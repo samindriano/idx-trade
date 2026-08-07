@@ -22,7 +22,8 @@ class TradabilityState(StrEnum):
 
 
 class DataAvailability(StrEnum):
-    """Whether the selected market-data source supplied an expected record."""
+    """Provider-record state, kept separate from exchange tradability."""
 
     PRESENT = "PRESENT"
+    ABSENT_UNRESOLVED = "ABSENT_UNRESOLVED"
     DATA_MISSING = "DATA_MISSING"
