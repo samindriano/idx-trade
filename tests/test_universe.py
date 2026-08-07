@@ -29,6 +29,7 @@ def _coverage():
     return canonicalize_coverage_windows(
         pd.DataFrame(
             {
+                "market": ["REGULAR"],
                 "effective_from": ["2020-01-01"],
                 "effective_to": ["2026-12-31"],
                 "source": ["TEST_COMPLETE"],
