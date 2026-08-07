@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.env
+.dist/
+build/
+*.egg-info/
+
+# Raw/derived research data and model artifacts stay out of git.
+data/raw/*
+data/processed/*
+data/results/*
+models/*
+
+# Keep directory contracts/docs if added later.
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/results/.gitkeep
+!models/.gitkeep
