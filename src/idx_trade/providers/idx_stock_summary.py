@@ -10,9 +10,9 @@ from ..security_master import canonicalize_tradability_anchors, normalise_ticker
 from ..states import TradabilityState
 
 
-IDX_HOME_URL = "https://www.idx.co.id/id"
-IDX_SESSION_VALIDATION_URL = "https://www.idx.co.id/primary/home/GetIndexList"
-IDX_STOCK_SUMMARY_URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
+IDX_HOME_URL = "https://www.idx.id/id"
+IDX_SESSION_VALIDATION_URL = "https://www.idx.id/primary/home/GetIndexList"
+IDX_STOCK_SUMMARY_URL = "https://www.idx.id/primary/TradingSummary/GetStockSummary"
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ def _browser_headers() -> dict[str, str]:
     return {
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-        "Referer": "https://www.idx.co.id/",
+        "Referer": "https://www.idx.id/",
         "User-Agent": "Mozilla/5.0 idx-trade-research/2.0",
         "X-Requested-With": "XMLHttpRequest",
     }

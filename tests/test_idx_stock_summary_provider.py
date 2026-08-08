@@ -11,7 +11,7 @@ from idx_trade.providers.idx_stock_summary import (
 def test_stock_summary_url_uses_current_official_idx_primary_endpoint():
     url = stock_summary_url("2026-07-31")
     assert url == (
-        "https://www.idx.co.id/primary/TradingSummary/GetStockSummary?date=20260731"
+        "https://www.idx.id/primary/TradingSummary/GetStockSummary?date=20260731"
     )
 
 
