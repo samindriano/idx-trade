@@ -660,3 +660,72 @@ Whenever a material checkpoint occurs, record:
 
 Do not erase failed approaches after they are fixed. Failure -> diagnosis -> fix
 is part of the project's reusable knowledge.
+
+---
+
+## 14. DATA-003 first historical expansion checkpoint
+
+Date: 2026-08-08. Source checkpoint: `data/idx-data-002c` at
+`949f98c3662e8a558d336996f64fd837417a870e`.
+
+The certified 43-session market window remains unchanged:
+
+- window: `2026-06-02` through `2026-07-31`;
+- model-safe panel SHA-256:
+  `ac923c22dfc3d85b1769419bc00d02136e4f9a96d7999ba466bc27a0579624b7`;
+- certified manifest SHA-256:
+  `6c639bf009553db64e1b80b5d570bd83436af57a6c9b9d2ae26d71521b255ffa`.
+
+The first bounded historical expansion used a new evidence workspace and
+certified the trailing 126 official IDX sessions, `2026-01-15` through
+`2026-07-31`, while preserving the 43-session artifacts above. The bounded
+official calendar replay returned 135 available sessions from `2026-01-02`
+through `2026-07-31`; the target is the exact last 126 sessions. January--June
+used the official IDX Digital Statistics daily-trading table and July used the
+official IDX Daily Statistics publication listing. Seven months parsed with no
+errors; one month used the official fallback source. No weekday estimation or
+Yahoo/JCI session substitution was used.
+
+Official Stock Summary execution evidence completed all 126 target sessions:
+`126/126` complete, `0` failed, `0` unresolved metric rows, `0` cached and
+`126` fetched sessions. It produced `107,424` ACTIVE anchors and `13,335`
+NO_TRADE anchors.
+
+PIT universe reconstruction found `964` tickers before scope. CNTX remained an
+authoritative `NON_COMMON_SHARE` exclusion (`Saham Preference`); CNTB remained
+an in-scope common share with `listed_from = 2000-12-22`. Required common-stock
+scope was `963` tickers, with no new historical identities and no unresolved
+identities. Curated intervals were loaded and merged; the official CNTB
+suspension beginning `2024-08-07` was preserved, including the applicable
+2026-07-30 and 2026-07-31 snapshots.
+
+For the 83 sessions added before the certified baseline, the Yahoo backfill
+updated `874` ticker artifacts with `0` provider-row gaps, `0` download
+errors, and `0` revision conflicts. The official split/reverse-split query
+covered the exact 126-session window; all 963 required tickers were
+authoritatively verified, including the no-event case.
+
+The history certification ladder passed both horizons:
+
+| horizon | required | passed | failed | UNKNOWN | missing ACTIVE prices | quarantined provider bars | price-required | semantics verified |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 43 sessions | 963 | 963 | 0 | 0 | 0 | 1,359 | 872 | 889 |
+| 126 sessions | 963 | 963 | 0 | 0 | 0 | 2,672 | 880 | 889 |
+
+Both full-universe gates had an empty blocker histogram. The 126-session
+ACTIVE-only model-safe panel contains `107,424` rows across `880` tickers and
+has SHA-256
+`401d2bdb65beaf9442f1a54212372e2adc5d1b2c006fc1e759738f6deea8a19a`.
+Its certified manifest contains 14 verified artifacts, is valid, and has
+SHA-256
+`650ab19e5a77085b7987ffaaa0ed7cbee0eb8c478a72c0c1166767e9eec68f5b`.
+
+Historical calendar diagnosis: the default publication-listing path failed
+closed for some early months because those listings were empty or incomplete.
+The bounded replay recovered the missing months through the official Digital
+Statistics source-result and retained the failed attempts as evidence. This
+is a source-replay issue, not permission to estimate sessions or substitute a
+vendor calendar.
+
+No modelling or `IDX-VAL-002` was started. The next safe checkpoint is a
+252-session expansion, but it must not start until separately requested.
