@@ -10,7 +10,11 @@ from .full_universe import run_full_universe_data_gate
 from .storage import write_csv_atomic
 
 
-DEFAULT_SESSION_HORIZONS = (43, 126, 252, 504, 756, 1260)
+# Primary certification checkpoints use exponential-ish jumps once a shorter
+# window is clean. Intermediate 252/756-session horizons remain available to
+# localise the first failing boundary when a larger jump fails.
+DEFAULT_SESSION_HORIZONS = (43, 126, 504, 1260)
+DIAGNOSTIC_SESSION_HORIZONS = (252, 756)
 
 
 def _atomic_json(value: dict[str, object], path: Path) -> None:
@@ -57,6 +61,11 @@ def run_history_certification_ladder(
     Horizons are measured in official IDX exchange sessions and all end on the
     latest supplied session. Each horizon reruns the point-in-time full-universe
     certification; no shorter-window pass is extrapolated backward into history.
+
+    The default ladder intentionally jumps from 126 to 504 to 1260 sessions once
+    the short window is clean. Intermediate horizons such as 252 or 756 sessions
+    are diagnostic fallbacks for localising the first failing historical boundary,
+    not mandatory checkpoints.
 
     The exact same authoritative security-scope exclusions used by the bounded
     full-universe certification are forwarded to every horizon. This prevents a
