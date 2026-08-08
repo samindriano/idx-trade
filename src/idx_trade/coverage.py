@@ -11,6 +11,7 @@ from .states import ExistenceState, TradabilityState
 @dataclass(frozen=True)
 class SecurityCoverage:
     ticker: str
+    identity_present: bool
     first_session: str | None
     last_session: str | None
     listed_sessions: int
@@ -121,6 +122,10 @@ def security_coverage(
     as audit diagnostics but quarantined from the model-safe price view; they do
     not override exchange truth. UNKNOWN state and missing ACTIVE-session prices
     remain hard failures.
+
+    A known security whose complete listing interval lies outside the evaluated
+    window is valid coverage with zero expected ACTIVE sessions. By contrast, a
+    ticker absent from the security master is unresolved identity and cannot pass.
     """
 
     ticker = normalise_ticker(ticker)
@@ -132,6 +137,11 @@ def security_coverage(
         .sort_values()
     )
     observed = _normalised_observed_dates(observed_prices)
+    identity_present = bool(
+        not security_master.empty
+        and "ticker" in security_master.columns
+        and security_master["ticker"].eq(ticker).any()
+    )
 
     listed: list[pd.Timestamp] = []
     active: list[pd.Timestamp] = []
@@ -165,10 +175,11 @@ def security_coverage(
     max_gap = _max_consecutive_missing(active, observed)
 
     price_required = bool(active)
-    complete = bool(listed) and not unknown and not missing
+    complete = bool(len(sessions)) and identity_present and not unknown and not missing
 
     return SecurityCoverage(
         ticker=ticker,
+        identity_present=identity_present,
         first_session=listed[0].date().isoformat() if listed else None,
         last_session=listed[-1].date().isoformat() if listed else None,
         listed_sessions=len(listed),
