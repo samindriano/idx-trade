@@ -53,20 +53,34 @@ The public IDX announcement page states that only **three years** of announcemen
 
 The initial free-only research-period candidate should be chosen inside the interval for which official announcement discovery can actually be audited. A longer period may be promoted only if an additional official/appropriately licensed source (for example TICMI) supplies the missing historical state evidence.
 
-## 4. Declare tradability coverage only after discovery audit
+## 4. Separate discovery coverage from per-security state anchors
 
-A `tradability_coverage_window` may be marked complete only when we have reasonable evidence that official suspension/resumption source discovery is complete for that market and period.
+A `tradability_coverage_window` means only that the relevant event-source discovery process is independently supported as complete for a market and bounded period. It must carry explicit source, discovery basis and boundary basis. It does **not** contain or imply one market-wide initial `ACTIVE` state.
 
-Do **not** infer completeness from:
+Per-security state evidence is stored separately in `tradability_anchors` with:
+
+- `ticker`;
+- `market`;
+- `as_of_date`;
+- `state`;
+- `source` / `source_ref`;
+- `evidence_type`.
+
+Inside a complete discovery window, the ACTIVE complement may be inferred for a ticker only when that ticker has authoritative anchor evidence in the same window and the anchor is consistent with the explicit event intervals. No anchor means `UNKNOWN`. Conflicting anchor/event evidence is a hard failure.
+
+Official status snapshots may be used as anchors, but the same rows must not simultaneously serve as independent validation evidence. Reserve separate dates/rows as reconciliation holdouts.
+
+Do **not** infer discovery completeness or ACTIVE state from:
 
 - all documents in a hand-picked manifest parsing successfully;
 - Yahoo prices looking continuous;
 - absence of known suspensions;
-- a ticker having many OHLC rows.
+- a ticker having many OHLC rows;
+- listing existence alone.
 
-Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed intervals. A mismatch is a blocker.
+Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed states. A mismatch is a blocker.
 
-Outside a declared-complete coverage window, missing suspension records resolve to `UNKNOWN`, not `ACTIVE`. A rolling three-year public listing is only a source reach limit; it is not evidence of completeness. The left boundary needs an explicit discovery basis and an initial `ACTIVE` state, otherwise no clean historical window may be claimed.
+Outside a declared-complete discovery window, or for a ticker without a valid anchor inside that window, unresolved state remains `UNKNOWN`.
 
 ## 5. Collect raw EOD price history
 
@@ -111,9 +125,10 @@ Expected standard:
 
 - all required listing states explained;
 - all relevant Regular-Market suspension intervals explained or deliberately `UNKNOWN`;
+- authoritative per-ticker anchors exist wherever ACTIVE complements are inferred;
 - no expected active session silently missing;
 - no price bar exists inside a known non-active state without investigation;
-- corporate actions verified;
+- split history verified;
 - price semantics verified.
 
 A failure means fix or narrow the research period. Do not weaken the gate merely to obtain a pass.
@@ -124,12 +139,14 @@ Only after adversarial cases pass should the same session-level gate be run over
 
 The model-development period can begin only when:
 
-1. the chosen historical period has an audited Regular-Market tradability coverage window;
-2. the official Exchange-Day calendar is complete for that period;
-3. required price histories pass expected-vs-observed session coverage;
-4. corporate-action and execution-price semantics are verified;
-5. unresolved provider gaps are classified explicitly;
-6. reproducibility manifests capture code, environment and data-source fingerprints.
+1. the chosen historical period has an audited Regular-Market event-discovery window;
+2. required securities have authoritative tradability anchors within that window;
+3. independent status reconciliation passes;
+4. the official Exchange-Day calendar is complete for that period;
+5. required price histories pass expected-vs-observed session coverage;
+6. split-history and execution-price semantics are verified;
+7. unresolved provider gaps are classified explicitly;
+8. reproducibility manifests capture code, environment and data-source fingerprints.
 
 ## Decision rule
 
