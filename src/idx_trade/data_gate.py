@@ -12,6 +12,7 @@ from .security_master import normalise_ticker
 @dataclass(frozen=True)
 class TickerDataGate:
     ticker: str
+    identity_resolved: bool
     session_coverage_complete: bool
     expected_active_sessions: int
     price_requirements_applicable: bool
@@ -68,7 +69,9 @@ def evaluate_data_gate(
         semantics_ok = bool(price_semantics_verified.get(ticker, False))
         price_required = coverage.price_required
         blockers: list[str] = []
-        if not coverage.complete:
+        if not coverage.identity_present:
+            blockers.append("SECURITY_IDENTITY_UNRESOLVED")
+        elif not coverage.complete:
             blockers.append("SESSION_COVERAGE_INCOMPLETE")
         if price_required and not split_ok:
             blockers.append("SPLIT_HISTORY_UNVERIFIED")
@@ -78,6 +81,7 @@ def evaluate_data_gate(
         ticker_reports.append(
             TickerDataGate(
                 ticker=ticker,
+                identity_resolved=coverage.identity_present,
                 session_coverage_complete=coverage.complete,
                 expected_active_sessions=coverage.expected_active_sessions,
                 price_requirements_applicable=price_required,
