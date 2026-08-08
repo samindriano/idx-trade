@@ -1,61 +1,78 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
-<rect width="1200" height="760" fill="#ffffff"/>
-<defs>
-  <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#334155"/></marker>
-  <marker id="arrowRed" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#dc2626"/></marker>
-  <style>
-    .txt{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#0f172a}
-    .title{font-size:20px;font-weight:700}.label{font-size:16px;font-weight:600}.small{font-size:13px}.tiny{font-size:12px}
-    .edge{stroke:#334155;stroke-width:2;fill:none;marker-end:url(#arrow)}
-    .edgeRed{stroke:#dc2626;stroke-width:2;fill:none;marker-end:url(#arrowRed)}
-  </style>
-</defs>
-<text x="50" y="42" class="txt title">IDX Trade — current architecture</text>
-<text x="50" y="66" class="txt small" fill="#475569">What exists today. Modelling remains blocked until the Data Gate passes.</text>
-<rect x="50" y="95" width="710" height="150" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
-<text x="70" y="123" class="txt label">Authoritative / source inputs</text>
-<rect x="75" y="145" width="500" height="75" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-<text x="325" y="170" text-anchor="middle" class="txt label">Official IDX</text>
-<text x="325" y="190" text-anchor="middle" class="txt small">sessions • listing/delisting • suspend/resume</text><text x="325" y="208" text-anchor="middle" class="txt small">corporate actions • Stock Summary</text>
-<rect x="600" y="145" width="135" height="75" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
-<text x="667.5" y="171" text-anchor="middle" class="txt label">Yahoo</text>
-<text x="667.5" y="193" text-anchor="middle" class="txt small">raw EOD OHLCV</text>
-<path d="M325 220 V275" class="edge"/><path d="M667 220 V275" class="edge"/>
-<rect x="105" y="275" width="620" height="190" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-<text x="125" y="305" class="txt label">Canonical point-in-time data layer</text>
-<rect x="130" y="330" width="170" height="95" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
-<text x="215" y="357" text-anchor="middle" class="txt label">Security master</text>
-<text x="215" y="380" text-anchor="middle" class="txt small">NOT_LISTED / LISTED</text>
-<text x="215" y="400" text-anchor="middle" class="txt small">DELISTED + IPO warm-up</text>
-<rect x="330" y="330" width="175" height="95" rx="10" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
-<text x="417.5" y="357" text-anchor="middle" class="txt label">Tradability</text>
-<text x="417.5" y="376" text-anchor="middle" class="txt small">REGULAR-market state</text><text x="417.5" y="396" text-anchor="middle" class="txt tiny">ACTIVE / SUSPENDED</text><text x="417.5" y="414" text-anchor="middle" class="txt tiny">FCA / NO_TRADE / UNKNOWN</text>
-<rect x="535" y="330" width="165" height="95" rx="10" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
-<text x="617.5" y="357" text-anchor="middle" class="txt label">Market data</text>
-<text x="617.5" y="380" text-anchor="middle" class="txt small">raw_* execution OHLC</text>
-<text x="617.5" y="400" text-anchor="middle" class="txt small">provider state + revisions</text>
-<path d="M415 465 V510" class="edge"/>
-<rect x="200" y="510" width="430" height="125" rx="14" fill="#fffbeb" stroke="#d97706" stroke-width="2.5"/>
-<text x="415" y="540" text-anchor="middle" class="txt title">DATA GATE</text>
-<text x="415" y="565" text-anchor="middle" class="txt small">PIT listing • tradability coverage • official sessions • split history</text>
-<text x="415" y="587" text-anchor="middle" class="txt small">price semantics • internal gaps • provenance • adversarial cases</text>
-<rect x="255" y="603" width="320" height="26" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.7"/>
-<text x="415" y="621" text-anchor="middle" class="txt small" fill="#b91c1c">CURRENT STATUS: BLOCKED_DATA_READINESS</text>
-<path d="M630 572 H770" class="edgeRed"/><text x="690" y="558" class="txt tiny" fill="#dc2626">PASS required</text>
-<rect x="790" y="285" width="350" height="350" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="7 5"/>
-<text x="965" y="318" text-anchor="middle" class="txt title" fill="#64748b">PLANNED MODEL PIPELINE</text>
-<text x="965" y="341" text-anchor="middle" class="txt small" fill="#dc2626">BLOCKED until Data Gate passes</text>
-<rect x="845" y="370" width="240" height="46" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
-<text x="965" y="399" text-anchor="middle" class="txt label">Dynamic eligible universe</text>
-<path d="M965 416 V445" class="edge"/>
-<rect x="845" y="447" width="240" height="46" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
-<text x="965" y="476" text-anchor="middle" class="txt label">Support / resistance engine</text>
-<path d="M965 493 V522" class="edge"/>
-<rect x="845" y="524" width="240" height="46" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
-<text x="965" y="553" text-anchor="middle" class="txt label">Setup + probability + score</text>
-<path d="M965 570 V599" class="edge"/>
-<rect x="845" y="601" width="240" height="46" rx="9" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
-<text x="965" y="630" text-anchor="middle" class="txt label">Risk sizing + simulation</text>
-<rect x="50" y="675" width="1090" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1"/>
-<text x="595" y="704" text-anchor="middle" class="txt small">Hard rule: missing provider row ≠ suspension. UNKNOWN remains a gate failure; the research window is shortened instead of guessed.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="760" viewBox="0 0 1260 760">
+  <defs>
+    <marker id="arrow-navy" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <style>
+      .title { font: 700 18px Arial, sans-serif; fill:#0f172a; }
+      .subtitle { font: 13px Arial, sans-serif; fill:#475569; }
+      .section { font: 700 12px Arial, sans-serif; fill:#334155; }
+      .label { font: 700 12px Arial, sans-serif; fill:#0f172a; }
+      .small { font: 11px Arial, sans-serif; fill:#475569; }
+      .tiny { font: 10px Arial, sans-serif; fill:#475569; }
+      .center { text-anchor: middle; dominant-baseline: middle; }
+      .box { fill:#ffffff; stroke-width:2; rx:12; ry:12; }
+      .group { fill:#f8fafc; stroke:#94a3b8; stroke-width:1.5; rx:14; ry:14; }
+      .dashed { fill:#f8fafc; stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:6 5; rx:14; ry:14; }
+      .arrowN { stroke:#334155; stroke-width:2.4; fill:none; marker-end:url(#arrow-navy); stroke-linecap:round; stroke-linejoin:round; }
+      .arrowG { stroke:#16a34a; stroke-width:2.4; fill:none; marker-end:url(#arrow-green); stroke-linecap:round; stroke-linejoin:round; }
+      .arrowR { stroke:#dc2626; stroke-width:2.4; fill:none; marker-end:url(#arrow-red); stroke-linecap:round; stroke-linejoin:round; }
+      .chip { fill:#fff7ed; stroke:#f59e0b; stroke-width:1.5; rx:8; ry:8; }
+      .status { fill:#fee2e2; stroke:#ef4444; stroke-width:1.5; rx:8; ry:8; }
+    </style>
+  </defs>
+<rect x="0" y="0" width="1260" height="760" fill="white"/>
+<text x="40" y="40" class="title">IDX Trade — current architecture</text>
+<text x="40" y="62" class="subtitle">What exists today. Modelling remains blocked until the Data Gate passes.</text>
+<rect x="40" y="90" width="760" height="130" class="group"/>
+<text x="56" y="112" class="section">Authoritative / source inputs</text>
+<rect x="65" y="140" width="500" height="65" class="box" style="stroke:#2563eb; fill:#eff6ff;" />
+<text x="315" y="158" class="label center">Official IDX</text>
+<text x="315" y="177" class="small center"><tspan x="315" dy="-7">sessions · listing/delisting · suspend/resume</tspan><tspan x="315" dy="14">corporate actions · Stock Summary</tspan></text>
+<rect x="595" y="140" width="140" height="65" class="box" style="stroke:#7c3aed; fill:#f5f3ff;" />
+<text x="665" y="158" class="label center">Yahoo</text>
+<text x="665" y="177" class="small center">raw EOD OHLCV</text>
+<path d="M315 205 V250" class="arrowN"/>
+<path d="M665 205 V250" class="arrowN"/>
+<rect x="95" y="250" width="650" height="170" class="group"/>
+<text x="112" y="274" class="section">Canonical point-in-time data layer</text>
+<rect x="120" y="295" width="165" height="95" class="box" style="stroke:#0891b2; fill:#ecfeff;" />
+<text x="202" y="318" class="label center">Security master</text>
+<text x="202" y="347" class="small center"><tspan x="202" dy="-7">NOT_LISTED / LISTED</tspan><tspan x="202" dy="14">DELISTED + IPO warm-up</tspan></text>
+<rect x="340" y="295" width="165" height="95" class="box" style="stroke:#d97706; fill:#fff7ed;" />
+<text x="422" y="318" class="label center">Tradability</text>
+<text x="422" y="350" class="small center"><tspan x="422" dy="-14">REGULAR-market state</tspan><tspan x="422" dy="14">ACTIVE / SUSPENDED</tspan><tspan x="422" dy="14">FCA / NO_TRADE / UNKNOWN</tspan></text>
+<rect x="560" y="295" width="160" height="95" class="box" style="stroke:#4f46e5; fill:#eef2ff;" />
+<text x="640" y="318" class="label center">Market data</text>
+<text x="640" y="350" class="small center"><tspan x="640" dy="-7">raw = execution OHLC</tspan><tspan x="640" dy="14">provider state + revisions</tspan></text>
+<path d="M420 390 V450" class="arrowN"/>
+<rect x="180" y="450" width="490" height="115" class="box" style="stroke:#d97706; fill:#fffaf0;" />
+<text x="425" y="475" class="label center">DATA GATE</text>
+<text x="425" y="504" class="small center"><tspan x="425" dy="-7">PIT listing · tradability coverage · official sessions · split history</tspan><tspan x="425" dy="14">price semantics · internal gaps · provenance · adversarial cases</tspan></text>
+<rect x="310" y="525" width="230" height="24" class="status"/>
+<text x="425" y="537" class="tiny center">CURRENT STATUS: BLOCKED_DATA_READINESS</text>
+<rect x="815" y="260" width="380" height="320" class="dashed"/>
+<text x="1005" y="286" class="title center">PLANNED MODEL PIPELINE</text>
+<text x="1005" y="306" class="subtitle center">BLOCKED until Data Gate passes</text>
+<rect x="895" y="340" width="220" height="44" class="box" style="stroke:#94a3b8; fill:#ffffff;" />
+<text x="1005.0" y="362.0" class="label center">Dynamic eligible universe</text>
+<rect x="895" y="406" width="220" height="44" class="box" style="stroke:#94a3b8; fill:#ffffff;" />
+<text x="1005.0" y="428.0" class="label center">Support / resistance engine</text>
+<rect x="895" y="472" width="220" height="44" class="box" style="stroke:#94a3b8; fill:#ffffff;" />
+<text x="1005.0" y="494.0" class="label center">Setup + probability + score</text>
+<rect x="895" y="538" width="220" height="44" class="box" style="stroke:#94a3b8; fill:#ffffff;" />
+<text x="1005.0" y="560.0" class="label center">Risk sizing + simulation</text>
+<path d="M1005 384 V406" class="arrowN"/>
+<path d="M1005 450 V472" class="arrowN"/>
+<path d="M1005 516 V538" class="arrowN"/>
+<path d="M670 507 H845" class="arrowR"/>
+<text x="755" y="495" class="tiny center" style="fill:#dc2626;">PASS required</text>
+<rect x="40" y="690" width="1180" height="34" class="group"/>
+<text x="630" y="707" class="small center">Hard rule: missing provider row ≠ suspension. UNKNOWN remains a gate failure; the research window is shortened instead of guessed.</text>
 </svg>
