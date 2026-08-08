@@ -6,14 +6,16 @@ The project remains in the **data foundation** phase. Model, support/resistance,
 
 Use the IDX active-listing and delisting adapters as the primary listing-security-master sources. Current active listings are identity/reference data only and must never define a historical backtest universe by themselves.
 
-The IDX `GetSecuritiesStock` current-list endpoint must **not** be assumed exhaustive for long-suspended or otherwise non-trading listed shares. If a required ticker is absent from that primary response, reconcile it against KSEI Registered Securities before declaring the identity unresolved. The KSEI fallback is accepted only when the page explicitly proves all of the following for the requested short code:
+The IDX `GetSecuritiesStock` current-list endpoint must **not** be assumed exhaustive for long-suspended or otherwise non-trading securities. If a required ticker is absent from that primary response, reconcile its identity against KSEI Registered Securities before declaring the identity unresolved. The KSEI fallback is accepted only when the page explicitly proves all of the following for the requested short code:
 
 - security type is a common share (`Saham Biasa` / common share);
 - `Stock Exchange = IDX`;
-- `Status = Active`;
+- KSEI registration `Status = Active`;
 - a valid listing date is present.
 
-KSEI is a supplemental identity/reference source, not a tradability source. It must never turn a suspended share into `ACTIVE` trading state. Any conflict between IDX delisting evidence and KSEI identity evidence is a hard review condition, not something to overwrite automatically.
+KSEI is a supplemental identity/reference source, not the authority for current exchange-listing state or tradability. `Status = Active` on KSEI means the registered security remains active in KSEI's registry; it must not override an official IDX delisting date. When IDX delisting evidence exists, that `listed_to` boundary remains authoritative and closes the listing interval. KSEI may supply missing identity/listing-date evidence, but it must never turn a delisted or suspended security into an exchange-listed or `ACTIVE` trading state.
+
+A required ticker whose identity and complete listing interval are known may legitimately have zero listed sessions in the evaluated research window, for example because it was delisted before the window or listed only after it. That is resolved non-eligibility, not missing coverage. A ticker absent from the security master entirely remains a hard `SECURITY_IDENTITY_UNRESOLVED` failure.
 
 Required outputs:
 
@@ -156,7 +158,8 @@ Run `run_adversarial_data_gate(...)` against the candidate research period.
 
 Expected standard:
 
-- all required listing states explained;
+- all required identities and listing intervals are explained;
+- a known security with zero listed sessions in the window is treated as resolved non-eligibility, not missing data;
 - every listed research session resolves through direct official execution evidence or explicit tradability evidence;
 - unresolved sessions remain `UNKNOWN`;
 - no expected ACTIVE session silently misses its raw price bar;
@@ -172,15 +175,16 @@ Only after adversarial cases pass should the same session-level gate be run over
 
 The model-development period can begin only when:
 
-1. the official Exchange-Day calendar is complete for the period;
-2. every required listed security/session has authoritative direct execution evidence or explicit tradability-state evidence;
-3. unresolved point evidence is zero for the required universe/period;
-4. independent reconciliation checks pass on reserved evidence;
-5. required ACTIVE-session price histories pass expected-vs-observed session coverage;
-6. non-ACTIVE provider contamination is quarantined from all research/model views;
-7. split-history and execution-price semantics are verified;
-8. unresolved provider gaps are classified explicitly;
-9. reproducibility manifests capture code, environment and data-source fingerprints.
+1. required security identities and point-in-time listing intervals are resolved;
+2. the official Exchange-Day calendar is complete for the period;
+3. every required listed security/session has authoritative direct execution evidence or explicit tradability-state evidence;
+4. unresolved point evidence is zero for the required universe/period;
+5. independent reconciliation checks pass on reserved evidence;
+6. required ACTIVE-session price histories pass expected-vs-observed session coverage;
+7. non-ACTIVE provider contamination is quarantined from all research/model views;
+8. split-history and execution-price semantics are verified;
+9. unresolved provider gaps are classified explicitly;
+10. reproducibility manifests capture code, environment and data-source fingerprints.
 
 A complete suspension-announcement reconstruction is still valuable for legal-state explanation and stress analysis, but it is no longer required to manufacture an `ACTIVE` complement when direct official per-session execution evidence already exists.
 
