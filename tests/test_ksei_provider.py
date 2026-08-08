@@ -25,6 +25,22 @@ def _html(ticker: str, listing_date: str, *, status: str = "Active") -> str:
     """
 
 
+def _structured_html(ticker: str, listing_date: str) -> str:
+    return f"""
+    <html><body>
+      <nav>Status Nominal Listing Date Stock Exchange</nav>
+      <dl>
+        <dt>Security name</dt><dd>{ticker} Example Tbk</dd>
+        <dt>Short Code</dt><dd>{ticker}</dd>
+        <dt>Type</dt><dd>Saham Biasa</dd>
+        <dt>Listing Date</dt><dd>{listing_date}</dd>
+        <dt>Stock Exchange</dt><dd>IDX</dd>
+        <dt>Status</dt><dd>Active</dd>
+      </dl>
+    </body></html>
+    """
+
+
 def test_ksei_active_idx_share_parses_as_supplemental_identity():
     row = parse_ksei_active_listing(
         _html("HDTX", "June 06, 1990"),
@@ -43,6 +59,15 @@ def test_ksei_nonactive_page_fails_closed():
             requested_ticker="KPAS",
             source_ref="ksei://KPAS",
         )
+
+
+def test_ksei_structured_fields_are_not_contaminated_by_navigation_text():
+    row = parse_ksei_active_listing(
+        _structured_html("KPAS", "October 05, 2018"),
+        requested_ticker="KPAS",
+        source_ref="ksei://KPAS",
+    )
+    assert row.loc[0, "listed_from"] == pd.Timestamp("2018-10-05")
 
 
 def test_missing_primary_names_can_be_supplemented_without_replacing_idx_rows():

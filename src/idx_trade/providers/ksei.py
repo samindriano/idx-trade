@@ -14,16 +14,19 @@ KSEI_SECURITY_URL = "https://web.ksei.co.id/services/registered-securities/share
 
 
 def _get_text(url: str) -> str:
-    response = requests.get(
-        url,
-        headers={
-            "Referer": "https://web.ksei.co.id/",
-            "User-Agent": "idx-trade-research/2.0",
-        },
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.text
+    for attempt in range(3):
+        response = requests.get(
+            url,
+            headers={
+                "Referer": "https://web.ksei.co.id/",
+                "User-Agent": "idx-trade-research/2.0",
+            },
+            timeout=30,
+        )
+        if response.status_code < 500 or attempt == 2:
+            response.raise_for_status()
+            return response.text
+    raise RuntimeError(f"KSEI request did not return a response: {url}")
 
 
 def _page_text(document: str) -> str:
@@ -36,6 +39,22 @@ def _between(text: str, start: str, end: str) -> str:
     pattern = rf"{re.escape(start)}\s+(.*?)\s+{re.escape(end)}"
     match = re.search(pattern, text, flags=re.IGNORECASE)
     return match.group(1).strip() if match else ""
+
+
+def _definition_fields(document: str) -> dict[str, str]:
+    """Read label/value pairs from the structured KSEI security page."""
+
+    root = html.fromstring(document)
+    fields: dict[str, str] = {}
+    for label_node in root.xpath("//dt"):
+        value_nodes = label_node.xpath("following-sibling::dd[1]")
+        if not value_nodes:
+            continue
+        label = " ".join(label_node.text_content().split())
+        value = " ".join(value_nodes[0].text_content().split())
+        if label and value:
+            fields.setdefault(label, value)
+    return fields
 
 
 def parse_ksei_active_listing(
@@ -54,12 +73,21 @@ def parse_ksei_active_listing(
 
     ticker = normalise_ticker(requested_ticker)
     text = _page_text(document)
-    short_code = normalise_ticker(_between(text, "Short Code", "Type"))
-    security_type = _between(text, "Type", "Listing Date")
-    listing_date_raw = _between(text, "Listing Date", "Stock Exchange")
-    stock_exchange = _between(text, "Stock Exchange", "Status").upper()
-    status = _between(text, "Status", "Nominal").upper()
-    security_name = _between(text, "Security name", "Issuer")
+    fields = _definition_fields(document)
+    short_code = normalise_ticker(
+        fields.get("Short Code") or _between(text, "Short Code", "Type")
+    )
+    security_type = fields.get("Type") or _between(text, "Type", "Listing Date")
+    listing_date_raw = fields.get("Listing Date") or _between(
+        text, "Listing Date", "Stock Exchange"
+    )
+    stock_exchange = (
+        fields.get("Stock Exchange") or _between(text, "Stock Exchange", "Status")
+    ).upper()
+    status = (fields.get("Status") or _between(text, "Status", "Nominal")).upper()
+    security_name = fields.get("Security name") or _between(
+        text, "Security name", "Issuer"
+    )
 
     if short_code != ticker:
         raise ValueError(
