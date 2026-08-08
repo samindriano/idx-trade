@@ -729,3 +729,76 @@ vendor calendar.
 
 No modelling or `IDX-VAL-002` was started. The next safe checkpoint is a
 252-session expansion, but it must not start until separately requested.
+
+---
+
+## 15. DATA-004 504-session historical expansion — FAIL / STOP
+
+Date: 2026-08-08. Runtime source checkpoint: `data/idx-data-002c` at
+`ed13ee0812e8db21d580e922f4e346873aa7b3cd`.
+
+The certified 43- and 126-session artifacts were preserved unchanged. A new
+evidence workspace was created for the trailing 504-session attempt. The
+bounded official calendar contained 516 sessions from `2024-06-03` through
+`2026-07-31`; the exact last 504 sessions were selected mechanically as
+`2024-06-21` through `2026-07-31`. All 26 requested months parsed with zero
+errors. The early-month recovery used only official IDX Digital Statistics
+dates where the Daily Statistics listing was empty; no weekday estimate,
+Yahoo calendar, or JCI substitute was used.
+
+Full pytest passed: 134 tests, exit 0, with two non-blocking warnings.
+
+Official Stock Summary evidence completed all 504 target sessions: 126 cache
+hits, 378 new fetches, 504/504 complete, 425,340 ACTIVE anchors, 54,131
+NO_TRADE anchors, and zero unresolved metric rows.
+
+PIT discovery found 977 securities before scope. CNTX remained the existing
+authoritative `NON_COMMON_SHARE / Saham Preference` exclusion, leaving 976
+common-stock candidates. FREN was newly discovered from official historical
+point evidence and absent from the reused security master. The generic KSEI
+reconciliation was attempted; the live KSEI page returned an undefined
+security/type/listing record, so FREN remains unresolved. No ticker-specific
+identity hardcode was added.
+
+The additional 378-session Yahoo extension requested 881 common candidates:
+878 were updated, with zero `DOWNLOAD_ERROR`, zero `REVISION_CONFLICT`, and
+three `NO_PROVIDER_ROWS`: FREN, MASA, and MFIN. Raw histories and revision
+guards were preserved; the insufficient first price attempt was retained as a
+separate failure artifact.
+
+The 126-session regression horizon reproduced PASS:
+
+- 963/963 tickers passed;
+- UNKNOWN sessions = 0;
+- missing ACTIVE prices = 0;
+- quarantined non-ACTIVE provider bars = 2,672;
+- blocker histogram = `{}`.
+
+The 504-session horizon is **FAIL**:
+
+- window: `2024-06-21` through `2026-07-31`;
+- discovered before scope: 977;
+- scope exclusion: CNTX;
+- required common stocks: 976;
+- passed/failed: 973/3;
+- unresolved identities: FREN;
+- UNKNOWN sessions: 2;
+- missing ACTIVE prices: 271;
+- quarantined non-ACTIVE provider bars: 22,400;
+- blocker histogram: `PRICE_SEMANTICS_UNVERIFIED: 2`,
+  `SECURITY_IDENTITY_UNRESOLVED: 1`, `SESSION_COVERAGE_INCOMPLETE: 2`.
+
+Exact failed tickers:
+
+- FREN — `SECURITY_IDENTITY_UNRESOLVED`; KSEI fallback did not provide a
+  usable identity/type/listing record.
+- MASA — `SESSION_COVERAGE_INCOMPLETE` and `PRICE_SEMANTICS_UNVERIFIED`;
+  22 expected ACTIVE prices are missing and Yahoo returned no provider rows.
+- MFIN — `SESSION_COVERAGE_INCOMPLETE` and `PRICE_SEMANTICS_UNVERIFIED`;
+  249 expected ACTIVE prices are missing and Yahoo returned no provider rows.
+
+Because 504 failed after the price extension and exact blockers were
+localized, the ladder stopped. No 252 diagnostic, 1260 expansion, model-safe
+504 panel, or 504 manifest was created. The next action is to resolve these
+three historical evidence/provider blockers without weakening the DATA GATE;
+only then may a new 504 certification be attempted.
