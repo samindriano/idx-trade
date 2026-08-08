@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pandas as pd
 
-from .providers.idx_sessions import fetch_exchange_sessions_month, monthly_session_page_url
+from .providers.idx_sessions import fetch_exchange_sessions_month, monthly_session_data_url
 from .storage import write_csv_atomic
 
 
@@ -43,7 +43,7 @@ def run_exchange_session_backfill(
     source_rows: list[dict[str, object]] = []
 
     for period in months:
-        url = monthly_session_page_url(period.year, period.month)
+        url = monthly_session_data_url(period.year, period.month)
         try:
             month_sessions = pd.DatetimeIndex(fetch_month(period.year, period.month))
             clipped = [
