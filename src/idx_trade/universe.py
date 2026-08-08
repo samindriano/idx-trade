@@ -34,20 +34,22 @@ def build_dynamic_liquidity_universe(
     tradability_intervals: pd.DataFrame,
     tradability_coverage_windows: pd.DataFrame,
     *,
+    tradability_anchors: pd.DataFrame | None = None,
     top_n: int = 200,
     lookback_sessions: int = 60,
     minimum_warmup_sessions: int = 60,
     minimum_active_share: float = 0.80,
 ) -> pd.DataFrame:
-    """Construct an as-of-date universe using only information known by that date.
-
-    The function intentionally does not accept a preselected 'current active'
-    ticker list. Historical delisted names can be included through `price_frames`
-    and are filtered by their point-in-time listing/tradability state.
-    """
+    """Construct an as-of-date universe using only point-in-time evidence."""
 
     as_of_date = pd.Timestamp(as_of_date).normalize()
-    sessions = pd.DatetimeIndex(pd.to_datetime(exchange_sessions)).tz_localize(None).normalize().unique().sort_values()
+    sessions = (
+        pd.DatetimeIndex(pd.to_datetime(exchange_sessions))
+        .tz_localize(None)
+        .normalize()
+        .unique()
+        .sort_values()
+    )
     sessions = sessions[sessions <= as_of_date]
     recent_sessions = sessions[-lookback_sessions:]
     recent_set = set(recent_sessions)
@@ -62,16 +64,31 @@ def build_dynamic_liquidity_universe(
             active_share = 0.0
         else:
             data = frame.copy()
-            data["date"] = pd.to_datetime(data["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
-            data = data[data["date"].notna() & data["date"].le(as_of_date)].sort_values("date")
+            data["date"] = (
+                pd.to_datetime(data["date"], errors="coerce")
+                .dt.tz_localize(None)
+                .dt.normalize()
+            )
+            data = data[
+                data["date"].notna() & data["date"].le(as_of_date)
+            ].sort_values("date")
             observed_dates = pd.DatetimeIndex(data["date"].drop_duplicates())
             observed_sessions = len(observed_dates)
             recent = data[data["date"].isin(recent_set)]
             recent_observed = recent["date"].nunique()
-            active_share = recent_observed / len(recent_sessions) if len(recent_sessions) else 0.0
+            active_share = (
+                recent_observed / len(recent_sessions)
+                if len(recent_sessions)
+                else 0.0
+            )
             if {"raw_close", "raw_volume"}.issubset(recent.columns) and not recent.empty:
-                traded_value = pd.to_numeric(recent["raw_close"], errors="coerce") * pd.to_numeric(recent["raw_volume"], errors="coerce")
-                median_value = float(traded_value.replace([np.inf, -np.inf], np.nan).dropna().median()) if traded_value.notna().any() else None
+                traded_value = pd.to_numeric(
+                    recent["raw_close"], errors="coerce"
+                ) * pd.to_numeric(recent["raw_volume"], errors="coerce")
+                clean_values = traded_value.replace(
+                    [np.inf, -np.inf], np.nan
+                ).dropna()
+                median_value = float(clean_values.median()) if not clean_values.empty else None
             else:
                 median_value = None
 
@@ -83,6 +100,7 @@ def build_dynamic_liquidity_universe(
             as_of_date,
             observed_sessions,
             minimum_warmup_sessions,
+            tradability_anchors=tradability_anchors,
         )
         eligible = bool(
             eligibility.eligible
@@ -90,9 +108,13 @@ def build_dynamic_liquidity_universe(
             and active_share >= minimum_active_share
             and median_value is not None
         )
-        reason = eligibility.reason if not eligibility.eligible else (
-            "LOW_TRADING_ACTIVITY" if active_share < minimum_active_share else (
-                "NO_LIQUIDITY_DATA" if median_value is None else "ELIGIBLE"
+        reason = (
+            eligibility.reason
+            if not eligibility.eligible
+            else (
+                "LOW_TRADING_ACTIVITY"
+                if active_share < minimum_active_share
+                else ("NO_LIQUIDITY_DATA" if median_value is None else "ELIGIBLE")
             )
         )
         rows.append(
@@ -117,10 +139,18 @@ def build_dynamic_liquidity_universe(
 
     ranked_idx = (
         output[output["eligible"]]
-        .sort_values(["median_traded_value", "ticker"], ascending=[False, True], na_position="last")
+        .sort_values(
+            ["median_traded_value", "ticker"],
+            ascending=[False, True],
+            na_position="last",
+        )
         .index
     )
     if len(ranked_idx):
         output.loc[ranked_idx, "liquidity_rank"] = np.arange(1, len(ranked_idx) + 1)
         output.loc[ranked_idx[:top_n], "selected"] = True
-    return output.sort_values(["selected", "liquidity_rank", "ticker"], ascending=[False, True, True], na_position="last").reset_index(drop=True)
+    return output.sort_values(
+        ["selected", "liquidity_rank", "ticker"],
+        ascending=[False, True, True],
+        na_position="last",
+    ).reset_index(drop=True)
