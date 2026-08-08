@@ -27,16 +27,16 @@ def _window_date(value: object) -> pd.Timestamp | None:
 def _public_window_from_evidence(
     evidence: Mapping[str, object] | None,
 ) -> tuple[dict[str, object] | None, str]:
-    """Return one exact public window only when its boundary evidence is explicit."""
+    """Return one exact event-discovery window only when evidence is explicit."""
 
     if evidence is None:
-        return None, "PUBLIC_WINDOW_NOT_PROVEN_DISCOVERY_OR_LEFT_BOUNDARY"
+        return None, "PUBLIC_WINDOW_NOT_PROVEN_DISCOVERY_OR_BOUNDARY"
     if evidence.get("discovery_complete") is not True:
         return None, "PUBLIC_DISCOVERY_COMPLETENESS_UNCONFIRMED"
 
     required_text = ("source", "discovery_basis", "left_boundary_basis")
     if any(not str(evidence.get(key, "")).strip() for key in required_text):
-        return None, "PUBLIC_WINDOW_MISSING_DISCOVERY_OR_LEFT_BOUNDARY_BASIS"
+        return None, "PUBLIC_WINDOW_MISSING_DISCOVERY_OR_BOUNDARY_BASIS"
 
     effective_from = _window_date(evidence.get("effective_from"))
     effective_to = _window_date(evidence.get("effective_to"))
@@ -44,10 +44,6 @@ def _public_window_from_evidence(
         return None, "PUBLIC_WINDOW_REQUIRES_EXPLICIT_BOTH_BOUNDARIES"
     if effective_to < effective_from:
         return None, "PUBLIC_WINDOW_BOUNDARIES_INVALID"
-
-    initial_state = str(evidence.get("initial_state", "")).strip().upper()
-    if initial_state != "ACTIVE":
-        return None, "PUBLIC_WINDOW_INITIAL_STATE_NOT_EXPLICIT_ACTIVE"
 
     try:
         market = normalise_market(evidence.get("market", "REGULAR"))
@@ -62,7 +58,6 @@ def _public_window_from_evidence(
         "is_complete": True,
         "discovery_basis": str(evidence["discovery_basis"]).strip(),
         "left_boundary_basis": str(evidence["left_boundary_basis"]).strip(),
-        "initial_state": initial_state,
     }, "OK"
 
 
@@ -72,11 +67,12 @@ def ingestion_integrity_report(
     *,
     coverage_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """Audit parser/compiler integrity without claiming source completeness.
+    """Audit parser/compiler integrity without inventing per-ticker state.
 
     A clean report means every supplied document was machine-resolved and its
-    event sequence was internally coherent. It does NOT prove that every IDX
-    suspension announcement in the research period has been discovered.
+    event sequence was internally coherent. It does not prove that every IDX
+    tradability announcement in the research period has been discovered, and a
+    complete discovery window does not by itself establish any ticker as ACTIVE.
     """
 
     if parse_diagnostics.empty:
@@ -113,9 +109,10 @@ def ingestion_integrity_report(
         "coverage_window": candidate_window if coverage_complete else None,
         "coverage_diagnostic": window_diagnostic,
         "coverage_note": (
-            "Ingestion integrity does not imply historical discovery completeness. "
-            "A complete window requires public-source discovery evidence and an explicit "
-            "left-boundary initial-state basis."
+            "Ingestion integrity and event-source completeness are separate from "
+            "per-security tradability state. A complete discovery window still "
+            "requires authoritative ticker anchors before ACTIVE complements can "
+            "be inferred."
         ),
     }
 
@@ -130,7 +127,10 @@ def _atomic_csv(frame: pd.DataFrame, path: Path) -> None:
 def _atomic_json(value: dict[str, object], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.stem}.{uuid4().hex}.tmp{path.suffix}")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
     temporary.replace(path)
 
 
@@ -141,12 +141,7 @@ def run_tradability_ingestion(
     fetcher: Callable[[str], tuple[str, str]] = fetch_pdf_text,
     coverage_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """Ingest an auditable IDX announcement manifest and persist raw outcomes.
-
-    The function intentionally writes diagnostics even when the integrity gate
-    fails, so ambiguous documents can be reviewed without mutating historical
-    coverage assumptions.
-    """
+    """Ingest an auditable IDX announcement manifest and persist raw outcomes."""
 
     manifest_path = Path(manifest_path)
     output_dir = Path(output_dir)
