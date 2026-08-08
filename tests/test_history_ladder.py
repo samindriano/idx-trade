@@ -75,3 +75,80 @@ def test_history_ladder_finds_longest_passing_trailing_window(tmp_path):
     assert result["summary"]["longest_passing_window"]["window_start"] == "2026-06-02"
     assert (tmp_path / "history_certification_ladder.csv").exists()
     assert (tmp_path / "history_certification_summary.json").exists()
+
+
+def test_history_ladder_preserves_authoritative_non_common_scope_exclusion():
+    sessions = pd.to_datetime(["2026-06-02", "2026-06-03"])
+    master = build_security_master(
+        pd.DataFrame(
+            {
+                "ticker": ["AAAA"],
+                "company_name": ["Active A"],
+                "listed_from": ["2020-01-01"],
+                "listed_to": [None],
+                "source": ["IDX"],
+            }
+        ),
+        pd.DataFrame(),
+    )
+    anchors = canonicalize_tradability_anchors(
+        pd.DataFrame(
+            {
+                "ticker": ["AAAA", "AAAA", "PREF", "PREF"],
+                "market": ["REGULAR"] * 4,
+                "as_of_date": [
+                    "2026-06-02",
+                    "2026-06-03",
+                    "2026-06-02",
+                    "2026-06-03",
+                ],
+                "state": ["ACTIVE", "ACTIVE", "NO_TRADE", "NO_TRADE"],
+                "source": ["IDX_STOCK_SUMMARY"] * 4,
+                "source_ref": ["idx://2", "idx://3", "idx://2", "idx://3"],
+                "evidence_type": [
+                    "IDX_STOCK_SUMMARY_REGULAR_EXECUTION_OBSERVATION",
+                ]
+                * 4,
+            }
+        )
+    )
+    prices = {
+        "AAAA": pd.DataFrame(
+            {
+                "date": sessions,
+                "raw_open": [100.0, 100.0],
+                "raw_high": [101.0, 101.0],
+                "raw_low": [99.0, 99.0],
+                "raw_close": [100.0, 100.0],
+                "raw_volume": [1000.0, 1000.0],
+            }
+        )
+    }
+    exclusions = pd.DataFrame(
+        {
+            "ticker": ["PREF"],
+            "reason": ["NON_COMMON_SHARE"],
+            "source": ["KSEI_REGISTERED_SECURITIES"],
+            "source_ref": ["ksei://PREF"],
+            "security_type": ["Saham Preference"],
+        }
+    )
+
+    result = run_history_certification_ladder(
+        pd.DatetimeIndex(sessions),
+        prices,
+        master,
+        canonicalize_tradability_intervals(pd.DataFrame()),
+        canonicalize_coverage_windows(pd.DataFrame()),
+        tradability_anchors=anchors,
+        split_history_verified={"AAAA": True},
+        price_semantics_verified={"AAAA": True},
+        security_scope_exclusions=exclusions,
+        session_horizons=[2],
+    )
+
+    row = result["ladder"][0]
+    assert row["passed"] is True
+    assert row["discovered_tickers_before_scope"] == 2
+    assert row["scope_excluded_tickers"] == ["PREF"]
+    assert row["required_tickers"] == 1
