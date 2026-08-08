@@ -45,6 +45,30 @@ TRADABILITY_ANCHOR_COLUMNS = (
 )
 SUPPORTED_MARKETS = {"REGULAR", "CASH", "NEGOTIATED", "ALL"}
 
+# These caches intentionally live outside DataFrame.attrs.  Pandas deep-copies
+# attrs when producing a filtered frame; storing a cache of filtered frames in
+# attrs therefore recursively copies the cache and can exhaust memory during a
+# full-universe gate.
+_EXISTENCE_SCOPE_CACHE: dict[int, tuple[pd.DataFrame, dict[str, pd.DataFrame]]] = {}
+_INTERVAL_SCOPE_CACHE: dict[int, tuple[pd.DataFrame, dict[tuple[str, str], pd.DataFrame]]] = {}
+_ANCHOR_SCOPE_CACHE: dict[int, tuple[pd.DataFrame, dict[tuple[str, str], pd.DataFrame]]] = {}
+_ANCHOR_STATE_CACHE: dict[
+    int, tuple[pd.DataFrame, dict[tuple[str, str], dict[pd.Timestamp, set[str]]]]
+] = {}
+
+
+def _scoped_cache(
+    frame: pd.DataFrame,
+    store: dict[int, tuple[pd.DataFrame, dict[object, object]]],
+) -> dict[object, object]:
+    key = id(frame)
+    cached = store.get(key)
+    if cached is None or cached[0] is not frame:
+        cache: dict[object, object] = {}
+        store[key] = (frame, cache)
+        return cache
+    return cached[1]
+
 
 def normalise_ticker(value: object) -> str:
     return str(value).upper().replace(".JK", "").strip()
@@ -88,7 +112,12 @@ def build_security_master(active: pd.DataFrame, delisted: pd.DataFrame) -> pd.Da
 def existence_state(master: pd.DataFrame, ticker: str, session: pd.Timestamp) -> ExistenceState:
     session = pd.Timestamp(session).normalize()
     ticker = normalise_ticker(ticker)
-    rows = master[master["ticker"].eq(ticker)]
+    cache = _scoped_cache(master, _EXISTENCE_SCOPE_CACHE)
+    if ticker in cache:
+        rows = cache[ticker]
+    else:
+        rows = master[master["ticker"].eq(ticker)]
+        cache[ticker] = rows
     if rows.empty:
         return ExistenceState.NOT_LISTED
     starts = pd.to_datetime(rows["listed_from"])
@@ -219,35 +248,63 @@ def _matching_interval(rows: pd.DataFrame, session: pd.Timestamp) -> pd.DataFram
 def _matching_interval_for_ticker(intervals: pd.DataFrame, ticker: str, session: pd.Timestamp, market: str) -> pd.DataFrame:
     if intervals.empty:
         return intervals
+    cache = _scoped_cache(intervals, _INTERVAL_SCOPE_CACHE)
+    key = (ticker, market)
+    if key in cache:
+        scoped = cache[key]
+        return _matching_interval(scoped, session)
+
     ticker_rows = intervals[intervals["ticker"].eq(ticker)]
     if ticker_rows.empty:
+        cache[key] = ticker_rows
         return ticker_rows
-    exact = _matching_interval(ticker_rows[ticker_rows["market"].eq(market)], session)
-    fallback = _matching_interval(ticker_rows[ticker_rows["market"].eq("ALL")], session)
+    exact_rows = ticker_rows[ticker_rows["market"].eq(market)]
+    fallback_rows = ticker_rows[ticker_rows["market"].eq("ALL")]
+    scoped = exact_rows if not exact_rows.empty else fallback_rows
+    cache[key] = scoped
+    exact = _matching_interval(exact_rows, session)
+    fallback = _matching_interval(fallback_rows, session)
     return exact if not exact.empty else fallback
 
 
 def _anchor_scope(anchors: pd.DataFrame, ticker: str, market: str) -> pd.DataFrame:
     if anchors.empty:
         return anchors
+    cache = _scoped_cache(anchors, _ANCHOR_SCOPE_CACHE)
+    key = (ticker, market)
+    if key in cache:
+        return cache[key]
+
     rows = anchors[anchors["ticker"].eq(ticker)]
     if rows.empty:
+        cache[key] = rows
         return rows
     exact = rows[rows["market"].eq(market)]
-    return exact if not exact.empty else rows[rows["market"].eq("ALL")]
+    scoped = exact if not exact.empty else rows[rows["market"].eq("ALL")]
+    cache[key] = scoped
+    return scoped
 
 
 def _exact_anchor_for_session(anchors: pd.DataFrame, ticker: str, market: str, session: pd.Timestamp) -> TradabilityState | None:
     rows = _anchor_scope(anchors, ticker, market)
     if rows.empty:
         return None
-    dates = pd.to_datetime(rows["as_of_date"], errors="coerce").dt.normalize()
-    rows = rows[dates.eq(session)]
-    if rows.empty:
+    state_cache = _scoped_cache(anchors, _ANCHOR_STATE_CACHE)
+    key = (ticker, market)
+    if key not in state_cache:
+        dates = pd.to_datetime(rows["as_of_date"], errors="coerce").dt.normalize()
+        grouped: dict[pd.Timestamp, set[str]] = {}
+        for date, state in zip(dates, rows["state"], strict=False):
+            if pd.isna(date):
+                continue
+            grouped.setdefault(pd.Timestamp(date), set()).add(str(state))
+        state_cache[key] = grouped
+    states = state_cache[key].get(session, set())
+    if not states:
         return None
-    if rows["state"].nunique() != 1:
+    if len(states) != 1:
         raise ValueError(f"Ambiguous exact tradability anchor for {ticker}/{market} on {session.date()}")
-    return TradabilityState(str(rows.iloc[-1]["state"]))
+    return TradabilityState(next(iter(states)))
 
 
 def _point_states_compatible(point_state: TradabilityState, explicit_state: TradabilityState) -> bool:
