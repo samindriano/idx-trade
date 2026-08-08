@@ -21,6 +21,7 @@ class SecurityCoverage:
     unexpected_nonactive_bars: int
     coverage_ratio: float | None
     max_missing_gap_sessions: int
+    price_required: bool
     complete: bool
 
     def to_dict(self) -> dict[str, object]:
@@ -63,6 +64,9 @@ def security_coverage(
 
     for session in sessions:
         if existence_state(security_master, ticker, session) is not ExistenceState.LISTED:
+            # A provider bar outside the listing interval is still an
+            # unexpected observation and must not be silently ignored.
+            nonactive.append(pd.Timestamp(session))
             continue
         listed.append(pd.Timestamp(session))
         state = tradability_state(tradability_intervals, tradability_coverage_windows, ticker, session)
@@ -80,13 +84,11 @@ def security_coverage(
     ratio = (len(observed_active) / len(active)) if active else None
     max_gap = _max_consecutive_missing(active, observed)
 
-    complete = (
-        bool(listed)
-        and not unknown
-        and not missing
-        and not unexpected
-        and len(active) > 0
-    )
+    # No active/executable sessions means no price row is required.  Unknown
+    # tradability and bars observed while a security is non-active remain hard
+    # failures; a missing row must never be used to infer ACTIVE.
+    price_required = bool(active)
+    complete = bool(listed) and not unknown and not missing and not unexpected
 
     return SecurityCoverage(
         ticker=ticker,
@@ -100,6 +102,7 @@ def security_coverage(
         unexpected_nonactive_bars=len(unexpected),
         coverage_ratio=ratio,
         max_missing_gap_sessions=max_gap,
+        price_required=price_required,
         complete=complete,
     )
 

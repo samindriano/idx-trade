@@ -108,30 +108,74 @@ def _resume_language(text: str) -> bool:
 
 
 def _resume_date(text: str) -> pd.Timestamp | None:
-    patterns = [
-        r"(?i)dibuka kembali.{0,180}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-        r"(?i)unsuspensi.{0,180}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-        r"(?i)(?:pencabutan|mencabut) suspensi.{0,220}?(\d{1,2}\s+[a-z]+\s+\d{4})",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return _parse_indonesian_date(match.group(1))
-    return None
+    return _resolve_effective_date(text, _resume_date_patterns())[0]
 
 
 def _suspend_date(text: str) -> pd.Timestamp | None:
-    patterns = [
-        r"(?i)(?:mulai\s+)?sesi\s+i.{0,80}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-        r"(?i)mulai.{0,80}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-        r"(?i)perdagangan.{0,100}?pada tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-        r"(?i)pada tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
-    ]
+    return _resolve_effective_date(text, _suspend_date_patterns())[0]
+
+
+_DATE_CAPTURE = r"(\d{1,2}\s+[a-z]+\s+\d{4})"
+
+
+def _resume_date_patterns() -> tuple[str, ...]:
+    action = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|mencabut suspensi)"
+    return (
+        rf"(?i){action}.{{0,220}}?(?:terhitung\s+sejak|mulai(?:\s+perdagangan)?|pada|tanggal)\s+(?:sesi\s+(?:i|1)\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i){action}.{{0,220}}?tanggal\s+{_DATE_CAPTURE}",
+        rf"(?i){action}.{{0,220}}?{_DATE_CAPTURE}",
+    )
+
+
+def _suspend_date_patterns() -> tuple[str, ...]:
+    return (
+        rf"(?i)(?:mulai|terhitung\s+sejak|berlaku\s+sejak)\s+(?:perdagangan\s+)?(?:sesi\s+(?:i|1)\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i)perdagangan.{{0,100}}?pada tanggal\s+{_DATE_CAPTURE}",
+        rf"(?i)pada tanggal\s+{_DATE_CAPTURE}",
+    )
+
+
+def _resolve_effective_date(
+    text: str,
+    patterns: tuple[str, ...],
+) -> tuple[pd.Timestamp | None, str | None]:
+    """Resolve one explicit effective date, without guessing between dates.
+
+    Patterns are ordered from the strongest effective-date wording to the
+    conservative fallback. A single strong match wins over unrelated dates
+    such as an announcement date. Multiple dates at the same precedence are
+    ambiguous and require manual review.
+    """
+
     for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return _parse_indonesian_date(match.group(1))
-    return None
+        values = re.findall(pattern, text)
+        if not values:
+            continue
+        parsed: list[pd.Timestamp] = []
+        for value in values:
+            try:
+                parsed.append(_parse_indonesian_date(value))
+            except ValueError:
+                return None, "EFFECTIVE_DATE_INVALID"
+        unique = list(dict.fromkeys(parsed))
+        if len(unique) != 1:
+            return None, "AMBIGUOUS_EFFECTIVE_DATE"
+        return unique[0], None
+    return None, "EFFECTIVE_DATE_NOT_FOUND"
+
+
+def _has_ambiguous_effective_date_wording(text: str, action: TradabilityAction) -> bool:
+    if action is TradabilityAction.RESUME:
+        markers = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|mencabut suspensi)"
+    else:
+        markers = r"(?:penghentian sementara|suspensi)"
+    date_pattern = r"(?i)\b\d{1,2}\s+[a-z]+\s+\d{4}\b"
+    for match in re.finditer(markers, text, flags=re.IGNORECASE):
+        sentence = re.split(r"[.;]", text[match.end() : match.end() + 260], maxsplit=1)[0]
+        dates = list(dict.fromkeys(re.findall(date_pattern, sentence)))
+        if len(dates) > 1:
+            return True
+    return False
 
 
 def _is_complex_intraday_document(text: str) -> bool:
@@ -142,14 +186,29 @@ def _is_complex_intraday_document(text: str) -> bool:
     return has_open and has_resuspend and has_clock
 
 
-def _is_partial_session_or_call_auction_resume(text: str) -> bool:
+def _is_multi_action_document(text: str) -> bool:
+    lowered = text.lower()
     if not _resume_language(text):
         return False
+    explicit_suspend = bool(
+        re.search(
+            r"(?:melakukan|memberlakukan|menetapkan|menghentikan)\s+(?:penghentian sementara|suspensi)"
+            r"|suspensi\s+kembali\b",
+            lowered,
+        )
+    )
+    return explicit_suspend
+
+
+def _is_partial_session_or_call_auction_resume(text: str) -> bool:
     lowered = text.lower()
+    has_action = _resume_language(text) or "penghentian sementara" in lowered or "suspensi" in lowered
+    if not has_action:
+        return False
     if "call auction" in lowered or "periodic call auction" in lowered:
         return True
-    # Session-I resumptions are safe for a daily bar. Later-session resumptions
-    # make that date only partially tradable and are deliberately not flattened.
+    # Session-I events are safe for a daily bar. Later-session events make that
+    # date only partially tradable and are deliberately not flattened.
     return bool(re.search(r"\bsesi\s+(?:ii|iii|iv|[2-9])\b", lowered))
 
 
@@ -171,6 +230,8 @@ def parse_idx_tradability_announcement(
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "REJECTED", "EMPTY_TEXT")
     if _is_complex_intraday_document(clean):
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "MULTI_ACTION_INTRADAY_DOCUMENT")
+    if _is_multi_action_document(clean):
+        return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "MULTI_ACTION_DOCUMENT")
     if _is_partial_session_or_call_auction_resume(clean):
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "PARTIAL_SESSION_OR_CALL_AUCTION_RESUME")
 
@@ -184,15 +245,19 @@ def parse_idx_tradability_announcement(
     lowered = clean.lower()
     if _resume_language(clean):
         action = TradabilityAction.RESUME
-        effective = _resume_date(clean)
+        if _has_ambiguous_effective_date_wording(clean, action):
+            return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "AMBIGUOUS_EFFECTIVE_DATE")
+        effective, date_diagnostic = _resolve_effective_date(clean, _resume_date_patterns())
     elif "penghentian sementara" in lowered or "suspensi" in lowered:
         action = TradabilityAction.SUSPEND
-        effective = _suspend_date(clean)
+        if _has_ambiguous_effective_date_wording(clean, action):
+            return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "AMBIGUOUS_EFFECTIVE_DATE")
+        effective, date_diagnostic = _resolve_effective_date(clean, _suspend_date_patterns())
     else:
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "REJECTED", "TRADABILITY_ACTION_NOT_FOUND")
 
     if effective is None:
-        return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "EFFECTIVE_DATE_NOT_FOUND")
+        return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", date_diagnostic or "EFFECTIVE_DATE_NOT_FOUND")
 
     announced = pd.to_datetime(announced_at, errors="coerce") if announced_at is not None else pd.NaT
     digest = hashlib.sha256(clean.encode("utf-8")).hexdigest()
@@ -342,12 +407,20 @@ def compile_suspension_intervals(
             effective = pd.Timestamp(row["effective_date"]).normalize()
             if action is TradabilityAction.SUSPEND:
                 if open_suspend is not None:
+                    open_date = pd.Timestamp(open_suspend["effective_date"]).normalize()
+                    duplicate = effective == open_date
                     diagnostics.append(
                         {
                             "ticker": ticker,
                             "market": market,
                             "effective_date": effective,
-                            "status": "REDUNDANT_SUSPEND",
+                            "status": "DUPLICATE_SUSPEND" if duplicate else "REDUNDANT_SUSPEND",
+                            "diagnostic": (
+                                "DUPLICATE_SUSPEND_SEQUENCE"
+                                if duplicate
+                                else "REDUNDANT_SUSPEND_SEQUENCE"
+                            ),
+                            "inferred_state": "UNKNOWN",
                             "source_ref": row.get("source_ref", ""),
                         }
                     )
@@ -362,6 +435,8 @@ def compile_suspension_intervals(
                         "market": market,
                         "effective_date": effective,
                         "status": "UNMATCHED_RESUME",
+                        "diagnostic": "UNMATCHED_RESUME_NO_INITIAL_ACTIVE",
+                        "inferred_state": "UNKNOWN",
                         "source_ref": row.get("source_ref", ""),
                     }
                 )
@@ -375,6 +450,8 @@ def compile_suspension_intervals(
                         "market": market,
                         "effective_date": effective,
                         "status": "INVALID_RESUME_ORDER",
+                        "diagnostic": "INVALID_RESUME_ORDER_NO_INITIAL_ACTIVE",
+                        "inferred_state": "UNKNOWN",
                         "source_ref": row.get("source_ref", ""),
                     }
                 )

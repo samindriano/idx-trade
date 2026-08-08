@@ -34,6 +34,9 @@ def _complete_window():
                 "effective_to": ["2025-12-31"],
                 "source": ["IDX_RECONSTRUCTION"],
                 "is_complete": [True],
+                "discovery_basis": ["IDX_PUBLIC_DISCOVERY_AUDIT"],
+                "left_boundary_basis": ["IDX_INITIAL_ACTIVE_SNAPSHOT"],
+                "initial_state": ["ACTIVE"],
             }
         )
     )
@@ -97,6 +100,24 @@ def test_coverage_does_not_pass_merely_because_many_rows_exist():
     assert report.missing_expected_sessions == 40
     assert report.coverage_ratio == 0.60
     assert report.complete is False
+
+
+def test_complete_claim_without_left_boundary_basis_stays_unknown():
+    master = _master()
+    intervals = canonicalize_tradability_intervals(pd.DataFrame())
+    claimed = canonicalize_coverage_windows(
+        pd.DataFrame(
+            {
+                "market": ["REGULAR"],
+                "effective_from": ["2025-01-01"],
+                "effective_to": ["2025-12-31"],
+                "source": ["UNSUPPORTED_CLAIM"],
+                "is_complete": [True],
+            }
+        )
+    )
+    assert bool(claimed.loc[0, "is_complete"]) is False
+    assert tradability_state(intervals, claimed, "TEST", pd.Timestamp("2025-01-03")) is TradabilityState.UNKNOWN
 
 
 def test_suspended_sessions_are_not_expected_as_price_rows():

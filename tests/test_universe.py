@@ -34,6 +34,9 @@ def _coverage():
                 "effective_to": ["2026-12-31"],
                 "source": ["TEST_COMPLETE"],
                 "is_complete": [True],
+                "discovery_basis": ["TEST_PUBLIC_DISCOVERY_AUDIT"],
+                "left_boundary_basis": ["TEST_INITIAL_ACTIVE_SNAPSHOT"],
+                "initial_state": ["ACTIVE"],
             }
         )
     )

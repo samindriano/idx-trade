@@ -73,10 +73,13 @@ def test_snapshot_exposes_false_active_complement_inside_claimed_complete_window
                 {
                     "market": "REGULAR",
                     "effective_from": "2025-01-01",
-                    "effective_to": "2025-12-31",
-                    "source": "CLAIMED_COMPLETE",
-                    "is_complete": True,
-                }
+                        "effective_to": "2025-12-31",
+                        "source": "CLAIMED_COMPLETE",
+                        "is_complete": True,
+                        "discovery_basis": "TEST_PUBLIC_DISCOVERY_AUDIT",
+                        "left_boundary_basis": "TEST_INITIAL_ACTIVE_SNAPSHOT",
+                        "initial_state": "ACTIVE",
+                    }
             ]
         )
     )

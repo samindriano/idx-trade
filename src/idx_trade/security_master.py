@@ -14,7 +14,8 @@ TRADABILITY_COLUMNS = (
     "ticker", "market", "state", "effective_from", "effective_to", "announced_at", "source", "source_ref"
 )
 COVERAGE_WINDOW_COLUMNS = (
-    "market", "effective_from", "effective_to", "source", "is_complete"
+    "market", "effective_from", "effective_to", "source", "is_complete",
+    "discovery_basis", "left_boundary_basis", "initial_state",
 )
 SUPPORTED_MARKETS = {"REGULAR", "CASH", "NEGOTIATED", "ALL"}
 
@@ -128,7 +129,13 @@ def canonicalize_tradability_intervals(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def canonicalize_coverage_windows(frame: pd.DataFrame) -> pd.DataFrame:
-    """Periods for which suspension/tradability reconstruction is known complete."""
+    """Periods for which suspension/tradability reconstruction is known complete.
+
+    A complete window must carry both an auditable discovery basis and an
+    explicit left-boundary initial state. Without those fields, absence of a
+    suspension record remains UNKNOWN rather than becoming an invented ACTIVE
+    complement.
+    """
 
     if frame.empty:
         return pd.DataFrame(columns=COVERAGE_WINDOW_COLUMNS)
@@ -142,6 +149,19 @@ def canonicalize_coverage_windows(frame: pd.DataFrame) -> pd.DataFrame:
         data["effective_to"] = pd.NaT
     data["effective_to"] = pd.to_datetime(data["effective_to"], errors="coerce").dt.normalize()
     data["is_complete"] = data["is_complete"].astype(bool)
+    for column in ("discovery_basis", "left_boundary_basis", "initial_state"):
+        if column not in data.columns:
+            data[column] = ""
+        data[column] = data[column].fillna("").astype(str).str.strip()
+
+    complete_without_basis = data["is_complete"] & (
+        data["discovery_basis"].eq("")
+        | data["left_boundary_basis"].eq("")
+        | ~data["initial_state"].eq("ACTIVE")
+    )
+    # Preserve the row for auditability but fail closed when a caller claims a
+    # complete window without the evidence needed to infer ACTIVE.
+    data.loc[complete_without_basis, "is_complete"] = False
     return data.dropna(subset=["market", "effective_from", "source"])[list(COVERAGE_WINDOW_COLUMNS)].sort_values(["market", "effective_from"]).reset_index(drop=True)
 
 

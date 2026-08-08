@@ -46,21 +46,25 @@ def _coverage():
                 "effective_to": ["2025-12-31"],
                 "source": ["TEST_COMPLETE"],
                 "is_complete": [True],
+                "discovery_basis": ["TEST_PUBLIC_DISCOVERY_AUDIT"],
+                "left_boundary_basis": ["TEST_INITIAL_ACTIVE_SNAPSHOT"],
+                "initial_state": ["ACTIVE"],
             }
         )
     )
 
 
-def test_model_is_blocked_when_corporate_actions_are_unverified():
+def test_model_is_blocked_when_split_history_is_unverified():
     sessions = pd.bdate_range("2025-01-01", periods=20)
     report = evaluate_data_gate(
         ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
         canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
-        corporate_action_verified={"TEST": False},
+        split_history_verified={"TEST": False},
         price_semantics_verified={"TEST": True},
     )
     assert not report["passed"]
-    assert report["ticker_gates"][0]["blockers"] == ("CORPORATE_ACTIONS_UNVERIFIED",)
+    assert report["ticker_gates"][0]["blockers"] == ("SPLIT_HISTORY_UNVERIFIED",)
+    assert report["ticker_gates"][0]["split_history_verified"] is False
     with pytest.raises(RuntimeError, match="DATA GATE failed"):
         assert_data_gate(report)
 
@@ -70,7 +74,7 @@ def test_model_is_blocked_when_price_semantics_flag_is_missing():
     report = evaluate_data_gate(
         ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
         canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
-        corporate_action_verified={"TEST": True},
+        split_history_verified={"TEST": True},
     )
     assert not report["passed"]
     assert report["ticker_gates"][0]["blockers"] == ("PRICE_SEMANTICS_UNVERIFIED",)
@@ -81,8 +85,49 @@ def test_complete_verified_ticker_passes_data_gate():
     report = evaluate_data_gate(
         ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
         canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
-        corporate_action_verified={"TEST": True},
+        split_history_verified={"TEST": True},
         price_semantics_verified={"TEST": True},
     )
     assert report["passed"]
     assert_data_gate(report)
+
+
+def test_dividend_verification_is_informational_only_for_v1_price_gate():
+    sessions = pd.bdate_range("2025-01-01", periods=20)
+    report = evaluate_data_gate(
+        ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
+        canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
+        split_history_verified={"TEST": True},
+        dividend_history_verified={"TEST": False},
+        price_semantics_verified={"TEST": True},
+    )
+    assert report["passed"] is True
+    assert report["ticker_gates"][0]["dividend_history_verified"] is False
+    assert all("DIVIDEND" not in blocker for blocker in report["ticker_gates"][0]["blockers"])
+
+
+def test_zero_expected_active_sessions_do_not_require_price_rows_or_price_flags():
+    sessions = pd.bdate_range("2025-01-01", periods=20)
+    intervals = canonicalize_tradability_intervals(
+        pd.DataFrame(
+            {
+                "ticker": ["TEST"],
+                "market": ["REGULAR"],
+                "state": ["SUSPENDED"],
+                "effective_from": ["2025-01-01"],
+                "effective_to": ["2025-01-31"],
+                "source": ["TEST"],
+            }
+        )
+    )
+    report = evaluate_data_gate(
+        ["TEST"], sessions, {"TEST": pd.DataFrame()}, _master(), intervals, _coverage(),
+        split_history_verified={"TEST": False},
+        price_semantics_verified={"TEST": False},
+    )
+    ticker = report["ticker_gates"][0]
+    assert report["passed"] is True
+    assert ticker["expected_active_sessions"] == 0
+    assert ticker["price_requirements_applicable"] is False
+    assert ticker["session_coverage_complete"] is True
+    assert ticker["blockers"] == ()

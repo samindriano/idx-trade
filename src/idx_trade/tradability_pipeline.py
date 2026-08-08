@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
 from uuid import uuid4
 
 import pandas as pd
@@ -12,11 +12,65 @@ from .providers.idx_tradability import (
     fetch_pdf_text,
     ingest_announcement_manifest,
 )
+from .security_master import normalise_market
+
+
+def _window_date(value: object) -> pd.Timestamp | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return pd.Timestamp(parsed).normalize()
+
+
+def _public_window_from_evidence(
+    evidence: Mapping[str, object] | None,
+) -> tuple[dict[str, object] | None, str]:
+    """Return one exact public window only when its boundary evidence is explicit."""
+
+    if evidence is None:
+        return None, "PUBLIC_WINDOW_NOT_PROVEN_DISCOVERY_OR_LEFT_BOUNDARY"
+    if evidence.get("discovery_complete") is not True:
+        return None, "PUBLIC_DISCOVERY_COMPLETENESS_UNCONFIRMED"
+
+    required_text = ("source", "discovery_basis", "left_boundary_basis")
+    if any(not str(evidence.get(key, "")).strip() for key in required_text):
+        return None, "PUBLIC_WINDOW_MISSING_DISCOVERY_OR_LEFT_BOUNDARY_BASIS"
+
+    effective_from = _window_date(evidence.get("effective_from"))
+    effective_to = _window_date(evidence.get("effective_to"))
+    if effective_from is None or effective_to is None:
+        return None, "PUBLIC_WINDOW_REQUIRES_EXPLICIT_BOTH_BOUNDARIES"
+    if effective_to < effective_from:
+        return None, "PUBLIC_WINDOW_BOUNDARIES_INVALID"
+
+    initial_state = str(evidence.get("initial_state", "")).strip().upper()
+    if initial_state != "ACTIVE":
+        return None, "PUBLIC_WINDOW_INITIAL_STATE_NOT_EXPLICIT_ACTIVE"
+
+    try:
+        market = normalise_market(evidence.get("market", "REGULAR"))
+    except ValueError:
+        return None, "PUBLIC_WINDOW_MARKET_INVALID"
+
+    return {
+        "market": market,
+        "effective_from": effective_from.date().isoformat(),
+        "effective_to": effective_to.date().isoformat(),
+        "source": str(evidence["source"]).strip(),
+        "is_complete": True,
+        "discovery_basis": str(evidence["discovery_basis"]).strip(),
+        "left_boundary_basis": str(evidence["left_boundary_basis"]).strip(),
+        "initial_state": initial_state,
+    }, "OK"
 
 
 def ingestion_integrity_report(
     parse_diagnostics: pd.DataFrame,
     compile_diagnostics: pd.DataFrame,
+    *,
+    coverage_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Audit parser/compiler integrity without claiming source completeness.
 
@@ -35,16 +89,33 @@ def ingestion_integrity_report(
 
     compile_issue_count = int(len(compile_diagnostics))
     passed = bool(len(parse_diagnostics)) and unresolved_parse.empty and compile_issue_count == 0
+    if compile_diagnostics.empty or "status" not in compile_diagnostics.columns:
+        compile_status_counts: dict[str, int] = {}
+    else:
+        compile_statuses = compile_diagnostics["status"].astype(str)
+        compile_status_counts = {
+            str(key): int(value) for key, value in compile_statuses.value_counts().items()
+        }
+
+    candidate_window, window_diagnostic = _public_window_from_evidence(coverage_evidence)
+    coverage_complete = bool(passed and candidate_window is not None)
+    if not passed:
+        window_diagnostic = "INGESTION_INTEGRITY_FAILED"
+
     return {
         "passed": passed,
         "manifest_rows": int(len(parse_diagnostics)),
         "parse_status_counts": status_counts,
         "unresolved_parse_rows": int(len(unresolved_parse)),
         "compile_issue_rows": compile_issue_count,
-        "coverage_complete": False,
+        "compile_status_counts": compile_status_counts,
+        "coverage_complete": coverage_complete,
+        "coverage_window": candidate_window if coverage_complete else None,
+        "coverage_diagnostic": window_diagnostic,
         "coverage_note": (
-            "Ingestion integrity never implies historical discovery completeness. "
-            "Create a complete tradability coverage window only after source-discovery audit."
+            "Ingestion integrity does not imply historical discovery completeness. "
+            "A complete window requires public-source discovery evidence and an explicit "
+            "left-boundary initial-state basis."
         ),
     }
 
@@ -68,6 +139,7 @@ def run_tradability_ingestion(
     output_dir: str | Path,
     *,
     fetcher: Callable[[str], tuple[str, str]] = fetch_pdf_text,
+    coverage_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Ingest an auditable IDX announcement manifest and persist raw outcomes.
 
@@ -81,7 +153,11 @@ def run_tradability_ingestion(
     manifest = pd.read_csv(manifest_path)
     events, parse_diagnostics = ingest_announcement_manifest(manifest, fetcher=fetcher)
     intervals, compile_diagnostics = compile_suspension_intervals(events)
-    report = ingestion_integrity_report(parse_diagnostics, compile_diagnostics)
+    report = ingestion_integrity_report(
+        parse_diagnostics,
+        compile_diagnostics,
+        coverage_evidence=coverage_evidence,
+    )
     report.update(
         {
             "manifest_path": str(manifest_path),
