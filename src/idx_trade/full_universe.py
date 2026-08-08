@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pandas as pd
 
+from .data import price_semantics_flags
 from .data_gate import evaluate_data_gate
 from .security_master import normalise_ticker
 from .storage import write_csv_atomic
@@ -149,6 +150,9 @@ def run_full_universe_data_gate(
     applied to all securities discoverable from official listing identity and
     official tradability evidence. No model-universe liquidity filter is
     applied here: this is a market-data certification step, not alpha research.
+
+    When explicit price-semantics flags are omitted, canonical raw provider
+    frames are verified structurally and deterministically for every candidate.
     """
 
     sessions = _canonical_sessions(exchange_sessions)
@@ -161,6 +165,11 @@ def run_full_universe_data_gate(
     if not required:
         raise ValueError("No securities are discoverable in the evaluated window")
 
+    semantics = (
+        price_semantics_verified
+        if price_semantics_verified is not None
+        else price_semantics_flags(price_frames, required)
+    )
     report = evaluate_data_gate(
         required,
         sessions,
@@ -171,7 +180,7 @@ def run_full_universe_data_gate(
         tradability_anchors=tradability_anchors,
         split_history_verified=split_history_verified,
         dividend_history_verified=dividend_history_verified,
-        price_semantics_verified=price_semantics_verified,
+        price_semantics_verified=semantics,
     )
 
     ticker_gates = pd.DataFrame(report["ticker_gates"])
@@ -196,6 +205,8 @@ def run_full_universe_data_gate(
             if not ticker_gates.empty
             else 0
         ),
+        "auto_price_semantics": price_semantics_verified is None,
+        "price_semantics_verified_tickers": int(sum(bool(value) for value in semantics.values())),
         "unknown_sessions": (
             int(session_reports["unknown_tradability_sessions"].sum())
             if not session_reports.empty
