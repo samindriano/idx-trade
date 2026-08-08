@@ -48,6 +48,56 @@ def test_backfill_persists_new_history_and_reports_range(tmp_path):
     assert report.loc[0, "first_date"] == "2025-01-01"
 
 
+def test_backfill_batches_large_symbol_set(tmp_path):
+    dates = pd.bdate_range("2025-01-01", periods=2)
+    calls = []
+
+    def downloader(tickers, start, end):
+        calls.append(list(tickers))
+        return {ticker: _frame(dates) for ticker in tickers}
+
+    summary = run_price_backfill(
+        ["DDDD", "AAAA", "CCCC", "BBBB", "EEEE"],
+        "2025-01-01",
+        "2025-01-10",
+        tmp_path / "raw",
+        tmp_path / "reports",
+        downloader=downloader,
+        batch_size=2,
+    )
+    assert calls == [["AAAA", "BBBB"], ["CCCC", "DDDD"], ["EEEE"]]
+    assert summary["batches_requested"] == 3
+    assert summary["updated"] == 5
+    assert summary["download_errors"] == 0
+    assert summary["complete"] is True
+
+
+def test_failed_download_batch_is_reported_per_ticker(tmp_path):
+    dates = pd.bdate_range("2025-01-01", periods=2)
+
+    def downloader(tickers, start, end):
+        if tickers == ["CCCC", "DDDD"]:
+            raise RuntimeError("provider timeout")
+        return {ticker: _frame(dates) for ticker in tickers}
+
+    summary = run_price_backfill(
+        ["AAAA", "BBBB", "CCCC", "DDDD"],
+        "2025-01-01",
+        "2025-01-10",
+        tmp_path / "raw",
+        tmp_path / "reports",
+        downloader=downloader,
+        batch_size=2,
+    )
+    assert summary["updated"] == 2
+    assert summary["download_errors"] == 2
+    assert summary["complete"] is False
+    report = pd.read_csv(tmp_path / "reports" / "price_backfill_report.csv")
+    failed = report[report["status"].eq("DOWNLOAD_ERROR")]
+    assert set(failed["ticker"]) == {"CCCC", "DDDD"}
+    assert failed["error"].str.contains("provider timeout").all()
+
+
 def test_exchange_window_backfill_includes_final_official_session(tmp_path):
     sessions = pd.to_datetime(["2025-01-02", "2025-01-03", "2025-01-06"])
 
