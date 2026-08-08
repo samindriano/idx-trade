@@ -64,7 +64,7 @@ def _anchors():
             {
                 "ticker": ["TEST"],
                 "market": ["REGULAR"],
-                "as_of_date": ["2025-01-02"],
+                "as_of_date": ["2025-01-01"],
                 "state": ["ACTIVE"],
                 "source": ["IDX_TEST_STATUS"],
                 "source_ref": ["idx://test-active"],
