@@ -99,10 +99,19 @@ def _markets(text: str) -> list[str]:
     return []
 
 
+def _resume_language(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        phrase in lowered
+        for phrase in ("dibuka kembali", "unsuspensi", "pencabutan suspensi", "mencabut suspensi")
+    )
+
+
 def _resume_date(text: str) -> pd.Timestamp | None:
     patterns = [
         r"(?i)dibuka kembali.{0,180}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
         r"(?i)unsuspensi.{0,180}?tanggal\s+(\d{1,2}\s+[a-z]+\s+\d{4})",
+        r"(?i)(?:pencabutan|mencabut) suspensi.{0,220}?(\d{1,2}\s+[a-z]+\s+\d{4})",
     ]
     for pattern in patterns:
         match = re.search(pattern, text)
@@ -133,6 +142,17 @@ def _is_complex_intraday_document(text: str) -> bool:
     return has_open and has_resuspend and has_clock
 
 
+def _is_partial_session_or_call_auction_resume(text: str) -> bool:
+    if not _resume_language(text):
+        return False
+    lowered = text.lower()
+    if "call auction" in lowered or "periodic call auction" in lowered:
+        return True
+    # Session-I resumptions are safe for a daily bar. Later-session resumptions
+    # make that date only partially tradable and are deliberately not flattened.
+    return bool(re.search(r"\bsesi\s+(?:ii|iii|iv|[2-9])\b", lowered))
+
+
 def parse_idx_tradability_announcement(
     text: str,
     *,
@@ -142,8 +162,8 @@ def parse_idx_tradability_announcement(
     """Parse a text-extractable IDX suspension/unsuspension announcement.
 
     This parser is deliberately conservative. Documents containing multiple
-    intraday state changes are rejected for manual review rather than flattened
-    into a false daily state.
+    intraday state changes or later-session/call-auction resumptions are rejected
+    for manual review rather than flattened into a false daily state.
     """
 
     clean = _normalise_text(text)
@@ -151,6 +171,8 @@ def parse_idx_tradability_announcement(
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "REJECTED", "EMPTY_TEXT")
     if _is_complex_intraday_document(clean):
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "MULTI_ACTION_INTRADAY_DOCUMENT")
+    if _is_partial_session_or_call_auction_resume(clean):
+        return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "PARTIAL_SESSION_OR_CALL_AUCTION_RESUME")
 
     tickers = _tickers(clean)
     markets = _markets(clean)
@@ -160,8 +182,7 @@ def parse_idx_tradability_announcement(
         return ParseResult(pd.DataFrame(columns=EVENT_COLUMNS), "MANUAL_REVIEW", "MARKET_SCOPE_NOT_FOUND")
 
     lowered = clean.lower()
-    resume_language = "dibuka kembali" in lowered or "unsuspensi" in lowered
-    if resume_language:
+    if _resume_language(clean):
         action = TradabilityAction.RESUME
         effective = _resume_date(clean)
     elif "penghentian sementara" in lowered or "suspensi" in lowered:
