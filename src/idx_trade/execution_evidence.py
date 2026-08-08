@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .security_master import canonicalize_tradability_anchors
+from .security_master import (
+    TRADABILITY_ANCHOR_COLUMNS,
+    canonicalize_tradability_anchors,
+)
 
 
 EXECUTION_DIAGNOSTIC_COLUMNS = (
@@ -22,14 +25,9 @@ def stock_summary_execution_anchors(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Convert official IDX Stock Summary rows into direct execution-state anchors.
 
-    Positive Regular-Market volume and frequency prove that the security traded
-    on that session, so the point state is ACTIVE. Exactly zero Regular-Market
-    volume and frequency prove that no Regular-Market transaction occurred, so
-    the point state is NO_TRADE. NO_TRADE is an execution observation, not a
-    claim that the security was legally suspended.
-
-    Missing, negative, or internally inconsistent metrics remain unresolved.
-    Row absence is not interpreted here and therefore remains UNKNOWN upstream.
+    Positive Regular-Market volume and frequency prove ACTIVE trading on that
+    session. Exactly zero Regular-Market volume and frequency prove NO_TRADE.
+    NO_TRADE is an execution observation, not a legal suspension claim.
     """
 
     required = {
@@ -103,13 +101,12 @@ def stock_summary_execution_anchors(
             )
             continue
 
-        state = "ACTIVE" if regular_volume > 0 else "NO_TRADE"
         anchors.append(
             {
                 "ticker": row.ticker,
                 "market": market,
                 "as_of_date": row.as_of_date,
-                "state": state,
+                "state": "ACTIVE" if regular_volume > 0 else "NO_TRADE",
                 "source": row.source,
                 "source_ref": row.source_ref,
                 "evidence_type": "IDX_STOCK_SUMMARY_REGULAR_EXECUTION_OBSERVATION",
@@ -122,3 +119,41 @@ def stock_summary_execution_anchors(
         columns=EXECUTION_DIAGNOSTIC_COLUMNS,
     )
     return anchor_frame, diagnostic_frame
+
+
+def merge_tradability_point_evidence(*frames: pd.DataFrame) -> pd.DataFrame:
+    """Merge point evidence while preserving more-specific legal non-trading states.
+
+    NO_TRADE is compatible with SUSPENDED/FCA_WATCHLIST because it only states
+    that no Regular-Market transaction occurred. SUSPENDED or FCA_WATCHLIST is
+    therefore kept as the more specific state. ACTIVE versus any non-trading
+    state is a hard conflict.
+    """
+
+    canonical = [canonicalize_tradability_anchors(frame) for frame in frames if not frame.empty]
+    if not canonical:
+        return canonicalize_tradability_anchors(pd.DataFrame())
+
+    data = pd.concat(canonical, ignore_index=True)
+    resolved: list[pd.Series] = []
+    keys = ["ticker", "market", "as_of_date"]
+    for _, group in data.groupby(keys, sort=False):
+        states = set(group["state"])
+        if len(states) == 1:
+            resolved.append(group.iloc[-1])
+            continue
+        if states <= {"NO_TRADE", "SUSPENDED"}:
+            resolved.append(group[group["state"].eq("SUSPENDED")].iloc[-1])
+            continue
+        if states <= {"NO_TRADE", "FCA_WATCHLIST"}:
+            resolved.append(group[group["state"].eq("FCA_WATCHLIST")].iloc[-1])
+            continue
+        raise ValueError(
+            "Conflicting tradability point evidence for "
+            f"{group.iloc[0]['ticker']}/{group.iloc[0]['market']} "
+            f"on {pd.Timestamp(group.iloc[0]['as_of_date']).date()}: {sorted(states)}"
+        )
+
+    return canonicalize_tradability_anchors(
+        pd.DataFrame(resolved, columns=TRADABILITY_ANCHOR_COLUMNS)
+    )
