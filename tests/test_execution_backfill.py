@@ -41,8 +41,38 @@ def test_execution_backfill_writes_active_and_no_trade_evidence(tmp_path):
     assert summary["anchor_rows"] == 4
     assert summary["active_anchor_rows"] == 2
     assert summary["no_trade_anchor_rows"] == 2
+    assert summary["fetched_sessions"] == 2
+    assert summary["cached_sessions"] == 0
     anchors = pd.read_csv(tmp_path / "idx_execution_anchors.csv")
     assert set(anchors["state"]) == {"ACTIVE", "NO_TRADE"}
+
+
+def test_execution_backfill_reuses_cached_snapshot_without_network(tmp_path):
+    sessions = pd.to_datetime(["2025-01-02", "2025-01-03"])
+    calls = []
+
+    def fetcher(day):
+        calls.append(day)
+        return _frame(day), _Meta(f"idx://{day.date()}")
+
+    first = backfill_stock_summary_execution_evidence(
+        pd.DatetimeIndex(sessions), tmp_path, fetcher=fetcher
+    )
+    assert first["fetched_sessions"] == 2
+    assert len(calls) == 2
+
+    def must_not_fetch(day):
+        raise AssertionError(f"cache miss for {day}")
+
+    second = backfill_stock_summary_execution_evidence(
+        pd.DatetimeIndex(sessions), tmp_path, fetcher=must_not_fetch
+    )
+    assert second["session_source_complete"] is True
+    assert second["cached_sessions"] == 2
+    assert second["fetched_sessions"] == 0
+    assert second["anchor_rows"] == 4
+    report = pd.read_csv(tmp_path / "idx_execution_session_report.csv")
+    assert set(report["retrieval"]) == {"CACHE"}
 
 
 def test_execution_backfill_records_failed_session_without_filling_it(tmp_path):
