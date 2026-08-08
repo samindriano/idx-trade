@@ -1,12 +1,21 @@
 import pandas as pd
 
-from idx_trade.history_ladder import run_history_certification_ladder
+from idx_trade.history_ladder import (
+    DEFAULT_SESSION_HORIZONS,
+    DIAGNOSTIC_SESSION_HORIZONS,
+    run_history_certification_ladder,
+)
 from idx_trade.security_master import (
     build_security_master,
     canonicalize_coverage_windows,
     canonicalize_tradability_anchors,
     canonicalize_tradability_intervals,
 )
+
+
+def test_default_history_strategy_uses_large_primary_jumps():
+    assert DEFAULT_SESSION_HORIZONS == (43, 126, 504, 1260)
+    assert DIAGNOSTIC_SESSION_HORIZONS == (252, 756)
 
 
 def test_history_ladder_finds_longest_passing_trailing_window(tmp_path):
