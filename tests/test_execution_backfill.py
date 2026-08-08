@@ -18,10 +18,10 @@ def _frame(date: pd.Timestamp) -> pd.DataFrame:
         {
             "ticker": ["AAAA", "BBBB"],
             "as_of_date": [date, date],
-            "volume": [1000, 200],
-            "frequency": [10, 2],
-            "nonregular_volume": [0, 200],
-            "nonregular_frequency": [0, 2],
+            "volume": [1000, 0],
+            "frequency": [10, 0],
+            "nonregular_volume": [2000, 200],
+            "nonregular_frequency": [20, 2],
             "source": ["IDX_PUBLIC_STOCK_SUMMARY"] * 2,
             "source_ref": [f"idx://{date.date()}"] * 2,
         }
