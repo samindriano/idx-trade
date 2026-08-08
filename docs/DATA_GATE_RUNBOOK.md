@@ -16,13 +16,13 @@ Required outputs:
 
 Coverage must be measured against official IDX Exchange Days, not against the dates returned by the price provider under audit.
 
-Use the IDX Digital Statistics daily-trading tables as the primary free session-calendar evidence. The session backfill writes:
+Use the IDX Digital Statistics daily-trading tables as the primary free session-calendar evidence. If a monthly Digital Statistics response is empty or incomplete, cross-check and fall back to the official IDX Daily Statistics publication listing. Never use Yahoo or JCI dates as Exchange-Day truth. The session backfill writes:
 
 - `exchange_sessions.csv`;
 - `exchange_session_sources.csv`;
 - `exchange_session_summary.json` including a canonical session-list hash.
 
-A month that cannot be parsed keeps the calendar incomplete. Do not silently replace missing official calendar months with Yahoo/JCI dates.
+A month that cannot be parsed keeps the calendar incomplete. Record the source identity and fallback reason for every month; do not silently replace missing official calendar months with Yahoo/JCI dates.
 
 ## 3. Build Regular-Market tradability history
 
@@ -66,7 +66,7 @@ Do **not** infer completeness from:
 
 Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed intervals. A mismatch is a blocker.
 
-Outside a declared-complete coverage window, missing suspension records resolve to `UNKNOWN`, not `ACTIVE`.
+Outside a declared-complete coverage window, missing suspension records resolve to `UNKNOWN`, not `ACTIVE`. A rolling three-year public listing is only a source reach limit; it is not evidence of completeness. The left boundary needs an explicit discovery basis and an initial `ACTIVE` state, otherwise no clean historical window may be claimed.
 
 ## 5. Collect raw EOD price history
 
@@ -83,12 +83,19 @@ Rules:
 
 ## 6. Verify corporate actions and price semantics
 
+The official IDX Corporate Actions source is authoritative for the technical actions in V1. The provider must retain source references and focus on:
+
+- `Stock Split`;
+- `Reverse Stock`.
+
+Yahoo split events may be cross-checked for diagnostics only; they never override IDX. The official IDX action table's action amount and total-after-action fields must be interpreted directionally before deriving a ratio.
+
 Every required ticker needs explicit evidence flags for:
 
-- corporate-action history verified;
+- `split_history_verified`;
 - raw execution-price semantics verified.
 
-Both flags fail closed. An absent verification flag is a blocker.
+Both flags fail closed only when active/executable observations are actually expected in the evaluated window. A ticker with zero expected active sessions must not fail solely because Yahoo returned no price rows. Dividend history is informational for V1 and must not block this gate; do not create dividend-adjusted technical OHLC. Raw OHLC and vendor-adjusted fields remain separate.
 
 Split-adjusted technical prices may be introduced only after explicit split-event history is verified.
 

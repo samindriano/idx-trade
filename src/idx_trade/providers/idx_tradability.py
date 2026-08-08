@@ -103,7 +103,14 @@ def _resume_language(text: str) -> bool:
     lowered = text.lower()
     return any(
         phrase in lowered
-        for phrase in ("dibuka kembali", "unsuspensi", "pencabutan suspensi", "mencabut suspensi")
+        for phrase in (
+            "dibuka kembali",
+            "unsuspensi",
+            "pencabutan suspensi",
+            "pencabutan penghentian sementara",
+            "mencabut suspensi",
+            "mencabut penghentian sementara",
+        )
     )
 
 
@@ -119,9 +126,9 @@ _DATE_CAPTURE = r"(\d{1,2}\s+[a-z]+\s+\d{4})"
 
 
 def _resume_date_patterns() -> tuple[str, ...]:
-    action = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|mencabut suspensi)"
+    action = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|pencabutan penghentian sementara|mencabut suspensi|mencabut penghentian sementara)"
     return (
-        rf"(?i){action}.{{0,220}}?(?:terhitung\s+sejak|mulai(?:\s+perdagangan)?|pada|tanggal)\s+(?:sesi\s+(?:i|1)\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i){action}.{{0,220}}?(?:terhitung\s+sejak|mulai(?:\s+perdagangan)?|pada|tanggal)\s+(?:sesi\s+(?:i|1|pra[- ]pembukaan)\s+)?(?:perdagangan\s+)?(?:efek\s+)?(?:pada\s+)?(?:hari\s+[a-z]+,?\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
         rf"(?i){action}.{{0,220}}?tanggal\s+{_DATE_CAPTURE}",
         rf"(?i){action}.{{0,220}}?{_DATE_CAPTURE}",
     )
@@ -129,7 +136,9 @@ def _resume_date_patterns() -> tuple[str, ...]:
 
 def _suspend_date_patterns() -> tuple[str, ...]:
     return (
-        rf"(?i)(?:mulai|terhitung\s+sejak|berlaku\s+sejak)\s+(?:perdagangan\s+)?(?:sesi\s+(?:i|1)\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i)mulai\s+(?:sesi\s+(?:i|1)\s+)?(?:perdagangan\s+)?(?:efek\s+)?(?:hari\s+[a-z]+,?\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i)(?:terhitung\s+sejak|berlaku\s+sejak)\s+(?:sesi\s+(?:i|1)\s+)?(?:perdagangan\s+)?(?:efek\s+)?(?:hari\s+[a-z]+,?\s+)?(?:tanggal\s+)?{_DATE_CAPTURE}",
+        rf"(?i)(?:pada|mulai)\s+perdagangan\s+tanggal\s+{_DATE_CAPTURE}",
         rf"(?i)perdagangan.{{0,100}}?pada tanggal\s+{_DATE_CAPTURE}",
         rf"(?i)pada tanggal\s+{_DATE_CAPTURE}",
     )
@@ -166,7 +175,7 @@ def _resolve_effective_date(
 
 def _has_ambiguous_effective_date_wording(text: str, action: TradabilityAction) -> bool:
     if action is TradabilityAction.RESUME:
-        markers = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|mencabut suspensi)"
+        markers = r"(?:dibuka kembali|unsuspensi|pencabutan suspensi|pencabutan penghentian sementara|mencabut suspensi|mencabut penghentian sementara)"
     else:
         markers = r"(?:penghentian sementara|suspensi)"
     date_pattern = r"(?i)\b\d{1,2}\s+[a-z]+\s+\d{4}\b"
@@ -202,7 +211,11 @@ def _is_multi_action_document(text: str) -> bool:
 
 def _is_partial_session_or_call_auction_resume(text: str) -> bool:
     lowered = text.lower()
-    has_action = _resume_language(text) or "penghentian sementara" in lowered or "suspensi" in lowered
+    has_action = (
+        _resume_language(text)
+        or "penghentian sementara" in lowered
+        or "suspensi" in lowered
+    )
     if not has_action:
         return False
     if "call auction" in lowered or "periodic call auction" in lowered:

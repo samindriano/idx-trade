@@ -34,6 +34,38 @@ def test_effective_session_date_wins_over_earlier_announcement_date():
     assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-07-01")]
 
 
+def test_suspend_date_parses_session_one_trade_wording():
+    text = """
+    Bursa melakukan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    mulai sesi I perdagangan tanggal 1 Juli 2025 di Pasar Reguler.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://session-one")
+    assert result.status == "PARSED"
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-07-01")]
+
+
+def test_suspend_date_parses_weekday_and_trade_wording():
+    text = """
+    Bursa memutuskan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    mulai sesi I perdagangan hari Kamis, 11 Juli 2024 di Seluruh Pasar.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://weekday")
+    assert result.status == "PARSED"
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2024-07-11")]
+
+
+def test_resume_date_parses_pencabutan_penghentian_sejak_preopening():
+    text = """
+    Bursa mencabut Penghentian Sementara Perdagangan Efek PT Example Tbk (TEST)
+    di Seluruh Pasar terhitung sejak Sesi Pra-Pembukaan Perdagangan Efek pada hari
+    Selasa, 14 Januari 2025.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://preopening")
+    assert result.status == "PARSED"
+    assert set(result.events["action"]) == {"RESUME"}
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-01-14")]
+
+
 def test_ambiguous_effective_date_wording_requires_manual_review():
     text = """
     Bursa melakukan penghentian sementara perdagangan saham PT Example Tbk (TEST)
