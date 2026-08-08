@@ -304,6 +304,7 @@ def _anchors_for_window(
     ticker: str,
     market: str,
     window: pd.Series,
+    session: pd.Timestamp,
 ) -> pd.DataFrame:
     if anchors.empty:
         return anchors
@@ -319,8 +320,9 @@ def _anchors_for_window(
 
     start = pd.Timestamp(window["effective_from"]).normalize()
     end = pd.Timestamp(window["effective_to"]).normalize()
+    target = pd.Timestamp(session).normalize()
     dates = pd.to_datetime(rows["as_of_date"])
-    return rows[dates.ge(start) & dates.le(end)]
+    return rows[dates.ge(start) & dates.le(end) & dates.le(target)]
 
 
 def _validate_anchor_consistency(
@@ -329,17 +331,15 @@ def _validate_anchor_consistency(
     ticker: str,
     market: str,
 ) -> None:
-    """Ensure anchors agree with explicit intervals before inferring complements."""
+    """Reject direct contradictions; unresolved non-ACTIVE anchors remain unknown."""
 
     for row in anchors.itertuples(index=False):
         anchor_date = pd.Timestamp(row.as_of_date).normalize()
         explicit = _matching_interval_for_ticker(intervals, ticker, anchor_date, market)
-        implied = (
-            TradabilityState(str(explicit.iloc[-1]["state"]))
-            if not explicit.empty
-            else TradabilityState.ACTIVE
-        )
         anchored = TradabilityState(str(row.state))
+        if explicit.empty:
+            continue
+        implied = TradabilityState(str(explicit.iloc[-1]["state"]))
         if anchored is not implied:
             raise ValueError(
                 "Tradability anchor conflicts with reconstructed event state for "
@@ -356,11 +356,12 @@ def tradability_state(
     market: str = "REGULAR",
     anchors: pd.DataFrame | None = None,
 ) -> TradabilityState:
-    """Resolve market-specific state from explicit events + per-security anchors.
+    """Resolve state causally from explicit intervals and prior ticker anchors.
 
-    Explicit market intervals always win. The ACTIVE complement is available
-    only inside a complete event-discovery window and only after authoritative
-    anchor evidence exists for that ticker in the same window.
+    A future anchor can never classify an earlier session. ACTIVE anchors allow
+    the non-suspended complement only forward from their as-of date. SUSPENDED
+    anchors must be represented by a matching compiled/synthetic suspension
+    interval before later state can be inferred.
     """
 
     ticker = normalise_ticker(ticker)
@@ -384,12 +385,41 @@ def tradability_state(
         if missing_anchor_columns:
             raise ValueError(f"Tradability-anchor columns missing: {sorted(missing_anchor_columns)}")
         anchor_frame = anchors
-    applicable_anchors = _anchors_for_window(anchor_frame, ticker, market, window)
-    if applicable_anchors.empty:
+
+    applicable = _anchors_for_window(anchor_frame, ticker, market, window, session)
+    if applicable.empty:
         return TradabilityState.UNKNOWN
 
-    _validate_anchor_consistency(intervals, applicable_anchors, ticker, market)
-    return TradabilityState.ACTIVE
+    _validate_anchor_consistency(intervals, applicable, ticker, market)
+    applicable = applicable.sort_values("as_of_date")
+    latest = applicable.iloc[-1]
+    anchor_date = pd.Timestamp(latest["as_of_date"]).normalize()
+    anchored = TradabilityState(str(latest["state"]))
+
+    if anchored is TradabilityState.ACTIVE:
+        return TradabilityState.ACTIVE
+
+    if anchored is TradabilityState.SUSPENDED:
+        anchor_interval = _matching_interval_for_ticker(
+            intervals, ticker, anchor_date, market
+        )
+        if anchor_interval.empty:
+            return (
+                TradabilityState.SUSPENDED
+                if session == anchor_date
+                else TradabilityState.UNKNOWN
+            )
+        interval = anchor_interval.iloc[-1]
+        end = pd.to_datetime(interval["effective_to"], errors="coerce")
+        if pd.isna(end):
+            return TradabilityState.SUSPENDED
+        if session > pd.Timestamp(end).normalize():
+            return TradabilityState.ACTIVE
+        return TradabilityState.SUSPENDED
+
+    # FCA / NO_TRADE anchors prove the point-in-time state only unless a
+    # dedicated transition history is added later.
+    return anchored if session == anchor_date else TradabilityState.UNKNOWN
 
 
 @dataclass(frozen=True)
