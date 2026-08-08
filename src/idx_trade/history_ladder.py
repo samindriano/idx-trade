@@ -48,6 +48,7 @@ def run_history_certification_ladder(
     split_history_verified: dict[str, bool],
     dividend_history_verified: dict[str, bool] | None = None,
     price_semantics_verified: dict[str, bool] | None = None,
+    security_scope_exclusions: pd.DataFrame | None = None,
     session_horizons: tuple[int, ...] | list[int] = DEFAULT_SESSION_HORIZONS,
     output_dir: str | Path | None = None,
 ) -> dict[str, object]:
@@ -56,6 +57,11 @@ def run_history_certification_ladder(
     Horizons are measured in official IDX exchange sessions and all end on the
     latest supplied session. Each horizon reruns the point-in-time full-universe
     certification; no shorter-window pass is extrapolated backward into history.
+
+    The exact same authoritative security-scope exclusions used by the bounded
+    full-universe certification are forwarded to every horizon. This prevents a
+    known non-common security from re-entering merely because the time window is
+    expanded.
     """
 
     sessions = _canonical_sessions(exchange_sessions)
@@ -75,6 +81,8 @@ def run_history_certification_ladder(
                     "window_end": sessions[-1].date().isoformat(),
                     "status": "INSUFFICIENT_CALENDAR_HISTORY",
                     "passed": False,
+                    "discovered_tickers_before_scope": 0,
+                    "scope_excluded_tickers": [],
                     "required_tickers": 0,
                     "passed_tickers": 0,
                     "failed_tickers": 0,
@@ -97,6 +105,7 @@ def run_history_certification_ladder(
             split_history_verified=split_history_verified,
             dividend_history_verified=dividend_history_verified,
             price_semantics_verified=price_semantics_verified,
+            security_scope_exclusions=security_scope_exclusions,
         )
         summary = report["full_universe_summary"]
         key = f"{requested}_sessions"
@@ -109,6 +118,10 @@ def run_history_certification_ladder(
                 "window_end": summary["window_end"],
                 "status": "PASS" if summary["passed"] else "FAIL",
                 "passed": bool(summary["passed"]),
+                "discovered_tickers_before_scope": int(
+                    summary.get("discovered_tickers_before_scope", summary["required_tickers"])
+                ),
+                "scope_excluded_tickers": list(summary.get("scope_excluded_tickers", [])),
                 "required_tickers": int(summary["required_tickers"]),
                 "passed_tickers": int(summary["passed_tickers"]),
                 "failed_tickers": int(summary["failed_tickers"]),
@@ -136,7 +149,9 @@ def run_history_certification_ladder(
         "available_calendar_sessions": int(len(sessions)),
         "horizons_tested": horizons,
         "passing_horizons": [
-            int(value) for value in ladder.loc[ladder["passed"].eq(True), "evaluated_sessions"] if int(value) > 0
+            int(value)
+            for value in ladder.loc[ladder["passed"].eq(True), "evaluated_sessions"]
+            if int(value) > 0
         ],
         "longest_passing_window": longest,
         "all_tested_horizons_pass": bool(len(ladder)) and bool(ladder["passed"].all()),
