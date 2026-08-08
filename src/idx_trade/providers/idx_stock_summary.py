@@ -49,14 +49,16 @@ def fetch_stock_summary_payload(
     session: requests.Session | None = None,
     timeout: int = 30,
 ) -> tuple[dict[str, object], str]:
-    """Fetch the official public IDX Stock Summary endpoint with a browser session."""
+    """Fetch the official public IDX Stock Summary endpoint."""
 
     client = session or requests.Session()
     headers = _browser_headers()
     home = client.get(IDX_HOME_URL, headers=headers, timeout=timeout)
     home.raise_for_status()
     validation = client.get(
-        IDX_SESSION_VALIDATION_URL, headers=headers, timeout=timeout
+        IDX_SESSION_VALIDATION_URL,
+        headers=headers,
+        timeout=timeout,
     )
     validation.raise_for_status()
 
@@ -82,6 +84,13 @@ def parse_stock_summary_payload(
     requested_date: str | pd.Timestamp,
     source_ref: str,
 ) -> tuple[pd.DataFrame, StockSummaryFetchMeta]:
+    """Parse the legacy IDX Stock Summary schema without changing its semantics.
+
+    `Volume`/`Frequency` are the regular order-book daily metrics. The
+    `NonRegular*` fields are separate market metrics and are retained only as
+    separate evidence; they must not be subtracted from `Volume`/`Frequency`.
+    """
+
     rows = payload.get("data")
     if not isinstance(rows, list):
         raise ValueError("IDX stock-summary response has no list-valued data field")
@@ -89,14 +98,20 @@ def parse_stock_summary_payload(
     requested = pd.Timestamp(requested_date).normalize()
     parsed: list[dict[str, object]] = []
     status_keys = ("SecurityStatus", "SecurityStatusCode")
+
     for row in rows:
         if not isinstance(row, Mapping):
             continue
         ticker = normalise_ticker(row.get("StockCode", ""))
         if not ticker or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}").iloc[0]:
             continue
+
         raw_date = pd.to_datetime(row.get("Date"), errors="coerce")
-        day = requested if pd.isna(raw_date) else pd.Timestamp(raw_date).tz_localize(None).normalize()
+        day = (
+            requested
+            if pd.isna(raw_date)
+            else pd.Timestamp(raw_date).tz_localize(None).normalize()
+        )
         if day != requested:
             continue
 
@@ -153,18 +168,9 @@ def parse_stock_summary_payload(
 
     regular_trade_rows = 0
     if not frame.empty:
-        numeric = frame[[
-            "volume",
-            "frequency",
-            "nonregular_volume",
-            "nonregular_frequency",
-        ]].apply(pd.to_numeric, errors="coerce")
-        regular_trade_rows = int(
-            (
-                numeric["volume"].sub(numeric["nonregular_volume"]).gt(0)
-                & numeric["frequency"].sub(numeric["nonregular_frequency"]).gt(0)
-            ).sum()
-        )
+        volume = pd.to_numeric(frame["volume"], errors="coerce")
+        frequency = pd.to_numeric(frame["frequency"], errors="coerce")
+        regular_trade_rows = int((volume.gt(0) & frequency.gt(0)).sum())
 
     meta = StockSummaryFetchMeta(
         requested_date=requested.date().isoformat(),
@@ -186,7 +192,9 @@ def fetch_stock_summary_snapshot(
     timeout: int = 30,
 ) -> tuple[pd.DataFrame, StockSummaryFetchMeta]:
     payload, source_ref = fetch_stock_summary_payload(
-        date, session=session, timeout=timeout
+        date,
+        session=session,
+        timeout=timeout,
     )
     return parse_stock_summary_payload(
         payload,
@@ -200,21 +208,13 @@ def stock_summary_regular_trade_anchors(
     *,
     market: str = "REGULAR",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Create ACTIVE anchors only from positive official Regular-Market trades.
-
-    IDX Stock Summary exposes total and non-regular transaction metrics. A
-    strictly positive `total - nonregular` volume *and* frequency proves that a
-    Regular-Market transaction occurred on that date. Zero activity is not
-    evidence of suspension and remains unresolved.
-    """
+    """Create ACTIVE anchors from positive official regular-market metrics only."""
 
     required = {
         "ticker",
         "as_of_date",
         "volume",
         "frequency",
-        "nonregular_volume",
-        "nonregular_frequency",
         "source",
         "source_ref",
     }
@@ -224,14 +224,12 @@ def stock_summary_regular_trade_anchors(
 
     anchors: list[dict[str, object]] = []
     diagnostics: list[dict[str, object]] = []
+
     for row in frame.itertuples(index=False):
-        values = {
-            "volume": pd.to_numeric(row.volume, errors="coerce"),
-            "frequency": pd.to_numeric(row.frequency, errors="coerce"),
-            "nonregular_volume": pd.to_numeric(row.nonregular_volume, errors="coerce"),
-            "nonregular_frequency": pd.to_numeric(row.nonregular_frequency, errors="coerce"),
-        }
-        if any(pd.isna(value) for value in values.values()):
+        regular_volume = pd.to_numeric(row.volume, errors="coerce")
+        regular_frequency = pd.to_numeric(row.frequency, errors="coerce")
+
+        if pd.isna(regular_volume) or pd.isna(regular_frequency):
             diagnostics.append(
                 {
                     "ticker": row.ticker,
@@ -242,15 +240,15 @@ def stock_summary_regular_trade_anchors(
             )
             continue
 
-        regular_volume = float(values["volume"] - values["nonregular_volume"])
-        regular_frequency = float(values["frequency"] - values["nonregular_frequency"])
+        regular_volume = float(regular_volume)
+        regular_frequency = float(regular_frequency)
         if regular_volume < 0 or regular_frequency < 0:
             diagnostics.append(
                 {
                     "ticker": row.ticker,
                     "as_of_date": row.as_of_date,
                     "status": "UNRESOLVED",
-                    "diagnostic": "REGULAR_TRADE_METRICS_NEGATIVE_AFTER_SUBTRACTION",
+                    "diagnostic": "REGULAR_TRADE_METRICS_NEGATIVE",
                 }
             )
             continue
@@ -298,12 +296,7 @@ def stock_summary_status_to_anchors(
     status_mapping: Mapping[str, str | TradabilityState],
     market: str = "REGULAR",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Create anchors only from explicitly mapped IDX status values.
-
-    No default mapping is provided because the public endpoint's live status
-    vocabulary must be audited first. `Remarks` and row presence are never
-    treated as ACTIVE evidence.
-    """
+    """Create anchors only from explicitly mapped IDX status values."""
 
     required = {
         "ticker",
@@ -318,10 +311,13 @@ def stock_summary_status_to_anchors(
 
     normalized_mapping = {
         str(key).strip(): (
-            value.value if isinstance(value, TradabilityState) else TradabilityState(str(value)).value
+            value.value
+            if isinstance(value, TradabilityState)
+            else TradabilityState(str(value)).value
         )
         for key, value in status_mapping.items()
     }
+
     anchors: list[dict[str, object]] = []
     diagnostics: list[dict[str, object]] = []
     for row in frame.itertuples(index=False):
@@ -337,6 +333,7 @@ def stock_summary_status_to_anchors(
                 }
             )
             continue
+
         mapped = normalized_mapping.get(raw)
         if mapped is None:
             diagnostics.append(
@@ -351,6 +348,7 @@ def stock_summary_status_to_anchors(
             continue
         if mapped == TradabilityState.UNKNOWN.value:
             raise ValueError("UNKNOWN cannot be promoted into an authoritative anchor")
+
         anchors.append(
             {
                 "ticker": row.ticker,
