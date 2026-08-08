@@ -43,7 +43,7 @@ def _complete_window():
     )
 
 
-def _active_anchor(date: str = "2025-01-03"):
+def _active_anchor(date: str = "2025-01-01"):
     return canonicalize_tradability_anchors(
         pd.DataFrame(
             {
@@ -77,7 +77,26 @@ def test_complete_discovery_window_without_ticker_anchor_stays_unknown():
     ) is TradabilityState.UNKNOWN
 
 
-def test_active_anchor_allows_complement_but_suspension_overrides():
+def test_future_active_anchor_never_classifies_earlier_session():
+    intervals = canonicalize_tradability_intervals(pd.DataFrame())
+    future_anchor = _active_anchor("2025-01-10")
+    assert tradability_state(
+        intervals,
+        _complete_window(),
+        "TEST",
+        pd.Timestamp("2025-01-09"),
+        anchors=future_anchor,
+    ) is TradabilityState.UNKNOWN
+    assert tradability_state(
+        intervals,
+        _complete_window(),
+        "TEST",
+        pd.Timestamp("2025-01-10"),
+        anchors=future_anchor,
+    ) is TradabilityState.ACTIVE
+
+
+def test_active_anchor_allows_forward_complement_but_suspension_overrides():
     intervals = canonicalize_tradability_intervals(
         pd.DataFrame(
             {
