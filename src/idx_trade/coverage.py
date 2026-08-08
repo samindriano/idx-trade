@@ -46,6 +46,7 @@ def security_coverage(
     security_master: pd.DataFrame,
     tradability_intervals: pd.DataFrame,
     tradability_coverage_windows: pd.DataFrame,
+    tradability_anchors: pd.DataFrame | None = None,
 ) -> SecurityCoverage:
     """Audit expected-vs-observed daily records for one ticker.
 
@@ -54,8 +55,19 @@ def security_coverage(
     """
 
     ticker = normalise_ticker(ticker)
-    sessions = pd.DatetimeIndex(pd.to_datetime(exchange_sessions)).tz_localize(None).normalize().unique().sort_values()
-    observed = set(pd.DatetimeIndex(pd.to_datetime(observed_dates, errors="coerce")).dropna().tz_localize(None).normalize())
+    sessions = (
+        pd.DatetimeIndex(pd.to_datetime(exchange_sessions))
+        .tz_localize(None)
+        .normalize()
+        .unique()
+        .sort_values()
+    )
+    observed = set(
+        pd.DatetimeIndex(pd.to_datetime(observed_dates, errors="coerce"))
+        .dropna()
+        .tz_localize(None)
+        .normalize()
+    )
 
     listed: list[pd.Timestamp] = []
     active: list[pd.Timestamp] = []
@@ -64,12 +76,16 @@ def security_coverage(
 
     for session in sessions:
         if existence_state(security_master, ticker, session) is not ExistenceState.LISTED:
-            # A provider bar outside the listing interval is still an
-            # unexpected observation and must not be silently ignored.
             nonactive.append(pd.Timestamp(session))
             continue
         listed.append(pd.Timestamp(session))
-        state = tradability_state(tradability_intervals, tradability_coverage_windows, ticker, session)
+        state = tradability_state(
+            tradability_intervals,
+            tradability_coverage_windows,
+            ticker,
+            session,
+            anchors=tradability_anchors,
+        )
         if state is TradabilityState.ACTIVE:
             active.append(pd.Timestamp(session))
         elif state is TradabilityState.UNKNOWN:
@@ -84,9 +100,6 @@ def security_coverage(
     ratio = (len(observed_active) / len(active)) if active else None
     max_gap = _max_consecutive_missing(active, observed)
 
-    # No active/executable sessions means no price row is required.  Unknown
-    # tradability and bars observed while a security is non-active remain hard
-    # failures; a missing row must never be used to infer ACTIVE.
     price_required = bool(active)
     complete = bool(listed) and not unknown and not missing and not unexpected
 
