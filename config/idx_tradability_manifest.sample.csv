@@ -1,0 +1,5 @@
+source_ref,announced_at,expected_parser_status,note
+https://www.idx.id/Portals/0/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/2025/JUN/20250630-WAS_Suspensi_KRAS.pdf,2025-06-30,PARSED,KRAS Regular/Cash suspension effective 1 Jul 2025
+https://www.idx.id/Portals/0/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/2025/JUL/20250701-WAS_Unsuspensi_KRAS.pdf,2025-07-01,PARSED,KRAS Regular/Cash resume effective 2 Jul 2025
+https://www.idx.id/Portals/0/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/2026/JAN/20260128-WAS_Unsuspensi_IFSH.pdf,2026-01-28,PARSED,IFSH Regular/Cash resume example; pair with its suspension document before using interval coverage
+https://block.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202507/45106f0f6b_5e5415397d.pdf,2025-07-18,MANUAL_REVIEW,HDTX negotiated-only intraday opening/resuspension; must never be flattened automatically
