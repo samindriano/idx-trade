@@ -75,9 +75,13 @@ def test_history_ladder_finds_longest_passing_trailing_window(tmp_path):
     assert result["summary"]["longest_passing_window"]["window_start"] == "2026-06-02"
     assert (tmp_path / "history_certification_ladder.csv").exists()
     assert (tmp_path / "history_certification_summary.json").exists()
+    assert (tmp_path / "1_sessions" / "full_universe_gate_summary.json").exists()
+    assert (tmp_path / "2_sessions" / "full_universe_gate_summary.json").exists()
+    assert (tmp_path / "3_sessions" / "full_universe_gate_summary.json").exists()
+    assert not (tmp_path / "5_sessions").exists()
 
 
-def test_history_ladder_preserves_authoritative_non_common_scope_exclusion():
+def test_history_ladder_preserves_authoritative_non_common_scope_exclusion(tmp_path):
     sessions = pd.to_datetime(["2026-06-02", "2026-06-03"])
     master = build_security_master(
         pd.DataFrame(
@@ -145,6 +149,7 @@ def test_history_ladder_preserves_authoritative_non_common_scope_exclusion():
         price_semantics_verified={"AAAA": True},
         security_scope_exclusions=exclusions,
         session_horizons=[2],
+        output_dir=tmp_path,
     )
 
     row = result["ladder"][0]
@@ -152,3 +157,7 @@ def test_history_ladder_preserves_authoritative_non_common_scope_exclusion():
     assert row["discovered_tickers_before_scope"] == 2
     assert row["scope_excluded_tickers"] == ["PREF"]
     assert row["required_tickers"] == 1
+    saved_exclusions = pd.read_csv(
+        tmp_path / "2_sessions" / "full_universe_scope_exclusions.csv"
+    )
+    assert saved_exclusions.loc[0, "ticker"] == "PREF"
