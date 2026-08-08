@@ -27,6 +27,20 @@ This file tracks the disposition of findings from the `market-movement-analyzer`
 | `confidence` represented different probability objects in different code paths | V2 schema separates opportunity score, calibrated probability and estimate reliability | PENDING MODEL PHASE |
 | Reused holdout was labeled but not technically protected | Experiment registry must freeze a holdout/use history and reject reuse as an untouched test | PENDING EVALUATION PHASE |
 
+## Data-foundation additions after audit
+
+| Requirement | V2 implementation | Status |
+|---|---|---|
+| Official suspension/resumption events need auditable provenance | Manifest-driven IDX PDF ingestion records source URL, document hash, parser version and diagnostics | IMPLEMENTED FOUNDATION |
+| Stock and warrant market scopes can coexist in one announcement | Equity parser prefers explicit stock Regular/Cash/Negotiated scope over unrelated warrant `Seluruh Pasar` text | IMPLEMENTED FOUNDATION |
+| Intraday negotiated-only opening/resuspension cannot be represented as a normal daily state | Complex intraday documents are `MANUAL_REVIEW`; no automatic interval is emitted | IMPLEMENTED FOUNDATION |
+| Periodic Call Auction/later-session resumptions are only partially tradable days | Call-auction or later-session resume documents are `MANUAL_REVIEW` for the daily engine | IMPLEMENTED FOUNDATION |
+| Successful parsing must not imply historical source completeness | Ingestion integrity report always keeps `coverage_complete=false`; coverage windows require a separate discovery audit | IMPLEMENTED FOUNDATION |
+| Data pipeline needs hostile real-world QA cases before ML | Versioned adversarial catalog covers normal liquid, IPO, suspend/resume, long suspension, delisted, complex market scope and data-quality stress cases | IMPLEMENTED FOUNDATION |
+| Missing price-semantics verification must fail closed | Absent `price_semantics_verified` flag is a hard DATA GATE blocker | IMPLEMENTED FOUNDATION |
+| Historical suspension discovery completeness is still unknown | Backfill/discovery audit must justify the usable Regular-Market research period; otherwise shorten the period | PENDING DATA BACKFILL |
+| Corporate-action provenance over delisted/imported history is still incomplete | Verify explicit split/dividend/action history before technical-price layer or model development | PENDING DATA BACKFILL |
+
 ## Reproducibility findings
 
 | V1 finding | V2 disposition | Status |
@@ -35,9 +49,18 @@ This file tracks the disposition of findings from the `market-movement-analyzer`
 | `monitor.py` evaluation logic was outside the frozen protocol hash | V2 run protocol must hash prediction and evaluation code paths | PENDING MONITOR PHASE |
 | Requirements used version ranges | Keep development constraints, but each run must persist exact installed versions/lock fingerprint | IMPLEMENTED FOUNDATION |
 
-## IDX-specific schema correction discovered during V2 migration
+## IDX-specific schema corrections discovered during V2 migration
 
-IDX announcements can suspend/unsuspend different markets differently (for example a negotiated-market-only opening). V2 therefore stores `market` on every tradability interval and resolves Regular Market independently. An `ALL` interval is only a fallback; an exact-market interval overrides it.
+IDX announcements can suspend/unsuspend different markets differently. V2 therefore stores `market` on every tradability interval and resolves Regular Market independently. An `ALL` interval is only a fallback; an exact-market interval overrides it.
+
+Some IDX resumptions are intraday or happen only in later Periodic Call Auction sessions. Those dates are not flattened into a normal full-day `ACTIVE` state in the daily model; the parser rejects them to manual review until the daily-state treatment is explicitly resolved.
+
+## Data-gate policy
+
+- `PASS`: freeze a versioned data snapshot and begin support/resistance/setup research.
+- `FAIL`: fix data, obtain better evidence, or shorten the research period.
+- `UNKNOWN`: remains a failure for model development.
+- Never weaken the gate merely to preserve an ambitious 2009-present history.
 
 ## Explicitly not migrated from V1
 
