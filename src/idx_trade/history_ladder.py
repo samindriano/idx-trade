@@ -62,6 +62,11 @@ def run_history_certification_ladder(
     full-universe certification are forwarded to every horizon. This prevents a
     known non-common security from re-entering merely because the time window is
     expanded.
+
+    When ``output_dir`` is supplied, every evaluated horizon also receives its
+    own full-universe artifact directory. A failed historical step therefore
+    preserves exact ticker/session diagnostics and can be debugged without first
+    repeating the whole ladder.
     """
 
     sessions = _canonical_sessions(exchange_sessions)
@@ -69,9 +74,11 @@ def run_history_certification_ladder(
     if not horizons:
         raise ValueError("At least one positive history horizon is required")
 
+    target = Path(output_dir) if output_dir is not None else None
     rows: list[dict[str, object]] = []
     detailed: dict[str, dict[str, object]] = {}
     for requested in horizons:
+        key = f"{requested}_sessions"
         if requested > len(sessions):
             rows.append(
                 {
@@ -106,9 +113,9 @@ def run_history_certification_ladder(
             dividend_history_verified=dividend_history_verified,
             price_semantics_verified=price_semantics_verified,
             security_scope_exclusions=security_scope_exclusions,
+            output_dir=(target / key) if target is not None else None,
         )
         summary = report["full_universe_summary"]
-        key = f"{requested}_sessions"
         detailed[key] = report
         rows.append(
             {
@@ -157,8 +164,7 @@ def run_history_certification_ladder(
         "all_tested_horizons_pass": bool(len(ladder)) and bool(ladder["passed"].all()),
     }
 
-    if output_dir is not None:
-        target = Path(output_dir)
+    if target is not None:
         write_csv_atomic(ladder, target / "history_certification_ladder.csv")
         _atomic_json(summary, target / "history_certification_summary.json")
 
