@@ -76,9 +76,15 @@ def _tickers(text: str) -> list[str]:
 
 
 def _markets(text: str) -> list[str]:
+    """Extract the equity market scope conservatively.
+
+    A common IDX document says the stock is suspended in Regular/Cash while a
+    warrant in the same document is suspended in All Markets. Explicit named
+    stock markets therefore take precedence over a generic `Seluruh Pasar`
+    mention elsewhere in the document.
+    """
+
     lowered = text.lower()
-    if "seluruh pasar" in lowered:
-        return ["ALL"]
     result: list[str] = []
     if "pasar reguler" in lowered:
         result.append("REGULAR")
@@ -86,7 +92,11 @@ def _markets(text: str) -> list[str]:
         result.append("CASH")
     if "pasar negosiasi" in lowered:
         result.append("NEGOTIATED")
-    return list(dict.fromkeys(result))
+    if result:
+        return list(dict.fromkeys(result))
+    if "seluruh pasar" in lowered:
+        return ["ALL"]
+    return []
 
 
 def _resume_date(text: str) -> pd.Timestamp | None:
@@ -236,8 +246,6 @@ def ingest_announcement_manifest(
             )
             events = result.events.copy()
             if not events.empty:
-                # Keep both canonical text and raw-byte fingerprints. The parser
-                # fingerprint guards semantic revisions; byte hash guards source revisions.
                 events["document_sha256"] = byte_hash
                 event_frames.append(events)
             diagnostics.append(
