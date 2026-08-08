@@ -97,3 +97,16 @@ Before ML/model development, the data layer must demonstrate:
 ## Migration policy
 
 This repository selectively ports infrastructure ideas from `market-movement-analyzer`, but the modelling core is new. The old repository remains a reference implementation only.
+
+## Orchestration
+
+Work is coordinated through the parent MAIN chat using bounded, non-overlapping
+workers and written handoffs. The repository is intentionally fail-closed:
+model, prediction, monitoring, paper-trading, and trading phases remain
+disabled until the research specification and IDX data-readiness gate are
+approved.
+
+- [Working agreement](AGENTS.md)
+- [Current coordination status](coordination/TEAM_STATUS.md)
+- [Task registry](coordination/TASK_REGISTRY.md)
+- [Orchestration workflow](docs/ORCHESTRATION.md)
