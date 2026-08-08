@@ -64,7 +64,21 @@ Implemented:
 - IPO warm-up eligibility;
 - historical provider-revision conflict detection;
 - environment/source/data provenance manifest helpers;
+- official IDX suspension/resumption PDF ingestion from an auditable manifest;
+- parser/compiler diagnostics with document hashes and parser version;
+- fail-closed handling for negotiated-only intraday changes and later-session/Periodic Call Auction resumptions;
+- versioned adversarial QA catalog covering normal, IPO, suspension, delisted and data-quality stress cases;
+- adversarial Data Gate runner and family-level results;
 - regression tests + GitHub Actions workflow.
+
+Still blocked before modelling:
+
+- historical discovery/backfill proving a usable Regular-Market tradability coverage window;
+- explicit split/dividend/corporate-action verification over the chosen research period;
+- price backfill and adversarial Data Gate execution on actual historical data;
+- full-universe Data Gate after the adversarial suite passes.
+
+A clean announcement-parser run does **not** mean suspension history is complete. The ingestion report deliberately keeps `coverage_complete=false` until source-discovery completeness is separately justified.
 
 Not migrated intentionally:
 
@@ -76,14 +90,14 @@ Not migrated intentionally:
 - old row-count coverage gate;
 - old forward monitor until its outcome/execution semantics are redesigned.
 
-See `docs/V2_MIGRATION_AUDIT.md` for the audit-to-migration map.
+See `docs/V2_MIGRATION_AUDIT.md` for the audit-to-migration map and `docs/DATA_GATE_RUNBOOK.md` for the execution sequence.
 
 ## Data gate
 
 Before ML/model development, the data layer must demonstrate:
 
 - listing interval correctness;
-- Regular-Market suspension/resumption intervals when known;
+- Regular-Market suspension/resumption intervals for an audited coverage period;
 - explicit `UNKNOWN` when tradability reconstruction is incomplete;
 - IPO warm-up behaviour;
 - delisted history retained before delisting;
@@ -92,7 +106,10 @@ Before ML/model development, the data layer must demonstrate:
 - expected-vs-observed exchange-session coverage;
 - internal gap detection;
 - provider absence distinguished from exchange trading state;
+- explicit corporate-action and price-semantics verification flags;
 - reproducibility manifest for code, config, dependency environment and source snapshots.
+
+`UNKNOWN` is a gate failure, not permission to guess. If an ambitious 2009-present period cannot be reconstructed reliably, the research period must be shortened rather than weakening the gate.
 
 ## Migration policy
 
