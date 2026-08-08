@@ -59,7 +59,7 @@ def evaluate_data_gate(
         coverage_reports.append(coverage)
 
         action_ok = bool(corporate_action_verified.get(ticker, False))
-        semantics_ok = bool(price_semantics_verified.get(ticker, True))
+        semantics_ok = bool(price_semantics_verified.get(ticker, False))
         blockers: list[str] = []
         if not coverage.complete:
             blockers.append("SESSION_COVERAGE_INCOMPLETE")
