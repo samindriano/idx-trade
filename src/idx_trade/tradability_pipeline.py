@@ -12,7 +12,11 @@ from .providers.idx_tradability import (
     fetch_pdf_text,
     ingest_announcement_manifest,
 )
-from .security_master import normalise_market
+from .security_master import canonicalize_coverage_windows, normalise_market
+from .tradability_anchor_reconstruction import (
+    ANCHOR_DIAGNOSTIC_COLUMNS,
+    reconcile_boundary_suspension_anchors,
+)
 
 
 def _window_date(value: object) -> pd.Timestamp | None:
@@ -67,13 +71,7 @@ def ingestion_integrity_report(
     *,
     coverage_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """Audit parser/compiler integrity without inventing per-ticker state.
-
-    A clean report means every supplied document was machine-resolved and its
-    event sequence was internally coherent. It does not prove that every IDX
-    tradability announcement in the research period has been discovered, and a
-    complete discovery window does not by itself establish any ticker as ACTIVE.
-    """
+    """Audit parser/compiler integrity without inventing per-ticker state."""
 
     if parse_diagnostics.empty:
         unresolved_parse = pd.DataFrame()
@@ -140,24 +138,51 @@ def run_tradability_ingestion(
     *,
     fetcher: Callable[[str], tuple[str, str]] = fetch_pdf_text,
     coverage_evidence: Mapping[str, object] | None = None,
+    tradability_anchors: pd.DataFrame | None = None,
 ) -> dict[str, object]:
-    """Ingest an auditable IDX announcement manifest and persist raw outcomes."""
+    """Ingest announcements and optionally reconcile boundary state anchors."""
 
     manifest_path = Path(manifest_path)
     output_dir = Path(output_dir)
     manifest = pd.read_csv(manifest_path)
     events, parse_diagnostics = ingest_announcement_manifest(manifest, fetcher=fetcher)
     intervals, compile_diagnostics = compile_suspension_intervals(events)
+
+    anchor_diagnostics = pd.DataFrame(columns=ANCHOR_DIAGNOSTIC_COLUMNS)
+    candidate_window, _ = _public_window_from_evidence(coverage_evidence)
+    if tradability_anchors is not None and candidate_window is not None:
+        discovery_windows = canonicalize_coverage_windows(
+            pd.DataFrame([candidate_window])
+        )
+        intervals, compile_diagnostics, anchor_diagnostics = (
+            reconcile_boundary_suspension_anchors(
+                events,
+                intervals,
+                compile_diagnostics,
+                tradability_anchors,
+                discovery_windows,
+            )
+        )
+
     report = ingestion_integrity_report(
         parse_diagnostics,
         compile_diagnostics,
         coverage_evidence=coverage_evidence,
     )
+    if anchor_diagnostics.empty:
+        anchor_status_counts: dict[str, int] = {}
+    else:
+        anchor_status_counts = {
+            str(key): int(value)
+            for key, value in anchor_diagnostics["status"].value_counts().items()
+        }
     report.update(
         {
             "manifest_path": str(manifest_path),
             "event_rows": int(len(events)),
             "interval_rows": int(len(intervals)),
+            "anchor_diagnostic_rows": int(len(anchor_diagnostics)),
+            "anchor_status_counts": anchor_status_counts,
         }
     )
 
@@ -165,5 +190,6 @@ def run_tradability_ingestion(
     _atomic_csv(parse_diagnostics, output_dir / "tradability_parse_diagnostics.csv")
     _atomic_csv(intervals, output_dir / "tradability_intervals.csv")
     _atomic_csv(compile_diagnostics, output_dir / "tradability_compile_diagnostics.csv")
+    _atomic_csv(anchor_diagnostics, output_dir / "tradability_anchor_diagnostics.csv")
     _atomic_json(report, output_dir / "tradability_ingestion_report.json")
     return report
