@@ -5,6 +5,7 @@ from idx_trade.providers.idx_corporate_actions import (
     IDX_CORPORATE_ACTION_SOURCE_ID,
     IDX_ISSUED_HISTORY_URL,
     cross_check_yahoo_split_events,
+    derive_action_share_counts,
     derive_split_ratio,
     fetch_idx_corporate_actions,
     issued_history_url,
@@ -61,10 +62,14 @@ def test_parses_stock_split_reverse_stock_and_excludes_dividends():
     assert actions["ticker"].tolist() == ["ABCD", "EFGH"]
     assert actions.loc[0, "effective_date"] == pd.Timestamp("2026-07-21")
     assert actions.loc[0, "listing_date"] == pd.Timestamp("2026-07-21")
+    assert actions.loc[0, "action_shares"] == 100
+    assert actions.loc[0, "total_shares_after_action"] == 200
     assert actions.loc[0, "old_shares"] == 100
     assert actions.loc[0, "new_shares"] == 200
     assert actions.loc[0, "ratio"] == pytest.approx(2.0)
-    assert actions.loc[1, "ratio"] == pytest.approx(1 / 9)
+    assert actions.loc[1, "old_shares"] == 250
+    assert actions.loc[1, "new_shares"] == 25
+    assert actions.loc[1, "ratio"] == pytest.approx(0.1)
     assert set(actions["source_identity"]) == {IDX_CORPORATE_ACTION_SOURCE_ID}
 
 
@@ -74,6 +79,13 @@ def test_safe_ratio_requires_positive_share_counts():
     assert derive_split_ratio(-100, 200) is None
     assert derive_split_ratio(100, 0) is None
     assert derive_split_ratio(None, 200) is None
+
+
+def test_action_amount_and_after_total_have_directional_semantics():
+    assert derive_action_share_counts("stockSplit", 45, 46.875) == pytest.approx((1.875, 46.875))
+    assert derive_action_share_counts("reverseStock", 225, 25) == (250, 25)
+    assert derive_action_share_counts("stockSplit", 0, 1) == (None, None)
+    assert derive_action_share_counts("stockSplit", 0, 0) == (None, None)
 
 
 def test_corporate_action_response_validation_fails_closed():

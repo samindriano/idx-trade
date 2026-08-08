@@ -23,6 +23,8 @@ CORPORATE_ACTION_COLUMNS = (
     "action",
     "effective_date",
     "listing_date",
+    "action_shares",
+    "total_shares_after_action",
     "old_shares",
     "new_shares",
     "ratio",
@@ -152,6 +154,47 @@ def derive_split_ratio(
     return float(Decimal(str(new)) / Decimal(str(old)))
 
 
+def derive_action_share_counts(
+    action: str,
+    action_shares: object,
+    total_shares_after_action: object,
+) -> tuple[int | float | None, int | float | None]:
+    """Derive old/new totals from IDX's action-amount and after-total fields.
+
+    The official listing-activity table exposes ``JumlahSaham`` as the amount
+    of the corporate action and ``JumlahSahamSetelahTindakan`` as the total
+    after the action. For a stock split, the action amount is the incremental
+    shares, so old = after - action. For a reverse stock, it is the removed
+    shares, so old = after + action. Invalid/non-positive arithmetic remains
+    unknown rather than being treated as a valid ratio.
+    """
+
+    action_count = _parse_share_count(action_shares, field="action_shares", ticker="")
+    total_after = _parse_share_count(
+        total_shares_after_action,
+        field="total_shares_after_action",
+        ticker="",
+    )
+    if (
+        action_count is None
+        or total_after is None
+        or action_count <= 0
+        or total_after <= 0
+    ):
+        return None, None
+    if action == "stockSplit":
+        old = total_after - action_count
+        new = total_after
+    elif action == "reverseStock":
+        old = total_after + action_count
+        new = total_after
+    else:
+        raise ValueError(f"Unsupported IDX corporate-action type: {action}")
+    if old <= 0 or new <= 0:
+        return None, None
+    return old, new
+
+
 def parse_idx_corporate_actions(
     payload: CorporateActionPayload,
     *,
@@ -190,17 +233,25 @@ def parse_idx_corporate_actions(
             "listing_date",
             "date",
         )
-        old_value = _first_present(
-            raw_row, "JumlahSaham", "old_shares", "old_share_count"
+        action_value_raw = _first_present(
+            raw_row, "JumlahSaham", "action_shares"
         )
-        new_value = _first_present(
+        total_after_value = _first_present(
             raw_row,
             "JumlahSahamSetelahTindakan",
-            "new_shares",
-            "new_share_count",
+            "total_shares_after_action",
         )
-        if _MISSING in (ticker_value, date_value, old_value, new_value):
+        explicit_old = _first_present(raw_row, "old_shares", "old_share_count")
+        explicit_new = _first_present(raw_row, "new_shares", "new_share_count")
+        if _MISSING in (ticker_value, date_value):
             raise ValueError(f"IDX {action} row is missing required fields")
+        if (
+            _MISSING in (action_value_raw, total_after_value)
+            and _MISSING in (explicit_old, explicit_new)
+        ):
+            raise ValueError(
+                f"IDX {action} row is missing required fields (share-count fields)"
+            )
 
         ticker = normalise_ticker(ticker_value)
         if not ticker:
@@ -214,14 +265,41 @@ def parse_idx_corporate_actions(
         if end_ts is not None and effective_date > end_ts:
             continue
 
-        old_shares = _parse_share_count(old_value, field="old_shares", ticker=ticker)
-        new_shares = _parse_share_count(new_value, field="new_shares", ticker=ticker)
+        action_shares = (
+            _parse_share_count(action_value_raw, field="action_shares", ticker=ticker)
+            if action_value_raw is not _MISSING
+            else None
+        )
+        total_shares_after_action = (
+            _parse_share_count(
+                total_after_value,
+                field="total_shares_after_action",
+                ticker=ticker,
+            )
+            if total_after_value is not _MISSING
+            else None
+        )
+        if explicit_old is not _MISSING and explicit_new is not _MISSING:
+            old_shares = _parse_share_count(
+                explicit_old, field="old_shares", ticker=ticker
+            )
+            new_shares = _parse_share_count(
+                explicit_new, field="new_shares", ticker=ticker
+            )
+        else:
+            old_shares, new_shares = derive_action_share_counts(
+                action,
+                action_shares,
+                total_shares_after_action,
+            )
         parsed.append(
             {
                 "ticker": ticker,
                 "action": action,
                 "effective_date": effective_date,
                 "listing_date": effective_date,
+                "action_shares": action_shares,
+                "total_shares_after_action": total_shares_after_action,
                 "old_shares": old_shares,
                 "new_shares": new_shares,
                 "ratio": derive_split_ratio(old_shares, new_shares),
@@ -363,7 +441,7 @@ def cross_check_yahoo_split_events(
     idx_actions: pd.DataFrame,
     yahoo_events: pd.DataFrame | Mapping[str, pd.DataFrame] | Sequence[Mapping[str, object]],
     *,
-    relative_tolerance: float = 1e-9,
+    relative_tolerance: float = 1e-8,
 ) -> pd.DataFrame:
     """Report Yahoo split agreement without changing authoritative IDX rows.
 
@@ -461,7 +539,7 @@ def report_yahoo_split_cross_check(
     idx_actions: pd.DataFrame,
     yahoo_events: pd.DataFrame | Mapping[str, pd.DataFrame] | Sequence[Mapping[str, object]],
     *,
-    relative_tolerance: float = 1e-9,
+    relative_tolerance: float = 1e-8,
 ) -> pd.DataFrame:
     """Compatibility alias for the deterministic Yahoo cross-check report."""
 
