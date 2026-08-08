@@ -171,7 +171,6 @@ def test_full_universe_gate_uses_same_hard_gate_and_writes_artifacts(tmp_path):
         canonicalize_coverage_windows(pd.DataFrame()),
         tradability_anchors=anchors,
         split_history_verified={"AAAA": True},
-        price_semantics_verified={"AAAA": True},
         output_dir=tmp_path,
     )
 
@@ -182,6 +181,8 @@ def test_full_universe_gate_uses_same_hard_gate_and_writes_artifacts(tmp_path):
     assert summary["unknown_sessions"] == 0
     assert summary["missing_active_prices"] == 0
     assert summary["identity_unresolved_tickers"] == []
+    assert summary["auto_price_semantics"] is True
+    assert summary["price_semantics_verified_tickers"] == 1
     assert summary["blocker_counts"] == {}
 
     saved = json.loads((tmp_path / "full_universe_gate_summary.json").read_text())
