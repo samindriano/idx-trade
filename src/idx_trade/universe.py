@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import pandas as pd
 
+from .coverage import active_price_view
 from .security_master import model_eligibility, normalise_ticker
 
 
@@ -40,7 +41,7 @@ def build_dynamic_liquidity_universe(
     minimum_warmup_sessions: int = 60,
     minimum_active_share: float = 0.80,
 ) -> pd.DataFrame:
-    """Construct an as-of-date universe using only point-in-time evidence."""
+    """Construct an as-of-date universe from model-safe ACTIVE price rows only."""
 
     as_of_date = pd.Timestamp(as_of_date).normalize()
     sessions = (
@@ -57,21 +58,21 @@ def build_dynamic_liquidity_universe(
     rows: list[UniverseRow] = []
     for raw_ticker, frame in sorted(price_frames.items()):
         ticker = normalise_ticker(raw_ticker)
-        if frame.empty or "date" not in frame.columns:
+        data = active_price_view(
+            frame,
+            ticker,
+            security_master,
+            tradability_intervals,
+            tradability_coverage_windows,
+            tradability_anchors=tradability_anchors,
+        )
+        if data.empty or "date" not in data.columns:
             observed_dates = pd.DatetimeIndex([])
             observed_sessions = 0
             median_value = None
             active_share = 0.0
         else:
-            data = frame.copy()
-            data["date"] = (
-                pd.to_datetime(data["date"], errors="coerce")
-                .dt.tz_localize(None)
-                .dt.normalize()
-            )
-            data = data[
-                data["date"].notna() & data["date"].le(as_of_date)
-            ].sort_values("date")
+            data = data[data["date"].le(as_of_date)].sort_values("date")
             observed_dates = pd.DatetimeIndex(data["date"].drop_duplicates())
             observed_sessions = len(observed_dates)
             recent = data[data["date"].isin(recent_set)]
