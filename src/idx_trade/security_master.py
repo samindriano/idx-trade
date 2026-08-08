@@ -377,11 +377,13 @@ def tradability_state(
     if window is None:
         return TradabilityState.UNKNOWN
 
-    anchor_frame = (
-        canonicalize_tradability_anchors(anchors)
-        if anchors is not None
-        else pd.DataFrame(columns=TRADABILITY_ANCHOR_COLUMNS)
-    )
+    if anchors is None:
+        anchor_frame = pd.DataFrame(columns=TRADABILITY_ANCHOR_COLUMNS)
+    else:
+        missing_anchor_columns = set(TRADABILITY_ANCHOR_COLUMNS) - set(anchors.columns)
+        if missing_anchor_columns:
+            raise ValueError(f"Tradability-anchor columns missing: {sorted(missing_anchor_columns)}")
+        anchor_frame = anchors
     applicable_anchors = _anchors_for_window(anchor_frame, ticker, market, window)
     if applicable_anchors.empty:
         return TradabilityState.UNKNOWN
