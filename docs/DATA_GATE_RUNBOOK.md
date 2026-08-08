@@ -12,7 +12,19 @@ Required outputs:
 - source references and retrieval manifest;
 - unresolved ticker/schema errors reported explicitly.
 
-## 2. Build Regular-Market tradability history
+## 2. Build an official Exchange-Day calendar
+
+Coverage must be measured against official IDX Exchange Days, not against the dates returned by the price provider under audit.
+
+Use the IDX Digital Statistics daily-trading tables as the primary free session-calendar evidence. The session backfill writes:
+
+- `exchange_sessions.csv`;
+- `exchange_session_sources.csv`;
+- `exchange_session_summary.json` including a canonical session-list hash.
+
+A month that cannot be parsed keeps the calendar incomplete. Do not silently replace missing official calendar months with Yahoo/JCI dates.
+
+## 3. Build Regular-Market tradability history
 
 Maintain an auditable manifest of official IDX suspension/resumption announcements. Run the tradability ingestion pipeline against that manifest.
 
@@ -35,7 +47,13 @@ Automatic parsing is fail-closed. At minimum the following require explicit revi
 - scanned/image-only documents;
 - unknown market/ticker/effective-date wording.
 
-## 3. Declare tradability coverage only after discovery audit
+### Free official announcement-history constraint
+
+The public IDX announcement page states that only **three years** of announcement data are available there; older historical data is directed to TICMI. Therefore the project must not claim free official suspension/resumption completeness back to 2009 merely because price data exists that far back.
+
+The initial free-only research-period candidate should be chosen inside the interval for which official announcement discovery can actually be audited. A longer period may be promoted only if an additional official/appropriately licensed source (for example TICMI) supplies the missing historical state evidence.
+
+## 4. Declare tradability coverage only after discovery audit
 
 A `tradability_coverage_window` may be marked complete only when we have reasonable evidence that official suspension/resumption source discovery is complete for that market and period.
 
@@ -46,9 +64,11 @@ Do **not** infer completeness from:
 - absence of known suspensions;
 - a ticker having many OHLC rows.
 
+Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed intervals. A mismatch is a blocker.
+
 Outside a declared-complete coverage window, missing suspension records resolve to `UNKNOWN`, not `ACTIVE`.
 
-## 4. Collect raw EOD price history
+## 5. Collect raw EOD price history
 
 Primary free research source: Yahoo/yfinance with `auto_adjust=False`.
 
@@ -61,7 +81,7 @@ Rules:
 - do not infer `SUSPENDED` or `NO_TRADE` from a missing provider row;
 - historical provider revisions must be surfaced rather than silently replacing prior research snapshots.
 
-## 5. Verify corporate actions and price semantics
+## 6. Verify corporate actions and price semantics
 
 Every required ticker needs explicit evidence flags for:
 
@@ -72,7 +92,7 @@ Both flags fail closed. An absent verification flag is a blocker.
 
 Split-adjusted technical prices may be introduced only after explicit split-event history is verified.
 
-## 6. Run the adversarial QA universe
+## 7. Run the adversarial QA universe
 
 `config/adversarial_cases.csv` deliberately includes normal liquid names and difficult cases: recent IPOs, suspend/resume cases, long suspensions, delisted history, market-scope anomalies and illiquid/data-quality stress names.
 
@@ -91,17 +111,18 @@ Expected standard:
 
 A failure means fix or narrow the research period. Do not weaken the gate merely to obtain a pass.
 
-## 7. Full-universe gate
+## 8. Full-universe gate
 
 Only after adversarial cases pass should the same session-level gate be run over the entire candidate point-in-time universe.
 
 The model-development period can begin only when:
 
 1. the chosen historical period has an audited Regular-Market tradability coverage window;
-2. required price histories pass expected-vs-observed session coverage;
-3. corporate-action and execution-price semantics are verified;
-4. unresolved provider gaps are classified explicitly;
-5. reproducibility manifests capture code, environment and data-source fingerprints.
+2. the official Exchange-Day calendar is complete for that period;
+3. required price histories pass expected-vs-observed session coverage;
+4. corporate-action and execution-price semantics are verified;
+5. unresolved provider gaps are classified explicitly;
+6. reproducibility manifests capture code, environment and data-source fingerprints.
 
 ## Decision rule
 
