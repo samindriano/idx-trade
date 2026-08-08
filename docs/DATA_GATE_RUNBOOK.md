@@ -51,13 +51,13 @@ Automatic parsing is fail-closed. At minimum the following require explicit revi
 
 The public IDX announcement page states that only **three years** of announcement data are available there; older historical data is directed to TICMI. Therefore the project must not claim free official suspension/resumption completeness back to 2009 merely because price data exists that far back.
 
-The initial free-only research-period candidate should be chosen inside the interval for which official announcement discovery can actually be audited. A longer period may be promoted only if an additional official/appropriately licensed source (for example TICMI) supplies the missing historical state evidence.
+A longer legal-state reconstruction period may be promoted only if an additional official/appropriately licensed source supplies the missing historical state evidence.
 
-## 4. Separate discovery coverage from per-security state anchors
+## 4. Separate legal-state discovery from direct session execution evidence
 
-A `tradability_coverage_window` means only that the relevant event-source discovery process is independently supported as complete for a market and bounded period. It must carry explicit source, discovery basis and boundary basis. It does **not** contain or imply one market-wide initial `ACTIVE` state.
+A `tradability_coverage_window` means only that the suspension/resumption event-discovery process is independently supported as complete for a bounded market period. It does **not** imply one market-wide initial `ACTIVE` state.
 
-Per-security state evidence is stored separately in `tradability_anchors` with:
+Per-security point evidence is stored in `tradability_anchors` with:
 
 - `ticker`;
 - `market`;
@@ -66,23 +66,30 @@ Per-security state evidence is stored separately in `tradability_anchors` with:
 - `source` / `source_ref`;
 - `evidence_type`.
 
-Inside a complete discovery window, the ACTIVE complement may be inferred for a ticker only when that ticker has authoritative anchor evidence in the same window and the anchor is consistent with the explicit event intervals. No anchor means `UNKNOWN`. Conflicting anchor/event evidence is a hard failure.
+An authoritative anchor is valid on its exact `as_of_date` even when surrounding event discovery is incomplete. Using that anchor to infer state on a different date still requires a complete causal event-discovery path. Conflicting anchor/event evidence is a hard failure.
 
-A valid free official ACTIVE anchor may be derived from IDX Stock Summary when the same official daily record proves a strictly positive Regular-Market transaction: total `Volume - NonRegularVolume > 0` **and** total `Frequency - NonRegularFrequency > 0`. This proves that Regular-Market trading occurred for that ticker on that date. Zero activity, mere row presence, `Remarks`, or Yahoo price presence do **not** prove ACTIVE and remain `UNKNOWN` unless another authoritative state source exists.
+### Direct official execution evidence
 
-Official status snapshots may be used as anchors, including SUSPENDED anchors for securities already suspended at the left boundary. When event discovery is complete, a SUSPENDED boundary anchor may be propagated forward only through explicit official transitions; nothing before the anchor is inferred. The same snapshot rows must not simultaneously serve as independent validation evidence. Reserve separate dates/rows as reconciliation holdouts.
+IDX Stock Summary can provide direct Regular-Market execution truth for a session:
 
-Do **not** infer discovery completeness or ACTIVE state from:
+- `Volume - NonRegularVolume > 0` **and** `Frequency - NonRegularFrequency > 0` => `ACTIVE` point evidence;
+- both differences exactly `0` => `NO_TRADE` point evidence;
+- missing, negative, or internally inconsistent metrics => unresolved;
+- row absence => unresolved.
 
-- all documents in a hand-picked manifest parsing successfully;
-- Yahoo prices looking continuous;
-- absence of known suspensions;
-- a ticker having many OHLC rows;
-- listing existence alone.
+`NO_TRADE` means **no Regular-Market transaction was observed on that official IDX session**. It is not a claim that the security was legally suspended. Explicit suspension evidence remains more descriptive and is retained separately.
 
-Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed states. A mismatch is a blocker.
+This direct evidence may satisfy session-level model-data coverage without proving that the entire announcement archive is complete, provided every listed session required by the research period has authoritative point evidence or another explicit state explanation. This is not a relaxation: unresolved sessions remain `UNKNOWN` and still fail the gate.
 
-Outside a declared-complete discovery window, or for a ticker without a valid causal anchor inside that window, unresolved state remains `UNKNOWN`.
+Do **not** infer state from:
+
+- Yahoo price presence or absence;
+- listing existence alone;
+- `Remarks` text without an audited mapping;
+- a hand-picked set of announcements;
+- row counts alone.
+
+Official status snapshots may be used as point anchors. Separate rows/dates must be reserved as independent reconciliation holdouts rather than reused as both anchor and validation evidence.
 
 ## 5. Collect raw EOD price history
 
@@ -104,14 +111,14 @@ The official IDX Corporate Actions source is authoritative for the technical act
 - `Stock Split`;
 - `Reverse Stock`.
 
-Yahoo split events may be cross-checked for diagnostics only; they never override IDX. The official IDX action table's action amount and total-after-action fields must be interpreted directionally before deriving a ratio.
+Yahoo split events may be cross-checked for diagnostics only; they never override IDX.
 
 Every required ticker needs explicit evidence flags for:
 
 - `split_history_verified`;
 - raw execution-price semantics verified.
 
-Both flags fail closed only when active/executable observations are actually expected in the evaluated window. A ticker with zero expected active sessions must not fail solely because Yahoo returned no price rows. Dividend history is informational for V1 and must not block this gate; do not create dividend-adjusted technical OHLC. Raw OHLC and vendor-adjusted fields remain separate.
+Both flags fail closed only when active/executable observations are actually expected in the evaluated window. A ticker with zero expected active sessions must not fail solely because Yahoo returned no price rows. Dividend history is informational for V1 and must not block this gate.
 
 Split-adjusted technical prices may be introduced only after explicit split-event history is verified.
 
@@ -121,15 +128,15 @@ Split-adjusted technical prices may be introduced only after explicit split-even
 
 This catalog is **not** the model universe and must not be used as evidence of alpha.
 
-Run `run_adversarial_data_gate(...)` against the candidate research period. Review results by case family.
+Run `run_adversarial_data_gate(...)` against the candidate research period.
 
 Expected standard:
 
 - all required listing states explained;
-- all relevant Regular-Market suspension intervals explained or deliberately `UNKNOWN`;
-- authoritative per-ticker anchors exist wherever ACTIVE complements are inferred;
-- no expected active session silently missing;
-- no price bar exists inside a known non-active state without investigation;
+- every listed research session resolves through direct official execution evidence or explicit tradability evidence;
+- unresolved sessions remain `UNKNOWN`;
+- no expected active session silently misses its raw price bar;
+- no provider bar exists on a directly evidenced non-trading session without investigation;
 - split history verified;
 - price semantics verified.
 
@@ -141,14 +148,16 @@ Only after adversarial cases pass should the same session-level gate be run over
 
 The model-development period can begin only when:
 
-1. the chosen historical period has an audited Regular-Market event-discovery window;
-2. required securities have authoritative tradability anchors within that window;
-3. independent status reconciliation passes;
-4. the official Exchange-Day calendar is complete for that period;
+1. the official Exchange-Day calendar is complete for the period;
+2. every required listed security/session has authoritative direct execution evidence or explicit tradability-state evidence;
+3. unresolved point evidence is zero for the required universe/period;
+4. independent reconciliation checks pass on reserved evidence;
 5. required price histories pass expected-vs-observed session coverage;
 6. split-history and execution-price semantics are verified;
 7. unresolved provider gaps are classified explicitly;
 8. reproducibility manifests capture code, environment and data-source fingerprints.
+
+A complete suspension-announcement reconstruction is still valuable for legal-state explanation and stress analysis, but it is no longer required to manufacture an `ACTIVE` complement when direct official per-session execution evidence already exists.
 
 ## Decision rule
 
@@ -156,4 +165,4 @@ The model-development period can begin only when:
 - **FAIL:** fix data, obtain better evidence, or shorten the historical period.
 - **UNKNOWN:** remains a failure for model development.
 
-The objective is not to force a 2009–present dataset. A shorter clean point-in-time period is preferable to a long dataset whose trading states are guessed.
+The objective is not to force a 2009-present dataset. A shorter directly evidenced point-in-time period is preferable to a long dataset whose trading states are guessed.
