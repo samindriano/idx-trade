@@ -2,6 +2,26 @@
 
 Personal research project for building a point-in-time, daily/EOD IDX trade-setup scoring and risk engine.
 
+## Architecture at a glance
+
+### Current system
+
+This is the architecture that exists today. The project is deliberately **data-first**: modelling remains disabled until the historical Data Gate can be defended without guessing tradability state.
+
+<p align="center">
+  <img src="docs/assets/current-architecture.svg" alt="Current IDX Trade data foundation and Data Gate architecture" width="100%">
+</p>
+
+### Planned scoring model
+
+The modelling path below is the target after the Data Gate passes. It is shown here to make the intended research product explicit; these components are **not yet treated as implemented model results**.
+
+<p align="center">
+  <img src="docs/assets/planned-scoring-model.svg" alt="Planned IDX support resistance setup scoring probability and risk model" width="100%">
+</p>
+
+In practical terms, the intended user-facing output is not a blind BUY/SELL call. It is a structured setup containing the detected price geometry, entry/invalidation/target, risk-reward, estimated `P(TP before SL)`, an Opportunity Score, estimate reliability, and conservative sizing / robustness information.
+
 ## Research scope (locked for V1 data foundation)
 
 - Market: Indonesia Stock Exchange (IDX) equities.
