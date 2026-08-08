@@ -13,6 +13,9 @@ from .security_master import normalise_ticker
 from .storage import write_csv_atomic
 
 
+_ALLOWED_SCOPE_EXCLUSION_REASONS = {"NON_COMMON_SHARE"}
+
+
 def _canonical_sessions(exchange_sessions: pd.DatetimeIndex) -> pd.DatetimeIndex:
     sessions = (
         pd.DatetimeIndex(pd.to_datetime(exchange_sessions))
@@ -27,23 +30,52 @@ def _canonical_sessions(exchange_sessions: pd.DatetimeIndex) -> pd.DatetimeIndex
     return sessions
 
 
+def _validated_scope_exclusions(
+    security_scope_exclusions: pd.DataFrame | None,
+) -> set[str]:
+    if security_scope_exclusions is None or security_scope_exclusions.empty:
+        return set()
+    required = {"ticker", "reason", "source"}
+    missing = required - set(security_scope_exclusions.columns)
+    if missing:
+        raise ValueError(f"Security-scope exclusion columns missing: {sorted(missing)}")
+    data = security_scope_exclusions.copy()
+    data["ticker"] = data["ticker"].map(normalise_ticker)
+    data["reason"] = data["reason"].fillna("").astype(str).str.strip()
+    data["source"] = data["source"].fillna("").astype(str).str.strip()
+    invalid = data[
+        ~data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False)
+        | ~data["reason"].isin(_ALLOWED_SCOPE_EXCLUSION_REASONS)
+        | data["source"].eq("")
+    ]
+    if not invalid.empty:
+        raise ValueError("Security-scope exclusions contain unsupported or incomplete evidence")
+    if data["ticker"].duplicated().any():
+        conflicting = data.groupby("ticker")["reason"].nunique()
+        if (conflicting > 1).any():
+            raise ValueError("Conflicting security-scope exclusions for the same ticker")
+    return set(data["ticker"])
+
+
 def required_tickers_for_window(
     security_master: pd.DataFrame,
     exchange_sessions: pd.DatetimeIndex,
     *,
     tradability_anchors: pd.DataFrame | None = None,
     tradability_intervals: pd.DataFrame | None = None,
+    security_scope_exclusions: pd.DataFrame | None = None,
 ) -> list[str]:
-    """Discover every security that must be explained in the evaluated window.
+    """Discover every in-scope common security that must be explained.
 
     The primary candidate set is every security-master listing interval that
     overlaps the window. To prevent current-list omissions from creating a
     survivorship hole, official tradability point/interval evidence inside the
-    same window also contributes ticker candidates. Evidence-only tickers are
-    intentionally retained even when identity is missing; the DATA GATE then
-    fails them as SECURITY_IDENTITY_UNRESOLVED until IDX/KSEI reconciliation.
+    same window also contributes ticker candidates.
 
-    Yahoo/provider symbols never define this universe.
+    Evidence-discovered securities may be removed only by explicit authoritative
+    scope evidence proving they are non-common shares. An exclusion that conflicts
+    with an overlapping security-master identity is a hard error rather than a
+    silent removal. Yahoo/provider symbols never define this universe.
     """
 
     sessions = _canonical_sessions(exchange_sessions)
@@ -64,7 +96,8 @@ def required_tickers_for_window(
         master["listed_from"].le(end)
         & (master["listed_to"].isna() | master["listed_to"].ge(start))
     ]
-    required = set(overlaps["ticker"].dropna().map(normalise_ticker))
+    master_required = set(overlaps["ticker"].dropna().map(normalise_ticker))
+    required = set(master_required)
 
     if tradability_anchors is not None and not tradability_anchors.empty:
         anchor_required = {"ticker", "as_of_date"}
@@ -105,6 +138,14 @@ def required_tickers_for_window(
         ]
         required.update(intervals["ticker"].dropna().map(normalise_ticker))
 
+    exclusions = _validated_scope_exclusions(security_scope_exclusions)
+    conflicts = master_required & exclusions
+    if conflicts:
+        raise ValueError(
+            "Security-scope exclusion conflicts with overlapping security-master identity: "
+            + ", ".join(sorted(conflicts))
+        )
+    required.difference_update(exclusions)
     return sorted(ticker for ticker in required if ticker)
 
 
@@ -142,29 +183,36 @@ def run_full_universe_data_gate(
     split_history_verified: dict[str, bool],
     dividend_history_verified: dict[str, bool] | None = None,
     price_semantics_verified: dict[str, bool] | None = None,
+    security_scope_exclusions: pd.DataFrame | None = None,
     output_dir: str | Path | None = None,
 ) -> dict[str, object]:
-    """Certify the complete point-in-time IDX universe for one bounded window.
+    """Certify the complete point-in-time IDX common-stock universe.
 
     The exact same hard per-security DATA GATE used by the adversarial suite is
-    applied to all securities discoverable from official listing identity and
-    official tradability evidence. No model-universe liquidity filter is
-    applied here: this is a market-data certification step, not alpha research.
-
-    When explicit price-semantics flags are omitted, canonical raw provider
-    frames are verified structurally and deterministically for every candidate.
+    applied to securities discoverable from official listing identity and
+    official tradability evidence. Explicit KSEI/official type evidence may mark
+    a preference/non-common security out of scope; arbitrary ticker exclusions
+    are not accepted.
     """
 
     sessions = _canonical_sessions(exchange_sessions)
-    required = required_tickers_for_window(
+    discovered_before_scope = required_tickers_for_window(
         security_master,
         sessions,
         tradability_anchors=tradability_anchors,
         tradability_intervals=tradability_intervals,
     )
+    required = required_tickers_for_window(
+        security_master,
+        sessions,
+        tradability_anchors=tradability_anchors,
+        tradability_intervals=tradability_intervals,
+        security_scope_exclusions=security_scope_exclusions,
+    )
     if not required:
-        raise ValueError("No securities are discoverable in the evaluated window")
+        raise ValueError("No in-scope securities are discoverable in the evaluated window")
 
+    excluded = sorted(set(discovered_before_scope) - set(required))
     semantics = (
         price_semantics_verified
         if price_semantics_verified is not None
@@ -196,6 +244,9 @@ def run_full_universe_data_gate(
         "passed": bool(report["passed"]),
         "window_start": sessions[0].date().isoformat(),
         "window_end": sessions[-1].date().isoformat(),
+        "discovered_tickers_before_scope": int(len(discovered_before_scope)),
+        "scope_excluded_tickers": excluded,
+        "scope_excluded_count": int(len(excluded)),
         "required_tickers": int(report["required_tickers"]),
         "passed_tickers": int(report["passed_tickers"]),
         "failed_tickers": int(report["failed_tickers"]),
@@ -229,6 +280,11 @@ def run_full_universe_data_gate(
         target = Path(output_dir)
         write_csv_atomic(ticker_gates, target / "full_universe_ticker_gates.csv")
         write_csv_atomic(session_reports, target / "full_universe_session_coverage.csv")
+        if security_scope_exclusions is not None:
+            write_csv_atomic(
+                security_scope_exclusions,
+                target / "full_universe_scope_exclusions.csv",
+            )
         _atomic_json(summary, target / "full_universe_gate_summary.json")
 
     return result
