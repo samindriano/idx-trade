@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import re
 from collections.abc import Callable
 
 import pandas as pd
@@ -16,6 +17,7 @@ IDX_DAILY_INVESTOR_TABLE_URL = (
 
 
 HtmlFetcher = Callable[[str], str]
+DATE_CELL = re.compile(r"^\s*\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\s*$")
 
 
 def _fetch_html(url: str) -> str:
@@ -54,9 +56,10 @@ def parse_exchange_sessions_from_html(html: str, *, year: int, month: int) -> pd
     """Extract Exchange Days from an official IDX daily-trading table.
 
     The page contains several investor-flow tables that repeat the same trading
-    dates. We intentionally use only values found inside parsed HTML tables and
-    require every resulting date to belong to the requested month. Page-level
-    timestamps or unrelated dates are never accepted as exchange sessions.
+    dates. We intentionally use only date-shaped values found inside parsed HTML
+    tables and require every resulting date to belong to the requested month.
+    Page-level timestamps, numeric trade values and unrelated dates are never
+    accepted as exchange sessions.
     """
 
     if not html.strip():
@@ -71,7 +74,8 @@ def parse_exchange_sessions_from_html(html: str, *, year: int, month: int) -> pd
     for table in tables:
         for column in table.columns:
             values = table[column].astype(str)
-            parsed = pd.to_datetime(values, errors="coerce", dayfirst=True)
+            date_values = values[values.str.match(DATE_CELL, na=False)]
+            parsed = pd.to_datetime(date_values, errors="coerce", dayfirst=True)
             for value in parsed.dropna():
                 session = pd.Timestamp(value).tz_localize(None).normalize()
                 if session.year == year and session.month == month:
