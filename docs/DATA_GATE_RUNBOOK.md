@@ -70,11 +70,11 @@ An authoritative anchor is valid on its exact `as_of_date` even when surrounding
 
 ### Direct official execution evidence
 
-IDX Stock Summary can provide direct Regular-Market execution truth for a session:
+IDX Stock Summary can provide direct Regular-Market execution truth for a session. In the legacy Stock Summary schema, `Volume` and `Frequency` are the regular/order-book daily metrics. `NonRegularVolume` and `NonRegularFrequency` are separate non-regular-market metrics and must **not** be subtracted from the regular metrics.
 
-- `Volume - NonRegularVolume > 0` **and** `Frequency - NonRegularFrequency > 0` => `ACTIVE` point evidence;
-- both differences exactly `0` => `NO_TRADE` point evidence;
-- missing, negative, or internally inconsistent metrics => unresolved;
+- `Volume > 0` **and** `Frequency > 0` => `ACTIVE` point evidence;
+- `Volume == 0` **and** `Frequency == 0` => `NO_TRADE` point evidence;
+- missing, negative, or internally inconsistent regular metrics => unresolved;
 - row absence => unresolved.
 
 `NO_TRADE` means **no Regular-Market transaction was observed on that official IDX session**. It is not a claim that the security was legally suspended. Explicit suspension evidence remains more descriptive and is retained separately.
