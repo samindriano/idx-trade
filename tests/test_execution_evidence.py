@@ -31,10 +31,10 @@ def _summary() -> pd.DataFrame:
         {
             "ticker": ["TEST"] * 3,
             "as_of_date": dates,
-            "volume": [1000, 200, 1500],
-            "frequency": [10, 2, 15],
-            "nonregular_volume": [0, 200, 0],
-            "nonregular_frequency": [0, 2, 0],
+            "volume": [1000, 0, 1500],
+            "frequency": [10, 0, 15],
+            "nonregular_volume": [2000, 200, 0],
+            "nonregular_frequency": [20, 2, 0],
             "source": ["IDX_PUBLIC_STOCK_SUMMARY"] * 3,
             "source_ref": ["idx://summary"] * 3,
         }
@@ -48,6 +48,24 @@ def test_stock_summary_execution_evidence_distinguishes_trade_from_no_trade():
     assert states[pd.Timestamp("2025-01-02")] == TradabilityState.ACTIVE.value
     assert states[pd.Timestamp("2025-01-03")] == TradabilityState.NO_TRADE.value
     assert states[pd.Timestamp("2025-01-06")] == TradabilityState.ACTIVE.value
+
+
+def test_nonregular_metrics_are_separate_not_subtracted_from_regular_metrics():
+    frame = pd.DataFrame(
+        {
+            "ticker": ["GOTO"],
+            "as_of_date": [pd.Timestamp("2026-06-02")],
+            "volume": [100.0],
+            "frequency": [1.0],
+            "nonregular_volume": [10_000.0],
+            "nonregular_frequency": [50.0],
+            "source": ["IDX_PUBLIC_STOCK_SUMMARY"],
+            "source_ref": ["idx://summary/20260602"],
+        }
+    )
+    anchors, diagnostics = stock_summary_execution_anchors(frame)
+    assert diagnostics.empty
+    assert anchors.loc[0, "state"] == TradabilityState.ACTIVE.value
 
 
 def test_direct_execution_evidence_can_complete_session_coverage_without_announcement_window():
