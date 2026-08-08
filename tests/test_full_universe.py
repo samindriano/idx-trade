@@ -42,6 +42,87 @@ def test_required_tickers_for_window_uses_listing_interval_overlap():
     assert required == ["AAAA", "DDDD"]
 
 
+def test_official_point_evidence_discovers_security_missing_from_master():
+    sessions = pd.to_datetime(["2026-06-02"])
+    anchors = canonicalize_tradability_anchors(
+        pd.DataFrame(
+            {
+                "ticker": ["ZZZZ"],
+                "market": ["REGULAR"],
+                "as_of_date": sessions,
+                "state": ["NO_TRADE"],
+                "source": ["IDX_STOCK_SUMMARY"],
+                "source_ref": ["idx://summary"],
+                "evidence_type": ["IDX_STOCK_SUMMARY_REGULAR_EXECUTION_OBSERVATION"],
+            }
+        )
+    )
+    required = required_tickers_for_window(
+        _master(),
+        pd.DatetimeIndex(sessions),
+        tradability_anchors=anchors,
+    )
+    assert required == ["AAAA", "DDDD", "ZZZZ"]
+
+
+def test_full_universe_gate_fails_evidence_only_identity_until_reconciled():
+    sessions = pd.to_datetime(["2026-06-02"])
+    master = build_security_master(
+        pd.DataFrame(
+            {
+                "ticker": ["AAAA"],
+                "company_name": ["Active A"],
+                "listed_from": ["2020-01-01"],
+                "listed_to": [None],
+                "source": ["IDX"],
+            }
+        ),
+        pd.DataFrame(),
+    )
+    anchors = canonicalize_tradability_anchors(
+        pd.DataFrame(
+            {
+                "ticker": ["AAAA", "ZZZZ"],
+                "market": ["REGULAR", "REGULAR"],
+                "as_of_date": [sessions[0], sessions[0]],
+                "state": ["ACTIVE", "NO_TRADE"],
+                "source": ["IDX_STOCK_SUMMARY", "IDX_STOCK_SUMMARY"],
+                "source_ref": ["idx://summary", "idx://summary"],
+                "evidence_type": [
+                    "IDX_STOCK_SUMMARY_REGULAR_EXECUTION_OBSERVATION",
+                    "IDX_STOCK_SUMMARY_REGULAR_EXECUTION_OBSERVATION",
+                ],
+            }
+        )
+    )
+    prices = {
+        "AAAA": pd.DataFrame(
+            {
+                "date": sessions,
+                "raw_open": [100.0],
+                "raw_high": [101.0],
+                "raw_low": [99.0],
+                "raw_close": [100.0],
+                "raw_volume": [1_000_000.0],
+            }
+        )
+    }
+    report = run_full_universe_data_gate(
+        pd.DatetimeIndex(sessions),
+        prices,
+        master,
+        canonicalize_tradability_intervals(pd.DataFrame()),
+        canonicalize_coverage_windows(pd.DataFrame()),
+        tradability_anchors=anchors,
+        split_history_verified={"AAAA": True},
+        price_semantics_verified={"AAAA": True},
+    )
+    summary = report["full_universe_summary"]
+    assert summary["passed"] is False
+    assert summary["identity_unresolved_tickers"] == ["ZZZZ"]
+    assert summary["blocker_counts"]["SECURITY_IDENTITY_UNRESOLVED"] == 1
+
+
 def test_full_universe_gate_uses_same_hard_gate_and_writes_artifacts(tmp_path):
     sessions = pd.to_datetime(["2026-06-02", "2026-06-03", "2026-06-04"])
     master = build_security_master(
@@ -100,6 +181,7 @@ def test_full_universe_gate_uses_same_hard_gate_and_writes_artifacts(tmp_path):
     assert summary["passed_tickers"] == 1
     assert summary["unknown_sessions"] == 0
     assert summary["missing_active_prices"] == 0
+    assert summary["identity_unresolved_tickers"] == []
     assert summary["blocker_counts"] == {}
 
     saved = json.loads((tmp_path / "full_universe_gate_summary.json").read_text())
