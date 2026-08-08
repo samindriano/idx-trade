@@ -4,13 +4,23 @@ The project remains in the **data foundation** phase. Model, support/resistance,
 
 ## 1. Build official identity reference
 
-Use the IDX active-listing and delisting adapters to construct the listing security master. Current active listings are identity/reference data only and must never define a historical backtest universe by themselves.
+Use the IDX active-listing and delisting adapters as the primary listing-security-master sources. Current active listings are identity/reference data only and must never define a historical backtest universe by themselves.
+
+The IDX `GetSecuritiesStock` current-list endpoint must **not** be assumed exhaustive for long-suspended or otherwise non-trading listed shares. If a required ticker is absent from that primary response, reconcile it against KSEI Registered Securities before declaring the identity unresolved. The KSEI fallback is accepted only when the page explicitly proves all of the following for the requested short code:
+
+- security type is a common share (`Saham Biasa` / common share);
+- `Stock Exchange = IDX`;
+- `Status = Active`;
+- a valid listing date is present.
+
+KSEI is a supplemental identity/reference source, not a tradability source. It must never turn a suspended share into `ACTIVE` trading state. Any conflict between IDX delisting evidence and KSEI identity evidence is a hard review condition, not something to overwrite automatically.
 
 Required outputs:
 
 - canonical security master with `listed_from` / `listed_to`;
 - source references and retrieval manifest;
-- unresolved ticker/schema errors reported explicitly.
+- explicit diagnostics for primary-list omissions and KSEI fallback results;
+- unresolved ticker/schema conflicts reported explicitly.
 
 ## 2. Build an official Exchange-Day calendar
 
