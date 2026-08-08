@@ -57,11 +57,23 @@ def test_model_is_blocked_when_corporate_actions_are_unverified():
         ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
         canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
         corporate_action_verified={"TEST": False},
+        price_semantics_verified={"TEST": True},
     )
     assert not report["passed"]
     assert report["ticker_gates"][0]["blockers"] == ("CORPORATE_ACTIONS_UNVERIFIED",)
     with pytest.raises(RuntimeError, match="DATA GATE failed"):
         assert_data_gate(report)
+
+
+def test_model_is_blocked_when_price_semantics_flag_is_missing():
+    sessions = pd.bdate_range("2025-01-01", periods=20)
+    report = evaluate_data_gate(
+        ["TEST"], sessions, {"TEST": _frame(sessions)}, _master(),
+        canonicalize_tradability_intervals(pd.DataFrame()), _coverage(),
+        corporate_action_verified={"TEST": True},
+    )
+    assert not report["passed"]
+    assert report["ticker_gates"][0]["blockers"] == ("PRICE_SEMANTICS_UNVERIFIED",)
 
 
 def test_complete_verified_ticker_passes_data_gate():
