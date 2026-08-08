@@ -25,9 +25,13 @@ def stock_summary_execution_anchors(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Convert official IDX Stock Summary rows into direct execution-state anchors.
 
-    Positive Regular-Market volume and frequency prove ACTIVE trading on that
-    session. Exactly zero Regular-Market volume and frequency prove NO_TRADE.
-    NO_TRADE is an execution observation, not a legal suspension claim.
+    In the IDX Stock Summary schema, `Volume` and `Frequency` are the regular
+    order-book daily metrics. `NonRegularVolume` and `NonRegularFrequency` are
+    separate non-regular-market metrics, not subsets that must be subtracted.
+
+    Positive regular volume and frequency prove ACTIVE trading on that session.
+    Exactly zero regular volume and frequency prove NO_TRADE. NO_TRADE is an
+    execution observation, not a legal suspension claim.
     """
 
     required = {
@@ -35,8 +39,6 @@ def stock_summary_execution_anchors(
         "as_of_date",
         "volume",
         "frequency",
-        "nonregular_volume",
-        "nonregular_frequency",
         "source",
         "source_ref",
     }
@@ -48,19 +50,10 @@ def stock_summary_execution_anchors(
     diagnostics: list[dict[str, object]] = []
 
     for row in frame.itertuples(index=False):
-        total_volume = pd.to_numeric(row.volume, errors="coerce")
-        total_frequency = pd.to_numeric(row.frequency, errors="coerce")
-        nonregular_volume = pd.to_numeric(row.nonregular_volume, errors="coerce")
-        nonregular_frequency = pd.to_numeric(
-            row.nonregular_frequency, errors="coerce"
-        )
-        values = (
-            total_volume,
-            total_frequency,
-            nonregular_volume,
-            nonregular_frequency,
-        )
-        if any(pd.isna(value) for value in values):
+        regular_volume = pd.to_numeric(row.volume, errors="coerce")
+        regular_frequency = pd.to_numeric(row.frequency, errors="coerce")
+
+        if pd.isna(regular_volume) or pd.isna(regular_frequency):
             diagnostics.append(
                 {
                     "ticker": row.ticker,
@@ -73,15 +66,15 @@ def stock_summary_execution_anchors(
             )
             continue
 
-        regular_volume = float(total_volume - nonregular_volume)
-        regular_frequency = float(total_frequency - nonregular_frequency)
+        regular_volume = float(regular_volume)
+        regular_frequency = float(regular_frequency)
         if regular_volume < 0 or regular_frequency < 0:
             diagnostics.append(
                 {
                     "ticker": row.ticker,
                     "as_of_date": row.as_of_date,
                     "status": "UNRESOLVED",
-                    "diagnostic": "REGULAR_TRADE_METRICS_NEGATIVE_AFTER_SUBTRACTION",
+                    "diagnostic": "REGULAR_TRADE_METRICS_NEGATIVE",
                     "regular_volume": regular_volume,
                     "regular_frequency": regular_frequency,
                 }
@@ -130,7 +123,11 @@ def merge_tradability_point_evidence(*frames: pd.DataFrame) -> pd.DataFrame:
     state is a hard conflict.
     """
 
-    canonical = [canonicalize_tradability_anchors(frame) for frame in frames if not frame.empty]
+    canonical = [
+        canonicalize_tradability_anchors(frame)
+        for frame in frames
+        if not frame.empty
+    ]
     if not canonical:
         return canonicalize_tradability_anchors(pd.DataFrame())
 
