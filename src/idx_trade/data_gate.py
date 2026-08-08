@@ -33,18 +33,12 @@ def evaluate_data_gate(
     tradability_intervals: pd.DataFrame,
     tradability_coverage_windows: pd.DataFrame,
     *,
+    tradability_anchors: pd.DataFrame | None = None,
     split_history_verified: Mapping[str, bool],
     dividend_history_verified: Mapping[str, bool] | None = None,
     price_semantics_verified: Mapping[str, bool] | None = None,
 ) -> dict[str, object]:
-    """Hard pre-model gate for the required research universe.
-
-    The gate is intentionally strict: a ticker with unresolved tradability,
-    missing expected sessions, unknown tradability, unexpected bars, unverified
-    split history, or unverified price semantics cannot silently enter model
-    development. Dividend verification is reported as informational metadata;
-    it does not block the V1 technical-price gate.
-    """
+    """Hard pre-model gate for the required research universe."""
 
     dividend_history_verified = dividend_history_verified or {}
     price_semantics_verified = price_semantics_verified or {}
@@ -62,6 +56,7 @@ def evaluate_data_gate(
             security_master,
             tradability_intervals,
             tradability_coverage_windows,
+            tradability_anchors=tradability_anchors,
         )
         coverage_reports.append(coverage)
 
