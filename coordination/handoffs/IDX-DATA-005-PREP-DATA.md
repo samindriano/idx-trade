@@ -7,7 +7,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: 5e6f6bd38a5af3ee11bca93a15f50fadf9515eb2
 branch: data/idx-data-005-1260-prep
-head_commit: PENDING_FINAL_PREP_COMMIT
+head_commit: ba49c42ff153db18527e47badbfc0e9418900cf6 (validated implementation head; later metadata-only handoff commit may advance branch HEAD)
 scope: Prepare a separate, non-executing 1260-session historical-expansion branch while the 504-session repair remains the active certification dependency.
 files_changed:
 - src/idx_trade/history_preflight.py
@@ -31,7 +31,7 @@ blocking_risks:
 - Five-year source coverage may expose older identity, delisting, legal-state, Yahoo-history, corporate-action, or IDX schema boundaries.
 - This branch has not performed a 1260 network/data run and must not be interpreted as a PASS.
 validation_run:
-- Unit tests added for exact trailing-window selection, insufficient calendar rejection, exact suffix enforcement, cache-pair auditing, persisted preflight artifacts, and 1260-from-504 delta=756.
-- GitHub CI should be required green before integration.
+- GitHub Actions run #138: 146 passed, 0 failed; 14 warnings, all non-blocking.
+- Tests cover exact trailing-window selection, insufficient calendar rejection, exact suffix enforcement, cache-pair auditing, persisted preflight artifacts, and 1260-from-504 delta=756.
 recommended_next_action:
 - Finish targeted 504 repair on data/idx-data-002c. If 504 certifies and manifest verification is valid, reconcile this prep branch with the certified 504 head, run full tests, then execute the persisted preflight before any 1260 network work.
