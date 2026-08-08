@@ -48,6 +48,18 @@ def test_intraday_negotiated_only_open_and_resuspend_requires_manual_review():
     assert result.events.empty
 
 
+def test_call_auction_later_session_resume_requires_manual_review():
+    text = """
+    Pengumuman Pencabutan Suspensi Efek PT Example Tbk (TEST). Bursa mencabut Suspensi Efek TEST
+    di Pasar Reguler Periodic Call Auction dan Pasar Tunai Periodic Call Auction terhitung sejak
+    Sesi 4 Call Auction pada hari Kamis, 31 Juli 2025.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://call-auction")
+    assert result.status == "MANUAL_REVIEW"
+    assert result.diagnostic == "PARTIAL_SESSION_OR_CALL_AUCTION_RESUME"
+    assert result.events.empty
+
+
 def test_all_market_suspension_can_be_closed_only_for_resumed_markets():
     events = pd.DataFrame(
         [
