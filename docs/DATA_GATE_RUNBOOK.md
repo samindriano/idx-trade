@@ -97,12 +97,26 @@ Primary free research source: Yahoo/yfinance with `auto_adjust=False`.
 
 Rules:
 
-- preserve raw OHLCV for execution semantics;
+- preserve raw OHLCV for source auditability and execution semantics;
 - keep vendor adjusted close separate;
 - do not synthesize split-adjusted technical OHLC from adjusted close;
 - do not forward-fill missing price bars;
 - do not infer `SUSPENDED` or `NO_TRADE` from a missing provider row;
 - historical provider revisions must be surfaced rather than silently replacing prior research snapshots.
+
+### Raw provider history vs model-safe price view
+
+Official IDX point evidence is authoritative for Regular-Market session state. Yahoo is the price provider, not the tradability authority.
+
+Therefore a Yahoo row on a session classified by official evidence as `NO_TRADE`, `SUSPENDED`, `FCA_WATCHLIST`, `DELISTED`, or otherwise non-ACTIVE must be retained in the raw provider artifact for audit but **quarantined from the model-safe research price view**. Its presence does not override IDX exchange truth and does not by itself fail session coverage.
+
+The model-safe price view contains only provider rows whose point-in-time official state resolves to `ACTIVE`. The DATA GATE still fails when:
+
+- an expected `ACTIVE` session has no provider price row;
+- a required listed session remains `UNKNOWN`;
+- split history or raw-price semantics are unverified when price evidence is required.
+
+Provider rows on non-ACTIVE sessions remain explicit contamination diagnostics (`quarantined_nonactive_bars`) and must never enter feature, support/resistance, liquidity, label, or backtest calculations.
 
 ## 6. Verify corporate actions and price semantics
 
@@ -135,8 +149,8 @@ Expected standard:
 - all required listing states explained;
 - every listed research session resolves through direct official execution evidence or explicit tradability evidence;
 - unresolved sessions remain `UNKNOWN`;
-- no expected active session silently misses its raw price bar;
-- no provider bar exists on a directly evidenced non-trading session without investigation;
+- no expected ACTIVE session silently misses its raw price bar;
+- provider rows on explicitly non-ACTIVE sessions are counted and quarantined, never promoted into execution evidence;
 - split history verified;
 - price semantics verified.
 
@@ -152,10 +166,11 @@ The model-development period can begin only when:
 2. every required listed security/session has authoritative direct execution evidence or explicit tradability-state evidence;
 3. unresolved point evidence is zero for the required universe/period;
 4. independent reconciliation checks pass on reserved evidence;
-5. required price histories pass expected-vs-observed session coverage;
-6. split-history and execution-price semantics are verified;
-7. unresolved provider gaps are classified explicitly;
-8. reproducibility manifests capture code, environment and data-source fingerprints.
+5. required ACTIVE-session price histories pass expected-vs-observed session coverage;
+6. non-ACTIVE provider contamination is quarantined from all research/model views;
+7. split-history and execution-price semantics are verified;
+8. unresolved provider gaps are classified explicitly;
+9. reproducibility manifests capture code, environment and data-source fingerprints.
 
 A complete suspension-announcement reconstruction is still valuable for legal-state explanation and stress analysis, but it is no longer required to manufacture an `ACTIVE` complement when direct official per-session execution evidence already exists.
 
