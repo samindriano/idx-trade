@@ -73,7 +73,11 @@ def build_security_master(active: pd.DataFrame, delisted: pd.DataFrame) -> pd.Da
     if "source" not in rows.columns:
         rows["source"] = "UNKNOWN"
     rows["_has_end"] = rows["listed_to"].notna().astype(int)
-    rows = rows.sort_values(["ticker", "listed_from", "_has_end"]).drop_duplicates(["ticker", "listed_from"], keep="last").drop(columns="_has_end")
+    rows = (
+        rows.sort_values(["ticker", "listed_from", "_has_end"])
+        .drop_duplicates(["ticker", "listed_from"], keep="last")
+        .drop(columns="_has_end")
+    )
     invalid = rows[rows["listed_to"].notna() & rows["listed_to"].lt(rows["listed_from"])]
     if not invalid.empty:
         raise ValueError(f"Invalid listing intervals for: {invalid['ticker'].tolist()[:10]}")
@@ -154,9 +158,17 @@ def canonicalize_coverage_windows(frame: pd.DataFrame) -> pd.DataFrame:
     invalid = data[data["effective_to"].notna() & data["effective_to"].lt(data["effective_from"])]
     if not invalid.empty:
         raise ValueError("Coverage window ends before it starts")
-    complete_without_basis = data["is_complete"] & (data["discovery_basis"].eq("") | data["left_boundary_basis"].eq("") | data["effective_to"].isna())
+    complete_without_basis = data["is_complete"] & (
+        data["discovery_basis"].eq("")
+        | data["left_boundary_basis"].eq("")
+        | data["effective_to"].isna()
+    )
     data.loc[complete_without_basis, "is_complete"] = False
-    return data.dropna(subset=["market", "effective_from", "source"])[list(COVERAGE_WINDOW_COLUMNS)].sort_values(["market", "effective_from"]).reset_index(drop=True)
+    return (
+        data.dropna(subset=["market", "effective_from", "source"])[list(COVERAGE_WINDOW_COLUMNS)]
+        .sort_values(["market", "effective_from"])
+        .reset_index(drop=True)
+    )
 
 
 def canonicalize_tradability_anchors(frame: pd.DataFrame) -> pd.DataFrame:
@@ -176,7 +188,11 @@ def canonicalize_tradability_anchors(frame: pd.DataFrame) -> pd.DataFrame:
     for column in ("source", "source_ref", "evidence_type"):
         data[column] = data[column].fillna("").astype(str).str.strip()
     data = data.dropna(subset=["ticker", "market", "as_of_date"])
-    data = data[data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False) & data["source"].ne("") & data["evidence_type"].ne("")]
+    data = data[
+        data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False)
+        & data["source"].ne("")
+        & data["evidence_type"].ne("")
+    ]
     if data["state"].eq(TradabilityState.UNKNOWN.value).any():
         raise ValueError("UNKNOWN is not an authoritative tradability anchor")
     duplicate = data.duplicated(["ticker", "market", "as_of_date"], keep=False)
@@ -185,7 +201,11 @@ def canonicalize_tradability_anchors(frame: pd.DataFrame) -> pd.DataFrame:
         if (conflicts > 1).any():
             raise ValueError("Conflicting tradability anchors for the same ticker/market/date")
         data = data.drop_duplicates(["ticker", "market", "as_of_date"], keep="last")
-    return data[list(TRADABILITY_ANCHOR_COLUMNS)].sort_values(["ticker", "market", "as_of_date"]).reset_index(drop=True)
+    return (
+        data[list(TRADABILITY_ANCHOR_COLUMNS)]
+        .sort_values(["ticker", "market", "as_of_date"])
+        .reset_index(drop=True)
+    )
 
 
 def _matching_interval(rows: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
@@ -230,10 +250,24 @@ def _exact_anchor_for_session(anchors: pd.DataFrame, ticker: str, market: str, s
     return TradabilityState(str(rows.iloc[-1]["state"]))
 
 
+def _point_states_compatible(point_state: TradabilityState, explicit_state: TradabilityState) -> bool:
+    if point_state is explicit_state:
+        return True
+    if point_state is TradabilityState.NO_TRADE and explicit_state in {
+        TradabilityState.SUSPENDED,
+        TradabilityState.FCA_WATCHLIST,
+    }:
+        return True
+    return False
+
+
 def _complete_window_for_session(coverage_windows: pd.DataFrame, session: pd.Timestamp, market: str) -> pd.Series | None:
     if coverage_windows.empty:
         return None
-    applicable = coverage_windows[coverage_windows["market"].isin([market, "ALL"]) & coverage_windows["is_complete"].astype(bool)].copy()
+    applicable = coverage_windows[
+        coverage_windows["market"].isin([market, "ALL"])
+        & coverage_windows["is_complete"].astype(bool)
+    ].copy()
     if applicable.empty:
         return None
     starts = pd.to_datetime(applicable["effective_from"])
@@ -245,7 +279,9 @@ def _complete_window_for_session(coverage_windows: pd.DataFrame, session: pd.Tim
     chosen = exact if not exact.empty else applicable[applicable["market"].eq("ALL")]
     if chosen.empty:
         return None
-    chosen = chosen.assign(_span=(pd.to_datetime(chosen["effective_to"]) - pd.to_datetime(chosen["effective_from"])).dt.days).sort_values(["_span", "effective_from"])
+    chosen = chosen.assign(
+        _span=(pd.to_datetime(chosen["effective_to"]) - pd.to_datetime(chosen["effective_from"])).dt.days
+    ).sort_values(["_span", "effective_from"])
     return chosen.iloc[0]
 
 
@@ -268,18 +304,16 @@ def _validate_anchor_consistency(intervals: pd.DataFrame, anchors: pd.DataFrame,
         if explicit.empty:
             continue
         implied = TradabilityState(str(explicit.iloc[-1]["state"]))
-        if anchored is not implied:
-            raise ValueError("Tradability anchor conflicts with reconstructed event state for " f"{ticker}/{market} on {anchor_date.date()}: anchor={anchored.value}, reconstructed={implied.value}")
+        if not _point_states_compatible(anchored, implied):
+            raise ValueError(
+                "Tradability anchor conflicts with reconstructed event state for "
+                f"{ticker}/{market} on {anchor_date.date()}: "
+                f"anchor={anchored.value}, reconstructed={implied.value}"
+            )
 
 
 def tradability_state(intervals: pd.DataFrame, coverage_windows: pd.DataFrame, ticker: str, session: pd.Timestamp, market: str = "REGULAR", anchors: pd.DataFrame | None = None) -> TradabilityState:
-    """Resolve point state first; propagate only with complete event discovery.
-
-    An authoritative exact-date anchor is valid evidence on that exact session
-    even when the surrounding discovery window is incomplete. Using an anchor
-    to infer later dates still requires a complete bounded event-discovery
-    window, so this does not manufacture historical ACTIVE complements.
-    """
+    """Resolve point state first; propagate only with complete event discovery."""
     ticker = normalise_ticker(ticker)
     market = normalise_market(market)
     session = pd.Timestamp(session).normalize()
@@ -297,8 +331,12 @@ def tradability_state(intervals: pd.DataFrame, coverage_windows: pd.DataFrame, t
         raise ValueError(f"Ambiguous tradability state for {ticker}/{market} on {session.date()}")
     if not explicit.empty:
         explicit_state = TradabilityState(str(explicit.iloc[-1]["state"]))
-        if exact_anchor is not None and exact_anchor is not explicit_state:
-            raise ValueError("Tradability anchor conflicts with reconstructed event state for " f"{ticker}/{market} on {session.date()}: anchor={exact_anchor.value}, reconstructed={explicit_state.value}")
+        if exact_anchor is not None and not _point_states_compatible(exact_anchor, explicit_state):
+            raise ValueError(
+                "Tradability anchor conflicts with reconstructed event state for "
+                f"{ticker}/{market} on {session.date()}: "
+                f"anchor={exact_anchor.value}, reconstructed={explicit_state.value}"
+            )
         return explicit_state
     if exact_anchor is not None:
         return exact_anchor
