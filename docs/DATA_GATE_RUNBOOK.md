@@ -68,7 +68,9 @@ Per-security state evidence is stored separately in `tradability_anchors` with:
 
 Inside a complete discovery window, the ACTIVE complement may be inferred for a ticker only when that ticker has authoritative anchor evidence in the same window and the anchor is consistent with the explicit event intervals. No anchor means `UNKNOWN`. Conflicting anchor/event evidence is a hard failure.
 
-Official status snapshots may be used as anchors, but the same rows must not simultaneously serve as independent validation evidence. Reserve separate dates/rows as reconciliation holdouts.
+A valid free official ACTIVE anchor may be derived from IDX Stock Summary when the same official daily record proves a strictly positive Regular-Market transaction: total `Volume - NonRegularVolume > 0` **and** total `Frequency - NonRegularFrequency > 0`. This proves that Regular-Market trading occurred for that ticker on that date. Zero activity, mere row presence, `Remarks`, or Yahoo price presence do **not** prove ACTIVE and remain `UNKNOWN` unless another authoritative state source exists.
+
+Official status snapshots may be used as anchors, including SUSPENDED anchors for securities already suspended at the left boundary. When event discovery is complete, a SUSPENDED boundary anchor may be propagated forward only through explicit official transitions; nothing before the anchor is inferred. The same snapshot rows must not simultaneously serve as independent validation evidence. Reserve separate dates/rows as reconciliation holdouts.
 
 Do **not** infer discovery completeness or ACTIVE state from:
 
@@ -80,7 +82,7 @@ Do **not** infer discovery completeness or ACTIVE state from:
 
 Use independent official status snapshots (for example long-suspension/status lists where applicable) to reconcile reconstructed states. A mismatch is a blocker.
 
-Outside a declared-complete discovery window, or for a ticker without a valid anchor inside that window, unresolved state remains `UNKNOWN`.
+Outside a declared-complete discovery window, or for a ticker without a valid causal anchor inside that window, unresolved state remains `UNKNOWN`.
 
 ## 5. Collect raw EOD price history
 
