@@ -26,8 +26,8 @@ def test_parser_preserves_explicit_security_status_without_inferring_from_remark
                 "SecurityStatus": "ACTIVE_CODE",
                 "Volume": 1000,
                 "Frequency": 10,
-                "NonRegularVolume": 200,
-                "NonRegularFrequency": 2,
+                "NonRegularVolume": 2000,
+                "NonRegularFrequency": 20,
             },
             {
                 "StockCode": "BBRI",
@@ -35,8 +35,8 @@ def test_parser_preserves_explicit_security_status_without_inferring_from_remark
                 "Remarks": "ACTIVE-looking remark must not be interpreted",
                 "Volume": 0,
                 "Frequency": 0,
-                "NonRegularVolume": 0,
-                "NonRegularFrequency": 0,
+                "NonRegularVolume": 200,
+                "NonRegularFrequency": 2,
             },
         ],
     }
@@ -67,8 +67,8 @@ def test_positive_regular_market_transactions_are_authoritative_active_evidence(
             {
                 "StockCode": "DEAL",
                 "Date": "2026-07-31",
-                "Volume": 100,
-                "Frequency": 1,
+                "Volume": 0,
+                "Frequency": 0,
                 "NonRegularVolume": 100,
                 "NonRegularFrequency": 1,
             },
@@ -85,6 +85,31 @@ def test_positive_regular_market_transactions_are_authoritative_active_evidence(
     assert anchors.loc[0, "evidence_type"] == "IDX_STOCK_SUMMARY_REGULAR_TRADE"
     assert diagnostics["ticker"].tolist() == ["DEAL"]
     assert diagnostics.loc[0, "diagnostic"] == "NO_REGULAR_TRADE_EVIDENCE"
+
+
+def test_nonregular_activity_larger_than_regular_does_not_get_subtracted():
+    payload = {
+        "data": [
+            {
+                "StockCode": "GOTO",
+                "Date": "2026-07-31",
+                "Volume": 100,
+                "Frequency": 1,
+                "NonRegularVolume": 10000,
+                "NonRegularFrequency": 50,
+            }
+        ]
+    }
+    frame, meta = parse_stock_summary_payload(
+        payload,
+        requested_date="2026-07-31",
+        source_ref="idx://stock-summary/20260731",
+    )
+    anchors, diagnostics = stock_summary_regular_trade_anchors(frame)
+    assert meta.regular_trade_evidence_rows == 1
+    assert diagnostics.empty
+    assert anchors.loc[0, "ticker"] == "GOTO"
+    assert anchors.loc[0, "state"] == "ACTIVE"
 
 
 def test_status_anchor_extraction_requires_explicit_audited_mapping():
