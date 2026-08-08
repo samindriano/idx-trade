@@ -12,19 +12,7 @@ from .security_master import normalise_ticker
 from .storage import write_csv_atomic
 
 
-def required_tickers_for_window(
-    security_master: pd.DataFrame,
-    exchange_sessions: pd.DatetimeIndex,
-) -> list[str]:
-    """Return securities whose listing interval overlaps the evaluated window.
-
-    This is deliberately point-in-time. A current-active list must never define
-    the historical research universe. Securities delisted before the window and
-    IPOs listed after it are excluded from the required model universe, while
-    any listing interval that touches at least one evaluated exchange session is
-    included.
-    """
-
+def _canonical_sessions(exchange_sessions: pd.DatetimeIndex) -> pd.DatetimeIndex:
     sessions = (
         pd.DatetimeIndex(pd.to_datetime(exchange_sessions))
         .dropna()
@@ -35,7 +23,29 @@ def required_tickers_for_window(
     )
     if len(sessions) == 0:
         raise ValueError("Full-universe gate requires at least one exchange session")
+    return sessions
 
+
+def required_tickers_for_window(
+    security_master: pd.DataFrame,
+    exchange_sessions: pd.DatetimeIndex,
+    *,
+    tradability_anchors: pd.DataFrame | None = None,
+    tradability_intervals: pd.DataFrame | None = None,
+) -> list[str]:
+    """Discover every security that must be explained in the evaluated window.
+
+    The primary candidate set is every security-master listing interval that
+    overlaps the window. To prevent current-list omissions from creating a
+    survivorship hole, official tradability point/interval evidence inside the
+    same window also contributes ticker candidates. Evidence-only tickers are
+    intentionally retained even when identity is missing; the DATA GATE then
+    fails them as SECURITY_IDENTITY_UNRESOLVED until IDX/KSEI reconciliation.
+
+    Yahoo/provider symbols never define this universe.
+    """
+
+    sessions = _canonical_sessions(exchange_sessions)
     required_columns = {"ticker", "listed_from", "listed_to"}
     missing = required_columns - set(security_master.columns)
     if missing:
@@ -53,7 +63,48 @@ def required_tickers_for_window(
         master["listed_from"].le(end)
         & (master["listed_to"].isna() | master["listed_to"].ge(start))
     ]
-    return sorted(overlaps["ticker"].dropna().unique().tolist())
+    required = set(overlaps["ticker"].dropna().map(normalise_ticker))
+
+    if tradability_anchors is not None and not tradability_anchors.empty:
+        anchor_required = {"ticker", "as_of_date"}
+        anchor_missing = anchor_required - set(tradability_anchors.columns)
+        if anchor_missing:
+            raise ValueError(
+                f"Tradability-anchor columns missing: {sorted(anchor_missing)}"
+            )
+        anchors = tradability_anchors.copy()
+        anchors["as_of_date"] = pd.to_datetime(
+            anchors["as_of_date"], errors="coerce"
+        ).dt.normalize()
+        anchors = anchors[
+            anchors["as_of_date"].notna()
+            & anchors["as_of_date"].ge(start)
+            & anchors["as_of_date"].le(end)
+        ]
+        required.update(anchors["ticker"].dropna().map(normalise_ticker))
+
+    if tradability_intervals is not None and not tradability_intervals.empty:
+        interval_required = {"ticker", "effective_from", "effective_to"}
+        interval_missing = interval_required - set(tradability_intervals.columns)
+        if interval_missing:
+            raise ValueError(
+                f"Tradability-interval columns missing: {sorted(interval_missing)}"
+            )
+        intervals = tradability_intervals.copy()
+        intervals["effective_from"] = pd.to_datetime(
+            intervals["effective_from"], errors="coerce"
+        ).dt.normalize()
+        intervals["effective_to"] = pd.to_datetime(
+            intervals["effective_to"], errors="coerce"
+        ).dt.normalize()
+        intervals = intervals[
+            intervals["effective_from"].notna()
+            & intervals["effective_from"].le(end)
+            & (intervals["effective_to"].isna() | intervals["effective_to"].ge(start))
+        ]
+        required.update(intervals["ticker"].dropna().map(normalise_ticker))
+
+    return sorted(ticker for ticker in required if ticker)
 
 
 def _atomic_json(value: dict[str, object], path: Path) -> None:
@@ -95,18 +146,24 @@ def run_full_universe_data_gate(
     """Certify the complete point-in-time IDX universe for one bounded window.
 
     The exact same hard per-security DATA GATE used by the adversarial suite is
-    applied to every security whose official listing interval overlaps the
-    evaluated exchange-session window. No model-universe liquidity filter is
+    applied to all securities discoverable from official listing identity and
+    official tradability evidence. No model-universe liquidity filter is
     applied here: this is a market-data certification step, not alpha research.
     """
 
-    required = required_tickers_for_window(security_master, exchange_sessions)
+    sessions = _canonical_sessions(exchange_sessions)
+    required = required_tickers_for_window(
+        security_master,
+        sessions,
+        tradability_anchors=tradability_anchors,
+        tradability_intervals=tradability_intervals,
+    )
     if not required:
-        raise ValueError("No listed securities overlap the evaluated window")
+        raise ValueError("No securities are discoverable in the evaluated window")
 
     report = evaluate_data_gate(
         required,
-        exchange_sessions,
+        sessions,
         price_frames,
         security_master,
         tradability_intervals,
@@ -119,13 +176,21 @@ def run_full_universe_data_gate(
 
     ticker_gates = pd.DataFrame(report["ticker_gates"])
     session_reports = pd.DataFrame(report["session_coverage"]["reports"])
+    identity_unresolved = []
+    if not ticker_gates.empty:
+        for row in ticker_gates.itertuples(index=False):
+            blockers = row.blockers if not isinstance(row.blockers, str) else (row.blockers,)
+            if "SECURITY_IDENTITY_UNRESOLVED" in blockers:
+                identity_unresolved.append(row.ticker)
+
     summary = {
         "passed": bool(report["passed"]),
-        "window_start": pd.Timestamp(pd.DatetimeIndex(exchange_sessions).min()).date().isoformat(),
-        "window_end": pd.Timestamp(pd.DatetimeIndex(exchange_sessions).max()).date().isoformat(),
+        "window_start": sessions[0].date().isoformat(),
+        "window_end": sessions[-1].date().isoformat(),
         "required_tickers": int(report["required_tickers"]),
         "passed_tickers": int(report["passed_tickers"]),
         "failed_tickers": int(report["failed_tickers"]),
+        "identity_unresolved_tickers": sorted(identity_unresolved),
         "price_required_tickers": (
             int(ticker_gates["price_requirements_applicable"].fillna(False).sum())
             if not ticker_gates.empty
