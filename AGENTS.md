@@ -1,5 +1,13 @@
 # IDX Trade V0 working agreement
 
+## Canonical project memory
+
+`docs/PROJECT_LEDGER.md` is the canonical cross-phase continuity document for this project.
+
+Before any material DATA, VALIDATION, or MODEL task, read the ledger first. Historical handoffs and commit messages are evidence snapshots, but they may describe an older state of the project. When a material assumption changes, a new failure class is discovered, a gate result changes, or a phase transition is approved, update the ledger with the symptom, diagnosis, fix, validation evidence, remaining blocker, and permanent lesson.
+
+Do not delete failed approaches from the ledger merely because they were fixed. The failure -> diagnosis -> fix chain is part of the research knowledge and is required to avoid repeating earlier mistakes after context loss or agent handoff.
+
 ## Repository-wide principles
 
 This repository is **EXPLORATORY_RESEARCH_ONLY**. It is not investment advice
