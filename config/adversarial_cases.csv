@@ -1,0 +1,36 @@
+case_id,ticker,case_family,gate_focus,reference_note
+normal_01,BBCA,NORMAL_LIQUID,baseline coverage and raw-adjusted semantics,Long-history liquid control
+normal_02,BBRI,NORMAL_LIQUID,baseline coverage and raw-adjusted semantics,Long-history liquid control
+normal_03,BMRI,NORMAL_LIQUID,baseline coverage and raw-adjusted semantics,Long-history liquid control
+normal_04,TLKM,NORMAL_LIQUID,baseline coverage and raw-adjusted semantics,Long-history liquid control
+normal_05,ASII,NORMAL_LIQUID,baseline coverage and corporate-action semantics,Long-history liquid control
+normal_06,ICBP,NORMAL_LIQUID,baseline coverage and corporate-action semantics,Long-history liquid control
+normal_07,INDF,NORMAL_LIQUID,baseline coverage and corporate-action semantics,Long-history liquid control
+normal_08,UNVR,NORMAL_LIQUID,baseline coverage and corporate-action semantics,Long-history liquid control
+ipo_01,BREN,RECENT_IPO,listing date warmup and short-history behavior,Recent large-cap IPO case
+ipo_02,AMMN,RECENT_IPO,listing date warmup and short-history behavior,Recent IPO case
+ipo_03,CUAN,RECENT_IPO,listing date warmup and short-history behavior,Recent IPO case
+ipo_04,GOTO,RECENT_IPO,listing date warmup and short-history behavior,Recent IPO case
+ipo_05,PGEO,RECENT_IPO,listing date warmup and short-history behavior,Recent IPO case
+ipo_06,NCKL,RECENT_IPO,listing date warmup and short-history behavior,Recent IPO case
+ipo_07,MTEL,RECENT_IPO,listing date warmup and short-history behavior,Newer listing relative to long-history controls
+ipo_08,ADMR,RECENT_IPO,listing date warmup and short-history behavior,Newer listing relative to long-history controls
+suspend_01,IFSH,SUSPEND_RESUME,regular-market suspension interval reconstruction,IDX unsuspension 29 Jan 2026
+suspend_02,ROCK,SUSPEND_RESUME,regular-market suspension interval reconstruction,IDX unsuspension 3 Feb 2026
+suspend_03,INDS,SUSPEND_RESUME,regular-market suspension interval reconstruction,IDX unsuspension 3 Feb 2026
+suspend_04,INET,SUSPEND_RESUME,stock-vs-warrant market-scope parsing,IDX documents mention stock and warrant scopes
+suspend_05,BWPT,SUSPEND_RESUME,regular-market suspension interval reconstruction,IDX unsuspension 9 Sep 2025
+suspend_06,NSSS,SUSPEND_RESUME,regular-market suspension interval reconstruction,IDX unsuspension 5 Jan 2026
+suspend_07,KRAS,SUSPEND_RESUME,suspension effective-date parsing,IDX suspension effective 1 Jul 2025
+suspend_08,UANG,SUSPEND_RESUME,suspension effective-date parsing,IDX suspension effective 15 Sep 2025
+long_01,MKNT,LONG_SUSPENSION,long suspension must not become provider-missing,Listed in IDX long-suspension monitoring
+long_02,SBAT,LONG_SUSPENSION,long suspension must not become provider-missing,Listed in IDX long-suspension monitoring
+long_03,DEAL,LONG_SUSPENSION,regular-cash suspension scope,Listed in IDX long-suspension monitoring
+long_04,TRIL,LONG_SUSPENSION,long suspension must not become provider-missing,Listed in IDX long-suspension monitoring
+long_05,SRIL,LONG_SUSPENSION,long suspension and distressed-history retention,Listed in IDX long-suspension monitoring
+complex_01,HDTX,COMPLEX_MARKET_SCOPE,negotiated-only temporary opening must require manual review,Delisting-related negotiated-market crossing case
+history_01,KPAS,DELISTED_HISTORY,pre-delisting observations retained and post-delisting excluded,Must be verified through IDX delisting reference adapter
+quality_01,ALTO,DATA_QUALITY_STRESS,illiquidity or long non-trading gaps must be classified explicitly,Stress case from suspension history universe
+quality_02,ARMY,DATA_QUALITY_STRESS,illiquidity or long non-trading gaps must be classified explicitly,Stress case from suspension history universe
+quality_03,ARTI,DATA_QUALITY_STRESS,illiquidity or long non-trading gaps must be classified explicitly,Stress case from suspension history universe
+quality_04,ALMI,DATA_QUALITY_STRESS,illiquidity or long non-trading gaps must be classified explicitly,Stress case from suspension history universe
