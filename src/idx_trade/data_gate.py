@@ -48,11 +48,10 @@ def evaluate_data_gate(
     for value in required_tickers:
         ticker = normalise_ticker(value)
         frame = price_frames.get(ticker, pd.DataFrame())
-        observed_dates = frame["date"] if "date" in frame.columns else pd.DatetimeIndex([])
         coverage = security_coverage(
             ticker,
             exchange_sessions,
-            observed_dates,
+            frame,
             security_master,
             tradability_intervals,
             tradability_coverage_windows,
