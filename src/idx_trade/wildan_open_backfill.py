@@ -40,13 +40,19 @@ def _normalise_date(series: pd.Series) -> pd.Series:
 
 
 def read_wildan_archive_info(root: str | Path) -> dict[str, object]:
-    root_path = Path(root)
-    info_path = root_path / "info.json"
+    """Read repository metadata, but never use it as a hard coverage boundary.
+
+    The public repository currently contains rows later than the date recorded in
+    ``info.json``. Coverage is therefore measured from the actual pinned CSV
+    snapshot, while ``info.json`` is retained as provenance metadata only.
+    """
+
+    info_path = Path(root) / "info.json"
     if not info_path.is_file():
-        raise FileNotFoundError(f"Wildan archive info.json missing: {info_path}")
+        return {}
     value = json.loads(info_path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or not str(value.get("last_update", "")).strip():
-        raise ValueError("Wildan archive info.json has no last_update")
+    if not isinstance(value, dict):
+        raise ValueError("Wildan archive info.json must contain an object")
     return value
 
 
@@ -58,8 +64,7 @@ def parse_wildan_stock_csv(
 ) -> pd.DataFrame:
     """Parse one existing Wildan/IDX-derived CSV into secondary OHLC evidence."""
 
-    csv_path = Path(path)
-    data = pd.read_csv(csv_path)
+    data = pd.read_csv(Path(path))
     data.columns = [str(column).strip().casefold() for column in data.columns]
     aliases = {
         "date": "date",
@@ -100,10 +105,9 @@ def load_wildan_archive(
     start: object | None = None,
     end: object | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Load only requested ticker files from a pinned local clone of the public archive."""
+    """Load requested ticker files from a pinned local clone of the public archive."""
 
-    root_path = Path(root)
-    data_root = root_path / WILDAN_DATA_SUBDIR
+    data_root = Path(root) / WILDAN_DATA_SUBDIR
     if not data_root.is_dir():
         raise FileNotFoundError(f"Wildan archive data directory missing: {data_root}")
     commit = str(source_commit).strip()
@@ -117,7 +121,15 @@ def load_wildan_archive(
     for raw_ticker in sorted({_normalise_ticker(value) for value in tickers}):
         path = data_root / f"{raw_ticker}.csv"
         if not path.is_file():
-            coverage.append({"ticker": raw_ticker, "status": "FILE_MISSING", "rows": 0, "first_date": None, "last_date": None})
+            coverage.append(
+                {
+                    "ticker": raw_ticker,
+                    "status": "FILE_MISSING",
+                    "rows": 0,
+                    "first_date": None,
+                    "last_date": None,
+                }
+            )
             continue
         parsed = parse_wildan_stock_csv(path, ticker=raw_ticker, source_commit=commit)
         if lower is not None:
@@ -136,8 +148,20 @@ def load_wildan_archive(
                 "last_date": parsed["date"].max() if not parsed.empty else None,
             }
         )
-    secondary = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
-        columns=["ticker", "date", "secondary_open", "secondary_high", "secondary_low", "secondary_close", "secondary_source_ref"]
+    secondary = (
+        pd.concat(frames, ignore_index=True)
+        if frames
+        else pd.DataFrame(
+            columns=[
+                "ticker",
+                "date",
+                "secondary_open",
+                "secondary_high",
+                "secondary_low",
+                "secondary_close",
+                "secondary_source_ref",
+            ]
+        )
     )
     return secondary, pd.DataFrame(coverage)
 
@@ -175,23 +199,41 @@ def official_missing_open_evidence(panel: pd.DataFrame) -> pd.DataFrame:
         targets = targets.merge(source_map, on=["ticker", "date"], how="left", validate="one_to_one")
     else:
         targets["official_source_ref"] = "IMMUTABLE_SIGNAL_RESEARCH_PANEL"
-    targets["official_source_ref"] = targets["official_source_ref"].fillna("IMMUTABLE_SIGNAL_RESEARCH_PANEL").astype(str)
+    targets["official_source_ref"] = (
+        targets["official_source_ref"].fillna("IMMUTABLE_SIGNAL_RESEARCH_PANEL").astype(str)
+    )
     return targets
 
 
 def audit_existing_open_overlap(panel: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame:
-    """Known-answer audit: compare archive OHLC with rows whose Open already exists."""
+    """Known-answer audit against rows whose Open already exists in the panel."""
 
     data = _prepare_panel(panel)
     existing = data[data["open"].gt(0)][["ticker", "date", "open", "high", "low", "close"]].copy()
     if existing.empty or secondary.empty:
         return pd.DataFrame(
-            columns=["ticker", "date", "hlc_exact", "open_exact", "panel_open", "secondary_open"]
+            columns=[
+                "ticker",
+                "date",
+                "hlc_exact",
+                "open_exact",
+                "panel_open",
+                "secondary_open",
+                "secondary_source_ref",
+            ]
         )
     merged = existing.merge(secondary, on=["ticker", "date"], how="inner", validate="one_to_one")
     if merged.empty:
         return pd.DataFrame(
-            columns=["ticker", "date", "hlc_exact", "open_exact", "panel_open", "secondary_open"]
+            columns=[
+                "ticker",
+                "date",
+                "hlc_exact",
+                "open_exact",
+                "panel_open",
+                "secondary_open",
+                "secondary_source_ref",
+            ]
         )
     merged["hlc_exact"] = (
         merged["high"].eq(merged["secondary_high"])
@@ -210,11 +252,19 @@ def apply_accepted_open_backfill(
     *,
     source_commit: str,
 ) -> pd.DataFrame:
+    """Fill null Open only. Existing Open/H/L/C/V rows are never overwritten."""
+
     data = _prepare_panel(panel)
-    data["open_source"] = "EXISTING_PANEL"
-    data["open_source_ref"] = data.get("open_evidence_status", "EXISTING_PANEL")
+    existing = data["open"].notna() & data["open"].gt(0)
+    data["open_source"] = existing.map({True: "EXISTING_PANEL", False: "UNRESOLVED"})
+    if "open_evidence_status" in data.columns:
+        data["open_source_ref"] = data["open_evidence_status"].where(existing, pd.NA)
+    else:
+        data["open_source_ref"] = existing.map({True: "EXISTING_PANEL", False: pd.NA})
     data["open_source_commit"] = pd.NA
-    data["open_validation_status"] = data["open"].notna().map({True: "EXISTING_OPEN_PRESERVED", False: "UNRESOLVED"})
+    data["open_validation_status"] = existing.map(
+        {True: "EXISTING_OPEN_PRESERVED", False: "UNRESOLVED"}
+    )
     if accepted.empty:
         return data
 
@@ -242,7 +292,7 @@ def run_wildan_open_backfill(
     output_dir: str | Path,
     expected_panel_sha256: str | None = None,
 ) -> dict[str, object]:
-    """Build a derivative panel that fills null Open only after exact H/L/C agreement."""
+    """Build a derivative panel from exact-HLC cross-validated archive Open rows."""
 
     panel_file = Path(panel_path)
     if not panel_file.is_file():
@@ -253,20 +303,25 @@ def run_wildan_open_backfill(
 
     panel = _prepare_panel(pd.read_parquet(panel_file))
     archive_info = read_wildan_archive_info(wildan_root)
-    source_last_update = pd.Timestamp(str(archive_info["last_update"])).normalize()
     secondary, coverage = load_wildan_archive(
         wildan_root,
         set(panel["ticker"]),
         source_commit=source_commit,
         start=panel["date"].min(),
-        end=min(panel["date"].max(), source_last_update),
+        end=panel["date"].max(),
     )
     overlap = audit_existing_open_overlap(panel, secondary)
     official_targets = official_missing_open_evidence(panel)
     candidate_for_targets = secondary.merge(
-        official_targets[["ticker", "date"]], on=["ticker", "date"], how="inner", validate="one_to_one"
+        official_targets[["ticker", "date"]],
+        on=["ticker", "date"],
+        how="inner",
+        validate="one_to_one",
     )
-    accepted, diagnostics = cross_validate_secondary_open_witness(official_targets, candidate_for_targets)
+    accepted, diagnostics = cross_validate_secondary_open_witness(
+        official_targets,
+        candidate_for_targets,
+    )
     derivative = apply_accepted_open_backfill(panel, accepted, source_commit=source_commit)
 
     output = Path(output_dir)
@@ -287,6 +342,8 @@ def run_wildan_open_backfill(
     overlap_rows = int(len(overlap))
     hlc_exact_rows = int(overlap["hlc_exact"].sum()) if overlap_rows else 0
     open_exact_rows = int(overlap["open_exact"].sum()) if overlap_rows else 0
+    observed_last_date = secondary["date"].max() if not secondary.empty else pd.NaT
+    info_last_update = str(archive_info.get("last_update", "")).strip() or None
     summary: dict[str, object] = {
         "status": "WILDAN_BACKFILL_COMPLETE",
         "input_panel": str(panel_file),
@@ -294,7 +351,10 @@ def run_wildan_open_backfill(
         "source_id": WILDAN_SOURCE_ID,
         "source_repository": WILDAN_REPOSITORY,
         "source_commit": str(source_commit).strip(),
-        "source_last_update": source_last_update.date().isoformat(),
+        "source_info_last_update": info_last_update,
+        "source_observed_last_date": (
+            pd.Timestamp(observed_last_date).date().isoformat() if pd.notna(observed_last_date) else None
+        ),
         "input_rows": int(len(panel)),
         "input_tickers": int(panel["ticker"].nunique()),
         "initial_null_open_rows": initial_null,
@@ -309,23 +369,32 @@ def run_wildan_open_backfill(
         "missing_open_target_rows": int(len(official_targets)),
         "source_candidate_target_rows": int(len(candidate_for_targets)),
         "accepted_backfill_rows": int(len(accepted)),
-        "rejected_or_unresolved_target_rows": int(len(diagnostics) - diagnostics["status"].eq("ACCEPTED").sum()) if not diagnostics.empty else int(len(official_targets)),
+        "rejected_or_unresolved_target_rows": (
+            int(len(diagnostics) - diagnostics["status"].eq("ACCEPTED").sum())
+            if not diagnostics.empty
+            else int(len(official_targets))
+        ),
         "final_null_open_rows": final_null,
         "filled_open_rows": initial_null - final_null,
-        "remaining_null_open_percentage": float(final_null / len(derivative) * 100.0) if len(derivative) else None,
+        "remaining_null_open_percentage": (
+            float(final_null / len(derivative) * 100.0) if len(derivative) else None
+        ),
         "execution_grade_promoted": False,
-        "note": "Derivative only. Strict execution-grade certification requires separate review of coverage/provenance and any remaining Open gaps.",
+        "note": (
+            "Derivative only. Strict execution-grade certification requires separate review of "
+            "coverage/provenance and any remaining Open gaps."
+        ),
     }
-    _atomic_json(summary, summary_output)
     summary["output_sha256"] = {
         panel_output.name: sha256_file(panel_output),
         coverage_output.name: sha256_file(coverage_output),
         overlap_output.name: sha256_file(overlap_output),
         diagnostics_output.name: sha256_file(diagnostics_output),
-        summary_output.name: sha256_file(summary_output),
     }
     _atomic_json(summary, summary_output)
-    return summary
+    returned = dict(summary)
+    returned["summary_sha256"] = sha256_file(summary_output)
+    return returned
 
 
 def _parser() -> argparse.ArgumentParser:
