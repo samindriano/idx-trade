@@ -108,7 +108,7 @@ Models:
 
 GitHub Actions on the implementation PR passed:
 
-- **182 tests passed**;
+- **184 tests passed**;
 - **0 tests failed**;
 - warnings are existing pandas/NumPy deprecation/future warnings and are not
   Stage-3 gate failures.
@@ -116,7 +116,8 @@ GitHub Actions on the implementation PR passed:
 Synthetic regression tests cover barrier ordering, ambiguity, path gaps,
 horizon/access bounds, causal-feature future invariance, liquidity windows,
 left-censored age, frozen fold boundaries, purge overlap, holdout rejection,
-baseline execution, and runtime admission helpers.
+baseline execution, runtime admission helpers, candidate/drop reporting,
+reliability bins, and pooled OOF aggregation.
 
 ## Runtime boundary
 
