@@ -7,7 +7,7 @@ reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: f51f9778a6657b52752d2423dbde8499c693bf70
 branch: research/idx-stage5-postmortem-v1
-head_commit: pending documentation commit
+head_commit: 69ed2d2b6f287b44279a07c00b4dbb3c8dc30fd3
 scope: Execute exactly one bounded descriptive post-mortem of the failed Stage-5 Ranking V1 holdout.
 files_changed: docs/CURRENT_STATUS.md; docs/PROJECT_CONTEXT_MASTER.md; docs/PROJECT_LEDGER.md; docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_RUNTIME.md; coordination/handoffs/IDX-STAGE5-POSTMORTEM-RESULT.md
 findings: The diagnostic completed with status DESCRIPTIVE_DIAGNOSTIC_COMPLETE. Feature distribution drift was largest for atr14_over_close, security_age_sessions_exact, distance_low_60_atr, observed_session_count, and close_return_20 by absolute SMD. Factual feature Q5-Q1 sign reversals occurred for atr14_over_close, log_regular_value_relative_20, observed_session_count, relative_volume_20, and security_age_sessions_exact. Fixed blocks A1/A2/A3 were positive or near-zero, B2/B3 were negative, and the HGB top-decile lift was positive in A but approximately zero/negative in B.
