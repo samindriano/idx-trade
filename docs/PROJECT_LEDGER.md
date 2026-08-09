@@ -1329,3 +1329,65 @@ checkpoint.
 
 No Stage 5, holdout inspection, `IDX-VAL-002`, modelling, external data, or
 main merge was started. Stop for independent ChatGPT review.
+
+## 26. STAGE-5 ranking-only locked holdout - FAIL and consumed
+
+Date: 2026-08-09 (Asia/Jakarta). Branch:
+`research/idx-stage5-ranking-holdout-v1`. Runtime code head:
+`05c2bb549b446da374c13937a41aa6732cf71ec0`.
+
+The exact frozen Stage-5 V1 runtime executed once under the required
+environment: Python 3.13.5, NumPy 2.4.2, pandas 2.3.3, pyarrow 23.0.1, and
+scikit-learn 1.8.0. Full pytest passed **206/206**, with three existing
+pandas FutureWarnings and no test failures. The immutable signal-research
+panel, research manifest, official calendar, Stage-4B summary, and security
+master hashes matched the frozen inputs. Manifest verification was
+`valid=true`, 15/15, with no mismatches.
+
+The final development ranking table stopped at signal session 988
+(`2025-06-13`) after the declared H20 purge/buffer. It contained 217,352 rows
+with positive rate 0.3882319923. The final rankers were frozen and hashed
+before holdout labels were read. The primary H10 holdout was sessions
+1009-1250 (`2025-07-15` to `2026-07-17`) with 71,420 rows and positive rate
+0.4071688603. Its model results were:
+
+| model | PR-AUC | ROC-AUC |
+|---|---:|---:|
+| BASE_RATE | 0.4071688603 | 0.5000000000 |
+| MOMENTUM_20 | 0.3966643214 | 0.4860543642 |
+| LOGISTIC_COMPACT | 0.4051024048 | 0.4990938749 |
+| HGB_FULL | 0.4073793720 | 0.4948433255 |
+
+The automatic decision was **`STAGE5_RANKING_HOLDOUT_FAIL`**. HGB beat the
+base-rate PR-AUC by only 0.0002105118 and beat momentum, and Q5 exceeded Q1
+by 0.0108405246, but HGB ROC-AUC did not exceed 0.5. HOLDOUT_A
+(`1009-1129`) had PR-AUC 0.4866372564 versus its 0.4647456292 base rate and
+Q5-Q1 0.0464755652. HOLDOUT_B (`1130-1250`) had PR-AUC 0.3471254020 versus
+its 0.3577062238 base rate and Q5-Q1 -0.0198933303. Therefore the temporal
+stability gate failed.
+
+Sensitivity results were weak and not decision-saving: H5 had 56,762 rows,
+PR-AUC 0.3934717252 versus positive rate 0.3893978366 and ROC-AUC
+0.5003881183; H20 had 76,458 rows, PR-AUC 0.4031550698 versus positive rate
+0.4014883989 and ROC-AUC 0.4958467114. H10 retained explicit outcome
+statuses: 482 `AMBIGUOUS_SAME_BAR`, 114 `INVALID_BARRIER`, 12,330
+`NO_BARRIER_HIT`, 42,340 `SL_FIRST`, 29,080 `TP_FIRST`, and 1,259
+`UNRESOLVED_PATH`.
+
+The runtime output is external and remains outside Git:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_ranking_holdout_v1_20260809`.
+The summary SHA-256 is
+`1a38171eead5a9c72de62da4f6ef486f35e3fba2e962c3b0bccac9fea033acd0`.
+The global holdout marker SHA-256 is
+`4afdfac7c0542391bd7b5787cd329ed4c3985402c0dea0547866597d52588d0d`; the
+local marker SHA-256 is
+`1295ac4dedf60dbb3d576b9e007c8e3d67611ff74dd5b7207482b269825db543`.
+Both markers record `holdout_consumed=true`,
+`holdout_consumed_for=RANKING_V1_ONLY`, and
+`models_frozen_before_holdout_labels=true`.
+
+Probability V1 remains **`PROBABILITY_V1_NOT_READY_DEFERRED`**. No Stage 6,
+Probability V2, `IDX-VAL-002`, execution-PnL claim, paper/live trading, or
+main merge is authorized. Any future Probability V2 validation must use fresh
+forward data strictly after `2026-07-31`; the consumed ranking holdout must
+not be reused.

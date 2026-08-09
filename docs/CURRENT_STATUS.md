@@ -11,9 +11,9 @@ checkpoint.
 - active branch: `research/idx-stage5-ranking-holdout-v1`
 - parent branch: `research/idx-stage4b-calibration-v1`
 - Stage-5 PR: #7, draft
-- phase: **Stage 5 — one-shot ranking-only locked holdout, implementation ready**
-- locked holdout: **still untouched at this checkpoint**
-- `holdout_outcome_accessed=false`
+- phase: **Stage 5 — one-shot ranking-only locked holdout completed, FAIL**
+- locked holdout: **consumed for `RANKING_V1_ONLY`; no retry permitted**
+- `holdout_outcome_accessed=true`
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
 - `IDX-VAL-002`: not started
 - merge to `main`: not authorized
@@ -97,7 +97,7 @@ Independent decision after Stage 4B:
 - any future Probability V2 must use fresh forward validation strictly after
   `2026-07-31` once the current holdout is consumed.
 
-## Stage 5 — ready, not yet executed
+## Stage 5 - ranking-only holdout executed, failed
 
 Read `docs/STAGE5_RANKING_HOLDOUT_PLAN_V1.md`.
 
@@ -113,14 +113,25 @@ Frozen mechanics:
 - primary gate is ranking-only: PR-AUC, ROC-AUC, Q5 vs Q1 and temporal halves;
 - no Brier/ECE/calibrated probability claim in Stage 5.
 
+Runtime result:
+
+- automatic decision: **`STAGE5_RANKING_HOLDOUT_FAIL`**;
+- runtime code commit: `05c2bb549b446da374c13937a41aa6732cf71ec0`;
+- H10 holdout: 71,420 resolved primary rows, positive rate 0.4071688603;
+- HGB PR-AUC: 0.4073793720 versus base 0.4071688603;
+- HGB ROC-AUC: 0.4948433255, below the 0.5 gate;
+- HOLDOUT_A passed its PR-AUC-over-base check, but HOLDOUT_B failed it;
+- the holdout is permanently consumed for `RANKING_V1_ONLY`;
+- output: `D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_ranking_holdout_v1_20260809`.
+
 One-shot safety:
 
-- before holdout outcomes are read, the runner writes a durable global marker
+- before holdout outcomes were read, the runner wrote a durable global marker
   `STAGE5_RANKING_V1_HOLDOUT_ACCESS_STARTED.json` beside the immutable panel;
 - if that marker exists, future Stage-5 runs fail closed even if another output
   directory is supplied;
-- a failure after marker creation means the holdout is conservatively treated
-  as consumed and must not be rerun automatically.
+- both global and local markers were written before holdout labels were read;
+- the successful runtime therefore consumed the holdout and must not be rerun.
 
 Implementation review:
 
@@ -129,5 +140,7 @@ Implementation review:
 - all upstream hashes, numerical environment, model-freeze ordering, and
   one-shot marker semantics are fail-closed.
 
-Next action: one execution-only local runtime of
-`python -m idx_trade.stage5_ranking_holdout`, then stop for independent review.
+Next action: independent ChatGPT review of the failed ranking-only result. Do
+not start Stage 6, Probability V2, `IDX-VAL-002`, paper/live trading, or a
+second Stage-5 runtime. Probability V1 remains
+`PROBABILITY_V1_NOT_READY_DEFERRED`.

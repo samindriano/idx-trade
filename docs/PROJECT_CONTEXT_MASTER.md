@@ -2223,3 +2223,40 @@ ablation, quintile, regime, calibration, and artifact-hash record are in
 
 No holdout inspection, Stage 5, `IDX-VAL-002`, modelling, external data use,
 or merge to `main` was performed. Stop for independent ChatGPT review.
+
+## 25. STAGE-5 ranking-only locked holdout - FAIL
+
+Date: 2026-08-09 (Asia-Jakarta). Branch:
+`research/idx-stage5-ranking-holdout-v1`. Code head:
+`05c2bb549b446da374c13937a41aa6732cf71ec0`.
+
+The frozen Stage-5 V1 ranking-only runtime executed exactly once. Full pytest
+passed **206/206** with three existing pandas FutureWarnings. All five frozen
+input hashes matched and the research manifest verified `valid=true`, 15/15.
+The required environment was Python 3.13.5, NumPy 2.4.2, pandas 2.3.3,
+pyarrow 23.0.1, and scikit-learn 1.8.0.
+
+The final models were frozen at signal session 988 before any holdout labels
+were read. The primary H10 holdout covered sessions 1009-1250
+(`2025-07-15` to `2026-07-17`), with 71,420 resolved primary rows and
+positive rate 0.4071688603. HGB produced PR-AUC 0.4073793720 and ROC-AUC
+0.4948433255, versus base-rate PR-AUC 0.4071688603 and ROC-AUC 0.5.
+Although HGB beat the base-rate PR-AUC by 0.0002105118 and Q5 exceeded Q1
+by 0.0108405246, it failed the ROC-AUC gate. Temporal stability also failed:
+HOLDOUT_A PR-AUC was 0.4866372564 versus base 0.4647456292, while HOLDOUT_B
+PR-AUC was 0.3471254020 versus base 0.3577062238; HOLDOUT_B Q5-Q1 was
+-0.0198933303.
+
+Automatic result: **`STAGE5_RANKING_HOLDOUT_FAIL`**. H5/H20 sensitivity was
+reported but cannot rescue the primary H10 decision. The holdout access
+markers were written before outcome access, so the locked holdout is now
+permanently consumed for `RANKING_V1_ONLY` and no Stage-5 retry is permitted.
+Probability V1 remains **`PROBABILITY_V1_NOT_READY_DEFERRED`**. No Stage 6,
+Probability V2, `IDX-VAL-002`, execution-PnL claim, paper/live trading, or
+main merge was started.
+
+Runtime artifacts and exact hashes are recorded in
+`docs/checkpoints/2026-08-09_STAGE5_RANKING_HOLDOUT_RUNTIME.md` and remain
+outside Git. Next action is independent ChatGPT review of the failed
+ranking-only result; any future Probability V2 validation must use fresh
+forward data strictly after `2026-07-31`.
