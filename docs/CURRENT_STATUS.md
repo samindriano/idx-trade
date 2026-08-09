@@ -139,7 +139,7 @@ This track may change computation only, never research semantics.
 
 Separate branch: `ops/idx-forward-open-archive-v1`.
 
-Status: **`FORWARD_OPEN_ARCHIVE_SCAFFOLD_READY_SOURCE_BLOCKED`**.
+Status: **`FORWARD_OPEN_ARCHIVE_WINDOWS_INSTALLED_SOURCE_BLOCKED`**.
 
 Purpose: prevent the current historical-Open problem from recurring on future sessions by archiving permitted forward OHLCV/Open data at 22:00 local time, with Windows logon catch-up and `StartWhenAvailable` behavior.
 
@@ -152,6 +152,11 @@ Implemented scaffold:
 - tests for OHLC/session invariants, immutability/idempotence, and fail-closed provider absence.
 
 No forward price provider is frozen yet. Until a separate source audit approves one, the scheduler intentionally returns `BLOCKED_SOURCE_NOT_FROZEN` and fetches no price data. Direct IDX scraping and silent provider fallback remain prohibited. Read `docs/FORWARD_OPEN_ARCHIVE_V1.md` and `docs/checkpoints/2026-08-10_FORWARD_OPEN_ARCHIVE_SCAFFOLD_READY.md`.
+
+The local Windows Task Scheduler installation and one manual trigger were
+verified on 2026-08-10. The task remains intentionally source-blocked and
+writes no price/session data; see
+`docs/checkpoints/2026-08-10_FORWARD_OPEN_ARCHIVE_WINDOWS_INSTALLED.md`.
 
 ## Authorization boundary
 
