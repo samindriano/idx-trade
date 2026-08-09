@@ -19,7 +19,8 @@ authorization boundary.
 - Stage-5 bounded post-mortem: **complete and independently interpreted**
 - interpretation checkpoint: `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_INTERPRETATION.md`
 - next authorized research work: **finish runtime-performance equivalence/benchmark, then execute the already-frozen bounded Ranking V2 prepared-cache/candidate workflow**
-- parallel data-quality work: **Tier-1 historical Open backfill implementation is ready on `data/idx-open-backfill-v1`**
+- parallel historical-Open track: **Tier-2 pilot accepted; bulk backfill still blocked; bounded Yahoo semantics/coverage follow-up authorized**
+- parallel forward-Open archive scaffold: tracked separately on `ops/idx-forward-open-archive-v1`; provider remains unfrozen
 - Stage 6: not authorized for Ranking V1
 - independent V2 validation: requires fresh forward data strictly after `2026-07-31`
 - `IDX-VAL-002`: not started
@@ -46,24 +47,28 @@ Signal-research HLCV:
 - manifest SHA-256: `b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a`
 - manifest valid=true, 15/15
 
-## Parallel Open-backfill data track
+## Parallel historical Open-backfill track
 
-Branch: `data/idx-open-backfill-v1`.
+Tier-1 branch: `data/idx-open-backfill-v1`.
+Tier-2 audit branch: `data/idx-open-backfill-tier2-audit-v1`.
 
-Status: **`OPEN_BACKFILL_WILDAN_RUNTIME_COMPLETE_REVIEW_REQUIRED`**.
+Current decision: **`TIER2_PILOT_ACCEPTED_BULK_BACKFILL_BLOCKED_YAHOO_SEMANTICS_FOLLOWUP_AUTHORIZED`**.
 
 Read:
 
 - `docs/OPEN_BACKFILL_POLICY_V1.md`;
-- `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_READY.md`;
 - `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_RUNTIME.md`;
-- `coordination/handoffs/IDX-OPEN-BACKFILL-WILDAN-RUNTIME.md`.
+- `docs/OPEN_BACKFILL_TIER2_SOURCE_AUDIT_V1.md`;
+- `docs/checkpoints/2026-08-10_OPEN_BACKFILL_TIER2_SOURCE_AUDIT_RUNTIME.md`;
+- `docs/checkpoints/2026-08-10_OPEN_BACKFILL_TIER2_INDEPENDENT_REVIEW.md`.
 
-Tier-1 source is the already-published `wildangunawan/Dataset-Saham-IDX` archive, pinned to an exact external Git commit. This track does not scrape `idx.co.id` directly. Existing panel Open values are immutable. A secondary Open is admitted only when ticker/date match exactly, secondary H/L/C exactly equal the certified panel H/L/C, and secondary Open is positive and lies inside the certified Low/High range.
+Tier-1 Wildan is closed as a missing-Open recovery source under the frozen contract: it accepted 0 fills and left all 446,843 original null Open rows unresolved.
 
-Important source finding: the archive `info.json` currently says `last_update=2024-07-19`, but actual public CSV files contain later rows (at least through February 2025 in inspected files). Runtime therefore derives actual coverage from the pinned CSV snapshot and treats `info.json` only as provenance metadata.
+Tier-2 bounded pilot preserved the immutable panel and tested Zapi/Yahoo without any bulk write. Zapi remained untested because no local API credential was present. Yahoo returned three missing-Open rows passing the unchanged H/L/C + positive/in-range Open gate (`AADI 2024-12-05`, `ALDO 2024-07-08`, `BREN 2024-05-06`), but also exposed provider gaps/errors and one BBCA known-answer H/L/C mismatch on a 5x historical price scale.
 
-Tier-1 runtime completed with the pinned source and produced a derivative artifact, but accepted **0** Open fills: all 446,843 original null Open rows remain null. The exact runtime result, provenance, diagnostics, and artifact hashes are in `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_RUNTIME.md`. `execution_grade_promoted=false` remains mandatory until the result is independently reviewed and remaining gaps are resolved through separately audited sources.
+The independent review accepts the pilot but blocks extrapolation. The 50-row sample contained only eight unique Yahoo tickers because the deterministic sample prioritised the named adversarial set. This is useful for failure discovery but insufficient for universe-wide source certification.
+
+Authorized next bounded data work is a **Yahoo split-semantics + broad-coverage audit**, not a 446,843-row bulk fill. It must test a materially broader deterministic ticker sample, separate split/non-split cases, use independently verified split evidence for any raw-scale reconstruction, exclude dividend/Adj-Close adjustment from execution prices, and retain exact certified H/L/C equality as the final admission gate. Existing panel Open remains immutable and `execution_grade_promoted=false`.
 
 ## Frozen V1 semantics
 
@@ -160,17 +165,18 @@ Allowed next work:
 
 1. finish the performance/equivalence track and prepared cache;
 2. run the frozen Ranking V2 development candidate architecture only after its cache gate passes;
-3. run Tier-1 Open backfill independently as a data-quality track and stop for review before adding any second source.
+3. run the bounded Yahoo split-semantics + broad-coverage Open audit independently; Zapi may be tested later if a credential becomes available.
 
 Do not:
 
+- bulk-fill historical Open from the Tier-2 pilot;
 - rerun Stage 5;
 - rescue/tune Ranking V1 against consumed outcomes;
 - call the consumed holdout independent V2 validation;
 - start Stage 6 for Ranking V1;
 - resume Probability V1 calibration rescue;
 - run `IDX-VAL-002`;
-- make execution-PnL claims from the Open-backfill derivative before certification;
+- make execution-PnL claims from any Open-backfill derivative before certification;
 - paper/live trade;
 - merge to `main`.
 
