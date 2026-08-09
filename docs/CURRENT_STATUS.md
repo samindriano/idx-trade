@@ -1,6 +1,6 @@
 # IDX Trade — Current Status
 
-Date: 2026-08-09 (Asia/Jakarta)
+Date: 2026-08-10 (Asia/Jakarta)
 
 This is the short **authoritative first-read status layer**. For full chronology read
 `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, and the newest
@@ -18,7 +18,8 @@ authorization boundary.
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
 - Stage-5 bounded post-mortem: **complete and independently interpreted**
 - interpretation checkpoint: `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_INTERPRETATION.md`
-- next authorized work: **finish runtime-performance equivalence/benchmark, freeze bounded Ranking V2 research specification, then implement V2 development research**
+- next authorized research work: **finish runtime-performance equivalence/benchmark, then execute the already-frozen bounded Ranking V2 prepared-cache/candidate workflow**
+- parallel data-quality work: **Tier-1 historical Open backfill implementation is ready on `data/idx-open-backfill-v1`**
 - Stage 6: not authorized for Ranking V1
 - independent V2 validation: requires fresh forward data strictly after `2026-07-31`
 - `IDX-VAL-002`: not started
@@ -44,6 +45,24 @@ Signal-research HLCV:
 - panel SHA-256: `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`
 - manifest SHA-256: `b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a`
 - manifest valid=true, 15/15
+
+## Parallel Open-backfill data track
+
+Branch: `data/idx-open-backfill-v1`.
+
+Status: **`OPEN_BACKFILL_WILDAN_IMPLEMENTATION_READY_FOR_LOCAL_RUNTIME`**.
+
+Read:
+
+- `docs/OPEN_BACKFILL_POLICY_V1.md`;
+- `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_READY.md`;
+- `coordination/handoffs/IDX-OPEN-BACKFILL-WILDAN-RUNTIME.md`.
+
+Tier-1 source is the already-published `wildangunawan/Dataset-Saham-IDX` archive, pinned to an exact external Git commit. This track does not scrape `idx.co.id` directly. Existing panel Open values are immutable. A secondary Open is admitted only when ticker/date match exactly, secondary H/L/C exactly equal the certified panel H/L/C, and secondary Open is positive and lies inside the certified Low/High range.
+
+Important source finding: the archive `info.json` currently says `last_update=2024-07-19`, but actual public CSV files contain later rows (at least through February 2025 in inspected files). Runtime therefore derives actual coverage from the pinned CSV snapshot and treats `info.json` only as provenance metadata.
+
+Tier-1 creates a derivative artifact only. `execution_grade_promoted=false` remains mandatory until the runtime coverage/provenance result is independently reviewed and remaining gaps are resolved through separately audited sources.
 
 ## Frozen V1 semantics
 
@@ -124,7 +143,7 @@ Because these hypotheses are informed by Stage-5 outcomes, the historical window
 
 ## Runtime performance track
 
-Separate branch: `perf/idx-research-runtime-v1` / draft PR #9.
+Separate branch: `perf/idx-research-runtime-v1` / PR #9.
 
 Candidate vectorized label engine exists and unit/adversarial equivalence tests pass, but legacy remains authoritative until:
 
@@ -138,9 +157,9 @@ This track may change computation only, never research semantics.
 
 Allowed next work:
 
-1. finish the performance/equivalence track;
-2. freeze a bounded Ranking V2 research specification;
-3. only then implement V2 development experiments.
+1. finish the performance/equivalence track and prepared cache;
+2. run the frozen Ranking V2 development candidate architecture only after its cache gate passes;
+3. run Tier-1 Open backfill independently as a data-quality track and stop for review before adding any second source.
 
 Do not:
 
@@ -150,7 +169,7 @@ Do not:
 - start Stage 6 for Ranking V1;
 - resume Probability V1 calibration rescue;
 - run `IDX-VAL-002`;
-- make execution-PnL claims;
+- make execution-PnL claims from the Open-backfill derivative before certification;
 - paper/live trade;
 - merge to `main`.
 
