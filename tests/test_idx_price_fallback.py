@@ -60,7 +60,7 @@ def test_first_trade_is_used_only_when_official_open_price_is_unavailable():
     assert diagnostics.loc[0, "diagnostic"] == "FIRSTTRADE_FALLBACK"
 
 
-def test_invalid_official_ohlc_remains_unresolved():
+def test_open_only_gap_is_distinguished_from_missing_hlc():
     frames, diagnostics = stock_summary_price_rows(
         _payload(
             {
@@ -81,7 +81,55 @@ def test_invalid_official_ohlc_remains_unresolved():
     )
     assert frames == {}
     assert diagnostics.loc[0, "status"] == "UNRESOLVED_PRICE"
-    assert diagnostics.loc[0, "diagnostic"] == "OFFICIAL_OHLC_MISSING_OR_NONPOSITIVE"
+    assert diagnostics.loc[0, "diagnostic"] == "OFFICIAL_OPEN_MISSING_OR_NONPOSITIVE"
+
+
+def test_hlc_gap_is_distinguished_when_open_is_valid():
+    frames, diagnostics = stock_summary_price_rows(
+        _payload(
+            {
+                "StockCode": "MFIN",
+                "Date": "2024-07-02",
+                "OpenPrice": 3400,
+                "FirstTrade": 3400,
+                "High": 0,
+                "Low": 3300,
+                "Close": 3400,
+                "Volume": 100,
+                "Frequency": 5,
+            }
+        ),
+        requested_date="2024-07-02",
+        source_ref="idx://20240702",
+        tickers=["MFIN"],
+    )
+    assert frames == {}
+    assert diagnostics.loc[0, "status"] == "UNRESOLVED_PRICE"
+    assert diagnostics.loc[0, "diagnostic"] == "OFFICIAL_HLC_MISSING_OR_NONPOSITIVE"
+
+
+def test_open_and_hlc_gap_is_distinguished_when_both_are_invalid():
+    frames, diagnostics = stock_summary_price_rows(
+        _payload(
+            {
+                "StockCode": "MFIN",
+                "Date": "2024-07-03",
+                "OpenPrice": 0,
+                "FirstTrade": 0,
+                "High": 0,
+                "Low": 3300,
+                "Close": 3400,
+                "Volume": 100,
+                "Frequency": 5,
+            }
+        ),
+        requested_date="2024-07-03",
+        source_ref="idx://20240703",
+        tickers=["MFIN"],
+    )
+    assert frames == {}
+    assert diagnostics.loc[0, "status"] == "UNRESOLVED_PRICE"
+    assert diagnostics.loc[0, "diagnostic"] == "OFFICIAL_OPEN_AND_HLC_MISSING_OR_NONPOSITIVE"
 
 
 def test_zero_regular_volume_does_not_create_price_fallback():
