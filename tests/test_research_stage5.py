@@ -100,6 +100,7 @@ def _half_frame(*, good_a: bool = True, good_b: bool = True) -> pd.DataFrame:
         ("B", HOLDOUT_B, good_b),
     ):
         for idx in range(start, end + 1):
+            synthetic_date = pd.Timestamp("2025-01-01") + pd.Timedelta(int(idx), unit="D")
             for j in range(10):
                 target = int(j >= 6)
                 score = float(j if good else -j)
@@ -108,7 +109,7 @@ def _half_frame(*, good_a: bool = True, good_b: bool = True) -> pd.DataFrame:
                         "signal_session_index": idx,
                         "binary_target": target,
                         "score": score,
-                        "date": pd.Timestamp("2025-01-01") + pd.Timedelta(days=idx),
+                        "date": synthetic_date,
                         "ticker": f"{name}{j:02d}",
                     }
                 )
