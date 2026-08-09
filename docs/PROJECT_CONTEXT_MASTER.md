@@ -37,10 +37,10 @@ Five-year preparation branch:
 - `data/idx-data-005-1260-prep`
 - PR #3 — draft only, preparation branch, **must not be treated as a 1260 PASS**
 
-Latest known primary-branch checkpoint when this document was created:
+Latest primary-branch checkpoint before this update:
 
-- `eee69814cdcb5ad0d5eebe9256bb9aff1ce81229`
-- commit message: `docs: record 504 repair stop`
+- `625e4ee40390921c7d8c904e9ffc8676a4db878c`
+- commit message: `merge: reconcile guarded 1260 research preflight`
 
 Latest five-year prep branch checkpoint when this document was created:
 
@@ -52,8 +52,9 @@ Current state:
 - 43-session adversarial gate: **35/35 PASS**
 - 43-session full-market common-stock gate: **963/963 PASS and certified**
 - 126-session full-market gate: **963/963 PASS and certified**
-- 504-session expansion: **NOT certified yet**
-- 1260-session expansion: **NOT started; prep only**
+- 504-session expansion: **NOT certified; strict opening-price gap remains**
+- 1260-session research-feasibility evaluation: **NO-GO / STOP**
+- 1260 model-safe panel/manifest: **not created**
 
 Certified 43-session snapshot:
 
@@ -1925,18 +1926,14 @@ When continuing this project in a new ChatGPT/Codex session, use this instructio
 > Read `AGENTS.md`, `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`,
 > and the newest relevant `docs/checkpoints/*` before doing any material work.
 > Verify the actual current branch and HEAD. Preserve all certified 43/126
-> artifacts. The active technical objective is to certify the 504-session
-> `2024-06-21 -> 2026-07-31` common-stock market history without weakening the
-> fail-closed gate. The latest documented blocker is historical raw-price
-> coverage/opening-price evidence for FREN/MASA/MFIN after FREN identity was
-> resolved. The bounded 2026-08-09 audit of the official IDXData3
-> `Stock_First_Trx/SOYYMMDD.zip` family found zero target files across 233
-> required dates; do not treat the legacy 2020 directory listing as target
-> coverage. Do not call 504 PASS until a new 126/504 ladder run passes, a new
-> 504 ACTIVE-only panel is created, and a new manifest verifies valid=true. Only
-> then reconcile the separate 1260-prep branch and attempt the direct 504->1260
-> expansion. No modelling, IDX-VAL-002, main merge, paper trading, or live
-> trading is authorized yet.
+> artifacts. Strict 504 remains uncertified because FREN/MASA/MFIN still lack
+> defensible historical opening-price evidence. The exact 1260-session
+> research-feasibility evaluation ending `2026-07-31` was run and is
+> **NO-GO / STOP**: strict 126 passes, strict 504 fails, strict 1260 fails,
+> and generic exclusions yield only 93.667% ticker coverage. Read the newest
+> `docs/checkpoints/2026-08-09_1260_RESEARCH_FEASIBILITY_NO_GO.md` before any
+> further historical work. No modelling, IDX-VAL-002, main merge, paper
+> trading, or live trading is authorized yet.
 
 If later checkpoints supersede this exact blocker, update this master document
 immediately so a future chat never starts from stale assumptions.
@@ -1987,3 +1984,51 @@ or official Stock Summary artifacts, do not rerun the 504/126 ladder, and do not
 start 252 or 1260. The audit evidence is retained in the external runtime
 workspace under the logical name `idxdata3_open_audit_20260809_retry`; it is
 not committed to Git.
+
+---
+
+# 36. 1260-session research-feasibility evaluation - NO-GO
+
+Date: 2026-08-09. The exact trailing official-session window was evaluated in
+the external workspace
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809`.
+It runs from `2021-04-29` through `2026-07-31` and contains exactly 1260 IDX
+exchange sessions. The existing certified 43- and 126-session artifacts remain
+unchanged. The 504 session set is the exact trailing suffix, but strict 504 is
+still not certified.
+
+Full pytest passed: 157 tests, exit 0, with three existing pandas warnings.
+The official Stock Summary evidence is complete for all 1260 sessions with
+982,398 ACTIVE regular-market anchors, 121,666 NO_TRADE anchors, 1,104,064
+merged point rows, and zero unresolved metrics. The rebuilt PIT master has 980
+pre-scope discoveries, one preserved CNTX non-common-share exclusion, 979
+required common stocks, and zero unresolved required identities. The official
+split/reverse query is complete: 55 stock-split rows, 52 tickers, and no
+reverse-stock rows in the target window.
+
+The strict regression/evaluation is:
+
+| horizon | window | required | passed | failed | UNKNOWN | missing ACTIVE prices | quarantined bars |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 126 | 2026-01-15 -> 2026-07-31 | 963 | 963 | 0 | 0 | 0 | 2,672 |
+| 504 | 2024-06-21 -> 2026-07-31 | 976 | 973 | 3 | 2 | 390 | 22,400 |
+| 1260 | 2021-04-29 -> 2026-07-31 | 979 | 917 | 62 | 572 | 6,716 | 57,808 |
+
+The exact 1260 strict failures are recorded in
+`docs/checkpoints/2026-08-09_1260_RESEARCH_FEASIBILITY_NO_GO.md` and the
+external gate CSV. Their blocker histogram is 62
+`SESSION_COVERAGE_INCOMPLETE` and 15 `PRICE_SEMANTICS_UNVERIFIED`.
+
+For research feasibility, the 62 blocked securities were excluded only through
+the generic `RESEARCH_UNSUPPORTED_SECURITY` registry after approved source
+exhaustion. This produced 917/979 = 93.667% ticker coverage, below the 98%
+minimum. Active-row coverage was 99.316% before exclusions and 100% after them,
+but known excluded regular-market value was 2.373%; sector bias was not
+computable from the current security master. The decision is therefore
+**NO-GO / STOP**, not a certified research dataset.
+
+No 1260 panel or manifest exists. Do not model, run `IDX-VAL-002`, start 252,
+merge to `main`, or treat the research exclusions as permission to weaken the
+strict gate. The detailed runtime summary is:
+
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\research_feasibility_report.json`

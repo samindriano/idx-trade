@@ -41,7 +41,7 @@ Validation principles for future model work:
 - repository: `samindriano/idx-trade`
 - working branch: `data/idx-data-002c`
 - review PR: PR #2, draft, base `data/idx-data-002b`
-- current phase: **full-market data certification, then historical expansion**
+- current phase: **full-market certification / bounded historical feasibility review**
 - modelling: **not started**
 - `IDX-VAL-002`: **not started**
 - merge to `main`: **not approved**
@@ -943,3 +943,104 @@ The 504 decision remains **NO-GO / STOP**. The next safe action is another
 normally accessible authoritative opening-price source or an explicit,
 evidence-backed decision that this 504 boundary is not defensible. The price
 gate must not be weakened.
+
+---
+
+## 19. DATA-005 1260-session research-feasibility evaluation - NO-GO
+
+Date: 2026-08-09 (Asia/Jakarta). Runtime workspace:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809`.
+The code branch was `data/idx-data-002c`; the 1260 preparation branch was
+reconciled into it before execution. The certified 43- and 126-session
+artifacts were not modified.
+
+This run evaluated an exact trailing 1260-session official IDX window ending
+`2026-07-31`, not an estimated calendar interval:
+
+- exact window: `2021-04-29 -> 2026-07-31`, 1260 sessions;
+- official session sources: IDX Daily Statistics publication listing and IDX
+  Digital Statistics daily trading table;
+- session summary SHA-256:
+  `5dae391a1b4068a71b0f0dd40edda207356a917f74dc860c50e4080fa7bd268f`;
+- the certified 504 target `2024-06-21 -> 2026-07-31` is the exact trailing
+  suffix, adding 756 older sessions.
+
+Full pytest passed: 157 tests, exit 0, with three existing non-blocking pandas
+`FutureWarning` messages. Official Stock Summary cache/execution evidence was
+complete for all 1260 sessions: 982,398 ACTIVE regular-market anchors,
+121,666 NO_TRADE anchors, 1,104,064 merged point-evidence rows, and zero
+unresolved metric rows. `Value` is now retained as `regular_value` so the
+materiality calculation uses the official regular-market value field; the
+parser regression assertion is covered by the full suite.
+
+The PIT identity/security-scope result was:
+
+- 980 tickers discovered before scope;
+- CNTX excluded by the preserved authoritative KSEI NON_COMMON_SHARE record
+  (`Saham Preference`);
+- 979 required common-stock tickers;
+- no unresolved required common-stock identity;
+- FINN was reconciled from the official IDX delisting source, and FREN's
+  repaired PIT interval was preserved (`2006-11-29 -> 2025-04-16`).
+
+The complete official corporate-action query over the target window returned
+55 `stockSplit` rows for 52 tickers and zero `reverseStock` rows. A complete
+authoritative no-event result is treated as verified; dividend evidence remains
+informational and is not used to construct technical OHLC.
+
+The older-segment Yahoo extension requested 897 tickers and produced 878
+updated, 19 `NO_PROVIDER_ROWS`, zero `DOWNLOAD_ERROR`, and zero
+`REVISION_CONFLICT`. The targeted official Stock Summary OHLC fallback requested
+the exact 6,794 missing ACTIVE ticker/date pairs (989 distinct dates):
+
+- 78 `PRICE_PARSED` rows filled, all for WSKT;
+- 0 `FIRSTTRADE_FALLBACK` rows;
+- 6,716 official rows remained unresolved;
+- no existing provider row was overwritten, and no synthetic or forward-filled
+  price was created.
+
+The canonical post-fallback `run_full_universe_data_gate(...)` result is saved at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\strict_gate_1260_post_fallback\full_universe_gate_summary.json`:
+
+| horizon | exact window | required | passed | failed | UNKNOWN sessions | missing ACTIVE prices | quarantined bars |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 126 | 2026-01-15 -> 2026-07-31 | 963 | 963 | 0 | 0 | 0 | 2,672 |
+| 504 | 2024-06-21 -> 2026-07-31 | 976 | 973 | 3 | 2 | 390 | 22,400 |
+| 1260 | 2021-04-29 -> 2026-07-31 | 979 | 917 | 62 | 572 | 6,716 | 57,808 |
+
+The strict 126 regression remains PASS. Strict 504 remains FAIL for FREN,
+MASA, and MFIN; the exact remaining historical opening-price gap is 390 rows.
+The full 1260 strict blocker histogram is:
+
+- `SESSION_COVERAGE_INCOMPLETE`: 62;
+- `PRICE_SEMANTICS_UNVERIFIED`: 15.
+
+The exact strict 1260 failed tickers are:
+`ADCP, AGAR, AGRS, AMIN, AYLS, BATA, BAYU, BBHI, BISI, BRMS, BRNA, BSIM,
+BTON, BTPN, BUAH, BUKK, CBMF, CLAY, CPRI, DMND, DUCK, EDGE, FINN, FREN,
+FUJI, GAMA, GEMA, GOLD, GRPH, HKMU, HOTL, IBST, INAF, INAI, INCI, INPC,
+INPP, ISSP, JECC, JIHD, JSKY, JSPT, KETR, KRYA, LCKM, LFLO, LMAS, MAGP,
+MASA, MFIN, PGJO, PTSP, PURE, RMBA, ROCK, SAFE, SRIL, TECH, TRST, TURI,
+UNSP, WSKT`.
+
+For the separate research-feasibility layer, the 62 failures were registered
+generically as `RESEARCH_UNSUPPORTED_SECURITY` only after the approved public
+IDX/Yahoo evidence paths were exhausted. The registry contains 47 rows with
+price/tradability evidence blockers and 15 additional rows with the same
+coverage failure plus `PRICE_SEMANTICS_UNVERIFIED`; the detailed registry is
+external at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\research_unsupported_registry_1260.csv`.
+The resulting research eligibility was 917/979 = 93.667%, below the 98%
+ticker threshold. Active-row coverage was 99.316% before generic exclusions
+and 100% after exclusions, but known excluded regular-market value was 2.373%
+of known value. Excluded names included one top-50 ticker, two top-100 tickers,
+and four top-200 tickers. Sector bias could not be computed because the current
+security master has no sector field.
+
+Decision: **NO-GO / STOP**. The research track does not meet the minimum ticker
+coverage or zero-gap requirements, and the strict 1260 gate fails. No 1260
+model-safe panel or manifest was materialized. No 252 diagnostic, modelling,
+`IDX-VAL-002`, main merge, paper trading, or live trading was started. The
+smallest safe next action is to obtain defensible additional historical
+opening/OHLC evidence or explicitly narrow the research contract after a
+separate review; the gate must not be weakened silently.

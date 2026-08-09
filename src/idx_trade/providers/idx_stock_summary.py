@@ -89,6 +89,7 @@ def parse_stock_summary_payload(
     `Volume`/`Frequency` are the regular order-book daily metrics. The
     `NonRegular*` fields are separate market metrics and are retained only as
     separate evidence; they must not be subtracted from `Volume`/`Frequency`.
+    `Value` is retained as `regular_value` for market-materiality reporting.
     """
 
     rows = payload.get("data")
@@ -131,6 +132,7 @@ def parse_stock_summary_payload(
                 "remarks": str(row.get("Remarks", "") or "").strip(),
                 "volume": _number(row.get("Volume")),
                 "frequency": _number(row.get("Frequency")),
+                "regular_value": _number(row.get("Value")),
                 "nonregular_volume": _number(row.get("NonRegularVolume")),
                 "nonregular_frequency": _number(row.get("NonRegularFrequency")),
                 "security_status_raw": explicit_status,
@@ -148,6 +150,7 @@ def parse_stock_summary_payload(
             "remarks",
             "volume",
             "frequency",
+            "regular_value",
             "nonregular_volume",
             "nonregular_frequency",
             "security_status_raw",

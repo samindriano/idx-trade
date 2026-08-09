@@ -24,6 +24,7 @@ def test_parser_preserves_explicit_security_status_without_inferring_from_remark
                 "Date": "2026-07-31",
                 "Remarks": "X",
                 "SecurityStatus": "ACTIVE_CODE",
+                "Value": 123456,
                 "Volume": 1000,
                 "Frequency": 10,
                 "NonRegularVolume": 2000,
@@ -50,6 +51,7 @@ def test_parser_preserves_explicit_security_status_without_inferring_from_remark
     assert meta.explicit_security_status_rows == 1
     assert meta.regular_trade_evidence_rows == 1
     assert frame.loc[frame["ticker"].eq("BBCA"), "security_status_raw"].iloc[0] == "ACTIVE_CODE"
+    assert frame.loc[frame["ticker"].eq("BBCA"), "regular_value"].iloc[0] == 123456.0
     assert frame.loc[frame["ticker"].eq("BBRI"), "security_status_raw"].iloc[0] == ""
 
 
