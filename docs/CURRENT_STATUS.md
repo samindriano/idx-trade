@@ -13,10 +13,12 @@ controls the current phase and authorization boundary.
 - active branch: `research/idx-stage5-ranking-holdout-v1`
 - parent branch: `research/idx-stage4b-calibration-v1`
 - Stage-5 PR: #7, draft
-- phase: **Stage 5 — one-shot ranking-only locked holdout completed, FAIL**
+- phase: **Stage 5 completed, FAIL; independent review accepts Ranking V1 rejection**
 - locked holdout: **consumed for `RANKING_V1_ONLY`; no retry permitted**
 - `holdout_outcome_accessed=true`
+- Ranking V1: **failed benchmark; not authorized for promotion to Stage 6**
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
+- next authorized scope: **bounded Stage-5 post-mortem / Ranking V2 research design only**
 - `IDX-VAL-002`: not started
 - merge to `main`: not authorized
 - paper/live trading: not authorized
@@ -69,7 +71,7 @@ HGB development PR-AUC:
 | F2 | 0.4140 | 0.4098 | 0.4169 | 0.4254 |
 | F3 | 0.3253 | 0.3289 | 0.3502 | 0.3649 |
 
-HGB beat base-rate and momentum in F1/F2/F3. Evidence is positive but modest.
+HGB beat base-rate and momentum in F1/F2/F3. Evidence was positive but modest and did not survive the final locked holdout robustly.
 
 ## Stage 4 — robustness / attribution / static calibration
 
@@ -99,16 +101,17 @@ Independent decision after Stage 4B:
 - any future Probability V2 must use fresh forward validation strictly after
   `2026-07-31` once the current holdout is consumed.
 
-## Stage 5 - ranking-only holdout executed, failed
+## Stage 5 — ranking-only holdout executed, failed
 
-Read `docs/STAGE5_RANKING_HOLDOUT_PLAN_V1.md`.
+Read `docs/STAGE5_RANKING_HOLDOUT_PLAN_V1.md` and
+`docs/checkpoints/2026-08-09_STAGE5_INDEPENDENT_REVIEW_FAIL.md`.
 
 Frozen mechanics:
 
 - final development ranking-model signal cutoff: session 988;
 - sessions 989–1008 are the H20 purge/buffer before holdout;
 - final rankers: BASE_RATE, MOMENTUM_20, LOGISTIC_COMPACT, HGB_FULL;
-- all models must be serialized and hashed before any holdout labels are read;
+- all models were serialized and hashed before any holdout labels were read;
 - primary H10 holdout signals: sessions 1009–1250;
 - H5/H20 are sensitivity-only;
 - two predeclared H10 halves: 1009–1129 and 1130–1250;
@@ -120,11 +123,24 @@ Runtime result:
 - automatic decision: **`STAGE5_RANKING_HOLDOUT_FAIL`**;
 - runtime code commit: `05c2bb549b446da374c13937a41aa6732cf71ec0`;
 - H10 holdout: 71,420 resolved primary rows, positive rate 0.4071688603;
-- HGB PR-AUC: 0.4073793720 versus base 0.4071688603;
-- HGB ROC-AUC: 0.4948433255, below the 0.5 gate;
-- HOLDOUT_A passed its PR-AUC-over-base check, but HOLDOUT_B failed it;
+- HGB PR-AUC: 0.4073793720 versus base 0.4071688603, delta only +0.0002105118;
+- HGB ROC-AUC: 0.4948433255, below the frozen 0.5 gate;
+- overall Q5-Q1: +0.0108405246;
+- top-decile lift: +0.0251666343;
+- HOLDOUT_A: PR-AUC delta vs base +0.0218916273, ROC-AUC 0.5186811460, Q5-Q1 +0.0464755652;
+- HOLDOUT_B: PR-AUC delta vs base -0.0105808218, ROC-AUC 0.4810497816, Q5-Q1 -0.0198933303;
+- H5/H20 sensitivity remained near-null and cannot rescue H10;
 - the holdout is permanently consumed for `RANKING_V1_ONLY`;
 - output: `D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_ranking_holdout_v1_20260809`.
+
+Independent review conclusion:
+
+- accept the preregistered FAIL; do not relax the gate after seeing outcomes;
+- Ranking V1 is preserved as a **failed benchmark**, not a holdout-passed architecture;
+- the divergence between HOLDOUT_A and HOLDOUT_B is evidence of temporal instability, not merely a lower prevalence period, because PR-AUC-vs-base, ROC-AUC, and Q5-Q1 all reverse in B;
+- the positive overall top-decile enrichment is only a V2 hypothesis and does not rescue V1;
+- no Stage 6 promotion for V1;
+- post-hoc use of the consumed holdout is allowed only for bounded diagnosis/V2 hypothesis generation and can never restore independent validation status.
 
 One-shot safety:
 
@@ -137,12 +153,15 @@ One-shot safety:
 
 Implementation review:
 
-- latest pre-runtime CI: **206 passed, 0 failed**;
-- remaining warnings are existing pandas/NumPy deprecation/future warnings;
+- runtime/full pytest: **206 passed, 0 failed**;
+- remaining warnings are existing pandas FutureWarnings;
 - all upstream hashes, numerical environment, model-freeze ordering, and
-  one-shot marker semantics are fail-closed.
+  one-shot marker semantics passed.
 
-Next action: independent ChatGPT review of the failed ranking-only result. Do
-not start Stage 6, Probability V2, `IDX-VAL-002`, paper/live trading, or a
-second Stage-5 runtime. Probability V1 remains
-`PROBABILITY_V1_NOT_READY_DEFERRED`.
+## Next authorization boundary
+
+Authorized next scope is only a bounded **Stage-5 post-mortem / Ranking V2 research-design** phase. Priority diagnostic questions are why HOLDOUT_A and HOLDOUT_B diverged and whether the apparent top-tail enrichment reflects a causal conditional signal or noise. Candidate V2 hypotheses may include date-relative/cross-sectional normalization, market/sector relative strength, explicit regime conditioning, ranking-native objectives grouped by signal date, and stronger causal support/resistance representations.
+
+Do not repeatedly search alternatives on the consumed Stage-5 outcomes. Any Ranking V2 and any Probability V2 require a **fresh forward evaluation period strictly after `2026-07-31`** for independent validation.
+
+Do not start the previously defined Stage 6, rerun Stage 5, resume Probability V1 calibration rescue, run `IDX-VAL-002`, make execution-PnL claims, paper/live trade, or merge to `main` without a new explicit gate.
