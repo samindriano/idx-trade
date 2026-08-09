@@ -6,11 +6,11 @@ task_id: IDX-OPEN-BACKFILL-TIER2-AUDIT
 model_used: Luna
 reasoning_level: xhigh
 source_repository: samindriano/idx-trade
-source_commit: e8a76055b267727854d33d49b5def1a661e0f86b
+source_commit: 5c85cc2e2d62e5ab35c178425e689a00e60117f4
 branch: data/idx-open-backfill-tier2-audit-v1
-head_commit: e8a76055b267727854d33d49b5def1a661e0f86b
+head_commit: 7d6e0cd
 scope: bounded 50-row historical Open source audit only
-files_changed: implementation/tests/docs needed for pilot audit only
+files_changed: src/idx_trade/tier2_open_audit.py; tests/test_tier2_open_audit.py; docs/checkpoints/2026-08-10_OPEN_BACKFILL_TIER2_SOURCE_AUDIT_RUNTIME.md; this handoff
 
 ## Question
 
@@ -146,3 +146,59 @@ Also report immutable panel re-hash before/after runtime.
 After runtime, document only factual results in a new dated checkpoint and update the handoff status. Push the resulting documentation/code commit as a fast-forward to `data/idx-open-backfill-tier2-audit-v1` only if the remote branch has not advanced; otherwise stop and report the detached HEAD commit for reconciliation.
 
 Then STOP for independent ChatGPT review.
+
+## Runtime result
+
+status: OPEN_BACKFILL_TIER2_SOURCE_AUDIT_COMPLETE_STOP_FOR_INDEPENDENT_REVIEW
+runtime_output:
+  D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_tier2_source_audit_v1_20260810
+panel_sha256_before: 67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76
+panel_sha256_after: 67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76
+sample_sha256: e1dbeb40969508108ec480a32c4a22a07d194d850986883fd4ee4b5ae1b79385
+sample_rows: 50
+sample_roles: 20 known-existing; 25 missing with Wildan row; 5 missing without Wildan row
+zapi: BLOCKED_CREDENTIAL_ABSENT; requests=0; admissible_missing_open=0
+yahoo: requests=8; raw_rows=1035; exact_sample_rows=8; HLC=7/8; known_open=4/5; admissible_missing_open=3
+yahoo_request_errors: FREN/MASA/MFIN yfinance timezone/404 diagnostics retained
+admissible_yahoo_rows: AADI 2024-12-05; ALDO 2024-07-08; BREN 2024-05-06
+known_answer_hlc_rejection: BBCA 2021-08-03 split-scale mismatch; existing panel Open preserved
+execution_grade_promoted: false
+pytest: 226 passed, 3 pre-existing warnings
+audit_summary_sha256: 5aab0e1f4ca03918f12d393c79b936326621f709b7ea956cf5541e2e8f936e33
+artifact_manifest_sha256: eeca6e2d0bcb126e1bf61092018e3aa893279e90b55aeda58fb1b96f722e1513
+
+findings:
+- Tier-2 sample construction is deterministic and outcome-independent.
+- Zapi could not be empirically plan-tested because ZAPI_API_KEY was absent.
+- Yahoo supplied 3 rows passing the unchanged H/L/C/raw-Open/range contract,
+  but the pilot also exposed one known-answer H/L/C incompatibility and
+  provider gaps/errors for FREN, MASA, and MFIN.
+
+decisions_made:
+- Existing panel Open values remain immutable.
+- No candidate was written into the immutable panel or a derivative panel.
+- No bulk backfill, direct IDX scrape, TradingView/Investing ingestion,
+  Stage-5 rerun, Ranking V2 change, execution-PnL claim, modelling, or main
+  merge was performed.
+
+decisions_needed:
+- Independent ChatGPT review must decide whether either source merits a new,
+  separately authorized bounded follow-up. This pilot alone does not authorize
+  bulk Tier-2 ingestion.
+
+blocking_risks:
+- Zapi credential/Free-plan access remains untested.
+- Yahoo raw semantics are not uniformly compatible with the certified panel;
+  the BBCA known-answer mismatch is a concrete rejection.
+- The 3 admissible Yahoo rows are source-audit candidates only, not certified
+  execution-grade fills.
+
+validation_run:
+- baseline full pytest: 217 passed, 3 warnings
+- implementation full pytest: 225 passed, 3 warnings
+- final full pytest: 226 passed, 3 warnings
+- immutable panel hash verified before and after runtime
+
+recommended_next_action:
+STOP for independent ChatGPT review. Do not bulk-fetch the 446,843-row gap,
+do not promote execution grade, and do not start modelling or Stage 5.
