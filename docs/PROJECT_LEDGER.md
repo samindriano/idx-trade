@@ -802,3 +802,49 @@ localized, the ladder stopped. No 252 diagnostic, 1260 expansion, model-safe
 504 panel, or 504 manifest was created. The next action is to resolve these
 three historical evidence/provider blockers without weakening the DATA GATE;
 only then may a new 504 certification be attempted.
+
+---
+
+## 16. DATA-004 repair attempt - STOP on official OHLC blocker
+
+Date: 2026-08-09. Runtime source checkpoint: `data/idx-data-002c` at
+`5e6f6bd38a5af3ee11bca93a15f50fadf9515eb2`.
+
+The certified 43- and 126-session artifacts were not modified. Full pytest
+passed: 141 tests, exit 0, with three non-blocking `FutureWarning` messages.
+
+The normal IDX/KSEI reconciliation for FREN had already failed with an
+undefined KSEI security/type/listing response. The curated registry was loaded
+through `load_curated_security_identities(...)` and applied only afterwards via
+`supplement_historical_security_identities(...)`. The rebuilt PIT master added
+FREN as a common share with `listed_from=2006-11-29` and
+`listed_to=2025-04-16`; existence checks returned LISTED on 2025-04-16 and
+DELISTED on 2025-04-17. Identity evidence did not create tradability state.
+
+From the preserved failed 504 gate and official Stock Summary anchors, the
+pre-repair missing ACTIVE price sets were exactly MASA 22 sessions and MFIN
+249 sessions, total 271. The exact set is preserved at the runtime artifact
+`D:\Documents\Project\idx-trade-data-gate-20260808v\repair_504\prices\missing_active_sessions_504_pre_repair.csv`.
+
+The targeted official IDX fallback was started for MASA only. All 22 requested
+rows were returned as `UNRESOLVED_PRICE / OFFICIAL_OHLC_MISSING_OR_NONPOSITIVE`:
+the official rows had positive Regular-Market Volume/Frequency and valid
+High/Low/Close, but neither positive `OpenPrice` nor positive `FirstTrade`.
+Therefore zero `PRICE_PARSED` rows, zero `FIRSTTRADE_FALLBACK` rows, zero
+filled rows, and 22 remaining missing ACTIVE rows were recorded. MFIN was not
+requested after this hard stop. No synthetic or forward-filled price was
+created, and no existing provider row was overwritten.
+
+The new FREN identity also correctly exposes 196 ACTIVE sessions in the 504
+window, but no raw price artifact exists for FREN. Automatic raw-price
+semantics are therefore false for FREN, MASA, and MFIN. This is preserved as a
+diagnostic and not bypassed.
+
+The 126/504 certification ladder was not rerun after the MASA hard stop. No
+504 panel or manifest was created. No 252/1260 expansion, modelling,
+`IDX-VAL-002`, or merge to main was started.
+
+The next safe action is a separately reviewed official source path that can
+provide a defensible opening execution for the exact MASA/MFIN dates (and the
+newly exposed FREN ACTIVE history), or an explicit evidence-backed decision
+that the 504 horizon cannot be certified. The price gate must not be weakened.
