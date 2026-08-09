@@ -17,7 +17,7 @@ This is the short **authoritative first-read status layer**. For full chronology
 - metrics-only integration: **`RANKING_V2_HISTORICAL_CHAMPION_SELECTED`**;
 - historical-development champion: **`HGB_XS_MARKET`**;
 - independent ChatGPT champion review: **PASS**;
-- current authorization: **champion freeze + final-refit/fresh-forward validation specification only; no fresh-forward outcome evaluation yet**;
+- current authorization: **champion and final-refit/fresh-forward contract frozen; final refit and fresh-forward outcome evaluation are not yet authorized**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -173,15 +173,20 @@ Integrator summary SHA-256:
 
 `3facb4468caafab8cf19f368cf5ef04f36dac052089d2ecb810b683c851ec705`
 
-## Immediate next action
+## Champion-freeze / forward-spec result
 
-Run only the champion-freeze / forward-spec task from:
+The champion-freeze / forward-spec task is complete on this branch. The
+reviewable contract is:
 
-`coordination/handoffs/IDX-RANKING-V2-CHAMPION-FREEZE-FORWARD-SPEC.md`
+`docs/RANKING_V2_CHAMPION_FORWARD_SPEC_V1.md`
 
-That task must freeze `HGB_XS_MARKET`, the exact final-development refit protocol, and the fresh-forward validation/anti-peeking/provenance contract before any fresh-forward outcome is inspected. If runtime implementation is touched, `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md` must be read first and any optimization must preserve semantic equivalence.
+Checkpoint:
 
-Stop after the specification/freeze phase for ChatGPT review. Do not evaluate fresh-forward outcomes in the same task.
+`docs/checkpoints/2026-08-10_RANKING_V2_CHAMPION_FORWARD_SPEC_FROZEN.md`
+
+No fresh-forward outcomes were inspected. The next action requires MAIN /
+ChatGPT review and explicit authorization to implement the final-refit and
+one-shot fresh-forward runtime against the frozen contract.
 
 ## Authorization boundary
 
