@@ -1246,5 +1246,38 @@ No modelling, `IDX-VAL-002`, holdout inspection, market redownload, raw-data
 rewrite, or main merge was performed. The next safe action is a separately
 approved Stage 3 implementation plan; this entry does not authorize it.
 
+---
+
+## 23. STAGE-3 development runtime - advancement rule met
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage3-v1`. Code head:
+`4c484b087aff592234dbe9905213e9d83b2f2611`.
+
+This execution-only run used the existing immutable
+`SIGNAL_RESEARCH_HLCV` panel and frozen Stage-3 runner. No market data was
+redownloaded, no raw data was changed, no Open was synthesized, and no
+holdout/model rescue was attempted. Full pytest passed **184/184** with three
+pre-existing pandas/NumPy warnings. Panel and manifest hashes matched, the
+manifest was valid 15/15, and all runtime boundaries passed:
+maximum signal index 942, maximum future source index 962, holdout start 1009,
+and `holdout_outcome_accessed=false`.
+
+The external runtime output is
+`D:\Documents\Project\idx-trade-data-gate-20260808v\stage3_development_v1_20260809`.
+Full valid candidate rows were 712,325; history-qualified rows 692,648;
+primary broad-liquid rows 244,761; and H10 resolved binary model rows
+208,375. H10 contained 197,910 `TP_FIRST`, 315,049 `SL_FIRST`, 6,974
+`AMBIGUOUS_SAME_BAR`, 107,189 `NO_BARRIER_HIT`, 40,463 `UNRESOLVED_PATH`,
+44,740 `INVALID_BARRIER`, and zero `UNRESOLVED_HORIZON_END`.
+
+The pre-registered advancement rule result is
+`STAGE3_RUNTIME_COMPLETE_ADVANCEMENT_RULE_MET`: `logistic_compact` beat both
+base-rate and momentum on F2/F3; `hist_gradient_boosting` did so on F1/F2/F3.
+This remains development OOF evidence, never final OOS performance. Pooled
+PR-AUC was 0.364646 for logistic and 0.374347 for HGB, but pooled Brier/ECE
+did not uniformly improve over base-rate, so independent review is required
+before any Stage-4 decision. No holdout, Stage 4, `IDX-VAL-002`, or main merge
+was started.
+
 The next authorized phase is **STAGE 2 — RESEARCH SPECIFICATION AND
 VALIDATION DESIGN**. Do not begin modelling in this run.

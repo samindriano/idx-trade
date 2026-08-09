@@ -2161,3 +2161,39 @@ separately approved.
 No strict 1260 PASS is implied. The next phase is Stage 2 research
 specification and validation design; modelling remains prohibited until that
 phase is separately approved.
+
+---
+
+## 23. STAGE-3 development runtime - advancement rule met
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage3-v1`, code head
+`4c484b087aff592234dbe9905213e9d83b2f2611`.
+
+The frozen Stage-3 development runner executed once against the existing
+immutable signal-research artifacts. Full pytest passed: **184 passed, 0
+failed**, with three existing pandas/NumPy deprecation warnings. The panel hash
+and research manifest hash matched exactly; manifest verification was
+`valid=true`, 15/15. Runtime admission confirmed maximum signal session 942,
+maximum future source session 962, locked holdout start 1009, and
+`holdout_outcome_accessed=false`.
+
+The development output is external at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\stage3_development_v1_20260809`.
+It contains 712,325 full valid/history candidate rows, 692,648
+history-qualified rows, 244,761 primary broad-liquid rows, and 208,375 H10
+resolved binary model rows. H10 labels were 197,910 `TP_FIRST`, 315,049
+`SL_FIRST`, 6,974 `AMBIGUOUS_SAME_BAR`, 107,189 `NO_BARRIER_HIT`, 40,463
+`UNRESOLVED_PATH`, 44,740 `INVALID_BARRIER`, and zero
+`UNRESOLVED_HORIZON_END`.
+
+The pre-registered advancement rule was met:
+
+- `logistic_compact`: F2 and F3;
+- `hist_gradient_boosting`: F1, F2, and F3.
+
+This is development OOF evidence only, not final OOS performance. The locked
+holdout was not read. No Stage 4, `IDX-VAL-002`, model deployment, or merge to
+main was started. The next safe action is independent ChatGPT review of the
+runtime result, with particular attention to weak pooled probability quality
+despite PR-AUC advancement and to the remaining strict execution-grade 1260
+FAIL status.
