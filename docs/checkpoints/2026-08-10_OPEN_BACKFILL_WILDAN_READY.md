@@ -2,12 +2,15 @@
 
 Date: 2026-08-10 (Asia/Jakarta)
 Branch: `data/idx-open-backfill-v1`
+Draft PR: #11
 
 ## Decision
 
 **OPEN_BACKFILL_WILDAN_IMPLEMENTATION_READY_FOR_LOCAL_RUNTIME**
 
 A fail-closed Tier-1 backfill runner is implemented for the already-published `wildangunawan/Dataset-Saham-IDX` archive.
+
+GitHub CI on the implementation branch: **217 passed, 0 failed**; remaining warnings are pre-existing dependency/pandas warnings. No live/local 1260-panel backfill outcome has been inspected yet.
 
 This track does not scrape `idx.co.id`. The public external repository must be cloned normally, pinned to an exact Git commit, and stored outside the project repository.
 
