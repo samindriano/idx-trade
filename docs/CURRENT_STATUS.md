@@ -1,6 +1,6 @@
 # IDX Trade — Current Status
 
-Date: 2026-08-09 (Asia/Jakarta)
+Date: 2026-08-10 (Asia/Jakarta)
 
 This is the short **authoritative first-read status layer**. For full chronology read
 `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, and the newest
@@ -18,7 +18,8 @@ authorization boundary.
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
 - Stage-5 bounded post-mortem: **complete and independently interpreted**
 - interpretation checkpoint: `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_INTERPRETATION.md`
-- next authorized work: **finish runtime-performance equivalence/benchmark, freeze bounded Ranking V2 research specification, then implement V2 development research**
+- next authorized research work: **finish runtime-performance equivalence/benchmark, freeze bounded Ranking V2 research specification, then implement V2 development research**
+- parallel data/ops tracks may recover historical Open and prepare fail-closed forward archival without changing Ranking V1/V2 semantics
 - Stage 6: not authorized for Ranking V1
 - independent V2 validation: requires fresh forward data strictly after `2026-07-31`
 - `IDX-VAL-002`: not started
@@ -134,13 +135,33 @@ Candidate vectorized label engine exists and unit/adversarial equivalence tests 
 
 This track may change computation only, never research semantics.
 
+## Forward Open archive ops track
+
+Separate branch: `ops/idx-forward-open-archive-v1`.
+
+Status: **`FORWARD_OPEN_ARCHIVE_SCAFFOLD_READY_SOURCE_BLOCKED`**.
+
+Purpose: prevent the current historical-Open problem from recurring on future sessions by archiving permitted forward OHLCV/Open data at 22:00 local time, with Windows logon catch-up and `StartWhenAvailable` behavior.
+
+Implemented scaffold:
+
+- source-agnostic `python -m idx_trade.forward_open_archive` runner;
+- immutable per-session Parquet + manifest/SHA contract;
+- official IDX exchange-session calendar reuse;
+- Windows runner and Task Scheduler installer scripts;
+- tests for OHLC/session invariants, immutability/idempotence, and fail-closed provider absence.
+
+No forward price provider is frozen yet. Until a separate source audit approves one, the scheduler intentionally returns `BLOCKED_SOURCE_NOT_FROZEN` and fetches no price data. Direct IDX scraping and silent provider fallback remain prohibited. Read `docs/FORWARD_OPEN_ARCHIVE_V1.md` and `docs/checkpoints/2026-08-10_FORWARD_OPEN_ARCHIVE_SCAFFOLD_READY.md`.
+
 ## Authorization boundary
 
 Allowed next work:
 
 1. finish the performance/equivalence track;
 2. freeze a bounded Ranking V2 research specification;
-3. only then implement V2 development experiments.
+3. only then implement V2 development experiments;
+4. independently install/verify the source-blocked forward archive scheduler locally;
+5. later run a separate Forward Open Acquisition source audit before enabling price collection.
 
 Do not:
 
@@ -152,6 +173,8 @@ Do not:
 - run `IDX-VAL-002`;
 - make execution-PnL claims;
 - paper/live trade;
+- configure an unreviewed forward price provider;
+- scrape/crawl IDX directly;
 - merge to `main`.
 
 Any independent Ranking V2 and Probability V2 claim requires **fresh forward evaluation data strictly after `2026-07-31`** after the relevant V2 design/model is frozen.
