@@ -11,13 +11,13 @@ This is the short **authoritative first-read status layer**. For full chronology
 - Ranking V1: **FAILED benchmark**;
 - Stage-5 holdout: **consumed for `RANKING_V1_ONLY`; never rerun**;
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**;
-- Stage-5 bounded post-mortem: complete and independently interpreted;
-- Ranking-V2 specification and implementation: **frozen before V2 outcomes**;
 - performance equivalence: **PASS — `FULL_PANEL_LEGACY_FAST_EQUIVALENT`**;
 - immutable Ranking-V2 prepared cache: **FROZEN**;
-- ChatGPT cache/equivalence review: **PASS**;
-- current authorization: **run frozen V1 control + V2-A/B/C/D historical-development candidate orchestra, then metrics-only integration**;
-- Ranking-V2 candidate outcomes: **not yet reviewed / do not alter definitions once execution begins**;
+- V2 control + A/B/C/D candidate orchestra: **COMPLETE**;
+- metrics-only integration: **`RANKING_V2_HISTORICAL_CHAMPION_SELECTED`**;
+- historical-development champion: **`HGB_XS_MARKET`**;
+- independent ChatGPT champion review: **PASS**;
+- current authorization: **champion freeze + final-refit/fresh-forward validation specification only; no fresh-forward outcome evaluation yet**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -25,17 +25,17 @@ This is the short **authoritative first-read status layer**. For full chronology
 
 Newest controlling checkpoint:
 
-`docs/checkpoints/2026-08-10_RANKING_V2_CACHE_FROZEN_CANDIDATES_AUTHORIZED.md`
+`docs/checkpoints/2026-08-10_RANKING_V2_HISTORICAL_CHAMPION_REVIEW.md`
 
-Runtime handoff:
+Next handoff:
 
-`coordination/handoffs/IDX-RANKING-V2-CANDIDATE-ORCHESTRA-RUNTIME.md`
+`coordination/handoffs/IDX-RANKING-V2-CHAMPION-FREEZE-FORWARD-SPEC.md`
 
 Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
 
 `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
 
-The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation. The note is not authorization to modify the currently running frozen V2 control/A/B/C/D experiment.
+The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation.
 
 ## Data foundation
 
@@ -73,12 +73,6 @@ Stage-5 H10 summary:
 
 The Stage-5 holdout is permanently consumed.
 
-## Post-mortem interpretation
-
-Bounded evidence supports a **regime/covariate-shift hypothesis** more than a hypothesis that all structure information disappeared. Key descriptive facts include large A→B shifts in ATR/Close, breadth and market returns, while several structure relationships retained direction. `observed_session_count` and `security_age_sessions_exact` are excluded from V2 core because they can act as mechanically drifting time/era proxies.
-
-These findings are design hypotheses, not independent causal/predictive claims.
-
 ## Ranking V2 — frozen design
 
 Frozen substantive implementation code head:
@@ -92,7 +86,7 @@ Frozen feature families:
 - 6 stock-minus-market-median relative features;
 - no sector-relative features until a PIT-safe historical sector mapping exists.
 
-Frozen models:
+Frozen candidates:
 
 - non-eligible control: `V1_HGB_CONTROL`;
 - V2-A: `LOGISTIC_XS`;
@@ -100,9 +94,9 @@ Frozen models:
 - V2-C: `HGB_XS_MARKET`;
 - V2-D: `PAIRWISE_LOGISTIC_XS`.
 
-Frozen validation uses six expanding chronological folds, each with an exact 20-session gap and a 100-session validation block. Candidate selection is H10-only and robustness-first under the predeclared eligibility/tie-break rules. If no candidate qualifies, the result is `RANKING_V2_NO_CHAMPION`.
+Historical-development validation used six expanding chronological folds, each with an exact 20-session gap and a 100-session validation block. Selection was H10-only under the predeclared robustness-first eligibility/tie-break rules.
 
-All history through `2026-07-31` is development/research knowledge. Any selected model is only a historical-development champion. Independent V2 validation requires fresh forward data strictly after `2026-07-31`, after the champion architecture is frozen.
+All history through `2026-07-31` is development/research knowledge. No historical V2 result can be upgraded to independent validation after the fact.
 
 ## Performance-equivalence result
 
@@ -153,33 +147,52 @@ Manifest SHA-256:
 
 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`
 
-All candidate workers must treat this cache as immutable/read-only and verify the exact SHA before outcome computation.
+## Ranking-V2 historical-development result
+
+All five frozen tasks completed and all 50 candidate artifacts were independently hash-verified with zero mismatches.
+
+Champion:
+
+`HGB_XS_MARKET`
+
+Key aggregate facts:
+
+- median PR-AUC delta `0.0238795`;
+- q25 PR-AUC delta `0.0194015`;
+- positive PR-delta folds `6/6`;
+- median ROC-AUC `0.524410`;
+- ROC-AUC >0.5 folds `5/6`;
+- positive Q5-Q1 folds `6/6`;
+- worst-fold PR-delta `0.008789`.
+
+Versus the non-eligible V1 control, the champion improves median PR-delta by only about `+0.0015315`, but improves q25 PR-delta by about `+0.0025528`, median ROC by `+0.005400`, median Q5-Q1 by about `+0.0201875`, and worst-fold PR-delta from `0.000785` to `0.008789`.
+
+Interpretation: evidence supports improved historical-development robustness from cross-sectional + explicit market-context features, but not a claim of overwhelming superiority. V2F6 ROC-AUC remained below 0.5 (`0.493102`) despite positive PR-delta and Q5-Q1, so fresh-forward validation is essential.
+
+Integrator summary SHA-256:
+
+`3facb4468caafab8cf19f368cf5ef04f36dac052089d2ecb810b683c851ec705`
 
 ## Immediate next action
 
-Run the frozen candidate orchestra according to:
+Run only the champion-freeze / forward-spec task from:
 
-`coordination/handoffs/IDX-RANKING-V2-CANDIDATE-ORCHESTRA-RUNTIME.md`
+`coordination/handoffs/IDX-RANKING-V2-CHAMPION-FREEZE-FORWARD-SPEC.md`
 
-Assignments:
+That task must freeze `HGB_XS_MARKET`, the exact final-development refit protocol, and the fresh-forward validation/anti-peeking/provenance contract before any fresh-forward outcome is inspected. If runtime implementation is touched, `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md` must be read first and any optimization must preserve semantic equivalence.
 
-1. `V1_HGB_CONTROL` comparator;
-2. `LOGISTIC_XS`;
-3. `HGB_XS`;
-4. `HGB_XS_MARKET`;
-5. `PAIRWISE_LOGISTIC_XS`.
-
-All five may use isolated parallel workers against the same cache. If all complete successfully, run the existing metrics-only integrator and apply the frozen champion-selection rules. Stop after the historical-development champion/no-champion result and return to ChatGPT for independent review.
+Stop after the specification/freeze phase for ChatGPT review. Do not evaluate fresh-forward outcomes in the same task.
 
 ## Authorization boundary
 
 Do not:
 
 - rerun Stage 5;
-- tune/rescue Ranking V1 against consumed outcomes;
-- modify V2 candidate definitions/features/folds/hyperparameters after outcomes begin;
-- use H5/H20 to select or rescue a V2 candidate;
+- reopen/tune/rescue Ranking-V2 candidate selection;
+- modify the selected champion based on historical outcomes now observed;
+- use H5/H20 to rescue the champion;
 - call history through `2026-07-31` independent V2 validation;
+- inspect fresh-forward outcomes before the forward contract is frozen;
 - start probability calibration;
 - start Stage 6;
 - run `IDX-VAL-002`;
