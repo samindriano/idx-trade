@@ -2068,3 +2068,46 @@ strict 126 remains PASS, and strict 504/1260 remain FAIL/NO-GO. No panel,
 manifest, modelling, `IDX-VAL-002`, 252/1260 rerun, or main merge was started.
 See `docs/checkpoints/2026-08-09_1260_OPEN_GAP_DOMINANT_DIAGNOSTIC.md` for the
 full artifact paths and review decision.
+
+---
+
+# 38. Final UNKNOWN diagnostic and SIGNAL_RESEARCH_1260 GO
+
+Date: 2026-08-09. The final bounded diagnostic reused the exact 1260 runtime
+and preserved strict execution-grade artifacts. Full pytest passed with 157
+tests and 0 failures; three pre-existing pandas warnings remain non-blocking.
+
+The exact 572 strict UNKNOWN pairs are 100% `UNKNOWN_NO_EXECUTION_EVIDENCE`:
+there are zero rows with positive official execution evidence, zero provider
+bars, zero valid H/L/C from an approved source, and zero explicit legal
+suspension-boundary cases. All 572 are listed, in-scope common-share rows. The
+8 affected tickers are ADCP, FINN, GRPH, KETR, MASA, MFIN, RMBA, and TURI.
+The UNKNOWN/expected-ACTIVE intersection is mechanically empty (0 rows).
+
+The signal-research contract is now explicit and separate from strict
+execution-grade OHLCV:
+
+- required common stocks: 979;
+- eligible common stocks: 979/979;
+- expected and eligible ACTIVE rows: 981,940 / 981,940;
+- ACTIVE-row coverage: 100.000%;
+- known Regular-Market Value coverage: 100.000%;
+- remaining unsupported securities: 0;
+- Open: nullable, explicit status, never synthesized;
+- UNKNOWN: excluded from all signal features, labels, liquidity metrics, and
+  execution paths.
+
+The signal panel contains 981,940 rows across 945 tickers with ACTIVE rows;
+34 required tickers have zero expected ACTIVE sessions. It has 446,843 null
+Open rows (45.5061409047%) and zero null H/L/C/Volume rows. The panel and the
+15-artifact signal-research manifest are external runtime outputs documented in
+`docs/checkpoints/2026-08-09_SIGNAL_RESEARCH_1260_GO.md`.
+
+Permanent status:
+
+`STRICT EXECUTION-GRADE 1260: FAIL`
+`SIGNAL-RESEARCH 1260: GO`
+
+No strict 1260 PASS is implied. The next phase is Stage 2 research
+specification and validation design; modelling remains prohibited until that
+phase is separately approved.

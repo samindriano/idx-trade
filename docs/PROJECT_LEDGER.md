@@ -1117,3 +1117,87 @@ HLCV contract, but this run did not implement or authorize that split. Strict
 No model-safe panel, manifest, modelling, `IDX-VAL-002`, 252/1260 rerun,
 main merge, or gate weakening was performed. Stop for independent ChatGPT
 review before changing the research contract.
+
+---
+
+## 21. DATA-006 final UNKNOWN diagnostic and SIGNAL_RESEARCH_1260 GO
+
+Date: 2026-08-09 (Asia/Jakarta). Source branch:
+`data/idx-data-002c`. The branch was clean and synchronized with origin at
+`0288b072c47af886d3d84e3e3b2e26f53a0a2c9f` before work. Full pytest passed
+before and after the contract implementation: **157 passed, 0 failed**, with
+three pre-existing non-blocking pandas `FutureWarning` messages.
+
+This was the final bounded diagnostic using only the existing
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809`
+runtime. No market redownload, market-wide Yahoo rerun, paid data, Open
+synthesis, strict-gate change, modelling, `IDX-VAL-002`, or main merge was
+performed. Four local read-only workers processed the cached date evidence.
+
+The exact 572 strict UNKNOWN pairs were persisted externally under
+`unknown_state_diagnostic_1260_20260809`:
+
+- 572 rows, 381 dates, 8 tickers: `ADCP, FINN, GRPH, KETR, MASA, MFIN, RMBA,
+  TURI`;
+- classification: 572 `UNKNOWN_NO_EXECUTION_EVIDENCE` (100.000%);
+- `UNKNOWN_WITH_OFFICIAL_EXECUTION`: 0;
+- `UNKNOWN_WITH_PROVIDER_PRICE_ROW`: 0;
+- `UNKNOWN_LEGAL_STATE_BOUNDARY`: 0;
+- `OTHER`: 0;
+- all 572 rows were `LISTED`, in-scope common shares;
+- all 572 lacked an exact Stock Summary row, valid H/L/C, provider/Yahoo row,
+  and legal suspension interval evidence;
+- nearest-state pattern: 567 had no prior anchor and next `ACTIVE`; 5 had prior
+  `NO_TRADE` and no next anchor;
+- reason split: 2 listing left-boundary rows, 565 before first authoritative
+  anchor, and 5 listed-to-boundary rows.
+
+The critical mechanical intersection was empty:
+
+`UNKNOWN ticker/date pairs ∩ required signal-research ACTIVE pairs = 0 rows`.
+
+Under the explicit `SIGNAL_RESEARCH_HLCV` contract, the result was:
+
+- required common stocks: 979;
+- eligible common stocks: 979/979;
+- expected ACTIVE rows: 981,940;
+- eligible ACTIVE rows: 981,940/981,940;
+- ACTIVE-row coverage: 100.000%;
+- known Regular-Market Value: 15,620,249,523,853,300 total and eligible,
+  100.000% coverage;
+- remaining unsupported securities: 0;
+- corporate-action integrity: verified for all 979 required tickers;
+- UNKNOWN rows excluded: 572.
+
+The dual contract was implemented in `src/idx_trade/signal_research.py` with
+regression tests and a permanent definition in
+`docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md`. The strict execution-grade path and
+its Open-required semantics were not changed.
+
+The external signal panel is:
+
+- path:
+  `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\unknown_state_diagnostic_1260_20260809\model_safe_signal_research_panel_1260.parquet`;
+- rows: 981,940;
+- tickers with ACTIVE rows: 945 (the other 34 required tickers have zero
+  expected ACTIVE sessions);
+- null Open rows: 446,843 (45.5061409047%);
+- no null H/L/C/Volume rows, no duplicates, and all rows carry
+  `SIGNAL_RESEARCH_HLCV` plus explicit provenance.
+
+The separate signal-research manifest was created with implementation commit
+`524fbfa8b794597a1959aa0e25392df242991d09` and verified immediately:
+
+- manifest:
+  `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\unknown_state_diagnostic_1260_20260809\signal_research_1260_manifest.json`;
+- SHA-256: `b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a`;
+- artifact count: 15;
+- verification: `valid=true`, 15/15 hashes verified.
+
+Permanent decision wording:
+
+`STRICT EXECUTION-GRADE 1260: FAIL`
+`SIGNAL-RESEARCH 1260: GO`
+
+The next authorized phase is **STAGE 2 — RESEARCH SPECIFICATION AND
+VALIDATION DESIGN**. Do not begin modelling in this run.
