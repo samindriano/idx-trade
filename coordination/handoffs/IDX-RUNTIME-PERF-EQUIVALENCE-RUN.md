@@ -76,5 +76,22 @@ Report:
 10. `fast_h10_labels.parquet` exact path + SHA;
 11. equivalence report exact path + SHA.
 
-Do not run Ranking-V2 candidate outcomes. If equivalence passes, stop so the
-frozen Ranking-V2 prepared cache can be built and reviewed next.
+## Fail-closed chained cache authorization
+
+For efficiency, MAIN explicitly authorizes the same Luna xhigh local task to
+continue immediately to `IDX-RANKING-V2-PREPARED-CACHE-RUNTIME` **only if every
+Required PASS condition above is satisfied exactly**.
+
+If exact equivalence passes:
+
+1. record the performance report and fast-H10 SHA;
+2. switch normally to `research/idx-ranking-v2-spec-v1` using fetch + checkout +
+   `pull --ff-only`;
+3. read
+   `coordination/handoffs/IDX-RANKING-V2-PREPARED-CACHE-RUNTIME.md`;
+4. build exactly one immutable Ranking-V2 prepared cache under that handoff;
+5. STOP after cache creation.
+
+This chained authorization does **not** authorize any `V1_HGB_CONTROL`, V2-A,
+V2-B, V2-C, or V2-D outcome run. Candidate orchestra remains blocked until
+ChatGPT independently reviews the equivalence report and prepared-cache hash.
