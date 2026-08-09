@@ -1,7 +1,7 @@
 # Stage 5 V1 — Locked Ranking Holdout Plan
 
 Date: 2026-08-09 (Asia/Jakarta)
-Status: FROZEN CANDIDATE — IMPLEMENTATION / CI REVIEW REQUIRED BEFORE RUNTIME
+Status: **FROZEN — IMPLEMENTATION REVIEW PASS / RUNTIME READY**
 
 ## 1. Decision entering Stage 5
 
@@ -30,7 +30,18 @@ No Stage-5 result may be called a calibrated `P(TP before SL)`.
 
 The locked holdout is consumed **once** for `RANKING_V1_ONLY`.
 
-After Stage 5 begins reading holdout outcomes:
+The runner writes a durable marker named
+`STAGE5_RANKING_V1_HOLDOUT_ACCESS_STARTED.json` beside the immutable research
+panel **after all rankers have been serialized and hashed, but before any full
+panel / holdout outcome read**. A mirror marker is written to the Stage-5 output
+directory.
+
+If the durable marker already exists, every later Stage-5 invocation must fail
+closed even if a different output directory is supplied. If a process fails
+after the marker is written, the holdout is conservatively treated as consumed
+and must not be rerun without an explicit independent review.
+
+After Stage 5 begins holdout access:
 
 - sessions 1009–1260 are no longer a reusable model-development holdout;
 - Stage-5 outcomes may not be used to tune labels, features, model parameters,
@@ -47,6 +58,8 @@ Unchanged:
   `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
 - research manifest SHA-256:
   `b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a`;
+- official calendar SHA-256:
+  `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`;
 - official calendar: 1,260 sessions, `2021-04-29 -> 2026-07-31`;
 - primary label: H10, ATR14, SL=1.0 ATR, RR=1.5;
 - primary universe: broad causal liquid view, trailing 60 official sessions,
@@ -88,13 +101,15 @@ The H20 boundary is a leakage guard, not a change of target.
 The Stage-5 runner must perform this order:
 
 1. verify immutable input hashes and Stage-4B parent status;
-2. build causal features;
-3. build **development-only** H10 labels with signal index <=988 and future
+2. verify the durable global holdout marker does not already exist;
+3. build causal development features;
+4. build **development-only** H10 labels with signal index <=988 and future
    access bounded to development sessions;
-4. create the final primary model table;
-5. fit and serialize all frozen rankers;
-6. hash the serialized model artifacts and write a pre-holdout freeze record;
-7. only then generate/read holdout outcome labels.
+5. create the final primary model table;
+6. fit and serialize all frozen rankers;
+7. hash the serialized model artifacts and write a pre-holdout freeze record;
+8. write the global/local one-shot holdout-access markers;
+9. only then generate/read holdout outcome labels.
 
 The runner must record:
 
@@ -233,8 +248,8 @@ Use when any overall condition 1–4 fails while safety guards remain clean.
 
 ### `STAGE5_RUNTIME_BLOCKED`
 
-Use for hash, manifest, environment, schema, causality, model-freeze-order, or
-other admission failure.
+Use for hash, manifest, environment, schema, causality, model-freeze-order,
+one-shot marker, or other admission failure.
 
 No Stage-5 status automatically authorizes paper/live trading.
 
@@ -271,6 +286,7 @@ The Stage-5 report must record:
 - dependency versions;
 - final development training boundary and rows;
 - model artifact hashes frozen before outcome access;
+- global and local holdout-access marker paths/hashes;
 - H10 outcome distribution;
 - all ranking metrics;
 - quintile/decile diagnostics;
@@ -279,6 +295,21 @@ The Stage-5 report must record:
 - final decision;
 - `holdout_consumed=true`;
 - `holdout_consumed_for=RANKING_V1_ONLY`;
-- `probability_v1_status=NOT_READY_DEFERRED`.
+- `probability_v1_status=PROBABILITY_V1_NOT_READY_DEFERRED`.
 
 No runtime prediction/model/parquet/CSV artifact is committed to Git.
+
+## 15. Implementation review result
+
+Stage-5 implementation and regression suite are green before holdout access:
+
+- GitHub CI: **206 passed, 0 failed**;
+- warning flood introduced by the initial Stage-5 test fixture was removed;
+- remaining warnings are existing pandas/NumPy deprecation/future warnings;
+- the runner refuses numerical-environment drift;
+- the runner refuses input hash or manifest drift;
+- the final model refit is serialized and hashed before holdout labels;
+- a durable global one-shot marker prevents accidental reruns into a new output
+  directory after holdout access begins.
+
+Runtime is authorized only as the exact one-shot execution described here.
