@@ -4,16 +4,16 @@
 
 `docs/CURRENT_STATUS.md` is the **first-read short status layer**. It records the latest approved phase, branch, frozen hashes, runtime gate, holdout state, and next authorization boundary. When an older bootstrap paragraph conflicts with it, the newer dated status/checkpoint wins.
 
-`docs/PROJECT_CONTEXT_MASTER.md` is the comprehensive bootstrap history for this project. It is designed specifically for new chats, model handoffs, and context-window loss. It contains the project objective, stage map, source hierarchy, ontology, architecture, certified hashes, branch/PR map, failure chronology, active blockers, and next-action contracts.
+`docs/PROJECT_CONTEXT_MASTER.md` is the comprehensive bootstrap history for this project. It is designed specifically for new chats, model handoffs, and context-window loss. It contains the project objective, stage map, source hierarchy, ontology, architecture, certified hashes, branch/PR map, failure chronology, active blockers, and next-action contracts. Some early "current stage" paragraphs inside this long-lived master are preserved historical snapshots; they MUST NOT override `docs/CURRENT_STATUS.md` or a newer dated checkpoint.
 
 `docs/PROJECT_LEDGER.md` is the canonical chronological causal ledger. It preserves the detailed failure -> diagnosis -> fix -> validation history and must remain consistent with the current status and master context.
 
 Before any material DATA, VALIDATION, or MODEL task, read in this order:
 
 1. `docs/CURRENT_STATUS.md`
-2. `docs/PROJECT_CONTEXT_MASTER.md`
-3. `docs/PROJECT_LEDGER.md`
-4. the newest relevant checkpoint under `docs/checkpoints/`
+2. the newest relevant checkpoint under `docs/checkpoints/`
+3. `docs/PROJECT_CONTEXT_MASTER.md`
+4. `docs/PROJECT_LEDGER.md`
 
 Then verify the actual current branch/HEAD before acting. Historical handoffs and commit messages are evidence snapshots, but they may describe an older state of the project. When a material assumption changes, a new failure class is discovered, a gate result changes, a phase transition is approved, or the active blocker changes, update the short current-status layer and the durable continuity records so a future chat can recover without relying on conversation history.
 
@@ -53,7 +53,7 @@ The current `idx-trade` implementation is the source of truth for IDX-specific c
 
 The IDX state model keeps listing existence, market-specific tradability, and provider availability separate. `UNKNOWN` is a valid state and must not be collapsed into `NO_TRADE`, `SUSPENDED`, or background data. Regular-Market eligibility, suspension/resumption intervals, IPO warm-up, delisted history, corporate-action provenance, and expected-vs-observed session coverage are decision-changing controls.
 
-Current model research is development-only under the latest written stage gate. The final locked holdout remains inaccessible until a separate Stage-5 authorization. No development result authorizes holdout inspection, execution-PnL claims, paper trading, or live trading.
+Current research status is controlled by `docs/CURRENT_STATUS.md`. At the 2026-08-09 Stage-5-ready checkpoint, Probability V1 is `PROBABILITY_V1_NOT_READY_DEFERRED` and exactly one ranking-only locked-holdout execution is authorized. No Stage-5 result may authorize post-holdout tuning, execution-PnL claims, paper trading, or live trading without a separate written gate.
 
 ## Ownership and coordination
 

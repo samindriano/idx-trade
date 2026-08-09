@@ -2,9 +2,11 @@
 
 Date: 2026-08-09 (Asia/Jakarta)
 
-This is the short first-read status layer. For full chronology read
+This is the short **authoritative first-read status layer**. For full chronology read
 `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, and the newest
-checkpoint.
+checkpoint. If an older "current stage" paragraph in the long-lived master or
+ledger conflicts with this file, this file plus the newest dated checkpoint
+controls the current phase and authorization boundary.
 
 ## Current phase
 
