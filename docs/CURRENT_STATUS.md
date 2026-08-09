@@ -50,19 +50,20 @@ Signal-research HLCV:
 
 Branch: `data/idx-open-backfill-v1`.
 
-Status: **`OPEN_BACKFILL_WILDAN_IMPLEMENTATION_READY_FOR_LOCAL_RUNTIME`**.
+Status: **`OPEN_BACKFILL_WILDAN_RUNTIME_COMPLETE_REVIEW_REQUIRED`**.
 
 Read:
 
 - `docs/OPEN_BACKFILL_POLICY_V1.md`;
 - `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_READY.md`;
+- `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_RUNTIME.md`;
 - `coordination/handoffs/IDX-OPEN-BACKFILL-WILDAN-RUNTIME.md`.
 
 Tier-1 source is the already-published `wildangunawan/Dataset-Saham-IDX` archive, pinned to an exact external Git commit. This track does not scrape `idx.co.id` directly. Existing panel Open values are immutable. A secondary Open is admitted only when ticker/date match exactly, secondary H/L/C exactly equal the certified panel H/L/C, and secondary Open is positive and lies inside the certified Low/High range.
 
 Important source finding: the archive `info.json` currently says `last_update=2024-07-19`, but actual public CSV files contain later rows (at least through February 2025 in inspected files). Runtime therefore derives actual coverage from the pinned CSV snapshot and treats `info.json` only as provenance metadata.
 
-Tier-1 creates a derivative artifact only. `execution_grade_promoted=false` remains mandatory until the runtime coverage/provenance result is independently reviewed and remaining gaps are resolved through separately audited sources.
+Tier-1 runtime completed with the pinned source and produced a derivative artifact, but accepted **0** Open fills: all 446,843 original null Open rows remain null. The exact runtime result, provenance, diagnostics, and artifact hashes are in `docs/checkpoints/2026-08-10_OPEN_BACKFILL_WILDAN_RUNTIME.md`. `execution_grade_promoted=false` remains mandatory until the result is independently reviewed and remaining gaps are resolved through separately audited sources.
 
 ## Frozen V1 semantics
 
