@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: 057d7c2df57ebe259f8b93642128e91ad294b146
 branch: data/idx-data-002c
-head_commit: pending documentation commit
+head_commit: 707ea18f4f1f14094bf65f1d48923d51cb1c928e
 scope: Freeze Stage-2 research question, signal timing, label family, universe, temporal validation, purge/embargo, metrics, baselines, calibration, and leakage threat model.
 files_changed: docs/RESEARCH_SPECIFICATION_V1.md; docs/VALIDATION_PLAN_V1.md; docs/VALIDATION_THREAT_MODEL_V1.md; docs/checkpoints/2026-08-09_STAGE2_RESEARCH_SPECIFICATION.md; docs/PROJECT_CONTEXT_MASTER.md; docs/PROJECT_LEDGER.md; coordination/handoffs/IDX-STAGE2-SPEC-MAIN.md
 findings: The immutable SIGNAL_RESEARCH_HLCV input remains 981,940 ACTIVE rows over the exact 1,260-session window. The primary signal question is causal post-close structure versus a bounded future excursion. The primary label is H=10 first-touch barrier with ATR14, k_sl=1.0, and RR=1.5; H=5/H=20 are bounded sensitivities. Open is not required or synthesized.
