@@ -1304,3 +1304,28 @@ checkpoint.
 
 No Stage 5, holdout inspection, `IDX-VAL-002`, modelling, or main merge was
 started. Next action is independent ChatGPT review, not tuning.
+
+## 25. STAGE-4B causal calibration runtime - still blocked
+
+Date: 2026-08-09 (Asia/Jakarta). Branch:
+`research/idx-stage4b-calibration-v1`. Code head:
+`607fc8045711892960bad68135da842289222700`.
+
+This execution-only run used the exact existing Stage-3 primary model table,
+Stage-4 calibration OOF predictions, Stage-4 summary, and official 1,260-
+session calendar. The numerical environment matched Stage 3/4 exactly and
+full pytest passed **198/198** with three existing warnings. Input hashes,
+parent decision, and holdout guards all matched; `holdout_outcome_accessed=false`.
+
+The automatic result is **`STAGE4B_CALIBRATION_STILL_BLOCKED`**. The primary
+`ISOTONIC_PRIOR_SHIFT_60` improved pooled Brier versus the mandatory
+`CAUSAL_PRIOR_ONLY_60` comparator, but failed to beat static base-rate and
+static isotonic on pooled Brier, failed pooled ECE versus static base-rate,
+and improved prevalence gap in zero of three folds. All 60- and 126-session
+causal audit rows passed; 126 remains sensitivity-only. No code, label,
+feature, universe, holdout, or stage boundary was changed. The full fold,
+pooled, audit, readiness, and artifact-hash record is in the Stage-4B
+checkpoint.
+
+No Stage 5, holdout inspection, `IDX-VAL-002`, modelling, external data, or
+main merge was started. Stop for independent ChatGPT review.

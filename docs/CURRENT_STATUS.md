@@ -114,3 +114,22 @@ Frozen runtime inputs:
 Implementation CI after Stage-4B code/tests: **198 passed, 0 failed**.
 
 Stage 4B remains development-only. No HGB refit, feature change, model search, label/universe change, holdout access, external data, execution-PnL, synthetic Open, Kelly/sizing, Stage 5, `IDX-VAL-002`, or main merge is authorized.
+
+## Stage 4B runtime result
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage4b-calibration-v1`.
+Code head used: `607fc8045711892960bad68135da842289222700`.
+
+The frozen causal calibration runtime completed once under the exact Stage-3/4
+numerical environment. Full pytest passed **198/198**, with three existing
+pandas/NumPy warnings. All input hashes and parent holdout guards matched;
+`holdout_outcome_accessed=false`.
+
+Automatic result: **`STAGE4B_CALIBRATION_STILL_BLOCKED`**. The primary
+`ISOTONIC_PRIOR_SHIFT_60` candidate beat `CAUSAL_PRIOR_ONLY_60` on pooled
+Brier, but did not beat static base-rate or static isotonic; pooled ECE and
+the 2-of-3-fold prevalence-gap gate also failed. The 60- and 126-session
+causal audits both passed all 378 dates with the exact `t - 10` official
+session maturity cutoff. The 126-session result remains sensitivity-only and
+does not change the primary decision. Stop for ChatGPT review; do not open
+the holdout or start Stage 5.
