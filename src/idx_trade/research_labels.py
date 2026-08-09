@@ -102,17 +102,28 @@ def build_first_touch_labels(
     official_sessions: Iterable[object],
     *,
     config: BarrierLabelConfig | None = None,
+    max_signal_session_index: int | None = None,
+    max_future_session_index: int | None = None,
 ) -> pd.DataFrame:
     """Build the frozen first-touch research label in official-session space.
 
     The function never uses Open. A resolved barrier/no-touch label requires the
     full future official-session path through H to be present as ACTIVE signal
     rows. Any missing future official session fails closed as UNRESOLVED_PATH.
+
+    `max_signal_session_index` and `max_future_session_index` are one-based hard
+    access bounds. Stage-3 development uses them to make accidental locked-
+    holdout outcome inspection impossible even when the immutable 1260 panel is
+    supplied as the source table.
     """
 
     cfg = config or BarrierLabelConfig()
     cfg.validate()
     sessions = _sessions(official_sessions)
+    if max_signal_session_index is not None and not 1 <= max_signal_session_index <= len(sessions):
+        raise ValueError("max_signal_session_index is outside the official calendar")
+    if max_future_session_index is not None and not 1 <= max_future_session_index <= len(sessions):
+        raise ValueError("max_future_session_index is outside the official calendar")
     session_index = {pd.Timestamp(day): idx for idx, day in enumerate(sessions)}
     data = add_causal_atr(panel, window=cfg.atr_window)
     unknown_dates = sorted(set(data["date"]) - set(sessions))
@@ -126,12 +137,15 @@ def build_first_touch_labels(
         for record in group.itertuples(index=False):
             day = pd.Timestamp(record.date)
             signal_idx = session_index[day]
+            signal_one_based = signal_idx + 1
+            if max_signal_session_index is not None and signal_one_based > max_signal_session_index:
+                continue
             reference = float(record.close)
             atr = getattr(record, atr_column)
             base = {
                 "ticker": ticker,
                 "signal_date": day,
-                "signal_session_index": signal_idx + 1,
+                "signal_session_index": signal_one_based,
                 "signal_reference_close": reference,
                 "atr": float(atr) if pd.notna(atr) else np.nan,
                 "horizon": cfg.horizon,
@@ -160,6 +174,12 @@ def build_first_touch_labels(
             if sl_level <= 0 or tp_level <= reference:
                 rows.append(base)
                 continue
+            future_end_one_based = signal_one_based + cfg.horizon
+            if max_future_session_index is not None and future_end_one_based > max_future_session_index:
+                raise RuntimeError(
+                    "label request crosses the configured future-session access boundary: "
+                    f"signal={signal_one_based}, horizon={cfg.horizon}, max_future={max_future_session_index}"
+                )
             if signal_idx + cfg.horizon >= len(sessions):
                 base["label_status"] = UNRESOLVED_HORIZON_END
                 rows.append(base)
@@ -208,6 +228,8 @@ def build_first_touch_labels(
             rows.append(base)
 
     result = pd.DataFrame(rows)
+    if result.empty:
+        return result
     if result.duplicated(["ticker", "signal_date"]).any():
         raise RuntimeError("label pipeline produced duplicate ticker/signal_date rows")
     return result.sort_values(["signal_date", "ticker"]).reset_index(drop=True)
