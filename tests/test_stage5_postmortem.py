@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 
@@ -20,7 +22,7 @@ def _toy_scored() -> pd.DataFrame:
             rows.append(
                 {
                     "ticker": f"T{i:02d}",
-                    "date": pd.Timestamp("2026-01-01") + pd.Timedelta(days=start - 1009),
+                    "date": pd.Timestamp("2026-01-01") + timedelta(days=int(start - 1009)),
                     "signal_session_index": start,
                     "binary_target": int(i >= 5),
                     "score_hist_gradient_boosting": float(i),
@@ -34,7 +36,7 @@ def _toy_features() -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for half, offset in (("HOLDOUT_A", 0.0), ("HOLDOUT_B", 1.0)):
         for day in range(2):
-            date = pd.Timestamp("2026-01-01") + pd.Timedelta(days=day + (10 if half == "HOLDOUT_B" else 0))
+            date = pd.Timestamp("2026-01-01") + timedelta(days=int(day + (10 if half == "HOLDOUT_B" else 0)))
             for i in range(10):
                 row: dict[str, object] = {
                     "ticker": f"T{i:02d}",
