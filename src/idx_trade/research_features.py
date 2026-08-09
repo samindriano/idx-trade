@@ -24,8 +24,7 @@ BASELINE_FEATURE_COLUMNS = (
     "relative_volume_20",
     "log_regular_value_relative_20",
     "observed_session_count",
-    "security_age_sessions_observed",
-    "security_age_left_censored",
+    "security_age_sessions_exact",
 )
 
 
@@ -54,20 +53,33 @@ def _age_features(
     sessions: pd.DatetimeIndex,
     listed_from: Mapping[str, object] | None,
 ) -> tuple[pd.Series, pd.Series]:
+    """Return exact in-window age, otherwise explicit left-censored missingness.
+
+    For securities listed before the certified calendar starts, the exact number
+    of exchange sessions since listing is not identifiable from this snapshot.
+    Returning the number of sessions since 2021-04-29 would create a calendar-
+    time proxy, not security age, so the model feature remains NaN and the
+    diagnostic censor flag stays explicit.
+    """
+
     listing_value = None if listed_from is None else listed_from.get(ticker)
     listing_date = pd.to_datetime(listing_value, errors="coerce") if listing_value is not None else pd.NaT
     if pd.isna(listing_date):
-        age = session_indices.astype(float) + 1.0
-        censored = pd.Series(True, index=session_indices.index, dtype=bool)
-        return age, censored
+        return (
+            pd.Series(np.nan, index=session_indices.index, dtype=float),
+            pd.Series(True, index=session_indices.index, dtype=bool),
+        )
     listing_date = pd.Timestamp(listing_date).tz_localize(None).normalize()
-    first_observable_idx = int(sessions.searchsorted(listing_date, side="left"))
-    left_censored = listing_date < sessions[0]
-    if left_censored:
-        first_observable_idx = 0
-    age = (session_indices.astype(float) - float(first_observable_idx) + 1.0).clip(lower=1.0)
-    censored = pd.Series(bool(left_censored), index=session_indices.index, dtype=bool)
-    return age, censored
+    if listing_date < sessions[0]:
+        return (
+            pd.Series(np.nan, index=session_indices.index, dtype=float),
+            pd.Series(True, index=session_indices.index, dtype=bool),
+        )
+    first_session_idx = int(sessions.searchsorted(listing_date, side="left"))
+    age = (session_indices.astype(float) - float(first_session_idx) + 1.0).where(
+        session_indices.astype(int) >= first_session_idx
+    )
+    return age, pd.Series(False, index=session_indices.index, dtype=bool)
 
 
 def build_baseline_features(
@@ -83,10 +95,11 @@ def build_baseline_features(
     in official exchange-session space and requires at least 20 observed ACTIVE
     rows inside that exact window.
 
-    Exact pre-snapshot lifetime in exchange sessions is unknowable from the
-    1260-session calendar alone. `security_age_sessions_observed` is therefore a
-    lower bound for pre-window listings and is paired with an explicit
-    `security_age_left_censored` flag rather than fabricating older sessions.
+    `security_age_sessions_exact` is populated only when listing occurs inside
+    the certified calendar and exact exchange-session age is therefore known.
+    Older listings remain NaN with `security_age_left_censored=True`; the later
+    training-only imputer/missing-indicator path handles them without inventing
+    a pre-window calendar.
     """
 
     sessions = _sessions(official_sessions)
@@ -138,7 +151,7 @@ def build_baseline_features(
             sessions,
             listed_from,
         )
-        frame["security_age_sessions_observed"] = age.astype(float)
+        frame["security_age_sessions_exact"] = age.astype(float)
         frame["security_age_left_censored"] = censored.astype(bool)
 
         session_idx = frame["session_index_zero"].to_numpy(dtype=int)
