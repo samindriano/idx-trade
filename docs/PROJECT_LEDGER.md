@@ -848,3 +848,55 @@ The next safe action is a separately reviewed official source path that can
 provide a defensible opening execution for the exact MASA/MFIN dates (and the
 newly exposed FREN ACTIVE history), or an explicit evidence-backed decision
 that the 504 horizon cannot be certified. The price gate must not be weakened.
+
+---
+
+## 17. DATA-004 independent price repair - secondary source unavailable
+
+Date: 2026-08-09. Runtime source checkpoint: `data/idx-data-002c` at the
+pre-repair code checkpoint `5e6f6bd38a5af3ee11bca93a15f50fadf9515eb2`.
+
+The three remaining historical price cases were processed independently. The
+certified 43- and 126-session artifacts and the earlier failed repair
+diagnostics were preserved. Full pytest after the generic secondary-open
+witness implementation passed: 149 tests, exit 0, with three existing
+non-blocking pandas `FutureWarning` messages.
+
+The exact regenerated missing ACTIVE counts were:
+
+| ticker | requested ACTIVE sessions | official PRICE_PARSED | FIRSTTRADE_FALLBACK | unresolved official rows | rows filled | remaining |
+|---|---:|---:|---:|---:|---:|---:|
+| FREN | 196 | 0 | 0 | 196 | 0 | 196 |
+| MASA | 22 | 0 | 0 | 22 | 0 | 22 |
+| MFIN | 249 | 77 | 0 | 172 | 77 | 172 |
+
+All official unresolved rows used the explicit diagnostic
+`OFFICIAL_OHLC_MISSING_OR_NONPOSITIVE`. MFIN's 77 accepted rows used positive
+`OpenPrice`; no accepted row required FirstTrade fallback. Existing primary
+rows were never overwritten. The exact date-level sets and all official
+provenance remain outside Git in
+`D:\Documents\Project\idx-trade-data-gate-20260808v\repair_504_complete\`.
+
+A generic secondary-open witness implementation and regression tests were
+added. It accepts only an exact ticker/date match where the secondary Open is
+positive and within the official IDX range, and secondary High/Low/Close match
+official IDX High/Low/Close exactly. The resulting row keeps official IDX
+High/Low/Close/Volume and retains both source references under the marker
+`IDX_STOCK_SUMMARY_WITH_SECONDARY_OPEN_WITNESS`. Existing primary history is
+preserved date-by-date.
+
+The normal public historical-page request was attempted for FREN, MASA, and
+MFIN using the public Investing.com pages. All three returned HTTP 403. No
+CAPTCHA, anti-bot, authentication, or rate-limit protection was bypassed, so
+the secondary source is recorded as unavailable. No secondary Open was used.
+
+Automatic raw-price semantics after the official fallback were FREN=false,
+MASA=false, MFIN=true. FREN/MASA still have no stored rows; MFIN has 77 stored
+rows but 172 ACTIVE dates remain missing.
+
+Because the explicitly authorized secondary source path was unavailable and
+the DATA GATE still has missing ACTIVE prices, the 126/504 ladder was not
+run. No new 504 panel or manifest was created. The 504 decision remains
+**NO-GO / STOP**; 252 and 1260 were not started. The smallest safe next action
+is to obtain a normally accessible public secondary OHLC source or other
+authoritative opening-price evidence without weakening the gate.
