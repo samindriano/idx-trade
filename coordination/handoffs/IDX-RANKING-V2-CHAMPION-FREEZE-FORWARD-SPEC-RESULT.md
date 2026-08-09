@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: a41f13f29f5186e126b78845311b9b2d0a839256
 branch: research/idx-ranking-v2-spec-v1
-head_commit: a41f13f29f5186e126b78845311b9b2d0a839256
+head_commit: 7c28abf352f630283d7529af3a50f75e3270c095
 scope: Frozen Ranking V2 champion and final-refit/fresh-forward validation contract only; no fresh-forward outcome access.
 files_changed:
 - docs/CURRENT_STATUS.md
