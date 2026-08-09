@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
+from importlib.metadata import version
 from pathlib import Path
 from typing import Iterable
 
@@ -12,7 +14,7 @@ from .research_baselines import run_development_fold
 from .research_features import build_baseline_features
 from .research_labels import BarrierLabelConfig, build_first_touch_labels
 from .research_validation import FROZEN_FOLDS, normalize_calendar
-from .signal_research import validate_signal_research_hlcv
+from .signal_research import validate_signal_research_hlcv, verify_signal_research_snapshot_manifest
 from .storage import write_parquet_atomic
 
 
@@ -79,6 +81,35 @@ def _read_development_panel(panel_path: Path, max_date: pd.Timestamp) -> pd.Data
     return panel
 
 
+def _verify_research_manifest(path: Path) -> dict[str, object]:
+    if sha256_file(path) != FROZEN_RESEARCH_MANIFEST_SHA256:
+        raise RuntimeError("frozen SIGNAL_RESEARCH_1260 manifest hash mismatch")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    verification = verify_signal_research_snapshot_manifest(manifest)
+    if not bool(verification.get("valid", False)):
+        raise RuntimeError(f"frozen research manifest verification failed: {verification}")
+    return verification
+
+
+def _frozen_spec_hashes() -> dict[str, str]:
+    repo_root = Path(__file__).resolve().parents[2]
+    paths = {
+        "research_specification_v1": repo_root / "docs" / "RESEARCH_SPECIFICATION_V1.md",
+        "validation_plan_v1": repo_root / "docs" / "VALIDATION_PLAN_V1.md",
+        "validation_threat_model_v1": repo_root / "docs" / "VALIDATION_THREAT_MODEL_V1.md",
+        "stage3_implementation_plan_v1": repo_root / "docs" / "STAGE3_IMPLEMENTATION_PLAN_V1.md",
+    }
+    missing = [str(path) for path in paths.values() if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(f"required frozen specification files are missing: {missing}")
+    return {name: sha256_file(path) for name, path in paths.items()}
+
+
+def _dependency_versions() -> dict[str, str]:
+    packages = ["numpy", "pandas", "pyarrow", "scikit-learn"]
+    return {name: version(name) for name in packages} | {"python": platform.python_version()}
+
+
 def _label_outcome_summary(labels: pd.DataFrame, horizon: int) -> list[dict[str, object]]:
     counts = labels["label_status"].value_counts(dropna=False).sort_index()
     total = int(len(labels))
@@ -114,6 +145,7 @@ def _advancement_summary(metrics: pd.DataFrame) -> dict[str, object]:
 def run_stage3_development(
     *,
     panel_path: Path,
+    research_manifest_path: Path,
     calendar_path: Path,
     security_master_path: Path,
     output_dir: Path,
@@ -124,6 +156,9 @@ def run_stage3_development(
 ) -> dict[str, object]:
     if sha256_file(panel_path) != FROZEN_PANEL_SHA256:
         raise RuntimeError("frozen SIGNAL_RESEARCH_HLCV panel hash mismatch")
+    manifest_verification = _verify_research_manifest(research_manifest_path)
+    spec_hashes = _frozen_spec_hashes()
+    dependencies = _dependency_versions()
     calendar = _calendar_from_table(calendar_path, calendar_column)
     listing_map = _listing_map(security_master_path, ticker_column, listed_from_column)
     max_future_date = pd.Timestamp(calendar[MAX_DEVELOPMENT_FUTURE_INDEX - 1])
@@ -152,12 +187,10 @@ def run_stage3_development(
     if model_table["date"].max() > max_signal_date:
         raise RuntimeError("model table crosses the pre-registered development signal boundary")
 
-    fold_results = []
     metrics_rows: list[dict[str, object]] = []
     prediction_frames: list[pd.DataFrame] = []
     for fold in FROZEN_FOLDS:
         results = run_development_fold(model_table, calendar, fold_name=fold.name, include_tree=True)
-        fold_results.extend(results)
         for result in results:
             metrics_rows.append({"fold": result.fold, "model_name": result.model_name, **result.metrics})
             prediction = result.predictions.copy()
@@ -192,6 +225,10 @@ def run_stage3_development(
         "code_commit": code_commit,
         "input_panel_sha256": FROZEN_PANEL_SHA256,
         "research_manifest_sha256": FROZEN_RESEARCH_MANIFEST_SHA256,
+        "research_manifest_verification": manifest_verification,
+        "specification_hashes": spec_hashes,
+        "dependency_versions": dependencies,
+        "random_seed": 42,
         "calendar_first": pd.Timestamp(calendar[0]).date().isoformat(),
         "calendar_last": pd.Timestamp(calendar[-1]).date().isoformat(),
         "max_signal_session_index_read": MAX_DEVELOPMENT_SIGNAL_INDEX,
@@ -227,6 +264,7 @@ def run_stage3_development(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run frozen Stage-3 development only; locked holdout is inaccessible")
     parser.add_argument("--panel", required=True, type=Path)
+    parser.add_argument("--research-manifest", required=True, type=Path)
     parser.add_argument("--calendar", required=True, type=Path)
     parser.add_argument("--security-master", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
@@ -241,6 +279,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = _parser().parse_args(list(argv) if argv is not None else None)
     summary = run_stage3_development(
         panel_path=args.panel,
+        research_manifest_path=args.research_manifest,
         calendar_path=args.calendar,
         security_master_path=args.security_master,
         output_dir=args.output_dir,
