@@ -17,6 +17,18 @@ from idx_trade.research_stage5 import (
     stage5_decision,
     temporal_half_metrics,
 )
+from idx_trade.stage5_ranking_holdout import EXPECTED_ENVIRONMENT, FROZEN_STAGE4B_SUMMARY_SHA256
+
+
+def test_stage5_runner_wiring_and_parent_hash_are_frozen():
+    assert EXPECTED_ENVIRONMENT == {
+        "python": "3.13.5",
+        "numpy": "2.4.2",
+        "pandas": "2.3.3",
+        "pyarrow": "23.0.1",
+        "scikit-learn": "1.8.0",
+    }
+    assert FROZEN_STAGE4B_SUMMARY_SHA256 == "f9cbce089c21debd6420943ebf5cd647fc41942e4f210964ddbb5d165d10ebb7"
 
 
 def test_stage5_boundaries_are_frozen_and_h20_purged():
