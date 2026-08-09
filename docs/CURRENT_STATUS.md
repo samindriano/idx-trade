@@ -10,17 +10,17 @@ authorization boundary.
 
 ## Current phase
 
-- active branch: `research/idx-stage5-postmortem-v1`
+- active research branch: `research/idx-stage5-postmortem-v1`
 - parent branch: `research/idx-stage5-ranking-holdout-v1`
 - Ranking V1: **failed benchmark; rejected as a holdout-passed architecture**
 - Stage-5 holdout: **consumed for `RANKING_V1_ONLY`; no retry permitted**
 - `holdout_outcome_accessed=true`
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
-- current phase: **bounded Stage-5 post-mortem complete; interpretation pending**
-- current post-mortem plan: `docs/STAGE5_POSTMORTEM_PLAN_V1.md`
-- Stage 6: not authorized
-- Ranking V2 implementation: not authorized yet
-- Probability V2: not authorized yet
+- Stage-5 bounded post-mortem: **complete and independently interpreted**
+- interpretation checkpoint: `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_INTERPRETATION.md`
+- next authorized work: **finish runtime-performance equivalence/benchmark, freeze bounded Ranking V2 research specification, then implement V2 development research**
+- Stage 6: not authorized for Ranking V1
+- independent V2 validation: requires fresh forward data strictly after `2026-07-31`
 - `IDX-VAL-002`: not started
 - merge to `main`: not authorized
 - paper/live trading: not authorized
@@ -67,12 +67,6 @@ Development HGB ranking evidence was positive but modest and did not survive the
 
 ## Stage 5 — final ranking holdout
 
-Read:
-
-- `docs/STAGE5_RANKING_HOLDOUT_PLAN_V1.md`;
-- `docs/checkpoints/2026-08-09_STAGE5_RANKING_HOLDOUT_RUNTIME.md`;
-- `docs/checkpoints/2026-08-09_STAGE5_INDEPENDENT_REVIEW_FAIL.md`.
-
 Automatic result: **`STAGE5_RANKING_HOLDOUT_FAIL`**.
 
 Primary H10:
@@ -89,65 +83,75 @@ Temporal split:
 - HOLDOUT_A: PR-AUC delta vs base +0.0218916273; ROC-AUC 0.5186811460; Q5-Q1 +0.0464755652;
 - HOLDOUT_B: PR-AUC delta vs base -0.0105808218; ROC-AUC 0.4810497816; Q5-Q1 -0.0198933303.
 
-Independent review accepts the FAIL. Ranking V1 is preserved only as a failed benchmark. H5/H20 are near-null sensitivities and cannot rescue V1. The consumed holdout cannot be reused as independent evidence.
+Ranking V1 remains a failed benchmark. H5/H20 are near-null sensitivities and cannot rescue V1. The consumed holdout cannot be reused as independent evidence.
 
-## Current bounded post-mortem
+## Stage-5 post-mortem — complete
 
-The post-mortem scope was frozen **before additional diagnostics**. It asks only why A and B diverged, under five descriptive hypotheses:
+Runtime status: **`DESCRIPTIVE_DIAGNOSTIC_COMPLETE`**.
 
-1. frozen feature distribution drift;
-2. feature/outcome relationship drift;
-3. gradual/localized score degradation across six fixed 40/41-session blocks;
-4. causal market/regime environment drift;
-5. broad-ranking failure versus top-tail behavior by temporal half.
+Read:
 
-Implementation added on this branch:
+- `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_RUNTIME.md`;
+- `docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_INTERPRETATION.md`.
 
-- `docs/STAGE5_POSTMORTEM_PLAN_V1.md`;
-- `src/idx_trade/stage5_postmortem.py`;
-- `tests/test_stage5_postmortem.py`.
+Key descriptive findings:
 
-The runner is read-only with respect to market/model artifacts. It requires the exact consumed Stage-5 summary and prediction hashes, exact signal panel/security master, and the durable consumed-holdout marker. It does **not** fit or select a model, change features, alter labels, search thresholds, or recalibrate probability.
+- largest A/B market-state shift: median ATR/Close SMD `+2.2328`;
+- breadth return-20 positive SMD `-1.0093`;
+- median return-20 SMD `-1.0206`;
+- B1 was near-null but B2/B3 turned negative, so lower prevalence alone does not explain failure;
+- several core structure feature relationships retained their direction across A/B (`close_position_20`, high/low distance features);
+- `atr14_over_close` shifted materially and lost its positive A relationship in B;
+- top-decile enrichment appeared in A and disappeared in B, so there is no top-tail rescue of V1;
+- `observed_session_count` and `security_age_sessions_exact` drift mechanically with time and must be explicitly controlled/tested in V2 rather than silently relied upon.
 
-Required external outputs are descriptive CSV/JSON artifacts only and must be hashed. After one factual post-mortem runtime, stop for ChatGPT interpretation before any Ranking V2 design is frozen.
+Independent interpretation:
 
-Post-mortem runtime result:
+**The evidence supports a regime/covariate-shift failure hypothesis for V1 more than a hypothesis that all technical structure information disappeared.** This is a V2 design hypothesis, not a validated causal claim.
 
-- status: **`DESCRIPTIVE_DIAGNOSTIC_COMPLETE`**;
-- substantive code commit: `f51f9778a6657b52752d2423dbde8499c693bf70`;
-- resolved H10 rows: 71,420 across 12 frozen features;
-- largest absolute A/B feature SMDs: `atr14_over_close` 0.5584,
-  `security_age_sessions_exact` 0.5538, `distance_low_60_atr` -0.4936,
-  `observed_session_count` 0.3902, and `close_return_20` -0.2277;
-- factual Q5-Q1 sign reversals: `atr14_over_close`,
-  `log_regular_value_relative_20`, `observed_session_count`,
-  `relative_volume_20`, and `security_age_sessions_exact`;
-- six fixed blocks show positive HGB PR-AUC deltas in A1/A2/A3 and near-zero
-  B1, then negative deltas in B2/B3;
-- output directory:
-  `D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_postmortem_v1_20260809`;
-- summary SHA-256:
-  `9f6c60ea3602673ad500adc99def8b1ecdfb7006c47c750dd52b2cf89984cad1`.
+## Ranking V2 design direction
 
-These are descriptive post-mortem findings only. They do not validate a
-feature, regime, subgroup, cutoff, or Ranking V2 architecture.
+Authorized bounded hypotheses for the next specification:
+
+1. within-date cross-sectional / robust normalization of stock features;
+2. causal continuous market-state context (breadth, market returns, market volatility, close-position, relative volume/value);
+3. market-relative and, if PIT-safe mapping is available, sector-relative strength;
+4. explicit control/sensitivity treatment for time/age proxy features;
+5. one bounded date-grouped ranking-native challenger versus V1-style binary classifiers;
+6. top-tail diagnostics may be reported but no cutoff may be optimized on the consumed holdout.
+
+Because these hypotheses are informed by Stage-5 outcomes, the historical window through `2026-07-31` is now development/research knowledge for Ranking V2. No result on that window is independent final V2 validation.
+
+## Runtime performance track
+
+Separate branch: `perf/idx-research-runtime-v1` / draft PR #9.
+
+Candidate vectorized label engine exists and unit/adversarial equivalence tests pass, but legacy remains authoritative until:
+
+1. exact full frozen-panel legacy-vs-fast equivalence passes;
+2. local wall-clock and peak-memory benchmark is recorded under the frozen numerical environment;
+3. deterministic feature/label artifacts are cached and hashed so repeated model trials do not rebuild them.
+
+This track may change computation only, never research semantics.
 
 ## Authorization boundary
 
-Allowed next action: independent ChatGPT interpretation of the completed
-bounded post-mortem artifacts.
+Allowed next work:
+
+1. finish the performance/equivalence track;
+2. freeze a bounded Ranking V2 research specification;
+3. only then implement V2 development experiments.
 
 Do not:
 
 - rerun Stage 5;
-- rescue/tune V1 against consumed outcomes;
-- start Stage 6;
-- implement Ranking V2 before post-mortem review;
-- resume Probability V1 calibration;
-- validate Ranking/Probability V2 on the consumed holdout;
+- rescue/tune Ranking V1 against consumed outcomes;
+- call the consumed holdout independent V2 validation;
+- start Stage 6 for Ranking V1;
+- resume Probability V1 calibration rescue;
 - run `IDX-VAL-002`;
 - make execution-PnL claims;
 - paper/live trade;
 - merge to `main`.
 
-Any future Ranking V2 and Probability V2 require fresh forward independent evaluation strictly after `2026-07-31`.
+Any independent Ranking V2 and Probability V2 claim requires **fresh forward evaluation data strictly after `2026-07-31`** after the relevant V2 design/model is frozen.
