@@ -7,7 +7,7 @@ reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: 05c2bb549b446da374c13937a41aa6732cf71ec0
 branch: research/idx-stage5-ranking-holdout-v1
-head_commit: pending documentation commit
+head_commit: 551c837b6bffad5db3bfbbd6032f9e072881801e
 scope: Execute exactly one frozen Stage-5 V1 ranking-only locked holdout and record the factual result.
 files_changed: docs/CURRENT_STATUS.md; docs/PROJECT_CONTEXT_MASTER.md; docs/PROJECT_LEDGER.md; docs/checkpoints/2026-08-09_STAGE5_RANKING_HOLDOUT_RUNTIME.md; coordination/handoffs/IDX-STAGE5-RANKING-HOLDOUT-RESULT.md
 findings: Automatic result STAGE5_RANKING_HOLDOUT_FAIL. HGB H10 PR-AUC was 0.4073793720 versus base 0.4071688603, but HGB ROC-AUC was 0.4948433255 and HOLDOUT_B PR-AUC was 0.3471254020 versus its 0.3577062238 base rate. Q5-Q1 was positive overall at 0.0108405246 but negative in HOLDOUT_B at -0.0198933303.
