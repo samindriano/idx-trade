@@ -31,6 +31,12 @@ Runtime handoff:
 
 `coordination/handoffs/IDX-RANKING-V2-CANDIDATE-ORCHESTRA-RUNTIME.md`
 
+Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
+
+`docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
+
+The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation. The note is not authorization to modify the currently running frozen V2 control/A/B/C/D experiment.
+
 ## Data foundation
 
 Signal-research HLCV 1260 is GO:
