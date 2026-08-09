@@ -2197,3 +2197,29 @@ main was started. The next safe action is independent ChatGPT review of the
 runtime result, with particular attention to weak pooled probability quality
 despite PR-AUC advancement and to the remaining strict execution-grade 1260
 FAIL status.
+
+## 24. STAGE-4 development runtime - ranking GO, calibration blocked
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage4-v1`. Code head:
+`ad2098c7932a187555ac7c9ec8b77372bdf622e5`.
+
+The frozen Stage-4 V1 runner executed once using only the immutable Stage-3
+development artifacts and the exact 1,260-session official calendar. The
+numerical environment matched Stage 3 exactly: Python 3.13.5, NumPy 2.4.2,
+pandas 2.3.3, pyarrow 23.0.1, scikit-learn 1.8.0, seed 42. Full pytest
+passed **192/192** with three pre-existing pandas/NumPy warnings. Input hashes
+matched; the locked holdout starts at session 1009 / `2025-07-15`; and
+`holdout_outcome_accessed=false`.
+
+Automatic status: **STAGE4_RANKING_GO_CALIBRATION_BLOCKED**. HGB beat the
+base-rate and momentum baselines on PR-AUC in F1/F2/F3, reproducing the
+Stage-3 advancement rule. Within-date score quintiles also had Q5 > Q1 in all
+three folds. The frozen calibrator-selection rule selected **ISOTONIC** by
+lowest pooled OOF Brier, but the calibration-readiness gate failed: pooled
+Brier and weighted ECE were worse than base-rate, and prevalence-gap
+improvement occurred in only one of three folds. The runtime output and full
+ablation, quintile, regime, calibration, and artifact-hash record are in
+`docs/checkpoints/2026-08-09_STAGE4_DEVELOPMENT_RUNTIME.md`.
+
+No holdout inspection, Stage 5, `IDX-VAL-002`, modelling, external data use,
+or merge to `main` was performed. Stop for independent ChatGPT review.

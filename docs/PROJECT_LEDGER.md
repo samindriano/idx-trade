@@ -1281,3 +1281,26 @@ was started.
 
 The next authorized phase is **STAGE 2 — RESEARCH SPECIFICATION AND
 VALIDATION DESIGN**. Do not begin modelling in this run.
+
+## 24. STAGE-4 development runtime - ranking GO, calibration blocked
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage4-v1`. Code head:
+`ad2098c7932a187555ac7c9ec8b77372bdf622e5`.
+
+This execution-only run used the exact Stage-3 model table, feature table,
+runtime summary, and official 1,260-session calendar. The numerical
+environment was identical to Stage 3, full pytest passed **192/192**, and all
+input hashes and holdout guards passed. `holdout_outcome_accessed=false`.
+
+The automatic decision is **STAGE4_RANKING_GO_CALIBRATION_BLOCKED**. HGB
+reproduced the Stage-3 ranking rule in all three folds; the cross-sectional
+quintile gate also passed in all three folds. The frozen selection rule chose
+ISOTONIC, but calibration readiness failed because pooled Brier and weighted
+ECE were worse than the base-rate comparator and prevalence-gap improvement
+occurred in only one fold. Feature-family attribution was directionally
+supportive for all five frozen families under the pre-registered removal rule;
+no subset was created. The detailed evidence and hashes are in the Stage-4
+checkpoint.
+
+No Stage 5, holdout inspection, `IDX-VAL-002`, modelling, or main merge was
+started. Next action is independent ChatGPT review, not tuning.

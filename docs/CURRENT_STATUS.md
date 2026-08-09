@@ -133,3 +133,22 @@ Read next:
 2. newest Stage-4 checkpoint under `docs/checkpoints/`
 3. `docs/PROJECT_CONTEXT_MASTER.md`
 4. `docs/PROJECT_LEDGER.md`
+
+## Stage 4 runtime result
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `research/idx-stage4-v1`. Code head:
+`ad2098c7932a187555ac7c9ec8b77372bdf622e5`.
+
+The frozen Stage-4 development runtime completed once against the exact
+Stage-3 artifacts. Numerical environment matched Stage 3 exactly and full
+pytest passed **192/192**, with three existing pandas/NumPy warnings. All
+input hashes matched; `holdout_outcome_accessed=false`; locked holdout starts
+at index 1009 / `2025-07-15`.
+
+Automatic result: **STAGE4_RANKING_GO_CALIBRATION_BLOCKED**. HGB reproduced
+the Stage-3 advancement rule in F1/F2/F3, and the within-date quintile gate
+had Q5 > Q1 in all three folds. The selected calibrator was ISOTONIC, but
+calibration readiness failed: pooled Brier and weighted ECE did not beat the
+base-rate comparator, and prevalence-gap improvement occurred in only 1/3
+folds. No Stage 5, holdout inspection, `IDX-VAL-002`, modelling, or main merge
+was started. The full factual record is in the new Stage-4 checkpoint.
