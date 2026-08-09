@@ -63,13 +63,23 @@ def test_causal_top_n_rank_is_recomputed_by_date():
     assert rows["universe_top100"].all()
 
 
-def test_pre_window_listing_age_is_explicitly_left_censored():
+def test_pre_window_listing_age_is_missing_and_explicitly_left_censored():
     panel = _panel(periods=30)
     calendar = pd.bdate_range("2024-01-02", periods=30)
     features = build_baseline_features(panel, calendar, listed_from={"AAA": "2000-01-01"})
     assert features["security_age_left_censored"].all()
-    assert features.iloc[0]["security_age_sessions_observed"] == 1.0
-    assert features.iloc[-1]["security_age_sessions_observed"] == 30.0
+    assert features["security_age_sessions_exact"].isna().all()
+
+
+def test_in_window_listing_has_exact_official_session_age():
+    panel = _panel(periods=30)
+    calendar = pd.bdate_range("2024-01-02", periods=30)
+    listed = calendar[4]
+    features = build_baseline_features(panel, calendar, listed_from={"AAA": listed})
+    assert not features["security_age_left_censored"].any()
+    assert pd.isna(features.iloc[3]["security_age_sessions_exact"])
+    assert features.iloc[4]["security_age_sessions_exact"] == 1.0
+    assert features.iloc[9]["security_age_sessions_exact"] == 6.0
 
 
 def test_primary_feature_registry_has_no_open_dependency():
