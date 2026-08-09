@@ -20,6 +20,7 @@ This is the short **authoritative first-read status layer**. For full chronology
 - champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
 - forward metric semantic clarification: **COMPLETE before outcome access**;
 - current authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
+- Ranking V3 research backlog: **RECORDED; asynchronous R&D may be specified separately without reading reserved V2 forward outcomes**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -38,6 +39,12 @@ Mandatory first-read before any **next model / next research-generation / optimi
 `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
 
 The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation.
+
+Mandatory first-read before any Ranking-V3 specification or implementation:
+
+`docs/RANKING_V3_RESEARCH_BACKLOG.md`
+
+The V3 backlog is an idea/hypothesis backlog only. It does not authorize V3 outcome runs and it does not authorize access to reserved V2 fresh-forward outcomes.
 
 ## Data foundation
 
@@ -220,18 +227,23 @@ are implemented and covered by tests.
 
 ## Immediate next action
 
-Wait for separate MAIN / ChatGPT authorization to consume a complete,
+V2 track: wait for separate MAIN / ChatGPT authorization to consume a complete,
 immutable, 100-session H10-mature forward block. Do not read outcomes,
 produce a fresh-forward verdict, or write the global access marker before that
 authorization.
+
+V3 track: asynchronous research specification may proceed separately under
+`docs/RANKING_V3_RESEARCH_BACKLOG.md`, beginning with a narrow recency-weighting
+hypothesis if authorized. Reserved V2 forward outcomes remain off-limits to V3.
 
 Not authorized yet:
 
 - writing `FORWARD_OUTCOME_ACCESS_STARTED`;
 - reading or summarizing the one-shot post-2026-07-31 outcome block;
-- producing a fresh-forward PASS/MIXED/FAIL verdict.
+- producing a fresh-forward PASS/MIXED/FAIL verdict;
+- running V3 outcomes before a separately frozen V3 specification.
 
-Actual one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
+Actual V2 one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
 
 ## Authorization boundary
 
