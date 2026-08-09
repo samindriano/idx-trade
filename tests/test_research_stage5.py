@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -17,7 +19,12 @@ from idx_trade.research_stage5 import (
     stage5_decision,
     temporal_half_metrics,
 )
-from idx_trade.stage5_ranking_holdout import EXPECTED_ENVIRONMENT, FROZEN_STAGE4B_SUMMARY_SHA256
+from idx_trade.stage5_ranking_holdout import (
+    EXPECTED_ENVIRONMENT,
+    FROZEN_STAGE4B_SUMMARY_SHA256,
+    GLOBAL_HOLDOUT_MARKER_FILENAME,
+    global_holdout_marker_path,
+)
 
 
 def test_stage5_runner_wiring_and_parent_hash_are_frozen():
@@ -29,6 +36,9 @@ def test_stage5_runner_wiring_and_parent_hash_are_frozen():
         "scikit-learn": "1.8.0",
     }
     assert FROZEN_STAGE4B_SUMMARY_SHA256 == "f9cbce089c21debd6420943ebf5cd647fc41942e4f210964ddbb5d165d10ebb7"
+    panel = Path("D:/runtime/frozen/model_safe_signal_research_panel_1260.parquet")
+    assert GLOBAL_HOLDOUT_MARKER_FILENAME == "STAGE5_RANKING_V1_HOLDOUT_ACCESS_STARTED.json"
+    assert global_holdout_marker_path(panel) == panel.parent / GLOBAL_HOLDOUT_MARKER_FILENAME
 
 
 def test_stage5_boundaries_are_frozen_and_h20_purged():
