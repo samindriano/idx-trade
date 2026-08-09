@@ -17,7 +17,9 @@ This is the short **authoritative first-read status layer**. For full chronology
 - metrics-only integration: **`RANKING_V2_HISTORICAL_CHAMPION_SELECTED`**;
 - historical-development champion: **`HGB_XS_MARKET`**;
 - independent ChatGPT champion review: **PASS**;
-- current authorization: **champion and final-refit/fresh-forward contract frozen; final refit and fresh-forward outcome evaluation are not yet authorized**;
+- champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
+- forward metric semantic clarification: **COMPLETE before outcome access**;
+- current authorization: **implement and freeze final refit + outcome-blind fresh-forward runtime; actual fresh-forward outcome access remains blocked**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -25,11 +27,11 @@ This is the short **authoritative first-read status layer**. For full chronology
 
 Newest controlling checkpoint:
 
-`docs/checkpoints/2026-08-10_RANKING_V2_HISTORICAL_CHAMPION_REVIEW.md`
+`docs/checkpoints/2026-08-10_RANKING_V2_FORWARD_SPEC_REVIEW_PASS.md`
 
-Next handoff:
+Current implementation handoff:
 
-`coordination/handoffs/IDX-RANKING-V2-CHAMPION-FREEZE-FORWARD-SPEC.md`
+`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT.md`
 
 Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
 
@@ -173,20 +175,51 @@ Integrator summary SHA-256:
 
 `3facb4468caafab8cf19f368cf5ef04f36dac052089d2ecb810b683c851ec705`
 
-## Champion-freeze / forward-spec result
+## Champion / final-refit / fresh-forward contract
 
-The champion-freeze / forward-spec task is complete on this branch. The
-reviewable contract is:
+Controlling specification:
 
 `docs/RANKING_V2_CHAMPION_FORWARD_SPEC_V1.md`
 
-Checkpoint:
+Current reviewed spec blob SHA:
 
-`docs/checkpoints/2026-08-10_RANKING_V2_CHAMPION_FORWARD_SPEC_FROZEN.md`
+`77b2d74c9d5f28460037c11cd3a134c6b6cc9d3d`
 
-No fresh-forward outcomes were inspected. The next action requires MAIN /
-ChatGPT review and explicit authorization to implement the final-refit and
-one-shot fresh-forward runtime against the frozen contract.
+The forward specification freezes:
+
+- champion `HGB_XS_MARKET`;
+- exact 25-feature order and existing HGB pipeline/parameters;
+- one final development refit over all 292,633 frozen eligible rows;
+- causal post-2026-07-31 universe/features;
+- H10 maturity;
+- first independent verdict on exactly 100 consecutive mature forward signal sessions;
+- predeclared first-50 / last-50 stability check;
+- one-shot global outcome-access marker;
+- immutable/hash-pinned provenance;
+- PASS/MIXED/FAIL rules.
+
+Independent review clarified before any fresh outcome access that Q5-Q1 retains the historical V2 meaning `Q5 TP rate - Q1 TP rate`; it is not a realized-return spread. Top-decile lift is top-decile TP rate minus prevalence.
+
+## Immediate next action
+
+Follow:
+
+`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT.md`
+
+Authorized now:
+
+- implement and run the single frozen final-development refit;
+- serialize/hash the final model and manifest;
+- implement/test/freeze the outcome-blind fresh-forward runtime;
+- profile post-cache runtime and apply engineering-only optimizations under semantic-equivalence gates.
+
+Not authorized yet:
+
+- writing `FORWARD_OUTCOME_ACCESS_STARTED`;
+- reading or summarizing the one-shot post-2026-07-31 outcome block;
+- producing a fresh-forward PASS/MIXED/FAIL verdict.
+
+Actual one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
 
 ## Authorization boundary
 
@@ -197,7 +230,8 @@ Do not:
 - modify the selected champion based on historical outcomes now observed;
 - use H5/H20 to rescue the champion;
 - call history through `2026-07-31` independent V2 validation;
-- inspect fresh-forward outcomes before the forward contract is frozen;
+- inspect fresh-forward outcomes before the separate one-shot authorization;
+- write the global forward-outcome access marker before that authorization;
 - start probability calibration;
 - start Stage 6;
 - run `IDX-VAL-002`;
