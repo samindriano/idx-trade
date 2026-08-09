@@ -7,7 +7,7 @@ reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: 607fc8045711892960bad68135da842289222700
 branch: research/idx-stage4b-calibration-v1
-head_commit: pending documentation commit
+head_commit: 2c8b8a875fe2423c95fca266fd64f64b303232bc
 scope: Execute the frozen Stage-4B causal prior-shift calibration runtime against exact existing Stage-3/Stage-4 artifacts only.
 files_changed: docs/CURRENT_STATUS.md; docs/PROJECT_LEDGER.md; docs/checkpoints/2026-08-09_STAGE4B_CALIBRATION_RUNTIME.md; coordination/handoffs/IDX-STAGE4B-CALIBRATION-RUNTIME.md
 findings: Full pytest passed 198/198 with three existing pandas/NumPy warnings. Numerical versions matched Stage 3/4 exactly. All frozen input hashes and parent holdout guards matched. The runtime completed once with automatic status STAGE4B_CALIBRATION_STILL_BLOCKED. ISOTONIC_PRIOR_SHIFT_60 beat CAUSAL_PRIOR_ONLY_60 on pooled Brier but failed static base-rate, static isotonic, pooled ECE, and prevalence-gap gates. All 60- and 126-session causal prior audits passed; each had 378 dates, exact t-10 maturity, and zero source-after-cutoff rows.
