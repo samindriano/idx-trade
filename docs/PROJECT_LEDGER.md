@@ -1199,5 +1199,52 @@ Permanent decision wording:
 `STRICT EXECUTION-GRADE 1260: FAIL`
 `SIGNAL-RESEARCH 1260: GO`
 
+---
+
+## 22. STAGE-2 research specification and validation design - GO
+
+Date: 2026-08-09 (Asia/Jakarta). Branch: `data/idx-data-002c`. Source head
+before this documentation update: `057d7c2df57ebe259f8b93642128e91ad294b146`.
+
+The Stage-2 design froze the first research question and validation contract
+without touching the immutable signal panel or acquiring new market data. The
+three primary documents are:
+
+- `docs/RESEARCH_SPECIFICATION_V1.md`;
+- `docs/VALIDATION_PLAN_V1.md`;
+- `docs/VALIDATION_THREAT_MODEL_V1.md`.
+
+The frozen primary question asks whether causal technical/market structure
+available after the official close at `t` contains information about favorable
+versus adverse future excursion. The primary label is a 10-session first-touch
+barrier using `SIGNAL_REFERENCE_CLOSE = Close_t`, ATR14, `k_sl=1.0`, and
+`RR=1.5`. H=5 and H=20 are bounded sensitivity horizons only. Open is not a
+primary feature and is never synthesized. `AMBIGUOUS_SAME_BAR` remains an
+explicit outcome excluded from primary binary calibration, while no-touch and
+unresolved paths remain separately reported.
+
+The primary research universe is causal and broad-liquid: point-in-time
+common-share scope, official ACTIVE at `t`, at least 20 valid observations in
+the trailing 60 official sessions, and at least IDR 1 billion median official
+Regular-Market Value. Full valid common-share and causal top-100/top-300 views
+are sensitivity views only; no current-survivor list is used.
+
+The exact split is development sessions 1-1008 (`2021-04-29 -> 2025-07-14`)
+and locked holdout sessions 1009-1260 (`2025-07-15 -> 2026-07-31`). The final
+20 sessions are an H=20 horizon-end buffer. Three expanding, date-grouped
+development folds use exact 20-session purge/embargo gaps. Metrics, baselines,
+calibration, score semantics, and the complete leakage threat model are frozen
+before modelling.
+
+An independent read-only adversarial review was completed against the exact
+drafts. It checked lookahead, execution-price assumptions, nullable Open,
+holdout contamination, label ambiguity, liquidity causality, and fold/purge
+testability. No material unresolved finding remained after correcting the F2/F3
+fold-table boundary mismatch. Decision: **STAGE2_SPEC_GO**.
+
+No modelling, `IDX-VAL-002`, holdout inspection, market redownload, raw-data
+rewrite, or main merge was performed. The next safe action is a separately
+approved Stage 3 implementation plan; this entry does not authorize it.
+
 The next authorized phase is **STAGE 2 — RESEARCH SPECIFICATION AND
 VALIDATION DESIGN**. Do not begin modelling in this run.

@@ -2108,6 +2108,56 @@ Permanent status:
 `STRICT EXECUTION-GRADE 1260: FAIL`
 `SIGNAL-RESEARCH 1260: GO`
 
+---
+
+## 22. STAGE-2 research specification and validation design - GO
+
+Date: 2026-08-09 (Asia/Jakarta). Source branch: `data/idx-data-002c` at
+`057d7c2df57ebe259f8b93642128e91ad294b146` before the Stage-2 documentation
+commit. No new market data, raw-artifact rewrite, model, `IDX-VAL-002`, or
+main merge was performed.
+
+The DATA FOUNDATION for the separate signal-research layer is now complete,
+and Stage 2 freezes what the first modelling cycle would test and how it would
+be validated. The immutable input remains the 1,260-session
+`SIGNAL_RESEARCH_HLCV` panel with 981,940 ACTIVE rows and the previously
+verified panel/manifest hashes. Strict execution-grade 1260 remains FAIL; the
+signal layer does not weaken or replace it.
+
+The frozen Stage-2 contract is:
+
+- question: causal technical/market structure after close at `t` versus
+  favorable/adverse future excursion;
+- reference: `SIGNAL_REFERENCE_CLOSE = Close_t`, never a fill claim;
+- primary label: first-touch barrier, H=10, `RR=1.5`, `k_sl=1.0`, with H=5/H=20
+  sensitivity only;
+- ambiguity: `AMBIGUOUS_SAME_BAR` is explicit and excluded from primary binary
+  calibration, never guessed as WIN/LOSS;
+- primary universe: causal broad liquid rule using trailing 60-session value,
+  at least 20 observations, and IDR 1 billion median value;
+- split: development sessions 1-1008 (`2021-04-29 -> 2025-07-14`) and locked
+  holdout sessions 1009-1260 (`2025-07-15 -> 2026-07-31`);
+- folds: three exact expanding, date-grouped folds with 20-session purge and
+  embargo gaps;
+- primary metric: mean fold PR-AUC against frozen base-rate and momentum
+  baselines, with calibration, excursion, and coverage metrics reported;
+- Open: never required by primary V1 features and never synthesized.
+
+The required threat model covers pivot/SR lookahead, rolling off-by-one,
+survivorship, corporate-action and provider-revision leakage, random split and
+overlapping labels, same-date contamination, future preprocessing, holdout
+feature/threshold/calibration selection, future liquidity, same-bar ambiguity,
+nullable Open, provider contamination, UNKNOWN collapse, horizon truncation,
+delisting/suspension interruption, prevalence leakage, and semantic collapse
+of probability/Opportunity Score/reliability.
+
+An independent read-only adversarial review of the three Stage-2 documents was
+completed. The review found no material unresolved issue after the fold-boundary
+consistency correction. Decision: **STAGE2_SPEC_GO**. The next authorized
+phase is Stage 3 - Label / Feature Pipeline + Baseline Models, but Stage 3 is
+not started here. The final holdout must remain untouched until that phase is
+separately approved.
+
 No strict 1260 PASS is implied. The next phase is Stage 2 research
 specification and validation design; modelling remains prohibited until that
 phase is separately approved.
