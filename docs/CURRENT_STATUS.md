@@ -19,7 +19,7 @@ This is the short **authoritative first-read status layer**. For full chronology
 - independent ChatGPT champion review: **PASS**;
 - champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
 - forward metric semantic clarification: **COMPLETE before outcome access**;
-- current authorization: **implement and freeze final refit + outcome-blind fresh-forward runtime; actual fresh-forward outcome access remains blocked**;
+- current authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -31,7 +31,7 @@ Newest controlling checkpoint:
 
 Current implementation handoff:
 
-`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT.md`
+`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT-RESULT.md`
 
 Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
 
@@ -200,18 +200,30 @@ The forward specification freezes:
 
 Independent review clarified before any fresh outcome access that Q5-Q1 retains the historical V2 meaning `Q5 TP rate - Q1 TP rate`; it is not a realized-return spread. Top-decile lift is top-decile TP rate minus prevalence.
 
+## Final-refit runtime implementation result
+
+The authorized implementation/freeze phase is complete:
+
+- runtime commit: `565cffa86b05f2bd877d06b6961e3b792253cb77`;
+- pytest: **228 passed, 3 existing warnings**;
+- final model: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_final_refit_20260810\ranking_v2_hgb_xs_market_final.joblib`;
+- model SHA-256: `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
+- model manifest SHA-256: `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
+- final fit facts: 292,633 rows, 737 tickers, signal sessions `20..1250`;
+- fresh-forward outcome access: **not performed**;
+- `FORWARD_OUTCOME_ACCESS_STARTED`: **not written**.
+
+The outcome-blind forward feature builder, H10 maturity diagnostics, fixed
+100-session block selector, historical metric semantics, pre-outcome manifest,
+marker guard, deterministic artifact verification, and post-cache profiling
+are implemented and covered by tests.
+
 ## Immediate next action
 
-Follow:
-
-`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT.md`
-
-Authorized now:
-
-- implement and run the single frozen final-development refit;
-- serialize/hash the final model and manifest;
-- implement/test/freeze the outcome-blind fresh-forward runtime;
-- profile post-cache runtime and apply engineering-only optimizations under semantic-equivalence gates.
+Wait for separate MAIN / ChatGPT authorization to consume a complete,
+immutable, 100-session H10-mature forward block. Do not read outcomes,
+produce a fresh-forward verdict, or write the global access marker before that
+authorization.
 
 Not authorized yet:
 
