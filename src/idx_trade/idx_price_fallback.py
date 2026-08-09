@@ -48,6 +48,11 @@ def stock_summary_price_rows(
     when `OpenPrice` is zero/missing, a positive `FirstTrade` is accepted as the
     session opening execution price. Rows with no defensible positive opening
     execution price remain unresolved instead of being synthesized.
+
+    Diagnostics deliberately distinguish an opening-only gap from missing or
+    invalid H/L/C. That distinction does not relax the execution-safe OHLCV
+    contract; it exists so research-feasibility audits can measure how much
+    otherwise authoritative H/L/C evidence remains available when Open is not.
     """
 
     rows = payload.get("data")
@@ -103,13 +108,20 @@ def stock_summary_price_rows(
             if first_trade is not None and first_trade > 0
             else None
         )
-        if opening is None or any(value is None or value <= 0 for value in (high, low, close)):
+        hlc_valid = all(value is not None and value > 0 for value in (high, low, close))
+        if opening is None or not hlc_valid:
+            if opening is None and hlc_valid:
+                diagnostic = "OFFICIAL_OPEN_MISSING_OR_NONPOSITIVE"
+            elif opening is not None and not hlc_valid:
+                diagnostic = "OFFICIAL_HLC_MISSING_OR_NONPOSITIVE"
+            else:
+                diagnostic = "OFFICIAL_OPEN_AND_HLC_MISSING_OR_NONPOSITIVE"
             diagnostics.append(
                 {
                     "ticker": ticker,
                     "date": day,
                     "status": "UNRESOLVED_PRICE",
-                    "diagnostic": "OFFICIAL_OHLC_MISSING_OR_NONPOSITIVE",
+                    "diagnostic": diagnostic,
                     "source_ref": source_ref,
                 }
             )
