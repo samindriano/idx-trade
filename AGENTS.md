@@ -2,11 +2,19 @@
 
 ## Canonical project memory
 
-`docs/PROJECT_LEDGER.md` is the canonical cross-phase continuity document for this project.
+`docs/PROJECT_CONTEXT_MASTER.md` is the **first-read comprehensive bootstrap context** for this project. It is designed specifically for new chats, model handoffs, and context-window loss. It contains the project objective, stage map, source hierarchy, ontology, architecture, certified hashes, branch/PR map, failure chronology, active blockers, and next-action contracts.
 
-Before any material DATA, VALIDATION, or MODEL task, read the ledger first. Historical handoffs and commit messages are evidence snapshots, but they may describe an older state of the project. When a material assumption changes, a new failure class is discovered, a gate result changes, or a phase transition is approved, update the ledger with the symptom, diagnosis, fix, validation evidence, remaining blocker, and permanent lesson.
+`docs/PROJECT_LEDGER.md` is the canonical chronological causal ledger. It preserves the detailed failure -> diagnosis -> fix -> validation history and must remain consistent with the master context.
 
-Do not delete failed approaches from the ledger merely because they were fixed. The failure -> diagnosis -> fix chain is part of the research knowledge and is required to avoid repeating earlier mistakes after context loss or agent handoff.
+Before any material DATA, VALIDATION, or MODEL task, read **both** documents in this order:
+
+1. `docs/PROJECT_CONTEXT_MASTER.md`
+2. `docs/PROJECT_LEDGER.md`
+3. the newest relevant checkpoint under `docs/checkpoints/`
+
+Then verify the actual current branch/HEAD before acting. Historical handoffs and commit messages are evidence snapshots, but they may describe an older state of the project. When a material assumption changes, a new failure class is discovered, a gate result changes, a phase transition is approved, or the active blocker changes, update the master context and ledger so a future chat can recover without relying on conversation history.
+
+Do not delete failed approaches from either continuity record merely because they were fixed. The failure -> diagnosis -> fix chain is part of the research knowledge and is required to avoid repeating earlier mistakes after context loss or agent handoff.
 
 ## Repository-wide principles
 
