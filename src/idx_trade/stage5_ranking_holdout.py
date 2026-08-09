@@ -38,6 +38,7 @@ FROZEN_PANEL_SHA256 = "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796
 FROZEN_RESEARCH_MANIFEST_SHA256 = "b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a"
 FROZEN_STAGE4B_SUMMARY_SHA256 = "f9cbce089c21debd6420943ebf5cd647fc41942e4f210964ddbb5d165d10ebb7"
 FROZEN_CALENDAR_SHA256 = "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+GLOBAL_HOLDOUT_MARKER_FILENAME = "STAGE5_RANKING_V1_HOLDOUT_ACCESS_STARTED.json"
 EXPECTED_ENVIRONMENT = {
     "python": "3.13.5",
     "numpy": "2.4.2",
@@ -128,11 +129,24 @@ def _verify_stage4b(path: Path) -> dict[str, object]:
     return summary
 
 
+def global_holdout_marker_path(panel_path: Path) -> Path:
+    """Return the durable one-shot marker beside the immutable research panel."""
+
+    return panel_path.parent / GLOBAL_HOLDOUT_MARKER_FILENAME
+
+
+def _assert_global_holdout_unused(panel_path: Path) -> None:
+    marker = global_holdout_marker_path(panel_path)
+    if marker.exists():
+        raise RuntimeError(
+            f"Stage-5 global holdout marker already exists at {marker}; "
+            "RANKING_V1 holdout is consumed and must not be read again"
+        )
+
+
 def _assert_clean_output_dir(output_dir: Path) -> None:
     if output_dir.exists() and any(output_dir.iterdir()):
-        raise RuntimeError(
-            "Stage-5 output directory is not clean; refusing a rerun because locked-holdout access is one-shot"
-        )
+        raise RuntimeError("Stage-5 output directory is not clean; use a new directory before holdout access")
     output_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -211,9 +225,15 @@ def _freeze_models(
     return hashes, freeze_path
 
 
-def _write_holdout_access_marker(output_dir: Path, freeze_path: Path, calendar: pd.DatetimeIndex) -> tuple[Path, str]:
-    marker_path = output_dir / "STAGE5_HOLDOUT_ACCESS_STARTED.json"
-    if marker_path.exists():
+def _write_holdout_access_markers(
+    output_dir: Path,
+    panel_path: Path,
+    freeze_path: Path,
+    calendar: pd.DatetimeIndex,
+) -> tuple[Path, str, Path, str]:
+    global_marker = global_holdout_marker_path(panel_path)
+    local_marker = output_dir / GLOBAL_HOLDOUT_MARKER_FILENAME
+    if global_marker.exists() or local_marker.exists():
         raise RuntimeError("Stage-5 holdout-access marker already exists; refusing a second holdout read")
     marker = {
         "holdout_consumed": True,
@@ -224,8 +244,15 @@ def _write_holdout_access_marker(output_dir: Path, freeze_path: Path, calendar: 
         "preholdout_model_freeze_sha256": sha256_file(freeze_path),
         "rerun_policy": "STOP_FOR_INDEPENDENT_REVIEW_IF_PROCESS_FAILS_AFTER_THIS_MARKER",
     }
-    _atomic_json(marker, marker_path)
-    return marker_path, sha256_file(marker_path)
+    # The durable marker is written first. From this point onward the holdout is
+    # conservatively treated as consumed even if a later I/O/runtime failure occurs.
+    _atomic_json(marker, global_marker)
+    global_sha = sha256_file(global_marker)
+    local_payload = dict(marker)
+    local_payload["global_marker_path"] = str(global_marker)
+    local_payload["global_marker_sha256"] = global_sha
+    _atomic_json(local_payload, local_marker)
+    return global_marker, global_sha, local_marker, sha256_file(local_marker)
 
 
 def _label_summary(labels: pd.DataFrame, features: pd.DataFrame, horizon: int) -> pd.DataFrame:
@@ -311,6 +338,7 @@ def run_stage5_ranking_holdout(
     parent = _verify_stage4b(stage4b_summary_path)
     calendar = _calendar(calendar_path, calendar_column)
     listing_map = _listing_map(security_master_path, ticker_column, listed_from_column)
+    _assert_global_holdout_unused(panel_path)
     _assert_clean_output_dir(output_dir)
 
     # PRE-HOLDOUT PHASE. Only development data through session 1008 is readable.
@@ -338,8 +366,10 @@ def run_stage5_ranking_holdout(
     if not bool(freeze_record.get("models_frozen_before_holdout_labels", False)):
         raise RuntimeError("model freeze record failed before holdout outcome access")
 
-    # HOLDOUT IS IRREVOCABLY CONSUMED FOR RANKING_V1_ONLY AFTER THIS MARKER.
-    marker_path, marker_sha = _write_holdout_access_marker(output_dir, freeze_path, calendar)
+    # HOLDOUT IS IRREVOCABLY CONSUMED FOR RANKING_V1_ONLY AFTER THESE MARKERS.
+    global_marker, global_marker_sha, local_marker, local_marker_sha = _write_holdout_access_markers(
+        output_dir, panel_path, freeze_path, calendar
+    )
 
     full_panel = _read_full_panel_after_freeze(panel_path)
     features = build_baseline_features(full_panel, calendar, listed_from=listing_map)
@@ -463,8 +493,10 @@ def run_stage5_ranking_holdout(
         "training_positive_rate": float(train_table["binary_target"].mean()),
         "preholdout_artifact_hashes": preholdout_hashes,
         "models_frozen_before_holdout_labels": True,
-        "holdout_access_marker": str(marker_path),
-        "holdout_access_marker_sha256": marker_sha,
+        "global_holdout_access_marker": str(global_marker),
+        "global_holdout_access_marker_sha256": global_marker_sha,
+        "local_holdout_access_marker": str(local_marker),
+        "local_holdout_access_marker_sha256": local_marker_sha,
         "holdout_start_index": HOLDOUT_START_INDEX,
         "holdout_start_date": pd.Timestamp(calendar[HOLDOUT_START_INDEX - 1]).date().isoformat(),
         "h10_last_evaluable_signal_index": HOLDOUT_H10_LAST_SIGNAL_INDEX,
