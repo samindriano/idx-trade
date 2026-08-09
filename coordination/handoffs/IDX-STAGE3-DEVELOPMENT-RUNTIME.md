@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: 4c484b087aff592234dbe9905213e9d83b2f2611
 branch: research/idx-stage3-v1
-head_commit: pending documentation commit
+head_commit: cd976da89003d7d714fc9d2a6c8dd13956e3e04e
 scope: Execute the approved frozen Stage-3 development runner against the immutable SIGNAL_RESEARCH_HLCV artifacts through development fold F3 only.
 files_changed: docs/PROJECT_CONTEXT_MASTER.md; docs/PROJECT_LEDGER.md; docs/checkpoints/2026-08-09_STAGE3_DEVELOPMENT_RUNTIME.md; coordination/handoffs/IDX-STAGE3-DEVELOPMENT-RUNTIME.md
 findings: Full pytest 184 passed, 0 failed. Admission passed with panel hash 67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76, manifest hash b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a, manifest valid 15/15, max signal 942, max future source 962, and holdout_outcome_accessed=false. Full valid rows 712325; history-qualified 692648; primary broad-liquid 244761; H10 resolved binary rows 208375. H10: TP_FIRST 197910, SL_FIRST 315049, AMBIGUOUS_SAME_BAR 6974, NO_BARRIER_HIT 107189, UNRESOLVED_PATH 40463, INVALID_BARRIER 44740, UNRESOLVED_HORIZON_END 0.
