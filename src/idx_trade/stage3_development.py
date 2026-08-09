@@ -10,9 +10,18 @@ from typing import Iterable
 import pandas as pd
 
 from .provenance import sha256_file
-from .research_baselines import run_development_fold
+from .research_baselines import prepare_primary_model_table, run_development_fold
 from .research_features import build_baseline_features
 from .research_labels import BarrierLabelConfig, build_first_touch_labels
+from .research_reporting import (
+    candidate_counts_by_date,
+    drop_reason_summary,
+    excursion_summary,
+    fold_boundary_audit,
+    pooled_oof_summary,
+    primary_drop_reason_ledger,
+    reliability_bins,
+)
 from .research_validation import FROZEN_FOLDS, normalize_calendar
 from .signal_research import validate_signal_research_hlcv, verify_signal_research_snapshot_manifest
 from .storage import write_parquet_atomic
@@ -181,22 +190,30 @@ def run_stage3_development(
         label_tables[horizon] = labels
         outcome_summary.extend(_label_outcome_summary(labels, horizon))
 
-    from .research_baselines import prepare_primary_model_table
-
     model_table = prepare_primary_model_table(features, label_tables[10])
     if model_table["date"].max() > max_signal_date:
         raise RuntimeError("model table crosses the pre-registered development signal boundary")
 
+    fold_results = []
     metrics_rows: list[dict[str, object]] = []
     prediction_frames: list[pd.DataFrame] = []
+    calibration_edge_rows: list[dict[str, object]] = []
     for fold in FROZEN_FOLDS:
         results = run_development_fold(model_table, calendar, fold_name=fold.name, include_tree=True)
+        fold_results.extend(results)
         for result in results:
             metrics_rows.append({"fold": result.fold, "model_name": result.model_name, **result.metrics})
             prediction = result.predictions.copy()
             prediction["fold"] = result.fold
             prediction["model_name"] = result.model_name
             prediction_frames.append(prediction)
+            calibration_edge_rows.append(
+                {
+                    "fold": result.fold,
+                    "model_name": result.model_name,
+                    "bin_edges": list(result.calibration_bin_edges),
+                }
+            )
 
     metrics = pd.DataFrame(metrics_rows).sort_values(["fold", "model_name"]).reset_index(drop=True)
     predictions = pd.concat(prediction_frames, ignore_index=True, sort=False).sort_values(
@@ -204,17 +221,41 @@ def run_stage3_development(
     ).reset_index(drop=True)
     advancement = _advancement_summary(metrics)
 
+    candidates = candidate_counts_by_date(features)
+    drop_ledger = primary_drop_reason_ledger(features, label_tables[10])
+    drop_summary = drop_reason_summary(drop_ledger)
+    reliability = pd.concat([reliability_bins(item) for item in fold_results], ignore_index=True, sort=False)
+    pooled = pooled_oof_summary(fold_results)
+    excursions = excursion_summary(features, label_tables[10])
+    fold_audit = fold_boundary_audit(calendar)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     feature_path = output_dir / "stage3_baseline_features_development.parquet"
     model_table_path = output_dir / "stage3_primary_model_table_development.parquet"
     prediction_path = output_dir / "stage3_oof_predictions_development.parquet"
     metrics_path = output_dir / "stage3_fold_metrics.csv"
+    pooled_path = output_dir / "stage3_pooled_oof_metrics.csv"
+    reliability_path = output_dir / "stage3_reliability_bins.csv"
+    candidate_path = output_dir / "stage3_candidate_counts_by_date.csv"
+    drop_ledger_path = output_dir / "stage3_primary_drop_reason_ledger.parquet"
+    drop_summary_path = output_dir / "stage3_primary_drop_reason_summary.csv"
+    excursion_path = output_dir / "stage3_primary_excursion_summary.csv"
+    fold_audit_path = output_dir / "stage3_fold_boundary_audit.json"
+    calibration_edges_path = output_dir / "stage3_calibration_bin_edges.json"
     label_paths: dict[int, Path] = {}
 
     write_parquet_atomic(features, feature_path)
     write_parquet_atomic(model_table, model_table_path)
     write_parquet_atomic(predictions, prediction_path)
+    write_parquet_atomic(drop_ledger, drop_ledger_path)
     metrics.to_csv(metrics_path, index=False)
+    pooled.to_csv(pooled_path, index=False)
+    reliability.to_csv(reliability_path, index=False)
+    candidates.to_csv(candidate_path, index=False)
+    drop_summary.to_csv(drop_summary_path, index=False)
+    excursions.to_csv(excursion_path, index=False)
+    _atomic_json(fold_audit, fold_audit_path)
+    _atomic_json(calibration_edge_rows, calibration_edges_path)
     for horizon, labels in label_tables.items():
         path = output_dir / f"stage3_labels_h{horizon}_development.parquet"
         write_parquet_atomic(labels, path)
@@ -243,7 +284,10 @@ def run_stage3_development(
         "feature_rows": int(len(features)),
         "primary_model_rows": int(len(model_table)),
         "outcome_summary": outcome_summary,
+        "drop_reason_summary": drop_summary.to_dict(orient="records"),
+        "fold_boundary_audit": fold_audit,
         "advancement": advancement,
+        "pooled_oof": pooled.to_dict(orient="records"),
         "artifacts": {},
     }
     artifact_paths = {
@@ -251,6 +295,14 @@ def run_stage3_development(
         "primary_model_table": model_table_path,
         "oof_predictions": prediction_path,
         "fold_metrics": metrics_path,
+        "pooled_oof_metrics": pooled_path,
+        "reliability_bins": reliability_path,
+        "candidate_counts_by_date": candidate_path,
+        "primary_drop_reason_ledger": drop_ledger_path,
+        "primary_drop_reason_summary": drop_summary_path,
+        "primary_excursion_summary": excursion_path,
+        "fold_boundary_audit": fold_audit_path,
+        "calibration_bin_edges": calibration_edges_path,
         **{f"labels_h{horizon}": path for horizon, path in label_paths.items()},
     }
     summary["artifacts"] = {
