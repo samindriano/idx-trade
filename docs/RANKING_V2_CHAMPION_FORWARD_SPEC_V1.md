@@ -1,6 +1,6 @@
 # Ranking V2 Champion and Fresh-Forward Specification V1
 
-Status: frozen for review, 2026-08-10 (Asia/Jakarta)
+Status: frozen after independent review clarification, 2026-08-10 (Asia/Jakarta)
 
 This document freezes the historical champion, final refit contract, and the
 first independent fresh-forward evaluation contract. It does not run a final
@@ -130,22 +130,32 @@ reported after the authorized run; they are not inspected or inferred here.
 
 The one-shot report must include resolved row count, expected row count,
 coverage, unknown/immature counts, positive prevalence, PR-AUC, PR-AUC minus
-prevalence, ROC-AUC, within-session Q5-Q1 mean return spread, and top-decile
-lift. All metrics must be finite and computed on the same frozen resolved
-sample. Probability calibration metrics are out of scope and remain deferred.
+prevalence, ROC-AUC, within-signal-date Q1 TP rate, within-signal-date Q5 TP
+rate, `Q5 TP rate - Q1 TP rate`, within-signal-date top-decile TP rate, and
+top-decile lift versus fold/block prevalence.
+
+These bucket metrics intentionally preserve the historical Ranking-V2 semantics
+implemented by `evaluate_v2_scores`: Q5-Q1 is a **TP-rate spread**, and
+top-decile lift is **top-decile TP rate minus prevalence**. No realized-return
+Q5-Q1 spread is part of this verdict.
+
+All metrics must be finite and computed on the same frozen resolved sample.
+Probability calibration metrics are out of scope and remain deferred.
 
 Split the 100-session block into its first 50 and last 50 mature signal
 sessions for a predeclared stability check. The verdict is:
 
 - `PASS` only when all data/provenance/maturity gates pass, all metrics are
   finite, aggregate PR-AUC minus prevalence is positive, aggregate ROC-AUC is
-  greater than 0.50, aggregate Q5-Q1 is positive, and both 50-session halves
-  have positive PR-AUC minus prevalence and positive Q5-Q1;
+  greater than 0.50, aggregate Q5-Q1 TP-rate spread is positive, and both
+  50-session halves have positive PR-AUC minus prevalence and positive Q5-Q1
+  TP-rate spread;
 - `MIXED` only when all data/provenance/maturity gates pass and the aggregate
-  PR-AUC minus prevalence and Q5-Q1 are positive, but at least one PASS
-  stability condition is not met;
+  PR-AUC minus prevalence and Q5-Q1 TP-rate spread are positive, but at least
+  one PASS stability condition is not met;
 - `FAIL` for any data/provenance/maturity failure, non-finite metric,
-  non-positive aggregate PR-AUC delta, or non-positive aggregate Q5-Q1.
+  non-positive aggregate PR-AUC delta, or non-positive aggregate Q5-Q1 TP-rate
+  spread.
 
 This rule is fixed before outcome access. No metric selection, threshold
 search, half selection, calibration, post-outcome refit, or adaptive rescue is
