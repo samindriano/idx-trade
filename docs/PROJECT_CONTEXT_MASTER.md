@@ -1931,7 +1931,8 @@ When continuing this project in a new ChatGPT/Codex session, use this instructio
 > research-feasibility evaluation ending `2026-07-31` was run and is
 > **NO-GO / STOP**: strict 126 passes, strict 504 fails, strict 1260 fails,
 > and generic exclusions yield only 93.667% ticker coverage. Read the newest
-> `docs/checkpoints/2026-08-09_1260_RESEARCH_FEASIBILITY_NO_GO.md` before any
+> 1260 checkpoint, including
+> `docs/checkpoints/2026-08-09_1260_OPEN_GAP_DOMINANT_DIAGNOSTIC.md`, before any
 > further historical work. No modelling, IDX-VAL-002, main merge, paper
 > trading, or live trading is authorized yet.
 
@@ -2032,3 +2033,38 @@ merge to `main`, or treat the research exclusions as permission to weaken the
 strict gate. The detailed runtime summary is:
 
 `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\research_feasibility_report.json`
+
+---
+
+# 37. Bounded 1260 Open-vs-HLC diagnostic - OPEN-GAP DOMINANT
+
+Date: 2026-08-09. This diagnostic reused the preserved strict 1260 runtime
+evidence at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\`
+and did not refetch or rewrite provider artifacts. Four bounded local read-only
+cache workers were used for date-partitioned processing.
+
+Full pytest passed: 157 tests, exit 0, with three existing pandas warnings.
+The preserved unresolved set contains 6,716 ticker/session pairs over 989
+dates, with all 989 payload dates available.
+
+The exact decomposition is 6,716 `OPEN_ONLY_MISSING` (100.000%), zero
+`HLC_MISSING`, zero `OPEN_AND_HLC_MISSING`, and zero `OTHER`. All unresolved
+pairs have valid official ACTIVE Regular-Market metrics and valid High, Low,
+and Close; no Open was synthesized. The affected known Regular-Market Value
+is 66,890,258,565,100. Year totals are 2021: 2,316 rows /
+37,835,732,109,000; 2022: 2,541 / 21,987,421,358,300; 2023: 1,172 /
+4,641,507,805,500; 2024: 544 / 2,302,577,000,300; and 2025: 143 /
+123,020,292,000.
+
+Under a hypothetical signal-research HLCV contract, all 979 required
+common-stock tickers and all 981,940 required-scope ACTIVE rows are eligible;
+known Regular-Market Value coverage is 100.000%, and no unsupported ticker or
+top-50/top-100/top-200/delisted/IPO/corporate-action unsupported cluster
+remains. This is a diagnostic result, not a production contract change.
+
+The strict execution-grade contract remains unchanged: Open is still required,
+strict 126 remains PASS, and strict 504/1260 remain FAIL/NO-GO. No panel,
+manifest, modelling, `IDX-VAL-002`, 252/1260 rerun, or main merge was started.
+See `docs/checkpoints/2026-08-09_1260_OPEN_GAP_DOMINANT_DIAGNOSTIC.md` for the
+full artifact paths and review decision.

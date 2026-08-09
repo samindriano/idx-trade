@@ -1044,3 +1044,76 @@ model-safe panel or manifest was materialized. No 252 diagnostic, modelling,
 smallest safe next action is to obtain defensible additional historical
 opening/OHLC evidence or explicitly narrow the research contract after a
 separate review; the gate must not be weakened silently.
+
+---
+
+## 20. DATA-005 bounded 1260 Open-vs-HLC diagnostic - OPEN-GAP DOMINANT
+
+Date: 2026-08-09 (Asia/Jakarta). The prior strict 1260 failure was decomposed
+using the preserved runtime evidence; no Stock Summary, Yahoo, or other
+provider refetch was performed and no production gate semantics were changed.
+The diagnostic was executed with four bounded local cache workers partitioned
+by date, solely to reduce elapsed read time.
+
+Source code head used: `d4517c61216d8efcae7b61225e03c7670e5cd5b9` on
+`data/idx-data-002c`. Full pytest passed: 157 tests, exit 0, with three
+existing non-blocking pandas `FutureWarning` messages.
+
+Input and exact diagnostic artifacts are retained outside Git at:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\diagnostic_open_hlc_1260_20260809\`.
+The preserved missing-set input contains 6,716 ticker/session pairs over 989
+official sessions; all 989 corresponding fallback payload dates were present.
+
+Every unresolved pair was classified as follows:
+
+| class | rows | row share | affected known Regular-Market Value | known-value share |
+|---|---:|---:|---:|---:|
+| `OPEN_ONLY_MISSING` | 6,716 | 100.000% | 66,890,258,565,100 | 100.000% |
+| `HLC_MISSING` | 0 | 0.000% | 0 | 0.000% |
+| `OPEN_AND_HLC_MISSING` | 0 | 0.000% | 0 | 0.000% |
+| `OTHER` | 0 | 0.000% | 0 | 0.000% |
+
+All 6,716 rows had defensible official ACTIVE Regular-Market metrics and
+positive/valid High, Low, and Close. No full-OHLC row was newly filled because
+the unresolved field was Open only; no Open was synthesized or forward-filled.
+The exact row-level evidence is in `unresolved_pair_diagnostics.csv` and the
+exact 62 failed-ticker report is in `failed_ticker_diagnostics.csv`.
+
+The year distribution is:
+
+| year | rows | affected known Regular-Market Value |
+|---:|---:|---:|
+| 2021 | 2,316 | 37,835,732,109,000 |
+| 2022 | 2,541 | 21,987,421,358,300 |
+| 2023 | 1,172 | 4,641,507,805,500 |
+| 2024 | 544 | 2,302,577,000,300 |
+| 2025 | 143 | 123,020,292,000 |
+
+The strict failed-ticker file contains 62 rows. Twenty-four were ever in the
+top-50, 31 in the top-100, and 46 in the top-200. No failed ticker was marked
+delisted, IPO-in-window, or corporate-action affected by this diagnostic. The
+full exact ticker, missing-row, blocker, and materiality columns remain in the
+CSV rather than being copied into a manually maintained list.
+
+For the hypothetical signal-research contract—official ACTIVE state, valid
+High/Low/Close/Volume, Regular-Market Value where available, and corporate-
+action integrity, with Open optional and never synthesized—the recheck found:
+
+- 979/979 required common-stock tickers eligible (100.000%);
+- 981,940 required-scope ACTIVE rows eligible out of 981,940 (100.000%);
+- known Regular-Market Value coverage 15,620,249,523,853,300 / the same total
+  (100.000%);
+- zero remaining unsupported tickers, including zero unsupported top-50,
+  top-100, top-200, delisted, IPO-in-window, or corporate-action cluster.
+
+The 981,940 row denominator is the required common-stock scope and therefore
+excludes CNTX; the all-anchor diagnostic summary elsewhere still reports
+982,398 ACTIVE anchors including out-of-scope evidence rows.
+
+Decision: **OPEN_GAP_DOMINANT**. This supports a possible future explicit
+separation between an execution-grade OHLCV contract and a signal-research
+HLCV contract, but this run did not implement or authorize that split. Strict
+126 remains PASS; strict 504 and strict 1260 remain unchanged FAIL/NO-GO.
+No model-safe panel, manifest, modelling, `IDX-VAL-002`, 252/1260 rerun,
+main merge, or gate weakening was performed. Stop for independent ChatGPT
+review before changing the research contract.
