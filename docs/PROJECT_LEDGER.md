@@ -1391,3 +1391,64 @@ Probability V2, `IDX-VAL-002`, execution-PnL claim, paper/live trading, or
 main merge is authorized. Any future Probability V2 validation must use fresh
 forward data strictly after `2026-07-31`; the consumed ranking holdout must
 not be reused.
+
+## 27. Bounded Stage-5 post-mortem - descriptive diagnostic complete
+
+Date: 2026-08-09 (Asia/Jakarta). Branch:
+`research/idx-stage5-postmortem-v1`. Substantive diagnostic code commit:
+`f51f9778a6657b52752d2423dbde8499c693bf70`. Runtime HEAD before the
+documentation result was `151e2f74507031077481f9a3131b9f85a0c145e8`.
+
+Full pytest passed **211/211**, with three existing pandas FutureWarnings. The
+exact Stage-5 panel, predictions, summary, calendar, and security-master
+hashes all matched the frozen admission values. The Stage-5 summary still
+records `STAGE5_RANKING_HOLDOUT_FAIL`, `holdout_consumed=true`,
+`holdout_consumed_for=RANKING_V1_ONLY`, and `holdout_outcome_accessed=true`.
+
+The bounded runner completed once with status
+**`DESCRIPTIVE_DIAGNOSTIC_COMPLETE`**. It used 71,420 resolved H10 rows and
+the 12 frozen baseline features. No model was fit or changed, no feature was
+selected, no threshold or calibration was searched, and no label or Stage-5
+rerun occurred.
+
+The six frozen blocks localized the broad ranking result as follows:
+
+- A1: PR-AUC delta `+0.0321643291`, ROC-AUC `0.5205789227`, Q5-Q1
+  `+0.0436252789`;
+- A2: delta `+0.0016159412`, ROC-AUC `0.5002196297`, Q5-Q1 `-0.0076857955`;
+- A3: delta `+0.0305332407`, ROC-AUC `0.5313986615`, Q5-Q1 `+0.0936463819`;
+- B1: delta `+0.0013945378`, ROC-AUC `0.5066507094`, Q5-Q1 `-0.0261259582`;
+- B2: delta `-0.0129344083`, ROC-AUC `0.4724630688`, Q5-Q1 `-0.0343101852`;
+- B3: delta `-0.0077401223`, ROC-AUC `0.4848301305`, Q5-Q1 `+0.0056943535`.
+
+The largest absolute feature-distribution SMDs were `atr14_over_close`
+`0.5583958847`, `security_age_sessions_exact` `0.5537919781`,
+`distance_low_60_atr` `-0.4935691423`, `observed_session_count`
+`0.3901573723`, and `close_return_20` `-0.2276565042`. Factual Q5-Q1
+sign reversals occurred for `atr14_over_close`,
+`log_regular_value_relative_20`, `observed_session_count`,
+`relative_volume_20`, and `security_age_sessions_exact`.
+
+The full primary-liquid market/regime comparison showed lower breadth and
+returns, higher ATR/Close, lower close position, lower relative volume, and
+lower relative Regular-Market Value in B than A. The largest regime SMDs
+were median ATR/Close `+2.2328112364`, median return 20 `-1.0205890228`,
+breadth return 20 positive `-1.0092554317`, and primary-liquid universe size
+`+0.8714894126`.
+
+HGB deciles showed an A top-decile TP rate of `0.5205847255` and lift
+`+0.0558390964`, while B top-decile TP rate was `0.3564280216` and lift
+`-0.0012782023`. This is descriptive only and does not validate a top-decile
+cutoff.
+
+The external runtime artifacts are under
+`D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_postmortem_v1_20260809`.
+The summary SHA-256 is
+`9f6c60ea3602673ad500adc99def8b1ecdfb7006c47c750dd52b2cf89984cad1`.
+All seven output hashes are recorded in the post-mortem checkpoint.
+
+Permanent status after this run: Ranking V1 remains a failed benchmark; the
+holdout remains consumed; Probability V1 remains deferred. No V2, Stage 6,
+`IDX-VAL-002`, execution-PnL claim, paper/live trading, or main merge was
+started. Stop for independent ChatGPT interpretation; do not treat any
+post-mortem subgroup or feature as independently validated.

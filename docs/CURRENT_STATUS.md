@@ -16,7 +16,7 @@ authorization boundary.
 - Stage-5 holdout: **consumed for `RANKING_V1_ONLY`; no retry permitted**
 - `holdout_outcome_accessed=true`
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**
-- current phase: **bounded Stage-5 post-mortem implementation; diagnostic only**
+- current phase: **bounded Stage-5 post-mortem complete; interpretation pending**
 - current post-mortem plan: `docs/STAGE5_POSTMORTEM_PLAN_V1.md`
 - Stage 6: not authorized
 - Ranking V2 implementation: not authorized yet
@@ -111,9 +111,31 @@ The runner is read-only with respect to market/model artifacts. It requires the 
 
 Required external outputs are descriptive CSV/JSON artifacts only and must be hashed. After one factual post-mortem runtime, stop for ChatGPT interpretation before any Ranking V2 design is frozen.
 
+Post-mortem runtime result:
+
+- status: **`DESCRIPTIVE_DIAGNOSTIC_COMPLETE`**;
+- substantive code commit: `f51f9778a6657b52752d2423dbde8499c693bf70`;
+- resolved H10 rows: 71,420 across 12 frozen features;
+- largest absolute A/B feature SMDs: `atr14_over_close` 0.5584,
+  `security_age_sessions_exact` 0.5538, `distance_low_60_atr` -0.4936,
+  `observed_session_count` 0.3902, and `close_return_20` -0.2277;
+- factual Q5-Q1 sign reversals: `atr14_over_close`,
+  `log_regular_value_relative_20`, `observed_session_count`,
+  `relative_volume_20`, and `security_age_sessions_exact`;
+- six fixed blocks show positive HGB PR-AUC deltas in A1/A2/A3 and near-zero
+  B1, then negative deltas in B2/B3;
+- output directory:
+  `D:\Documents\Project\idx-trade-data-gate-20260808v\stage5_postmortem_v1_20260809`;
+- summary SHA-256:
+  `9f6c60ea3602673ad500adc99def8b1ecdfb7006c47c750dd52b2cf89984cad1`.
+
+These are descriptive post-mortem findings only. They do not validate a
+feature, regime, subgroup, cutoff, or Ranking V2 architecture.
+
 ## Authorization boundary
 
-Allowed next action: validate the post-mortem implementation/tests, then execute the bounded descriptive runner once against the preserved Stage-5 artifacts.
+Allowed next action: independent ChatGPT interpretation of the completed
+bounded post-mortem artifacts.
 
 Do not:
 

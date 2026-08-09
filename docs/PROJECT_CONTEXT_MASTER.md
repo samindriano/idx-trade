@@ -2260,3 +2260,43 @@ Runtime artifacts and exact hashes are recorded in
 outside Git. Next action is independent ChatGPT review of the failed
 ranking-only result; any future Probability V2 validation must use fresh
 forward data strictly after `2026-07-31`.
+
+## 26. Bounded Stage-5 post-mortem - descriptive diagnostic complete
+
+Date: 2026-08-09 (Asia/Jakarta). Branch:
+`research/idx-stage5-postmortem-v1`. Substantive diagnostic code commit:
+`f51f9778a6657b52752d2423dbde8499c693bf70`.
+
+The exact bounded post-mortem runner completed once with status
+**`DESCRIPTIVE_DIAGNOSTIC_COMPLETE`**. Full pytest passed **211/211** with
+three existing pandas FutureWarnings. The exact Stage-5 panel, predictions,
+summary, official calendar, and security master matched their frozen hashes.
+The consumed-holdout guards remained valid, and no source/test/model artifact
+was changed.
+
+The six fixed blocks showed positive HGB PR-AUC deltas in A1/A2/A3, near-zero
+B1, then negative deltas in B2/B3. The largest feature distribution shifts by
+absolute SMD were `atr14_over_close` 0.5583958847,
+`security_age_sessions_exact` 0.5537919781, `distance_low_60_atr`
+-0.4935691423, `observed_session_count` 0.3901573723, and `close_return_20`
+-0.2276565042. Factual feature Q5-Q1 sign reversals were
+`atr14_over_close`, `log_regular_value_relative_20`,
+`observed_session_count`, `relative_volume_20`, and
+`security_age_sessions_exact`.
+
+The full primary-liquid A/B comparison showed lower breadth and returns,
+higher volatility, lower close position, lower relative volume, and lower
+relative Regular-Market Value in B. The HGB top-decile TP rate/lift was
+0.5205847255 / +0.0558390964 in A and 0.3564280216 / -0.0012782023 in B.
+These are descriptive observations only; no feature, regime, subgroup, or
+top-decile cutoff is validated by this post-mortem.
+
+All external artifacts and hashes are recorded in
+`docs/checkpoints/2026-08-09_STAGE5_POSTMORTEM_RUNTIME.md`. The post-mortem
+summary SHA-256 is
+`9f6c60ea3602673ad500adc99def8b1ecdfb7006c47c750dd52b2cf89984cad1`.
+
+Ranking V1 remains a failed benchmark, the holdout remains consumed, and
+Probability V1 remains deferred. No V2, Stage 6, `IDX-VAL-002`, execution-PnL
+claim, paper/live trading, or main merge was started. Stop for independent
+ChatGPT interpretation.
