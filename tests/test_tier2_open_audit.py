@@ -6,6 +6,7 @@ from idx_trade.tier2_open_audit import (
     build_audit_candidates,
     redact_secrets,
     run_zapi_audit,
+    run_yahoo_audit,
     select_audit_sample,
     sample_manifest_sha256,
 )
@@ -183,6 +184,19 @@ def test_yahoo_raw_and_adjusted_fields_stay_separate(monkeypatch):
     assert result.loc[0, "raw_open"] == 100.0
     assert result.loc[0, "vendor_adj_close"] == 95.0
     assert result.loc[0, "raw_open"] != result.loc[0, "vendor_adj_close"]
+
+
+def test_yahoo_provider_log_is_reported_as_request_error(monkeypatch, capsys):
+    def fake_download(tickers, start, end, threads):
+        print("1 Failed download: ['MASA.JK']: YFTzMissingError")
+        return {"MASA": pd.DataFrame()}
+
+    monkeypatch.setattr("idx_trade.tier2_open_audit.download_daily", fake_download)
+    result = run_yahoo_audit(_single_sample())
+    assert result["summary"]["requests_made"] == 1
+    assert "MASA:" in result["summary"]["request_errors"][0]
+    assert "YFTzMissingError" in result["summary"]["request_errors"][0]
+    assert capsys.readouterr().out == ""
 
 
 def test_secret_redaction_is_recursive():

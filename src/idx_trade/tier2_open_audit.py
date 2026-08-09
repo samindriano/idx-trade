@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import re
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -607,7 +609,12 @@ def run_yahoo_audit(sample: pd.DataFrame) -> dict[str, Any]:
         start = pd.Timestamp(rows["date"].min()).date()
         end = (pd.Timestamp(rows["date"].max()) + pd.Timedelta(days=1)).date()
         try:
-            result = download_daily([ticker], start=start, end=end, threads=False)
+            provider_log = io.StringIO()
+            with redirect_stdout(provider_log), redirect_stderr(provider_log):
+                result = download_daily([ticker], start=start, end=end, threads=False)
+            logged = provider_log.getvalue().strip()
+            if logged:
+                errors.append(f"{ticker}:{redact_secrets(logged)}")
             frame = result.get(ticker, _empty_provider_frame())
             if not frame.empty:
                 frame = frame.copy()
