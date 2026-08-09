@@ -10,7 +10,6 @@ from typing import Iterable
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.metrics import average_precision_score, roc_auc_score
 
 from .provenance import sha256_file
 from .research_baselines import logistic_baseline, prepare_primary_model_table, tree_challenger
@@ -129,6 +128,14 @@ def _verify_stage4b(path: Path) -> dict[str, object]:
     return summary
 
 
+def _assert_clean_output_dir(output_dir: Path) -> None:
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise RuntimeError(
+            "Stage-5 output directory is not clean; refusing a rerun because locked-holdout access is one-shot"
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+
 def _read_panel_until(panel_path: Path, max_date: pd.Timestamp) -> pd.DataFrame:
     if panel_path.suffix.lower() not in {".parquet", ".pq"}:
         raise ValueError("Stage-5 requires the immutable parquet panel")
@@ -176,7 +183,6 @@ def _freeze_models(
     code_commit: str,
     calendar: pd.DatetimeIndex,
 ) -> tuple[dict[str, str], Path]:
-    output_dir.mkdir(parents=True, exist_ok=True)
     training_path = output_dir / "stage5_final_training_model_table.parquet"
     write_parquet_atomic(train, training_path)
     hashes: dict[str, str] = {"training_model_table": sha256_file(training_path)}
@@ -203,6 +209,23 @@ def _freeze_models(
     _atomic_json(freeze_record, freeze_path)
     hashes["preholdout_model_freeze"] = sha256_file(freeze_path)
     return hashes, freeze_path
+
+
+def _write_holdout_access_marker(output_dir: Path, freeze_path: Path, calendar: pd.DatetimeIndex) -> tuple[Path, str]:
+    marker_path = output_dir / "STAGE5_HOLDOUT_ACCESS_STARTED.json"
+    if marker_path.exists():
+        raise RuntimeError("Stage-5 holdout-access marker already exists; refusing a second holdout read")
+    marker = {
+        "holdout_consumed": True,
+        "holdout_consumed_for": "RANKING_V1_ONLY",
+        "holdout_start_index": HOLDOUT_START_INDEX,
+        "holdout_start_date": pd.Timestamp(calendar[HOLDOUT_START_INDEX - 1]).date().isoformat(),
+        "models_frozen_before_holdout_labels": True,
+        "preholdout_model_freeze_sha256": sha256_file(freeze_path),
+        "rerun_policy": "STOP_FOR_INDEPENDENT_REVIEW_IF_PROCESS_FAILS_AFTER_THIS_MARKER",
+    }
+    _atomic_json(marker, marker_path)
+    return marker_path, sha256_file(marker_path)
 
 
 def _label_summary(labels: pd.DataFrame, features: pd.DataFrame, horizon: int) -> pd.DataFrame:
@@ -288,6 +311,7 @@ def run_stage5_ranking_holdout(
     parent = _verify_stage4b(stage4b_summary_path)
     calendar = _calendar(calendar_path, calendar_column)
     listing_map = _listing_map(security_master_path, ticker_column, listed_from_column)
+    _assert_clean_output_dir(output_dir)
 
     # PRE-HOLDOUT PHASE. Only development data through session 1008 is readable.
     development_end = pd.Timestamp(calendar[1007])
@@ -309,13 +333,14 @@ def run_stage5_ranking_holdout(
     if train_table["date"].max() > train_feature_end:
         raise RuntimeError("final training table crosses frozen signal boundary")
     models = _fit_final_rankers(train_table)
-    output_dir.mkdir(parents=True, exist_ok=True)
     preholdout_hashes, freeze_path = _freeze_models(models, train_table, output_dir, code_commit=code_commit, calendar=calendar)
     freeze_record = json.loads(freeze_path.read_text(encoding="utf-8"))
     if not bool(freeze_record.get("models_frozen_before_holdout_labels", False)):
         raise RuntimeError("model freeze record failed before holdout outcome access")
 
-    # HOLDOUT IS CONSUMED FROM THIS POINT FOR RANKING_V1_ONLY.
+    # HOLDOUT IS IRREVOCABLY CONSUMED FOR RANKING_V1_ONLY AFTER THIS MARKER.
+    marker_path, marker_sha = _write_holdout_access_marker(output_dir, freeze_path, calendar)
+
     full_panel = _read_full_panel_after_freeze(panel_path)
     features = build_baseline_features(full_panel, calendar, listed_from=listing_map)
     label_configs = {
@@ -438,6 +463,8 @@ def run_stage5_ranking_holdout(
         "training_positive_rate": float(train_table["binary_target"].mean()),
         "preholdout_artifact_hashes": preholdout_hashes,
         "models_frozen_before_holdout_labels": True,
+        "holdout_access_marker": str(marker_path),
+        "holdout_access_marker_sha256": marker_sha,
         "holdout_start_index": HOLDOUT_START_INDEX,
         "holdout_start_date": pd.Timestamp(calendar[HOLDOUT_START_INDEX - 1]).date().isoformat(),
         "h10_last_evaluable_signal_index": HOLDOUT_H10_LAST_SIGNAL_INDEX,
