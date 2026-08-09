@@ -900,3 +900,46 @@ run. No new 504 panel or manifest was created. The 504 decision remains
 **NO-GO / STOP**; 252 and 1260 were not started. The smallest safe next action
 is to obtain a normally accessible public secondary OHLC source or other
 authoritative opening-price evidence without weakening the gate.
+
+---
+
+## 18. DATA-004 official IDXData3 Stock_First_Trx audit - target files unavailable
+
+Date: 2026-08-09. Audit source head: `data/idx-data-002c` at
+`ffca7c51312ef96ce786913541c36a55edd4588c`.
+
+Official specification: `https://www.idxdata3.co.id/IDX%20Reporting%20PSPP/Revitalisasi/Specification%20Document-Report%20Revitalization_PUBLIK%20v1.0.pdf`.
+Official directory: `https://idxdata3.co.id/Download_Data/Daily/Stock_First_Trx/`.
+
+The exact remaining ACTIVE-price requirement was regenerated from the preserved
+post-official-fallback artifact. It contains 390 rows over 233 unique dates:
+FREN 196, MASA 22, and MFIN 172, covering `2024-06-21` through `2025-09-19`.
+
+The official IDXData3 report specification documents the
+`SO[YYMMDD].zip` opening-price family and maps fields including `open`,
+`firsttrade`, `high`, `low`, `close`, `daysvolume`, and `numtrades`. Normal
+public retrieval was attempted for all 233 target dates. The `www` hostname
+had a normal TLS hostname-verification failure, so the official canonical
+hostname was tested without disabling TLS verification or bypassing controls.
+The first canonical pass returned 12 HTTP 404 responses and 221 HTTP 503
+responses; one controlled retry returned HTTP 404 for all 221. Final target
+file status: 233 `FILE_NOT_FOUND`, zero `FILE_AVAILABLE`.
+
+The readable official directory advertised 133 files from `SO200203.zip`
+through `SO200819.zip`, i.e. an observed retention range of 2020-02-03 through
+2020-08-19. None of the target dates was advertised. The available sample
+`SO200819.zip` is a legacy DBF with fields `STK_CDAT`, `STK_CODE`, `STK_NAME`,
+and `STK_FIRST`; it is outside the target window and cannot supply the requested
+modern H/L/C/volume/frequency reconciliation.
+
+Per ticker, target SO files available = 0, ticker rows found = 0, official
+opens verified = 0, and unresolved rows = FREN 196, MASA 22, MFIN 172. All 390
+rows are `SO_FILE_MISSING`. No production parser/provider was added because
+coverage was zero/negligible. No 504 ladder rerun, 252 diagnostic, 1260 run,
+model, `IDX-VAL-002`, panel, manifest, or merge was started. The audit runtime
+artifacts remain external and are not part of Git.
+
+The 504 decision remains **NO-GO / STOP**. The next safe action is another
+normally accessible authoritative opening-price source or an explicit,
+evidence-backed decision that this 504 boundary is not defensible. The price
+gate must not be weakened.

@@ -1929,7 +1929,10 @@ When continuing this project in a new ChatGPT/Codex session, use this instructio
 > `2024-06-21 -> 2026-07-31` common-stock market history without weakening the
 > fail-closed gate. The latest documented blocker is historical raw-price
 > coverage/opening-price evidence for FREN/MASA/MFIN after FREN identity was
-> resolved. Do not call 504 PASS until a new 126/504 ladder run passes, a new
+> resolved. The bounded 2026-08-09 audit of the official IDXData3
+> `Stock_First_Trx/SOYYMMDD.zip` family found zero target files across 233
+> required dates; do not treat the legacy 2020 directory listing as target
+> coverage. Do not call 504 PASS until a new 126/504 ladder run passes, a new
 > 504 ACTIVE-only panel is created, and a new manifest verifies valid=true. Only
 > then reconcile the separate 1260-prep branch and attempt the direct 504->1260
 > expansion. No modelling, IDX-VAL-002, main merge, paper trading, or live
@@ -1937,3 +1940,50 @@ When continuing this project in a new ChatGPT/Codex session, use this instructio
 
 If later checkpoints supersede this exact blocker, update this master document
 immediately so a future chat never starts from stale assumptions.
+
+---
+
+# 35. IDXData3 Stock_First_Trx audit - target retention unavailable
+
+Date: 2026-08-09. Audit started from `data/idx-data-002c` at
+`ffca7c51312ef96ce786913541c36a55edd4588c`.
+
+The exact remaining historical ACTIVE-price requirement was regenerated from
+the preserved post-official-fallback evidence rather than copied from the
+previous headline counts:
+
+- FREN: 196 sessions;
+- MASA: 22 sessions;
+- MFIN: 172 sessions;
+- total: 390 ticker/date rows;
+- unique target dates: 233;
+- target date range: `2024-06-21` through `2025-09-19`.
+
+Normal public retrieval of every unique target date was attempted using the
+expected `SO[YYMMDD].zip` naming convention. The `www` hostname failed normal
+TLS hostname verification, so the official canonical hostname was also tested
+without disabling certificate verification or bypassing access controls. The
+initial canonical pass returned 12 HTTP 404 responses and 221 HTTP 503
+responses. After a controlled retry, all 221 transient responses returned HTTP
+404. Final direct-file classification is therefore 233 `FILE_NOT_FOUND`, zero
+`FILE_AVAILABLE`, and zero target archive parse/schema results.
+
+The public official directory listing was readable and advertised 133 SO
+archives, but its observed range was only `SO200203.zip` through
+`SO200819.zip` (2020-02-03 through 2020-08-19). None of the 233 target dates
+was advertised. An available retention-era sample, `SO200819.zip`, contained
+one legacy fixed-width DBF member with 657 rows and fields
+`STK_CDAT`, `STK_CODE`, `STK_NAME`, and `STK_FIRST`. It is outside the target
+window and does not expose the modern H/L/C/volume/frequency fields needed for
+the requested cross-check.
+
+Per-ticker target resolution was zero official opening rows and zero remaining
+target archives for every ticker. All 390 rows are classified
+`SO_FILE_MISSING`; no `OFFICIAL_OPEN_VERIFIED`, ticker-row, board, or H/L/C
+conflict classification can be made without a target archive.
+
+Decision: stop. Do not implement a new SO provider/parser, do not mutate Yahoo
+or official Stock Summary artifacts, do not rerun the 504/126 ladder, and do not
+start 252 or 1260. The audit evidence is retained in the external runtime
+workspace under the logical name `idxdata3_open_audit_20260809_retry`; it is
+not committed to Git.
