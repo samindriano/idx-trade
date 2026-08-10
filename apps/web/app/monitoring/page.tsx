@@ -27,6 +27,7 @@ type RuntimeModelRun = {
 
 type MonitorRuntimeStatus = {
   runtime_ready: boolean;
+  monitor_start_date: string;
   calendar_ready: boolean;
   calendar_first_session: string | null;
   calendar_last_session: string | null;
@@ -108,7 +109,11 @@ export default function MonitoringPage() {
         setStatus(payload.status);
         setRequestError(null);
         setRequestDetail(null);
-        setTargetDate((current) => current || payload.status?.next_missing_session || "");
+        setTargetDate((current) => {
+          const floor = payload.status?.monitor_start_date ?? "";
+          if (!current || (floor && current < floor)) return payload.status?.next_missing_session || floor;
+          return current;
+        });
       } else {
         setRequestError(payload.error ?? "Runtime unavailable");
         setRequestDetail(payload.detail ?? null);
@@ -126,7 +131,12 @@ export default function MonitoringPage() {
   }, [refresh]);
 
   useEffect(() => {
-    if (!status?.next_missing_session) return;
+    if (!status) return;
+    if (targetDate && targetDate < status.monitor_start_date) {
+      setTargetDate(status.next_missing_session || status.monitor_start_date);
+      return;
+    }
+    if (!status.next_missing_session) return;
     const selected = status.sessions.find((item) => item.session_date === targetDate);
     if (!targetDate || selected?.state === "DATA_READY") setTargetDate(status.next_missing_session);
   }, [status, targetDate]);
@@ -225,7 +235,7 @@ export default function MonitoringPage() {
                     type="date"
                     value={targetDate}
                     onChange={(event) => setTargetDate(event.target.value)}
-                    min={status?.calendar_first_session ?? undefined}
+                    min={status?.monitor_start_date ?? "2026-08-10"}
                     max={status?.calendar_last_session ?? undefined}
                   />
                 </label>
