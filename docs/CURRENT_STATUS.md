@@ -19,7 +19,7 @@ This is the short **authoritative first-read status layer**. For full chronology
 - Ranking V3 roadmap: **AUDITED after legacy-model autopsy**;
 - Ranking V3-A recency spec: **INDEPENDENT REVIEW PASS WITH PRE-OUTCOME ADDENDUM**;
 - Ranking V3-A runner: **IMPLEMENTED**;
-- Ranking V3-A F1-F4 outcome run: **AUTHORIZED but NOT RUN in ChatGPT runtime because the user-local frozen cache/reference artifacts are not mounted**;
+- Ranking V3-A F1-F4 outcome run: **COMPLETE — control-equivalence PASS; both recency variants KEEP_DIAGNOSTIC; V2 control retained**;
 - Ranking V3 V2F5/V2F6: **SEALED FOR FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - reserved post-2026-07-31 V2 forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
@@ -290,7 +290,23 @@ Focused isolated ChatGPT-runtime harness result:
 
 This was not the repo-local full pytest suite. GitHub did not expose an automatic workflow run for these commits.
 
-The actual F1-F4 outcome run was not executed in ChatGPT because the container does not mount the user's Windows research store or the frozen V2 HGB_XS_MARKET prediction artifact needed by the control-equivalence gate. No candidate metric/verdict was fabricated.
+The local F1-F4 discovery run is complete against the exact frozen Windows artifacts:
+
+- repo pytest: `240 passed, 3 warnings` in `19.04 s`;
+- control equivalence: **PASS**, `84,732` rows, maximum score difference `0.0`, and maximum difference `0.0` for every required metric;
+- H=252: absolute sanity **PASS**, paired promotion **FAIL**, verdict `KEEP_DIAGNOSTIC`;
+- H=504: absolute sanity **PASS**, paired promotion **FAIL**, verdict `KEEP_DIAGNOSTIC`;
+- deterministic result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`;
+- selected/promoted recency component: none;
+- runtime: sequential reference, `40.3661506 s` total;
+- output: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_recency_discovery_20260810_retry1`;
+- summary SHA-256: `cf5d50c746ba9d88c74303193f770817588d6ad0fd23f24bb34baeb162e7519f`.
+
+The run scored only V2F1-V2F4. V2F5/V2F6 remained sealed, the reserved
+post-2026-07-31 V2 forward outcomes were not accessed, and
+`FORWARD_OUTCOME_ACCESS_STARTED` was not written by this run. The complete
+result, metrics, paired diagnostics, provenance, and artifact inventory are in
+`docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_F1_F4_RESULT.md`.
 
 ## Immediate next action
 
@@ -300,15 +316,9 @@ Wait. Do not access the fresh-forward block until the separately authorized firs
 
 ### V3 track
 
-Run the already-implemented V3-A runner on the user's local machine against the exact frozen artifacts. Before scoring:
-
-1. pull the branch;
-2. run the full repo pytest suite and record exact result/warnings;
-3. locate and verify the prepared-cache manifest hash `6b404f...6143`;
-4. locate the original frozen `ranking_v2_hgb_xs_market_summary.json` and `ranking_v2_hgb_xs_market_predictions.parquet`;
-5. use a new empty V3-A output directory;
-6. execute only V2F1-V2F4;
-7. commit result artifacts/ledger/checkpoint/handoff and stop for review.
+The authorized V3-A F1-F4 discovery run is complete and documented. Stop for
+ChatGPT review. Do not proceed automatically to Structure-Lite, F5/F6, or any
+later V3 lane.
 
 Do **not** proceed automatically to Structure-Lite after the run.
 
