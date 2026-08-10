@@ -225,9 +225,8 @@ def _read_reference_artifacts(
     reference_dir: Path,
 ) -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame, dict[str, str]]:
     summary_path = reference_dir / "ranking_v2_hgb_xs_market_summary.json"
-    metrics_path = reference_dir / "ranking_v2_hgb_xs_market_fold_metrics.csv"
     predictions_path = reference_dir / "ranking_v2_hgb_xs_market_predictions.parquet"
-    for path in (summary_path, metrics_path, predictions_path):
+    for path in (summary_path, predictions_path):
         if not path.is_file():
             raise FileNotFoundError(path)
 
@@ -244,17 +243,14 @@ def _read_reference_artifacts(
     artifact_hashes = summary.get("artifact_sha256", {})
     actual_hashes = {
         "summary": sha256_file(summary_path),
-        "fold_metrics": sha256_file(metrics_path),
         "predictions": sha256_file(predictions_path),
     }
-    for key in ("fold_metrics", "predictions"):
-        expected = artifact_hashes.get(key)
-        if not isinstance(expected, str) or expected != actual_hashes[key]:
-            raise RuntimeError(f"reference V2 {key} artifact hash mismatch")
+    expected = artifact_hashes.get("predictions")
+    if not isinstance(expected, str) or expected != actual_hashes["predictions"]:
+        raise RuntimeError("reference V2 predictions artifact hash mismatch")
 
-    # F5/F6 remain sealed. The full immutable files are hashed for provenance,
-    # but outcome rows are materialized only for F1-F4 using a parquet predicate.
-    # The F5/F6 metrics CSV is never parsed by this runner.
+    # F5/F6 remain sealed. The immutable prediction file is hash-verified against
+    # the frozen V2 summary, but outcome rows are materialized only for F1-F4.
     allowed = [fold.name for fold in DISCOVERY_FOLDS]
     predictions = pd.read_parquet(predictions_path, filters=[("fold", "in", allowed)])
     predictions = predictions[predictions["fold"].isin(allowed)].copy().reset_index(drop=True)
@@ -545,7 +541,6 @@ def run_discovery(
     model_hashes_by_candidate: dict[str, dict[str, str]] = {V3_A_CONTROL: control_model_hashes}
     runtime_seconds: dict[str, float] = {V3_A_CONTROL: control_seconds}
 
-    # Variants are not fitted until the mandatory control-equivalence gate above passes.
     for candidate in V3_A_VARIANTS:
         candidate_started = time.perf_counter()
         candidate_dir = output_dir / candidate.lower()
