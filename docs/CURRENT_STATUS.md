@@ -18,9 +18,9 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-E True Ranking: killed;
 - V2F1..V2F6 are development knowledge and are not independent V4 holdouts;
 - V4-A Participation Quality / Price Impact: **CLOSED — no survivor**;
-- V4-B Price-Path Quality: **BLIND-AUDIT REVIEW PASS — OUTCOME RUN HELD**;
-- V4-C Cross-Sectional Opportunity Context: **IMPLEMENTED PRE-OUTCOME — CACHE/AUDIT NEXT**;
-- cumulative historical evaluated-candidate count remains `12`;
+- V4-B Price-Path Quality: **CLOSED — NO SURVIVOR**;
+- V4-C Cross-Sectional Opportunity Context: **CLOSED — NO SURVIVOR**;
+- cumulative historical evaluated-candidate count is now `17`;
 - sessions `1225+` remain sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
@@ -64,7 +64,7 @@ The arena retains seven information families but intends a bounded executable se
 
 Result checkpoint: `docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`.
 
-## V4-B — BLIND-AUDIT REVIEW PASS / OUTCOME HELD
+## V4-B — CLOSED — NO SURVIVOR
 
 Hypothesis: `V4-B-PRICE-PATH-V1`.
 
@@ -109,13 +109,24 @@ Independent review checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V4_B_PRICE_PATH_AUDIT_REVIEW_PASS.md`.
 
-No V4-B candidate has been fitted/scored. Ordinals `015..017` remain unviewed, no B1+B2 integration exists, and cumulative historical evaluated-candidate count remains `12`.
+The authorized atomic first pass viewed ordinals `015..017`: exact control
+equivalence passed, but both B1 `016` and B2 `017` failed the unchanged paired
+gate. Survivors are `[]`; no B1+B2 integration exists.
 
-### Sequencing hold
+Result checkpoint:
 
-V4-B is mechanically ready for its later atomic control+B1+B2 run, but outcome scoring is deliberately held until the already-frozen V4-C cache/audit is completed and independently reviewed. This preserves the strongest practical outcome-blindness for the remaining main V4 families and does not modify any V4-B research rule.
+`docs/checkpoints/2026-08-10_RANKING_V4_B_C_FIRST_PASS_OUTCOME_RESULT.md`.
 
-## V4-C — IMPLEMENTED PRE-OUTCOME
+Result handoff:
+
+`coordination/handoffs/IDX-RANKING-V4-B-C-FIRST-PASS-OUTCOME-RESULT.md`.
+
+### Final first-pass result
+
+V4-B is closed with no survivor. The frozen result is not an invitation to
+rescue, change the feature bundle, or create B1+B2 integration.
+
+## V4-C — CLOSED — NO SURVIVOR
 
 Hypothesis: `V4-C-CROSS-SECTIONAL-CONTEXT-V1`.
 
@@ -137,15 +148,26 @@ Each is computed per date from the full causal primary-liquid universe, not only
 
 Controlling spec Git blob: `43f222f31c7c0ea15e870d22b066aae95858c81f`.
 
-Implementation is complete and CI through the focused-test commit reported `357 passed, 0 failed`. No V4-C model has been fitted/scored.
+Implementation and the authorized first pass are complete. Exact control
+equivalence passed; ordinal `019` failed the unchanged paired gate. Survivors
+are `[]`, and no cross-family integration exists.
+
+Result checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V4_B_C_FIRST_PASS_OUTCOME_RESULT.md`.
+
+Result handoff:
+
+`coordination/handoffs/IDX-RANKING-V4-B-C-FIRST-PASS-OUTCOME-RESULT.md`.
 
 ## Immediate next action
 
-Execute **only** the V4-C Windows-local outcome-blind cache preparation and audit handoff:
+Stop for ChatGPT interpretation. Do not rescue, rerun, or integrate V4-B or
+V4-C automatically:
 
-`coordination/handoffs/IDX-RANKING-V4-C-CROSS-SECTIONAL-CONTEXT-CACHE-AUDIT.md`
+`coordination/handoffs/IDX-RANKING-V4-B-C-FIRST-PASS-OUTCOME-RESULT.md`
 
-Return the V4-C audit to ChatGPT and stop. Do **not** score V4-B or V4-C yet.
+The V4-B/C first-pass result is recorded above. Stop for ChatGPT review.
 
 ## Hard boundary
 
@@ -157,7 +179,7 @@ Do not:
 - rescue/reformulate V4-A;
 - change V4-B after its blind-audit review;
 - adapt V4-C to any later V4-B outcome;
-- fit/score V4-B or V4-C before a separate later authorization;
+- rerun or adapt V4-B/V4-C after outcome access without a separate review;
 - create integrations that are not separately preregistered and result-eligible;
 - materialize/score session `1225+` for V4 development;
 - access post-2026-07-31 fresh-forward outcomes or write `FORWARD_OUTCOME_ACCESS_STARTED`;

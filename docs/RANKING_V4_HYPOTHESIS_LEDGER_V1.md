@@ -1,13 +1,16 @@
 # Ranking V4 Final Alpha Hypothesis Ledger V1
 
 Date: 2026-08-10 (Asia/Jakarta)
-Status: **V4-A CLOSED / V4-B 015..017 PRE-OUTCOME / V4-C 018..019 PRE-OUTCOME / 3 V4 CANDIDATES VIEWED**
+Status: **V4-A CLOSED / V4-B 015..017 COMPLETE / V4-C 018..019 COMPLETE / 8 V4 CANDIDATES VIEWED**
 
 V4 is the final alpha-generation program. The final V3 historical-development architecture `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` is the immutable common benchmark.
 
 The seven-family design arena is frozen in `docs/RANKING_V4_FINAL_ALPHA_ARENA_V1.md`. A family enters this ledger only when a concrete candidate ordinal is reserved.
 
-The cumulative historical evaluated-candidate count entering V4 was `9`: V3 ordinals `001..007` and `010..011` were viewed; V3-D ordinals `008..009` remain blocked/unviewed. V4-A later viewed ordinals `012..014`, so the current cumulative historical evaluated count remains `12` until another separately authorized outcome run occurs.
+The cumulative historical evaluated-candidate count entering V4 was `9`: V3
+ordinals `001..007` and `010..011` were viewed; V3-D ordinals `008..009`
+remain blocked/unviewed. V4-A viewed `012..014`, and this authorized first pass
+viewed `015..019`, so the cumulative historical evaluated count is now `17`.
 
 ## V4-A first-pass ordinals — CLOSED
 
@@ -23,15 +26,15 @@ Controlling result:
 
 `docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`
 
-## V4-B reserved first-pass ordinals — PRE-OUTCOME
+## V4-B first-pass ordinals — CLOSED
 
 Hypothesis: `V4-B-PRICE-PATH-V1`.
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
-| 015 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-CONTROL-015` | exact frozen V3-B 33-feature HGB control | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
-| 016 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-COHERENCE-016` | exact V3-B + B1 Path Coherence / Jump Concentration | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
-| 017 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-RANGE-ACCEPTANCE-017` | exact V3-B + B2 Range Acceptance / Rejection | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
+| 015 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-CONTROL-015` | exact frozen V3-B 33-feature HGB control | `FIRST_PASS_COMPLETE` | `true` | `CONTROL_EQUIVALENCE_PASS` |
+| 016 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-COHERENCE-016` | exact V3-B + B1 Path Coherence / Jump Concentration | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
+| 017 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-RANGE-ACCEPTANCE-017` | exact V3-B + B2 Range Acceptance / Rejection | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
 
 Frozen spec:
 
@@ -41,11 +44,12 @@ Git blob: `a750c28831b95b1c88640c5879289da5f2c05446`.
 
 No B1+B2 integration ordinal exists. One may be designed only if 016 and 017 both independently PASS under a separate future specification/review.
 
-V4-B implementation is complete pre-outcome. Its next permitted step is only the Windows-local cache preparation + outcome-blind audit in:
+The atomic V4-B first pass is complete. Both challengers failed the unchanged
+gate, survivors are `[]`, and no B1+B2 integration exists. Complete metrics and
+hashes are in
+`docs/checkpoints/2026-08-10_RANKING_V4_B_C_FIRST_PASS_OUTCOME_RESULT.md`.
 
-`coordination/handoffs/IDX-RANKING-V4-B-PRICE-PATH-CACHE-AUDIT.md`
-
-## V4-C reserved first-pass ordinals — PRE-OUTCOME
+## V4-C first-pass ordinals — CLOSED
 
 Hypothesis: `V4-C-CROSS-SECTIONAL-CONTEXT-V1`.
 
@@ -53,8 +57,8 @@ V4-C was frozen while V4-B still had no viewed outcome. Its definition therefore
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
-| 018 | `V4-C-CROSS-SECTIONAL-CONTEXT-V1` | `V4-C-CROSS-SECTIONAL-CONTEXT-V1-CONTROL-018` | exact frozen V3-B 33-feature HGB control | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
-| 019 | `V4-C-CROSS-SECTIONAL-CONTEXT-V1` | `V4-C-CROSS-SECTIONAL-CONTEXT-V1-DISPERSION-019` | exact V3-B + frozen 4-feature cross-sectional opportunity-dispersion context | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
+| 018 | `V4-C-CROSS-SECTIONAL-CONTEXT-V1` | `V4-C-CROSS-SECTIONAL-CONTEXT-V1-CONTROL-018` | exact frozen V3-B 33-feature HGB control | `FIRST_PASS_COMPLETE` | `true` | `CONTROL_EQUIVALENCE_PASS` |
+| 019 | `V4-C-CROSS-SECTIONAL-CONTEXT-V1` | `V4-C-CROSS-SECTIONAL-CONTEXT-V1-DISPERSION-019` | exact V3-B + frozen 4-feature cross-sectional opportunity-dispersion context | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
 
 ### V4-B outcome-blind cache audit — 2026-08-10
 
@@ -86,9 +90,9 @@ was below `80%`, and no absolute Spearman pair reached `0.95`. The highest
 absolute pair was `0.940791493` between
 `v4b_range_acceptance_mean_5` and `v4b_extreme_close_balance_5`.
 
-This is a pre-outcome data/feature audit only. Ordinals `015..017` remain
-`UNVIEWED_RESERVED`; no V4-B control, B1, or B2 fit/score was run; cumulative
-historical evaluated-candidate count remains `12`; session `1225+`,
+This was a pre-outcome data/feature audit only. At that stage ordinals
+`015..017` were `UNVIEWED_RESERVED` and no V4-B control, B1, or B2 fit/score
+had been run. The later authorized result is recorded below; session `1225+`,
 post-2026-07-31 fresh-forward outcomes, and
 `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched.
 
@@ -112,26 +116,29 @@ Controlling files:
 - `docs/RANKING_V4_C_CROSS_SECTIONAL_CONTEXT_SPEC_REVIEW_ADDENDUM_V1.md`;
 - implementation checkpoint `docs/checkpoints/2026-08-10_RANKING_V4_C_CROSS_SECTIONAL_CONTEXT_IMPLEMENTED_PRE_OUTCOME.md`.
 
-V4-C implementation + focused tests are complete pre-outcome. Its next permitted step is only the Windows-local cache preparation + outcome-blind audit in:
-
-`coordination/handoffs/IDX-RANKING-V4-C-CROSS-SECTIONAL-CONTEXT-CACHE-AUDIT.md`
+The atomic V4-C first pass is complete. Ordinal `019` failed the unchanged
+gate, survivors are `[]`, and no cross-family integration exists. Complete
+metrics and hashes are in
+`docs/checkpoints/2026-08-10_RANKING_V4_B_C_FIRST_PASS_OUTCOME_RESULT.md`.
 
 ## Shared V4 gate and outcome-access boundary
 
 V4-B and V4-C inherit the exact same challenger gate frozen for V4-A. No family receives easier thresholds after observing previous failures.
 
-At this ledger state:
+After the authorized first pass:
 
 - V4-A results viewed: `true` for ordinals `012..014`;
-- V4-B results viewed: `false` for `015..017`;
-- V4-C results viewed: `false` for `018..019`;
-- V4 evaluated-candidate count remains `3`;
-- cumulative historical evaluated-candidate count remains `12`;
+- V4-B results viewed: `true` for `015..017`;
+- V4-C results viewed: `true` for `018..019`;
+- V4 evaluated-candidate count is `8`;
+- cumulative historical evaluated-candidate count is `17`;
 - V2F1..V2F6 are historical-development knowledge, not independent V4 validation;
 - sessions `1225+` remain sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes remain unaccessed;
 - `FORWARD_OUTCOME_ACCESS_STARTED` remains unwritten;
-- no calibration, Stage 6, `IDX-VAL-002`, execution/PnL, Kelly, paper/live or main merge is authorized.
+- B1+B2 and B/C integrations were not created; no rescue or additional V4
+  family is authorized automatically. Calibration, Stage 6, `IDX-VAL-002`,
+  execution/PnL, Kelly, paper/live, and main merge remain unauthorized.
 
 ## Permanent accounting rule
 

@@ -1583,3 +1583,40 @@ not run; no normalized history, cache, manifest, assignment coverage, or
 outcome metric was created. Ordinals `008/009` remain unviewed, V3-C remains
 `V3_C_REGIME_KILL_KEEP_V2_CONTROL`, and all F5/F6/fresh-forward boundaries
 remain untouched.
+
+## 32. V4-B + V4-C first-pass historical outcome result — 2026-08-10
+
+The newest explicit authorization superseded the stale pre-outcome sequencing
+text in CURRENT_STATUS.md. On research/idx-ranking-v2-spec-v1, the branch was
+fast-forwarded to f605e1be5964714db3038a2e6b315b9256315c40, the tree was clean
+and synchronized, and full pytest passed 357/357 with three existing pandas
+FutureWarnings in 15.87s.
+
+All pinned V4-B/V4-C cache and manifest SHA-256 identities, both frozen spec
+Git blobs, and all four frozen V3-B reference artifact hashes matched. V4-C
+was executed first with stdout redirected and not inspected; it exited 0.
+V4-B then executed in a separate output directory without inspecting V4-C; it
+also exited 0. Both result sets were opened only after both successful exits.
+
+Control equivalence passed for both families on 144,223 rows with maximum
+score difference 0.0 and maximum metric differences below 8.33e-17.
+
+V4-C ordinal 019 failed the frozen gate: 4/6 nonnegative paired PR folds,
+median PR improvement +0.001470161, median ROC change -0.002178033, median
+Q5-Q1 change -0.003855059, and late PR gate false. V4-B ordinal 016 failed
+with 3/6 nonnegative paired PR folds and median PR improvement -0.000917642.
+V4-B ordinal 017 failed with 4/6 nonnegative paired PR folds, despite median
+PR improvement +0.003591194 and median Q5-Q1 change +0.021899858; its late
+PR gate was false. Survivors are empty; no B1+B2 or B/C integration was
+created.
+
+The permanent result checkpoint records every per-fold metric, paired delta,
+gate detail, top-decile overlap, runtime, output hash, and exact local output
+path:
+
+docs/checkpoints/2026-08-10_RANKING_V4_B_C_FIRST_PASS_OUTCOME_RESULT.md
+
+The cumulative historical evaluated-candidate count is now 17 after viewing
+ordinals 015..019. No rescue, additional family, session 1225+, post-
+2026-07-31 fresh-forward outcome, FORWARD_OUTCOME_ACCESS_STARTED, calibration,
+Stage 6, IDX-VAL-002, execution/PnL, paper/live, or main merge was started.
