@@ -29,7 +29,9 @@ and
 
 ## Findings
 
-- full IDX Trade pytest: `264 passed, 0 failed, 3 warnings`;
+- V3-C run-tree pytest: `264 passed, 0 failed, 3 warnings`;
+- final merged-tree pytest after preserving concurrent remote V3-D work:
+  `277 passed, 0 failed, 3 warnings`;
 - all seven frozen input artifacts matched their required SHA-256 values;
 - V3-C cache status: `RANKING_V3_C_REGIME_DISCOVERY_CACHE_FROZEN`;
 - cache: `216,472` rows / `674` tickers / sessions `20..984`;
@@ -104,7 +106,8 @@ rescue this hypothesis or infer independent validation from these historical
 folds. Stop for ChatGPT review before any new V3 specification or sealed-fold
 access.
 
-validation_run: `264 passed, 0 failed, 3 warnings`; prepare coverage PASS;
+validation_run: V3-C run-tree `264 passed, 0 failed, 3 warnings`; final merged
+tree `277 passed, 0 failed, 3 warnings`; prepare coverage PASS;
 control-equivalence PASS; absolute sanity PASS; overall paired FAIL; regime
 robustness FAIL
 recommended_next_action: independent ChatGPT review of the checkpoint and

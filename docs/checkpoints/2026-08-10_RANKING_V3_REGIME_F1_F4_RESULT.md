@@ -41,6 +41,12 @@ Wrapper wall duration: **24.85 s**. The three warnings are existing pandas
 `FutureWarning` instances in curated-identity and tradability-anchor
 concatenation tests.
 
+After merging the concurrent remote V3-D pre-outcome work without running it,
+the final tree was revalidated with the same explicit command: **`277 passed,
+0 failed, 3 warnings in 18.52 s`**, wrapper wall duration **20.63 s**. This
+post-merge suite included the additional V3-D guard tests only; no V3-D cache or
+outcome command was run.
+
 Before cache work, a NumPy 2.4/pandas mixed-row dtype compatibility failure was
 found in two V3-C causal-threshold tests. The minimal engineering correction
 converts the selected threshold rows to `float` before `np.allclose`; no
