@@ -1,10 +1,10 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D AMENDED PRE-OUTCOME/NOT RUN; 7 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E IMPLEMENTED/PREREGISTERED/NOT RUN; 7 CANDIDATES EVALUATED**
 
 All results through V2F1-V2F4 are historical-development evidence only. The cumulative evaluated counter is `7`.
 
-Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` remain unviewed and are not counted. Pre-score engineering/data/provenance blocks do not increment the denominator.
+Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-D but remain unviewed because the PIT sector data gate blocked before model outcomes. Ordinals `010`-`011` are now frozen/implemented for V3-E but also remain unviewed. Pre-score engineering/data/provenance blocks do not increment the denominator.
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
@@ -15,8 +15,10 @@ Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` remain unviewed and 
 | 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | V2 25 + fixed 8-feature causal geometry bundle | `COMPLETE` | `true` | `PROMOTE_FOR_NEXT_RESEARCH_STEP` |
 | 006 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-CONTROL-006` | exact V2 control | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
 | 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | frozen NORMAL/STRESS two-expert architecture | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
-| 008 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CONTROL-008` | exact V2 control | `AMENDED_IMPLEMENTED_NOT_RUN` | `false` | `BLOCKED_PENDING_PIT_SECTOR_GATE` |
-| 009 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CANDIDATE-009` | V2 25 + fixed 6-feature PIT sector-relative bundle | `AMENDED_IMPLEMENTED_NOT_RUN` | `false` | `BLOCKED_PENDING_PIT_SECTOR_GATE` |
+| 008 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CONTROL-008` | exact V2 control | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
+| 009 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CANDIDATE-009` | V2 25 + fixed 6-feature PIT sector-relative bundle | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
+| 010 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-CONTROL-010` | exact V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 011 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-LAMBDAMART-011` | exact V2 25 features + frozen XGBoost LambdaMART same-date ranker | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
 
 ## V3-A Recency — executed identity
 
@@ -75,82 +77,95 @@ Controlling spec: `docs/RANKING_V3_REGIME_SPEC_V1.md`.
 
 The two-expert architecture is closed. No threshold/expert/blending/rescaling rescue is authorized.
 
-## V3-D Sector-Relative — final pre-outcome identity
+## V3-D Sector-Relative — blocked without outcome access
 
-Base spec:
+Base spec: `docs/RANKING_V3_SECTOR_RELATIVE_SPEC_V1.md`.
 
-`docs/RANKING_V3_SECTOR_RELATIVE_SPEC_V1.md`
+Post-V3-C amendment: `docs/RANKING_V3_SECTOR_RELATIVE_POST_V3C_AMENDMENT_V1.md`.
 
-Initial review addendum:
+Candidate ordinal 009 remains exact V2 25 features plus six PIT sector-relative features in one global HGB. The exact V3-C regime state is evaluation metadata only for the frozen robustness amendment.
 
-`docs/RANKING_V3_SECTOR_RELATIVE_SPEC_REVIEW_ADDENDUM_V1.md`
+Implementation lineage before block:
 
-The one allowed post-V3-C amendment has now been exercised and frozen:
-
-`docs/RANKING_V3_SECTOR_RELATIVE_POST_V3C_AMENDMENT_V1.md`
-
-Review checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_REGIME_REVIEW_PASS_V3D_AMENDED.md`
-
-### Candidate definition — unchanged
-
-Ordinal 009 remains exact V2 25 features plus:
-
-1. `sector_rank_close_return_5`
-2. `sector_rank_close_return_20`
-3. `sector_rank_close_position_20`
-4. `sector_relative_close_return_5`
-5. `sector_relative_close_return_20`
-6. `sector_relative_close_position_20`
-
-One global HGB only. No Structure-Lite or regime state is a model feature. No regime expert/router is used.
-
-### Implementation lineage
-
-- `670a4cbc7c9fdc98eb3d82dfc336a7b23624d8a0` — provisional V3-D spec baseline;
+- `670a4cbc7c9fdc98eb3d82dfc336a7b23624d8a0` — pre-outcome V3-D spec baseline;
 - `ae8dcfe91e4656d4f8536d0fcf1f7fd7575ecb92` — PIT sector validator/assignment/features;
 - `ca658e13d0d3ad4333820cab7ba9d2ef766c8ffc` — cache/base runner/sector diagnostics;
 - `28981a25a427f67db0fc940415d0d7c910a9ff84` — focused PIT/run guards;
 - `600c439c42e2a4452859ea7354e41d246db1e42e` — pre-outcome PIT/schema/dtype hardening;
-- `055cca747d5ee0ecc3209b8b0efb36dcf25ddd5d` — pre-outcome review addendum;
 - `775c447e4e685420f7d5f62ac39483e702126efe` — post-V3-C amendment frozen;
 - `1f5ec6ec24b53e5e66ceb20b8ecbf50123f5cf3e` — amended regime robustness wrapper;
-- `59a9b47e9c47c2baa7c83c97e147c5e2da7dde05` — amendment guard tests;
-- `4fd37155e617093cb557cb0a53a983983f28b93a` — V3-C review / V3-D amendment checkpoint.
+- `59a9b47e9c47c2baa7c83c97e147c5e2da7dde05` — amendment guard tests.
 
-### Post-V3-C evaluation guard
+PIT data gate checkpoint:
 
-The exact frozen V3-C regime cache is pinned by SHA:
+`docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED.md`
 
-`1fd9350f949fc111968934839a65c79ac30ad1b10a5c1d396560ea370d4ce5a8`
+- full amended-tree pytest `290 passed, 0 failed, 3 warnings`;
+- result `BLOCKED_PIT_SECTOR_HISTORY`;
+- no sector cache/manifest/outcome metric was created;
+- current-sector backfill and guessed report-month dates are prohibited.
 
-It is evaluation metadata only.
+Ordinals 008/009 remain `result_viewed=false`. A future data-source unblock may resume this frozen lane without treating the block as a model failure.
 
-Final V3-D promotion requires original data/control/absolute/paired gates plus:
+## V3-E True Ranking — frozen preregistration / implemented
 
-- NORMAL median paired PR improvement >= `-0.005`;
-- STRESS median paired PR improvement >= `-0.005`;
-- NORMAL/STRESS median ROC change each >= `-0.005`;
-- NORMAL/STRESS median Q5-Q1 change each >= `-0.005`;
-- worst fold/state PR improvement >= `-0.015`.
+Controlling spec:
 
-Top-decile lift remains diagnostic only.
+`docs/RANKING_V3_TRUE_RANKING_SPEC_V1.md`
 
-### Current blocker
+- SHA-256 `79534d29d414a08b60cca85e68e8781849aabefa1a103d9f43ab0ead47308c55`;
+- Git blob `20df2927b6663ea16955919760db9c1429cff3a5`;
+- spec commit `7e9d9440798d4ece254069a570a7c6e8916df127`.
 
-A real point-in-time historical sector artifact has not yet passed provenance and coverage gates.
+Review addendum:
 
-Required fields: `ticker`, `sector_code`, `effective_from`, `effective_to_exclusive`, `available_at`, `source_id`, `source_sha256`.
+`docs/RANKING_V3_TRUE_RANKING_SPEC_REVIEW_ADDENDUM_V1.md`
 
-Current-sector backfill is prohibited. Every source hash must be independently evidenced against immutable source bytes or a trusted immutable archive identity.
+- SHA-256 `6652e1f934f58630619a9cab5afb0bdfaa3317894977bad8bfa9ca5ffe980812`;
+- Git blob `01c4dca87ff52fca678c948e4ee23d3e3c82dbcd`;
+- review commit `04ad6e1b20359d96295273c34279c305b28dcf35`.
 
-No `V3_D_OUTCOME_RUN_AUTHORIZED` JSON exists. Ordinals 008/009 remain unviewed.
+Candidate definition:
+
+- ordinal 010 exact V2 control;
+- ordinal 011 one XGBoost LambdaMART candidate;
+- exact dependency `xgboost==3.2.1`;
+- `XGBRanker`, objective `rank:ndcg`;
+- query = exact signal date;
+- exact V2 25 features only;
+- binary H10 target unchanged;
+- training-only V2-style median imputer + missing indicators;
+- 200 estimators, learning rate .05, max depth 5;
+- min-child 1, lambda 1, alpha/gamma 0;
+- full row/column sample, CPU hist;
+- seed 42, n_jobs 1;
+- mean pair method, 8 pairs/sample, LambdaRank normalization enabled;
+- no early stopping or score normalization.
+
+Implementation lineage:
+
+- `52a267b637eb9277a9f81617e396442d465f1910` — dependency pin;
+- `b1eff77503e91953fe43fac624153eeefc04c8b7` — `ranking_v3_true_ranking.py` runner;
+- `cc1643d61bae0edb34deb6e7d8b583615dfea2f2` — focused tests;
+- `eb4b7ac8f2b85f8ad580967be657a44f914a428b` — deterministic diagnostic fixture correction;
+- `7b4e10ccefcf158adb0d03ac2da2e5ecb431489e` — implementation/run authorization checkpoint;
+- `aaaea6ccdd5064de601a8b988a01d11e85358f88` — local-run handoff.
+
+The runner physically materializes only prepared rows through session 984, runs exact V2 control first, requires exact control equivalence, then permits ordinal 011. Existing V3 absolute sanity + paired promotion gates remain controlling.
+
+No V3-E outcome has been viewed. The implementation environment available to ChatGPT had XGBoost 3.1.3, so no local full-pytest/outcome-run claim is made. The local operator must establish exact XGBoost 3.2.1 and full pytest PASS first.
+
+Allowed final result only:
+
+- `V3_E_TRUE_RANKING_PROMOTE_LAMBDAMART`; or
+- `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`.
+
+If both candidates are executed/viewed, the cumulative evaluated V3 denominator becomes 9. No rescue/second ranker is authorized.
 
 ## Required row schema after future execution
 
 Every executed row must record:
 
-`hypothesis_id`, `parent_hypothesis`, `candidate_id`, `candidate_ordinal`, `spec/amendment identity`, `cache_sha256`, `cache_manifest_sha256`, `fold_set`, `feature_order_hash`, `model_identity`, `result_status`, `result_viewed`, `metrics_artifact`, `artifact_sha256`, `verdict`, `cumulative_candidate_count`, `code_commit`, `environment`, and `notes`.
+`hypothesis_id`, `parent_hypothesis`, `candidate_id`, `candidate_ordinal`, `spec/review identity`, `cache/prepared identity`, `fold_set`, `feature_order_hash`, `model_identity`, `result_status`, `result_viewed`, `metrics_artifact`, `artifact_sha256`, `verdict`, `cumulative_candidate_count`, `code_commit`, `environment`, and `notes`.
 
-The counter increments only when a candidate is actually run. A killed/viewed candidate remains in the denominator permanently; a pre-score data/provenance block does not.
+A killed/viewed candidate remains in the denominator permanently. A pre-score data/provenance/dependency block does not fabricate an evaluated result.
