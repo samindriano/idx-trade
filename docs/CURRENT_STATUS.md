@@ -17,11 +17,11 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-B Structure-Lite: **COMPLETE — PROMOTED / ONLY CURRENT V3 SURVIVOR**;
 - V3-C Regime-Specialization: **COMPLETE — KILLED**;
 - V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
-- V3-E True Ranking: **DEPENDENCY ERRATUM APPLIED PRE-OUTCOME; LOCAL F1-F4 RUN REAUTHORIZED**;
+- V3-E True Ranking: **COMPLETE — KILLED / KEEP V2 CONTROL**;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 candidate count remains `7`. V3-D ordinals 008/009 and V3-E ordinals 010/011 remain `result_viewed=false`.
+Cumulative evaluated V3 candidate count is now `9`. V3-D ordinals 008/009 remain `result_viewed=false`; V3-E ordinals 010/011 are complete and viewed.
 
 ## Frozen data/model identities
 
@@ -100,15 +100,19 @@ Controlling checkpoint:
 
 A future immutable ticker-level PIT IDX-IC history with defensible publication/effective dates may unblock this frozen lane. Do not stall the V3 ladder on it.
 
-## V3-E True Ranking — dependency erratum resolved pre-outcome
+## V3-E True Ranking — executed / killed, V2 control retained
 
-The first V3-E local attempt stopped correctly before outcome access because the original spec pinned nonexistent public package release `xgboost==3.2.1`.
+The first local attempt stopped correctly before outcome access because the original spec pinned nonexistent public package release `xgboost==3.2.1`. The formal erratum corrected only that dependency to `xgboost==3.2.0`; the reauthorized run then completed on F1-F4.
 
-Blocked checkpoint:
+Result checkpoint:
 
-`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_BLOCKED_DEPENDENCY.md`
+`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_RESULT.md`
 
-The blocked attempt did **not** materialize prepared/reference artifacts for the run, did not execute control or LambdaMART, and did not increment the evaluated denominator.
+Result handoff:
+
+`coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-RESULT.md`
+
+The exact V2 control passed equivalence on 84,732 rows with max score and metric differences `0.0`. LambdaMART passed the frozen absolute sanity gate but failed the frozen paired promotion gate, so the final decision is `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`. Both ordinals 010/011 are permanently viewed and the cumulative denominator is now `9`.
 
 ### Controlling original research contract
 
@@ -173,6 +177,15 @@ Allowed final V3-E decisions only:
 
 No post-result rescue/second ranker is authorized.
 
+### V3-E executed result
+
+- environment: Python `3.13.5`, NumPy `2.4.2`, pandas `2.3.3`, PyArrow `23.0.1`, scikit-learn `1.8.0`, XGBoost `3.2.0`;
+- discovery: 169,464 combined control/candidate prediction rows, 474 tickers, 400 signal dates, session indices `525..984`, dates `2023-06-23..2025-06-05`;
+- control equivalence: PASS, 84,732 rows, max score diff `0.0`, every metric diff `0.0`;
+- LambdaMART absolute sanity: PASS; paired promotion: FAIL;
+- final: `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`;
+- V2F5/V2F6 and reserved post-2026-07-31 forward outcomes were not accessed; `FORWARD_OUTCOME_ACCESS_STARTED` was not written.
+
 ## Mandatory first reads
 
 1. this file;
@@ -187,16 +200,7 @@ No post-result rescue/second ranker is authorized.
 
 ## Immediate next action
 
-Execute only the corrected V3-E local-run handoff:
-
-1. sync latest branch;
-2. install/verify exact `xgboost==3.2.0`;
-3. full repository pytest;
-4. verify original spec/review + erratum + frozen V2 artifact identities;
-5. run exact control F1-F4 and prove equivalence;
-6. only after PASS run frozen LambdaMART F1-F4;
-7. document/push result;
-8. STOP for ChatGPT review.
+Stop for ChatGPT review of the completed V3-E result. Keep V2 HGB_XS_MARKET as the active ranking control. Do not integrate LambdaMART, reopen V3-A/B/C, unblock V3-D, or start calibration/Stage 6/IDX-VAL-002/integration automatically.
 
 Do not start integration automatically even if V3-E promotes.
 

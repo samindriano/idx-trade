@@ -1,10 +1,10 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E DEPENDENCY ERRATUM APPLIED / IMPLEMENTED / NOT RUN; 7 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E COMPLETE/KILLED; 9 CANDIDATES EVALUATED**
 
-All F1-F4 results are historical-development evidence only. The cumulative evaluated counter is `7`.
+All F1-F4 results are historical-development evidence only. The cumulative evaluated counter is `9`.
 
-Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-D but remain unviewed because the PIT sector data gate blocked before model outcomes. Ordinals `010`-`011` are frozen/implemented for V3-E and remain unviewed. Pre-score engineering/data/provenance/dependency blocks do not increment the denominator.
+Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-D but remain unviewed because the PIT sector data gate blocked before model outcomes. Ordinals `010`-`011` were executed and viewed on F1-F4. Pre-score engineering/data/provenance/dependency blocks do not increment the denominator.
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
@@ -17,8 +17,8 @@ Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-
 | 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | frozen NORMAL/STRESS two-expert architecture | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 | 008 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CONTROL-008` | exact V2 control | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
 | 009 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CANDIDATE-009` | V2 25 + fixed 6-feature PIT sector-relative bundle | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
-| 010 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-CONTROL-010` | exact V2 HGB control on F1-F4 | `ERRATUM_APPLIED_IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
-| 011 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-LAMBDAMART-011` | exact V2 25 + frozen XGBoost LambdaMART same-date ranker | `ERRATUM_APPLIED_IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 010 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-CONTROL-010` | exact V2 HGB control on F1-F4 | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
+| 011 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-LAMBDAMART-011` | exact V2 25 + frozen XGBoost LambdaMART same-date ranker | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 
 ## V3-A Recency — executed
 
@@ -112,12 +112,25 @@ Corrected implementation lineage:
 - `b68376e38ea3d8b4edbd5133547dbe0f2f381fb5` — erratum review/run reauthorization checkpoint;
 - `daf425d407a030884e381dc195d20fc18a806c86` — corrected local-run handoff.
 
-No V3-E outcome has yet been viewed. Run exact control first, require exact equivalence, then ordinal 011. Allowed final decisions remain only:
+Executed result:
+
+- final code commit used: `d6d727758a5d90c673e0e7c3845cb282a2fc221b`;
+- environment: Python `3.13.5`, NumPy `2.4.2`, pandas `2.3.3`, PyArrow `23.0.1`, scikit-learn `1.8.0`, XGBoost `3.2.0`;
+- discovery output: 169,464 combined control/candidate rows, 474 tickers, 400 dates, session indices `525..984`, dates `2023-06-23..2025-06-05`;
+- ordinal 010 control equivalence: PASS on 84,732 rows; max score diff `0.0`; all metric diffs `0.0`;
+- ordinal 011 LambdaMART: absolute sanity PASS; paired promotion FAIL;
+- paired PR-delta improvement: median `+0.0049421451`, q25 `-0.0034997915`, worst `-0.0253353754`, positive/non-below folds `3/4`;
+- paired robustness: median ROC change `+0.0036990136`; median Q5-Q1 change `-0.0072112874`, non-below folds `1/4`; median top-decile lift change `-0.0025193041`;
+- final decision: `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`;
+- ordinals 010/011 are now result viewed `true`; cumulative evaluated count is `9`;
+- no rescue, second ranker, integration, or later stage was started.
+
+Allowed final decisions were:
 
 - `V3_E_TRUE_RANKING_PROMOTE_LAMBDAMART`; or
 - `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`.
 
-If ordinals 010/011 are executed/viewed, cumulative evaluated count becomes `9`. No rescue/second ranker is authorized.
+No rescue/second ranker is authorized. V2 HGB_XS_MARKET remains the active ranking control.
 
 ## Required future execution record
 
