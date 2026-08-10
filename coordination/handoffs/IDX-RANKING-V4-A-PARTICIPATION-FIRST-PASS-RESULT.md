@@ -43,8 +43,8 @@ the result checkpoint.
 
 ## Input and output identities
 
-Input cache SHA: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`  
-Input manifest SHA: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`  
+Input cache SHA: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`
+Input manifest SHA: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`
 Spec Git blob: `e32fa69596291f418ae797613da219bd0d3cf69c`
 
 Main output hashes:
