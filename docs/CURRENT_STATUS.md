@@ -13,15 +13,16 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V2 final refit + outcome-blind forward runtime remain frozen;
 - V2 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
-- V3-A Recency: **COMPLETE — KILLED / NO PROMOTION**;
-- V3-B Structure-Lite: **COMPLETE — PROMOTED / ONLY CURRENT V3 SURVIVOR**;
+- V3-A Recency: **COMPLETE — KILLED**;
+- V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED / ONLY SURVIVING TIER-1 COMPONENT**;
 - V3-C Regime-Specialization: **COMPLETE — KILLED**;
 - V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
-- V3-E True Ranking: **COMPLETE — KILLED / KEEP V2 CONTROL**;
-- V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
+- V3-E True Ranking: **COMPLETE — KILLED**;
+- optional V3 integration: **SKIPPED — only one Tier-1 component survives**;
+- final V3 late-development confirmation: **FROZEN + IMPLEMENTED + LOCAL RUN AUTHORIZED; V2F5/V2F6 NOT YET ACCESSED**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 candidate count is now `9`. V3-D ordinals 008/009 remain `result_viewed=false`; V3-E ordinals 010/011 are complete and viewed.
+Cumulative evaluated V3 architecture-candidate count is `9`. Final late-development confirmation reuses existing V3-B ordinals 004/005 and does not create a new candidate ordinal. V3-D ordinals 008/009 remain unviewed.
 
 ## Frozen data/model identities
 
@@ -49,13 +50,13 @@ Final V2 refit:
 - manifest SHA-256 `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
 - score is ranking-only, not calibrated probability.
 
-## V3 results so far
+## Tier-1 V3 result summary
 
-### V3-A Recency — closed
+### V3-A Recency — killed
 
-Exact control equivalence PASS on 84,732 F1-F4 rows. H252 and H504 both failed paired promotion. Result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`. No recency rescue is allowed.
+Exact control equivalence PASS on 84,732 F1-F4 rows. Both H252/H504 failed paired promotion. No rescue is allowed.
 
-### V3-B Structure-Lite — promoted survivor
+### V3-B Structure-Lite — survivor
 
 Exact V2 25 features + frozen eight causal geometry features.
 
@@ -69,151 +70,132 @@ Exact V2 25 features + frozen eight causal geometry features.
 - median top-decile lift change `-0.0036228765` retained as diagnostic warning;
 - result `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`.
 
-V3-B remains the only surviving V3 component so far. Its viewed definition is closed.
+Its viewed definition is closed.
 
-### V3-C Regime-Specialization — closed
+### V3-C Regime-Specialization — killed
 
-- fragmentation gate PASS all F1-F4;
-- control equivalence PASS on 84,732 rows, max diff `0.0`;
-- absolute sanity PASS;
-- overall paired promotion FAIL;
-- regime-specific gate FAIL;
-- overall median PR improvement `-0.0123171892`;
-- NORMAL median `-0.0014712226`;
-- STRESS median `-0.0289646749`;
-- result `V3_C_REGIME_KILL_KEEP_V2_CONTROL`.
+Two-expert NORMAL/STRESS architecture passed absolute sanity but failed overall paired and regime-specific gates. Overall median PR improvement `-0.0123171892`; STRESS median `-0.0289646749`. No rescue/new expert/blending is allowed.
 
-No rescue/new expert/threshold/blending/rescaling is allowed.
+### V3-D Sector-Relative — blocked without outcome access
 
-### V3-D Sector-Relative — parked blocked, outcomes untouched
+`BLOCKED_PIT_SECTOR_HISTORY`. No cache/model outcome was created. Current-sector backfill and guessed report-month dates are prohibited. A future defensible immutable PIT IDX-IC archive may unblock the frozen lane, but it does not stall current V3 finalization.
 
-Latest data-gate result: `BLOCKED_PIT_SECTOR_HISTORY`.
+### V3-E True Ranking — killed
 
-- blocked-run pytest `290 passed, 0 failed, 3 warnings`;
-- no V3-D cache/manifest/outcome metric was created;
-- ordinals 008/009 remain unviewed;
-- current-sector backfill and guessed report-month dates remain prohibited.
-
-Controlling checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED.md`
-
-A future immutable ticker-level PIT IDX-IC history with defensible publication/effective dates may unblock this frozen lane. Do not stall the V3 ladder on it.
-
-## V3-E True Ranking — executed / killed, V2 control retained
-
-The first local attempt stopped correctly before outcome access because the original spec pinned nonexistent public package release `xgboost==3.2.1`. The formal erratum corrected only that dependency to `xgboost==3.2.0`; the reauthorized run then completed on F1-F4.
-
-Result checkpoint:
+Authoritative result:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_RESULT.md`
 
-Result handoff:
+- final pytest `307 passed, 0 failed, 3 warnings`;
+- XGBoost `3.2.0` after the pre-outcome dependency erratum;
+- exact control equivalence PASS on 84,732 rows, all max diffs `0.0`;
+- LambdaMART absolute sanity PASS;
+- paired promotion FAIL;
+- median paired PR improvement `+0.0049421451` but worst fold `-0.0253353754`;
+- median Q5-Q1 change `-0.0072112874`, non-below control only `1/4` folds;
+- final `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`;
+- no rescue/second ranker is allowed.
 
-`coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-RESULT.md`
+## Final V3 historical-development candidate
 
-The exact V2 control passed equivalence on 84,732 rows with max score and metric differences `0.0`. LambdaMART passed the frozen absolute sanity gate but failed the frozen paired promotion gate, so the final decision is `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`. Both ordinals 010/011 are permanently viewed and the cumulative denominator is now `9`.
+There is only one surviving component, so no integration experiment is justified.
 
-### Controlling original research contract
+Candidate for late-development confirmation remains exact existing V3-B ordinal 005:
 
-Spec:
+`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`
 
-`docs/RANKING_V3_TRUE_RANKING_SPEC_V1.md`
+No new feature/model/ordinal is introduced.
 
-- SHA-256 `79534d29d414a08b60cca85e68e8781849aabefa1a103d9f43ab0ead47308c55`;
-- Git blob `20df2927b6663ea16955919760db9c1429cff3a5`.
+### One-shot V2F5/V2F6 confirmation contract
+
+Controlling spec:
+
+`docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_SPEC_V1.md`
+
+- SHA-256 `c1acbe99656b0a0a0adabc7840ad779ee0553b59b7441a24607a53322d1b369f`;
+- Git blob `08eba22b5f36efb160cc01abbfb5cb82d079f36e`.
 
 Review addendum:
 
-`docs/RANKING_V3_TRUE_RANKING_SPEC_REVIEW_ADDENDUM_V1.md`
+`docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_REVIEW_ADDENDUM_V1.md`
 
-- SHA-256 `6652e1f934f58630619a9cab5afb0bdfaa3317894977bad8bfa9ca5ffe980812`;
-- Git blob `01c4dca87ff52fca678c948e4ee23d3e3c82dbcd`.
+- SHA-256 `fa6c856f6cc45714b8ba5b4817a06fab2f9141fe66be7982c0c2a30ee1fd799e`;
+- Git blob `8ae7147af61c9aeaf9993576cac198c8ab8c9387`.
 
-### One pre-outcome dependency erratum
+Implementation checkpoint:
 
-`docs/RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_V1.md`
+`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_IMPLEMENTED_RUN_AUTHORIZED.md`
 
-- SHA-256 `bd029458f7a7cd14424af9b748cb7522f1d23b0fe8eaf20ad8f6b44d48894bea`;
-- Git blob `327e053c2a1b4270acc4e7de313bba97680eff8b`;
-- corrected exact dependency: **`xgboost==3.2.0`**.
+Run handoff:
 
-This erratum changes only the impossible dependency identity. Research semantics remain unchanged:
+`coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md`
 
-- ordinal 010 exact V2 HGB control;
-- ordinal 011 one `XGBRanker` LambdaMART candidate;
-- `objective="rank:ndcg"`;
-- exact signal-date query/qid;
-- exact V2 25 features;
-- unchanged binary H10 target;
-- training-only median imputer + missing indicators;
-- 200 estimators, LR .05, depth 5;
-- min-child 1, lambda 1, alpha/gamma 0;
-- full row/column sampling, CPU hist;
-- seed 42, `n_jobs=1`;
-- mean pair method, 8 pairs/sample, LambdaRank normalization enabled;
-- no early stopping, score normalization, tuning, graded gains, or second ranker.
+Implementation:
 
-Corrected implementation:
+`src/idx_trade/ranking_v3_final_late_dev.py`
 
-- `src/idx_trade/ranking_v3_true_ranking_erratum.py` wraps the original frozen runner and records the erratum identity;
-- `pyproject.toml` pins `xgboost==3.2.0`;
-- `tests/test_ranking_v3_true_ranking.py` asserts the corrected dependency and unchanged ranker contract.
+Focused tests:
 
-Run-reauthorization checkpoint:
+`tests/test_ranking_v3_final_late_dev.py`
 
-`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_RUN_REAUTHORIZED.md`
+Late folds are exactly:
 
-Controlling local-run handoff:
+- V2F5 train 1..984 / purge 985..1004 / validation 1005..1104;
+- V2F6 train 1..1104 / purge 1105..1124 / validation 1125..1224.
 
-`coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-ERRATUM.md`
+The two folds must be executed atomically after preflight/cache prepare. Do not inspect F5 before deciding whether to run F6.
 
-The run must use `python -m idx_trade.ranking_v3_true_ranking_erratum`, execute exact control first, prove exact control equivalence, then and only then score ordinal 011. Existing absolute sanity + paired promotion gates are unchanged.
+Frozen PASS requires:
 
-Allowed final V3-E decisions only:
+- candidate PR delta >0, ROC>0.5, Q5-Q1>0 on both F5/F6;
+- paired PR improvement >=0 on both;
+- median paired PR improvement >=+0.001;
+- median ROC change >=-0.005;
+- paired Q5-Q1 change >=0 on both.
 
-- `V3_E_TRUE_RANKING_PROMOTE_LAMBDAMART`;
-- `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`.
+Top-decile lift remains diagnostic only.
 
-No post-result rescue/second ranker is authorized.
+Allowed final decisions only:
 
-### V3-E executed result
+- `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`;
+- `V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2`.
 
-- environment: Python `3.13.5`, NumPy `2.4.2`, pandas `2.3.3`, PyArrow `23.0.1`, scikit-learn `1.8.0`, XGBoost `3.2.0`;
-- discovery: 169,464 combined control/candidate prediction rows, 474 tickers, 400 signal dates, session indices `525..984`, dates `2023-06-23..2025-06-05`;
-- control equivalence: PASS, 84,732 rows, max score diff `0.0`, every metric diff `0.0`;
-- LambdaMART absolute sanity: PASS; paired promotion: FAIL;
-- final: `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`;
-- V2F5/V2F6 and reserved post-2026-07-31 forward outcomes were not accessed; `FORWARD_OUTCOME_ACCESS_STARTED` was not written.
+No MIXED/rescue/second late-development attempt.
 
 ## Mandatory first reads
 
 1. this file;
-2. `docs/RANKING_V3_TRUE_RANKING_SPEC_V1.md`;
-3. `docs/RANKING_V3_TRUE_RANKING_SPEC_REVIEW_ADDENDUM_V1.md`;
-4. `docs/RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_V1.md`;
-5. `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_RUN_REAUTHORIZED.md`;
-6. `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-ERRATUM.md`;
+2. `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_RESULT.md`;
+3. `docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_SPEC_V1.md`;
+4. `docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_REVIEW_ADDENDUM_V1.md`;
+5. `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_IMPLEMENTED_RUN_AUTHORIZED.md`;
+6. `coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md`;
 7. `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`;
-8. `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
-9. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`.
+8. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`.
 
 ## Immediate next action
 
-Stop for ChatGPT review of the completed V3-E result. Keep V2 HGB_XS_MARKET as the active ranking control. Do not integrate LambdaMART, reopen V3-A/B/C, unblock V3-D, or start calibration/Stage 6/IDX-VAL-002/integration automatically.
+Execute only `coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md` locally:
 
-Do not start integration automatically even if V3-E promotes.
+1. sync branch and run full pytest;
+2. verify all frozen source/spec identities;
+3. build outcome-independent Structure-Lite cache through session 1224;
+4. freeze/report cache + manifest hashes and coverage;
+5. execute exact V2 control on F5/F6 and prove equivalence;
+6. only after equivalence PASS execute exact frozen Structure-Lite on both F5/F6 in one run;
+7. apply frozen gates, document/push result;
+8. STOP for ChatGPT review.
 
 ## Hard boundary
 
 Do not:
 
-- alter/reopen viewed V3-A/B/C hypotheses;
+- alter/reopen V3-A/B/C/E definitions;
+- integrate killed components;
 - bypass V3-D PIT block;
-- alter V3-E research semantics after outcome access;
-- run another XGBoost version/ranking objective/library;
-- include Structure-Lite in standalone V3-E discovery;
-- load/score/summarize V2F5/V2F6;
-- inspect reserved post-2026-07-31 V2 forward outcomes;
+- create a new candidate ordinal for F5/F6 confirmation;
+- run F5/F6 more than once;
+- materialize or score session 1225+;
+- inspect reserved post-2026-07-31 V2 fresh-forward outcomes;
 - write `FORWARD_OUTCOME_ACCESS_STARTED`;
-- start integration/calibration/Stage6/IDX-VAL-002/execution/PnL/Kelly/paper/live/main automatically.
+- start calibration/Stage6/IDX-VAL-002/execution/PnL/Kelly/paper/live/main automatically.
