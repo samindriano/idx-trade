@@ -54,39 +54,17 @@ type GenerationSlot = {
 };
 
 const generationSlots: GenerationSlot[] = [
-  {
-    generation: "V2",
-    modelId: "HGB_XS_MARKET",
-    name: "HGB XS + Market",
-    frozen: true,
-    targetSessions: 100,
-  },
-  {
-    generation: "V3",
-    modelId: "FUTURE_V3_CHAMPION",
-    name: "Future champion",
-    frozen: false,
-    targetSessions: null,
-  },
-  {
-    generation: "V4",
-    modelId: "FUTURE_V4_CHAMPION",
-    name: "Future champion",
-    frozen: false,
-    targetSessions: null,
-  },
+  { generation: "V2", modelId: "HGB_XS_MARKET", name: "HGB XS + Market", frozen: true, targetSessions: 100 },
+  { generation: "V3", modelId: "FUTURE_V3_CHAMPION", name: "Future champion", frozen: false, targetSessions: null },
+  { generation: "V4", modelId: "FUTURE_V4_CHAMPION", name: "Future champion", frozen: false, targetSessions: null },
 ];
 
 function Logo() {
-  return (
-    <div className="brandMark" aria-hidden="true">
-      <span /><span /><span /><span />
-    </div>
-  );
+  return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
 }
 
 function shortDate(value: string | null) {
-  if (!value) return "Not synced";
+  if (!value) return "—";
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "short",
@@ -132,12 +110,12 @@ export default function MonitoringPage() {
         setRequestDetail(null);
         setTargetDate((current) => current || payload.status?.next_missing_session || "");
       } else {
-        setRequestError(payload.error ?? "Local monitoring runtime is unavailable.");
+        setRequestError(payload.error ?? "Runtime unavailable");
         setRequestDetail(payload.detail ?? null);
       }
     } catch (error) {
       setConnected(false);
-      setRequestError(error instanceof Error ? error.message : "Monitoring status cannot be read.");
+      setRequestError(error instanceof Error ? error.message : "Runtime unavailable");
     }
   }, []);
 
@@ -150,9 +128,7 @@ export default function MonitoringPage() {
   useEffect(() => {
     if (!status?.next_missing_session) return;
     const selected = status.sessions.find((item) => item.session_date === targetDate);
-    if (!targetDate || selected?.state === "DATA_READY") {
-      setTargetDate(status.next_missing_session);
-    }
+    if (!targetDate || selected?.state === "DATA_READY") setTargetDate(status.next_missing_session);
   }, [status, targetDate]);
 
   async function capture() {
@@ -175,13 +151,11 @@ export default function MonitoringPage() {
       if (!response.ok) {
         throw new Error(payload.detail ? `${payload.error ?? "Capture failed"} — ${payload.detail}` : payload.error ?? "Capture failed");
       }
-      if (payload.reason === "NO_MISSING_SESSION") {
-        setRequestError("All currently known closed IDX sessions are already recorded.");
-      }
+      if (payload.reason === "NO_MISSING_SESSION") setRequestError("All closed sessions are recorded.");
       await new Promise((resolve) => window.setTimeout(resolve, 500));
       await refresh();
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Session capture could not be started.");
+      setRequestError(error instanceof Error ? error.message : "Capture failed");
     } finally {
       setSubmitting(false);
     }
@@ -205,9 +179,7 @@ export default function MonitoringPage() {
     return map;
   }, [status]);
 
-  const latestFailure = [...(status?.sessions ?? [])]
-    .reverse()
-    .find((session) => session.state === "DATA_FAILED");
+  const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
   const anyFetching = status?.sessions.some((session) => session.state === "FETCHING") ?? false;
   const calendarReady = status?.calendar_ready ?? false;
   const captureTarget = targetDate || status?.next_missing_session || null;
@@ -220,7 +192,6 @@ export default function MonitoringPage() {
           <a className="brand" href="/" aria-label="IDX Trade home"><Logo /><span>IDX Trade</span></a>
           <nav className="primaryNav" aria-label="Primary navigation">
             <a href="/#overview">Overview</a>
-            <a href="/#models">Models</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
           </nav>
           <div className="researchPill"><span className="liveDot" /> Research only</div>
@@ -229,11 +200,7 @@ export default function MonitoringPage() {
 
       <div className="page monitoringPage">
         <section className="monitorHero">
-          <div>
-            <p className="eyebrow">FORWARD MONITORING</p>
-            <h1>Capture once. Run models independently.</h1>
-            <p>Ambil satu snapshot EOD yang immutable. Session yang sudah terekam tidak diambil ulang; model champion memakai snapshot yang sama dan punya progress sendiri.</p>
-          </div>
+          <div><p className="eyebrow">V2 CHAMPION</p><h1>Forward Monitoring</h1></div>
           <div className="monitorHeroBadges">
             <span className="lockBadge"><span className="lockDot" /> Outcomes locked</span>
             <span className={`runtimeBadge ${connected ? "online" : "offline"}`}><i /> {connected ? "Runtime connected" : "Runtime offline"}</span>
@@ -241,38 +208,16 @@ export default function MonitoringPage() {
         </section>
 
         <section className="monitorSummaryGrid">
-          <article className="summaryBlock prominent">
-            <span>V2 forward progress</span>
-            <div><strong>{v2DoneDates.size}</strong><em>/ 100 sessions</em></div>
-            <small>Naik hanya setelah output V2 DONE + artifact verified.</small>
-          </article>
-          <article className="summaryBlock">
-            <span>Data snapshots ready</span>
-            <strong>{status?.data_ready_sessions ?? 0}</strong>
-            <small>Canonical session snapshots</small>
-          </article>
-          <article className="summaryBlock">
-            <span>Next missing session</span>
-            <strong className="summaryTextValue">{shortDate(status?.next_missing_session ?? null)}</strong>
-            <small>Earliest missing eligible IDX session</small>
-          </article>
-          <article className="summaryBlock">
-            <span>Outcome access</span>
-            <strong className="summaryTextValue">LOCKED</strong>
-            <small>H10 verdict tetap tidak dibaca</small>
-          </article>
+          <article className="summaryBlock prominent"><span>V2 progress</span><div><strong>{v2DoneDates.size}</strong><em>/ 100</em></div></article>
+          <article className="summaryBlock"><span>Snapshots</span><strong>{status?.data_ready_sessions ?? 0}</strong></article>
+          <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{shortDate(status?.next_missing_session ?? null)}</strong></article>
+          <article className="summaryBlock"><span>Outcomes</span><strong className="summaryTextValue">LOCKED</strong></article>
         </section>
 
         <section className="monitorMainGrid">
           <article className="surface sessionCapturePanel">
-            <div className="sectionHead">
-              <div><span>SESSION DATA</span><h2>Ambil data satu tanggal</h2></div>
-              <span className="statusBadge indigo">SESSION-FIRST</span>
-            </div>
-
+            <div className="sectionHead"><div><span>SESSION DATA</span><h2>Capture</h2></div></div>
             <div className="captureBody">
-              <p className="captureLead">Default selalu tanggal bursa paling awal yang belum terekam. Kalau app mati, registry dibaca ulang dan session DATA_READY otomatis di-skip.</p>
-
               <div className="captureControls">
                 <label>
                   <span>Target session</span>
@@ -285,25 +230,19 @@ export default function MonitoringPage() {
                   />
                 </label>
                 <button className="captureButton" type="button" disabled={!canCapture} onClick={() => void capture()}>
-                  {submitting ? "Menyiapkan..." : anyFetching ? "Sedang mengambil data..." : `Ambil Data ${buttonDate(captureTarget)}`}
+                  {submitting ? "Starting..." : anyFetching ? "Fetching..." : `Ambil Data ${buttonDate(captureTarget)}`}
                 </button>
               </div>
 
-              {!configured && (
-                <div className="runtimeNotice"><i /><div><strong>Runtime path belum dikonfigurasi.</strong><p>Set sekali `IDX_TRADE_RUNTIME_ROOT` dan `IDX_TRADE_PYTHON` di `.env.local`; setelah itu operasi harian tetap satu tombol.</p></div></div>
-              )}
-              {configured && !calendarReady && connected && (
-                <div className="runtimeNotice info"><i /><div><strong>Forward calendar belum disinkronkan.</strong><p>Tombol pertama akan sinkronkan kalender resmi IDX lalu otomatis memilih session tertua yang belum terekam.</p></div></div>
-              )}
-              {requestError && (
-                <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>
-              )}
+              {!configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
+              {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Calendar syncs on first capture</strong></div></div>}
+              {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
               {latestFailure && !requestError && (
-                <div className="runtimeNotice danger"><i /><div><strong>Capture {shortDate(latestFailure.session_date)} belum berhasil.</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "Safe to retry after the blocker is fixed."}</p></div></div>
+                <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "Retry available"}</p></div></div>
               )}
 
               <div className="sessionStripHeader">
-                <div><span>SESSION HISTORY</span><h3>Recorded, missing, dan proses aktif</h3></div>
+                <div><span>SESSION HISTORY</span><h3>Recent sessions</h3></div>
                 <div className="sessionLegend">
                   <span><i className="legendDone" /> Recorded</span>
                   <span><i className="legendMissing" /> Missing</span>
@@ -327,39 +266,30 @@ export default function MonitoringPage() {
                   ))}
                 </div>
               ) : (
-                <div className="emptySessionState">
-                  <div className="emptySessionIcon">↳</div>
-                  <strong>{connected ? "Forward calendar belum punya snapshot" : "Belum terhubung ke canonical registry"}</strong>
-                  <p>{connected ? "Klik Ambil Data sekali; calendar resmi disinkronkan dan earliest missing session dipilih otomatis." : "Begitu runtime tersambung, state durable akan direkonstruksi tanpa reset progress."}</p>
-                </div>
+                <div className="emptySessionState"><strong>No captured sessions</strong></div>
               )}
             </div>
           </article>
 
           <article className="surface v2ContractPanel">
             <div className="sectionHead compact">
-              <div><span>ACTIVE CONTRACT</span><h2>V2 · HGB XS + Market</h2></div>
-              <span className="modelBadge champion">V2 CHAMPION</span>
+              <div><span>ACTIVE MODEL</span><h2>HGB XS + Market</h2></div>
+              <span className="modelBadge champion">V2</span>
             </div>
             <div className="contractProgress">
               <div className="contractNumber"><strong>{v2DoneDates.size}</strong><span>/ 100</span></div>
               <div className="progressTrack indigoTrack"><span style={{ width: `${v2DoneDates.size}%` }} /></div>
             </div>
             <div className="contractFacts">
-              <div><span>Final model</span><strong><i className="okDot" /> Frozen</strong></div>
-              <div><span>Model SHA</span><strong>5c9e3d02…</strong></div>
-              <div><span>Session complete when</span><strong>Model artifact DONE</strong></div>
-              <div><span>Outcome access</span><strong>Locked</strong></div>
+              <div><span>Model</span><strong><i className="okDot" /> Frozen</strong></div>
+              <div><span>SHA</span><strong>5c9e3d02…</strong></div>
+              <div><span>Outcomes</span><strong>Locked</strong></div>
             </div>
-            <p className="contractNote">DATA_READY belum menambah 100-session counter. Counter hanya menghitung unique V2 result yang persisted dan verified.</p>
           </article>
         </section>
 
         <section className="surface modelRunsPanel">
-          <div className="sectionHead">
-            <div><span>CHAMPION RUNS</span><h2>Independent model progress</h2></div>
-            <span className="tableHint">No global progress bar</span>
-          </div>
+          <div className="sectionHead"><div><span>CHAMPION RUNS</span><h2>Model progress</h2></div></div>
           <div className="modelRunList">
             {generationSlots.map((slot) => {
               const run = latestRuns.get(slot.modelId);
@@ -369,27 +299,20 @@ export default function MonitoringPage() {
                 <article className={`modelRunRow ${slot.frozen ? "" : "futureRun"}`} key={slot.modelId}>
                   <div className="runIdentity">
                     <span className={`generationPill ${slot.generation.toLowerCase()}`}>{slot.generation}</span>
-                    <div><strong>{slot.name}</strong><small>{slot.frozen ? slot.modelId : "Muncul otomatis setelah generasi ini punya frozen champion"}</small></div>
+                    <div><strong>{slot.name}</strong><small>{slot.frozen ? slot.modelId : "Not frozen"}</small></div>
                   </div>
                   <div className="runProgressBlock">
                     <div className="runProgressHead"><span>{state.replaceAll("_", " ")}</span>{slot.frozen && <em>{Math.round(progress * 100)}%</em>}</div>
                     <div className={`runTrack ${state === "FAILED" ? "failed" : ""}`}><span style={{ width: `${progress * 100}%` }} /></div>
                   </div>
                   <div className="runMeta">
-                    {slot.frozen ? <><span>{v2DoneDates.size}/{slot.targetSessions ?? "—"} sessions</span><strong>{run?.artifact_sha256 ? "Artifact verified" : "Waiting"}</strong></> : <><span>Research generation</span><strong>Not monitorable yet</strong></>}
+                    {slot.frozen ? <><span>{v2DoneDates.size}/{slot.targetSessions ?? "—"} sessions</span><strong>{run?.artifact_sha256 ? "Verified" : "Waiting"}</strong></> : <strong>Inactive</strong>}
                   </div>
                 </article>
               );
             })}
           </div>
         </section>
-
-        <section className="recoveryStrip">
-          <span>RECOVERY</span>
-          <p><strong>Restart safe:</strong> DATA_READY di-skip, verified DONE model di-skip, dan hanya gap/interrupted unit yang dijalankan ulang.</p>
-        </section>
-
-        <div className="pageFooter"><span>IDX Trade · exploratory research only</span><span>Signal-side monitoring only · reserved H10 outcomes remain sealed.</span></div>
       </div>
     </main>
   );
