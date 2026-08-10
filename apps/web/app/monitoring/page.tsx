@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FINAL_RANKER } from "@/lib/model-catalog";
+import { FINAL_RANKER, V2_CHAMPION } from "@/lib/model-catalog";
 
 type SessionState = "AVAILABLE" | "FETCHING" | "DATA_READY" | "DATA_FAILED";
 
@@ -190,6 +190,15 @@ export default function MonitoringPage() {
     );
   }, [status]);
 
+  const v2ScoredDates = useMemo(() => {
+    if (!status) return new Set<string>();
+    return new Set(
+      status.model_runs
+        .filter((run) => run.model_id === V2_CHAMPION.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+        .map((run) => run.session_date),
+    );
+  }, [status]);
+
   const latestFinalRun = useMemo(() => {
     const runs = (status?.model_runs ?? []).filter((run) => run.model_id === FINAL_RANKER.id);
     return [...runs].sort((a, b) => b.session_date.localeCompare(a.session_date))[0] ?? null;
@@ -220,7 +229,7 @@ export default function MonitoringPage() {
           <div>
             <p className="eyebrow">FINAL V3-B · OUTCOME-BLIND</p>
             <h1>Forward Monitoring</h1>
-            <p className="heroCopy">Monitor data integrity and frozen V3-B signal production now. Performance outcomes remain sealed until the exact 100-session H10-mature validation block is complete.</p>
+            <p className="heroCopy">Capture EOD data and track the frozen V2 and V3-B rankers. Outcomes stay locked.</p>
           </div>
           <div className="monitorHeroBadges">
             <span className="lockBadge"><span className="lockDot" /> Outcomes locked</span>
@@ -237,7 +246,7 @@ export default function MonitoringPage() {
 
         <section className="monitorMainGrid">
           <article className="surface sessionCapturePanel">
-            <div className="sectionHead"><div><span>1 · SESSION DATA</span><h2>Capture EOD evidence</h2></div></div>
+            <div className="sectionHead"><div><span>SESSION DATA</span><h2>Capture EOD data</h2></div></div>
             <div className="captureBody">
               <div className="captureControls">
                 <label>
@@ -255,7 +264,6 @@ export default function MonitoringPage() {
                 </button>
               </div>
 
-              <div className="runtimeNotice info"><i /><div><strong>Capture is data-only.</strong><p>A session counts toward the 100-session final-ranker track only after a verified V3-B score artifact exists. Capturing data never unlocks outcomes.</p></div></div>
               {!configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
               {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Calendar syncs on first capture</strong></div></div>}
               {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
@@ -264,7 +272,7 @@ export default function MonitoringPage() {
               )}
 
               <div className="sessionStripHeader">
-                <div><span>SESSION HISTORY</span><h3>Recent EOD snapshots</h3></div>
+                <div><span>HISTORY</span><h3>Recent sessions</h3></div>
                 <div className="sessionLegend">
                   <span><i className="legendDone" /> Recorded</span>
                   <span><i className="legendMissing" /> Missing</span>
@@ -293,14 +301,18 @@ export default function MonitoringPage() {
             </div>
           </article>
 
-          <article className="surface v2ContractPanel">
+          <article className="surface finalModelPanel">
             <div className="sectionHead compact">
-              <div><span>2 · ACTIVE SIGNAL MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
+              <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
               <span className="modelBadge champion">FINAL V3</span>
             </div>
             <div className="contractProgress">
               <div className="contractNumber"><strong>{finalScoredDates.size}</strong><span>/ {FINAL_RANKER.forwardTargetSessions}</span></div>
               <div className="progressTrack indigoTrack"><span style={{ width: `${scoringProgress}%` }} /></div>
+            </div>
+            <div className="modelMeta">
+              <span>33 features</span>
+              <span>SHA {FINAL_RANKER.modelSha256.slice(0, 10)}...</span>
             </div>
             <div className="contractFacts">
               <div><span>Architecture</span><strong><i className="okDot" /> 33 features</strong></div>
@@ -309,21 +321,21 @@ export default function MonitoringPage() {
               <div><span>Outcomes</span><strong>Locked</strong></div>
             </div>
           </article>
-        </section>
 
-        <section className="surface modelRunsPanel">
-          <div className="sectionHead"><div><span>MONITORING CONTRACT</span><h2>What we monitor</h2></div></div>
-          <div className="modelRunList">
-            {monitoringLayers.map((layer, index) => (
-              <article className="modelRunRow" key={layer.title}>
-                <div className="runIdentity">
-                  <span className={`generationPill ${index === 0 ? "v2" : index === 1 ? "v3" : "v4"}`}>{index + 1}</span>
-                  <div><strong>{layer.title}</strong><small>{layer.copy}</small></div>
-                </div>
-                <div className="runMeta"><strong>{layer.state}</strong></div>
-              </article>
-            ))}
-          </div>
+          <article className="surface finalModelPanel legacyChampionPanel">
+            <div className="sectionHead compact">
+              <div><span>V2 CHAMPION</span><h2>{V2_CHAMPION.shortName}</h2></div>
+              <span className="modelBadge">FROZEN</span>
+            </div>
+            <div className="contractProgress">
+              <div className="contractNumber"><strong>{v2ScoredDates.size}</strong><span>/ {V2_CHAMPION.forwardTargetSessions}</span></div>
+              <div className="progressTrack indigoTrack"><span style={{ width: `${Math.min(100, v2ScoredDates.size)}%` }} /></div>
+            </div>
+            <div className="modelMeta">
+              <span>25 features</span>
+              <span>SHA {V2_CHAMPION.modelSha256.slice(0, 10)}...</span>
+            </div>
+          </article>
         </section>
 
         <section className="surface modelRunsPanel">

@@ -85,3 +85,27 @@
 @media (max-width: 460px) {
   .sessionStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.finalModelPanel { min-height: 100%; }
+
+.monitorMainGrid { grid-template-columns: minmax(0, 1fr); }
+
+.finalModelPanel .contractFacts { display: none; }
+
+.modelMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 20px 22px 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.monitoringPage > .modelRunsPanel { display: none; }
+
+@media (max-width: 660px) {
+  .modelMeta { margin-right: 16px; margin-left: 16px; }
+}

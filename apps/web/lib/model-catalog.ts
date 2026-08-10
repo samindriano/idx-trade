@@ -27,6 +27,16 @@ export const FINAL_RANKER = {
   forwardCutoff: "2026-07-31",
 } as const;
 
+export const V2_CHAMPION = {
+  id: "HGB_XS_MARKET",
+  shortName: "HGB XS + Market",
+  generation: "V2",
+  featureCount: 25,
+  modelSha256: "5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace",
+  manifestSha256: "f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9",
+  forwardTargetSessions: 100,
+} as const;
+
 export const V3_B_DISCOVERY_FOLDS = [
   { fold: "F1", deltaPr: 0.007948, roc: 0.002743, qSpread: 0.013084 },
   { fold: "F2", deltaPr: 0.001841, roc: 0.009782, qSpread: 0.015608 },
