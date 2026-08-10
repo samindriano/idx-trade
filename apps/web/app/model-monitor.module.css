@@ -1,0 +1,91 @@
+.chartStage {
+  position: relative;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 12;
+  width: 168px;
+  transform: translate(14px, calc(-100% - 10px));
+  border: 1px solid rgba(21, 30, 26, 0.10);
+  border-radius: 12px;
+  background: rgba(255, 254, 250, 0.98);
+  box-shadow: 0 14px 34px rgba(26, 39, 33, 0.16), 0 2px 8px rgba(26, 39, 33, 0.08);
+  overflow: hidden;
+  pointer-events: none;
+  animation: tooltipIn 120ms ease both;
+}
+
+.tooltipLeft {
+  transform: translate(calc(-100% - 14px), calc(-100% - 10px));
+}
+
+.tooltipHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px 8px;
+  border-bottom: 1px solid #ece9e2;
+}
+
+.tooltipHead strong {
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
+
+.tooltipHead span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #edf8f3;
+  color: #08734f;
+  font-size: 8px;
+  font-weight: 820;
+  letter-spacing: .08em;
+}
+
+.tooltipRows {
+  padding: 6px 11px 8px;
+}
+
+.tooltipRows > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.tooltipRows span {
+  color: #7d8681;
+  font-size: 9px;
+  font-weight: 620;
+}
+
+.tooltipRows strong {
+  font-size: 10px;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+.positive { color: #08734f; }
+.negative { color: #b73940; }
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translate(14px, calc(-100% - 5px)); }
+  to { opacity: 1; }
+}
+
+.tooltipLeft {
+  animation-name: tooltipLeftIn;
+}
+
+@keyframes tooltipLeftIn {
+  from { opacity: 0; transform: translate(calc(-100% - 14px), calc(-100% - 5px)); }
+  to { opacity: 1; }
+}
+
+@media (max-width: 660px) {
+  .tooltip { display: none; }
+}
