@@ -19,9 +19,11 @@ This is the short **authoritative first-read status layer**. For full chronology
 - independent ChatGPT champion review: **PASS**;
 - champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
 - forward metric semantic clarification: **COMPLETE before outcome access**;
-- current authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
-- Ranking V3 recency specification: **FROZEN BEFORE OUTCOME RUN; PENDING INDEPENDENT REVIEW**;
-- Ranking V3 research backlog: **RECORDED; asynchronous R&D remains outcome-blind**;
+- current V2 authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
+- Ranking V3 recency specification: **INDEPENDENT REVIEW PASS WITH PRE-OUTCOME ADDENDUM**;
+- Ranking V3-A authorization: **IMPLEMENT + RUN V2F1-V2F4 DISCOVERY ONLY**;
+- Ranking V3 V2F5/V2F6: **SEALED FOR FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
+- Ranking V3 research backlog: **RECORDED; asynchronous R&D remains outcome-blind to reserved V2 forward outcomes**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -29,11 +31,11 @@ This is the short **authoritative first-read status layer**. For full chronology
 
 Newest controlling checkpoint:
 
-`docs/checkpoints/2026-08-10_RANKING_V2_FORWARD_SPEC_REVIEW_PASS.md`
+`docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_REVIEW_PASS.md`
 
 Current implementation handoff:
 
-`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT-RESULT.md`
+`coordination/handoffs/IDX-RANKING-V3-RECENCY-DISCOVERY-RUN.md`
 
 Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
 
@@ -45,20 +47,16 @@ Mandatory first-read before any Ranking-V3 specification or implementation:
 
 `docs/RANKING_V3_RESEARCH_BACKLOG.md`
 
-The V3 backlog is an idea/hypothesis backlog only. It does not authorize V3 outcome runs and it does not authorize access to reserved V2 fresh-forward outcomes.
+The V3 backlog is an idea/hypothesis backlog only. It does not authorize any work beyond the newest controlling checkpoint/handoff and it never authorizes access to reserved V2 fresh-forward outcomes.
 
-Current V3 specification under review:
+Current effective V3-A recency contract:
 
-`docs/RANKING_V3_RECENCY_SPEC_V1.md`
+- original frozen spec: `docs/RANKING_V3_RECENCY_SPEC_V1.md`;
+- controlling review addendum: `docs/RANKING_V3_RECENCY_SPEC_REVIEW_ADDENDUM_V1.md`;
+- review checkpoint: `docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_REVIEW_PASS.md`;
+- hypothesis ledger: `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
 
-Current V3 checkpoint and ledger:
-
-- `docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_FROZEN.md`;
-- `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
-
-The V3 specification has not been fitted or scored. No reserved V2 forward
-outcome has been inspected and `FORWARD_OUTCOME_ACCESS_STARTED` has not been
-written.
+The addendum controls wherever it conflicts with the original spec. V3-A may run only V2F1-V2F4. V2F5/V2F6 must remain unscored for recency. No reserved V2 forward outcome has been inspected and `FORWARD_OUTCOME_ACCESS_STARTED` has not been written.
 
 ## Data foundation
 
@@ -246,16 +244,20 @@ immutable, 100-session H10-mature forward block. Do not read outcomes,
 produce a fresh-forward verdict, or write the global access marker before that
 authorization.
 
-V3 track: asynchronous research specification may proceed separately under
-`docs/RANKING_V3_RESEARCH_BACKLOG.md`, beginning with a narrow recency-weighting
-hypothesis if authorized. Reserved V2 forward outcomes remain off-limits to V3.
+V3 track: pull the remote review state and execute only
+`coordination/handoffs/IDX-RANKING-V3-RECENCY-DISCOVERY-RUN.md`. Implement the
+reviewed recency runner, prove exact V2 control equivalence on F1-F4, then run
+only H=252 and H=504 on F1-F4 if equivalence passes. Update the ledger and stop
+for ChatGPT review. **Do not score F5/F6.**
 
 Not authorized yet:
 
 - writing `FORWARD_OUTCOME_ACCESS_STARTED`;
-- reading or summarizing the one-shot post-2026-07-31 outcome block;
+- reading or summarizing the one-shot post-2026-07-31 V2 outcome block;
 - producing a fresh-forward PASS/MIXED/FAIL verdict;
-- running V3 outcomes before a separately frozen V3 specification.
+- V3-A scoring on V2F5/V2F6;
+- V3-B or later V3 hypothesis outcome runs;
+- V3 integration or final late-development confirmation.
 
 Actual V2 one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
 
@@ -270,6 +272,9 @@ Do not:
 - call history through `2026-07-31` independent V2 validation;
 - inspect fresh-forward outcomes before the separate one-shot authorization;
 - write the global forward-outcome access marker before that authorization;
+- score V2F5/V2F6 for the V3-A recency hypothesis;
+- change V3-A candidate definitions/gates based on scores;
+- start a later V3 hypothesis without a separately reviewed specification;
 - start probability calibration;
 - start Stage 6;
 - run `IDX-VAL-002`;
