@@ -83,9 +83,8 @@ Signal-research source:
 
 Immutable V2 prepared cache:
 
-- SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb85cd4823e3?`;
-
-Canonical V2 prepared cache identity remains the one recorded in the frozen V2/V3 checkpoints and hypothesis ledger; use those files rather than manually transcribing a path/hash from memory when running any future task.
+- SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`;
+- manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`.
 
 Late-development Structure-Lite cache:
 
