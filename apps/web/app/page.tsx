@@ -11,6 +11,7 @@ type FoldMetric = {
 
 type ModelRecord = {
   id: string;
+  generation: "V1" | "V2";
   label: string;
   badge: string;
   status: string;
@@ -25,6 +26,7 @@ type ModelRecord = {
 const models: ModelRecord[] = [
   {
     id: "HGB_XS_MARKET",
+    generation: "V2",
     label: "HGB XS + Market",
     badge: "V2 CHAMPION",
     status: "Frozen · forward contract active",
@@ -44,6 +46,7 @@ const models: ModelRecord[] = [
   },
   {
     id: "HGB_XS",
+    generation: "V2",
     label: "HGB XS",
     badge: "V2",
     status: "Historical candidate",
@@ -63,6 +66,7 @@ const models: ModelRecord[] = [
   },
   {
     id: "LOGISTIC_XS",
+    generation: "V2",
     label: "Logistic XS",
     badge: "V2",
     status: "Historical candidate",
@@ -82,6 +86,7 @@ const models: ModelRecord[] = [
   },
   {
     id: "PAIRWISE_XS",
+    generation: "V2",
     label: "Pairwise Logistic XS",
     badge: "V2",
     status: "Historical candidate",
@@ -101,8 +106,9 @@ const models: ModelRecord[] = [
   },
   {
     id: "V1_HGB_CONTROL",
-    label: "V1 HGB Control",
-    badge: "CONTROL",
+    generation: "V1",
+    label: "HGB Control",
+    badge: "V1 CONTROL",
     status: "Historical control · not champion-eligible",
     description: "Original HGB feature set retained only as the locked V2 comparison control.",
     medianDeltaPr: 0.022348,
@@ -120,7 +126,7 @@ const models: ModelRecord[] = [
   },
 ];
 
-const futureModels = ["V3 Recency", "V3 Regime", "V3 Sector Relative", "V3 True Ranking"];
+const futureModels = ["Recency", "Regime", "Sector Relative", "True Ranking"];
 
 function pct(value: number, digits = 2) {
   return `${(value * 100).toFixed(digits)}%`;
@@ -163,8 +169,8 @@ function FoldChart({ model }: { model: ModelRecord }) {
       <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Chronological delta PR-AUC for ${model.label}`}>
         <defs>
           <linearGradient id={`area-${model.id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#139b78" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#139b78" stopOpacity="0" />
+            <stop offset="0%" stopColor="#4856d6" stopOpacity="0.17" />
+            <stop offset="100%" stopColor="#4856d6" stopOpacity="0" />
           </linearGradient>
         </defs>
         {gridValues.map((value) => {
@@ -195,6 +201,8 @@ function FoldChart({ model }: { model: ModelRecord }) {
 export default function Home() {
   const [modelId, setModelId] = useState("HGB_XS_MARKET");
   const model = models.find((item) => item.id === modelId) ?? models[0];
+  const v2Models = models.filter((item) => item.generation === "V2");
+  const v1Models = models.filter((item) => item.generation === "V1");
 
   const comparison = useMemo(
     () => [...models].sort((a, b) => b.medianDeltaPr - a.medianDeltaPr),
@@ -207,14 +215,14 @@ export default function Home() {
     <main className="appShell">
       <header className="topNav">
         <div className="navInner">
-          <a className="brand" href="#top" aria-label="IDX Trade home">
+          <a className="brand" href="/" aria-label="IDX Trade home">
             <Logo />
             <span>IDX Trade</span>
           </a>
           <nav className="primaryNav" aria-label="Primary navigation">
-            <a className="active" href="#overview">Overview</a>
-            <a href="#models">Models</a>
-            <a href="#forward">Forward Test</a>
+            <a className="active" href="/#overview">Overview</a>
+            <a href="/#models">Models</a>
+            <a href="/monitoring">Forward Monitoring</a>
           </nav>
           <div className="researchPill"><span className="liveDot" /> Research only</div>
         </div>
@@ -225,7 +233,7 @@ export default function Home() {
           <div>
             <p className="eyebrow">MODEL OBSERVATORY</p>
             <h1>Model Monitor</h1>
-            <p className="heroCopy">Historical evidence and forward-test readiness, without exposing reserved outcomes.</p>
+            <p className="heroCopy">Historical model evidence, comparison, and the frozen V2 champion contract.</p>
           </div>
           <div className="lockBadge"><span className="lockDot" /> Forward outcomes locked</div>
         </section>
@@ -235,13 +243,18 @@ export default function Home() {
             <label htmlFor="model-select">MODEL</label>
             <div className="selectShell">
               <select id="model-select" value={modelId} onChange={(event) => setModelId(event.target.value)}>
-                <optgroup label="Historical models">
-                  {models.map((item) => (
-                    <option key={item.id} value={item.id}>{item.label}</option>
+                <optgroup label="V2 models · historical benchmark">
+                  {v2Models.map((item) => (
+                    <option key={item.id} value={item.id}>V2 · {item.label}</option>
                   ))}
                 </optgroup>
-                <optgroup label="V3 research backlog">
-                  {futureModels.map((item) => <option key={item} disabled>{item} · not frozen</option>)}
+                <optgroup label="V1 control">
+                  {v1Models.map((item) => (
+                    <option key={item.id} value={item.id}>V1 · {item.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="V3 research backlog · not frozen">
+                  {futureModels.map((item) => <option key={item} disabled>V3 · {item} · not frozen</option>)}
                 </optgroup>
               </select>
               <span className="selectChevron">⌄</span>
@@ -251,7 +264,7 @@ export default function Home() {
           <div className="modelSummary" key={`summary-${model.id}`}>
             <span className={model.id === "HGB_XS_MARKET" ? "modelBadge champion" : "modelBadge"}>{model.badge}</span>
             <div>
-              <strong>{model.label}</strong>
+              <strong>{model.generation} · {model.label}</strong>
               <p>{model.description}</p>
             </div>
           </div>
@@ -260,7 +273,7 @@ export default function Home() {
         <section className="metricStrip" key={`metrics-${model.id}`}>
           <article>
             <span>Median ΔPR-AUC</span>
-            <strong className="positiveValue">+{pct(model.medianDeltaPr)}</strong>
+            <strong className="primaryValue">+{pct(model.medianDeltaPr)}</strong>
             <small>vs fold prevalence</small>
           </article>
           <article>
@@ -270,7 +283,7 @@ export default function Home() {
           </article>
           <article>
             <span>Median Q5 − Q1</span>
-            <strong className="positiveValue">+{pct(model.medianQSpread)}</strong>
+            <strong className="primaryValue">+{pct(model.medianQSpread)}</strong>
             <small>TP-rate spread</small>
           </article>
           <article>
@@ -298,7 +311,7 @@ export default function Home() {
             </div>
           </article>
 
-          <article className="surface forwardPanel" id="forward">
+          <article className="surface forwardPanel">
             <div className="sectionHead compact">
               <div>
                 <span>FORWARD VALIDATION</span>
@@ -311,20 +324,19 @@ export default function Home() {
               <>
                 <div className="forwardCount"><strong>0</strong><span>/ 100 sessions</span></div>
                 <div className="progressTrack"><span style={{ width: "0%" }} /></div>
-                <p className="forwardCopy">The final model is frozen. Signal-side readiness may be monitored, but reserved H10 outcomes stay sealed until the one-shot gate.</p>
+                <p className="forwardCopy">Signal sessions will be tracked independently from the sealed H10 outcomes. The V2 counter moves only after its model run finishes and the artifact is verified.</p>
                 <div className="forwardFacts">
-                  <div><span>Final model</span><strong><i className="okDot" /> Frozen</strong></div>
-                  <div><span>Artifact</span><strong><i className="okDot" /> Valid</strong></div>
-                  <div><span>H10 block</span><strong>Not evaluated</strong></div>
-                  <div><span>Outcome marker</span><strong>Absent</strong></div>
+                  <div><span>Champion</span><strong><i className="okDot" /> V2 · HGB XS + Market</strong></div>
+                  <div><span>Model artifact</span><strong><i className="okDot" /> Frozen & verified</strong></div>
+                  <div><span>Outcome access</span><strong>Locked</strong></div>
                 </div>
-                <div className="forwardMeta">292,633 training rows · 737 tickers · H10 first-touch</div>
+                <a className="primaryLink" href="/monitoring">Open Forward Monitoring →</a>
               </>
             ) : (
               <div className="noForward">
                 <div className="noForwardIcon">↗</div>
                 <h3>Historical evidence only</h3>
-                <p>This candidate was not selected for the frozen V2 forward test. Switch to HGB XS + Market to monitor the independent validation contract.</p>
+                <p>This candidate was not selected for the frozen V2 forward test. Switch to V2 · HGB XS + Market to inspect the active contract.</p>
               </div>
             )}
           </article>
@@ -342,6 +354,7 @@ export default function Home() {
             <table>
               <thead>
                 <tr>
+                  <th>Version</th>
                   <th>Model</th>
                   <th>ΔPR-AUC</th>
                   <th>ROC-AUC</th>
@@ -353,10 +366,11 @@ export default function Home() {
               <tbody>
                 {comparison.map((item) => (
                   <tr key={item.id} className={item.id === model.id ? "selectedRow" : ""} onClick={() => setModelId(item.id)}>
+                    <td><span className={`generationPill ${item.generation.toLowerCase()}`}>{item.generation}</span></td>
                     <td><strong>{item.label}</strong><small>{item.id}</small></td>
-                    <td className="positiveCell">+{pct(item.medianDeltaPr)}</td>
+                    <td className="primaryCell">+{pct(item.medianDeltaPr)}</td>
                     <td>{item.medianRoc.toFixed(4)}</td>
-                    <td className="positiveCell">+{pct(item.medianQSpread)}</td>
+                    <td className="primaryCell">+{pct(item.medianQSpread)}</td>
                     <td>{item.positiveDeltaFolds}</td>
                     <td>{item.id === "HGB_XS_MARKET" ? <span className="championLabel">Champion</span> : item.id === "V1_HGB_CONTROL" ? "Control" : "Candidate"}</td>
                   </tr>
