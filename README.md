@@ -6,42 +6,11 @@ The core idea is deliberately **not** to build one giant model that tries to do 
 
 ## Project map
 
-```mermaid
-flowchart TD
-    A[Market Data + Official IDX Evidence] --> B[0. Data / Universe Gate<br/>PIT identity, listing, tradability,<br/>liquidity, causal regular-market data]
+<p align="center">
+  <img src="docs/assets/model-ecosystem-overview.svg" alt="IDX Trade model ecosystem: data gate, alpha ranker, path risk, decision engine, portfolio, execution, and paper/live monitoring" width="100%">
+</p>
 
-    B --> C[1. Alpha / Opportunity Ranker<br/>FINAL HISTORICAL RANKER<br/>V3-B Structure-Lite<br/>33 causal features]
-
-    C --> C1[Daily cross-sectional score + rank<br/>Which eligible setups look most attractive?]
-    C --> FV[Independent Fresh-Forward Validation<br/>First 100 consecutive H10-mature sessions<br/>WAITING FOR FUTURE DATA]
-
-    C1 --> D[2A. Path Risk<br/>How severe can adverse excursion be?<br/>NEXT RESEARCH LANE]
-    C1 --> E[2B. Probability / Calibration<br/>Future research]
-    C1 --> F[2C. Expected Payoff / Distribution<br/>Future research]
-    C1 --> G[2D. Reliability / Uncertainty<br/>Future research]
-
-    D --> H[3. Decision / Trade Selection Engine<br/>Combine only independently validated evidence]
-    E --> H
-    F --> H
-    G --> H
-
-    H --> I[4. Portfolio / Position Sizing<br/>Exposure, concentration, risk budget]
-    I --> J[5. Execution / Cost Model<br/>Spread, slippage, liquidity, fees, fills]
-    J --> K[6. Paper / Live + Monitoring<br/>Drift, performance, failures]
-
-    L[V3/V4 Historical Alpha Search<br/>CLOSED] -. no retuning .-> C
-    M[Fresh-Forward Outcomes<br/>PROTECTED / UNTOUCHED] -. reserved only .-> FV
-
-    classDef locked fill:#d7f5dd,stroke:#247a38,stroke-width:2px,color:#111;
-    classDef next fill:#fff2c7,stroke:#9a6b00,stroke-width:2px,color:#111;
-    classDef future fill:#e8edf3,stroke:#64748b,stroke-width:1px,color:#111;
-    classDef protected fill:#f8d7da,stroke:#a61b29,stroke-width:2px,color:#111;
-
-    class B,C,C1,L locked;
-    class D next;
-    class E,F,G,H,I,J,K future;
-    class FV,M protected;
-```
+**Legend:** green = built/locked · yellow = next research lane · gray = future · red = protected validation boundary.
 
 ## The project in one sentence
 
