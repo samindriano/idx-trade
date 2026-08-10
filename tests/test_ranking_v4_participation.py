@@ -106,17 +106,31 @@ def test_centered_log_ratio_is_zero_at_own_baseline_and_finite_at_zero() -> None
     assert np.isnan(_centered_log_ratio(1.0, 0.0))
 
 
-def test_constant_participation_path_has_expected_neutral_features() -> None:
+def test_flat_participation_path_has_expected_neutral_features() -> None:
     panel, sessions = _panel(40)
+    panel["close"] = 100.0
+    panel["high"] = 101.0
+    panel["low"] = 99.0
     result = build_participation_quality_features(
         panel, sessions, max_signal_session_index=40
     )
     row = result.loc[result["signal_session_index"].eq(30)].iloc[0]
     assert row["v4a_range_impact_logrel20"] == pytest.approx(0.0, abs=1e-12)
-    assert row["v4a_close_impact_logrel20"] == pytest.approx(0.0, abs=1e-12)
+    assert np.isnan(row["v4a_close_impact_logrel20"])
     assert row["v4a_high_range_impact_fraction_5"] == pytest.approx(0.0)
     assert row["v4a_value_persistence_fraction_5"] == pytest.approx(0.0)
     assert row["v4a_value_acceleration_log_5v20"] == pytest.approx(0.0)
+    assert row["v4a_signed_value_5"] == pytest.approx(0.0)
+    assert row["v4a_signed_value_20"] == pytest.approx(0.0)
+
+
+def test_persistent_positive_path_has_positive_signed_participation() -> None:
+    panel, sessions = _panel(40)
+    result = build_participation_quality_features(
+        panel, sessions, max_signal_session_index=40
+    )
+    row = result.loc[result["signal_session_index"].eq(30)].iloc[0]
+    assert row["v4a_close_impact_logrel20"] == pytest.approx(0.0, abs=1e-12)
     assert row["v4a_signed_value_5"] == pytest.approx(1.0)
     assert row["v4a_signed_value_20"] == pytest.approx(1.0)
 
