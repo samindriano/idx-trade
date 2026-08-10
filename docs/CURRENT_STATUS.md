@@ -13,50 +13,44 @@ This is the short **authoritative first-read status layer**. For full chronology
 - Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**;
 - performance equivalence: **PASS — `FULL_PANEL_LEGACY_FAST_EQUIVALENT`**;
 - immutable Ranking-V2 prepared cache: **FROZEN**;
-- V2 control + A/B/C/D candidate orchestra: **COMPLETE**;
-- metrics-only integration: **`RANKING_V2_HISTORICAL_CHAMPION_SELECTED`**;
-- historical-development champion: **`HGB_XS_MARKET`**;
-- independent ChatGPT champion review: **PASS**;
-- champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
-- forward metric semantic clarification: **COMPLETE before outcome access**;
-- current V2 authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
-- Ranking V3 recency specification: **INDEPENDENT REVIEW PASS WITH PRE-OUTCOME ADDENDUM**;
-- Ranking V3-A authorization: **IMPLEMENT + RUN V2F1-V2F4 DISCOVERY ONLY**;
+- Ranking-V2 historical-development champion: **`HGB_XS_MARKET`**;
+- V2 final refit + outcome-blind forward runtime: **IMPLEMENTED/FROZEN**;
+- actual V2 fresh-forward outcome access: **BLOCKED pending separate one-shot authorization and 100 H10-mature sessions**;
+- Ranking V3 roadmap: **AUDITED after legacy-model autopsy**;
+- Ranking V3-A recency spec: **INDEPENDENT REVIEW PASS WITH PRE-OUTCOME ADDENDUM**;
+- Ranking V3-A runner: **IMPLEMENTED**;
+- Ranking V3-A F1-F4 outcome run: **AUTHORIZED but NOT RUN in ChatGPT runtime because the user-local frozen cache/reference artifacts are not mounted**;
 - Ranking V3 V2F5/V2F6: **SEALED FOR FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
-- Ranking V3 research backlog: **RECORDED; asynchronous R&D remains outcome-blind to reserved V2 forward outcomes**;
-- Stage 6: not authorized;
-- `IDX-VAL-002`: not started;
-- execution-PnL / paper / live trading: not authorized;
-- merge to `main`: not authorized.
+- reserved post-2026-07-31 V2 forward outcomes: **NOT ACCESSED**;
+- `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
+- Stage 6 / `IDX-VAL-002` / probability calibration / execution-PnL / paper/live / main merge: **NOT AUTHORIZED**.
 
-Newest controlling checkpoint:
+Newest implementation checkpoint:
 
-`docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_REVIEW_PASS.md`
+`docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_RUNNER_IMPLEMENTED_DATA_BLOCKED.md`
 
-Current implementation handoff:
+Current implementation/result handoff:
+
+`coordination/handoffs/IDX-RANKING-V3-RECENCY-RUNNER-IMPLEMENTED-DATA-BLOCKED.md`
+
+Controlling V3-A execution authorization:
 
 `coordination/handoffs/IDX-RANKING-V3-RECENCY-DISCOVERY-RUN.md`
 
-Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
+Mandatory first-read before any next model/runtime implementation:
 
 `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
 
-The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation.
+Mandatory V3 research reads:
 
-Mandatory first-read before any Ranking-V3 specification or implementation:
+- `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
+- `docs/RANKING_V3_RESEARCH_BACKLOG.md`;
+- `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md`;
+- `docs/RANKING_V3_RECENCY_SPEC_V1.md`;
+- `docs/RANKING_V3_RECENCY_SPEC_REVIEW_ADDENDUM_V1.md`;
+- `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
 
-`docs/RANKING_V3_RESEARCH_BACKLOG.md`
-
-The V3 backlog is an idea/hypothesis backlog only. It does not authorize any work beyond the newest controlling checkpoint/handoff and it never authorizes access to reserved V2 fresh-forward outcomes.
-
-Current effective V3-A recency contract:
-
-- original frozen spec: `docs/RANKING_V3_RECENCY_SPEC_V1.md`;
-- controlling review addendum: `docs/RANKING_V3_RECENCY_SPEC_REVIEW_ADDENDUM_V1.md`;
-- review checkpoint: `docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_REVIEW_PASS.md`;
-- hypothesis ledger: `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
-
-The addendum controls wherever it conflicts with the original spec. V3-A may run only V2F1-V2F4. V2F5/V2F6 must remain unscored for recency. No reserved V2 forward outcome has been inspected and `FORWARD_OUTCOME_ACCESS_STARTED` has not been written.
+The review addendum controls wherever it conflicts with the original recency spec.
 
 ## Data foundation
 
@@ -94,89 +88,34 @@ Stage-5 H10 summary:
 
 The Stage-5 holdout is permanently consumed.
 
-## Ranking V2 — frozen design
+## Ranking V2 — frozen design and result
 
 Frozen substantive implementation code head:
 
 `5f2ed2f53aececfd7c338d3f9f65db1efae372b6`
 
-Frozen feature families:
+Frozen V2 feature families:
 
 - 10 same-date primary-universe percentile-rank stock features;
 - 9 continuous causal market-state context features;
 - 6 stock-minus-market-median relative features;
-- no sector-relative features until a PIT-safe historical sector mapping exists.
+- no sector-relative features until PIT-safe historical sector mapping exists.
 
-Frozen candidates:
+Frozen candidates were:
 
-- non-eligible control: `V1_HGB_CONTROL`;
-- V2-A: `LOGISTIC_XS`;
-- V2-B: `HGB_XS`;
-- V2-C: `HGB_XS_MARKET`;
-- V2-D: `PAIRWISE_LOGISTIC_XS`.
+- non-eligible control `V1_HGB_CONTROL`;
+- `LOGISTIC_XS`;
+- `HGB_XS`;
+- `HGB_XS_MARKET`;
+- `PAIRWISE_LOGISTIC_XS`.
 
-Historical-development validation used six expanding chronological folds, each with an exact 20-session gap and a 100-session validation block. Selection was H10-only under the predeclared robustness-first eligibility/tie-break rules.
+Historical-development validation used six expanding chronological folds, exact 20-session gaps, 100-session validation blocks, H10-only selection and robustness-first frozen gates.
 
-All history through `2026-07-31` is development/research knowledge. No historical V2 result can be upgraded to independent validation after the fact.
-
-## Performance-equivalence result
-
-Performance runtime HEAD:
-
-`4f1f3af2c71cb49df7249a11d0c684cfef4aa9ca`
-
-Repo-local pytest: **218 passed, 3 warnings**.
-
-Result:
-
-- status `FULL_PANEL_LEGACY_FAST_EQUIVALENT`;
-- `legacy_fast_equal=true`;
-- horizons `[5, 10, 20]`;
-- H5 legacy `1567.8568 s`;
-- H10 legacy `1559.6417 s`;
-- H20 legacy `1592.5304 s`;
-- fast multi-horizon `16.2132 s`;
-- approximate benchmark label-engine speedup vs parallel legacy wall estimate: `98.22x`;
-- equivalence report SHA-256: `8f8865b2f133020a94ab8d2507fbb221f4b7f59bd1775b9da51fba2f4084d554`;
-- exact fast-H10 SHA-256: `a447b3f2208cbc320f7ec7cfa16c3dbb51107286891deca130f2fb848895b677`.
-
-The speedup is specifically a label-engine benchmark result, not a guaranteed end-to-end candidate speedup.
-
-## Immutable Ranking-V2 prepared cache
-
-Manifest status:
-
-`RANKING_V2_PREPARED_CACHE_FROZEN`
-
-Prepared cache:
-
-`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_prepared_cache_20260809\ranking_v2_prepared_model_table.parquet`
-
-SHA-256:
-
-`522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`
-
-Facts:
-
-- rows `292633`;
-- tickers `737`;
-- signal-session index `20..1250`;
-- positive rate `0.3939849573`;
-- resolved primary H10 model rows only.
-
-Manifest SHA-256:
-
-`6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`
-
-## Ranking-V2 historical-development result
-
-All five frozen tasks completed and all 50 candidate artifacts were independently hash-verified with zero mismatches.
-
-Champion:
+Selected champion:
 
 `HGB_XS_MARKET`
 
-Key aggregate facts:
+Key historical-development facts:
 
 - median PR-AUC delta `0.0238795`;
 - q25 PR-AUC delta `0.0194015`;
@@ -184,100 +123,209 @@ Key aggregate facts:
 - median ROC-AUC `0.524410`;
 - ROC-AUC >0.5 folds `5/6`;
 - positive Q5-Q1 folds `6/6`;
-- worst-fold PR-delta `0.008789`.
-
-Versus the non-eligible V1 control, the champion improves median PR-delta by only about `+0.0015315`, but improves q25 PR-delta by about `+0.0025528`, median ROC by `+0.005400`, median Q5-Q1 by about `+0.0201875`, and worst-fold PR-delta from `0.000785` to `0.008789`.
-
-Interpretation: evidence supports improved historical-development robustness from cross-sectional + explicit market-context features, but not a claim of overwhelming superiority. V2F6 ROC-AUC remained below 0.5 (`0.493102`) despite positive PR-delta and Q5-Q1, so fresh-forward validation is essential.
+- worst-fold PR-delta `0.008789`;
+- V2F6 ROC-AUC `0.493102` despite positive PR-delta/Q5-Q1.
 
 Integrator summary SHA-256:
 
 `3facb4468caafab8cf19f368cf5ef04f36dac052089d2ecb810b683c851ec705`
 
-## Champion / final-refit / fresh-forward contract
+All history through `2026-07-31` is development/research knowledge, not independent V2 validation.
+
+## Performance-equivalence result
+
+Performance runtime HEAD:
+
+`4f1f3af2c71cb49df7249a11d0c684cfef4aa9ca`
+
+Result:
+
+- `FULL_PANEL_LEGACY_FAST_EQUIVALENT`;
+- H5 legacy `1567.8568 s`;
+- H10 legacy `1559.6417 s`;
+- H20 legacy `1592.5304 s`;
+- fast multi-horizon `16.2132 s`;
+- label-engine benchmark speedup `98.22x`;
+- equivalence report SHA-256 `8f8865b2f133020a94ab8d2507fbb221f4b7f59bd1775b9da51fba2f4084d554`;
+- exact fast-H10 SHA-256 `a447b3f2208cbc320f7ec7cfa16c3dbb51107286891deca130f2fb848895b677`.
+
+This is a label-engine benchmark, not a guaranteed end-to-end candidate speedup.
+
+## Immutable Ranking-V2 prepared cache
+
+Prepared table:
+
+`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_prepared_cache_20260809\ranking_v2_prepared_model_table.parquet`
+
+Prepared-table SHA-256:
+
+`522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`
+
+Prepared-cache manifest SHA-256:
+
+`6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`
+
+Facts:
+
+- 292,633 rows;
+- 737 tickers;
+- signal-session index `20..1250`;
+- positive rate `0.3939849573`;
+- resolved primary H10 rows only.
+
+## V2 final refit / fresh-forward contract
 
 Controlling specification:
 
 `docs/RANKING_V2_CHAMPION_FORWARD_SPEC_V1.md`
 
-Current reviewed spec blob SHA:
+Reviewed spec blob:
 
 `77b2d74c9d5f28460037c11cd3a134c6b6cc9d3d`
 
-The forward specification freezes:
+Final refit result:
 
-- champion `HGB_XS_MARKET`;
-- exact 25-feature order and existing HGB pipeline/parameters;
-- one final development refit over all 292,633 frozen eligible rows;
-- causal post-2026-07-31 universe/features;
-- H10 maturity;
-- first independent verdict on exactly 100 consecutive mature forward signal sessions;
-- predeclared first-50 / last-50 stability check;
-- one-shot global outcome-access marker;
-- immutable/hash-pinned provenance;
-- PASS/MIXED/FAIL rules.
+- final model SHA-256 `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
+- model manifest SHA-256 `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
+- 292,633 rows / 737 tickers / sessions `20..1250`;
+- fresh-forward outcomes not accessed;
+- global marker not written.
 
-Independent review clarified before any fresh outcome access that Q5-Q1 retains the historical V2 meaning `Q5 TP rate - Q1 TP rate`; it is not a realized-return spread. Top-decile lift is top-decile TP rate minus prevalence.
+First independent V2 verdict remains exactly 100 consecutive mature forward signal sessions, with first-50/last-50 stability and the frozen PASS/MIXED/FAIL semantics. Q5-Q1 means `Q5 TP rate - Q1 TP rate`, not realized-return spread.
 
-## Final-refit runtime implementation result
+## Ranking V3 roadmap
 
-The authorized implementation/freeze phase is complete:
+After the legacy archive audit, the current V3 hypothesis order is:
 
-- runtime commit: `565cffa86b05f2bd877d06b6961e3b792253cb77`;
-- pytest: **228 passed, 3 existing warnings**;
-- final model: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_final_refit_20260810\ranking_v2_hgb_xs_market_final.joblib`;
-- model SHA-256: `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
-- model manifest SHA-256: `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
-- final fit facts: 292,633 rows, 737 tickers, signal sessions `20..1250`;
-- fresh-forward outcome access: **not performed**;
-- `FORWARD_OUTCOME_ACCESS_STARTED`: **not written**.
+1. V3-A RECENCY;
+2. V3-B STRUCTURE-LITE;
+3. V3-C REGIME-SPECIALIZATION;
+4. V3-D SECTOR-RELATIVE, conditional on a PIT-safe sector data gate;
+5. V3-E TRUE-RANKING.
 
-The outcome-blind forward feature builder, H10 maturity diagnostics, fixed
-100-session block selector, historical metric semantics, pre-outcome manifest,
-marker guard, deterministic artifact verification, and post-cache profiling
-are implemented and covered by tests.
+Distributional uncertainty, path-risk, broker flow, EventRank, fundamentals and broader macro inputs remain separate future lanes, not first-pass V3 feature soup.
+
+Global V3 rules:
+
+- one falsifiable hypothesis per experiment;
+- exact V2 champion control;
+- normally control + at most two bounded variants;
+- permanent candidate/hypothesis denominator;
+- robustness-first metrics, not best-period optimization;
+- no post-result rescue under the same hypothesis;
+- at most one later preregistered integration experiment;
+- V2F5/V2F6 reserved once for final-V3 late-development confirmation;
+- reserved V2 fresh-forward outcomes remain unavailable to V3 R&D.
+
+## Ranking V3-A RECENCY — effective frozen contract
+
+Original spec:
+
+`docs/RANKING_V3_RECENCY_SPEC_V1.md`
+
+Reported spec SHA-256:
+
+`53c5bc3e90af12fea62a73815e1e85352e836d69938ce0e9287437a52c1d58fa`
+
+Review addendum:
+
+`docs/RANKING_V3_RECENCY_SPEC_REVIEW_ADDENDUM_V1.md`
+
+Frozen candidates:
+
+- `V3-A-RECENCY-V1-CONTROL-001`: exact uniform V2 `HGB_XS_MARKET`;
+- `V3-A-RECENCY-V1-HL252-002`: H=252 official sessions;
+- `V3-A-RECENCY-V1-HL504-003`: H=504 official sessions.
+
+Only sample weights may differ:
+
+`age = train_end - signal_session_index`
+
+`raw_weight = 2 ** (-age / H)`
+
+Weights are normalized fold-locally to arithmetic mean 1.0. Label, universe, exact 25 features, HGB architecture/parameters, ranking score and metric semantics stay unchanged.
+
+Authorized discovery folds:
+
+- V2F1/V3D1;
+- V2F2/V3D2;
+- V2F3/V3D3;
+- V2F4/V3D4.
+
+V2F5/V2F6 must not be scored or summarized for V3-A.
+
+## Ranking V3-A runner implementation result
+
+Implementation code:
+
+`src/idx_trade/ranking_v3_recency.py`
+
+Focused tests:
+
+`tests/test_ranking_v3_recency.py`
+
+Implementation lineage:
+
+- `cab1ad4f0a78bcee63ac75d10997fef1f1122f85` — initial runner;
+- `57f2b955bee3b48ace31f7eb22327e8d224adef0` — focused tests;
+- `3e368f7d7d6fa1e8ce0d076039640aaeef06a27f` — final sealed-reference-path implementation fix.
+
+Implemented guardrails include:
+
+- exact prepared-cache/manifest hash verification;
+- frozen spec SHA/Git-blob verification and review-addendum Git-blob verification;
+- V2F1-F4-only scoring loop;
+- explicit V2F5/V2F6 rejection;
+- exact uniform-control fit first;
+- SHA-verified frozen V2 HGB_XS_MARKET reference summary/prediction artifact;
+- Parquet predicate materialization of only F1-F4 reference rows;
+- mandatory row/score/metric equivalence before H252/H504 can fit;
+- sequential reference execution;
+- frozen discovery gates/tie rule;
+- hashed metrics/predictions/models/runtime/verdict/ledger artifacts.
+
+Focused isolated ChatGPT-runtime harness result:
+
+**12 passed in 0.63 s**
+
+This was not the repo-local full pytest suite. GitHub did not expose an automatic workflow run for these commits.
+
+The actual F1-F4 outcome run was not executed in ChatGPT because the container does not mount the user's Windows research store or the frozen V2 HGB_XS_MARKET prediction artifact needed by the control-equivalence gate. No candidate metric/verdict was fabricated.
 
 ## Immediate next action
 
-V2 track: wait for separate MAIN / ChatGPT authorization to consume a complete,
-immutable, 100-session H10-mature forward block. Do not read outcomes,
-produce a fresh-forward verdict, or write the global access marker before that
-authorization.
+### V2 track
 
-V3 track: pull the remote review state and execute only
-`coordination/handoffs/IDX-RANKING-V3-RECENCY-DISCOVERY-RUN.md`. Implement the
-reviewed recency runner, prove exact V2 control equivalence on F1-F4, then run
-only H=252 and H=504 on F1-F4 if equivalence passes. Update the ledger and stop
-for ChatGPT review. **Do not score F5/F6.**
+Wait. Do not access the fresh-forward block until the separately authorized first 100 mature forward signal sessions exist with immutable provenance.
 
-Not authorized yet:
+### V3 track
 
-- writing `FORWARD_OUTCOME_ACCESS_STARTED`;
-- reading or summarizing the one-shot post-2026-07-31 V2 outcome block;
-- producing a fresh-forward PASS/MIXED/FAIL verdict;
-- V3-A scoring on V2F5/V2F6;
-- V3-B or later V3 hypothesis outcome runs;
-- V3 integration or final late-development confirmation.
+Run the already-implemented V3-A runner on the user's local machine against the exact frozen artifacts. Before scoring:
 
-Actual V2 one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
+1. pull the branch;
+2. run the full repo pytest suite and record exact result/warnings;
+3. locate and verify the prepared-cache manifest hash `6b404f...6143`;
+4. locate the original frozen `ranking_v2_hgb_xs_market_summary.json` and `ranking_v2_hgb_xs_market_predictions.parquet`;
+5. use a new empty V3-A output directory;
+6. execute only V2F1-V2F4;
+7. commit result artifacts/ledger/checkpoint/handoff and stop for review.
+
+Do **not** proceed automatically to Structure-Lite after the run.
 
 ## Authorization boundary
 
 Do not:
 
 - rerun Stage 5;
-- reopen/tune/rescue Ranking-V2 candidate selection;
-- modify the selected champion based on historical outcomes now observed;
-- use H5/H20 to rescue the champion;
-- call history through `2026-07-31` independent V2 validation;
-- inspect fresh-forward outcomes before the separate one-shot authorization;
-- write the global forward-outcome access marker before that authorization;
-- score V2F5/V2F6 for the V3-A recency hypothesis;
-- change V3-A candidate definitions/gates based on scores;
-- start a later V3 hypothesis without a separately reviewed specification;
-- start probability calibration;
-- start Stage 6;
-- run `IDX-VAL-002`;
+- reopen/tune/rescue Ranking V2;
+- call pre-2026-07-31 history independent validation;
+- inspect reserved post-2026-07-31 V2 fresh-forward outcomes before separate one-shot authorization;
+- write `FORWARD_OUTCOME_ACCESS_STARTED` before that authorization;
+- score/load/summarize V2F5/V2F6 for V3-A;
+- change V3-A half-lives, features, model parameters, gates or tie rule based on outcomes;
+- start V3-B or later outcome work without a separately reviewed spec;
+- start V3 integration/final confirmation;
+- start probability calibration, Stage 6 or `IDX-VAL-002`;
 - make execution-PnL claims;
 - Kelly-size;
 - paper/live trade;
