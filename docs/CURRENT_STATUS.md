@@ -241,3 +241,41 @@ Do not:
 - materialize/score session `1225+` for V4 development;
 - access post-2026-07-31 fresh-forward outcomes or write `FORWARD_OUTCOME_ACCESS_STARTED`;
 - start calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge automatically.
+
+## V3-D PIT sector-history recheck — 2026-08-10
+
+The post-V3-C V3-D data-gate review was rerun on final branch HEAD
+`147b6a4f665ecfea9117b58f10c81bc5747fe034`.
+
+- full pytest: `357 passed`, `0 failed`, `3 warnings` in `15.77s`;
+- frozen panel/calendar/security-master/V2 prepared/V2 manifest hashes all
+  matched exactly;
+- no defensible immutable ticker-by-date IDX-IC history was located locally
+  or established from the official public pages;
+- `validate-history`: not run because no admissible sector-history artifact
+  exists;
+- `prepare`: not run;
+- data-gate result: `BLOCKED_PIT_SECTOR_HISTORY`.
+
+The official IDX stocks page confirms IDX-IC starts on 2021-01-25 and describes
+the taxonomy, but it is a current classification page. The current IDX stock
+list is dynamic and exposes no historical effective/availability intervals.
+The previously inspected monthly stock-price listing contains report-month
+sector labels but does not establish exact classification change dates or
+public `available_at` semantics. A publicly indexed 2021 initial-list lead is
+not a complete change history or a verified first-party immutable source.
+
+The local current sector snapshots under
+`D:\Documents\Project\idx-trade-external\Dataset-Saham-IDX\List Emiten\Sectors`
+were explicitly rejected as PIT evidence and were not used. No normalized
+history, cache, manifest, or sector assignment artifact was created. V3-C
+remains final `V3_C_REGIME_KILL_KEEP_V2_CONTROL`; V3-D ordinals `008/009`
+remain unviewed and the outcome boundary is unchanged.
+
+Result checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED_RERUN.md`
+
+Result handoff:
+
+`coordination/handoffs/IDX-RANKING-V3-SECTOR-PRE-RUN-REVIEW-RESULT.md`

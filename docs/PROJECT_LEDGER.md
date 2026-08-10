@@ -1559,3 +1559,27 @@ unviewed and the cumulative historical evaluated-candidate count remains
 `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. See the dated checkpoint
 and result handoff for the full input paths, feature coverage, and top-15
 correlation table.
+
+## 31. V3-D PIT sector-history data-gate recheck — 2026-08-10
+
+The post-V3-C V3-D pre-run review was rerun on
+`research/idx-ranking-v2-spec-v1` at HEAD
+`147b6a4f665ecfea9117b58f10c81bc5747fe034`. Full pytest passed
+`357/357` with three existing pandas FutureWarnings in `15.77s`.
+
+The exact frozen panel, calendar, security master, V2 prepared table, and V2
+manifest all matched their pinned SHA-256 identities. No defensible immutable
+historical IDX-IC ticker-by-date classification source was found in the local
+data stores or established from the official public IDX pages. The official
+stocks page establishes the IDX-IC taxonomy and its 2021-01-25 start, but the
+current stock list is dynamic and the monthly listing source does not establish
+classification effective-date changes or public availability timestamps.
+
+Current local sector CSV snapshots were rejected as current-state data and not
+used. Because `usable_from=max(effective_from, calendar_date(available_at))`
+cannot be established for a complete development-period history, the result
+is `BLOCKED_PIT_SECTOR_HISTORY`. `validate-history` and V3-D `prepare` were
+not run; no normalized history, cache, manifest, assignment coverage, or
+outcome metric was created. Ordinals `008/009` remain unviewed, V3-C remains
+`V3_C_REGIME_KILL_KEEP_V2_CONTROL`, and all F5/F6/fresh-forward boundaries
+remain untouched.
