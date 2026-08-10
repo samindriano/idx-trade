@@ -94,10 +94,10 @@ def _assert_contract_files(
         "structure_spec_sha256": _normalized_sha256(structure_spec_path),
         "structure_spec_git_blob": _normalized_git_blob_sha1(structure_spec_path),
         "structure_addendum_git_blob": _normalized_git_blob_sha1(structure_addendum_path),
-        "late_spec_sha256": sha256_file(late_spec_path),
-        "late_spec_git_blob": _git_blob_sha1(late_spec_path),
-        "late_addendum_sha256": sha256_file(late_addendum_path),
-        "late_addendum_git_blob": _git_blob_sha1(late_addendum_path),
+        "late_spec_sha256": _normalized_sha256(late_spec_path),
+        "late_spec_git_blob": _normalized_git_blob_sha1(late_spec_path),
+        "late_addendum_sha256": _normalized_sha256(late_addendum_path),
+        "late_addendum_git_blob": _normalized_git_blob_sha1(late_addendum_path),
     }
     expected = {
         "structure_spec_sha256": STRUCTURE_SPEC_SHA256,
