@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import idx_trade.ranking_v3_true_ranking as v3e
+import idx_trade.ranking_v3_true_ranking_erratum as v3e
 from idx_trade.research_v2_models import HGB_XS_MARKET, candidate_feature_columns
 
 
@@ -39,13 +39,13 @@ def test_candidate_identity_and_feature_contract() -> None:
 
 
 def test_xgboost_version_is_frozen(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(v3e.xgb, "__version__", "0.0.0")
-    with pytest.raises(RuntimeError, match="xgboost==3.2.1"):
+    monkeypatch.setattr(v3e.base.xgb, "__version__", "0.0.0")
+    with pytest.raises(RuntimeError, match="xgboost==3.2.0"):
         v3e._assert_xgboost_version()
 
 
 def test_lambdamart_parameter_contract() -> None:
-    assert v3e._assert_xgboost_version() == "3.2.1"
+    assert v3e._assert_xgboost_version() == "3.2.0"
     ranker = v3e.build_lambdamart()
     params = ranker.get_params()
     expected = {
@@ -147,8 +147,8 @@ def test_discovery_read_physically_filters_at_984(
         captured["filters"] = filters
         return raw.copy()
 
-    monkeypatch.setattr(v3e.pd, "read_parquet", fake_read_parquet)
-    monkeypatch.setattr(v3e, "_normalize_candidate_table", lambda frame, candidate: frame)
+    monkeypatch.setattr(v3e.base.pd, "read_parquet", fake_read_parquet)
+    monkeypatch.setattr(v3e.base, "_normalize_candidate_table", lambda frame, candidate: frame)
 
     result = v3e.read_discovery_table(path)
     assert captured["filters"] == [("signal_session_index", "<=", 984)]
@@ -168,8 +168,8 @@ def test_discovery_read_rejects_materialized_sealed_session(
             "binary_target": [1],
         }
     )
-    monkeypatch.setattr(v3e.pd, "read_parquet", lambda *args, **kwargs: raw.copy())
-    monkeypatch.setattr(v3e, "_normalize_candidate_table", lambda frame, candidate: frame)
+    monkeypatch.setattr(v3e.base.pd, "read_parquet", lambda *args, **kwargs: raw.copy())
+    monkeypatch.setattr(v3e.base, "_normalize_candidate_table", lambda frame, candidate: frame)
     with pytest.raises(RuntimeError, match="sealed sessions"):
         v3e.read_discovery_table(path)
 
@@ -215,7 +215,10 @@ def test_top_decile_overlap_identical_scores_is_one() -> None:
 
 def test_top_decile_overlap_detects_changed_names() -> None:
     control = _predictions([float(i) for i in range(10)], v3e.V3_E_CONTROL)
-    candidate = _predictions([10.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 0.0], v3e.V3_E_LAMBDAMART)
+    candidate = _predictions(
+        [10.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 0.0],
+        v3e.V3_E_LAMBDAMART,
+    )
     result = v3e._top_decile_overlap(control, candidate)
     assert (result["top_decile_jaccard"] < 1.0).all()
     assert (result["top_decile_entrants"] > 0).all()
@@ -242,6 +245,9 @@ def test_contract_hash_constants_are_frozen() -> None:
     assert v3e.TRUE_RANKING_SPEC_GIT_BLOB == "20df2927b6663ea16955919760db9c1429cff3a5"
     assert v3e.TRUE_RANKING_ADDENDUM_SHA256 == "6652e1f934f58630619a9cab5afb0bdfaa3317894977bad8bfa9ca5ffe980812"
     assert v3e.TRUE_RANKING_ADDENDUM_GIT_BLOB == "01c4dca87ff52fca678c948e4ee23d3e3c82dbcd"
+    assert v3e.DEPENDENCY_ERRATUM_SHA256 == "bd029458f7a7cd14424af9b748cb7522f1d23b0fe8eaf20ad8f6b44d48894bea"
+    assert v3e.DEPENDENCY_ERRATUM_GIT_BLOB == "327e053c2a1b4270acc4e7de313bba97680eff8b"
+    assert v3e.FROZEN_XGBOOST_VERSION == "3.2.0"
 
 
 def test_existing_v3_gates_are_reused() -> None:
