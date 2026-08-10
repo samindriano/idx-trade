@@ -19,6 +19,7 @@ Do not implement or modify research code in this task. Return the local result t
 6. `src/idx_trade/path_risk_v1_discovery_run.py`
 7. `tests/test_path_risk_v1.py`
 8. `tests/test_path_risk_v1_discovery_run.py`
+9. `docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_IMPORT_PREFLIGHT_BLOCK.md`
 
 Acknowledge:
 
@@ -30,6 +31,8 @@ Acknowledge:
 
 ## Preflight
 
+This repository uses a `src/` package layout. `pytest` injects `src` through `pyproject.toml`, but a bare `python -m ...` does not. The first local execution attempt therefore resolved `idx_trade` from an older Codex worktree and stopped before any outcome access. For this rerun, the current checkout's `src` directory is explicitly pinned for the entire PowerShell process.
+
 ```powershell
 git fetch origin
 git checkout research/idx-ranking-v2-spec-v1
@@ -37,6 +40,15 @@ git pull --ff-only origin research/idx-ranking-v2-spec-v1
 git status --short
 $HEAD = git rev-parse HEAD
 $UPSTREAM = git rev-parse origin/research/idx-ranking-v2-spec-v1
+
+# Replace any inherited PYTHONPATH so Python cannot resolve idx_trade from a stale worktree.
+$REPO_ROOT = (Resolve-Path .).Path
+$SRC_ROOT = (Resolve-Path .\src).Path
+$env:PYTHONPATH = $SRC_ROOT
+
+# Fail closed unless both the package and the discovery runner resolve from THIS checkout.
+python -c "import pathlib, idx_trade, idx_trade.path_risk_v1_discovery_run as r; root=pathlib.Path(r'$REPO_ROOT').resolve(); pkg=pathlib.Path(idx_trade.__file__).resolve(); runner=pathlib.Path(r.__file__).resolve(); print('idx_trade=', pkg); print('runner=', runner); assert root in pkg.parents; assert root in runner.parents"
+
 python -m pytest
 ```
 
@@ -44,9 +56,10 @@ Require:
 
 - clean working tree before execution;
 - `$HEAD -eq $UPSTREAM`;
+- `idx_trade` and `path_risk_v1_discovery_run` both resolve below the current `$REPO_ROOT`;
 - full pytest with `0 failed`.
 
-If pytest fails, STOP and return the exact failure. Do not patch code locally.
+If import verification or pytest fails, STOP and return the exact failure. Do not patch code locally.
 
 ## Frozen local inputs
 
@@ -112,7 +125,7 @@ Use a new empty output directory:
 $OUT = "D:\Documents\Project\idx-trade-data-gate-20260808v\path_risk_v1_discovery_run_20260810_001"
 ```
 
-Run exactly once:
+Run exactly once in the **same PowerShell process where `$env:PYTHONPATH = $SRC_ROOT` was set**:
 
 ```powershell
 python -m idx_trade.path_risk_v1_discovery_run `
@@ -134,11 +147,12 @@ Do not run the command twice. If the process errors after creating a nonempty ou
 Return, without editing repo files:
 
 1. branch, final HEAD/upstream, clean state;
-2. full pytest result;
-3. exact verified input hashes;
-4. target rows and target status composition;
-5. feature/target join coverage;
-6. per-fold F1-F4:
+2. exact `idx_trade.__file__` and discovery-runner `__file__` import paths from preflight;
+3. full pytest result;
+4. exact verified input hashes;
+5. target rows and target status composition;
+6. feature/target join coverage;
+7. per-fold F1-F4:
    - train rows;
    - validation rows/dates/tickers;
    - training q75 baseline;
@@ -150,10 +164,10 @@ Return, without editing repo files:
    - Q1/Q5 realized adverse excursion and spread;
    - Q1/Q5 stop-touch rates;
    - prediction finite rate / unique prediction count;
-7. exact frozen gate checks and final verdict;
-8. all artifact hashes, including target/model-table/metrics/predictions/summary and per-fold model hashes;
-9. runtime total + per fold;
-10. explicit confirmation that:
+8. exact frozen gate checks and final verdict;
+9. all artifact hashes, including target/model-table/metrics/predictions/summary and per-fold model hashes;
+10. runtime total + per fold;
+11. explicit confirmation that:
    - only F1-F4 Path Risk outcomes were materialized/evaluated;
    - no Path Risk F5/F6 outcome was read into the run frames;
    - no post-2026-07-31 outcome was accessed;
@@ -168,7 +182,7 @@ After returning the report, STOP.
 Do not:
 
 - edit/commit/push source or docs;
-- rerun PR-001;
+- rerun PR-001 after outcome access begins;
 - access F5/F6 Path Risk outcomes;
 - change quantile/model/features/folds/gates;
 - create rescue candidates;
