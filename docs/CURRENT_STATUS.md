@@ -2,32 +2,30 @@
 
 Date: 2026-08-10 (Asia/Jakarta)
 
-This is the authoritative short first-read layer. For chronology use `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`, and the newest dated checkpoint/handoff. If older text conflicts, this file plus the newest controlling checkpoint wins.
+This is the authoritative short first-read layer. For chronology use `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`, `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`, and the newest dated checkpoint/handoff. If older text conflicts, this file plus the newest controlling checkpoint wins.
 
 ## Current phase
 
 - active research branch: `research/idx-ranking-v2-spec-v1`;
 - Ranking V1 historical benchmark failed and its consumed holdout is never rerun;
 - Ranking V2 frozen control remains exact `HGB_XS_MARKET`;
-- Ranking V3 historical-development search is **CLOSED**;
+- Ranking V3 historical-development architecture search is **CLOSED**;
 - final V3 historical-development architecture is **`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`**;
 - one-shot V2F5/V2F6 late-development confirmation: **PASS**;
 - V3-A Recency: killed;
 - V3-C Regime-Specialization: killed;
 - V3-D Sector-Relative: parked at `BLOCKED_PIT_SECTOR_HISTORY`, outcomes unconsumed;
 - V3-E True Ranking: killed;
-- optional V3 integration: skipped because only one independent Tier-1 component survived;
-- cumulative evaluated V3 architecture-candidate count remains `9`;
-- V3-D ordinals 008/009 remain unviewed;
-- V2F5/V2F6 are now consumed exactly once and may not be reused for model selection;
-- sessions `1225+` remain outside the consumed late-development confirmation;
+- cumulative evaluated V3 architecture-candidate count remains `9`; V3-D ordinals `008/009` remain unviewed;
+- V2F1..V2F6 are now development knowledge and may not be relabeled independent holdouts for V4;
+- sessions `1225+` remain sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
 ## Frozen V3 conclusion
 
-Final independent review checkpoint:
+Final review checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REVIEW_PASS_CLOSED.md`
 
@@ -35,42 +33,11 @@ Late-development result checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_RESULT.md`
 
-The defensible V3 conclusion is:
+Defensible conclusion:
 
-> Adding the frozen compact eight-feature causal Structure-Lite geometry bundle to the exact V2 HGB ranker produced robust incremental historical-development ranking value across discovery folds F1-F4 and reserved late-development folds F5-F6.
+> Adding the frozen compact eight-feature causal Structure-Lite geometry bundle to the exact V2 HGB ranker produced robust incremental historical-development ranking value across F1-F6. This remains ranking evidence only, not calibrated probability, execution/PnL evidence, live readiness, or independent future validation.
 
-This remains a ranking result only. It is not calibrated probability, execution/PnL evidence, live-trading readiness, or independent future validation.
-
-## V3-B historical evidence
-
-### Discovery F1-F4
-
-Paired versus exact V2 control:
-
-- median PR improvement `+0.0039258450`;
-- q25 `+0.0026897894`;
-- worst `+0.0018412974`;
-- PR improvement positive `4/4` folds;
-- median ROC change `+0.0022459186`;
-- median Q5-Q1 change `+0.0113241480`;
-- top-decile lift median change `-0.0036228765` remains a diagnostic warning.
-
-### One-shot late-development F5/F6
-
-Exact control equivalence PASS on `59,491` rows with max score and metric differences `0.0`.
-
-Paired Structure-Lite changes:
-
-- F5 PR `+0.0016661426`, ROC `+0.0026017659`, Q5-Q1 `+0.0215800814`, top-decile lift `+0.0164814105`;
-- F6 PR `+0.0135161180`, ROC `+0.0118806168`, Q5-Q1 `+0.0038483525`, top-decile lift `-0.0043770061`;
-- median PR improvement `+0.0075911303`, worst `+0.0016661426`;
-- median ROC change `+0.0072411913`;
-- median Q5-Q1 change `+0.0127142169`, worst `+0.0038483525`;
-- absolute gate PASS;
-- paired gate PASS;
-- final `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`.
-
-F6 is especially informative: exact V2 control ROC was `0.4931017075`, while Structure-Lite increased it to `0.5049823243` and also improved PR delta and Q5-Q1. This is useful historical robustness evidence but must not be relabeled independent future validation.
+V3-B paired PR improvement versus exact V2 control was positive on all six development folds. F1-F4 median paired PR improvement was `+0.0039258450`; F5/F6 median was `+0.0075911303`. Top-decile behavior remains a diagnostic caveat rather than a promotion target.
 
 ## Frozen data/model identities
 
@@ -86,46 +53,88 @@ Immutable V2 prepared cache:
 - SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`;
 - manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`.
 
-Late-development Structure-Lite cache:
+Frozen V3-B late-development cache used as the V4 base:
 
 - status `RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CACHE_FROZEN`;
 - SHA-256 `af0ed60f55563a571bdd86c024d3087bd46fea50845343d285f9f93b72a21a4d`;
 - manifest SHA-256 `1c629850a6b902442fa4cb17585c514de88e1f9d3a40c854b07cb1f01cc58880`;
 - rows/tickers/sessions `286,453 / 737 / 20..1224`;
-- no session 1225+ materialized.
+- no session `1225+` materialized.
 
-## Next research lane
+## V4 — final alpha program
 
-The V3 ranking architecture is now a **fixed benchmark**, not a moving target.
+V4 is now the project's **final bounded alpha-generation round** before primary attention moves to fresh-forward validation and then separate risk/uncertainty/portfolio/execution layers.
 
-While the separate post-2026-07-31 fresh-forward block accumulates toward its previously frozen independent-validation requirement, active research may continue only on orthogonal lanes that do not alter the V3-B ranker or consume reserved fresh-forward outcomes.
+The design arena is frozen in:
 
-Preferred next lane:
+`docs/RANKING_V4_FINAL_ALPHA_ARENA_V1.md`
 
-**V4-A Path Risk / Adverse Excursion — SPECIFICATION FIRST.**
+Seven information families are retained as a design shortlist, not seven automatic model runs:
 
-Research question:
+1. Liquidity & Participation Quality;
+2. Price-Path Quality;
+3. Cross-Sectional Opportunity Context;
+4. Peer / Sector Relative Strength, conditional on PIT sector history;
+5. Systematic-Adjusted / Idiosyncratic Strength;
+6. Catalyst / Fundamental Context, conditional on PIT provenance;
+7. Flow / Ownership Information, conditional on data readiness.
 
-> Conditional on a setup already ranked by frozen V3-B, can a separate model characterize adverse path risk, drawdown/excursion, time-to-resolution, or related path uncertainty without replacing the opportunity rank?
+Normal executable budget remains narrow: normally three main families plus at most one defensible conditional wildcard, one frozen bundle per family, no model zoo, and at most one preregistered integration after independent family results.
 
-The first V4-A task must define target(s), path window, censoring/resolution semantics, causal feature boundary, validation design, model/candidate budget, and explicit separation from V3 opportunity ranking before any model is fitted.
+## Current V4-A family
 
-Do not use V4-A outcomes to retune or reopen V3-B.
+Current family:
+
+**`V4-A-PARTICIPATION-V1` — Participation Quality / Price Impact.**
+
+Controlling files:
+
+- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_EXPERIMENT_MAP_V1.md`;
+- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_V1.md`;
+- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_REVIEW_ADDENDUM_V1.md`;
+- `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`.
+
+Reserved first-pass candidates are frozen before V4 outcome access:
+
+- ordinal `012`: exact V3-B 33-feature control;
+- ordinal `013`: V3-B + three-feature **A1 Impact/Absorption** bundle;
+- ordinal `014`: V3-B + four-feature **A2 Persistent Directional Participation** bundle.
+
+A1 and A2 are specified together and are intended to be scored atomically/parallel-equivalently. There is **no first-pass A1+A2 integration candidate**. One integration may be considered only if both challengers independently pass their frozen gates.
+
+Implementation exists for:
+
+- causal A1/A2 feature construction;
+- exact candidate feature/model definitions using frozen V3-B HGB parameters;
+- V4-A cache preparation on exact frozen V3-B rows;
+- atomic control+A1+A2 historical runner with frozen V3-B reference-equivalence checks and promotion gates;
+- focused causal/model/gate tests.
+
+No V4-A model outcome has been viewed yet; V4 evaluated-candidate count remains `0`, cumulative historical evaluated count remains `9`.
 
 ## Immediate next action
 
-Prepare and independently review a V4-A Path Risk specification only. Do not fit/score V4-A until that specification is frozen.
+The next permitted action is **outcome-independent local V4-A cache preparation and feature audit only**:
 
-Separately, do not authorize fresh-forward V3 outcome access until the already frozen future-session/maturity requirement is genuinely satisfied and explicitly authorized.
+- exact source/spec/cache identity;
+- row/session preservation;
+- feature coverage/missingness;
+- numerical distributions;
+- redundancy/correlation versus existing V3-B volume/value features;
+- runtime profile.
+
+Only after that cache/data audit is reviewed and frozen may a separate checkpoint authorize the one atomic F1-F6 control+A1+A2 outcome run.
 
 ## Hard boundary
 
 Do not:
 
 - reopen/tune V3-A/B/C/E;
-- reuse V2F5/V2F6 for candidate selection;
+- treat V2F5/V2F6 as independent V4 holdouts;
 - bypass V3-D PIT sector-history block;
-- materialize/score post-2026-07-31 fresh-forward outcomes;
-- write `FORWARD_OUTCOME_ACCESS_STARTED` without explicit future authorization;
-- conflate V4 path-risk targets with the frozen V3 opportunity score;
+- modify A1/A2 formulas based on V4 outcome metrics;
+- materialize/score session `1225+` for V4 development;
+- access post-2026-07-31 fresh-forward outcomes or write `FORWARD_OUTCOME_ACCESS_STARTED` without separate future authorization;
+- create A1+A2 integration before both independently pass;
+- conflate future path-risk/uncertainty targets with the frozen opportunity ranking target;
 - start calibration/Stage 6/`IDX-VAL-002`/execution-PnL/Kelly/paper/live/main automatically.
