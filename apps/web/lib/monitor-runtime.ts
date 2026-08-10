@@ -35,6 +35,7 @@ export type MonitorRuntimeStatus = {
   schema_version: number;
   runtime_ready: boolean;
   runtime_root: string;
+  monitor_start_date: string;
   calendar_ready: boolean;
   calendar_first_session: string | null;
   calendar_last_session: string | null;
@@ -111,7 +112,7 @@ async function runJson<T>(args: string[], timeout = 20_000): Promise<T> {
 function baseArgs(command: "status" | "capture" | "sync-calendar") {
   return [
     "-m",
-    "idx_trade.forward_monitoring",
+    "idx_trade.forward_monitoring_runtime",
     command,
     "--runtime-root",
     runtimeRoot(),
@@ -123,10 +124,13 @@ export async function getMonitorRuntimeStatus(): Promise<MonitorRuntimeStatus> {
 }
 
 export async function syncMonitorCalendar() {
-  return runJson<{ status: string; sessions: number; first: string | null; last: string | null }>(
-    baseArgs("sync-calendar"),
-    60_000,
-  );
+  return runJson<{
+    status: string;
+    monitor_start_date: string;
+    sessions: number;
+    first: string | null;
+    last: string | null;
+  }>(baseArgs("sync-calendar"), 60_000);
 }
 
 export async function launchSessionCapture(requestedDate?: string | null) {
@@ -138,6 +142,12 @@ export async function launchSessionCapture(requestedDate?: string | null) {
   const target = requestedDate?.trim() || status.next_missing_session;
   if (!target) {
     return { accepted: false as const, reason: "NO_MISSING_SESSION", target_session: null };
+  }
+
+  if (target < status.monitor_start_date) {
+    throw new MonitorRuntimeError(
+      `Target ${target} is before monitor start ${status.monitor_start_date}.`,
+    );
   }
 
   const session = status.sessions.find((item) => item.session_date === target);
