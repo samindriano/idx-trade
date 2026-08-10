@@ -297,10 +297,13 @@ def build_participation_quality_features(
         if not state.eq("ACTIVE").all():
             raise ValueError("V4-A signal-research panel must contain ACTIVE rows only")
 
-    for column in ("high", "low", "close", "regular_market_value"):
+    for column in ("high", "low", "close"):
         values = pd.to_numeric(data[column], errors="coerce")
         if (values.dropna() <= 0.0).any():
             raise ValueError(f"V4-A panel contains non-positive {column}")
+    market_value = pd.to_numeric(data["regular_market_value"], errors="coerce")
+    if (market_value.dropna() < 0.0).any():
+        raise ValueError("V4-A panel contains negative regular_market_value")
     high = pd.to_numeric(data["high"], errors="coerce")
     low = pd.to_numeric(data["low"], errors="coerce")
     if (high.notna() & low.notna() & (high < low)).any():
