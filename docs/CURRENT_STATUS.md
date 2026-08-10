@@ -14,48 +14,25 @@ This is the authoritative short first-read layer. For chronology read `docs/PROJ
 - V2 fresh-forward outcomes: **NOT ACCESSED**; first independent verdict still waits for exactly 100 consecutive H10-mature forward signal sessions under the frozen one-shot contract;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - V3-A Recency: **COMPLETE — CLOSED WITHOUT PROMOTION**;
-- V3-A result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`; H252/H504 are `KEEP_DIAGNOSTIC`; cumulative V3 candidate count `3`;
-- V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED FOR NEXT RESEARCH STEP**;
-- V3-B outcome score: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8` on historical development folds only;
+- V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED / SURVIVING COMPONENT**;
+- V3-C Regime-Specialization: **SPEC FROZEN + REVIEW PASS + IMPLEMENTED; LOCAL F1-F4 RUN NOT YET EXECUTED**;
+- V3-D Sector / V3-E True Ranking: not started;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
-- V3-C Regime / V3-D Sector / V3-E True Ranking: not started;
 - probability calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-## Current controlling V3-B documents
+## Mandatory first reads
 
-Frozen specification:
+Before any next model/runtime action read:
 
-`docs/RANKING_V3_STRUCTURE_LITE_SPEC_V1.md`
+1. this file;
+2. newest checkpoint/handoff;
+3. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`;
+4. `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
+5. `docs/RANKING_V3_RESEARCH_BACKLOG.md`;
+6. `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md`;
+7. `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
 
-- reported SHA-256: `1bf046e98f0d0e92c0981ff4120dc5a54e74f2082b84b8c9d8f4ca281cdf1051`;
-- Git blob: `0392ab506aa451355697327d416f8f2b2ea21d4f`.
-
-Independent review addendum:
-
-`docs/RANKING_V3_STRUCTURE_LITE_SPEC_REVIEW_ADDENDUM_V1.md`
-
-- Git blob: `717871707e833ab9818c249d52aae5b234334fc4`.
-
-Implementation/run-authorization checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_IMPLEMENTED_RUN_AUTHORIZED.md`
-
-Current local-run handoff:
-
-`coordination/handoffs/IDX-RANKING-V3-STRUCTURE-LITE-LOCAL-RUN.md`
-
-Mandatory runtime/read-before-next-model note:
-
-`docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
-
-Mandatory V3 research context:
-
-- `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
-- `docs/RANKING_V3_RESEARCH_BACKLOG.md`;
-- `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md`;
-- `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
-
-## V2 data/model frozen identities
+## Frozen data/model identities
 
 Signal-research source:
 
@@ -71,54 +48,44 @@ Immutable V2 prepared cache:
 - 292,633 rows / 737 tickers / signal sessions `20..1250`;
 - resolved primary H10 rows only.
 
-Historical-development V2 champion:
+Historical V2 champion:
 
 - `HGB_XS_MARKET`;
-- 25 frozen features = 10 same-date XS ranks + 9 causal market-context + 6 stock-minus-market features;
+- exact 25 frozen features = 10 same-date XS ranks + 9 causal market-context + 6 stock-minus-market features;
 - median PR-AUC delta `0.0238795` across V2F1-F6;
 - q25 PR delta `0.0194015`;
 - positive PR folds `6/6`;
 - median ROC `0.524410`;
 - positive Q5-Q1 folds `6/6`;
-- V2F6 ROC `0.493102`, therefore forward validation remains essential.
+- V2F6 ROC `0.493102`, therefore independent forward validation remains essential.
+
+Historical frozen V2 HGB reference artifacts:
+
+- summary SHA-256 `24cd9c6d1a978b35126955802fcf4852e1f3d50a489540b761052a9221a5327d`;
+- predictions SHA-256 `5a9df1c66a34c0d54760015c49ccb356be984703935c96ee8218ae863c47b179`.
 
 Final frozen V2 refit:
 
 - model SHA-256 `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
 - model manifest SHA-256 `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
-- fit rows 292,633 / 737 tickers / sessions `20..1250`;
 - ranking score is not calibrated probability.
 
-Historical frozen V2 HGB reference artifacts needed for V3 control equivalence:
+## V3-A Recency — closed
 
-- summary SHA-256 `24cd9c6d1a978b35126955802fcf4852e1f3d50a489540b761052a9221a5327d`;
-- predictions SHA-256 `5a9df1c66a34c0d54760015c49ccb356be984703935c96ee8218ae863c47b179`.
+Evaluated exactly ordinals 001-003 on V2F1-F4.
 
-## V3-A Recency closed result
+- control equivalence PASS on 84,732 rows with max score/metric differences `0.0`;
+- H252: absolute sanity PASS, paired promotion FAIL;
+- H504: absolute sanity PASS, paired promotion FAIL;
+- deterministic result `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`;
+- no recency component survives;
+- do not rescue with new half-lives/windows/weight clipping.
 
-V3-A evaluated exactly:
+Cumulative evaluated count after V3-A: `3`.
 
-- ordinal 001 exact V2 control;
-- ordinal 002 H252;
-- ordinal 003 H504;
-- V2F1-F4 only;
-- control equivalence PASS on 84,732 rows with maximum score/metric differences `0.0`;
-- full local pytest at that run: `240 passed, 3 warnings`;
-- H252 absolute sanity PASS, paired promotion FAIL;
-- H504 absolute sanity PASS, paired promotion FAIL;
-- selected component: none;
-- deterministic result `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`.
+## V3-B Structure-Lite — promoted survivor
 
-Do not rescue recency with new half-lives/windows/weight clipping.
-
-## V3-B Structure-Lite frozen candidate
-
-Exact candidate budget:
-
-1. ordinal 004: exact V2 `HGB_XS_MARKET` control;
-2. ordinal 005: exact V2 25 features + one frozen eight-feature Structure-Lite bundle.
-
-Eight new features, exact order:
+Frozen candidate = exact V2 25 features plus eight causal geometry features:
 
 1. `structure_support_distance_atr`
 2. `structure_resistance_distance_atr`
@@ -129,57 +96,162 @@ Eight new features, exact order:
 7. `structure_breakout_retest_state`
 8. `structure_breakout_volume_confirmed`
 
+V3-B F1-F4 result:
+
+- full pytest `252 passed, 0 failed, 3 warnings`;
+- cache `216,472` rows / `674` tickers / sessions `20..984`;
+- cache SHA `7084759fddaa20e82ec03e50205f2872520e6b3e11ea5f294033589a9c803405`;
+- manifest SHA `e428cad0ff24b57977106482cef1478e60c0660adcee6dbf103803516b35aeb2`;
+- control equivalence PASS on 84,732 rows, max diff `0.0`;
+- paired PR improvement positive 4/4 folds;
+- median paired PR improvement `+0.0039258450`;
+- q25 `+0.0026897894`;
+- worst `+0.0018412974`;
+- median ROC change `+0.0022459186`;
+- median Q5-Q1 change `+0.0113241480`;
+- top-decile lift median change `-0.0036228765` is a retained warning/diagnostic;
+- deterministic result `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`.
+
+Independent review PASS checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_REVIEW_PASS.md`
+
+V3-B survives as a component for a later one-shot integration experiment. Its features/parameters are closed and may not be tuned after the viewed result.
+
+Cumulative evaluated count after V3-B: `5`.
+
+## V3-C Regime-Specialization — current active task
+
+Controlling spec:
+
+`docs/RANKING_V3_REGIME_SPEC_V1.md`
+
+- Git blob `2a2f48d68f5d3df839c61191d4a11fa870470b00`.
+
+Independent review addendum:
+
+`docs/RANKING_V3_REGIME_SPEC_REVIEW_ADDENDUM_V1.md`
+
+- Git blob `a13c5ae103908311968e38c6ded233b7a1cbd901`.
+
+Implementation checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_REGIME_IMPLEMENTED_RUN_AUTHORIZED.md`
+
+Local execution handoff:
+
+`coordination/handoffs/IDX-RANKING-V3-REGIME-LOCAL-RUN.md`
+
+### Frozen V3-C question
+
+Does explicit conditional specialization add robust value beyond the exact V2 HGB that already contains continuous market context?
+
+### Frozen state definition
+
+Use outcome-independent market context rebuilt from the full causal primary-liquid frame:
+
+- `market_breadth_return_20_positive`;
+- `market_median_close_return_20`;
+- `market_median_atr14_over_close`.
+
+For session t, use prior 252 official sessions only, require at least 126 finite prior observations:
+
+- breadth <= prior q25 = stress vote;
+- return <= prior q25 = stress vote;
+- ATR/close >= prior q75 = stress vote;
+- >=2 votes → `STRESS`, otherwise `NORMAL`;
+- insufficient causal history → `MISSING_WARMUP`.
+
+### Frozen architecture
+
+Candidate budget exactly:
+
+- ordinal 006 exact V2 global control;
+- ordinal 007 one NORMAL exact-V2 HGB expert + one STRESS exact-V2 HGB expert.
+
+Regime is routing metadata only. Both experts use exact V2 25 features, preprocessing, HGB parameters, target and raw-logit score. No Structure-Lite, recency, blending, score alignment, calibration, or fallback is allowed.
+
 Implementation:
 
-- `src/idx_trade/research_v3_structure_lite.py` — causal geometry engine;
-- `src/idx_trade/ranking_v3_structure_lite.py` — immutable discovery-cache prepare + F1-F4 runner;
-- `tests/test_ranking_v3_structure_lite.py` — focused causal/guardrail tests.
+- `src/idx_trade/research_v3_regime.py`;
+- `src/idx_trade/ranking_v3_regime.py`;
+- `tests/test_ranking_v3_regime.py`.
 
 Implementation lineage:
 
-- `d451befd10e32711fdaf7f468f6038e2e58f0376` geometry engine;
-- `837e5ce42e90825451b019517022db7d79a7bf81` cache/runner;
-- `c06f1a32068e3b8ad7c09385709a7f80258d11b4` focused tests;
-- `885430ef9d2dbacd85af71fa1119be4a96c34752` fixture correction only.
+- `b92cb24367bcc675cd2bfba5bab636d239fa384a` regime builder;
+- `89ca64393d94bf294a1d437990242bd5d230c96f` initial cache/runner;
+- `7409bfc16914ce487fe39e393f1dd0bf62df4b29` focused tests;
+- `9c94678b970c271b6a9f85c8943e719a5b651bff` pre-outcome context-alignment correction + expert class guards;
+- `3406f835d9d6573bf320daee1edb058e14b1dd77` repeated-market-date regression test.
 
-The implementation uses exact V2 research H/L/C/Volume + causal ATR, official-session windows, prior-session level inventory, deterministic level clustering, separated touches, role reversal, causal breakout/retest state and prior-only volume confirmation. It rejects label/outcome columns and has no Open dependency.
+### Mandatory pre-score fragmentation gate
 
-## V3-B F1-F4 result
+Every F1-F4 fold must have:
 
-The frozen local run completed on source/implementation HEAD
-`eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`.
+Training each NORMAL/STRESS:
 
-- full pytest: `252 passed, 0 failed, 3 warnings`;
-- cache: `216,472` rows, `674` tickers, sessions `20..984`;
-- cache SHA-256: `7084759fddaa20e82ec03e50205f2872520e6b3e11ea5f294033589a9c803405`;
-- cache manifest SHA-256: `e428cad0ff24b57977106482cef1478e60c0660adcee6dbf103803516b35aeb2`;
-- control equivalence: PASS on `84,732` rows; max score and metric differences `0.0` at `1e-12` tolerance;
-- Structure-Lite absolute sanity: PASS;
-- Structure-Lite paired promotion: PASS;
-- deterministic result: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`;
-- cumulative V3 candidate count: `5`.
+- >=40 dates;
+- >=5,000 rows.
 
-This is historical-development evidence on V2F1-V2F4, not independent
-validation. The full metrics, paired deltas, coverage, runtime, and artifact
-hashes are recorded in
-`docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_F1_F4_RESULT.md`.
+Validation each NORMAL/STRESS:
 
-## V3-B next boundary
+- >=8 dates;
+- >=500 rows;
+- zero MISSING_WARMUP validation rows.
 
-Stop for independent ChatGPT review. Do not start V3-C or any integration,
-F5/F6 late-development confirmation, fresh-forward access, calibration,
-Stage 6, `IDX-VAL-002`, execution-PnL, paper/live work, or main merge in this
-run.
+If this outcome-independent gate fails, V3-C is blocked and the regime definition must not be rescued/tuned.
+
+### Frozen V3-C promotion requirements
+
+Candidate must pass:
+
+1. existing absolute sanity gate;
+2. existing overall paired promotion gate;
+3. additional regime-specific gate:
+   - STRESS median paired PR improvement >= `+0.001`;
+   - STRESS nonnegative PR improvement >=3/4 folds;
+   - NORMAL median PR improvement >= `-0.001`;
+   - worst fold-regime PR improvement >= `-0.005`;
+   - median ROC change >= `-0.005` in each regime;
+   - median Q5-Q1 change >= `-0.005` in each regime.
+
+Possible deterministic decisions:
+
+- `V3_C_REGIME_BLOCKED_KEEP_V2_CONTROL`;
+- `V3_C_REGIME_KILL_KEEP_V2_CONTROL`;
+- `V3_C_REGIME_PROMOTE_TWO_STATE_EXPERTS`.
+
+No V3-C outcome has been viewed yet. Cumulative evaluated count remains `5`; ordinals 006/007 are preregistered only.
+
+## Immediate next action
+
+### V2 track
+
+Wait. Do not inspect fresh-forward outcomes until the separately authorized 100-session H10-mature block exists.
+
+### V3 track
+
+Execute only `coordination/handoffs/IDX-RANKING-V3-REGIME-LOCAL-RUN.md` locally:
+
+1. full pytest;
+2. verify frozen artifacts;
+3. outcome-independent V3-C cache prepare + fragmentation gate;
+4. if coverage passes, exact control equivalence;
+5. only then run NORMAL/STRESS experts on F1-F4;
+6. document and stop for independent ChatGPT review.
+
+Do not start V3-D/V3-E or integration automatically.
 
 ## Hard authorization boundary
 
 Do not:
 
-- change Structure-Lite features/constants/model/gates based on results;
-- add a V3-B variant/ablation/rescue;
-- reopen V3-A;
-- load/score/summarize V2F5/V2F6 for V3 R&D;
-- inspect reserved post-2026-07-31 V2 fresh-forward outcomes before its separate one-shot authorization;
-- write `FORWARD_OUTCOME_ACCESS_STARTED` before that authorization;
-- start V3-C/D/E outcome work or V3 integration before separate reviewed specs;
-- calibrate probabilities, run Stage 6/IDX-VAL-002, claim execution PnL, Kelly-size, paper/live trade, or merge to main.
+- alter V3-A/B viewed hypotheses;
+- tune V3-C thresholds/state definition/candidate/gates;
+- include Structure-Lite in V3-C;
+- load/score/summarize V2F5/V2F6;
+- inspect reserved post-2026-07-31 V2 fresh-forward outcomes;
+- write `FORWARD_OUTCOME_ACCESS_STARTED`;
+- start V3-D/V3-E or integration before separate review/spec;
+- calibrate probability, run Stage 6/IDX-VAL-002, execution-PnL, Kelly, paper/live, or merge main.
