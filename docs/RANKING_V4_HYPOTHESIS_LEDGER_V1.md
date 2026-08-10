@@ -1,7 +1,7 @@
 # Ranking V4 Final Alpha Hypothesis Ledger V1
 
 Date: 2026-08-10 (Asia/Jakarta)
-Status: **V4-A FIRST-PASS COMPLETE / A1+A2 FAIL / 3 V4 CANDIDATES VIEWED**
+Status: **V4-A CLOSED / V4-B 015..017 RESERVED PRE-OUTCOME / 3 V4 CANDIDATES VIEWED**
 
 V4 is the final alpha-generation program. The final V3 historical-development architecture `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` is the immutable common benchmark.
 
@@ -9,7 +9,7 @@ The seven-family design arena is frozen in `docs/RANKING_V4_FINAL_ALPHA_ARENA_V1
 
 The cumulative historical evaluated-candidate count entering V4 is `9`: V3 ordinals `001..007` and `010..011` were viewed; V3-D ordinals `008..009` remain blocked/unviewed and therefore are not counted as evaluated results.
 
-## Reserved V4-A first-pass ordinals
+## V4-A first-pass ordinals — CLOSED
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
@@ -17,9 +17,9 @@ The cumulative historical evaluated-candidate count entering V4 is `9`: V3 ordin
 | 013 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-IMPACT-013` | exact V3-B + frozen 3-feature Impact/Absorption bundle | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
 | 014 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-PERSIST-DIRECTION-014` | exact V3-B + frozen 4-feature Persistent Directional Participation bundle | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
 
-No A1+A2 integration ordinal is reserved. One integration candidate may be designed only after both ordinals `013` and `014` independently pass their frozen first-pass gates and receives a separate specification/review/authorization.
+No A1+A2 integration ordinal exists. Both challengers failed their frozen gates; V4-A is closed with no survivor and may not be rescued.
 
-## V4-A frozen identities
+### V4-A frozen identity/result
 
 Controlling specification:
 
@@ -27,86 +27,86 @@ Controlling specification:
 
 Git blob identity at freeze: `e32fa69596291f418ae797613da219bd0d3cf69c`.
 
-First-pass architecture set is exactly:
-
-1. ordinal `012` exact V3-B control;
-2. ordinal `013` A1 Impact/Absorption;
-3. ordinal `014` A2 Persistent Directional Participation.
-
-A1 and A2 were completely specified and implemented before either V4 outcome result was inspected. Their first run is atomic/parallel-equivalent on the same V2F1..V2F6 historical-development folds.
-
-## Outcome-blind V4-A cache audit — 2026-08-10
-
-The authorized cache preparation and restricted feature audit completed before any candidate outcome access.
+Outcome-blind audit completed before any V4-A fit/score:
 
 - cache status: `RANKING_V4_A_PARTICIPATION_CACHE_FROZEN_PRE_OUTCOME`;
 - cache rows/tickers/sessions: `286,453 / 737 / 20..1224`;
 - cache SHA-256: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`;
 - manifest SHA-256: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`;
-- all seven V4-A features have finite rate at least `98.5785%`;
-- no constant or below-80%-finite feature;
-- no absolute Spearman correlation `>=0.95`;
-- highest absolute correlation: `0.8942494476` between `v4a_value_persistence_fraction_5` and `v4a_value_acceleration_log_5v20`;
-- audit status: `RANKING_V4_A_PARTICIPATION_OUTCOME_BLIND_AUDIT_COMPLETE`;
-- audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`;
-- official audit: `binary_target_loaded=false`, `outcome_columns_loaded=false`, `outcome_metrics_computed=false`;
-- no V4-A candidate was fitted/scored and no ordinal result was viewed;
-- cumulative evaluated-candidate count remains `9`.
+- audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`.
 
-The `0.8942` A2 within-bundle redundancy is documented but is below the frozen mechanical-review threshold and is not a causal/specification defect. The already-frozen A2 definition is therefore unchanged.
+First-pass result:
 
-## First-pass authorization — 2026-08-10
-
-Pre-outcome review completed with decision:
-
-`V4_A_FIRST_PASS_ATOMIC_RUN_AUTHORIZED`
-
-Controlling authorization checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RUN_AUTHORIZED.md`
-
-Execution handoff:
-
-`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RUN.md`
-
-The authorized scope is exactly one runner invocation containing control + A1 + A2 over F1-F6, with mandatory exact V3-B control equivalence before challenger interpretation. A1 and A2 use their frozen independent PASS/FAIL gates. No integration is executed in the first-pass run.
-
-## First-pass result — 2026-08-10
-
-The single authorized atomic runner completed with exact control equivalence.
-Both challengers passed absolute sanity but failed their independent paired
-promotion gates. Survivors are empty and no integration candidate was
-authorized or executed.
+- exact control equivalence PASS;
+- A1 ordinal `013`: FAIL;
+- A2 ordinal `014`: FAIL;
+- survivors `[]`;
+- integration not authorized/executed;
+- cumulative historical evaluated-candidate count after V4-A: `12`.
 
 Result checkpoint:
+
 `docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`
 
-Result handoff:
-`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RESULT.md`
+Closure checkpoint:
 
-- control equivalence: `PASS`, `144,223` rows, max score diff `0.0`;
-- A1 paired PR nonnegative folds `3/6`, median PR `+0.0000801749`, median
-  Q5-Q1 change `-0.0028469425` -> `FAIL`;
-- A2 paired PR nonnegative folds `4/6`, median PR `+0.0010168334`, median
-  ROC change `-0.0030273322`, median Q5-Q1 change `-0.0067399084` -> `FAIL`;
-- survivors: `[]`;
-- integration authorized by result: `false`;
-- integration executed: `false`;
-- candidate ordinals viewed: `012..014`;
-- cumulative historical evaluated-candidate count: `12`.
+`docs/checkpoints/2026-08-10_RANKING_V4_A_REVIEW_CLOSED_V4_B_SPEC_AUTHORIZED.md`
+
+## V4-B reserved first-pass ordinals — PRE-OUTCOME
+
+Hypothesis:
+
+`V4-B-PRICE-PATH-V1`
+
+| Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
+|---:|---|---|---|---|---|---|
+| 015 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-CONTROL-015` | exact frozen V3-B 33-feature HGB control | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
+| 016 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-COHERENCE-016` | exact V3-B + frozen B1 3-feature Path Coherence / Jump Concentration bundle | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
+| 017 | `V4-B-PRICE-PATH-V1` | `V4-B-PRICE-PATH-V1-RANGE-ACCEPTANCE-017` | exact V3-B + frozen B2 3-feature Range Acceptance / Rejection bundle | `IMPLEMENTATION_PRE_OUTCOME` | `false` | `UNVIEWED_RESERVED` |
+
+No B1+B2 integration ordinal exists. One integration candidate may be designed only if ordinals `016` and `017` both independently PASS their frozen first-pass gates and receive separate specification/review/authorization.
+
+### V4-B frozen identities
+
+Experiment map:
+
+`docs/RANKING_V4_B_PRICE_PATH_EXPERIMENT_MAP_V1.md`
+
+Controlling specification:
+
+`docs/RANKING_V4_B_PRICE_PATH_SPEC_V1.md`
+
+Frozen spec Git blob:
+
+`a750c28831b95b1c88640c5879289da5f2c05446`
+
+Review addendum:
+
+`docs/RANKING_V4_B_PRICE_PATH_SPEC_REVIEW_ADDENDUM_V1.md`
+
+First-pass architecture set is exactly:
+
+1. ordinal `015` exact V3-B control;
+2. ordinal `016` B1 Path Coherence / Jump Concentration;
+3. ordinal `017` B2 Range Acceptance / Rejection.
+
+B1 and B2 must be completely implemented/frozen before either outcome result is inspected. Their first score, if separately authorized after the outcome-blind audit, must be atomic/parallel-equivalent over V2F1..V2F6.
+
+The V4-B promotion gate is inherited unchanged from V4-A. No gate relaxation or alternate lookback/model/feature rescue is allowed after outcome access.
 
 ## Outcome-access boundary
 
 At this ledger state:
 
 - V4-A result viewed: `true` for ordinals `012..014`;
-- V4 evaluated-candidate count is `3`;
-- cumulative historical evaluated-candidate count is `12`;
+- V4-B result viewed: `false` for ordinals `015..017`;
+- V4 evaluated-candidate count remains `3`;
+- cumulative historical evaluated-candidate count remains `12`;
 - V2F1..V2F6 are known historical-development periods and are not independent validation for V4;
 - sessions `1225+` are sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes remain unaccessed;
 - `FORWARD_OUTCOME_ACCESS_STARTED` remains unwritten;
-- no V4-A integration candidate exists;
+- no V4-B integration candidate exists;
 - no calibration, Stage 6, `IDX-VAL-002`, execution/PnL, Kelly, paper/live or main merge is authorized.
 
 ## Permanent accounting rule
