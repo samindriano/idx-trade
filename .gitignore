@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 .env
+.env.local
+.env.*.local
+apps/web/.env.local
 .dist/
 build/
 *.egg-info/
