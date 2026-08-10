@@ -71,6 +71,17 @@ Agents work from isolated branches/worktrees for writers and never merge into th
 
 Every task concludes with `coordination/handoffs/<task-id>-<agent>.md` using the repository handoff contract. A handoff is evidence, not permission to begin the next phase.
 
+## Parent-chat implementation rule
+
+The parent ChatGPT conversation is the default implementer, not merely an architect that automatically delegates work.
+
+- If the requested repository change can be completed directly with the parent chat's available GitHub or other tools, the parent chat SHOULD implement it directly.
+- Do not hand routine coding, documentation, GitHub editing, review, or architecture work to local Codex merely out of habit.
+- Use local Codex only when the task materially requires access that the parent chat does not have, especially local filesystem/runtime execution, `npm install`, build/typecheck/test execution on the user's machine, dev-server/process management, large local data/model artifacts, or other machine-local operations.
+- When Codex is required, the parent chat still owns the specification, reviews the result, and performs any repository-side follow-up it can do directly.
+- Before delegating, explicitly ask: **"Does this step actually require local execution or local-only state?"** If no, keep the work in the parent chat.
+- This rule applies across research, frontend, documentation, and infrastructure work unless the user explicitly asks for a different orchestration style.
+
 ## Orchestration levels
 
 The parent chat is the control plane. Choose the lightest level that is still reliable:
