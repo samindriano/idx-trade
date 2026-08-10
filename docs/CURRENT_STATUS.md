@@ -7,22 +7,70 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 ## Current phase
 
 - active research branch: `research/idx-ranking-v2-spec-v1`;
-- Ranking V1 historical benchmark failed; consumed Stage-5 holdout is never rerun;
-- Probability V1 remains `PROBABILITY_V1_NOT_READY_DEFERRED`;
-- Ranking V2 historical-development champion remains exact `HGB_XS_MARKET`;
-- V2 final refit + outcome-blind forward runtime remain frozen;
-- V2 fresh-forward outcomes: **NOT ACCESSED**;
+- Ranking V1 historical benchmark failed and its consumed holdout is never rerun;
+- Ranking V2 frozen control remains exact `HGB_XS_MARKET`;
+- Ranking V3 historical-development search is **CLOSED**;
+- final V3 historical-development architecture is **`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`**;
+- one-shot V2F5/V2F6 late-development confirmation: **PASS**;
+- V3-A Recency: killed;
+- V3-C Regime-Specialization: killed;
+- V3-D Sector-Relative: parked at `BLOCKED_PIT_SECTOR_HISTORY`, outcomes unconsumed;
+- V3-E True Ranking: killed;
+- optional V3 integration: skipped because only one independent Tier-1 component survived;
+- cumulative evaluated V3 architecture-candidate count remains `9`;
+- V3-D ordinals 008/009 remain unviewed;
+- V2F5/V2F6 are now consumed exactly once and may not be reused for model selection;
+- sessions `1225+` remain outside the consumed late-development confirmation;
+- post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
-- V3-A Recency: **COMPLETE — KILLED**;
-- V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED / ONLY SURVIVING TIER-1 COMPONENT**;
-- V3-C Regime-Specialization: **COMPLETE — KILLED**;
-- V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
-- V3-E True Ranking: **COMPLETE — KILLED**;
-- optional V3 integration: **SKIPPED — only one Tier-1 component survives**;
-- final V3 late-development confirmation: **COMPLETE — PASS; V3-B STRUCTURE-LITE RETAINED AS FINAL HISTORICAL-DEVELOPMENT ARCHITECTURE**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 architecture-candidate count remains `9`. Final late-development confirmation reused existing V3-B ordinals 004/005 and did not create a new candidate ordinal. V3-D ordinals 008/009 remain unviewed.
+## Frozen V3 conclusion
+
+Final independent review checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REVIEW_PASS_CLOSED.md`
+
+Late-development result checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_RESULT.md`
+
+The defensible V3 conclusion is:
+
+> Adding the frozen compact eight-feature causal Structure-Lite geometry bundle to the exact V2 HGB ranker produced robust incremental historical-development ranking value across discovery folds F1-F4 and reserved late-development folds F5-F6.
+
+This remains a ranking result only. It is not calibrated probability, execution/PnL evidence, live-trading readiness, or independent future validation.
+
+## V3-B historical evidence
+
+### Discovery F1-F4
+
+Paired versus exact V2 control:
+
+- median PR improvement `+0.0039258450`;
+- q25 `+0.0026897894`;
+- worst `+0.0018412974`;
+- PR improvement positive `4/4` folds;
+- median ROC change `+0.0022459186`;
+- median Q5-Q1 change `+0.0113241480`;
+- top-decile lift median change `-0.0036228765` remains a diagnostic warning.
+
+### One-shot late-development F5/F6
+
+Exact control equivalence PASS on `59,491` rows with max score and metric differences `0.0`.
+
+Paired Structure-Lite changes:
+
+- F5 PR `+0.0016661426`, ROC `+0.0026017659`, Q5-Q1 `+0.0215800814`, top-decile lift `+0.0164814105`;
+- F6 PR `+0.0135161180`, ROC `+0.0118806168`, Q5-Q1 `+0.0038483525`, top-decile lift `-0.0043770061`;
+- median PR improvement `+0.0075911303`, worst `+0.0016661426`;
+- median ROC change `+0.0072411913`;
+- median Q5-Q1 change `+0.0127142169`, worst `+0.0038483525`;
+- absolute gate PASS;
+- paired gate PASS;
+- final `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`.
+
+F6 is especially informative: exact V2 control ROC was `0.4931017075`, while Structure-Lite increased it to `0.5049823243` and also improved PR delta and Q5-Q1. This is useful historical robustness evidence but must not be relabeled independent future validation.
 
 ## Frozen data/model identities
 
@@ -35,171 +83,50 @@ Signal-research source:
 
 Immutable V2 prepared cache:
 
-- SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`;
-- manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`;
-- 292,633 rows / 737 tickers / sessions 20..1250.
+- SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb85cd4823e3?`;
 
-Frozen V2 HGB reference:
+Canonical V2 prepared cache identity remains the one recorded in the frozen V2/V3 checkpoints and hypothesis ledger; use those files rather than manually transcribing a path/hash from memory when running any future task.
 
-- summary SHA-256 `24cd9c6d1a978b35126955802fcf4852e1f3d50a489540b761052a9221a5327d`;
-- predictions SHA-256 `5a9df1c66a34c0d54760015c49ccb356be984703935c96ee8218ae863c47b179`.
+Late-development Structure-Lite cache:
 
-Final V2 refit:
+- status `RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CACHE_FROZEN`;
+- SHA-256 `af0ed60f55563a571bdd86c024d3087bd46fea50845343d285f9f93b72a21a4d`;
+- manifest SHA-256 `1c629850a6b902442fa4cb17585c514de88e1f9d3a40c854b07cb1f01cc58880`;
+- rows/tickers/sessions `286,453 / 737 / 20..1224`;
+- no session 1225+ materialized.
 
-- model SHA-256 `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
-- manifest SHA-256 `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
-- score is ranking-only, not calibrated probability.
+## Next research lane
 
-## Tier-1 V3 result summary
+The V3 ranking architecture is now a **fixed benchmark**, not a moving target.
 
-### V3-A Recency — killed
+While the separate post-2026-07-31 fresh-forward block accumulates toward its previously frozen independent-validation requirement, active research may continue only on orthogonal lanes that do not alter the V3-B ranker or consume reserved fresh-forward outcomes.
 
-Exact control equivalence PASS on 84,732 F1-F4 rows. Both H252/H504 failed paired promotion. No rescue is allowed.
+Preferred next lane:
 
-### V3-B Structure-Lite — survivor
+**V4-A Path Risk / Adverse Excursion — SPECIFICATION FIRST.**
 
-Exact V2 25 features + frozen eight causal geometry features.
+Research question:
 
-- control equivalence PASS, max diff `0.0`;
-- median paired PR improvement `+0.0039258450`;
-- q25 `+0.0026897894`;
-- worst `+0.0018412974`;
-- PR improvement positive `4/4`;
-- median ROC change `+0.0022459186`;
-- median Q5-Q1 change `+0.0113241480`;
-- median top-decile lift change `-0.0036228765` retained as diagnostic warning;
-- result `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`.
+> Conditional on a setup already ranked by frozen V3-B, can a separate model characterize adverse path risk, drawdown/excursion, time-to-resolution, or related path uncertainty without replacing the opportunity rank?
 
-Its viewed definition is closed.
+The first V4-A task must define target(s), path window, censoring/resolution semantics, causal feature boundary, validation design, model/candidate budget, and explicit separation from V3 opportunity ranking before any model is fitted.
 
-### V3-C Regime-Specialization — killed
-
-Two-expert NORMAL/STRESS architecture passed absolute sanity but failed overall paired and regime-specific gates. Overall median PR improvement `-0.0123171892`; STRESS median `-0.0289646749`. No rescue/new expert/blending is allowed.
-
-### V3-D Sector-Relative — blocked without outcome access
-
-`BLOCKED_PIT_SECTOR_HISTORY`. No cache/model outcome was created. Current-sector backfill and guessed report-month dates are prohibited. A future defensible immutable PIT IDX-IC archive may unblock the frozen lane, but it does not stall current V3 finalization.
-
-### V3-E True Ranking — killed
-
-Authoritative result:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_RESULT.md`
-
-- final pytest `307 passed, 0 failed, 3 warnings`;
-- XGBoost `3.2.0` after the pre-outcome dependency erratum;
-- exact control equivalence PASS on 84,732 rows, all max diffs `0.0`;
-- LambdaMART absolute sanity PASS;
-- paired promotion FAIL;
-- median paired PR improvement `+0.0049421451` but worst fold `-0.0253353754`;
-- median Q5-Q1 change `-0.0072112874`, non-below control only `1/4` folds;
-- final `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`;
-- no rescue/second ranker is allowed.
-
-## Final V3 historical-development candidate
-
-There is only one surviving component, so no integration experiment is justified.
-
-Candidate for late-development confirmation remains exact existing V3-B ordinal 005:
-
-`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`
-
-No new feature/model/ordinal is introduced.
-
-### One-shot V2F5/V2F6 confirmation contract
-
-Controlling spec:
-
-`docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_SPEC_V1.md`
-
-- SHA-256 `c1acbe99656b0a0a0adabc7840ad779ee0553b59b7441a24607a53322d1b369f`;
-- Git blob `08eba22b5f36efb160cc01abbfb5cb82d079f36e`.
-
-Review addendum:
-
-`docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_REVIEW_ADDENDUM_V1.md`
-
-- SHA-256 `fa6c856f6cc45714b8ba5b4817a06fab2f9141fe66be7982c0c2a30ee1fd799e`;
-- Git blob `8ae7147af61c9aeaf9993576cac198c8ab8c9387`.
-
-Implementation checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_IMPLEMENTED_RUN_AUTHORIZED.md`
-
-Run handoff:
-
-`coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md`
-
-Implementation:
-
-`src/idx_trade/ranking_v3_final_late_dev.py`
-
-Focused tests:
-
-`tests/test_ranking_v3_final_late_dev.py`
-
-Late folds are exactly:
-
-- V2F5 train 1..984 / purge 985..1004 / validation 1005..1104;
-- V2F6 train 1..1104 / purge 1105..1124 / validation 1125..1224.
-
-The two folds must be executed atomically after preflight/cache prepare. Do not inspect F5 before deciding whether to run F6.
-
-Frozen PASS requires:
-
-- candidate PR delta >0, ROC>0.5, Q5-Q1>0 on both F5/F6;
-- paired PR improvement >=0 on both;
-- median paired PR improvement >=+0.001;
-- median ROC change >=-0.005;
-- paired Q5-Q1 change >=0 on both.
-
-Top-decile lift remains diagnostic only.
-
-Allowed final decisions only:
-
-- `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`;
-- `V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2`.
-
-No MIXED/rescue/second late-development attempt.
-
-### Final late-development result
-
-- result: `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`;
-- exact F5/F6 control equivalence PASS on `59,491` rows, max score and metric diffs `0.0`;
-- Structure-Lite absolute gate PASS and paired gate PASS;
-- paired PR improvement: median `+0.0075911303`, worst `+0.0016661426`;
-- paired ROC change median `+0.0072411913`;
-- paired Q5-Q1 change median `+0.0127142169`, worst `+0.0038483525`;
-- V2F5/V2F6 consumed exactly once; sessions `1225+` not materialized or scored;
-- fresh-forward outcomes untouched and `FORWARD_OUTCOME_ACCESS_STARTED` not written.
-
-## Mandatory first reads
-
-1. this file;
-2. `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_RESULT.md`;
-3. `docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_SPEC_V1.md`;
-4. `docs/RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_CONFIRM_REVIEW_ADDENDUM_V1.md`;
-5. `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_STRUCTURE_LITE_LATE_DEV_IMPLEMENTED_RUN_AUTHORIZED.md`;
-6. `coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md`;
-7. `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`;
-8. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`.
+Do not use V4-A outcomes to retune or reopen V3-B.
 
 ## Immediate next action
 
-Stop for ChatGPT review of the completed one-shot F5/F6 confirmation. Do not
-start forward validation, calibration, Stage 6, `IDX-VAL-002`, execution/PnL,
-paper/live, or main merge automatically.
+Prepare and independently review a V4-A Path Risk specification only. Do not fit/score V4-A until that specification is frozen.
+
+Separately, do not authorize fresh-forward V3 outcome access until the already frozen future-session/maturity requirement is genuinely satisfied and explicitly authorized.
 
 ## Hard boundary
 
 Do not:
 
-- alter/reopen V3-A/B/C/E definitions;
-- integrate killed components;
-- bypass V3-D PIT block;
-- create a new candidate ordinal for F5/F6 confirmation;
-- run F5/F6 more than once;
-- materialize or score session 1225+;
-- inspect reserved post-2026-07-31 V2 fresh-forward outcomes;
-- write `FORWARD_OUTCOME_ACCESS_STARTED`;
-- start calibration/Stage6/IDX-VAL-002/execution/PnL/Kelly/paper/live/main automatically.
+- reopen/tune V3-A/B/C/E;
+- reuse V2F5/V2F6 for candidate selection;
+- bypass V3-D PIT sector-history block;
+- materialize/score post-2026-07-31 fresh-forward outcomes;
+- write `FORWARD_OUTCOME_ACCESS_STARTED` without explicit future authorization;
+- conflate V4 path-risk targets with the frozen V3 opportunity score;
+- start calibration/Stage 6/`IDX-VAL-002`/execution-PnL/Kelly/paper/live/main automatically.
