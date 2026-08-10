@@ -15,7 +15,7 @@ This is the authoritative short first-read layer. For chronology read `docs/PROJ
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - V3-A Recency: **COMPLETE — CLOSED WITHOUT PROMOTION**;
 - V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED / SURVIVING COMPONENT**;
-- V3-C Regime-Specialization: **SPEC FROZEN + REVIEW PASS + IMPLEMENTED; LOCAL F1-F4 RUN NOT YET EXECUTED**;
+- V3-C Regime-Specialization: **F1-F4 COMPLETE — KILLED / KEEP V2 CONTROL**;
 - V3-D Sector / V3-E True Ranking: not started;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - probability calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
@@ -120,7 +120,7 @@ V3-B survives as a component for a later one-shot integration experiment. Its fe
 
 Cumulative evaluated count after V3-B: `5`.
 
-## V3-C Regime-Specialization — current active task
+## V3-C Regime-Specialization — completed result
 
 Controlling spec:
 
@@ -222,7 +222,25 @@ Possible deterministic decisions:
 - `V3_C_REGIME_KILL_KEEP_V2_CONTROL`;
 - `V3_C_REGIME_PROMOTE_TWO_STATE_EXPERTS`.
 
-No V3-C outcome has been viewed yet. Cumulative evaluated count remains `5`; ordinals 006/007 are preregistered only.
+V3-C F1-F4 result:
+
+- run/code commit: `619b511f14d8e929f8f23ed7c001f72fe730566f`;
+- full IDX Trade pytest: `264 passed, 0 failed, 3 warnings`;
+- cache: `216,472` rows / `674` tickers / sessions `20..984`;
+- cache SHA-256: `1fd9350f949fc111968934839a65c79ac30ad1b10a5c1d396560ea370d4ce5a8`;
+- cache manifest SHA-256: `c4b090de65c291af21ea0a49f63d5d2d0dc1acbd18fff1c995494e1212f1418b`;
+- fragmentation gate: PASS for V2F1-V2F4;
+- control equivalence: PASS on `84,732` rows, max score/metric diff `0.0` at `1e-12`;
+- two-expert absolute sanity: PASS;
+- overall paired gate: FAIL;
+- regime-specific gate: FAIL, with STRESS median PR improvement `-0.0289647` and NORMAL `-0.0014712`;
+- deterministic result: `V3_C_REGIME_KILL_KEEP_V2_CONTROL`;
+- candidate verdict: `KEEP_DIAGNOSTIC`;
+- cumulative evaluated count: `7`.
+
+V2F5/V2F6 and reserved post-2026-07-31 V2 forward outcomes were not accessed. The
+V3-C candidate is closed to rescue, threshold changes, score alignment, blending,
+or a second variant.
 
 ## Immediate next action
 
@@ -232,14 +250,9 @@ Wait. Do not inspect fresh-forward outcomes until the separately authorized 100-
 
 ### V3 track
 
-Execute only `coordination/handoffs/IDX-RANKING-V3-REGIME-LOCAL-RUN.md` locally:
-
-1. full pytest;
-2. verify frozen artifacts;
-3. outcome-independent V3-C cache prepare + fragmentation gate;
-4. if coverage passes, exact control equivalence;
-5. only then run NORMAL/STRESS experts on F1-F4;
-6. document and stop for independent ChatGPT review.
+Review the completed V3-C result in the dated checkpoint and result handoff.
+Do not start V3-D/V3-E, V3 integration, F5/F6, or fresh-forward access without
+separate authorization.
 
 Do not start V3-D/V3-E or integration automatically.
 

@@ -1,6 +1,6 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE; V3-B PROMOTED; V3-C IMPLEMENTED / PREREGISTERED / NOT YET SCORED; 5 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE; V3-B PROMOTED; V3-C COMPLETE / KILLED KEEP V2 CONTROL; 7 CANDIDATES EVALUATED**
 
 Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory control equivalence. Ordinals `004`-`005` were then executed exactly once on V2F1-V2F4 under the frozen V3-B contract. The cumulative evaluated counter is now `5`. Ordinals `006`-`007` are preregistered for V3-C but remain unviewed. All results are historical development evidence, not independent validation.
 
@@ -11,8 +11,8 @@ Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory con
 | 003 | `V3-A-RECENCY-V1` | `V3-A-RECENCY-V1-HL504-003` | normalized exponential decay, H=504 official sessions | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 | 004 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CONTROL-004` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
 | 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | exact V2 25-feature prefix + fixed eight-feature causal Structure-Lite bundle | `COMPLETE` | `true` | `PROMOTE_FOR_NEXT_RESEARCH_STEP` |
-| 006 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-CONTROL-006` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
-| 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | one frozen NORMAL/STRESS two-expert architecture using exact V2 25 features | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 006 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-CONTROL-006` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
+| 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | one frozen NORMAL/STRESS two-expert architecture using exact V2 25 features | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 
 ## V3-A executed result identity
 
@@ -118,7 +118,36 @@ Implementation lineage before local run:
 
 Known pre-outcome engineering correction required before local prepare/run: `_context_equivalence` must allow repeated `(signal_session_index,date)` target keys because many securities share one market-wide date context. This is an alignment bug only; the frozen regime/spec/gates must not change. The local run handoff controls the correction before any V3-C outcome is viewed.
 
-Outcome-bearing folds remain V2F1-V2F4 only. V2F5/V2F6 and reserved forward outcomes remain sealed. Ordinals `006` and `007` do not increment the denominator until actually scored.
+Outcome-bearing folds remain V2F1-V2F4 only. V2F5/V2F6 and reserved forward outcomes remain sealed.
+
+## V3-C executed result identity
+
+- run/code commit: `619b511f14d8e929f8f23ed7c001f72fe730566f`;
+- full IDX Trade pytest: `264 passed, 0 failed, 3 warnings`;
+- cache SHA-256: `1fd9350f949fc111968934839a65c79ac30ad1b10a5c1d396560ea370d4ce5a8`;
+- cache manifest SHA-256: `c4b090de65c291af21ea0a49f63d5d2d0dc1acbd18fff1c995494e1212f1418b`;
+- rows/tickers/session range: `216,472 / 674 / 20..984`;
+- fragmentation gate: PASS on V2F1-V2F4;
+- control equivalence: `V3_C_CONTROL_EQUIVALENCE_PASS`, `84,732` rows, all max score/metric diffs `0.0` at `1e-12`;
+- candidate absolute sanity: PASS;
+- overall paired promotion: FAIL;
+- regime-specific robustness: FAIL;
+- deterministic result: `V3_C_REGIME_KILL_KEEP_V2_CONTROL`;
+- candidate verdict: `KEEP_DIAGNOSTIC`;
+- cumulative candidate count: `7`.
+
+Aggregate paired diagnostics:
+
+- overall median PR-delta improvement `-0.0123171892`, q25 `-0.0156725256`, worst `-0.0221428730`, PR not below control `1/4`;
+- overall median ROC change `-0.0087919123`, median Q5-Q1 change `-0.0207539272`, Q5-Q1 not below control `0/4`;
+- NORMAL median PR-delta improvement `-0.0014712226`, nonnegative folds `2/4`, median ROC change `-0.0086442462`, median Q5-Q1 change `-0.0146909836`;
+- STRESS median PR-delta improvement `-0.0289646749`, nonnegative folds `1/4`, median ROC change `-0.0268295350`, median Q5-Q1 change `-0.0357468445`;
+- worst fold-regime PR-delta improvement `-0.0372442541`.
+
+Artifact hashes are recorded in the dated checkpoint and result handoff. The
+two-expert candidate is closed; no rescue, second variant, threshold change,
+score alignment, blending, or Structure-Lite inheritance is authorized under
+this hypothesis.
 
 ## Required row schema after execution
 
