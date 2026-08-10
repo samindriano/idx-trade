@@ -15,8 +15,8 @@ This is the authoritative short first-read layer. For chronology read `docs/PROJ
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - V3-A Recency: **COMPLETE — CLOSED WITHOUT PROMOTION**;
 - V3-A result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`; H252/H504 are `KEEP_DIAGNOSTIC`; cumulative V3 candidate count `3`;
-- V3-B Structure-Lite: **SPEC FROZEN + INDEPENDENTLY REVIEWED + IMPLEMENTED; LOCAL OUTCOME-INDEPENDENT CACHE PREPARE AND F1-F4 DISCOVERY RUN AUTHORIZED**;
-- V3-B outcome score: **NOT RUN YET**;
+- V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED FOR NEXT RESEARCH STEP**;
+- V3-B outcome score: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8` on historical development folds only;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - V3-C Regime / V3-D Sector / V3-E True Ranking: not started;
 - probability calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
@@ -144,31 +144,32 @@ Implementation lineage:
 
 The implementation uses exact V2 research H/L/C/Volume + causal ATR, official-session windows, prior-session level inventory, deterministic level clustering, separated touches, role reversal, causal breakout/retest state and prior-only volume confirmation. It rejects label/outcome columns and has no Open dependency.
 
-## V3-B immediate next action
+## V3-B F1-F4 result
 
-Local Codex/runner must follow exactly:
+The frozen local run completed on source/implementation HEAD
+`eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`.
 
-`coordination/handoffs/IDX-RANKING-V3-STRUCTURE-LITE-LOCAL-RUN.md`
+- full pytest: `252 passed, 0 failed, 3 warnings`;
+- cache: `216,472` rows, `674` tickers, sessions `20..984`;
+- cache SHA-256: `7084759fddaa20e82ec03e50205f2872520e6b3e11ea5f294033589a9c803405`;
+- cache manifest SHA-256: `e428cad0ff24b57977106482cef1478e60c0660adcee6dbf103803516b35aeb2`;
+- control equivalence: PASS on `84,732` rows; max score and metric differences `0.0` at `1e-12` tolerance;
+- Structure-Lite absolute sanity: PASS;
+- Structure-Lite paired promotion: PASS;
+- deterministic result: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`;
+- cumulative V3 candidate count: `5`.
 
-Sequence:
+This is historical-development evidence on V2F1-V2F4, not independent
+validation. The full metrics, paired deltas, coverage, runtime, and artifact
+hashes are recorded in
+`docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_F1_F4_RESULT.md`.
 
-1. pull latest branch and verify clean;
-2. run full repo pytest; any failure => STOP;
-3. hash-locate exact frozen data/reference artifacts;
-4. run `python -m idx_trade.ranking_v3_structure_lite prepare ...` into a new empty directory;
-5. verify/freeze the outcome-independent cache/manifest, coverage and that no row exceeds signal session 984;
-6. do not edit spec/code/gates after cache freeze;
-7. run `python -m idx_trade.ranking_v3_structure_lite run ...` into another new empty directory;
-8. exact V2 control equivalence on F1-F4 must PASS before Structure-Lite interpretation;
-9. apply only frozen gates;
-10. update ledger ordinals 004-005, result checkpoint/handoff/current status, commit/push, STOP for ChatGPT review.
+## V3-B next boundary
 
-Expected hypothesis result states:
-
-- `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`; or
-- `V3_B_STRUCTURE_LITE_KILL_KEEP_V2_CONTROL`.
-
-Engineering/data/provenance/control-equivalence failure is a blocked run, not hypothesis evidence.
+Stop for independent ChatGPT review. Do not start V3-C or any integration,
+F5/F6 late-development confirmation, fresh-forward access, calibration,
+Stage 6, `IDX-VAL-002`, execution-PnL, paper/live work, or main merge in this
+run.
 
 ## Hard authorization boundary
 

@@ -1,16 +1,16 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE; V3-B IMPLEMENTED / PREREGISTERED / NOT YET SCORED; 3 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE; V3-B F1-F4 COMPLETE / PROMOTED FOR NEXT RESEARCH STEP; 5 CANDIDATES EVALUATED**
 
-Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory control equivalence. The cumulative evaluated counter remains `3`. Ordinals `004`-`005` are frozen and implemented but have not been outcome-scored, so they do not increment the denominator yet. All results are historical development evidence, not independent validation.
+Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory control equivalence. Ordinals `004`-`005` were then executed exactly once on V2F1-V2F4 under the frozen V3-B contract. The cumulative evaluated counter is now `5`. All results are historical development evidence, not independent validation.
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
 | 001 | `V3-A-RECENCY-V1` | `V3-A-RECENCY-V1-CONTROL-001` | exact uniform V2 `HGB_XS_MARKET` control | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
 | 002 | `V3-A-RECENCY-V1` | `V3-A-RECENCY-V1-HL252-002` | normalized exponential decay, H=252 official sessions | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 | 003 | `V3-A-RECENCY-V1` | `V3-A-RECENCY-V1-HL504-003` | normalized exponential decay, H=504 official sessions | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
-| 004 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CONTROL-004` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
-| 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | exact V2 25-feature prefix + fixed eight-feature causal Structure-Lite bundle | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 004 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CONTROL-004` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
+| 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | exact V2 25-feature prefix + fixed eight-feature causal Structure-Lite bundle | `COMPLETE` | `true` | `PROMOTE_FOR_NEXT_RESEARCH_STEP` |
 
 ## V3-A executed result identity
 
@@ -70,7 +70,27 @@ The local execution authorization is:
 
 `coordination/handoffs/IDX-RANKING-V3-STRUCTURE-LITE-LOCAL-RUN.md`
 
-Until that exact run completes, ordinals `004` and `005` remain unviewed and the cumulative evaluated denominator remains `3`.
+The exact local run completed on V2F1-V2F4. Ordinals `004` and `005` are now
+viewed exactly once and the cumulative evaluated denominator is `5`.
+
+## V3-B F1-F4 executed result identity
+
+- source/run HEAD: `eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`;
+- implementation commit: `eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`;
+- full pytest: `252 passed, 0 failed, 3 warnings`;
+- discovery fold set: `V2F1-V2F4` only;
+- cache SHA-256: `7084759fddaa20e82ec03e50205f2872520e6b3e11ea5f294033589a9c803405`;
+- cache manifest SHA-256: `e428cad0ff24b57977106482cef1478e60c0660adcee6dbf103803516b35aeb2`;
+- control equivalence: `V3_B_CONTROL_EQUIVALENCE_PASS`, 84,732 rows, max score/metric difference `0.0`;
+- candidate verdict: `PROMOTE_FOR_NEXT_RESEARCH_STEP`;
+- deterministic decision: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`;
+- metrics artifact: `ranking_v3_b_structure_lite_f1_f4_metrics.csv`;
+- metrics artifact SHA-256: `0a6919a22669c14db272cc12ff70081d50ea53139f591c7faf2be2c43d321357`;
+- summary artifact SHA-256: `a8ca2fea755a98bc94ad2f1d4d5ae2a25db238a0aff57323014dd2a280d5368e`.
+
+The full result, paired deltas, coverage, runtime, and artifact inventory are
+in `docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_F1_F4_RESULT.md`.
+V2F5/V2F6 and reserved post-2026-07-31 V2 forward outcomes were not accessed.
 
 ## Required row schema after execution
 
