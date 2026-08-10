@@ -107,7 +107,7 @@ The outcome-blind cache/data audit completed successfully:
 - highest absolute correlation: `0.8942494476` between A2 persistence and acceleration;
 - `mechanical_review_required=false`;
 - official audit did not load `binary_target` or outcome columns;
-- no V4-A candidate model/outcome has yet been viewed;
+- no V4-A candidate model/outcome had been viewed at the time of this audit;
 - audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`.
 
 Audit result checkpoint:
@@ -116,27 +116,32 @@ Audit result checkpoint:
 
 The high but sub-threshold `0.8942` correlation is retained as documented redundancy inside the already-frozen A2 hypothesis; it is not a specification defect and is not grounds for post-freeze redesign.
 
-## Current authorization
+## V4-A first-pass result
 
-The pre-outcome review is complete and the **one atomic V4-A first-pass historical-development run is now AUTHORIZED**.
+The authorized atomic run completed exactly once:
 
-Authorization checkpoint:
+- status: `V4_A_FIRST_PASS_COMPLETE`;
+- control equivalence: `PASS` on `144,223` rows, max score diff `0.0`;
+- A1 Impact/Absorption ordinal `013`: `FAIL`;
+- A2 Persistent Directional Participation ordinal `014`: `FAIL`;
+- survivors: `[]`;
+- `integration_authorized_by_result=false`;
+- `integration_executed=false`;
+- cumulative historical evaluated-candidate count is now `12`.
 
-`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RUN_AUTHORIZED.md`
+Result checkpoint:
 
-Execution handoff:
+`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`
 
-`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RUN.md`
+Result handoff:
 
-The authorized run is exactly one invocation of exact V3-B control + A1 + A2 across V2F1..V2F6, with mandatory `1e-12` V3-B control equivalence before challenger interpretation and frozen independent PASS/FAIL gates for A1 and A2. There is no mid-run adaptation and no integration execution.
+`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RESULT.md`
 
 ## Immediate next action
 
-Run only the Windows-local procedure in:
-
-`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RUN.md`
-
-After the run, document/commit/push the result and STOP for ChatGPT review. Do not proceed automatically to integration or V4-B.
+Stop for ChatGPT review. Do not rescue A1/A2, create/run integration, or start
+V4-B automatically. The exact per-fold metrics and frozen-gate blockers are in
+the result checkpoint.
 
 ## Hard boundary
 

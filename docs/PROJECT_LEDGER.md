@@ -1503,3 +1503,29 @@ computed; reserved ordinals `012..014` remain unviewed; the cumulative
 evaluated candidate count remains `9`; session `1225+`, fresh-forward outcomes,
 and `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. A separate handoff is
 required before the atomic V4-A outcome run.
+
+## 29. V4-A participation first-pass atomic result — 2026-08-10
+
+The authorized one-shot V4-A historical-development runner completed on
+`research/idx-ranking-v2-spec-v1` at execution HEAD
+`61dbfb19001598ee955430db9ee3a5b21e8290c5`. Full pytest passed `337/337` with
+three existing pandas FutureWarnings.
+
+The runner executed exact V3-B control ordinal `012`, A1 Impact/Absorption
+ordinal `013`, and A2 Persistent Directional Participation ordinal `014` in one
+invocation over V2F1..V2F6. Control equivalence passed on `144,223` rows with
+max score difference `0.0` and all metric differences below `8.33e-17`.
+
+Both challengers passed absolute sanity but failed the frozen paired gate. A1
+had `3/6` nonnegative PR changes, median PR improvement `+0.0000801749`, and
+median Q5-Q1 change `-0.0028469425`. A2 had `4/6` nonnegative PR changes,
+median PR improvement `+0.0010168334`, median ROC change `-0.0030273322`, and
+median Q5-Q1 change `-0.0067399084`. Survivors are empty; no integration was
+authorized or executed.
+
+The cumulative historical evaluated-candidate count is now `12` after viewing
+ordinals `012..014`. Session `1225+`, post-2026-07-31 fresh-forward outcomes,
+and `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. No rescue, V4-B,
+calibration, Stage 6, `IDX-VAL-002`, execution/PnL, paper/live, or main merge
+was started. See the dated V4-A first-pass checkpoint and result handoff for
+complete fold metrics, gate diagnostics, overlap, runtime, and artifact hashes.

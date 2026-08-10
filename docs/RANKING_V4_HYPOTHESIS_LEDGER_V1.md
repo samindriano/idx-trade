@@ -1,7 +1,7 @@
 # Ranking V4 Final Alpha Hypothesis Ledger V1
 
 Date: 2026-08-10 (Asia/Jakarta)
-Status: **V4-A A1/A2 FIRST-PASS RUN AUTHORIZED / 0 V4 CANDIDATES VIEWED**
+Status: **V4-A FIRST-PASS COMPLETE / A1+A2 FAIL / 3 V4 CANDIDATES VIEWED**
 
 V4 is the final alpha-generation program. The final V3 historical-development architecture `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` is the immutable common benchmark.
 
@@ -13,9 +13,9 @@ The cumulative historical evaluated-candidate count entering V4 is `9`: V3 ordin
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
-| 012 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-CONTROL-012` | exact frozen V3-B 33-feature HGB control | `FIRST_PASS_RUN_AUTHORIZED` | `false` | `UNVIEWED_RESERVED` |
-| 013 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-IMPACT-013` | exact V3-B + frozen 3-feature Impact/Absorption bundle | `FIRST_PASS_RUN_AUTHORIZED` | `false` | `UNVIEWED_RESERVED` |
-| 014 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-PERSIST-DIRECTION-014` | exact V3-B + frozen 4-feature Persistent Directional Participation bundle | `FIRST_PASS_RUN_AUTHORIZED` | `false` | `UNVIEWED_RESERVED` |
+| 012 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-CONTROL-012` | exact frozen V3-B 33-feature HGB control | `FIRST_PASS_COMPLETE` | `true` | `CONTROL_EQUIVALENCE_PASS` |
+| 013 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-IMPACT-013` | exact V3-B + frozen 3-feature Impact/Absorption bundle | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
+| 014 | `V4-A-PARTICIPATION-V1` | `V4-A-PARTICIPATION-V1-PERSIST-DIRECTION-014` | exact V3-B + frozen 4-feature Persistent Directional Participation bundle | `FIRST_PASS_COMPLETE` | `true` | `FAIL` |
 
 No A1+A2 integration ordinal is reserved. One integration candidate may be designed only after both ordinals `013` and `014` independently pass their frozen first-pass gates and receives a separate specification/review/authorization.
 
@@ -71,13 +71,37 @@ Execution handoff:
 
 The authorized scope is exactly one runner invocation containing control + A1 + A2 over F1-F6, with mandatory exact V3-B control equivalence before challenger interpretation. A1 and A2 use their frozen independent PASS/FAIL gates. No integration is executed in the first-pass run.
 
+## First-pass result — 2026-08-10
+
+The single authorized atomic runner completed with exact control equivalence.
+Both challengers passed absolute sanity but failed their independent paired
+promotion gates. Survivors are empty and no integration candidate was
+authorized or executed.
+
+Result checkpoint:
+`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`
+
+Result handoff:
+`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RESULT.md`
+
+- control equivalence: `PASS`, `144,223` rows, max score diff `0.0`;
+- A1 paired PR nonnegative folds `3/6`, median PR `+0.0000801749`, median
+  Q5-Q1 change `-0.0028469425` -> `FAIL`;
+- A2 paired PR nonnegative folds `4/6`, median PR `+0.0010168334`, median
+  ROC change `-0.0030273322`, median Q5-Q1 change `-0.0067399084` -> `FAIL`;
+- survivors: `[]`;
+- integration authorized by result: `false`;
+- integration executed: `false`;
+- candidate ordinals viewed: `012..014`;
+- cumulative historical evaluated-candidate count: `12`.
+
 ## Outcome-access boundary
 
 At this ledger state:
 
-- V4-A result viewed: `false` for all three reserved ordinals;
-- V4 evaluated-candidate count remains `0`;
-- cumulative historical evaluated-candidate count remains `9` until the authorized first-pass result is actually viewed;
+- V4-A result viewed: `true` for ordinals `012..014`;
+- V4 evaluated-candidate count is `3`;
+- cumulative historical evaluated-candidate count is `12`;
 - V2F1..V2F6 are known historical-development periods and are not independent validation for V4;
 - sessions `1225+` are sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes remain unaccessed;
