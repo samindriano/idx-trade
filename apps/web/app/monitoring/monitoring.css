@@ -1,28 +1,28 @@
 .runtimeBadge.online {
-  border-color: #d7e3dd;
-  background: #f8fbf9;
-  color: #426158;
+  border-color: #cfe4d8;
+  background: #f5fbf7;
+  color: #35634f;
 }
 
-.runtimeBadge.online i { background: var(--green); }
+.runtimeBadge.online i { background: var(--market-green); }
 
 .runtimeNotice.info {
-  border-color: #dfe1fb;
-  background: var(--indigo-soft);
+  border-color: #ecd9b6;
+  background: var(--amber-soft);
 }
 
-.runtimeNotice.info > i { background: var(--indigo); }
-.runtimeNotice.info strong { color: var(--indigo-dark); }
-.runtimeNotice.info p { color: #656ba8; }
+.runtimeNotice.info > i { background: var(--amber); }
+.runtimeNotice.info strong { color: #85591c; }
+.runtimeNotice.info p { color: #9a7139; }
 
 .runtimeNotice.danger {
-  border-color: #efcec8;
-  background: #fff2ef;
+  border-color: #efc9cc;
+  background: var(--market-red-soft);
 }
 
-.runtimeNotice.danger > i { background: var(--red); }
-.runtimeNotice.danger strong { color: #9b4038; }
-.runtimeNotice.danger p { color: #a96159; }
+.runtimeNotice.danger > i { background: var(--market-red); }
+.runtimeNotice.danger strong { color: var(--market-red-dark); }
+.runtimeNotice.danger p { color: #a45c61; }
 
 .sessionStrip {
   display: grid;
@@ -36,7 +36,7 @@
   padding: 11px 9px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fffdf9;
+  background: #fffefa;
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -46,14 +46,14 @@
 .sessionTile:hover { transform: translateY(-1px); border-color: var(--line-strong); }
 .sessionTile span { display: block; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .sessionTile strong { display: block; margin-top: 5px; font-size: 10px; }
-.sessionTile.data_ready { border-color: #d5e5de; background: #f6fbf8; }
-.sessionTile.data_ready strong { color: var(--green-dark); }
-.sessionTile.available { border-color: #ecd8d1; background: #fff9f6; }
-.sessionTile.available strong { color: #ad5a4d; }
-.sessionTile.fetching { border-color: #dfe1fb; background: var(--indigo-soft); }
-.sessionTile.fetching strong { color: var(--indigo-dark); }
-.sessionTile.data_failed { border-color: #efc8c2; background: #fff1ee; }
-.sessionTile.data_failed strong { color: var(--red); }
+.sessionTile.data_ready { border-color: #cfe4d8; background: #f3faf6; }
+.sessionTile.data_ready strong { color: var(--market-green-dark); }
+.sessionTile.available { border-color: #efcdcf; background: #fff7f7; }
+.sessionTile.available strong { color: var(--market-red-dark); }
+.sessionTile.fetching { border-color: #ecd9b6; background: var(--amber-soft); }
+.sessionTile.fetching strong { color: #8a5b19; }
+.sessionTile.data_failed { border-color: #efc5c8; background: var(--market-red-soft); }
+.sessionTile.data_failed strong { color: var(--market-red); }
 
 .recoveryStrip {
   display: flex;
@@ -61,20 +61,20 @@
   gap: 16px;
   margin-top: 16px;
   padding: 14px 18px;
-  border: 1px solid #dfe1fb;
+  border: 1px solid #d7e7df;
   border-radius: 13px;
-  background: linear-gradient(135deg, #f2f3ff, #fff8f3);
+  background: var(--market-green-soft);
 }
 
 .recoveryStrip > span {
   flex: 0 0 auto;
-  color: var(--indigo-dark);
+  color: var(--market-green-dark);
   font-size: 9px;
   font-weight: 820;
   letter-spacing: .11em;
 }
 
-.recoveryStrip p { margin: 0; color: #646979; font-size: 10px; line-height: 1.55; }
+.recoveryStrip p { margin: 0; color: #567064; font-size: 10px; line-height: 1.55; }
 .recoveryStrip strong { color: var(--text); }
 
 @media (max-width: 760px) {
