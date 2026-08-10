@@ -3,182 +3,92 @@
 Date: 2026-08-10 (Asia/Jakarta)
 Status: **IDEA BACKLOG ONLY — NOT AUTHORIZATION TO RUN V3 OUTCOMES**
 
-## Purpose
+## Controlling roadmap
 
-Record the next-generation Ranking V3 hypotheses identified after Ranking V2 selected and froze `HGB_XS_MARKET` as the historical-development champion.
+The detailed and current V3 research ordering/governance is frozen in:
 
-This file exists so future model work does not depend on chat history. It must be read together with `docs/CURRENT_STATUS.md`, the newest controlling checkpoint/specification, `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`, and `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md` before any V3 specification or implementation begins.
+`docs/RANKING_V3_ROADMAP_AUDIT_V1.md`
 
-The legacy-model lessons note is mandatory because earlier Indonesian-stock projects already explored recency, regime, peer-relative, support/resistance, event, macro, ensemble, distributional, and path-risk ideas, often with too many simultaneous degrees of freedom. Those old projects are hypothesis/failure sources only, not performance evidence for `idx-trade`.
+That audit supersedes the earlier backlog ordering after review of the frozen V2 result and the private legacy Indonesian-stock model archive.
 
-V2 remains a separate frozen forward-validation track. Nothing in this backlog authorizes reading the reserved V2 fresh-forward outcomes, changing the V2 champion, or modifying the V2 forward contract.
+Mandatory first-reads before any V3 specification or implementation:
 
-## Research separation / async rule
+- `docs/CURRENT_STATUS.md`;
+- `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
+- `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md`;
+- `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`;
+- newest controlling checkpoint/specification.
 
-V3 R&D may proceed asynchronously while V2 accumulates its reserved 100-mature-session fresh-forward block, provided V3 uses only already-authorized development knowledge and does **not** inspect or react to reserved V2 forward outcomes.
+The legacy archive is hypothesis/failure evidence only. Its old scores are not promotion evidence for `idx-trade`.
 
-If the V2 one-shot forward block is later opened and its result is used to alter V3, that block becomes development knowledge for V3. Any V3 architecture finalized after learning from that result requires a newer independent forward block.
+## V2/V3 separation
 
-## Current diagnosis motivating V3
+V2 remains a separate frozen forward-validation track. V3 R&D may proceed asynchronously using only already-authorized development knowledge through `2026-07-31` and must not inspect or react to reserved V2 fresh-forward outcomes.
 
-V2 evidence suggests that market context improved historical-development robustness, but transportability risk remains:
+If V2 forward outcomes are learned and used to alter V3 before V3 is frozen, those outcomes become V3 development knowledge and cannot be V3 independent validation.
 
-- `HGB_XS_MARKET` won the frozen V2 selection;
-- median PR-AUC delta was positive and Q5-Q1 was positive across all six folds;
-- however the latest V2 fold had ROC-AUC below 0.5 despite positive PR-delta/Q5-Q1;
-- the V1→V2 post-mortem already showed material volatility, breadth, and market-return regime/covariate shift.
+## Audited V3 hypothesis ladder
 
-The legacy archive adds a second lesson: many individually plausible ideas were previously mixed inside broad feature/model/threshold/ensemble searches, destroying attribution and increasing validation-overfit risk. Therefore V3 should primarily test one bounded non-stationarity or structure hypothesis at a time rather than recreate a large model/feature soup.
+### V3-Control
 
-## Proposed V3 hypothesis ladder
+Exact frozen V2 `HGB_XS_MARKET` semantics. Every V3 experiment must compare against the real V2 champion on identical eligible development rows/folds.
 
-### V3-Control — frozen V2 champion
+### Priority 1 — V3-A RECENCY
 
-Reference comparator: exact `HGB_XS_MARKET` architecture and 25-feature representation.
+Question: does reducing older training-row influence improve robustness under temporal drift?
 
-Purpose: every V3 experiment must prove incremental robustness against the actual V2 champion, not against a weaker baseline.
+Keep H10, universe, exact 25 V2 features, HGB architecture/hyperparameters, scoring, and metrics fixed. Change only deterministic fit-row sample weights. Use uniform control plus at most two predeclared recency variants. No half-life sweep after seeing outcomes.
 
-### Priority 1 — V3-RECENCY
+### Priority 2 — V3-B STRUCTURE-LITE
 
-Hypothesis: older observations receive too much influence when market structure drifts over time; recent development observations may deserve greater training weight.
+Question: does compact causal support/resistance/price geometry add information beyond V2's existing high/low distances and range position?
 
-Preferred first experiment because it changes one research dimension while retaining:
+Possible future compact bundle: prior-only touch density, level age/recency, role reversal, breakout/retest state, volume confirmation, and compression. Do not port legacy outcome-conditioned setup buckets, ticker-specific backtest overlays, adaptive horizon weights, or hand-tuned score bonuses.
 
-- same H10 label;
-- same causal universe;
-- same 25 V2 features;
-- same HGB architecture/hyperparameters;
-- same ranking metrics.
+### Priority 3 — V3-C REGIME-SPECIALIZATION
 
-Candidate forms should be predeclared before outcome runs. A bounded example for specification work is:
+Question: after V2 already includes market context and nonlinear HGB interactions, does explicit conditional specialization still improve worst-regime/worst-fold behavior?
 
-- control: uniform sample weight;
-- recency candidate with a moderate exponential half-life, e.g. ~500 official sessions;
-- recency candidate with a stronger half-life, e.g. ~250 official sessions.
+Use only a small causal state definition and one bounded specialist formulation. No broad macro feature soup or threshold grid.
 
-These numbers are backlog ideas only, not frozen parameters. Do not grid-search many decay values after seeing outcomes.
+### Priority 4 — V3-D SECTOR-RELATIVE
 
-The legacy Big3 project previously exposed recent-training-window controls, but because recency was mixed with many other model/feature knobs it provides no clean evidence that recency worked. Current V3 must isolate it.
+Question: does within-sector relative strength add incremental edge beyond whole-market context?
 
-Primary question: does recency weighting improve q25/worst-fold PR-delta, latest-fold behavior, ROC stability, and Q5-Q1 stability rather than merely the best fold?
+Blocked on a point-in-time historical sector-membership data gate. Sector infrastructure may be built asynchronously, but no sector model outcome run is allowed until provenance/effective-date/history coverage passes.
 
-Kill quickly if robustness does not improve.
+### Priority 5 — V3-E TRUE-RANKING
 
-### Priority 2 — V3-REGIME / gated experts
+Question: does one tightly bounded nonlinear same-date ranking objective beat binary HGB scoring?
 
-Hypothesis: one global mapping from stock/market features to ranking utility is insufficient across materially different market regimes.
+Lower priority because current pairwise-linear V2 did not win and an older downside-ranking experiment also failed its historical champion. No ranking-library/model tournament.
 
-Candidate concept:
+## Separate later lanes
 
-- predeclared causal market-state gate using a small volatility/breadth/market-return state definition;
-- a small bounded set of expert models or conditional models;
-- no regime thresholds optimized on reserved V2 forward outcomes.
+- **Distribution/uncertainty:** U1-style q10/q50/q90 may become a separate uncertainty/tail layer, not a first-pass V3 ranker feature.
+- **Path risk:** V4-style MAE/MFE/path modeling may become a risk/veto/geometry layer, not a replacement opportunity target.
+- **Broker flow / EventRank / fundamentals / macro expansion:** require separate point-in-time availability, revision, coverage, and provenance gates before model use.
 
-The legacy Big3 project combined IHSG, USD/IDR, VIX, rates, peer context, events and other macro inputs. That is useful idea history but poor attribution. Current V3 regime research must not recreate that broad feature soup.
+## Research discipline
 
-This is higher-complexity and higher-overfit-risk than V3-RECENCY, so it should follow the cleaner recency test.
+Use one falsifiable hypothesis per experiment. Normally allow one exact V2 control plus at most two bounded variants. Maintain a permanent hypothesis ledger with every viewed candidate; failed candidates are never erased from the research denominator.
 
-Primary question: can explicit conditional specialization improve worst-regime and worst-fold ranking robustness without sacrificing broad coverage?
+Use robustness-first diagnostics: median/q25/worst-fold PR-AUC delta, positive-fold count, ROC stability, Q5-Q1 stability, top-decile lift, late-fold behavior, and incremental-selection quality where applicable.
 
-### Priority 3 — V3-STRUCTURE-LITE
+Do not rebuild the legacy monster by automatically stacking every surviving idea. After Tier-1 screening, at most one preregistered integration experiment may compare the best single surviving component versus one combined candidate. Prefer the simpler architecture when practically tied.
 
-Hypothesis: causal support/resistance and price-structure geometry contains incremental information beyond V2's simple recent-high/recent-low distances and range position.
-
-Legacy evidence is **feature inspiration only**. The standalone support/resistance project had useful pivot/cluster/touch/role-reversal geometry but also a downstream outcome-conditioned scoring layer that must not be ported.
-
-Possible bounded feature family for future specification work:
-
-- prior high/low 20/60 ATR distance;
-- causal pivot/touch density;
-- level age / recency;
-- role-reversal count;
-- breakout/retest state;
-- volume confirmation;
-- compression/range-position measures.
-
-Definitions must be point-in-time and frozen before scoring. Do not use historical test/backtest outcome buckets, ticker-specific empirical overlays, adaptive horizon weights, or hand-tuned investment-score bonuses as features or selection rules.
-
-Primary question: does richer but compact causal geometry add robust ranking separation without recreating the legacy technical-indicator soup?
-
-### Priority 4 — V3-SECTOR-RELATIVE
-
-Hypothesis: stock strength/weakness relative to its own sector contains incremental information beyond whole-market cross-sectional ranks and stock-minus-market context.
-
-Prerequisite: a point-in-time-safe historical sector mapping with explicit effective dates and revision/provenance controls.
-
-Do not backfill today's sector classification over historical rows.
-
-Possible future feature families after PIT mapping is proven:
-
-- within-sector percentile ranks;
-- stock-minus-sector-median features;
-- sector-relative momentum/volatility/volume;
-- sector-state versus market-state context.
-
-Legacy Big3 peer-relative features used a tiny bank universe and are not evidence that sector-relative features work broadly.
-
-### Priority 5 — V3-TRUE-RANKING
-
-Hypothesis: the target task is same-date ranking and a nonlinear learning-to-rank objective may outperform pooled binary HGB while preserving causal/date grouping.
-
-V2 `PAIRWISE_LOGISTIC_XS` tested only a linear pairwise objective and did not establish that nonlinear learning-to-rank is unhelpful. Separately, an older preregistered downside-ranking experiment also failed to beat its historical champion, so objective change alone must not be assumed beneficial.
-
-Possible future research: a tightly bounded LambdaMART/tree-ranking candidate with signal date as the query group, predeclared parameters, and the same chronological validation discipline.
-
-Do not launch a broad ranking-library/hyperparameter tournament.
-
-## Separate later lanes — not primary V3 candidates yet
-
-### Distributional / uncertainty layer
-
-The legacy U1 design proposed q10/q50/q90 T+5 excess-return forecasts with explicit uncertainty width and tail asymmetry. It was blocked by data provenance and is not evidence of predictive edge.
-
-A future distributional model may be useful as a separate uncertainty/action layer after the primary ranker is stronger. Do not add it to the first V3 experiment.
-
-### Path-risk layer
-
-The legacy V4 experiment showed that predicting worse MAE/path risk can improve a path metric while still degrading endpoint opportunity quality. A future path-risk model should therefore be an explicit risk/veto/geometry overlay, not a silent replacement for the H10 opportunity ranker.
-
-### Broker flow / EventRank
-
-These remain data-infrastructure hypotheses until point-in-time availability, revision semantics, coverage, licensing/provenance, and missingness rules pass a separate data gate. In particular, local `captured_at` is not sufficient proof of historical `available_at`, and missing flow must not be treated as zero.
-
-## What not to do
-
-Do not define V3 as a large indiscriminate model zoo (XGBoost/CatBoost/neural nets/etc.) simply because V2 is frozen. Any candidate must correspond to a specific falsifiable hypothesis.
-
-Do not:
-
-- inspect the reserved V2 forward outcomes during V3 R&D;
-- retune V2 and call it V3 without a research hypothesis;
-- search many recency half-lives/regime thresholds after seeing fold outcomes;
-- combine recency + regime + structure + sector + macro + events + model zoo in one first-pass experiment;
-- use non-PIT sector classifications historically;
-- reuse outcome-conditioned setup/backtest buckets as current scoring features;
-- reward coverage expansion without separately measuring incremental-only quality;
-- weaken chronological purge/maturity controls;
-- optimize solely for average metric while ignoring q25/worst-fold/stability;
-- conflate engineering/runtime optimization with model improvement.
+The audited default development process reserves the latest development folds from repeated candidate iteration: use earlier folds for bounded discovery, then one frozen final V3 architecture may receive a one-shot **late-development confirmation** on the reserved later folds. This remains development evidence, never independent validation.
 
 ## Runtime requirement
 
-Before V3 implementation, read `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`.
+Before V3 implementation, read `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md` and explicitly report that it was read. Prefer one deterministic Python orchestrator with bounded workers; do not use many Codex chats as the compute scheduler by default. Any performance optimization must prove semantic equivalence before outcome-bearing use.
 
-Prefer one deterministic Python orchestrator with bounded process/thread scheduling, measured bottleneck profiling, column-projected reads where useful, and semantic-equivalence gates for any optimized path. Do not use many Codex chats as the computational scheduler by default.
+## Next V3 task
 
-## Recommended next V3 specification task
+The next V3 task is **specification only**:
 
-When V3 is separately authorized, the first specification should be a narrow `RANKING_V3_RECENCY_SPEC_V1` containing:
+`RANKING_V3_RECENCY_SPEC_V1`
 
-- exact development-data boundary;
-- exact control and bounded recency candidates;
-- exact sample-weight formula(s) and half-life(s);
-- chronological folds/purge/maturity rules;
-- primary/secondary metrics;
-- robustness eligibility and kill criteria;
-- incremental/effective-search-space controls;
-- tie-break rules;
-- runtime/provenance contract;
-- explicit prohibition on V2 reserved-forward outcome access.
+It must freeze the discovery folds, exact control, at most two recency variants, sample-weight formula/normalization, metrics, robustness gates, promotion/kill rule, hypothesis-ledger identity, runtime/provenance, and the prohibition on reserved V2 forward outcomes.
 
-Freeze that specification before any V3 recency outcome run.
+Only after review of that frozen spec may Codex be authorized to implement and run V3-A scores.
