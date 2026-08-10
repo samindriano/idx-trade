@@ -61,7 +61,12 @@ def test_current_context_does_not_change_its_own_thresholds() -> None:
     changed.loc[139, REGIME_SOURCE_COLUMNS[2]] = 1.0
     second = build_regime_table(changed, dates, max_signal_session_index=140)
     threshold_cols = ["regime_breadth_q25_prior", "regime_return_q25_prior", "regime_atr_q75_prior"]
-    assert np.allclose(first.loc[139, threshold_cols], second.loc[139, threshold_cols], rtol=0.0, atol=0.0)
+    assert np.allclose(
+        first.loc[139, threshold_cols].to_numpy(dtype=float),
+        second.loc[139, threshold_cols].to_numpy(dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
     assert second.loc[139, "regime_state"] == REGIME_STRESS
 
 
@@ -74,7 +79,12 @@ def test_regime_history_is_capped_at_252_official_sessions() -> None:
     changed.loc[:46, REGIME_SOURCE_COLUMNS[2]] = 10.0
     second = build_regime_table(changed, dates, max_signal_session_index=300)
     cols = ["regime_breadth_q25_prior", "regime_return_q25_prior", "regime_atr_q75_prior"]
-    assert np.allclose(first.loc[299, cols], second.loc[299, cols], rtol=0.0, atol=0.0)
+    assert np.allclose(
+        first.loc[299, cols].to_numpy(dtype=float),
+        second.loc[299, cols].to_numpy(dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
 
 
 def test_two_of_three_votes_define_stress() -> None:
