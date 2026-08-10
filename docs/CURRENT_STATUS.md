@@ -20,6 +20,7 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - cumulative historical evaluated-candidate count: `17`;
 - final V3-B refit / fresh-forward specification: **FROZEN + REVIEW PASS**;
 - final V3-B refit/runtime: **FROZEN SUCCESSFULLY, NO PERFORMANCE METRICS COMPUTED**;
+- Path Risk V1 implementation + feature cache: **FROZEN PRE-OUTCOME; PR-001 UNVIEWED**;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
@@ -61,6 +62,31 @@ Final V3-B refit/runtime result:
 Controlling checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REFIT_RUNTIME_RESULT.md`
+
+## Path Risk V1
+
+The separate Path Risk lane is implemented and its real outcome-blind discovery
+feature cache is frozen through signal session `984`.
+
+- hypothesis: `PATH-RISK-A-ADVERSE-EXCURSION-Q75-V1`;
+- reserved candidate: `PATH-RISK-A-Q75-HGB-001`;
+- implementation: `src/idx_trade/path_risk_v1.py` and
+  `src/idx_trade/path_risk_v1_prepare.py`;
+- cache status: `PATH_RISK_V1_DISCOVERY_FEATURE_CACHE_FROZEN_PRE_OUTCOME`;
+- cache rows/tickers/dates/sessions: `254,383 / 679 / 965 / 20..984`;
+- primary-liquid count per date: `222 / 258 / 307` min/median/max;
+- cache SHA-256 `74c300390dce542dad95ae204dd7663f5f780b09dd33c3514c5dd264f15cca08`;
+- manifest SHA-256 `054ccff7676a744871b1f82a5b263898f9fa53c2d1ae1ac20a5659485466bed0`;
+- audit SHA-256 `1bb6fecbae1733f7ab62022c5f50389ffdd2bfe1dcc68f98c9853c9d123d2807`;
+- exact 33-feature order SHA-256 remains
+  `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
+- infinity cells `0`; constant/all-null features `0/0`;
+- real H10 labels, real Path Risk targets, PR-001, performance metrics, F5/F6,
+  and fresh-forward outcomes: not accessed.
+
+Controlling checkpoint:
+
+`docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_CACHE_AUDIT_RESULT.md`
 
 ## V4 final alpha review — CLOSED
 
@@ -140,12 +166,11 @@ Before future outcome access, the exact block and immutable source snapshots mus
 
 ## Immediate next action
 
-Stop for ChatGPT review. The exact final V3-B model/runtime is now frozen and
-the local artifact report is permanently documented. Any future fresh-forward
-work requires a separately authorized pre-outcome manifest and atomic outcome
-access step. A separately named Path-Risk / Adverse-Excursion research lane
-may proceed while the fresh-forward block matures, but it must not retune the
-ranker or access the reserved fresh-forward ranking outcomes.
+Stop for ChatGPT review of the frozen Path Risk feature-only cache. A separate
+authorization is required before loading the real H10 labels, constructing
+adverse-excursion targets, fitting PR-001, or viewing any Path Risk outcome.
+Any future fresh-forward work also requires its separately authorized
+pre-outcome manifest and atomic outcome-access step.
 
 ## Hard boundary
 
@@ -156,6 +181,9 @@ Do not:
 - bypass the V3-D PIT sector-history block;
 - inspect sessions `1225..1250` as a validation slice;
 - inspect or summarize post-2026-07-31 fresh-forward labels/outcomes;
+- load the real H10 label parquet or compute real adverse-excursion targets;
+- fit PR-001 or compute real Path Risk pinball/Spearman/quintile metrics;
+- access Path Risk F5/F6 outcomes or create a risk-veto/integration rule;
 - write the real `FORWARD_OUTCOME_ACCESS_STARTED` marker now;
 - change the 33-feature ranker, model parameters, labels, universe, or fresh-forward verdict rule;
 - start calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge automatically.

@@ -1651,3 +1651,39 @@ and no fresh-forward verdict, V4 rescue, calibration, Path-Risk, Stage 6,
 IDX-VAL-002, execution/PnL, paper/live, or main merge was started. See the
 dated final-refit checkpoint and result handoff for the full identity table,
 paths, runtime profile, and boundary record.
+
+## 34. Path Risk V1 implementation and outcome-blind discovery cache — 2026-08-10
+
+The authorized Path Risk V1 implementation/preparation task completed on
+`research/idx-ranking-v2-spec-v1` at implementation HEAD
+`61991c80f95355b34824b5fe09aa8d8e4977aa82`. Full pytest passed `375/375` with
+three existing pandas `FutureWarning` instances in `16.44s` pytest time.
+
+The frozen Path Risk target primitive, q75 HGB model definition, constant q75
+baseline, diagnostics, and exact discovery gate were implemented and covered
+with synthetic/adversarial tests. No real target or model fit was run.
+
+The real outcome-blind full-primary-liquid 33-feature cache was prepared only
+through signal session `984`. It contains `254,383` rows, `679` tickers, and
+`965` dates over sessions `20..984`; primary-liquid rows per date are
+`222/258/307` min/median/max. Cache SHA-256:
+`74c300390dce542dad95ae204dd7663f5f780b09dd33c3514c5dd264f15cca08`.
+Manifest SHA-256:
+`054ccff7676a744871b1f82a5b263898f9fa53c2d1ae1ac20a5659485466bed0`.
+Audit SHA-256:
+`1bb6fecbae1733f7ab62022c5f50389ffdd2bfe1dcc68f98c9853c9d123d2807`.
+
+The exact 33-feature order SHA is
+`100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`.
+All feature columns have at least one finite value; infinity cells are `0`,
+constant features are `[]`, all-null features are `[]`, and forbidden outcome
+columns are `[]`.
+
+The cache manifest/audit flags are all fail-closed pre-outcome values:
+`real_h10_labels_loaded=false`, `real_path_risk_target_computed=false`,
+`pr001_model_fitted=false`, `path_risk_performance_metrics_computed=false`,
+`f5_f6_path_risk_accessed=false`, `fresh_forward_accessed=false`, and
+`forward_marker_written=false`. PR-001 remains reserved and unviewed; the
+ranking historical denominator remains `17`. No risk-veto/integration,
+ranking change, fresh-forward access, or main merge was started. See the dated
+Path Risk checkpoint and result handoff for the complete per-feature audit.
