@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1840" viewBox="0 0 1080 1840" role="img" aria-labelledby="title desc">
+  <title id="title">IDX Trade model ecosystem overview</title>
+  <desc id="desc">Vertical project map from market data and universe gating through alpha ranking, secondary risk and evidence models, decision engine, portfolio sizing, execution, and paper or live monitoring, with a protected fresh-forward validation branch.</desc>
+  <defs>
+    <style>
+      .bg{fill:#0d1117}.title{fill:#f0f6fc;font:700 44px Arial,sans-serif}.sub{fill:#9da7b3;font:22px Arial,sans-serif}.h{fill:#f0f6fc;font:700 27px Arial,sans-serif}.t{fill:#c9d1d9;font:21px Arial,sans-serif}.small{fill:#9da7b3;font:18px Arial,sans-serif}.locked{fill:#163d27;stroke:#3fb950;stroke-width:3}.next{fill:#493a12;stroke:#d29922;stroke-width:3}.future{fill:#21262d;stroke:#6e7681;stroke-width:2}.protected{fill:#4a2025;stroke:#f85149;stroke-width:3}.source{fill:#161b22;stroke:#30363d;stroke-width:2}.arrow{stroke:#8b949e;stroke-width:4;fill:none}.arrow-red{stroke:#f85149;stroke-width:4;fill:none}.badge-green{fill:#238636}.badge-yellow{fill:#9e6a03}.badge-gray{fill:#30363d}.badge-red{fill:#da3633}.badge{fill:white;font:700 16px Arial,sans-serif;letter-spacing:.5px}.legend{fill:#c9d1d9;font:18px Arial,sans-serif}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8b949e"/></marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#f85149"/></marker>
+  </defs>
+  <rect class="bg" width="1080" height="1840" rx="28"/>
+
+  <text class="title" x="540" y="78" text-anchor="middle">IDX Trade — Model Ecosystem</text>
+  <text class="sub" x="540" y="116" text-anchor="middle">From defensible IDX data to a complete trading decision system</text>
+
+  <rect class="source" x="190" y="160" width="700" height="110" rx="22"/>
+  <text class="h" x="540" y="203" text-anchor="middle">Market Data + Official IDX Evidence</text>
+  <text class="t" x="540" y="239" text-anchor="middle">Daily/EOD regular-market observations + exchange evidence</text>
+
+  <path class="arrow" d="M540 270 V320" marker-end="url(#arrow)"/>
+
+  <rect class="locked" x="145" y="330" width="790" height="145" rx="24"/>
+  <rect class="badge-green" x="172" y="350" width="100" height="30" rx="15"/><text class="badge" x="222" y="371" text-anchor="middle">BUILT</text>
+  <text class="h" x="540" y="393" text-anchor="middle">0. Data / Universe Gate</text>
+  <text class="t" x="540" y="428" text-anchor="middle">PIT identity • listing • tradability • liquidity • causal prices</text>
+  <text class="small" x="540" y="458" text-anchor="middle">Only defensible primary-liquid stock/session rows may continue</text>
+
+  <path class="arrow" d="M540 475 V525" marker-end="url(#arrow)"/>
+
+  <rect class="locked" x="145" y="535" width="790" height="180" rx="24"/>
+  <rect class="badge-green" x="172" y="555" width="112" height="30" rx="15"/><text class="badge" x="228" y="576" text-anchor="middle">LOCKED</text>
+  <text class="h" x="540" y="605" text-anchor="middle">1. Alpha / Opportunity Ranker</text>
+  <text class="t" x="540" y="642" text-anchor="middle">Final historical ranker: V3-B Structure-Lite</text>
+  <text class="t" x="540" y="675" text-anchor="middle">33 causal features → daily cross-sectional score + rank</text>
+  <text class="small" x="540" y="704" text-anchor="middle">Question: “Which eligible setups look most attractive today?”</text>
+
+  <rect class="locked" x="36" y="560" width="92" height="130" rx="18"/>
+  <text class="small" x="82" y="593" text-anchor="middle">V3/V4</text>
+  <text class="small" x="82" y="621" text-anchor="middle">alpha</text>
+  <text class="small" x="82" y="649" text-anchor="middle">search</text>
+  <text class="small" x="82" y="677" text-anchor="middle">CLOSED</text>
+  <path class="arrow" d="M128 625 H145" marker-end="url(#arrow)"/>
+
+  <rect class="protected" x="760" y="745" width="280" height="178" rx="22"/>
+  <rect class="badge-red" x="785" y="765" width="126" height="30" rx="15"/><text class="badge" x="848" y="786" text-anchor="middle">PROTECTED</text>
+  <text class="h" x="900" y="825" text-anchor="middle">Fresh-Forward</text>
+  <text class="t" x="900" y="856" text-anchor="middle">Independent validation</text>
+  <text class="small" x="900" y="886" text-anchor="middle">First 100 consecutive</text>
+  <text class="small" x="900" y="911" text-anchor="middle">H10-mature sessions</text>
+  <path class="arrow-red" d="M700 715 C770 720 745 800 760 820" marker-end="url(#arrowRed)"/>
+
+  <path class="arrow" d="M540 715 V785" marker-end="url(#arrow)"/>
+
+  <rect class="next" x="145" y="795" width="560" height="265" rx="24"/>
+  <rect class="badge-yellow" x="172" y="815" width="90" height="30" rx="15"/><text class="badge" x="217" y="836" text-anchor="middle">NEXT</text>
+  <text class="h" x="425" y="866" text-anchor="middle">2. Secondary Evidence Models</text>
+
+  <rect class="next" x="175" y="895" width="240" height="130" rx="18"/>
+  <text class="h" x="295" y="934" text-anchor="middle">Path Risk</text>
+  <text class="t" x="295" y="966" text-anchor="middle">q75 adverse excursion</text>
+  <text class="small" x="295" y="997" text-anchor="middle">“How rough can the path be?”</text>
+
+  <rect class="future" x="435" y="895" width="240" height="130" rx="18"/>
+  <text class="h" x="555" y="930" text-anchor="middle">Future lanes</text>
+  <text class="small" x="555" y="960" text-anchor="middle">Probability / Calibration</text>
+  <text class="small" x="555" y="986" text-anchor="middle">Expected Payoff</text>
+  <text class="small" x="555" y="1012" text-anchor="middle">Reliability / Uncertainty</text>
+
+  <path class="arrow" d="M425 1060 V1110" marker-end="url(#arrow)"/>
+
+  <rect class="future" x="145" y="1120" width="790" height="135" rx="24"/>
+  <rect class="badge-gray" x="172" y="1140" width="104" height="30" rx="15"/><text class="badge" x="224" y="1161" text-anchor="middle">FUTURE</text>
+  <text class="h" x="540" y="1188" text-anchor="middle">3. Decision / Trade Selection Engine</text>
+  <text class="t" x="540" y="1223" text-anchor="middle">Combine only independently validated evidence into a selection policy</text>
+
+  <path class="arrow" d="M540 1255 V1305" marker-end="url(#arrow)"/>
+
+  <rect class="future" x="145" y="1315" width="790" height="115" rx="24"/>
+  <text class="h" x="540" y="1360" text-anchor="middle">4. Portfolio / Position Sizing</text>
+  <text class="t" x="540" y="1395" text-anchor="middle">Exposure • concentration • diversification • risk budget</text>
+
+  <path class="arrow" d="M540 1430 V1480" marker-end="url(#arrow)"/>
+
+  <rect class="future" x="145" y="1490" width="790" height="115" rx="24"/>
+  <text class="h" x="540" y="1535" text-anchor="middle">5. Execution / Cost Model</text>
+  <text class="t" x="540" y="1570" text-anchor="middle">Spread • slippage • liquidity • fees • realistic fills</text>
+
+  <path class="arrow" d="M540 1605 V1655" marker-end="url(#arrow)"/>
+
+  <rect class="future" x="145" y="1665" width="790" height="115" rx="24"/>
+  <text class="h" x="540" y="1710" text-anchor="middle">6. Paper / Live + Monitoring</text>
+  <text class="t" x="540" y="1745" text-anchor="middle">Drift • performance • data quality • failures • provenance</text>
+
+  <circle cx="250" cy="1810" r="9" fill="#3fb950"/><text class="legend" x="270" y="1817">built / locked</text>
+  <circle cx="440" cy="1810" r="9" fill="#d29922"/><text class="legend" x="460" y="1817">next</text>
+  <circle cx="565" cy="1810" r="9" fill="#6e7681"/><text class="legend" x="585" y="1817">future</text>
+  <circle cx="690" cy="1810" r="9" fill="#f85149"/><text class="legend" x="710" y="1817">protected</text>
+</svg>
