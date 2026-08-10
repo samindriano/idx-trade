@@ -215,7 +215,7 @@ def test_top_decile_overlap_identical_scores_is_one() -> None:
 
 def test_top_decile_overlap_detects_changed_names() -> None:
     control = _predictions([float(i) for i in range(10)], v3e.V3_E_CONTROL)
-    candidate = _predictions([9.0] + [float(i) for i in range(1, 10)], v3e.V3_E_LAMBDAMART)
+    candidate = _predictions([10.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 0.0], v3e.V3_E_LAMBDAMART)
     result = v3e._top_decile_overlap(control, candidate)
     assert (result["top_decile_jaccard"] < 1.0).all()
     assert (result["top_decile_entrants"] > 0).all()
