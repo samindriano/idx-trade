@@ -1,8 +1,8 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE; V3-B F1-F4 COMPLETE / PROMOTED FOR NEXT RESEARCH STEP; 5 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE; V3-B PROMOTED; V3-C IMPLEMENTED / PREREGISTERED / NOT YET SCORED; 5 CANDIDATES EVALUATED**
 
-Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory control equivalence. Ordinals `004`-`005` were then executed exactly once on V2F1-V2F4 under the frozen V3-B contract. The cumulative evaluated counter is now `5`. All results are historical development evidence, not independent validation.
+Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory control equivalence. Ordinals `004`-`005` were then executed exactly once on V2F1-V2F4 under the frozen V3-B contract. The cumulative evaluated counter is now `5`. Ordinals `006`-`007` are preregistered for V3-C but remain unviewed. All results are historical development evidence, not independent validation.
 
 | Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
 |---:|---|---|---|---|---|---|
@@ -11,6 +11,8 @@ Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory con
 | 003 | `V3-A-RECENCY-V1` | `V3-A-RECENCY-V1-HL504-003` | normalized exponential decay, H=504 official sessions | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 | 004 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CONTROL-004` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `COMPLETE` | `true` | `CONTROL_REFERENCE` |
 | 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | exact V2 25-feature prefix + fixed eight-feature causal Structure-Lite bundle | `COMPLETE` | `true` | `PROMOTE_FOR_NEXT_RESEARCH_STEP` |
+| 006 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-CONTROL-006` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | one frozen NORMAL/STRESS two-expert architecture using exact V2 25 features | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
 
 ## V3-A executed result identity
 
@@ -31,7 +33,7 @@ Ordinals `001`-`003` were executed exactly once on V2F1-V2F4 after mandatory con
 
 V3-A deterministic result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`. No recency component survived. Cumulative candidate count after V3-A is `3`.
 
-## V3-B frozen preregistration identity
+## V3-B executed result identity
 
 Controlling specification:
 
@@ -64,38 +66,64 @@ Frozen eight-feature order:
 7. `structure_breakout_retest_state`
 8. `structure_breakout_volume_confirmed`
 
-Outcome-bearing fold set remains `V2F1-V2F4` only. V2F5/V2F6 and reserved post-2026-07-31 V2 forward outcomes remain sealed.
-
-The local execution authorization is:
-
-`coordination/handoffs/IDX-RANKING-V3-STRUCTURE-LITE-LOCAL-RUN.md`
-
-The exact local run completed on V2F1-V2F4. Ordinals `004` and `005` are now
-viewed exactly once and the cumulative evaluated denominator is `5`.
-
-## V3-B F1-F4 executed result identity
+The exact local run completed on V2F1-V2F4. Ordinals `004` and `005` are viewed exactly once and the cumulative evaluated denominator is `5`.
 
 - source/run HEAD: `eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`;
-- implementation commit: `eee4ed0458fdfdea5fdc0f5335ec211efd3dd80b`;
 - full pytest: `252 passed, 0 failed, 3 warnings`;
-- discovery fold set: `V2F1-V2F4` only;
 - cache SHA-256: `7084759fddaa20e82ec03e50205f2872520e6b3e11ea5f294033589a9c803405`;
 - cache manifest SHA-256: `e428cad0ff24b57977106482cef1478e60c0660adcee6dbf103803516b35aeb2`;
 - control equivalence: `V3_B_CONTROL_EQUIVALENCE_PASS`, 84,732 rows, max score/metric difference `0.0`;
 - candidate verdict: `PROMOTE_FOR_NEXT_RESEARCH_STEP`;
 - deterministic decision: `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`;
-- metrics artifact: `ranking_v3_b_structure_lite_f1_f4_metrics.csv`;
 - metrics artifact SHA-256: `0a6919a22669c14db272cc12ff70081d50ea53139f591c7faf2be2c43d321357`;
 - summary artifact SHA-256: `a8ca2fea755a98bc94ad2f1d4d5ae2a25db238a0aff57323014dd2a280d5368e`.
 
-The full result, paired deltas, coverage, runtime, and artifact inventory are
-in `docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_F1_F4_RESULT.md`.
-V2F5/V2F6 and reserved post-2026-07-31 V2 forward outcomes were not accessed.
+The full result is in `docs/checkpoints/2026-08-10_RANKING_V3_STRUCTURE_LITE_F1_F4_RESULT.md`. V2F5/V2F6 and reserved post-2026-07-31 V2 forward outcomes were not accessed.
+
+## V3-C frozen preregistration identity
+
+Controlling specification:
+
+`docs/RANKING_V3_REGIME_SPEC_V1.md`
+
+- Git blob `2a2f48d68f5d3df839c61191d4a11fa870470b00`.
+
+Independent review addendum:
+
+`docs/RANKING_V3_REGIME_SPEC_REVIEW_ADDENDUM_V1.md`
+
+- Git blob `a13c5ae103908311968e38c6ded233b7a1cbd901`.
+
+Frozen regime definition:
+
+- source context: market breadth-20, market median return-20, market median ATR/close;
+- trailing threshold history: prior 252 official sessions, minimum 126 observations;
+- stress votes: breadth <= prior q25, return <= prior q25, ATR >= prior q75;
+- `STRESS` if at least 2/3 votes, otherwise `NORMAL`;
+- regime is a routing variable only, not a model feature.
+
+Frozen architecture:
+
+- exact V2 global control;
+- one `NORMAL` exact-V2 HGB expert;
+- one `STRESS` exact-V2 HGB expert;
+- experts use only exact V2 25 features and frozen HGB parameters;
+- no Structure-Lite, recency weighting, rescaling, blending, or fallback during validation.
+
+Implementation lineage before local run:
+
+- `b92cb24367bcc675cd2bfba5bab636d239fa384a` — causal outcome-blind regime builder;
+- `89ca64393d94bf294a1d437990242bd5d230c96f` — F1-F4-only cache/runner;
+- `7409bfc16914ce487fe39e393f1dd0bf62df4b29` — focused guardrail tests.
+
+Known pre-outcome engineering correction required before local prepare/run: `_context_equivalence` must allow repeated `(signal_session_index,date)` target keys because many securities share one market-wide date context. This is an alignment bug only; the frozen regime/spec/gates must not change. The local run handoff controls the correction before any V3-C outcome is viewed.
+
+Outcome-bearing folds remain V2F1-V2F4 only. V2F5/V2F6 and reserved forward outcomes remain sealed. Ordinals `006` and `007` do not increment the denominator until actually scored.
 
 ## Required row schema after execution
 
 Every executed row must record, without deleting prior rows:
 
-`hypothesis_id`, `parent_hypothesis`, `candidate_id`, `candidate_ordinal`, `spec_sha256`, `spec_commit`, `cache_sha256`, `cache_manifest_sha256`, `fold_set`, `feature_order_hash`, `model_identity`, `weight_formula`, `weight_normalization`, `result_status`, `result_viewed`, `metrics_artifact`, `artifact_sha256`, `verdict`, `cumulative_candidate_count`, `code_commit`, `environment`, and `notes`.
+`hypothesis_id`, `parent_hypothesis`, `candidate_id`, `candidate_ordinal`, `spec_sha256/spec_blob`, `cache_sha256`, `cache_manifest_sha256`, `fold_set`, `feature_order_hash`, `model_identity`, `result_status`, `result_viewed`, `metrics_artifact`, `artifact_sha256`, `verdict`, `cumulative_candidate_count`, `code_commit`, `environment`, and `notes`.
 
 The counter increments when a candidate is actually run. A failed run with viewed results, killed candidate, or diagnostic candidate stays in the denominator permanently. A pre-score engineering/data/provenance block does not fabricate an evaluated candidate result.
