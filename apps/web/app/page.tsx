@@ -19,24 +19,20 @@ type ModelRecord = {
   medianRoc: number;
   medianQSpread: number;
   positiveDeltaFolds: string;
-  positiveQFolds: string;
-  rocPositiveFolds: string;
   folds: FoldMetric[];
 };
 
-const models: Record<string, ModelRecord> = {
-  HGB_XS_MARKET: {
+const models: ModelRecord[] = [
+  {
     id: "HGB_XS_MARKET",
     label: "HGB XS + Market",
     badge: "V2 CHAMPION",
-    status: "Frozen · historical-development",
-    description: "Cross-sectional stock ranks + explicit market state + stock-relative-to-market features.",
+    status: "Frozen · forward contract active",
+    description: "Cross-sectional stock strength, market state, and stock-vs-market context.",
     medianDeltaPr: 0.02388,
     medianRoc: 0.52441,
     medianQSpread: 0.051196,
     positiveDeltaFolds: "6 / 6",
-    positiveQFolds: "6 / 6",
-    rocPositiveFolds: "5 / 6",
     folds: [
       { fold: "F1", deltaPr: 0.021677, roc: 0.525558, qSpread: 0.084017 },
       { fold: "F2", deltaPr: 0.028999, roc: 0.523262, qSpread: 0.070311 },
@@ -46,7 +42,7 @@ const models: Record<string, ModelRecord> = {
       { fold: "F6", deltaPr: 0.018643, roc: 0.493102, qSpread: 0.044856 },
     ],
   },
-  HGB_XS: {
+  {
     id: "HGB_XS",
     label: "HGB XS",
     badge: "V2",
@@ -56,8 +52,6 @@ const models: Record<string, ModelRecord> = {
     medianRoc: 0.515711,
     medianQSpread: 0.036905,
     positiveDeltaFolds: "6 / 6",
-    positiveQFolds: "6 / 6",
-    rocPositiveFolds: "6 / 6",
     folds: [
       { fold: "F1", deltaPr: 0.020569, roc: 0.513621, qSpread: 0.03434 },
       { fold: "F2", deltaPr: 0.03865, roc: 0.533146, qSpread: 0.08415 },
@@ -67,18 +61,16 @@ const models: Record<string, ModelRecord> = {
       { fold: "F6", deltaPr: 0.016394, roc: 0.515047, qSpread: 0.018103 },
     ],
   },
-  LOGISTIC_XS: {
+  {
     id: "LOGISTIC_XS",
     label: "Logistic XS",
     badge: "V2",
     status: "Historical candidate",
-    description: "Linear cross-sectional baseline for testing whether normalization alone improves transportability.",
+    description: "Linear cross-sectional baseline used to isolate the effect of same-date normalization.",
     medianDeltaPr: 0.009372,
     medianRoc: 0.506269,
     medianQSpread: 0.019726,
     positiveDeltaFolds: "6 / 6",
-    positiveQFolds: "5 / 6",
-    rocPositiveFolds: "5 / 6",
     folds: [
       { fold: "F1", deltaPr: 0.009908, roc: 0.502548, qSpread: 0.029134 },
       { fold: "F2", deltaPr: 0.030582, roc: 0.528439, qSpread: 0.07807 },
@@ -88,18 +80,16 @@ const models: Record<string, ModelRecord> = {
       { fold: "F6", deltaPr: 0.003217, roc: 0.505476, qSpread: 0.005455 },
     ],
   },
-  PAIRWISE_XS: {
+  {
     id: "PAIRWISE_XS",
     label: "Pairwise Logistic XS",
     badge: "V2",
     status: "Historical candidate",
-    description: "Linear same-date pairwise ranking experiment; useful as an objective-function diagnostic.",
+    description: "Linear same-date pairwise ranking experiment retained as an objective-function diagnostic.",
     medianDeltaPr: 0.01067,
     medianRoc: 0.508343,
     medianQSpread: 0.024926,
     positiveDeltaFolds: "6 / 6",
-    positiveQFolds: "6 / 6",
-    rocPositiveFolds: "6 / 6",
     folds: [
       { fold: "F1", deltaPr: 0.010404, roc: 0.501659, qSpread: 0.018493 },
       { fold: "F2", deltaPr: 0.027711, roc: 0.525379, qSpread: 0.067298 },
@@ -109,7 +99,7 @@ const models: Record<string, ModelRecord> = {
       { fold: "F6", deltaPr: 0.002926, roc: 0.504925, qSpread: 0.003426 },
     ],
   },
-  V1_HGB_CONTROL: {
+  {
     id: "V1_HGB_CONTROL",
     label: "V1 HGB Control",
     badge: "CONTROL",
@@ -119,8 +109,6 @@ const models: Record<string, ModelRecord> = {
     medianRoc: 0.51901,
     medianQSpread: 0.031008,
     positiveDeltaFolds: "6 / 6",
-    positiveQFolds: "6 / 6",
-    rocPositiveFolds: "5 / 6",
     folds: [
       { fold: "F1", deltaPr: 0.017436, roc: 0.512096, qSpread: 0.020781 },
       { fold: "F2", deltaPr: 0.03315, roc: 0.528622, qSpread: 0.068228 },
@@ -130,21 +118,17 @@ const models: Record<string, ModelRecord> = {
       { fold: "F6", deltaPr: 0.02726, roc: 0.525924, qSpread: 0.044931 },
     ],
   },
-};
+];
 
-const futureModels = ["V3-RECENCY", "V3-REGIME", "V3-SECTOR", "V3-TRUE-RANKING"];
+const futureModels = ["V3 Recency", "V3 Regime", "V3 Sector Relative", "V3 True Ranking"];
 
 function pct(value: number, digits = 2) {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-function metricWidth(value: number, max: number) {
-  return `${Math.min(100, Math.max(1.5, (Math.abs(value) / max) * 100))}%`;
-}
-
-function LogoMark() {
+function Logo() {
   return (
-    <div className="logoMark" aria-hidden="true">
+    <div className="brandMark" aria-hidden="true">
       <span />
       <span />
       <span />
@@ -153,259 +137,240 @@ function LogoMark() {
   );
 }
 
-function StatusDot({ tone = "green" }: { tone?: "green" | "amber" | "muted" }) {
-  return <span className={`statusDot ${tone}`} />;
+function FoldChart({ model }: { model: ModelRecord }) {
+  const width = 760;
+  const height = 270;
+  const left = 48;
+  const right = 22;
+  const top = 28;
+  const bottom = 42;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const maxY = 0.04;
+
+  const points = model.folds.map((fold, index) => {
+    const x = left + (index / (model.folds.length - 1)) * chartWidth;
+    const y = top + chartHeight - (fold.deltaPr / maxY) * chartHeight;
+    return { ...fold, x, y };
+  });
+
+  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+  const areaPath = `${linePath} L${points[points.length - 1].x},${top + chartHeight} L${points[0].x},${top + chartHeight} Z`;
+  const gridValues = [0, 0.01, 0.02, 0.03, 0.04];
+
+  return (
+    <div className="chartWrap" key={model.id}>
+      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Chronological delta PR-AUC for ${model.label}`}>
+        <defs>
+          <linearGradient id={`area-${model.id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#139b78" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#139b78" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {gridValues.map((value) => {
+          const y = top + chartHeight - (value / maxY) * chartHeight;
+          return (
+            <g key={value}>
+              <line className="gridLine" x1={left} x2={width - right} y1={y} y2={y} />
+              <text className="axisLabel" x={left - 12} y={y + 4} textAnchor="end">{pct(value, 0)}</text>
+            </g>
+          );
+        })}
+        <path className="areaPath" d={areaPath} fill={`url(#area-${model.id})`} />
+        <path className="linePath" d={linePath} />
+        {points.map((point) => (
+          <g className="chartPoint" key={point.fold}>
+            <circle cx={point.x} cy={point.y} r="5">
+              <title>{`${point.fold}: ΔPR ${pct(point.deltaPr)} · ROC ${point.roc.toFixed(3)} · Q5-Q1 ${pct(point.qSpread)}`}</title>
+            </circle>
+            <text className="pointValue" x={point.x} y={point.y - 13} textAnchor="middle">{pct(point.deltaPr)}</text>
+            <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
 }
 
 export default function Home() {
   const [modelId, setModelId] = useState("HGB_XS_MARKET");
-  const [view, setView] = useState<"historical" | "forward">("historical");
-  const model = models[modelId];
+  const model = models.find((item) => item.id === modelId) ?? models[0];
 
-  const bestFold = useMemo(
-    () => model.folds.reduce((best, fold) => (fold.deltaPr > best.deltaPr ? fold : best), model.folds[0]),
-    [model]
+  const comparison = useMemo(
+    () => [...models].sort((a, b) => b.medianDeltaPr - a.medianDeltaPr),
+    []
   );
 
-  const weakestFold = useMemo(
-    () => model.folds.reduce((worst, fold) => (fold.deltaPr < worst.deltaPr ? fold : worst), model.folds[0]),
-    [model]
-  );
+  const championForward = model.id === "HGB_XS_MARKET";
 
   return (
-    <main className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <LogoMark />
-          <div>
-            <strong>IDX TRADE</strong>
-            <span>RESEARCH TERMINAL</span>
-          </div>
+    <main className="appShell">
+      <header className="topNav">
+        <div className="navInner">
+          <a className="brand" href="#top" aria-label="IDX Trade home">
+            <Logo />
+            <span>IDX Trade</span>
+          </a>
+          <nav className="primaryNav" aria-label="Primary navigation">
+            <a className="active" href="#overview">Overview</a>
+            <a href="#models">Models</a>
+            <a href="#forward">Forward Test</a>
+          </nav>
+          <div className="researchPill"><span className="liveDot" /> Research only</div>
         </div>
+      </header>
 
-        <nav className="nav">
-          <a className="active" href="#overview"><span>01</span>Overview</a>
-          <a href="#forward"><span>02</span>Forward monitor</a>
-          <a href="#folds"><span>03</span>Fold diagnostics</a>
-          <a href="#models"><span>04</span>Model registry</a>
-          <a href="#research"><span>05</span>Research lane</a>
-        </nav>
-
-        <div className="sidebarBottom">
-          <div className="environment">
-            <span>ENVIRONMENT</span>
-            <strong><StatusDot /> Research only</strong>
-          </div>
-          <div className="tinyMeta">
-            <span>Branch</span>
-            <code>frontend/model-monitoring-v1</code>
-          </div>
-        </div>
-      </aside>
-
-      <section className="workspace">
-        <header className="topbar">
+      <div className="page" id="top">
+        <section className="hero" id="overview">
           <div>
-            <div className="eyebrow">MODEL OBSERVATORY / IDX</div>
-            <h1>Forward Research Monitor</h1>
+            <p className="eyebrow">MODEL OBSERVATORY</p>
+            <h1>Model Monitor</h1>
+            <p className="heroCopy">Historical evidence and forward-test readiness, without exposing reserved outcomes.</p>
           </div>
-          <div className="topbarRight">
-            <div className="guardrail"><StatusDot tone="amber" />Forward outcomes locked</div>
-            <div className="avatar">ST</div>
+          <div className="lockBadge"><span className="lockDot" /> Forward outcomes locked</div>
+        </section>
+
+        <section className="modelToolbar">
+          <div className="modelSelectBlock">
+            <label htmlFor="model-select">MODEL</label>
+            <div className="selectShell">
+              <select id="model-select" value={modelId} onChange={(event) => setModelId(event.target.value)}>
+                <optgroup label="Historical models">
+                  {models.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="V3 research backlog">
+                  {futureModels.map((item) => <option key={item} disabled>{item} · not frozen</option>)}
+                </optgroup>
+              </select>
+              <span className="selectChevron">⌄</span>
+            </div>
           </div>
-        </header>
 
-        <div className="content" id="overview">
-          <section className="controlStrip">
-            <div className="controlBlock modelControl">
-              <label htmlFor="model">ACTIVE MODEL</label>
-              <div className="selectWrap">
-                <select id="model" value={modelId} onChange={(event) => setModelId(event.target.value)}>
-                  <optgroup label="Historical models">
-                    {Object.values(models).map((item) => (
-                      <option key={item.id} value={item.id}>{item.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="V3 research backlog">
-                    {futureModels.map((item) => <option key={item} disabled>{item} · not frozen</option>)}
-                  </optgroup>
-                </select>
-                <span className="chevron">⌄</span>
-              </div>
+          <div className="modelSummary" key={`summary-${model.id}`}>
+            <span className={model.id === "HGB_XS_MARKET" ? "modelBadge champion" : "modelBadge"}>{model.badge}</span>
+            <div>
+              <strong>{model.label}</strong>
+              <p>{model.description}</p>
             </div>
+          </div>
+        </section>
 
-            <div className="controlBlock">
-              <label>VIEW</label>
-              <div className="segmented">
-                <button className={view === "historical" ? "selected" : ""} onClick={() => setView("historical")}>Historical</button>
-                <button className={view === "forward" ? "selected" : ""} onClick={() => setView("forward")}>Forward</button>
-              </div>
-            </div>
+        <section className="metricStrip" key={`metrics-${model.id}`}>
+          <article>
+            <span>Median ΔPR-AUC</span>
+            <strong className="positiveValue">+{pct(model.medianDeltaPr)}</strong>
+            <small>vs fold prevalence</small>
+          </article>
+          <article>
+            <span>Median ROC-AUC</span>
+            <strong>{model.medianRoc.toFixed(4)}</strong>
+            <small>ranking discrimination</small>
+          </article>
+          <article>
+            <span>Median Q5 − Q1</span>
+            <strong className="positiveValue">+{pct(model.medianQSpread)}</strong>
+            <small>TP-rate spread</small>
+          </article>
+          <article>
+            <span>Positive ΔPR folds</span>
+            <strong>{model.positiveDeltaFolds}</strong>
+            <small>chronological folds</small>
+          </article>
+        </section>
 
-            <div className="modelIdentity">
-              <span className="tag">{model.badge}</span>
+        <section className="mainGrid">
+          <article className="surface chartPanel">
+            <div className="sectionHead">
               <div>
-                <strong>{model.id}</strong>
-                <span>{model.status}</span>
+                <span>HISTORICAL ROBUSTNESS</span>
+                <h2>Chronological fold performance</h2>
               </div>
+              <div className="legend"><i /> Δ PR-AUC</div>
             </div>
-          </section>
+            <FoldChart model={model} />
+            <div className="chartNote">
+              <span>Hover each point for ROC-AUC and Q5−Q1.</span>
+              <span className={model.folds[model.folds.length - 1].roc >= 0.5 ? "" : "warningText"}>
+                Latest fold ROC {model.folds[model.folds.length - 1].roc.toFixed(3)}
+              </span>
+            </div>
+          </article>
 
-          <div className="notice">
-            <span className="noticeIcon">!</span>
-            <p><strong>No fresh-forward outcome data is rendered.</strong> This UI contains frozen historical benchmark evidence and readiness metadata only. Forward results remain unavailable until the separate one-shot authorization gate.</p>
-          </div>
+          <article className="surface forwardPanel" id="forward">
+            <div className="sectionHead compact">
+              <div>
+                <span>FORWARD VALIDATION</span>
+                <h2>{championForward ? "V2 independent test" : "No forward contract"}</h2>
+              </div>
+              <span className={championForward ? "statusBadge amber" : "statusBadge"}>{championForward ? "LOCKED" : "HISTORICAL"}</span>
+            </div>
 
-          {view === "historical" ? (
-            <>
-              <section className="metricGrid">
-                <article className="metricCard featured">
-                  <span>MEDIAN Δ PR-AUC</span>
-                  <strong>{pct(model.medianDeltaPr)}</strong>
-                  <small>vs fold prevalence</small>
-                </article>
-                <article className="metricCard">
-                  <span>MEDIAN ROC-AUC</span>
-                  <strong>{model.medianRoc.toFixed(4)}</strong>
-                  <small>{model.rocPositiveFolds} folds above 0.50</small>
-                </article>
-                <article className="metricCard">
-                  <span>MEDIAN Q5 − Q1</span>
-                  <strong>{pct(model.medianQSpread)}</strong>
-                  <small>TP-rate spread</small>
-                </article>
-                <article className="metricCard">
-                  <span>POSITIVE ΔPR FOLDS</span>
-                  <strong>{model.positiveDeltaFolds}</strong>
-                  <small>chronological validation</small>
-                </article>
-              </section>
-
-              <section className="dashboardGrid">
-                <article className="panel performancePanel" id="folds">
-                  <div className="panelHeader">
-                    <div>
-                      <span className="sectionLabel">ROBUSTNESS</span>
-                      <h2>Chronological fold profile</h2>
-                    </div>
-                    <div className="legend"><span className="legendBar" />Δ PR-AUC</div>
-                  </div>
-
-                  <div className="foldChart">
-                    {model.folds.map((fold) => (
-                      <div className="foldRow" key={fold.fold}>
-                        <span className="foldLabel">{fold.fold}</span>
-                        <div className="barTrack">
-                          <div className="barFill" style={{ width: metricWidth(fold.deltaPr, 0.04) }} />
-                        </div>
-                        <strong>{pct(fold.deltaPr)}</strong>
-                        <span className={fold.roc >= 0.5 ? "roc positive" : "roc negative"}>ROC {fold.roc.toFixed(3)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="chartFooter">
-                    <div><span>Best fold</span><strong>{bestFold.fold} · {pct(bestFold.deltaPr)}</strong></div>
-                    <div><span>Weakest fold</span><strong>{weakestFold.fold} · {pct(weakestFold.deltaPr)}</strong></div>
-                    <div><span>Q5−Q1 positive</span><strong>{model.positiveQFolds}</strong></div>
-                  </div>
-                </article>
-
-                <article className="panel thesisPanel">
-                  <div className="panelHeader">
-                    <div>
-                      <span className="sectionLabel">MODEL THESIS</span>
-                      <h2>What this model reads</h2>
-                    </div>
-                  </div>
-                  <p>{model.description}</p>
-                  <div className="featureStack">
-                    <div><span className="featureNum">10</span><span><strong>Cross-sectional stock ranks</strong><small>momentum · ATR · volume · range position · liquidity</small></span></div>
-                    <div><span className="featureNum">09</span><span><strong>Market-state features</strong><small>breadth · median returns · volatility · active universe</small></span></div>
-                    <div><span className="featureNum">06</span><span><strong>Stock-vs-market features</strong><small>relative momentum · volatility · range · volume · value</small></span></div>
-                  </div>
-                  {model.id !== "HGB_XS_MARKET" && <div className="contextNote">Feature stack shown is the V2 champion architecture. Selected candidate differs; use fold metrics above for candidate comparison.</div>}
-                </article>
-              </section>
-            </>
-          ) : (
-            <section className="forwardLayout" id="forward">
-              <article className="panel forwardHero">
-                <div className="lockGlyph">◫</div>
-                <span className="sectionLabel">ONE-SHOT FORWARD VALIDATION</span>
-                <h2>Outcome access is intentionally locked.</h2>
-                <p>The final V2 champion is frozen and the outcome-blind runtime exists. The dashboard will only populate forward outcome metrics after a complete immutable 100-session H10-mature block receives separate authorization.</p>
-                <div className="progressMeta"><span>OUTCOMES CONSUMED</span><strong>0 / 100</strong></div>
+            {championForward ? (
+              <>
+                <div className="forwardCount"><strong>0</strong><span>/ 100 sessions</span></div>
                 <div className="progressTrack"><span style={{ width: "0%" }} /></div>
-                <div className="readinessGrid">
-                  <div><span>Final model</span><strong><StatusDot /> Frozen</strong></div>
-                  <div><span>Artifact verification</span><strong><StatusDot /> Valid</strong></div>
-                  <div><span>100-session readiness</span><strong><StatusDot tone="muted" /> Not evaluated</strong></div>
-                  <div><span>Outcome marker</span><strong><StatusDot tone="muted" /> Absent</strong></div>
+                <p className="forwardCopy">The final model is frozen. Signal-side readiness may be monitored, but reserved H10 outcomes stay sealed until the one-shot gate.</p>
+                <div className="forwardFacts">
+                  <div><span>Final model</span><strong><i className="okDot" /> Frozen</strong></div>
+                  <div><span>Artifact</span><strong><i className="okDot" /> Valid</strong></div>
+                  <div><span>H10 block</span><strong>Not evaluated</strong></div>
+                  <div><span>Outcome marker</span><strong>Absent</strong></div>
                 </div>
-              </article>
-
-              <article className="panel sessionPanel">
-                <div className="panelHeader">
-                  <div>
-                    <span className="sectionLabel">SESSION LEDGER</span>
-                    <h2>Forward sessions</h2>
-                  </div>
-                  <span className="tag subtle">OUTCOME-BLIND</span>
-                </div>
-                <div className="emptyTable">
-                  <div className="tableHead"><span>Session</span><span>Universe</span><span>Rank output</span><span>H10 maturity</span><span>Outcome</span></div>
-                  <div className="emptyState">
-                    <span>∅</span>
-                    <strong>No authorized forward outcome rows</strong>
-                    <p>Future data adapter can populate signal-side monitoring without exposing labels; outcome columns stay sealed until the gate opens.</p>
-                  </div>
-                </div>
-              </article>
-            </section>
-          )}
-
-          <section className="lowerGrid" id="models">
-            <article className="panel registryPanel">
-              <div className="panelHeader">
-                <div>
-                  <span className="sectionLabel">MODEL REGISTRY</span>
-                  <h2>Frozen artifacts</h2>
-                </div>
+                <div className="forwardMeta">292,633 training rows · 737 tickers · H10 first-touch</div>
+              </>
+            ) : (
+              <div className="noForward">
+                <div className="noForwardIcon">↗</div>
+                <h3>Historical evidence only</h3>
+                <p>This candidate was not selected for the frozen V2 forward test. Switch to HGB XS + Market to monitor the independent validation contract.</p>
               </div>
-              <div className="registryRows">
-                <div><span>Champion</span><strong>HGB_XS_MARKET</strong></div>
-                <div><span>Training rows</span><strong>292,633</strong></div>
-                <div><span>Tickers</span><strong>737</strong></div>
-                <div><span>Sessions</span><strong>20..1250</strong></div>
-                <div><span>Model SHA-256</span><code>5c9e3d02…15cb9ace</code></div>
-                <div><span>Manifest SHA-256</span><code>f4834500…7c3ace9</code></div>
-              </div>
-            </article>
+            )}
+          </article>
+        </section>
 
-            <article className="panel researchPanel" id="research">
-              <div className="panelHeader">
-                <div>
-                  <span className="sectionLabel">PARALLEL RESEARCH</span>
-                  <h2>V3 experiment lane</h2>
-                </div>
-                <span className="tag subtle">BACKLOG</span>
-              </div>
-              <div className="researchList">
-                <div><span className="researchIndex">A</span><span><strong>Recency weighting</strong><small>Test training-age / non-stationarity.</small></span><em>FIRST</em></div>
-                <div><span className="researchIndex">B</span><span><strong>Regime-aware experts</strong><small>Separate mappings across causal market states.</small></span><em>QUEUED</em></div>
-                <div><span className="researchIndex">C</span><span><strong>PIT sector relative</strong><small>Stock vs sector + sector vs market.</small></span><em>DATA GATE</em></div>
-                <div><span className="researchIndex">D</span><span><strong>True learning-to-rank</strong><small>Nonlinear same-date ranking objective.</small></span><em>QUEUED</em></div>
-              </div>
-            </article>
-          </section>
+        <section className="surface comparisonPanel" id="models">
+          <div className="sectionHead">
+            <div>
+              <span>MODEL COMPARISON</span>
+              <h2>Historical benchmark</h2>
+            </div>
+            <span className="tableHint">Click a row to inspect</span>
+          </div>
+          <div className="tableScroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>ΔPR-AUC</th>
+                  <th>ROC-AUC</th>
+                  <th>Q5−Q1</th>
+                  <th>Folds</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((item) => (
+                  <tr key={item.id} className={item.id === model.id ? "selectedRow" : ""} onClick={() => setModelId(item.id)}>
+                    <td><strong>{item.label}</strong><small>{item.id}</small></td>
+                    <td className="positiveCell">+{pct(item.medianDeltaPr)}</td>
+                    <td>{item.medianRoc.toFixed(4)}</td>
+                    <td className="positiveCell">+{pct(item.medianQSpread)}</td>
+                    <td>{item.positiveDeltaFolds}</td>
+                    <td>{item.id === "HGB_XS_MARKET" ? <span className="championLabel">Champion</span> : item.id === "V1_HGB_CONTROL" ? "Control" : "Candidate"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-          <footer>
-            <span>IDX Trade · exploratory research only</span>
-            <span>Historical benchmark snapshot · 2026-08-10</span>
-          </footer>
+        <div className="pageFooter">
+          <span>IDX Trade · exploratory research only</span>
+          <span>Reserved forward outcomes are not rendered.</span>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
