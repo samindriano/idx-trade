@@ -17,11 +17,25 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-B Structure-Lite: **COMPLETE — PROMOTED / ONLY CURRENT V3 SURVIVOR**;
 - V3-C Regime-Specialization: **COMPLETE — KILLED**;
 - V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
-- V3-E True Ranking: **SPEC FROZEN + REVIEW PASS + IMPLEMENTED; LOCAL V2F1-V2F4 RUN AUTHORIZED BUT NOT YET EXECUTED**;
+- V3-E True Ranking: **BLOCKED_DEPENDENCY BEFORE OUTCOME ACCESS**;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 candidate count is `7`. V3-D ordinals 008/009 remain `result_viewed=false`. V3-E ordinals 010/011 are implemented/preregistered but remain `result_viewed=false` until the local run actually occurs.
+Cumulative evaluated V3 candidate count is `7`. V3-D ordinals 008/009 remain `result_viewed=false`. V3-E ordinals 010/011 remain `result_viewed=false` because the local run was blocked before outcome access.
+
+Latest V3-E pre-run result: `BLOCKED_DEPENDENCY`.
+
+- required dependency: `xgboost==3.2.1`;
+- local import: `3.1.3`;
+- exact installation was attempted but neither the configured package index
+  nor public PyPI had a matching `3.2.1` distribution;
+- full pytest: `306 passed, 1 failed, 3 warnings` in `22.8 seconds`;
+- no prepared/reference artifact was materialized for the run;
+- no V3-E control or LambdaMART outcome was viewed;
+- result checkpoint:
+  `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_BLOCKED_DEPENDENCY.md`;
+- result handoff:
+  `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-BLOCKED.md`.
 
 ## Frozen identities
 

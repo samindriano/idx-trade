@@ -1,6 +1,6 @@
 # Ranking V3 Hypothesis Ledger V1
 
-Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E IMPLEMENTED/PREREGISTERED/NOT RUN; 7 CANDIDATES EVALUATED**
+Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E BLOCKED/UNVIEWED; 7 CANDIDATES EVALUATED**
 
 All results through V2F1-V2F4 are historical-development evidence only. The cumulative evaluated counter is `7`.
 
@@ -17,8 +17,8 @@ Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-
 | 007 | `V3-C-REGIME-V1` | `V3-C-REGIME-V1-TWO-EXPERT-007` | frozen NORMAL/STRESS two-expert architecture | `COMPLETE` | `true` | `KEEP_DIAGNOSTIC` |
 | 008 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CONTROL-008` | exact V2 control | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
 | 009 | `V3-D-SECTOR-RELATIVE-V1` | `V3-D-SECTOR-RELATIVE-V1-CANDIDATE-009` | V2 25 + fixed 6-feature PIT sector-relative bundle | `BLOCKED_PIT_SECTOR_HISTORY` | `false` | `UNVIEWED_RESERVED` |
-| 010 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-CONTROL-010` | exact V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
-| 011 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-LAMBDAMART-011` | exact V2 25 features + frozen XGBoost LambdaMART same-date ranker | `IMPLEMENTED_NOT_RUN` | `false` | `PENDING_RUN` |
+| 010 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-CONTROL-010` | exact V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `BLOCKED_DEPENDENCY` | `false` | `BLOCKED_DEPENDENCY` |
+| 011 | `V3-E-TRUE-RANKING-V1` | `V3-E-TRUE-RANKING-V1-LAMBDAMART-011` | exact V2 25 features + frozen XGBoost LambdaMART same-date ranker | `BLOCKED_DEPENDENCY` | `false` | `BLOCKED_DEPENDENCY` |
 
 ## V3-A Recency — executed identity
 
@@ -161,6 +161,18 @@ Allowed final result only:
 - `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`.
 
 If both candidates are executed/viewed, the cumulative evaluated V3 denominator becomes 9. No rescue/second ranker is authorized.
+
+### V3-E pre-run dependency block
+
+The first authorized local run stopped before artifact materialization because
+the frozen `xgboost==3.2.1` dependency was not available from either the
+configured package index or public PyPI. The local import was `3.1.3`; no substitute was used. Full
+pytest reported `306 passed, 1 failed, 3 warnings` in `22.8s`, with the sole
+failure being the frozen XGBoost version assertion. Ordinals 010/011 remain
+unviewed and the cumulative evaluated count remains `7`.
+
+Checkpoint:
+`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_BLOCKED_DEPENDENCY.md`.
 
 ## Required row schema after future execution
 
