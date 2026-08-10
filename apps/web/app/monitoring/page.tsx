@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FINAL_RANKER } from "@/lib/model-catalog";
 
 type SessionState = "AVAILABLE" | "FETCHING" | "DATA_READY" | "DATA_FAILED";
 
@@ -46,20 +47,6 @@ type StatusResponse = {
   detail?: string | null;
 };
 
-type GenerationSlot = {
-  generation: "V2" | "V3" | "V4";
-  modelId: string;
-  name: string;
-  frozen: boolean;
-  targetSessions: number | null;
-};
-
-const generationSlots: GenerationSlot[] = [
-  { generation: "V2", modelId: "HGB_XS_MARKET", name: "HGB XS + Market", frozen: true, targetSessions: 100 },
-  { generation: "V3", modelId: "FUTURE_V3_CHAMPION", name: "Future champion", frozen: false, targetSessions: null },
-  { generation: "V4", modelId: "FUTURE_V4_CHAMPION", name: "Future champion", frozen: false, targetSessions: null },
-];
-
 function Logo() {
   return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
 }
@@ -89,6 +76,29 @@ function sessionLabel(state: SessionState) {
   if (state === "DATA_FAILED") return "Failed";
   return "Missing";
 }
+
+const monitoringLayers = [
+  {
+    title: "Data capture",
+    state: "ACTIVE",
+    copy: "Official-session snapshot, PIT universe evidence, canonical EOD prices, artifact hashes, and capture failures.",
+  },
+  {
+    title: "Signal scoring",
+    state: "FINAL V3-B ONLY",
+    copy: "Persist the full same-day V3-B cross-sectional score/rank artifact and exact model fingerprint. No V2 fallback selection.",
+  },
+  {
+    title: "Forward accumulation",
+    state: "100 SESSIONS",
+    copy: "Count only verified final-ranker score artifacts. H10 maturity metadata can be tracked without opening realized outcomes.",
+  },
+  {
+    title: "Outcome vault",
+    state: "LOCKED",
+    copy: "PR-AUC, ROC-AUC, Q5−Q1, TP/SL results, realized returns, and PnL stay hidden until the frozen one-shot block opens.",
+  },
+];
 
 export default function MonitoringPage() {
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
@@ -171,22 +181,18 @@ export default function MonitoringPage() {
     }
   }
 
-  const v2DoneDates = useMemo(() => {
+  const finalScoredDates = useMemo(() => {
     if (!status) return new Set<string>();
     return new Set(
       status.model_runs
-        .filter((run) => run.model_id === "HGB_XS_MARKET" && run.state === "DONE" && Boolean(run.artifact_sha256))
+        .filter((run) => run.model_id === FINAL_RANKER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
         .map((run) => run.session_date),
     );
   }, [status]);
 
-  const latestRuns = useMemo(() => {
-    const map = new Map<string, RuntimeModelRun>();
-    for (const run of status?.model_runs ?? []) {
-      const existing = map.get(run.model_id);
-      if (!existing || run.session_date >= existing.session_date) map.set(run.model_id, run);
-    }
-    return map;
+  const latestFinalRun = useMemo(() => {
+    const runs = (status?.model_runs ?? []).filter((run) => run.model_id === FINAL_RANKER.id);
+    return [...runs].sort((a, b) => b.session_date.localeCompare(a.session_date))[0] ?? null;
   }, [status]);
 
   const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
@@ -194,6 +200,7 @@ export default function MonitoringPage() {
   const calendarReady = status?.calendar_ready ?? false;
   const captureTarget = targetDate || status?.next_missing_session || null;
   const canCapture = configured && connected && !submitting && !anyFetching;
+  const scoringProgress = Math.min(100, finalScoredDates.size);
 
   return (
     <main className="appShell monitorShell">
@@ -210,7 +217,11 @@ export default function MonitoringPage() {
 
       <div className="page monitoringPage">
         <section className="monitorHero">
-          <div><p className="eyebrow">V2 CHAMPION</p><h1>Forward Monitoring</h1></div>
+          <div>
+            <p className="eyebrow">FINAL V3-B · OUTCOME-BLIND</p>
+            <h1>Forward Monitoring</h1>
+            <p className="heroCopy">Monitor data integrity and frozen V3-B signal production now. Performance outcomes remain sealed until the exact 100-session H10-mature validation block is complete.</p>
+          </div>
           <div className="monitorHeroBadges">
             <span className="lockBadge"><span className="lockDot" /> Outcomes locked</span>
             <span className={`runtimeBadge ${connected ? "online" : "offline"}`}><i /> {connected ? "Runtime connected" : "Runtime offline"}</span>
@@ -218,15 +229,15 @@ export default function MonitoringPage() {
         </section>
 
         <section className="monitorSummaryGrid">
-          <article className="summaryBlock prominent"><span>V2 progress</span><div><strong>{v2DoneDates.size}</strong><em>/ 100</em></div></article>
-          <article className="summaryBlock"><span>Snapshots</span><strong>{status?.data_ready_sessions ?? 0}</strong></article>
+          <article className="summaryBlock prominent"><span>Final V3-B scores</span><div><strong>{finalScoredDates.size}</strong><em>/ {FINAL_RANKER.forwardTargetSessions}</em></div></article>
+          <article className="summaryBlock"><span>EOD snapshots</span><strong>{status?.data_ready_sessions ?? 0}</strong></article>
           <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{shortDate(status?.next_missing_session ?? null)}</strong></article>
-          <article className="summaryBlock"><span>Outcomes</span><strong className="summaryTextValue">LOCKED</strong></article>
+          <article className="summaryBlock"><span>Outcome vault</span><strong className="summaryTextValue">LOCKED</strong></article>
         </section>
 
         <section className="monitorMainGrid">
           <article className="surface sessionCapturePanel">
-            <div className="sectionHead"><div><span>SESSION DATA</span><h2>Capture</h2></div></div>
+            <div className="sectionHead"><div><span>1 · SESSION DATA</span><h2>Capture EOD evidence</h2></div></div>
             <div className="captureBody">
               <div className="captureControls">
                 <label>
@@ -240,10 +251,11 @@ export default function MonitoringPage() {
                   />
                 </label>
                 <button className="captureButton" type="button" disabled={!canCapture} onClick={() => void capture()}>
-                  {submitting ? "Starting..." : anyFetching ? "Fetching..." : `Ambil Data ${buttonDate(captureTarget)}`}
+                  {submitting ? "Starting..." : anyFetching ? "Fetching..." : `Capture EOD ${buttonDate(captureTarget)}`}
                 </button>
               </div>
 
+              <div className="runtimeNotice info"><i /><div><strong>Capture is data-only.</strong><p>A session counts toward the 100-session final-ranker track only after a verified V3-B score artifact exists. Capturing data never unlocks outcomes.</p></div></div>
               {!configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
               {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Calendar syncs on first capture</strong></div></div>}
               {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
@@ -252,7 +264,7 @@ export default function MonitoringPage() {
               )}
 
               <div className="sessionStripHeader">
-                <div><span>SESSION HISTORY</span><h3>Recent sessions</h3></div>
+                <div><span>SESSION HISTORY</span><h3>Recent EOD snapshots</h3></div>
                 <div className="sessionLegend">
                   <span><i className="legendDone" /> Recorded</span>
                   <span><i className="legendMissing" /> Missing</span>
@@ -283,44 +295,52 @@ export default function MonitoringPage() {
 
           <article className="surface v2ContractPanel">
             <div className="sectionHead compact">
-              <div><span>ACTIVE MODEL</span><h2>HGB XS + Market</h2></div>
-              <span className="modelBadge champion">V2</span>
+              <div><span>2 · ACTIVE SIGNAL MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
+              <span className="modelBadge champion">FINAL V3</span>
             </div>
             <div className="contractProgress">
-              <div className="contractNumber"><strong>{v2DoneDates.size}</strong><span>/ 100</span></div>
-              <div className="progressTrack indigoTrack"><span style={{ width: `${v2DoneDates.size}%` }} /></div>
+              <div className="contractNumber"><strong>{finalScoredDates.size}</strong><span>/ {FINAL_RANKER.forwardTargetSessions}</span></div>
+              <div className="progressTrack indigoTrack"><span style={{ width: `${scoringProgress}%` }} /></div>
             </div>
             <div className="contractFacts">
-              <div><span>Model</span><strong><i className="okDot" /> Frozen</strong></div>
-              <div><span>SHA</span><strong>5c9e3d02…</strong></div>
+              <div><span>Architecture</span><strong><i className="okDot" /> 33 features</strong></div>
+              <div><span>Model SHA</span><strong>{FINAL_RANKER.modelSha256.slice(0, 10)}…</strong></div>
+              <div><span>Latest score run</span><strong>{latestFinalRun ? shortDate(latestFinalRun.session_date) : "Not produced yet"}</strong></div>
               <div><span>Outcomes</span><strong>Locked</strong></div>
             </div>
           </article>
         </section>
 
         <section className="surface modelRunsPanel">
-          <div className="sectionHead"><div><span>CHAMPION RUNS</span><h2>Model progress</h2></div></div>
+          <div className="sectionHead"><div><span>MONITORING CONTRACT</span><h2>What we monitor</h2></div></div>
           <div className="modelRunList">
-            {generationSlots.map((slot) => {
-              const run = latestRuns.get(slot.modelId);
-              const progress = run?.progress_fraction ?? 0;
-              const state = slot.frozen ? run?.state ?? "WAITING_FOR_DATA" : "NOT_FROZEN";
-              return (
-                <article className={`modelRunRow ${slot.frozen ? "" : "futureRun"}`} key={slot.modelId}>
-                  <div className="runIdentity">
-                    <span className={`generationPill ${slot.generation.toLowerCase()}`}>{slot.generation}</span>
-                    <div><strong>{slot.name}</strong><small>{slot.frozen ? slot.modelId : "Not frozen"}</small></div>
-                  </div>
-                  <div className="runProgressBlock">
-                    <div className="runProgressHead"><span>{state.replaceAll("_", " ")}</span>{slot.frozen && <em>{Math.round(progress * 100)}%</em>}</div>
-                    <div className={`runTrack ${state === "FAILED" ? "failed" : ""}`}><span style={{ width: `${progress * 100}%` }} /></div>
-                  </div>
-                  <div className="runMeta">
-                    {slot.frozen ? <><span>{v2DoneDates.size}/{slot.targetSessions ?? "—"} sessions</span><strong>{run?.artifact_sha256 ? "Verified" : "Waiting"}</strong></> : <strong>Inactive</strong>}
-                  </div>
-                </article>
-              );
-            })}
+            {monitoringLayers.map((layer, index) => (
+              <article className="modelRunRow" key={layer.title}>
+                <div className="runIdentity">
+                  <span className={`generationPill ${index === 0 ? "v2" : index === 1 ? "v3" : "v4"}`}>{index + 1}</span>
+                  <div><strong>{layer.title}</strong><small>{layer.copy}</small></div>
+                </div>
+                <div className="runMeta"><strong>{layer.state}</strong></div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="surface modelRunsPanel">
+          <div className="sectionHead"><div><span>RESEARCH LANES</span><h2>What is in the forward system</h2></div></div>
+          <div className="modelRunList">
+            <article className="modelRunRow">
+              <div className="runIdentity"><span className="generationPill v3">V3</span><div><strong>Alpha ranker · {FINAL_RANKER.shortName}</strong><small>{FINAL_RANKER.id}</small></div></div>
+              <div className="runMeta"><strong>ACTIVE / FROZEN</strong></div>
+            </article>
+            <article className="modelRunRow futureRun">
+              <div className="runIdentity"><span className="generationPill v4">RISK</span><div><strong>Path Risk V1</strong><small>Separate historical research lane; not a forward trade filter yet.</small></div></div>
+              <div className="runMeta"><strong>NOT INTEGRATED</strong></div>
+            </article>
+            <article className="modelRunRow futureRun">
+              <div className="runIdentity"><span className="generationPill v4">P</span><div><strong>Probability / calibration</strong><small>No validated probability layer exists yet.</small></div></div>
+              <div className="runMeta"><strong>NOT STARTED</strong></div>
+            </article>
           </div>
         </section>
       </div>
