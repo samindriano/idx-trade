@@ -105,7 +105,7 @@ def test_breakout_then_retest_state_is_causal() -> None:
     sessions = np.array([1, 2, 3, 4], dtype=int)
     high = np.array([99.0, 100.0, 103.0, 102.0])
     low = np.array([98.0, 99.0, 101.0, 99.5])
-    close = np.array([99.0, 100.0, 102.0, 101.0])
+    close = np.array([99.0, 100.0, 102.0, 101.5])
     volume = np.array([100.0, 100.0, 200.0, 100.0])
     atr = np.ones(4)
     resistance = Cluster("HIGH", 100.0, 1, (), 0)
