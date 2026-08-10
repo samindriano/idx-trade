@@ -111,8 +111,8 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     generation: "Risk",
     name: "Path Risk V1",
     candidate: "PATH-RISK-A-Q75-HGB-001",
-    status: "RESEARCH",
-    result: "Separate lane — not part of alpha ranker",
-    note: "Outcome-blind feature cache is frozen. PR-001 is not part of forward alpha monitoring until separately validated.",
+    status: "FAIL",
+    result: "Discovery FAIL_CLOSE",
+    note: "Ordering diagnostics were positive, but q75 pinball robustness failed the frozen gate; no F5/F6, rescue, or alpha+risk integration.",
   },
 ];
