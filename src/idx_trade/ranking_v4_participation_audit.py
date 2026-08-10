@@ -117,8 +117,7 @@ def audit_v4a_cache(
     if bool(manifest.get("fresh_forward_accessed", True)):
         raise RuntimeError("V4-A audit manifest claims fresh-forward access")
 
-    parquet_columns = set(pd.read_parquet(cache_path, columns=[]).columns)
-    del parquet_columns  # schema presence is validated by the targeted read below.
+    # Targeted column projection is deliberate: the audit does not read labels or outcomes.
     frame = pd.read_parquet(cache_path, columns=list(AUDIT_COLUMNS))
     if frame.empty:
         raise RuntimeError("V4-A audit cache is empty")
