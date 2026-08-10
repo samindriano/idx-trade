@@ -51,3 +51,27 @@ At this ledger state:
 ## Permanent accounting rule
 
 Once an ordinal's V4 outcome is viewed, it remains in the denominator permanently. A mechanical/spec/data/provenance block before candidate scoring does not count as an evaluated result and must remain documented as a block rather than fabricated as a model failure.
+
+## Outcome-blind V4-A cache audit — 2026-08-10
+
+The authorized V4-A cache preparation and restricted feature audit completed
+before any candidate outcome access.
+
+- cache status: `RANKING_V4_A_PARTICIPATION_CACHE_FROZEN_PRE_OUTCOME`;
+- cache rows/tickers/sessions: `286,453 / 737 / 20..1224`;
+- cache SHA-256: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`;
+- manifest SHA-256: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`;
+- all seven V4-A features have finite rate at least `98.5785%`;
+- no constant or below-80%-finite feature;
+- `abs_spearman_ge_095`: empty;
+- audit status: `RANKING_V4_A_PARTICIPATION_OUTCOME_BLIND_AUDIT_COMPLETE`;
+- audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`;
+- `binary_target_loaded=false`, `outcome_columns_loaded=false`,
+  `outcome_metrics_computed=false` in the official audit;
+- no V4-A candidate was fitted/scored and no ordinal result was viewed;
+- cumulative evaluated-candidate count remains `9`; ordinals `012..014` remain
+  reserved and unviewed.
+
+This is a cache/data-quality result only. It does not create a V4-A verdict or
+authorize the atomic outcome run. Sessions `1225+`, fresh-forward outcomes, and
+`FORWARD_OUTCOME_ACCESS_STARTED` remain untouched.

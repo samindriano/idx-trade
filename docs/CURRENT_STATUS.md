@@ -112,18 +112,32 @@ Implementation exists for:
 
 No V4-A model outcome has been viewed yet; V4 evaluated-candidate count remains `0`, cumulative historical evaluated count remains `9`.
 
+The authorized outcome-blind cache/audit is complete:
+
+- cache status: `RANKING_V4_A_PARTICIPATION_CACHE_FROZEN_PRE_OUTCOME`;
+- cache rows/tickers/sessions: `286,453 / 737 / 20..1224`;
+- cache SHA-256: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`;
+- cache manifest SHA-256: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`;
+- all seven V4-A features have finite rate at least `98.5785%`;
+- no constant feature, no feature below 80% finite coverage, and no
+  `abs_spearman >= 0.95` pair;
+- audit status: `RANKING_V4_A_PARTICIPATION_OUTCOME_BLIND_AUDIT_COMPLETE`;
+- audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`;
+- no V4-A outcome metric, fit, score, or verdict was produced.
+
+Result checkpoint:
+`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_CACHE_AUDIT_RESULT.md`.
+
 ## Immediate next action
 
-The next permitted action is **outcome-independent local V4-A cache preparation and feature audit only**:
+The next permitted action is a **separate authorization review for the atomic
+V4-A control+A1+A2 historical outcome run**. The cache/data audit itself is
+complete; no outcome run is authorized automatically:
 
-- exact source/spec/cache identity;
-- row/session preservation;
-- feature coverage/missingness;
-- numerical distributions;
-- redundancy/correlation versus existing V3-B volume/value features;
-- runtime profile.
-
-Only after that cache/data audit is reviewed and frozen may a separate checkpoint authorize the one atomic F1-F6 control+A1+A2 outcome run.
+- review the checkpoint and handoff;
+- preserve the frozen cache and audit hashes;
+- authorize the one atomic F1-F6 control+A1+A2 outcome run only through a
+  separate controlling handoff.
 
 ## Hard boundary
 

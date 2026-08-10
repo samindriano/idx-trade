@@ -1477,3 +1477,29 @@ no model fit, score, F5/F6 access, fresh-forward access, Recency rescue, or
 `FORWARD_OUTCOME_ACCESS_STARTED` marker occurred. The V3-A cumulative
 evaluated candidate count remains `3`; V3-B control/candidate slots are
 preregistered but not evaluated.
+
+## 28. V4-A participation cache preparation and outcome-blind audit — 2026-08-10
+
+The authorized V4-A preflight, exact source SHA verification, cache preparation,
+and restricted outcome-blind feature audit completed on
+`research/idx-ranking-v2-spec-v1`. Full pytest passed `337/337` with three
+existing pandas FutureWarnings.
+
+The exact frozen V3-B late-development cache was extended with the seven frozen
+V4-A A1/A2 features over `286,453` rows, `737` tickers, and signal sessions
+`20..1224`. Cache SHA-256:
+`a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`.
+Manifest SHA-256:
+`b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`.
+
+The restricted audit loaded no target/outcome columns, found all seven V4-A
+features at or above `98.5785%` finite coverage, found no constant or below-80%
+finite feature, and found no pair with absolute Spearman correlation at least
+`0.95`. Audit SHA-256:
+`c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`.
+
+No V4-A candidate was fitted or scored; no outcome metric or verdict was
+computed; reserved ordinals `012..014` remain unviewed; the cumulative
+evaluated candidate count remains `9`; session `1225+`, fresh-forward outcomes,
+and `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. A separate handoff is
+required before the atomic V4-A outcome run.
