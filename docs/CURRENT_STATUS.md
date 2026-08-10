@@ -2,7 +2,7 @@
 
 Date: 2026-08-10 (Asia/Jakarta)
 
-This is the authoritative short first-read layer. For chronology use `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`, `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`, and the newest dated checkpoint/handoff. If older text conflicts, this file plus the newest controlling checkpoint wins.
+This is the authoritative short first-read layer. For chronology use `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`, `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`, `docs/PATH_RISK_V1_LEDGER.md`, and the newest dated checkpoint/handoff. If older text conflicts, this file plus the newest controlling checkpoint wins.
 
 ## Current phase
 
@@ -17,10 +17,10 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-D Sector-Relative: parked `BLOCKED_PIT_SECTOR_HISTORY`, outcomes unconsumed;
 - V3-E True Ranking: killed;
 - V4 final alpha-generation program: **CLOSED — NO SURVIVOR**;
-- cumulative historical evaluated-candidate count: `17`;
-- final V3-B refit / fresh-forward specification: **FROZEN + REVIEW PASS**;
+- cumulative historical evaluated alpha-candidate count: `17`;
 - final V3-B refit/runtime: **FROZEN SUCCESSFULLY, NO PERFORMANCE METRICS COMPUTED**;
-- Path Risk V1 implementation + feature cache: **FROZEN PRE-OUTCOME; PR-001 UNVIEWED**;
+- Path Risk V1: **CLOSED — `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`**;
+- Path Risk PR-001 is permanently viewed; F5/F6 remain sealed and are not authorized;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
@@ -46,53 +46,84 @@ Frozen V2 resolved-primary-H10 prepared cache for the final fit:
 - manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`;
 - rows/tickers/sessions `292,633 / 737 / 20..1250`.
 
-Final V3-B refit/runtime result:
+Final V3-B refit result:
 
-- execution code HEAD `56e6aa43d318775a5abcf73c87401fafde993b82`;
 - status `RANKING_V3_B_FINAL_REFIT_FROZEN`;
-- final training table: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_b_final_refit_20260810_001\ranking_v3_b_structure_lite_final_training_table.parquet`;
 - training table SHA-256 `5893c9f2872aae0f33acd4104d82ee8c1d4474aae7d54e9d01879724b86dffbe`;
 - model SHA-256 `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`;
 - model manifest SHA-256 `4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9`;
 - summary SHA-256 `e8e42dec10c73257fe4776f682f55d146ed8ca49b4aed7ce63ddb7488419e6a0`;
-- `verify_final_v3_refit_artifacts`: `valid=true`;
-- historical performance metrics: not computed; sessions `1225..1250` were training-only;
-- fresh-forward outcomes: not accessed; `FORWARD_OUTCOME_ACCESS_STARTED`: not written.
+- rows/tickers/sessions `292,633 / 737 / 20..1250`;
+- sessions `1225..1250` were training-only;
+- historical performance metrics were not computed;
+- model/manifest verification: `valid=true`;
+- fresh-forward outcomes were not accessed.
 
 Controlling checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REFIT_RUNTIME_RESULT.md`
 
-## Path Risk V1
+## Path Risk V1 — CLOSED
 
-The separate Path Risk lane is implemented and its real outcome-blind discovery
-feature cache is frozen through signal session `984`.
+Frozen hypothesis:
 
-- hypothesis: `PATH-RISK-A-ADVERSE-EXCURSION-Q75-V1`;
-- reserved candidate: `PATH-RISK-A-Q75-HGB-001`;
-- implementation: `src/idx_trade/path_risk_v1.py` and
-  `src/idx_trade/path_risk_v1_prepare.py`;
-- cache status: `PATH_RISK_V1_DISCOVERY_FEATURE_CACHE_FROZEN_PRE_OUTCOME`;
-- cache rows/tickers/dates/sessions: `254,383 / 679 / 965 / 20..984`;
-- primary-liquid count per date: `222 / 258 / 307` min/median/max;
-- cache SHA-256 `74c300390dce542dad95ae204dd7663f5f780b09dd33c3514c5dd264f15cca08`;
-- manifest SHA-256 `054ccff7676a744871b1f82a5b263898f9fa53c2d1ae1ac20a5659485466bed0`;
-- audit SHA-256 `1bb6fecbae1733f7ab62022c5f50389ffdd2bfe1dcc68f98c9853c9d123d2807`;
-- exact 33-feature order SHA-256 remains
-  `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
-- infinity cells `0`; constant/all-null features `0/0`;
-- real H10 labels, real Path Risk targets, PR-001, performance metrics, F5/F6,
-  and fresh-forward outcomes: not accessed.
+`PATH-RISK-A-ADVERSE-EXCURSION-Q75-V1`
 
-Controlling checkpoint:
+Frozen candidate:
 
-`docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_CACHE_AUDIT_RESULT.md`
+`PATH-RISK-A-Q75-HGB-001`
+
+The outcome-blind 33-feature discovery cache passed pre-outcome review, then PR-001 was executed exactly once on F1-F4 with the corrected current-checkout import path.
+
+Execution facts:
+
+- code HEAD used: `878898b70e930269e11cf00e18e263735fd3928c`;
+- pytest: `381 passed, 0 failed, 3 warnings`;
+- target rows: `660,721`;
+- feature rows: `254,383`;
+- joined model rows: `252,198`;
+- feature-to-target join coverage: `99.1411%`;
+- prediction finite rate: `100%` on all four folds.
+
+Relative pinball improvement by fold:
+
+- V2F1: `+0.004267`;
+- V2F2: `+0.011273`;
+- V2F3: `+0.014061`;
+- V2F4: `-0.033463`.
+
+Frozen gate summary:
+
+- nonnegative pinball improvement on >=3/4: **PASS**, `3/4`;
+- median pinball improvement >= `+0.02`: **FAIL**, approximately `+0.00777`;
+- q25 pinball improvement >= `0`: **FAIL**, approximately `-0.00517`;
+- worst pinball improvement >= `-0.01`: **FAIL**, `-0.033463`;
+- positive Spearman on >=3/4: **PASS**, `4/4`;
+- median Spearman >= `+0.10`: **PASS**;
+- positive Q5-Q1 realized adverse-excursion spread on >=3/4: **PASS**, `4/4`;
+- median Q5-Q1 spread >= `+0.10 R`: **PASS**.
+
+Final verdict:
+
+`PATH_RISK_A_DISCOVERY_FAIL_CLOSE`
+
+Interpretation: the frozen representation contains some cross-sectional risk-ordering information, but the q75 model does not robustly beat the unconditional training-q75 comparator on the proper scoring objective. F4 materially degrades pinball loss and shows strong q75 undercoverage. The experiment may not be rescued after the fact as a pure ordering model.
+
+Therefore:
+
+- PR-001 is permanently viewed;
+- Path Risk V1 is closed;
+- no Path Risk F5/F6 confirmation;
+- no alternate quantile/model/feature/target rescue;
+- no risk-veto or alpha+risk integration rule;
+- final V3-B ranker remains unchanged.
+
+Controlling files:
+
+- `docs/PATH_RISK_V1_LEDGER.md`;
+- `docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_RESULT_FAIL_CLOSE.md`.
 
 ## V4 final alpha review — CLOSED
-
-Controlling review:
-
-`docs/checkpoints/2026-08-10_RANKING_V4_FINAL_ALPHA_REVIEW_CLOSED.md`
 
 V4-A:
 
@@ -111,79 +142,64 @@ V4-C:
 - `018` exact control: equivalence PASS;
 - `019` Cross-Sectional Dispersion: FAIL.
 
-No V4 survivor, B1+B2 integration, B/C integration, rescue, threshold relaxation, or additional post-result market-derived alpha family is authorized.
+No V4 survivor, integration, rescue, threshold relaxation, or additional post-result market-derived alpha family is authorized.
 
-Ordinal `017` had positive aggregate diagnostics but failed temporal robustness/late-fold protection. Ordinal `019` is not treated as an almost-pass: besides missing the median PR threshold, it failed multiple q25/worst/ROC/Q5-Q1/late-fold gates. Failed candidates remain permanently in the denominator.
+Controlling review:
 
-The frozen seven-family V4 arena was a shortlist, not seven automatic runs. The three planned main families have now been consumed. Peer/Sector remains PIT-data blocked; Fundamental/Catalyst and Flow/Ownership lack frozen admissible PIT data gates. Systematic-adjusted strength remains a future idea rather than an outcome-responsive fourth V4 run.
+`docs/checkpoints/2026-08-10_RANKING_V4_FINAL_ALPHA_REVIEW_CLOSED.md`
 
 ## V3-D PIT sector history
 
 Status remains `BLOCKED_PIT_SECTOR_HISTORY`.
 
-No complete immutable ticker-by-date IDX-IC source chain with defensible `effective_from`, `effective_to_exclusive`, and `available_at` was established. `validate-history` and V3-D `prepare` were not run; ordinals `008/009` remain unviewed.
-
-Controlling checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED_RERUN.md`
-
-## Final V3-B refit / forward contract
-
-Frozen specification:
-
-`docs/RANKING_V3_FINAL_FORWARD_SPEC_V1.md`
-
-Spec Git blob:
-
-`024f1919de8d5ea4e2e9933a9e4c1a1ef9bbe4f4`
-
-Review checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_FORWARD_SPEC_REVIEW_PASS.md`
-
-Exact 33-feature order SHA-256:
-
-`100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`
-
-Implemented pre-outcome runtime:
-
-- `src/idx_trade/ranking_v3_forward_runtime.py`;
-- `tests/test_ranking_v3_forward_runtime.py`.
-
-The local Windows task must now run full pytest, verify frozen source/cache/spec identities, build the exact 292,633-row V3-B training table, fit the exact model once, and freeze/hash the model + manifest. It must compute **no historical performance metric** and must stop before any real fresh-forward outcome access.
-
-Sessions `1225..1250` may participate only in this final training refit after architecture closure. They may not become another validation slice.
+No complete immutable ticker-by-date IDX-IC source chain with defensible `effective_from`, `effective_to_exclusive`, and `available_at` was established. Ordinals `008/009` remain unviewed.
 
 ## Fresh-forward independent verdict
 
 The first independent final-ranker verdict is frozen to the first exact **100 consecutive H10-mature official signal sessions strictly after 2026-07-31**.
 
-The PASS/MIXED/FAIL semantics reuse the already-frozen V2 fresh-forward rule unchanged. No shorter interim verdict, rolling peek, alternate block, V2 fallback selection, or post-result rescue is allowed.
+The PASS/MIXED/FAIL semantics reuse the already-frozen forward rule unchanged. No shorter interim verdict, rolling performance peek, alternate block, V2 fallback selection, or post-result rescue is allowed.
 
-Because the current date is 2026-08-10, that 100-session H10-mature block cannot yet exist. No real forward access is authorized now.
+Daily outcome-blind operation may record:
 
-Before future outcome access, the exact block and immutable source snapshots must be hash-pinned in a pre-outcome manifest, then the global `FORWARD_OUTCOME_ACCESS_STARTED` marker must be atomically written before labels/outcomes are loaded. A crash after the marker consumes the block.
+- official-session data capture and provenance;
+- exact final V3-B features;
+- final V3-B score/rank artifacts;
+- model/feature/artifact fingerprints;
+- feature completeness and runtime health;
+- count of verified scored sessions toward the future 100-session block;
+- calendar/data maturity state without loading realized TP/SL outcomes.
+
+Daily operation must not display or summarize realized TP/SL, PR-AUC, ROC-AUC, Q5-Q1 performance, realized return, PnL, hit rate, or any other reserved forward outcome before the one-shot access boundary.
+
+Before future outcome access, the exact 100-session block and immutable source snapshots must be hash-pinned in a pre-outcome manifest. Then the global `FORWARD_OUTCOME_ACCESS_STARTED` marker must be atomically written before labels/outcomes are loaded. A crash after the marker consumes the block.
 
 ## Immediate next action
 
-Stop for ChatGPT review of the frozen Path Risk feature-only cache. A separate
-authorization is required before loading the real H10 labels, constructing
-adverse-excursion targets, fitting PR-001, or viewing any Path Risk outcome.
-Any future fresh-forward work also requires its separately authorized
-pre-outcome manifest and atomic outcome-access step.
+Primary attention moves to **outcome-blind forward operations for the frozen V3-B ranker**:
+
+1. capture each closed official IDX session with provenance/hash checks;
+2. build exact frozen 33-feature V3-B scoring rows;
+3. score/rank with exact final model SHA `1a702031...`;
+4. persist immutable same-day score/rank artifacts and fingerprints;
+5. monitor data/runtime health and verified-session accumulation;
+6. keep the forward outcome vault sealed.
+
+Path Risk V1 requires no further execution.
 
 ## Hard boundary
 
 Do not:
 
 - reopen V3/V4 architecture selection;
-- rescue V4-A/B/C or add a fourth V4 market-derived family after the viewed failures;
+- rescue V4-A/B/C or create a fourth post-result alpha family;
+- rerun or rescue Path Risk PR-001;
+- access Path Risk F5/F6 outcomes;
+- reinterpret PR-001 as a post-hoc pure ordering model;
+- create a risk-veto or alpha+risk integration rule;
 - bypass the V3-D PIT sector-history block;
 - inspect sessions `1225..1250` as a validation slice;
 - inspect or summarize post-2026-07-31 fresh-forward labels/outcomes;
-- load the real H10 label parquet or compute real adverse-excursion targets;
-- fit PR-001 or compute real Path Risk pinball/Spearman/quintile metrics;
-- access Path Risk F5/F6 outcomes or create a risk-veto/integration rule;
 - write the real `FORWARD_OUTCOME_ACCESS_STARTED` marker now;
 - change the 33-feature ranker, model parameters, labels, universe, or fresh-forward verdict rule;
 - start calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge automatically.
