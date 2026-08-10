@@ -97,9 +97,11 @@ def _assert_spec_files(spec_path: Path, addendum_path: Path) -> dict[str, str]:
 
 def _context_equivalence(v2: pd.DataFrame, regime: pd.DataFrame) -> dict[str, float]:
     keyed = regime.set_index(["signal_session_index", "date"])
+    if keyed.index.duplicated().any():
+        raise RuntimeError("V3-C regime table has duplicate session/date context")
+    # Many securities legitimately share the same market-wide session/date key.
+    # The source context index must be unique; repeated target keys are expected.
     keys = pd.MultiIndex.from_frame(v2[["signal_session_index", "date"]])
-    if not keys.is_unique:
-        raise RuntimeError("V3-C V2 discovery keys are not unique")
     missing = keys.difference(keyed.index)
     if len(missing):
         raise RuntimeError(f"V3-C regime context missing {len(missing)} V2 rows")
@@ -121,12 +123,9 @@ def _coverage_report(cache: pd.DataFrame) -> dict[str, Any]:
     report: dict[str, Any] = {"folds": {}, "gate_pass": True}
     for fold in DISCOVERY_FOLDS:
         assert_discovery_fold_allowed(fold.name)
-        train = cache[pd.to_numeric(cache["signal_session_index"], errors="raise").astype(int).between(fold.train_start, fold.train_end)]
-        validation = cache[
-            pd.to_numeric(cache["signal_session_index"], errors="raise").astype(int).between(
-                fold.validation_start, fold.validation_end
-            )
-        ]
+        session_values = pd.to_numeric(cache["signal_session_index"], errors="raise").astype(int)
+        train = cache[session_values.between(fold.train_start, fold.train_end)]
+        validation = cache[session_values.between(fold.validation_start, fold.validation_end)]
         fold_report: dict[str, Any] = {"train": {}, "validation": {}}
         for state in (*REGIME_STATES, REGIME_MISSING):
             train_state = train[train["regime_state"].eq(state)]
@@ -227,13 +226,13 @@ def prepare_regime_cache(
         raise RuntimeError("V3-C cache changed an existing V2 prepared column")
     if joined.duplicated(["ticker", "date"]).any():
         raise RuntimeError("V3-C discovery cache contains duplicate ticker/date rows")
-    if tuple(V2_FULL_FEATURE_COLUMNS) != tuple(V2_FULL_FEATURE_COLUMNS):
-        raise RuntimeError("V3-C V2 feature prefix invariant failed")
 
     allowed_states = {REGIME_NORMAL, REGIME_STRESS, REGIME_MISSING}
     if not set(joined["regime_state"].astype(str).unique()).issubset(allowed_states):
         raise RuntimeError("V3-C cache contains invalid regime state")
-    observed_votes = pd.to_numeric(joined.loc[joined["regime_state"].isin(REGIME_STATES), "stress_votes"], errors="raise")
+    observed_votes = pd.to_numeric(
+        joined.loc[joined["regime_state"].isin(REGIME_STATES), "stress_votes"], errors="raise"
+    )
     if not observed_votes.isin([0.0, 1.0, 2.0, 3.0]).all():
         raise RuntimeError("V3-C cache contains invalid stress vote count")
 
@@ -378,6 +377,10 @@ def _score_specialist(
                 raise RuntimeError(f"V3-C {fold.name} {state} training fragmentation gate failed")
             if len(expert_validation) < VALIDATION_MIN_ROWS_PER_REGIME or expert_validation["date"].nunique() < VALIDATION_MIN_DATES_PER_REGIME:
                 raise RuntimeError(f"V3-C {fold.name} {state} validation fragmentation gate failed")
+            if expert_train["binary_target"].nunique() != 2:
+                raise RuntimeError(f"V3-C {fold.name} {state} expert training requires both classes")
+            if expert_validation["binary_target"].nunique() != 2:
+                raise RuntimeError(f"V3-C {fold.name} {state} expert validation requires both classes")
             model = pointwise_model(HGB_XS_MARKET)
             model.fit(expert_train, expert_train["binary_target"].to_numpy(dtype=int))
             expert_score = pointwise_raw_score(model, expert_validation)
