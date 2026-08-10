@@ -19,7 +19,7 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V4 final alpha-generation program: **CLOSED — NO SURVIVOR**;
 - cumulative historical evaluated-candidate count: `17`;
 - final V3-B refit / fresh-forward specification: **FROZEN + REVIEW PASS**;
-- final V3-B refit/runtime code: **IMPLEMENTED IN REPO, LOCAL PYTEST/REFIT NEXT**;
+- final V3-B refit/runtime: **FROZEN SUCCESSFULLY, NO PERFORMANCE METRICS COMPUTED**;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
@@ -44,6 +44,23 @@ Frozen V2 resolved-primary-H10 prepared cache for the final fit:
 - cache SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`;
 - manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`;
 - rows/tickers/sessions `292,633 / 737 / 20..1250`.
+
+Final V3-B refit/runtime result:
+
+- execution code HEAD `56e6aa43d318775a5abcf73c87401fafde993b82`;
+- status `RANKING_V3_B_FINAL_REFIT_FROZEN`;
+- final training table: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_b_final_refit_20260810_001\ranking_v3_b_structure_lite_final_training_table.parquet`;
+- training table SHA-256 `5893c9f2872aae0f33acd4104d82ee8c1d4474aae7d54e9d01879724b86dffbe`;
+- model SHA-256 `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`;
+- model manifest SHA-256 `4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9`;
+- summary SHA-256 `e8e42dec10c73257fe4776f682f55d146ed8ca49b4aed7ce63ddb7488419e6a0`;
+- `verify_final_v3_refit_artifacts`: `valid=true`;
+- historical performance metrics: not computed; sessions `1225..1250` were training-only;
+- fresh-forward outcomes: not accessed; `FORWARD_OUTCOME_ACCESS_STARTED`: not written.
+
+Controlling checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REFIT_RUNTIME_RESULT.md`
 
 ## V4 final alpha review — CLOSED
 
@@ -123,13 +140,12 @@ Before future outcome access, the exact block and immutable source snapshots mus
 
 ## Immediate next action
 
-Execute only:
-
-`coordination/handoffs/IDX-RANKING-V3-FINAL-REFIT-FORWARD-RUNTIME-LOCAL.md`
-
-Return the local pytest/final-refit artifact report to ChatGPT and stop.
-
-After the final V3-B model/runtime is frozen, a separately named Path-Risk / Adverse-Excursion research lane may proceed while the fresh-forward block matures, but it must not retune the ranker or access the reserved fresh-forward ranking outcomes.
+Stop for ChatGPT review. The exact final V3-B model/runtime is now frozen and
+the local artifact report is permanently documented. Any future fresh-forward
+work requires a separately authorized pre-outcome manifest and atomic outcome
+access step. A separately named Path-Risk / Adverse-Excursion research lane
+may proceed while the fresh-forward block matures, but it must not retune the
+ranker or access the reserved fresh-forward ranking outcomes.
 
 ## Hard boundary
 

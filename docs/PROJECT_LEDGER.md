@@ -1620,3 +1620,34 @@ The cumulative historical evaluated-candidate count is now 17 after viewing
 ordinals 015..019. No rescue, additional family, session 1225+, post-
 2026-07-31 fresh-forward outcome, FORWARD_OUTCOME_ACCESS_STARTED, calibration,
 Stage 6, IDX-VAL-002, execution/PnL, paper/live, or main merge was started.
+
+## 33. Final V3-B refit/runtime freeze — 2026-08-10
+
+The separately authorized final V3-B Structure-Lite refit completed on
+`research/idx-ranking-v2-spec-v1` using implementation HEAD
+`56e6aa43d318775a5abcf73c87401fafde993b82`. Full pytest passed `364/364` with
+three existing pandas FutureWarnings in approximately `18.507s` shell time.
+
+All five frozen source/cache identities, the final-forward spec Git blob, and
+the exact 33-feature-order SHA matched. Exactly one refit was executed. The
+frozen result is status `RANKING_V3_B_FINAL_REFIT_FROZEN`, architecture
+`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`, with `292,633` rows, `737` tickers,
+and signal sessions `20..1250`. Sessions `1225..1250` were training-only;
+no historical performance metric was computed.
+
+The final training table SHA is
+`5893c9f2872aae0f33acd4104d82ee8c1d4474aae7d54e9d01879724b86dffbe`, model
+SHA is `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`,
+manifest SHA is
+`4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9`, and
+summary SHA is
+`e8e42dec10c73257fe4776f682f55d146ed8ca49b4aed7ce63ddb7488419e6a0`.
+The model/manifest pair verification returned `valid=true`.
+
+The cumulative historical evaluated-candidate count remains `17`: this was a
+final training refit, not another candidate evaluation. Post-2026-07-31
+outcomes were not accessed, `FORWARD_OUTCOME_ACCESS_STARTED` was not written,
+and no fresh-forward verdict, V4 rescue, calibration, Path-Risk, Stage 6,
+IDX-VAL-002, execution/PnL, paper/live, or main merge was started. See the
+dated final-refit checkpoint and result handoff for the full identity table,
+paths, runtime profile, and boundary record.
