@@ -1,0 +1,118 @@
+export type ResearchStatus = "FINAL" | "BASELINE" | "FAIL" | "BLOCKED" | "RESEARCH";
+
+export type ResearchExperiment = {
+  generation: string;
+  name: string;
+  candidate: string;
+  status: ResearchStatus;
+  result: string;
+  note: string;
+};
+
+export const FINAL_RANKER = {
+  id: "V3-B-STRUCTURE-LITE-V1-CANDIDATE-005",
+  shortName: "V3-B Structure-Lite",
+  generation: "V3",
+  featureCount: 33,
+  finalRefitRows: 292633,
+  finalRefitTickers: 737,
+  finalRefitSessions: "20..1250",
+  modelSha256: "1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6",
+  manifestSha256: "4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9",
+  featureOrderSha256: "100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e",
+  discoveryMedianPairedDeltaPr: 0.003925845,
+  lateMedianPairedDeltaPr: 0.0075911303,
+  lateWorstPairedDeltaPr: 0.0016661426,
+  forwardTargetSessions: 100,
+  forwardCutoff: "2026-07-31",
+} as const;
+
+export const V3_B_DISCOVERY_FOLDS = [
+  { fold: "F1", deltaPr: 0.007948, roc: 0.002743, qSpread: 0.013084 },
+  { fold: "F2", deltaPr: 0.001841, roc: 0.009782, qSpread: 0.015608 },
+  { fold: "F3", deltaPr: 0.004879, roc: 0.001502, qSpread: 0.009564 },
+  { fold: "F4", deltaPr: 0.002973, roc: 0.001748, qSpread: 0.005156 },
+] as const;
+
+export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
+  {
+    generation: "V2",
+    name: "HGB XS + Market",
+    candidate: "HGB_XS_MARKET",
+    status: "BASELINE",
+    result: "Historical V2 champion",
+    note: "Median ΔPR +2.39%, median ROC 0.5244, median Q5−Q1 +5.12% across six folds.",
+  },
+  {
+    generation: "V3-A",
+    name: "Recency weighting",
+    candidate: "H252 / H504",
+    status: "FAIL",
+    result: "Killed",
+    note: "Both recency variants failed the paired promotion gate; no rescue.",
+  },
+  {
+    generation: "V3-B",
+    name: "Structure-Lite",
+    candidate: FINAL_RANKER.id,
+    status: "FINAL",
+    result: "Promoted + late confirmation PASS",
+    note: "Only surviving V3 component. Exact V2 information set plus eight causal price-geometry features.",
+  },
+  {
+    generation: "V3-C",
+    name: "Regime specialization",
+    candidate: "TWO-EXPERT-007",
+    status: "FAIL",
+    result: "Killed",
+    note: "Overall median paired ΔPR −1.23%; stress regime degraded materially.",
+  },
+  {
+    generation: "V3-D",
+    name: "Sector relative",
+    candidate: "008 / 009",
+    status: "BLOCKED",
+    result: "PIT data blocked",
+    note: "No defensible historical ticker-by-date IDX-IC membership chain; outcomes remain unviewed.",
+  },
+  {
+    generation: "V3-E",
+    name: "True ranking / LambdaMART",
+    candidate: "LAMBDAMART-011",
+    status: "FAIL",
+    result: "Killed",
+    note: "Some PR uplift, but robustness and Q5−Q1 promotion gates failed.",
+  },
+  {
+    generation: "V4-A",
+    name: "Participation quality",
+    candidate: "013 / 014",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Impact/Absorption and Persistent Directional Participation both failed.",
+  },
+  {
+    generation: "V4-B",
+    name: "Price-path quality",
+    candidate: "016 / 017",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Coherence failed; Range Acceptance had positive aggregate uplift but failed late-fold protection.",
+  },
+  {
+    generation: "V4-C",
+    name: "Cross-sectional dispersion",
+    candidate: "019",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Median paired ΔPR +0.147% missed the +0.150% gate and other robustness gates also failed.",
+  },
+  {
+    generation: "Risk",
+    name: "Path Risk V1",
+    candidate: "PATH-RISK-A-Q75-HGB-001",
+    status: "RESEARCH",
+    result: "Separate lane — not part of alpha ranker",
+    note: "Outcome-blind feature cache is frozen. PR-001 is not part of forward alpha monitoring until separately validated.",
+  },
+];
