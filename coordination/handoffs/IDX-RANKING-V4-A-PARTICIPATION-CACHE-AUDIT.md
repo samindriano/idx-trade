@@ -22,48 +22,69 @@ $HEAD = git rev-parse HEAD
 python -m pytest
 ```
 
-Stop if checkout is dirty before the run, pull is not fast-forward, or pytest fails.
+Stop if checkout is dirty before execution, pull is not fast-forward, or pytest fails.
 
-## Frozen local inputs
+## Frozen local input identities
 
-Signal panel:
+Do **not** infer an input from its filename alone. Resolve/reuse the exact previously certified local artifacts and verify SHA-256 before prepare.
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\unknown_state_diagnostic_1260_20260809\model_safe_signal_research_panel_1260.parquet`
+Research-store root:
 
-Official calendar:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\`
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\official_exchange_sessions_1260.csv`
+Required identities:
 
-Frozen V3-B late-development cache:
+- signal-research panel SHA-256: `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
+- official exchange calendar SHA-256: `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`;
+- frozen V3-B late-development cache SHA-256: `af0ed60f55563a571bdd86c024d3087bd46fea50845343d285f9f93b72a21a4d`;
+- frozen V3-B late-development manifest SHA-256: `1c629850a6b902442fa4cb17585c514de88e1f9d3a40c854b07cb1f01cc58880`.
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache.parquet`
+The V3-B cache and manifest were previously produced under:
 
-Frozen V3-B late-development cache manifest:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\`
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache_manifest.json`
+but SHA identity is authoritative. For the signal panel and calendar, reuse their exact paths from the prior successful V3 run if available. If not, locate candidates under the research-store root and accept only a unique SHA match. Do not guess a new path.
+
+Set the resolved paths, for example:
+
+```powershell
+$PANEL = "<EXACT_SHA_VERIFIED_SIGNAL_PANEL>"
+$CALENDAR = "<EXACT_SHA_VERIFIED_OFFICIAL_CALENDAR>"
+$V3CACHE = "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache.parquet"
+$V3MANIFEST = "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache_manifest.json"
+
+(Get-FileHash $PANEL -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash $CALENDAR -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash $V3CACHE -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash $V3MANIFEST -Algorithm SHA256).Hash.ToLower()
+```
+
+Stop if any hash differs from the frozen identity above or if panel/calendar resolution is ambiguous.
 
 Frozen V4-A spec:
 
 `docs\RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_V1.md`
 
-The implementation pins and verifies the immutable source/cache/spec identities. Do not substitute similarly named files.
+The implementation also verifies these immutable identities and fails closed on mismatch.
 
-## Prepare command
+## Phase 1 — prepare outcome-independent V4-A cache
 
-Use a new output directory, for example:
+Use a new empty output directory:
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_prepare_20260810_001`
+```powershell
+$PREP = "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_prepare_20260810_001"
+```
 
 Run:
 
 ```powershell
 python -m idx_trade.ranking_v4_participation_cli prepare `
-  --panel "D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\unknown_state_diagnostic_1260_20260809\model_safe_signal_research_panel_1260.parquet" `
-  --calendar "D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\official_exchange_sessions_1260.csv" `
-  --v3-cache "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache.parquet" `
-  --v3-manifest "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v3_final_structure_lite_late_dev_prepare_20260810_001\ranking_v3_final_structure_lite_late_dev_cache_manifest.json" `
+  --panel $PANEL `
+  --calendar $CALENDAR `
+  --v3-cache $V3CACHE `
+  --v3-manifest $V3MANIFEST `
   --spec "docs\RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_V1.md" `
-  --output-dir "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_prepare_20260810_001" `
+  --output-dir $PREP `
   --code-commit $HEAD
 ```
 
@@ -73,46 +94,53 @@ Expected cache status:
 
 The manifest must report:
 
+- exact frozen source/spec identities;
+- exact existing V3-B columns preserved;
 - `post_1224_materialized=false`;
 - `outcome_metrics_computed=false`;
 - `fresh_forward_accessed=false`;
 - `integration_candidate_materialized=false`.
 
-## Outcome-blind audit command
+Do not inspect target-performance metrics during this phase.
 
-Use a second new output directory:
+## Phase 2 — outcome-blind feature audit
 
-`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_audit_20260810_001`
+Use a second new empty directory:
+
+```powershell
+$AUDIT = "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_audit_20260810_001"
+```
 
 Run:
 
 ```powershell
 python -m idx_trade.ranking_v4_participation_audit `
-  --cache "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_prepare_20260810_001\ranking_v4_a_participation_prepared_cache.parquet" `
-  --cache-manifest "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_prepare_20260810_001\ranking_v4_a_participation_prepared_cache_manifest.json" `
-  --output-dir "D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v4_a_participation_audit_20260810_001"
+  --cache "$PREP\ranking_v4_a_participation_prepared_cache.parquet" `
+  --cache-manifest "$PREP\ranking_v4_a_participation_prepared_cache_manifest.json" `
+  --output-dir $AUDIT
 ```
 
-The audit intentionally reads only identity + V3 participation-context + V4-A feature columns. It must report:
+The audit deliberately projects only identity columns, the existing V3-B participation-context features, and the seven V4-A feature columns. It must report:
 
 - `binary_target_loaded=false`;
 - `outcome_columns_loaded=false`;
 - `fresh_forward_accessed=false`;
 - `post_1224_materialized=false`.
 
-## Return for review
+## Return for ChatGPT review
 
-Report back exactly:
+Report exactly:
 
-1. final branch HEAD and clean/dirty status;
+1. final branch HEAD and clean/synchronized state;
 2. full pytest result;
-3. prepare runtime and cache/manifest SHA-256;
-4. rows, tickers, signal-session range;
-5. finite rate / missing rate for all seven V4-A features;
-6. any constant feature;
-7. all `abs_spearman_ge_095` entries;
-8. highest 10 absolute Spearman correlations involving a V4-A feature;
-9. audit runtime and audit SHA-256;
-10. confirmation that no V4-A candidate model was fit/scored and no outcome metrics were computed.
+3. exact resolved paths + verified hashes for panel/calendar/V3 cache/V3 manifest;
+4. prepare runtime and prepared cache/manifest SHA-256;
+5. rows, tickers, signal-session range;
+6. finite/missing rate for all seven V4-A features;
+7. any constant feature or feature with finite rate below 80%;
+8. every `abs_spearman_ge_095` entry;
+9. highest 10 absolute Spearman correlations involving a V4-A feature;
+10. audit runtime and audit SHA-256;
+11. explicit confirmation that no V4-A candidate was fitted/scored, no V4-A outcome metrics were computed, session `1225+` was not materialized, and fresh-forward remained untouched.
 
-Stop after this report. Do not authorize or execute the atomic A1/A2 model run automatically.
+Stop after this report. Do not authorize or execute the atomic control+A1+A2 outcome run automatically.
