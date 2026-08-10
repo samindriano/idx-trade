@@ -8,11 +8,11 @@ from idx_trade.ranking_v3_regime import (
     REGIME_JOIN_COLUMNS,
     V3_C_CANDIDATE,
     V3_C_CONTROL,
+    _context_equivalence,
     _coverage_report,
     _regime_promotion,
     assert_discovery_fold_allowed,
 )
-from idx_trade.research_v2_features import V2_FULL_FEATURE_COLUMNS
 from idx_trade.research_v3_regime import (
     REGIME_MISSING,
     REGIME_NORMAL,
@@ -37,9 +37,9 @@ def _context_frame(periods: int, *, start: str = "2024-01-02") -> tuple[pd.DataF
     return frame, dates
 
 
-def test_regime_feature_contract_does_not_add_model_features() -> None:
-    assert tuple(V2_FULL_FEATURE_COLUMNS) == tuple(V2_FULL_FEATURE_COLUMNS)
+def test_regime_contract_is_routing_only() -> None:
     assert "regime_state" in REGIME_JOIN_COLUMNS
+    assert all(not column.startswith("structure_") for column in REGIME_JOIN_COLUMNS)
     assert V3_C_CONTROL.endswith("006")
     assert V3_C_CANDIDATE.endswith("007")
 
@@ -47,8 +47,8 @@ def test_regime_feature_contract_does_not_add_model_features() -> None:
 def test_regime_warmup_requires_126_prior_observations() -> None:
     frame, dates = _context_frame(130)
     regime = build_regime_table(frame, dates, max_signal_session_index=130)
-    assert regime.loc[124, "regime_state"] == REGIME_MISSING  # session 125 has only 124 prior
-    assert regime.loc[125, "regime_state"] == REGIME_MISSING  # session 126 has only 125 prior
+    assert regime.loc[124, "regime_state"] == REGIME_MISSING
+    assert regime.loc[125, "regime_state"] == REGIME_MISSING
     assert regime.loc[126, "regime_state"] in {REGIME_NORMAL, REGIME_STRESS}
 
 
@@ -134,6 +134,30 @@ def test_extract_market_context_rejects_non_datewide_values() -> None:
     )
     with pytest.raises(RuntimeError, match="not date-wide"):
         extract_market_context(frame)
+
+
+def test_context_equivalence_allows_many_tickers_per_market_date() -> None:
+    date = pd.Timestamp("2026-01-02")
+    regime = pd.DataFrame(
+        {
+            "signal_session_index": [500],
+            "date": [date],
+            REGIME_SOURCE_COLUMNS[0]: [0.4],
+            REGIME_SOURCE_COLUMNS[1]: [-0.02],
+            REGIME_SOURCE_COLUMNS[2]: [0.03],
+        }
+    )
+    v2 = pd.DataFrame(
+        {
+            "signal_session_index": [500, 500],
+            "date": [date, date],
+            "ticker": ["AAA", "BBB"],
+            REGIME_SOURCE_COLUMNS[0]: [0.4, 0.4],
+            REGIME_SOURCE_COLUMNS[1]: [-0.02, -0.02],
+            REGIME_SOURCE_COLUMNS[2]: [0.03, 0.03],
+        }
+    )
+    assert _context_equivalence(v2, regime) == {column: 0.0 for column in REGIME_SOURCE_COLUMNS}
 
 
 def test_f5_f6_are_hard_blocked() -> None:
