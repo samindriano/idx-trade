@@ -17,6 +17,8 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-D Sector-Relative: parked at `BLOCKED_PIT_SECTOR_HISTORY`, outcomes unconsumed;
 - V3-E True Ranking: killed;
 - V2F1..V2F6 are development knowledge and are not independent V4 holdouts;
+- V4-A Participation Quality / Price Impact: **CLOSED — no survivor**;
+- cumulative historical evaluated-candidate count is `12`;
 - sessions `1225+` remain sealed from V4 historical-development materialization;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
@@ -71,7 +73,7 @@ Families are a design shortlist, not seven automatic model runs:
 
 Normal executable budget remains narrow: one frozen bundle per family, no model zoo, and only preregistered integration after independent survivor evidence.
 
-## Current V4-A family
+## V4-A family — CLOSED
 
 Family:
 
@@ -83,65 +85,53 @@ Frozen first-pass candidates:
 - ordinal `013`: V3-B + three-feature A1 Impact/Absorption bundle;
 - ordinal `014`: V3-B + four-feature A2 Persistent Directional Participation bundle.
 
-No first-pass A1+A2 integration candidate exists. One integration may be designed later only if both 013 and 014 independently PASS.
+The authorized outcome-blind cache audit passed before scoring. The single atomic first-pass run then completed exactly once with exact control equivalence.
 
-Controlling files:
+Final V4-A result:
 
-- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_EXPERIMENT_MAP_V1.md`;
-- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_V1.md`;
-- `docs/RANKING_V4_A_PARTICIPATION_QUALITY_SPEC_REVIEW_ADDENDUM_V1.md`;
-- `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`.
-
-## V4-A pre-outcome audit
-
-The outcome-blind cache/data audit completed successfully:
-
-- prepared cache status: `RANKING_V4_A_PARTICIPATION_CACHE_FROZEN_PRE_OUTCOME`;
-- cache rows/tickers/sessions: `286,453 / 737 / 20..1224`;
-- cache SHA-256: `a487e14625942cba849b499730113cf8d0f9b3f08e866177c79642079cef6aab`;
-- manifest SHA-256: `b9f15e5363e2ea0a2f912fe31a563fc45ebf7ed4788ee524540b1cdb41d308cc`;
-- all seven V4-A features finite at least `98.5785%`;
-- no constant feature;
-- no feature below 80% finite coverage;
-- no absolute Spearman correlation `>=0.95`;
-- highest absolute correlation: `0.8942494476` between A2 persistence and acceleration;
-- `mechanical_review_required=false`;
-- official audit did not load `binary_target` or outcome columns;
-- no V4-A candidate model/outcome had been viewed at the time of this audit;
-- audit SHA-256: `c89a19d1cce390b4734dc1de8c2cc08994217248478fd2e8025d94e90f93d31a`.
-
-Audit result checkpoint:
-
-`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_CACHE_AUDIT_RESULT.md`
-
-The high but sub-threshold `0.8942` correlation is retained as documented redundancy inside the already-frozen A2 hypothesis; it is not a specification defect and is not grounds for post-freeze redesign.
-
-## V4-A first-pass result
-
-The authorized atomic run completed exactly once:
-
-- status: `V4_A_FIRST_PASS_COMPLETE`;
 - control equivalence: `PASS` on `144,223` rows, max score diff `0.0`;
 - A1 Impact/Absorption ordinal `013`: `FAIL`;
 - A2 Persistent Directional Participation ordinal `014`: `FAIL`;
 - survivors: `[]`;
-- `integration_authorized_by_result=false`;
-- `integration_executed=false`;
-- cumulative historical evaluated-candidate count is now `12`.
+- integration authorized by result: `false`;
+- integration executed: `false`;
+- no rescue or redesign is permitted.
 
-Result checkpoint:
+A1 paired PR was nonnegative on only `3/6` folds, median PR improvement `+0.0000801749`, median Q5-Q1 change `-0.0028469425`, and V2F6 PR change `-0.0116775888`.
 
-`docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`
+A2 was closer on PR and had positive paired PR in V2F5/V2F6, but still failed broad robustness: nonnegative PR on `4/6` folds, median PR improvement `+0.0010168334` below the frozen threshold, median ROC change `-0.0030273322`, and median Q5-Q1 change `-0.0067399084`.
 
-Result handoff:
+The defensible family conclusion is limited to the tested frozen daily-EOD definitions: they did not add sufficiently robust incremental ranking alpha beyond V3-B.
 
-`coordination/handoffs/IDX-RANKING-V4-A-PARTICIPATION-FIRST-PASS-RESULT.md`
+Controlling result/review checkpoints:
+
+- `docs/checkpoints/2026-08-10_RANKING_V4_A_PARTICIPATION_FIRST_PASS_RESULT.md`;
+- `docs/checkpoints/2026-08-10_RANKING_V4_A_REVIEW_CLOSED_V4_B_SPEC_AUTHORIZED.md`.
+
+## Current V4-B lane
+
+Next family:
+
+**`V4-B — Price-Path Quality` — SPECIFICATION FIRST.**
+
+Research question:
+
+> Conditional on frozen V3-B state and geometry information, does the way the current setup was formed — coherent versus jump-concentrated movement, and acceptance versus rejection within daily ranges — add robust cross-sectional ranking information?
+
+Preferred pre-outcome conceptual split, subject to exact overlap review before freeze:
+
+1. **Path Coherence / Jump Concentration** — persistent/distributed movement versus one/few extreme sessions or noisy reversals;
+2. **Range Acceptance / Rejection Quality** — repeated favorable closes within daily high-low ranges versus rejection/excursion-heavy behavior.
+
+Tail asymmetry, trend coherence, spike concentration, candle/range quality and related ideas belong inside these merged questions rather than becoming many scored variants.
+
+No V4-B candidate ordinal is yet reserved and no V4-B outcome scoring is authorized.
 
 ## Immediate next action
 
-Stop for ChatGPT review. Do not rescue A1/A2, create/run integration, or start
-V4-B automatically. The exact per-fold metrics and frozen-gate blockers are in
-the result checkpoint.
+Prepare and independently review a compact V4-B Price-Path specification only. Before implementation/scoring, audit overlap against the exact frozen V3-B 33-feature set and freeze exact formulas, windows, missingness semantics, candidate budget, ordinals and gates.
+
+If two genuinely distinct V4-B sub-hypotheses survive the pre-outcome design audit, both must be fully specified before either outcome is viewed and should be scored atomically/parallel-equivalently later under a separate authorization.
 
 ## Hard boundary
 
@@ -150,10 +140,9 @@ Do not:
 - reopen/tune V3-A/B/C/E;
 - treat V2F1..V2F6 as independent V4 validation;
 - bypass V3-D PIT sector-history block;
-- modify A1/A2 formulas, lookbacks, candidate IDs, model parameters, folds or gates based on V4 outcomes;
-- run one challenger and then adapt the other;
-- create/run A1+A2 integration before both independently pass and a separate integration spec/review exists;
+- rescue/reformulate V4-A based on viewed results;
+- create or run a V4-A integration candidate;
+- score V4-B before a separately frozen/reviewed specification and run authorization;
 - materialize/score session `1225+` for V4 development;
 - access post-2026-07-31 fresh-forward outcomes or write `FORWARD_OUTCOME_ACCESS_STARTED`;
-- begin V4-B automatically after the V4-A run;
 - start calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge automatically.
