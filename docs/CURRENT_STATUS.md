@@ -17,27 +17,13 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-B Structure-Lite: **COMPLETE — PROMOTED / ONLY CURRENT V3 SURVIVOR**;
 - V3-C Regime-Specialization: **COMPLETE — KILLED**;
 - V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
-- V3-E True Ranking: **BLOCKED_DEPENDENCY BEFORE OUTCOME ACCESS**;
+- V3-E True Ranking: **DEPENDENCY ERRATUM APPLIED PRE-OUTCOME; LOCAL F1-F4 RUN REAUTHORIZED**;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 candidate count is `7`. V3-D ordinals 008/009 remain `result_viewed=false`. V3-E ordinals 010/011 remain `result_viewed=false` because the local run was blocked before outcome access.
+Cumulative evaluated V3 candidate count remains `7`. V3-D ordinals 008/009 and V3-E ordinals 010/011 remain `result_viewed=false`.
 
-Latest V3-E pre-run result: `BLOCKED_DEPENDENCY`.
-
-- required dependency: `xgboost==3.2.1`;
-- local import: `3.1.3`;
-- exact installation was attempted but neither the configured package index
-  nor public PyPI had a matching `3.2.1` distribution;
-- full pytest: `306 passed, 1 failed, 3 warnings` in `22.8 seconds`;
-- no prepared/reference artifact was materialized for the run;
-- no V3-E control or LambdaMART outcome was viewed;
-- result checkpoint:
-  `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_BLOCKED_DEPENDENCY.md`;
-- result handoff:
-  `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-BLOCKED.md`.
-
-## Frozen identities
+## Frozen data/model identities
 
 Signal-research source:
 
@@ -63,15 +49,15 @@ Final V2 refit:
 - manifest SHA-256 `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
 - score is ranking-only, not calibrated probability.
 
-## V3 results
+## V3 results so far
 
 ### V3-A Recency — closed
 
-Exact control equivalence PASS on 84,732 F1-F4 rows. H252 and H504 both failed paired promotion. Result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`. No rescue half-lives/windows are allowed.
+Exact control equivalence PASS on 84,732 F1-F4 rows. H252 and H504 both failed paired promotion. Result: `V3_A_RECENCY_KILL_KEEP_V2_CONTROL`. No recency rescue is allowed.
 
 ### V3-B Structure-Lite — promoted survivor
 
-Exact V2 25 features + frozen eight causal geometry features. F1-F4:
+Exact V2 25 features + frozen eight causal geometry features.
 
 - control equivalence PASS, max diff `0.0`;
 - median paired PR improvement `+0.0039258450`;
@@ -83,51 +69,50 @@ Exact V2 25 features + frozen eight causal geometry features. F1-F4:
 - median top-decile lift change `-0.0036228765` retained as diagnostic warning;
 - result `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`.
 
-V3-B is the only surviving V3 component so far. Its viewed definition is closed.
+V3-B remains the only surviving V3 component so far. Its viewed definition is closed.
 
 ### V3-C Regime-Specialization — closed
 
-Two-expert NORMAL/STRESS architecture on exact V2 25 features:
-
-- cache 216,472 rows / 674 tickers / sessions 20..984;
 - fragmentation gate PASS all F1-F4;
 - control equivalence PASS on 84,732 rows, max diff `0.0`;
 - absolute sanity PASS;
 - overall paired promotion FAIL;
 - regime-specific gate FAIL;
 - overall median PR improvement `-0.0123171892`;
-- NORMAL median PR improvement `-0.0014712226`;
-- STRESS median PR improvement `-0.0289646749`;
+- NORMAL median `-0.0014712226`;
+- STRESS median `-0.0289646749`;
 - result `V3_C_REGIME_KILL_KEEP_V2_CONTROL`.
 
-Do not rescue with new regime thresholds, more experts, rescaling, blending, or fallback.
+No rescue/new expert/threshold/blending/rescaling is allowed.
 
-## V3-D Sector-Relative — parked blocked, outcomes untouched
-
-Frozen candidate remains exact V2 25 features + six PIT sector-relative features in one global HGB. The post-V3-C NORMAL/STRESS robustness amendment remains frozen.
+### V3-D Sector-Relative — parked blocked, outcomes untouched
 
 Latest data-gate result: `BLOCKED_PIT_SECTOR_HISTORY`.
 
-- blocked-run final pytest `290 passed, 0 failed, 3 warnings` in `26.2 s`;
-- no V3-D cache/manifest was created;
-- no V3-D F1-F4 outcome metric was computed;
+- blocked-run pytest `290 passed, 0 failed, 3 warnings`;
+- no V3-D cache/manifest/outcome metric was created;
 - ordinals 008/009 remain unviewed;
 - current-sector backfill and guessed report-month dates remain prohibited.
 
-Controlling files:
+Controlling checkpoint:
 
-- `docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED.md`;
-- `docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_BLOCK_REVIEW_PASS_PARKED.md`.
+`docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED.md`
 
-A future unblock remains possible only if a defensible immutable ticker-level PIT IDX-IC history with publication/effective-date semantics is obtained. Do not stall the V3 ladder on this external data dependency.
+A future immutable ticker-level PIT IDX-IC history with defensible publication/effective dates may unblock this frozen lane. Do not stall the V3 ladder on it.
 
-## V3-E True Ranking — implemented / run authorized
+## V3-E True Ranking — dependency erratum resolved pre-outcome
 
-Frozen research question:
+The first V3-E local attempt stopped correctly before outcome access because the original spec pinned nonexistent public package release `xgboost==3.2.1`.
 
-> Does one tightly bounded nonlinear same-date learning-to-rank objective outperform the exact frozen binary HGB ranking score on identical V2 causal rows and V2F1-V2F4 discovery folds?
+Blocked checkpoint:
 
-Controlling spec:
+`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_BLOCKED_DEPENDENCY.md`
+
+The blocked attempt did **not** materialize prepared/reference artifacts for the run, did not execute control or LambdaMART, and did not increment the evaluated denominator.
+
+### Controlling original research contract
+
+Spec:
 
 `docs/RANKING_V3_TRUE_RANKING_SPEC_V1.md`
 
@@ -141,47 +126,47 @@ Review addendum:
 - SHA-256 `6652e1f934f58630619a9cab5afb0bdfaa3317894977bad8bfa9ca5ffe980812`;
 - Git blob `01c4dca87ff52fca678c948e4ee23d3e3c82dbcd`.
 
-Implementation checkpoint:
+### One pre-outcome dependency erratum
 
-`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_IMPLEMENTED_RUN_AUTHORIZED.md`
+`docs/RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_V1.md`
 
-Local run handoff:
+- SHA-256 `bd029458f7a7cd14424af9b748cb7522f1d23b0fe8eaf20ad8f6b44d48894bea`;
+- Git blob `327e053c2a1b4270acc4e7de313bba97680eff8b`;
+- corrected exact dependency: **`xgboost==3.2.0`**.
 
-`coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN.md`
+This erratum changes only the impossible dependency identity. Research semantics remain unchanged:
 
-Candidate budget:
-
-- ordinal 010 exact V2 `HGB_XS_MARKET` control;
-- ordinal 011 exact V2 25 features + one `xgboost==3.2.1` `XGBRanker` LambdaMART candidate with `rank:ndcg` and exact signal-date queries.
-
-Frozen candidate details:
-
-- binary H10 target unchanged;
-- exact V2 25 feature order only;
-- V2-style training-only median imputer + missing indicators, no scaler;
-- `n_estimators=200`, `learning_rate=0.05`, `max_depth=5`;
-- `min_child_weight=1`, `reg_lambda=1`, `reg_alpha=0`, `gamma=0`;
-- `subsample=1`, `colsample_bytree=1`, `tree_method=hist`;
+- ordinal 010 exact V2 HGB control;
+- ordinal 011 one `XGBRanker` LambdaMART candidate;
+- `objective="rank:ndcg"`;
+- exact signal-date query/qid;
+- exact V2 25 features;
+- unchanged binary H10 target;
+- training-only median imputer + missing indicators;
+- 200 estimators, LR .05, depth 5;
+- min-child 1, lambda 1, alpha/gamma 0;
+- full row/column sampling, CPU hist;
 - seed 42, `n_jobs=1`;
-- `lambdarank_pair_method=mean`, 8 pairs/sample, normalization enabled;
-- no early stopping, target gain engineering, score normalization or calibration.
+- mean pair method, 8 pairs/sample, LambdaRank normalization enabled;
+- no early stopping, score normalization, tuning, graded gains, or second ranker.
 
-Implementation lineage:
+Corrected implementation:
 
-- `7e9d9440798d4ece254069a570a7c6e8916df127` — frozen spec;
-- `04ad6e1b20359d96295273c34279c305b28dcf35` — independent review addendum;
-- `52a267b637eb9277a9f81617e396442d465f1910` — exact XGBoost dependency pin;
-- `b1eff77503e91953fe43fac624153eeefc04c8b7` — runner implementation;
-- `cc1643d61bae0edb34deb6e7d8b583615dfea2f2` — focused tests;
-- `eb4b7ac8f2b85f8ad580967be657a44f914a428b` — deterministic diagnostic fixture correction;
-- `7b4e10ccefcf158adb0d03ac2da2e5ecb431489e` — implementation/run-authorization checkpoint;
-- `aaaea6ccdd5064de601a8b988a01d11e85358f88` — local-run handoff.
+- `src/idx_trade/ranking_v3_true_ranking_erratum.py` wraps the original frozen runner and records the erratum identity;
+- `pyproject.toml` pins `xgboost==3.2.0`;
+- `tests/test_ranking_v3_true_ranking.py` asserts the corrected dependency and unchanged ranker contract.
 
-The runner physically reads only prepared rows with `signal_session_index <= 984`, executes the exact V2 control first, requires exact control equivalence, then runs the one LambdaMART candidate. Existing V3 absolute sanity + paired promotion gates remain unchanged.
+Run-reauthorization checkpoint:
 
-No V3-E outcome has been viewed. The ChatGPT implementation runtime had XGBoost 3.1.3 rather than frozen 3.2.1, so no full/local outcome-run claim is made here. The local operator must first establish exact XGBoost 3.2.1 and pass full repository pytest.
+`docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_RUN_REAUTHORIZED.md`
 
-Allowed V3-E final decisions only:
+Controlling local-run handoff:
+
+`coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-ERRATUM.md`
+
+The run must use `python -m idx_trade.ranking_v3_true_ranking_erratum`, execute exact control first, prove exact control equivalence, then and only then score ordinal 011. Existing absolute sanity + paired promotion gates are unchanged.
+
+Allowed final V3-E decisions only:
 
 - `V3_E_TRUE_RANKING_PROMOTE_LAMBDAMART`;
 - `V3_E_TRUE_RANKING_KILL_KEEP_V2_CONTROL`.
@@ -193,23 +178,25 @@ No post-result rescue/second ranker is authorized.
 1. this file;
 2. `docs/RANKING_V3_TRUE_RANKING_SPEC_V1.md`;
 3. `docs/RANKING_V3_TRUE_RANKING_SPEC_REVIEW_ADDENDUM_V1.md`;
-4. `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_IMPLEMENTED_RUN_AUTHORIZED.md`;
-5. `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN.md`;
-6. `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`;
-7. `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
-8. `docs/RANKING_V3_LEGACY_MODEL_LESSONS.md`;
+4. `docs/RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_V1.md`;
+5. `docs/checkpoints/2026-08-10_RANKING_V3_TRUE_RANKING_DEPENDENCY_ERRATUM_RUN_REAUTHORIZED.md`;
+6. `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN-ERRATUM.md`;
+7. `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`;
+8. `docs/RANKING_V3_ROADMAP_AUDIT_V1.md`;
 9. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`.
 
 ## Immediate next action
 
-Execute only `coordination/handoffs/IDX-RANKING-V3-TRUE-RANKING-LOCAL-RUN.md` locally:
+Execute only the corrected V3-E local-run handoff:
 
-1. sync branch / exact XGBoost 3.2.1;
-2. full repository pytest;
-3. verify frozen artifacts;
-4. exact V2 control F1-F4 and control equivalence;
-5. only after PASS run the single frozen LambdaMART candidate F1-F4;
-6. document/push result and STOP for ChatGPT review.
+1. sync latest branch;
+2. install/verify exact `xgboost==3.2.0`;
+3. full repository pytest;
+4. verify original spec/review + erratum + frozen V2 artifact identities;
+5. run exact control F1-F4 and prove equivalence;
+6. only after PASS run frozen LambdaMART F1-F4;
+7. document/push result;
+8. STOP for ChatGPT review.
 
 Do not start integration automatically even if V3-E promotes.
 
@@ -218,11 +205,10 @@ Do not start integration automatically even if V3-E promotes.
 Do not:
 
 - alter/reopen viewed V3-A/B/C hypotheses;
-- backfill current-sector labels or bypass V3-D PIT block;
-- score V3-D without a future separate data-gate PASS and final authorization;
-- alter V3-E candidate/objective/parameters after outcome access;
-- include V3-B Structure-Lite in standalone V3-E discovery;
-- run a second ranking objective/library;
+- bypass V3-D PIT block;
+- alter V3-E research semantics after outcome access;
+- run another XGBoost version/ranking objective/library;
+- include Structure-Lite in standalone V3-E discovery;
 - load/score/summarize V2F5/V2F6;
 - inspect reserved post-2026-07-31 V2 forward outcomes;
 - write `FORWARD_OUTCOME_ACCESS_STARTED`;
