@@ -20,7 +20,8 @@ This is the short **authoritative first-read status layer**. For full chronology
 - champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
 - forward metric semantic clarification: **COMPLETE before outcome access**;
 - current authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
-- Ranking V3 research backlog: **RECORDED; asynchronous R&D may be specified separately without reading reserved V2 forward outcomes**;
+- Ranking V3 recency specification: **FROZEN BEFORE OUTCOME RUN; PENDING INDEPENDENT REVIEW**;
+- Ranking V3 research backlog: **RECORDED; asynchronous R&D remains outcome-blind**;
 - Stage 6: not authorized;
 - `IDX-VAL-002`: not started;
 - execution-PnL / paper / live trading: not authorized;
@@ -45,6 +46,19 @@ Mandatory first-read before any Ranking-V3 specification or implementation:
 `docs/RANKING_V3_RESEARCH_BACKLOG.md`
 
 The V3 backlog is an idea/hypothesis backlog only. It does not authorize V3 outcome runs and it does not authorize access to reserved V2 fresh-forward outcomes.
+
+Current V3 specification under review:
+
+`docs/RANKING_V3_RECENCY_SPEC_V1.md`
+
+Current V3 checkpoint and ledger:
+
+- `docs/checkpoints/2026-08-10_RANKING_V3_RECENCY_SPEC_FROZEN.md`;
+- `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`.
+
+The V3 specification has not been fitted or scored. No reserved V2 forward
+outcome has been inspected and `FORWARD_OUTCOME_ACCESS_STARTED` has not been
+written.
 
 ## Data foundation
 
