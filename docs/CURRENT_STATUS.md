@@ -16,12 +16,26 @@ This is the authoritative short first-read layer. For chronology read `docs/PROJ
 - V3-A Recency: **COMPLETE — CLOSED WITHOUT PROMOTION**;
 - V3-B Structure-Lite: **F1-F4 COMPLETE — PROMOTED / ONLY CURRENT V3 SURVIVING COMPONENT**;
 - V3-C Regime-Specialization: **F1-F4 COMPLETE — KILLED / REVIEW CLOSED**;
-- V3-D Sector-Relative: **POST-V3-C PRE-OUTCOME AMENDMENT FROZEN + IMPLEMENTED; PIT DATA GATE NOT YET RUN; OUTCOME SCORING NOT AUTHORIZED**;
+- V3-D Sector-Relative: **PIT DATA GATE BLOCKED; OUTCOME SCORING NOT AUTHORIZED**;
 - V3-E True Ranking: not started;
 - V2F5/V2F6: **SEALED FOR ONE FUTURE FINAL-V3 LATE-DEVELOPMENT CONFIRMATION**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
 Cumulative evaluated V3 candidate count is `7`. V3-D ordinals 008/009 remain unviewed and do not count yet.
+
+Latest V3-D data-gate result: `BLOCKED_PIT_SECTOR_HISTORY`.
+
+- full pytest: `290 passed, 0 failed, 3 warnings` in `26.2 seconds`;
+- official current-sector pages and monthly report rows were located, but no
+  immutable ticker-level historical PIT sector archive with defensible
+  `effective_from`, `effective_to_exclusive`, and `available_at` semantics was
+  established;
+- current-sector backfill and assumed report-month dates are prohibited;
+- no `validate-history`, V3-D prepare, or V3-D score was run;
+- result checkpoint:
+  `docs/checkpoints/2026-08-10_RANKING_V3_SECTOR_PIT_DATA_GATE_BLOCKED.md`;
+- result handoff:
+  `coordination/handoffs/IDX-RANKING-V3-SECTOR-PIT-DATA-GATE-BLOCKED.md`.
 
 ## Mandatory first reads
 
