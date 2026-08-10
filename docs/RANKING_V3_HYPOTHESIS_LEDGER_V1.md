@@ -47,3 +47,19 @@ Every executed row must add, without deleting prior rows:
 
 The counter increments only when a candidate is actually run. A failed run,
 viewed result, or killed candidate remains in the denominator permanently.
+
+## V3-B Structure-Lite preregistration
+
+This section was added by the 2026-08-10 specification audit. It contains no
+runtime results. The cumulative evaluated counter remains `3`; preregistered
+slots do not increment it.
+
+| Ordinal | Hypothesis | Candidate | Definition | Status | Result viewed | Verdict |
+|---:|---|---|---|---|---|---|
+| 004 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CONTROL-004` | exact frozen V2 `HGB_XS_MARKET` control on V2F1-V2F4 | `PREREGISTERED` | `false` | `PENDING_REVIEW` |
+| 005 | `V3-B-STRUCTURE-LITE-V1` | `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005` | one fixed eight-feature causal Structure-Lite bundle defined by `RANKING_V3_STRUCTURE_LITE_SPEC_V1` | `PREREGISTERED` | `false` | `PENDING_REVIEW` |
+
+The candidate budget is control plus one Structure-Lite candidate. V2F5/F6
+and reserved post-2026-07-31 V2 forward outcomes remain sealed. No candidate
+is counted as evaluated until a separately authorized runtime completes the
+control-equivalence gate and records its artifacts.

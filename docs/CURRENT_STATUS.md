@@ -340,3 +340,34 @@ Do not:
 - Kelly-size;
 - paper/live trade;
 - merge to `main`.
+
+## V3-B Structure-Lite specification audit — frozen, no outcome run
+
+On 2026-08-10, the separately authorized specification/definition audit for
+`RANKING_V3_STRUCTURE_LITE_SPEC_V1` was completed on branch
+`research/idx-ranking-v2-spec-v1` after fetching the latest handoff. The exact
+V2 `HGB_XS_MARKET` control remains frozen. One compact Structure-Lite
+candidate was preregistered with eight causal geometry features; no second
+variant was added.
+
+The audit reviewed the current V2 25-feature representation and the read-only
+archive branch
+`samindriano/past-models-indo-stock:frontend/indo-stock-lookup-support-resistance`
+at `b10f1f619d99590028823addb2cd497333aff20f`. Only causal concepts were
+salvaged. Legacy centered pivot confirmation, snapshot/strength/selection
+scores, empirical probabilities, realized outcomes, routed tests, and
+backtest-conditioned decision layers remain prohibited.
+
+Frozen specification:
+`docs/RANKING_V3_STRUCTURE_LITE_SPEC_V1.md`
+
+The specification defines exact PIT pivot, clustering, touch separation,
+level-age, role-reversal, breakout/retest, and volume-confirmation semantics;
+missing-value and fail-closed behavior; immutable-cache lineage; V2 row/
+feature equivalence; V2F1-V2F4-only discovery gates; required tests; and
+provenance/ledger contracts. The V2 prepared cache remains unchanged.
+
+No model was fit or scored. V2F5/V2F6 and reserved post-2026-07-31 V2
+forward outcomes were not accessed, `FORWARD_OUTCOME_ACCESS_STARTED` was not
+written, Recency was not rescued, and no V3-B runtime was started. The next
+action is independent ChatGPT review of the pushed specification.

@@ -1452,3 +1452,28 @@ holdout remains consumed; Probability V1 remains deferred. No V2, Stage 6,
 `IDX-VAL-002`, execution-PnL claim, paper/live trading, or main merge was
 started. Stop for independent ChatGPT interpretation; do not treat any
 post-mortem subgroup or feature as independently validated.
+
+## 27. V3-B Structure-Lite specification audit — 2026-08-10
+
+The separately authorized V3-B definition audit is complete on
+`research/idx-ranking-v2-spec-v1`. The exact V2 `HGB_XS_MARKET` 25-feature
+representation remains the control. One fixed, eight-feature Structure-Lite
+candidate was preregistered; no second variant was justified or added.
+
+The read-only archive audit used
+`samindriano/past-models-indo-stock` branch
+`frontend/indo-stock-lookup-support-resistance` at
+`b10f1f619d99590028823addb2cd497333aff20f`. Causal primitives were separated
+from legacy centered/look-ahead pivots and outcome-conditioned snapshot,
+backtest, empirical-probability, and investment-scoring layers. The frozen
+contract is in
+`docs/RANKING_V3_STRUCTURE_LITE_SPEC_V1.md`.
+
+The spec freezes PIT level construction, deterministic clustering and touch
+separation, role reversal, breakout/retest and volume semantics, missing and
+fail-closed behavior, immutable cache lineage, exact V2 control equivalence,
+V2F1-V2F4 discovery gates, tests, and provenance. This was specification only:
+no model fit, score, F5/F6 access, fresh-forward access, Recency rescue, or
+`FORWARD_OUTCOME_ACCESS_STARTED` marker occurred. The V3-A cumulative
+evaluated candidate count remains `3`; V3-B control/candidate slots are
+preregistered but not evaluated.
