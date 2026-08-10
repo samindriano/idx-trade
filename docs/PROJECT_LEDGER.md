@@ -1529,3 +1529,33 @@ and `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. No rescue, V4-B,
 calibration, Stage 6, `IDX-VAL-002`, execution/PnL, paper/live, or main merge
 was started. See the dated V4-A first-pass checkpoint and result handoff for
 complete fold metrics, gate diagnostics, overlap, runtime, and artifact hashes.
+
+## 30. V4-B price-path cache preparation and outcome-blind audit — 2026-08-10
+
+The authorized V4-B preflight, exact frozen-source SHA verification, cache
+preparation, and restricted feature audit completed on
+`research/idx-ranking-v2-spec-v1` at HEAD
+`f5c83022678030dc5d3894982136aa365aeb2dac`.
+
+Full pytest passed `348/348` with three existing pandas FutureWarnings. The
+V4-B cache is frozen pre-outcome over `286,453` rows, `737` tickers, and signal
+sessions `20..1224`. Cache SHA-256:
+`8c59200d284e73867a3ff3566473f7dc7dd4aa0a2bfd42917ef4e08c761d1c68`.
+Manifest SHA-256:
+`d30c7e4f0841bbddd479fdc0b8c62b1028dcf8f107277b5a8a250d9725243b2f`.
+
+The official audit loaded only identity, the exact V3-B 33-feature prefix,
+and the six V4-B features. All six were non-constant and at least `98.0775%`
+finite; none fell below `80%` finite coverage and no absolute Spearman pair
+reached `0.95`. The highest absolute pair was `0.940791493` between
+`v4b_range_acceptance_mean_5` and `v4b_extreme_close_balance_5`. Audit
+SHA-256:
+`b8facff42be8231e263c261f97e4c02d6b9db92e64ceee831d9ff27b5c7586d6`.
+
+No target/outcome columns were loaded; no V4-B candidate was fitted or scored;
+no performance metric or verdict was computed. Ordinals `015..017` remain
+unviewed and the cumulative historical evaluated-candidate count remains
+`12`. Sessions `1225+`, fresh-forward outcomes, and
+`FORWARD_OUTCOME_ACCESS_STARTED` remain untouched. See the dated checkpoint
+and result handoff for the full input paths, feature coverage, and top-15
+correlation table.

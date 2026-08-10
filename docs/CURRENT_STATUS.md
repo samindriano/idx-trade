@@ -139,13 +139,49 @@ CI on implementation commit `1d409c7f88faa2069d0a7ffc4d2402c9cce76c8a`:
 
 No V4-B candidate has been fitted/scored yet. Ordinals `015..017` remain unviewed. No B1+B2 integration candidate exists.
 
+## Outcome-blind cache audit result
+
+The Windows-local V4-B cache preparation and feature audit authorized by
+`coordination/handoffs/IDX-RANKING-V4-B-PRICE-PATH-CACHE-AUDIT.md` completed on
+2026-08-10 at branch `research/idx-ranking-v2-spec-v1`, HEAD
+`f5c83022678030dc5d3894982136aa365aeb2dac`.
+
+- full pytest: `348 passed`, `0 failed`, `3 warnings`;
+- cache status: `RANKING_V4_B_PRICE_PATH_CACHE_FROZEN_PRE_OUTCOME`;
+- cache rows/tickers/sessions: `286,453 / 737 / 20..1224`;
+- cache SHA-256:
+  `8c59200d284e73867a3ff3566473f7dc7dd4aa0a2bfd42917ef4e08c761d1c68`;
+- cache manifest SHA-256:
+  `d30c7e4f0841bbddd479fdc0b8c62b1028dcf8f107277b5a8a250d9725243b2f`;
+- audit SHA-256:
+  `b8facff42be8231e263c261f97e4c02d6b9db92e64ceee831d9ff27b5c7586d6`.
+
+The restricted audit loaded identity, the exact V3-B 33-feature prefix, and
+the six frozen V4-B features only. All six features were non-constant and at
+least `98.0775%` finite; no feature was below the `80%` finite-rate rule. The
+largest absolute Spearman correlation involving a V4-B feature was
+`0.940791493` (`v4b_range_acceptance_mean_5` versus
+`v4b_extreme_close_balance_5`), below the `0.95` mechanical-review threshold.
+
+No target or outcome columns were loaded; no candidate was fitted or scored;
+no V4-B outcome metric or verdict was computed. Ordinals `015..017` remain
+`UNVIEWED_RESERVED`, cumulative historical evaluated-candidate count remains
+`12`, session `1225+` remains sealed, and fresh-forward outcomes plus
+`FORWARD_OUTCOME_ACCESS_STARTED` remain untouched.
+
+Result checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V4_B_PRICE_PATH_CACHE_AUDIT_RESULT.md`
+
+Result handoff:
+
+`coordination/handoffs/IDX-RANKING-V4-B-PRICE-PATH-CACHE-AUDIT-RESULT.md`
+
 ## Immediate next action
 
-Run only the Windows-local **outcome-blind cache preparation + feature audit** in:
-
-`coordination/handoffs/IDX-RANKING-V4-B-PRICE-PATH-CACHE-AUDIT.md`
-
-The task must STOP after returning coverage/distribution/redundancy results. A separate ChatGPT review/checkpoint is required before any V4-B control/B1/B2 model outcome run.
+Stop for independent ChatGPT review of the outcome-blind V4-B cache audit.
+Any V4-B control/B1/B2 outcome run requires the separate atomic first-pass
+authorization and must not be inferred from this audit.
 
 ## Hard boundary
 

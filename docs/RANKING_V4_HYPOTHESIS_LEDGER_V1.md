@@ -94,6 +94,42 @@ B1 and B2 must be completely implemented/frozen before either outcome result is 
 
 The V4-B promotion gate is inherited unchanged from V4-A. No gate relaxation or alternate lookback/model/feature rescue is allowed after outcome access.
 
+### V4-B outcome-blind cache audit — 2026-08-10
+
+The authorized V4-B cache preparation and restricted feature audit completed
+before any candidate outcome access. The exact frozen sources were verified:
+
+- panel SHA-256:
+  `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
+- official calendar SHA-256:
+  `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`;
+- V3-B late cache SHA-256:
+  `af0ed60f55563a571bdd86c024d3087bd46fea50845343d285f9f93b72a21a4d`;
+- V3-B late manifest SHA-256:
+  `1c629850a6b902442fa4cb17585c514de88e1f9d3a40c854b07cb1f01cc58880`;
+- V4-B spec Git blob:
+  `a750c28831b95b1c88640c5879289da5f2c05446`.
+
+The prepared V4-B cache is `286,453` rows, `737` tickers, signal sessions
+`20..1224`, with cache SHA-256
+`8c59200d284e73867a3ff3566473f7dc7dd4aa0a2bfd42917ef4e08c761d1c68` and
+manifest SHA-256
+`d30c7e4f0841bbddd479fdc0b8c62b1028dcf8f107277b5a8a250d9725243b2f`.
+The audit SHA-256 is
+`b8facff42be8231e263c261f97e4c02d6b9db92e64ceee831d9ff27b5c7586d6`.
+
+The audit loaded no target/outcome columns. All six V4-B features were
+non-constant and had finite coverage from `98.0775%` to `99.5751%`; no feature
+was below `80%`, and no absolute Spearman pair reached `0.95`. The highest
+absolute pair was `0.940791493` between
+`v4b_range_acceptance_mean_5` and `v4b_extreme_close_balance_5`.
+
+This is a pre-outcome data/feature audit only. Ordinals `015..017` remain
+`UNVIEWED_RESERVED`; no V4-B control, B1, or B2 fit/score was run; cumulative
+historical evaluated-candidate count remains `12`; session `1225+`,
+post-2026-07-31 fresh-forward outcomes, and
+`FORWARD_OUTCOME_ACCESS_STARTED` remain untouched.
+
 ## Outcome-access boundary
 
 At this ledger state:
