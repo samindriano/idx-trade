@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -67,24 +66,33 @@ def _normalize_ticker(values: pd.Series) -> pd.Series:
 
 
 def _normalize_date(values: pd.Series, *, column: str, allow_missing: bool = False) -> pd.Series:
+    original = values.copy()
     parsed = pd.to_datetime(values, errors="coerce")
     if getattr(parsed.dt, "tz", None) is not None:
         parsed = parsed.dt.tz_localize(None)
     parsed = parsed.dt.normalize()
-    if not allow_missing and parsed.isna().any():
+    if allow_missing:
+        original_missing = original.isna() | original.astype(str).str.strip().isin({"", "NaT", "None", "nan"})
+        invalid = parsed.isna() & ~original_missing
+        if invalid.any():
+            raise ValueError(f"invalid {column} value")
+    elif parsed.isna().any():
         raise ValueError(f"invalid {column} value")
     return parsed
 
 
 def _security_master_tickers(security_master: pd.DataFrame) -> set[str]:
-    candidates = [
-        column
-        for column in ("ticker", "symbol", "normalized_ticker", "security_ticker")
-        if column in security_master.columns
-    ]
-    if len(candidates) != 1:
-        raise ValueError(f"security master requires exactly one recognized ticker column, got {candidates}")
-    normalized = _normalize_ticker(security_master[candidates[0]])
+    ticker_column = next(
+        (
+            column
+            for column in ("ticker", "normalized_ticker", "security_ticker", "symbol")
+            if column in security_master.columns
+        ),
+        None,
+    )
+    if ticker_column is None:
+        raise ValueError("security master has no recognized ticker column")
+    normalized = _normalize_ticker(security_master[ticker_column])
     if normalized.eq("").any():
         raise ValueError("security master contains empty ticker")
     return set(normalized)
@@ -211,8 +219,11 @@ def assign_pit_sector(features: pd.DataFrame, validated_history: pd.DataFrame) -
     if data.duplicated(["ticker", "date"]).any():
         raise ValueError("sector feature input contains duplicate ticker/date rows")
 
-    for column in SECTOR_ASSIGNMENT_AUDIT_COLUMNS:
-        data[column] = np.nan if column != "sector_code" else pd.NA
+    data["sector_code"] = pd.Series(pd.NA, index=data.index, dtype="object")
+    data["sector_usable_from"] = pd.Series(pd.NaT, index=data.index, dtype="datetime64[ns]")
+    data["sector_effective_to_exclusive"] = pd.Series(pd.NaT, index=data.index, dtype="datetime64[ns]")
+    data["sector_source_id"] = pd.Series(pd.NA, index=data.index, dtype="object")
+    data["sector_source_sha256"] = pd.Series(pd.NA, index=data.index, dtype="object")
 
     history_by_ticker = {
         ticker: block.reset_index(drop=True)
@@ -241,10 +252,6 @@ def assign_pit_sector(features: pd.DataFrame, validated_history: pd.DataFrame) -
             data.at[target_index, "sector_source_id"] = row["source_id"]
             data.at[target_index, "sector_source_sha256"] = row["source_sha256"]
 
-    data["sector_usable_from"] = pd.to_datetime(data["sector_usable_from"], errors="coerce")
-    data["sector_effective_to_exclusive"] = pd.to_datetime(
-        data["sector_effective_to_exclusive"], errors="coerce"
-    )
     assigned = data["sector_code"].notna()
     if assigned.any():
         if (data.loc[assigned, "sector_usable_from"] > data.loc[assigned, "date"]).any():
