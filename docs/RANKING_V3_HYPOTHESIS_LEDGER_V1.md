@@ -2,7 +2,7 @@
 
 Status: **V3-A COMPLETE/KILLED; V3-B COMPLETE/PROMOTED; V3-C COMPLETE/KILLED; V3-D BLOCKED/UNVIEWED; V3-E COMPLETE/KILLED; 9 CANDIDATES EVALUATED**
 
-All F1-F4 results are historical-development evidence only. The cumulative evaluated counter is `9`.
+All V3 results are historical-development evidence only. The cumulative evaluated counter is `9`.
 
 Ordinals `001`-`007` have been viewed. Ordinals `008`-`009` are reserved for V3-D but remain unviewed because the PIT sector data gate blocked before model outcomes. Ordinals `010`-`011` were executed and viewed on F1-F4. Pre-score engineering/data/provenance/dependency blocks do not increment the denominator.
 
@@ -41,6 +41,21 @@ Controlling spec: `docs/RANKING_V3_STRUCTURE_LITE_SPEC_V1.md`.
 - final `V3_B_STRUCTURE_LITE_PROMOTE_GEOMETRY8`.
 
 V3-B is the only surviving V3 component so far. Its viewed definition is closed.
+
+### V3-B Structure-Lite — final late-development confirmation
+
+The one-shot V2F5/V2F6 confirmation reused ordinals 004/005; no new candidate
+ordinal was created and the cumulative architecture-candidate count remains `9`.
+
+- exact control equivalence PASS on `59,491` F5/F6 rows, max score and metric diffs `0.0`;
+- Structure-Lite absolute gate PASS;
+- paired confirmation gate PASS;
+- paired PR improvement: median `+0.0075911303`, worst `+0.0016661426`;
+- median paired ROC change `+0.0072411913`;
+- paired Q5-Q1 change: median `+0.0127142169`, worst `+0.0038483525`;
+- final result: `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`;
+- final historical-development architecture: `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`;
+- V2F5/V2F6 were consumed exactly once; sessions `1225+`, fresh-forward outcomes and `FORWARD_OUTCOME_ACCESS_STARTED` remain untouched.
 
 ## V3-C Regime — executed / killed
 

@@ -19,10 +19,10 @@ This is the authoritative short first-read layer. For chronology use `docs/PROJE
 - V3-D Sector-Relative: **PARKED AT `BLOCKED_PIT_SECTOR_HISTORY`; OUTCOMES UNCONSUMED**;
 - V3-E True Ranking: **COMPLETE — KILLED**;
 - optional V3 integration: **SKIPPED — only one Tier-1 component survives**;
-- final V3 late-development confirmation: **FROZEN + IMPLEMENTED + LOCAL RUN AUTHORIZED; V2F5/V2F6 NOT YET ACCESSED**;
+- final V3 late-development confirmation: **COMPLETE — PASS; V3-B STRUCTURE-LITE RETAINED AS FINAL HISTORICAL-DEVELOPMENT ARCHITECTURE**;
 - calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
 
-Cumulative evaluated V3 architecture-candidate count is `9`. Final late-development confirmation reuses existing V3-B ordinals 004/005 and does not create a new candidate ordinal. V3-D ordinals 008/009 remain unviewed.
+Cumulative evaluated V3 architecture-candidate count remains `9`. Final late-development confirmation reused existing V3-B ordinals 004/005 and did not create a new candidate ordinal. V3-D ordinals 008/009 remain unviewed.
 
 ## Frozen data/model identities
 
@@ -162,6 +162,17 @@ Allowed final decisions only:
 
 No MIXED/rescue/second late-development attempt.
 
+### Final late-development result
+
+- result: `V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS`;
+- exact F5/F6 control equivalence PASS on `59,491` rows, max score and metric diffs `0.0`;
+- Structure-Lite absolute gate PASS and paired gate PASS;
+- paired PR improvement: median `+0.0075911303`, worst `+0.0016661426`;
+- paired ROC change median `+0.0072411913`;
+- paired Q5-Q1 change median `+0.0127142169`, worst `+0.0038483525`;
+- V2F5/V2F6 consumed exactly once; sessions `1225+` not materialized or scored;
+- fresh-forward outcomes untouched and `FORWARD_OUTCOME_ACCESS_STARTED` not written.
+
 ## Mandatory first reads
 
 1. this file;
@@ -175,16 +186,9 @@ No MIXED/rescue/second late-development attempt.
 
 ## Immediate next action
 
-Execute only `coordination/handoffs/IDX-RANKING-V3-FINAL-STRUCTURE-LITE-LATE-DEV-RUN.md` locally:
-
-1. sync branch and run full pytest;
-2. verify all frozen source/spec identities;
-3. build outcome-independent Structure-Lite cache through session 1224;
-4. freeze/report cache + manifest hashes and coverage;
-5. execute exact V2 control on F5/F6 and prove equivalence;
-6. only after equivalence PASS execute exact frozen Structure-Lite on both F5/F6 in one run;
-7. apply frozen gates, document/push result;
-8. STOP for ChatGPT review.
+Stop for ChatGPT review of the completed one-shot F5/F6 confirmation. Do not
+start forward validation, calibration, Stage 6, `IDX-VAL-002`, execution/PnL,
+paper/live, or main merge automatically.
 
 ## Hard boundary
 
