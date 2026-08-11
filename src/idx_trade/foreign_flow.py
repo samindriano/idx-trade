@@ -90,16 +90,16 @@ def canonicalize_foreign_flow(frame: pd.DataFrame) -> pd.DataFrame:
     if data["knowledge_at"].isna().any():
         raise ValueError("Foreign-flow observation missing knowledge_at")
 
+    session_utc_date = data["knowledge_at"].dt.tz_convert("Asia/Jakarta").dt.normalize().dt.tz_localize(None)
+    if session_utc_date.lt(data["session_date"]).any():
+        raise ValueError("Foreign-flow knowledge time precedes its trading session")
+
     invalid_publication = (
         data["published_at"].notna()
         & data["knowledge_at"].lt(data["published_at"])
     )
     if invalid_publication.any():
         raise ValueError("knowledge_at precedes published_at")
-
-    session_utc_date = data["knowledge_at"].dt.tz_convert("Asia/Jakarta").dt.normalize().dt.tz_localize(None)
-    if session_utc_date.lt(data["session_date"]).any():
-        raise ValueError("Foreign-flow knowledge time precedes its trading session")
 
     for column in ("foreign_buy", "foreign_sell", "foreign_net"):
         data[column] = pd.to_numeric(data[column], errors="coerce")
