@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "SOURCE_INVENTORY_INCOMPLETE",
-  "notes": "Official IDX sources only. Unknown dates/refs/URLs stay null or UNRESOLVED; do not infer them. DISCOVERY_REQUIRED rows must be resolved before acquisition may run.",
+  "notes": "Official IDX sources only. Unknown dates/refs/URLs stay null or UNRESOLVED; do not infer them. Secondary-source discovery may populate candidate announcement metadata while status remains DISCOVERY_REQUIRED until the corresponding official IDX attachment is located and verified.",
   "sources": [
     {
       "source_id": "IDX_IC_BASELINE_2021",
@@ -24,9 +24,9 @@
     {
       "source_id": "IDX_IC_ANNUAL_2022",
       "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "UNRESOLVED",
-      "announced_at": null,
-      "effective_from": null,
+      "announcement_ref": "Peng-00150/BEI.POP/06-2022",
+      "announced_at": "2022-06-24",
+      "effective_from": "2022-07-01",
       "status": "DISCOVERY_REQUIRED",
       "download_url": ""
     },
