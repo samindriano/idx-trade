@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `1510585f6a11c52411edb47f08127b9ee3525685`
 branch: `data/idx-open-backfill-zapi-tradingview-targeted-census-v1`
-head_commit: `dadc016`
+head_commit: `0a6767f`
 scope: Frozen 38,819-row non-corporate-action Zapi TradingView census; reuse preserved cache first; fetch only 459 unique tickers lacking preserved usable chart responses.
 files_changed: `src/idx_trade/zapi_tradingview_targeted_census.py`, `tests/test_zapi_tradingview_targeted_census.py`, `docs/checkpoints/2026-08-11_ZAPI_TRADINGVIEW_TARGETED_CENSUS_RUNTIME.md`
 
