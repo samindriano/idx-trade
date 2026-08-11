@@ -1,6 +1,6 @@
 # Corporate Actions V1
 
-Status: initial data-foundation scaffold; real IDX/Zapi source acquisition pending local runtime audit.
+Status: source-audit milestone completed on 2026-08-11; canonical promotion remains event-type and date-semantic conditional.
 
 ## Goal
 
