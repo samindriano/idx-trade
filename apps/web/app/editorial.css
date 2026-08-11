@@ -572,3 +572,111 @@ body {
   .overviewArchiveStatus { font-size: 7px; }
   .monitorHero { min-height: 170px; }
 }
+
+/* Clickable model cards and a safe forward-evidence detail view. */
+.modelCardsGrid {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border-top: 1px solid var(--editorial-line);
+  border-bottom: 1px solid var(--editorial-line);
+  background: var(--editorial-line);
+}
+.modelCardButton {
+  width: 100%;
+  min-width: 0;
+  display: block;
+  margin: 0;
+  padding: 0 0 14px;
+  border: 0;
+  border-radius: 0;
+  color: var(--editorial-ink);
+  background: var(--editorial-paper);
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+.modelCardButton:hover { background: #faf8f1; }
+.modelCardButton.isSelected {
+  background: #f5fbf7;
+  box-shadow: inset 3px 0 0 var(--editorial-green);
+}
+.modelCardButton:focus-visible {
+  outline: 2px solid var(--editorial-green);
+  outline-offset: -3px;
+}
+.modelCardButton .sectionHead,
+.modelCardButton .contractProgress,
+.modelCardButton .modelMeta { pointer-events: none; }
+.modelCardButton .modelMeta { margin-top: 18px !important; }
+.modelCardAction {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 11px 22px 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--editorial-line);
+  color: var(--editorial-green-dark);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.modelCardAction b { font-size: 14px; line-height: .7; }
+.modelPerformancePanel {
+  margin-top: 14px;
+  padding: 18px 20px 20px;
+  border-color: var(--editorial-line);
+  border-radius: 0;
+  background: rgba(255,255,255,.22);
+  box-shadow: none;
+}
+.modelPerformanceHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--editorial-line);
+}
+.modelPerformanceHead > div > span,
+.modelPerformanceSessionsHead > span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .14em; }
+.modelPerformanceHead h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.05; letter-spacing: -.04em; }
+.modelPerformanceHead p { max-width: 540px; margin: 8px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+.modelPerformanceBadge { padding: 5px 7px; color: var(--editorial-green-dark); background: var(--editorial-green-soft); font-size: 8px; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.modelPerformanceMetrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--editorial-line); }
+.modelPerformanceMetrics > div { min-width: 0; padding: 13px 14px 12px 0; border-right: 1px solid var(--editorial-line); }
+.modelPerformanceMetrics > div + div { padding-left: 14px; }
+.modelPerformanceMetrics > div:last-child { border-right: 0; }
+.modelPerformanceMetrics span,
+.modelPerformanceMetrics small { display: block; color: var(--editorial-muted); font-size: 9px; }
+.modelPerformanceMetrics strong { display: block; margin-top: 7px; overflow: hidden; color: var(--editorial-ink); font-size: 18px; line-height: 1; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+.modelPerformanceMetrics strong em { margin-left: 3px; color: var(--editorial-muted); font-size: 11px; font-style: normal; letter-spacing: 0; }
+.modelPerformanceMetrics small { margin-top: 6px; color: var(--editorial-muted); font-size: 8px; }
+.modelPerformanceSessions { padding-top: 14px; }
+.modelPerformanceSessionsHead { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.modelPerformanceSessionsHead small { color: var(--editorial-muted); font-size: 9px; }
+.modelPerformanceRunList { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 9px; background: var(--editorial-line); }
+.modelPerformanceRun { min-width: 0; display: grid; gap: 4px; padding: 10px; background: var(--editorial-paper); }
+.modelPerformanceRun strong { font-size: 10px; }
+.modelPerformanceRun span { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.modelPerformanceRun small { overflow: hidden; color: var(--editorial-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.runStateDone { color: var(--editorial-green-dark); }
+.runStateOther { color: var(--editorial-amber); }
+.modelPerformanceEmpty { margin: 10px 0 0; color: var(--editorial-muted); font-size: 10px; }
+
+@media (max-width: 900px) {
+  .modelPerformanceMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modelPerformanceMetrics > div:nth-child(2) { border-right: 0; }
+  .modelPerformanceMetrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--editorial-line); }
+  .modelPerformanceRunList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 660px) {
+  .modelPerformancePanel { padding-inline: 16px; }
+  .modelPerformanceHead { display: block; }
+  .modelPerformanceBadge { display: inline-block; margin-top: 12px; }
+  .modelPerformanceMetrics strong { font-size: 16px; }
+  .modelPerformanceRunList { grid-template-columns: 1fr 1fr; }
+}

@@ -47,6 +47,8 @@ type StatusResponse = {
   detail?: string | null;
 };
 
+type MonitoredModelId = typeof FINAL_RANKER.id | typeof V2_CHAMPION.id;
+
 function Logo() {
   return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
 }
@@ -108,6 +110,7 @@ export default function MonitoringPage() {
   const [requestDetail, setRequestDetail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [targetDate, setTargetDate] = useState("");
+  const [selectedModelId, setSelectedModelId] = useState<MonitoredModelId>(FINAL_RANKER.id);
 
   const refresh = useCallback(async () => {
     try {
@@ -198,6 +201,21 @@ export default function MonitoringPage() {
         .map((run) => run.session_date),
     );
   }, [status]);
+
+  const selectedModel = selectedModelId === V2_CHAMPION.id ? V2_CHAMPION : FINAL_RANKER;
+  const selectedModelSummary = useMemo(() => {
+    const runs = (status?.model_runs ?? [])
+      .filter((run) => run.model_id === selectedModelId)
+      .sort((a, b) => b.session_date.localeCompare(a.session_date));
+    const completedRuns = runs.filter((run) => run.state === "DONE" && Boolean(run.artifact_sha256));
+    return {
+      runs,
+      completedRuns,
+      latestRun: runs[0] ?? null,
+      latestCompletedRun: completedRuns[0] ?? null,
+      failedRuns: runs.filter((run) => run.state === "FAILED" || run.error_code),
+    };
+  }, [selectedModelId, status]);
 
   const latestFinalRun = useMemo(() => {
     const runs = (status?.model_runs ?? []).filter((run) => run.model_id === FINAL_RANKER.id);
@@ -301,7 +319,13 @@ export default function MonitoringPage() {
             </div>
           </article>
 
-          <article className="surface finalModelPanel">
+          <div className="modelCardsGrid" aria-label="Monitored models">
+          <button
+            type="button"
+            className={`surface modelCardButton finalModelPanel ${selectedModelId === FINAL_RANKER.id ? "isSelected" : ""}`}
+            aria-pressed={selectedModelId === FINAL_RANKER.id}
+            onClick={() => setSelectedModelId(FINAL_RANKER.id)}
+          >
             <div className="sectionHead compact">
               <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
               <span className="modelBadge champion">FINAL V3</span>
@@ -311,7 +335,7 @@ export default function MonitoringPage() {
               <div className="progressTrack indigoTrack"><span style={{ width: `${scoringProgress}%` }} /></div>
             </div>
             <div className="modelMeta">
-              <span>33 features</span>
+              <span>{FINAL_RANKER.featureCount} features</span>
               <span>SHA {FINAL_RANKER.modelSha256.slice(0, 10)}...</span>
             </div>
             <div className="contractFacts">
@@ -320,9 +344,15 @@ export default function MonitoringPage() {
               <div><span>Latest score run</span><strong>{latestFinalRun ? shortDate(latestFinalRun.session_date) : "Not produced yet"}</strong></div>
               <div><span>Outcomes</span><strong>Locked</strong></div>
             </div>
-          </article>
+            <div className="modelCardAction"><span>{selectedModelId === FINAL_RANKER.id ? "Selected" : "View forward detail"}</span><b aria-hidden="true">→</b></div>
+          </button>
 
-          <article className="surface finalModelPanel legacyChampionPanel">
+          <button
+            type="button"
+            className={`surface modelCardButton finalModelPanel legacyChampionPanel ${selectedModelId === V2_CHAMPION.id ? "isSelected" : ""}`}
+            aria-pressed={selectedModelId === V2_CHAMPION.id}
+            onClick={() => setSelectedModelId(V2_CHAMPION.id)}
+          >
             <div className="sectionHead compact">
               <div><span>V2 CHAMPION</span><h2>{V2_CHAMPION.shortName}</h2></div>
               <span className="modelBadge">FROZEN</span>
@@ -332,10 +362,47 @@ export default function MonitoringPage() {
               <div className="progressTrack indigoTrack"><span style={{ width: `${Math.min(100, v2ScoredDates.size)}%` }} /></div>
             </div>
             <div className="modelMeta">
-              <span>25 features</span>
+              <span>{V2_CHAMPION.featureCount} features</span>
               <span>SHA {V2_CHAMPION.modelSha256.slice(0, 10)}...</span>
             </div>
-          </article>
+            <div className="modelCardAction"><span>{selectedModelId === V2_CHAMPION.id ? "Selected" : "View forward detail"}</span><b aria-hidden="true">→</b></div>
+          </button>
+          </div>
+        </section>
+
+        <section className="surface modelPerformancePanel" aria-live="polite">
+          <div className="modelPerformanceHead">
+            <div>
+              <span>FORWARD PERFORMANCE</span>
+              <h2>{selectedModel.shortName}</h2>
+              <p>Rangkuman score artifact yang sudah dibuat dari sesi forward. Outcome realized tetap terpisah dan belum dibuka.</p>
+            </div>
+            <span className="modelPerformanceBadge">{selectedModel.generation} / SELECTED</span>
+          </div>
+
+          <div className="modelPerformanceMetrics">
+            <div><span>Score coverage</span><strong>{selectedModelSummary.completedRuns.length}<em>/ {selectedModel.forwardTargetSessions}</em></strong><small>forward sessions scored</small></div>
+            <div><span>Latest scored</span><strong>{selectedModelSummary.latestCompletedRun ? shortDate(selectedModelSummary.latestCompletedRun.session_date) : "Not yet"}</strong><small>verified score artifact</small></div>
+            <div><span>Latest run</span><strong>{selectedModelSummary.latestRun?.state ?? "Not started"}</strong><small>{selectedModelSummary.latestRun ? shortDate(selectedModelSummary.latestRun.session_date) : "Waiting for data"}</small></div>
+            <div><span>Run issues</span><strong>{selectedModelSummary.failedRuns.length}</strong><small>failed or incomplete</small></div>
+          </div>
+
+          <div className="modelPerformanceSessions">
+            <div className="modelPerformanceSessionsHead"><span>FORWARD SESSION EVIDENCE</span><small>Most recent model runs</small></div>
+            {selectedModelSummary.runs.length ? (
+              <div className="modelPerformanceRunList">
+                {selectedModelSummary.runs.slice(0, 8).map((run) => (
+                  <div className="modelPerformanceRun" key={`${run.model_id}-${run.session_date}`}>
+                    <strong>{shortDate(run.session_date)}</strong>
+                    <span className={run.state === "DONE" ? "runStateDone" : "runStateOther"}>{run.state === "DONE" ? "Scored" : run.state}</span>
+                    <small>{run.artifact_sha256 ? `Artifact ${run.artifact_sha256.slice(0, 12)}...` : run.error_message ?? "No score artifact"}</small>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="modelPerformanceEmpty">Belum ada score artifact untuk model ini.</p>
+            )}
+          </div>
         </section>
 
         <section className="surface modelRunsPanel">
