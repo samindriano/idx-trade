@@ -1,6 +1,6 @@
 # Ownership / KSEI V1
 
-Status: initial PIT ownership-snapshot contract implemented; real IDX/KSEI/Zapi source audit pending local runtime.
+Status: initial PIT ownership-snapshot contract implemented; bounded IDX/KSEI/Zapi source audit completed on 2026-08-12. Source discovery and per-security semantics are usable, but publication-time PIT and complete historical coverage remain fail-closed pending a source-timestamp/version solution.
 
 ## Goal
 
