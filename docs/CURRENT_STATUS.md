@@ -2,8 +2,8 @@
 
 Date: 2026-08-11 (Asia/Jakarta)
 
-This is the authoritative short first-read layer.  For chronology use the
-project ledgers and newest dated checkpoints.  If older text conflicts, this
+This is the authoritative short first-read layer. For chronology use the
+project ledgers and newest dated checkpoints. If older text conflicts, this
 file plus the newest controlling checkpoint wins.
 
 ## Current phase
@@ -32,8 +32,8 @@ file plus the newest controlling checkpoint wins.
 `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`
 
 V3-B is exact V2 `HGB_XS_MARKET` information plus eight frozen causal
-Structure-Lite geometry features.  It was the only V3 survivor and later passed
-its one-shot V2F5/V2F6 late-development confirmation.  V4-A Participation,
+Structure-Lite geometry features. It was the only V3 survivor and later passed
+its one-shot V2F5/V2F6 late-development confirmation. V4-A Participation,
 V4-B Price Path and V4-C Cross-Sectional Context produced no survivor.
 
 Final refit facts:
@@ -56,7 +56,7 @@ Controlling checkpoint:
 ## Path Risk V1 — closed
 
 PR-001 tested q75 pre-resolution adverse-excursion regression using the exact
-33 causal features.  It showed useful ordering diagnostics but failed the
+33 causal features. It showed useful ordering diagnostics but failed the
 frozen proper-scoring gate:
 
 - F1/F2/F3 relative pinball improvement:
@@ -104,7 +104,7 @@ Binary risk endpoint:
 - negative: `TP_FIRST`, `NO_BARRIER_HIT`.
 
 F1-F4 are already-consumed Path Risk development knowledge and are the only
-folds allowed in V2 discovery.  V2 reuses the immutable V1 joined model table:
+folds allowed in V2 discovery. V2 reuses the immutable V1 joined model table:
 
 - SHA-256:
   `b66fc7e40f18940ae9db418331a421e0f36d23b86597500b1d3ba73a8e3777fe`;
@@ -146,7 +146,7 @@ The final V3-B ranker is independently evaluated only on the first exact
 2026-07-31**.
 
 Daily outcome-blind operation may record data provenance, exact V3-B features,
-scores/ranks, model/artifact fingerprints and maturity state.  It must not
+scores/ranks, model/artifact fingerprints and maturity state. It must not
 expose realized TP/SL, PR-AUC, ROC-AUC, Q5-Q1 performance, realized return or
 PnL before the one-shot outcome-access boundary.
 
@@ -154,15 +154,44 @@ Before future outcome access, the exact block and source snapshots must be
 hash-pinned, then `FORWARD_OUTCOME_ACCESS_STARTED` must be written atomically
 before outcomes are loaded.
 
+## Orchestration execution policy — refreshed 2026-08-11
+
+The project now uses **parallel-first LIGHT orchestration for meaningful work**
+to reduce wall-clock time with Luna xhigh while preserving all frozen research
+boundaries.
+
+- MAIN must build the execution frontier before substantial implementation;
+- independent ready scopes should be spawned before MAIN duplicates them;
+- `LIGHT` = default for roughly 2–3 useful independent workstreams;
+- `HEAVY` = 3–6 independent critical-path scopes or decision-changing review;
+- `DIRECT` = small/inherently sequential work; substantial DIRECT requires a
+  reason that workers would not materially shorten the critical path;
+- dependent scientific experiments remain sequential even when supporting
+  implementation/tests/audit work can run concurrently;
+- `Luna xhigh` remains the MAIN/worker default; `Sol High` remains a bounded
+  decision-changing escalation, not a persistent default.
+
+For the immediate Path Risk V2 milestone, import/full-suite verification and
+independent frozen-spec/seal audit may run in parallel when isolated. The one
+evidence-producing PR-002/PR-003 F1-F4 discovery execution remains serialized
+after preflight because its result controls the next scientific decision.
+
+Controlling orchestration documents:
+
+- `AGENTS.md`;
+- `docs/ORCHESTRATION.md`;
+- `coordination/TEAM_STATUS.md`;
+- `coordination/TASK_REGISTRY.md`.
+
 ## Immediate next action
 
-Run the full repository test suite locally after pulling the latest branch.  If
+Run the full repository test suite locally after pulling the latest branch. If
 it passes and current-checkout import resolution is correct, execute exactly one
 Path Risk V2 PR-002/PR-003 F1-F4 development run using:
 
 `coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`
 
-Return the result to ChatGPT.  Do not touch F5/F6 after the run even if a winner
+Return the result to ChatGPT. Do not touch F5/F6 after the run even if a winner
 is selected; a separate one-shot confirmation specification is required.
 
 ## Hard boundary
