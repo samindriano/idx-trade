@@ -172,3 +172,40 @@ Push normal fast-forward if remote did not advance. If remote advanced, stop rat
 - no main merge.
 
 Then STOP for independent ChatGPT review.
+
+## Runtime result — 2026-08-11
+
+runtime_status: `ZAPI_BLOCKED_CREDENTIAL_ABSENT`
+runtime_head_before_local_fix: `cf896b2b3677f807a39fb6050291eda7dcf60875`
+checkpoint: `docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_RESIDUAL_AUDIT_RUNTIME.md`
+
+ZAPI_API_KEY was absent. The Zapi endpoint was not called, zero Zapi network
+requests were made, no alternate source was used, and the required external
+runtime output directory was not created.
+
+The two authorized implementation invariants were repaired only:
+
+- nullable/numpy known-control booleans are evaluated by value rather than
+  Python identity;
+- the artifact manifest excludes the final summary and itself, then its hash
+  is written into the finalized summary.
+
+Changed files:
+
+- `src/idx_trade/zapi_residual_audit.py`
+- `tests/test_zapi_residual_audit.py`
+- `docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_RESIDUAL_AUDIT_RUNTIME.md`
+- this handoff
+
+validation_run:
+
+- focused pytest before fix: `3 passed`;
+- full pytest before fix: `236 passed`, `5 warnings`;
+- focused pytest after fix: `5 passed`, `2 warnings`;
+- full pytest after fix: `236 passed`, `5 warnings`;
+- immutable panel SHA verified unchanged:
+  `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`.
+
+decision: stop for independent ChatGPT review. Do not start the Zapi runtime,
+Source-2 backfill, corporate-action repair, modelling, Ranking/PIT-sector work,
+or execution-PnL until credential/access is separately authorized.

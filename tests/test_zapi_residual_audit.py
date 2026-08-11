@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from idx_trade.zapi_residual_audit import (
@@ -8,6 +9,7 @@ from idx_trade.zapi_residual_audit import (
     build_targeted_sample,
     classify_residual_rows,
     fetch_zapi_date_grouped,
+    _write_artifact_manifest,
 )
 
 
@@ -190,3 +192,47 @@ def test_arbitration_distinguishes_panel_yahoo_and_recovery():
     classes = dict(zip(result["sample_id"], result["arbitration_class"]))
     assert classes["Z2-001"] == "SOURCE2_SUPPORTS_YAHOO"
     assert classes["Z2-002"] == "SOURCE2_RECOVERY_CANDIDATE"
+
+
+def test_known_control_numpy_boolean_is_classified_as_exact():
+    sample = pd.DataFrame(
+        {
+            "sample_id": ["CONTROL-1"],
+            "residual_problem_class": [None],
+            "yahoo_raw_open": [100.0],
+            "yahoo_raw_high": [110.0],
+            "yahoo_raw_low": [90.0],
+            "yahoo_raw_close": [105.0],
+        }
+    )
+    audit = pd.DataFrame(
+        {
+            "sample_id": ["CONTROL-1"],
+            "sample_role": ["KNOWN_CONTROL"],
+            "diagnostic": ["KNOWN_OPEN_EXACT"],
+            "admission_status": ["EXISTING_OPEN_PRESERVED_EXACT"],
+            "hlc_exact": [True],
+            "known_open_exact": pd.Series([np.bool_(True)], dtype=object),
+            "raw_open": [100.0],
+            "raw_high": [110.0],
+            "raw_low": [90.0],
+            "raw_close": [105.0],
+        }
+    )
+    result = build_arbitration(sample, audit)
+    assert result.loc[0, "arbitration_class"] == "CONTROL_PANEL_HLC_OPEN_EXACT"
+
+
+def test_artifact_manifest_excludes_summary_and_manifest(tmp_path):
+    (tmp_path / "zapi_targeted_summary.json").write_text("stale", encoding="utf-8")
+    (tmp_path / "sample.csv").write_text("ticker\nBBCA\n", encoding="utf-8")
+
+    manifest_sha = _write_artifact_manifest(tmp_path)
+
+    import hashlib
+    import json
+
+    manifest_path = tmp_path / "artifact_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert set(manifest["files"]) == {"sample.csv"}
+    assert manifest_sha == hashlib.sha256(manifest_path.read_bytes()).hexdigest()

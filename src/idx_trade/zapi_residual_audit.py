@@ -439,7 +439,11 @@ def build_arbitration(sample: pd.DataFrame, zapi_audit: pd.DataFrame) -> pd.Data
         if row.sample_role == "KNOWN_CONTROL":
             if row.diagnostic == "NO_PROVIDER_ROW":
                 classification.append("CONTROL_ZAPI_NO_ROW")
-            elif bool(row.hlc_exact) and row.known_open_exact is True:
+            elif (
+                bool(row.hlc_exact)
+                and pd.notna(row.known_open_exact)
+                and bool(row.known_open_exact)
+            ):
                 classification.append("CONTROL_PANEL_HLC_OPEN_EXACT")
             elif bool(row.hlc_exact):
                 classification.append("CONTROL_PANEL_HLC_ONLY")
@@ -481,6 +485,24 @@ def _write_csv(frame: pd.DataFrame, path: Path) -> None:
 
 def _write_json(value: object, path: Path) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, default=str), encoding="utf-8")
+
+
+def _write_artifact_manifest(output: Path) -> str:
+    summary_name = "zapi_targeted_summary.json"
+    manifest_name = "artifact_manifest.json"
+    artifact_files = sorted(
+        path
+        for path in output.iterdir()
+        if path.is_file() and path.name not in {summary_name, manifest_name}
+    )
+    manifest = {
+        "runtime": "zapi_targeted_residual_audit_v1_20260811",
+        "files": {path.name: sha256_file(path) for path in artifact_files},
+        "execution_grade_promoted": False,
+    }
+    manifest_path = output / manifest_name
+    _write_json(manifest, manifest_path)
+    return sha256_file(manifest_path)
 
 
 def run_zapi_residual_audit(
@@ -568,16 +590,10 @@ def run_zapi_residual_audit(
         "bulk_backfill_authorized": False,
         "corporate_action_repair_performed": False,
     }
-    _write_json(summary, output / "zapi_targeted_summary.json")
-    artifact_files = sorted(path for path in output.iterdir() if path.is_file())
-    manifest = {
-        "runtime": "zapi_targeted_residual_audit_v1_20260811",
-        "files": {path.name: sha256_file(path) for path in artifact_files},
-        "execution_grade_promoted": False,
-    }
-    _write_json(manifest, output / "artifact_manifest.json")
-    summary["artifact_manifest_sha256"] = sha256_file(output / "artifact_manifest.json")
-    _write_json(summary, output / "zapi_targeted_summary.json")
+    summary_path = output / "zapi_targeted_summary.json"
+    _write_json(summary, summary_path)
+    summary["artifact_manifest_sha256"] = _write_artifact_manifest(output)
+    _write_json(summary, summary_path)
     return summary
 
 
