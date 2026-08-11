@@ -1,0 +1,117 @@
+# Handoff
+
+from: ChatGPT independent reviewer / implementation owner  
+to: Codex local runtime verifier  
+task_id: IDX-OPEN-BACKFILL-ZAPI-ALT-ENDPOINTS-AUDIT  
+branch: `data/idx-open-backfill-zapi-alt-endpoints-audit-v1`
+
+## Read first
+
+- `AGENTS.md`
+- `docs/OPEN_BACKFILL_ZAPI_ALT_ENDPOINTS_AUDIT_V1.md`
+- `docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_ALT_ENDPOINTS_AUDIT_IMPLEMENTATION.md`
+- `src/idx_trade/zapi_alt_open_audit.py`
+- `tests/test_zapi_alt_open_audit.py`
+
+## Purpose
+
+Run only the already-frozen bounded comparison of two separate Zapi upstreams:
+
+1. `finance:tradingview/chart`
+2. `finance:investing/search` + `finance:investing/historical`
+
+This does not reopen `finance:idx/stock-summary`, which remains rejected for Open recovery.
+
+## Exact local inputs
+
+Frozen sample manifest from the completed stock-summary audit:
+
+`D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_residual_audit_v1_20260811\zapi_targeted_sample_manifest.csv`
+
+Required SHA-256:
+
+`9704fcba50ad8c19367025bdac0d5c12e0745425590425f166f619248a52a344`
+
+New output root must be absent or empty:
+
+`D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_alt_endpoints_audit_v1_20260811`
+
+`ZAPI_API_KEY` should already exist in the Windows user/process environment. Verify presence only; never print, hash, persist, or commit the value.
+
+## Preflight
+
+1. Fetch remote and switch to this exact branch.
+2. Confirm worktree clean and note remote HEAD.
+3. Confirm `ZAPI_API_KEY` is visible to the running Codex process without revealing it.
+4. Confirm the sample file exists and its SHA matches the frozen SHA.
+5. Run:
+   - `pytest -q tests/test_zapi_alt_open_audit.py`
+   - full `pytest`
+6. If a concrete implementation wiring bug is found, fix only the smallest semantics-preserving issue. Do not alter provider, sample, quota, endpoint parameters, admission rules, or classification design.
+
+## Runtime
+
+Run:
+
+`python -m idx_trade.zapi_alt_open_audit --sample-manifest "D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_residual_audit_v1_20260811\zapi_targeted_sample_manifest.csv" --output-dir "D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_alt_endpoints_audit_v1_20260811"`
+
+Use the worktree `src` on `PYTHONPATH` if necessary; do not persist a package-path workaround.
+
+## Frozen network scope
+
+TradingView:
+
+- one request per unique sample ticker maximum;
+- `symbol=IDX:<ticker>`;
+- `market=indonesia`;
+- `resolution=1D`;
+- `count=1000`.
+
+Investing:
+
+- one `/search` request per unique sample ticker maximum;
+- only exact, defensible Indonesian identity candidates advance;
+- one `/historical` request per verified ticker maximum;
+- `pairId=<verified>`;
+- `interval=1d`;
+- `period=max`;
+- `pointscount=1500`.
+
+Maximum intended total requests: `618` plus bounded retries already implemented.
+
+If `pointscount=1500` is rejected as an invalid parameter, STOP and report it. Do not silently retry with a different point count.
+
+If access/plan is gated, stop that provider cleanly. Do not substitute another source.
+
+## Required factual report
+
+For TradingView and Investing separately return:
+
+- access and plan status;
+- requests/retries/rate limits/errors;
+- identities attempted/verified/ambiguous/not found where applicable;
+- provider rows;
+- exact sample ticker/date coverage;
+- history-window unavailable count;
+- H/L/C exact count/rate;
+- known-control H/L/C exact;
+- known-control Open exact;
+- missing-Open recovery candidates;
+- provider-class/rejection histogram;
+- among the 120 Yahoo H/L/C mismatch sample, count supporting certified panel vs Yahoo vs disagreement.
+
+Also return:
+
+- overlap rows covered by both providers;
+- exact raw OHLC agreement between providers;
+- artifact hashes and final manifest SHA;
+- confirmation that no panel was modified and:
+  - `execution_grade_promoted=false`
+  - `bulk_backfill_authorized=false`
+  - `corporate_action_repair_performed=false`
+
+## Stop boundary
+
+Write a dated factual runtime checkpoint and update this handoff with the result. Commit/push normal fast-forward, then STOP for independent ChatGPT review.
+
+Do not start a full-universe backfill, another source, corporate-action repair, model/ranking work, execution PnL, or main merge.
