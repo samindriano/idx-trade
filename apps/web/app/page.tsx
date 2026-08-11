@@ -5,6 +5,7 @@ import styles from "./model-monitor.module.css";
 import {
   FINAL_RANKER,
   RESEARCH_EXPERIMENTS,
+  type ResearchFoldMetric,
   type ResearchEvidenceSeries,
   type ResearchStatus,
 } from "@/lib/model-catalog";
@@ -65,6 +66,55 @@ function signedPct(value: number) {
   return `${value >= 0 ? "+" : ""}${pct(value)}`;
 }
 
+const POSITIVE_TONE = "#00a66a";
+const NEGATIVE_TONE = "#d84b56";
+
+function metricTone(value: number) {
+  return value >= 0 ? POSITIVE_TONE : NEGATIVE_TONE;
+}
+
+type PlottedPoint = ResearchFoldMetric & { x: number; y: number };
+
+function lineSegments(points: readonly PlottedPoint[], zeroY: number) {
+  return points.slice(0, -1).flatMap((start, index) => {
+    const end = points[index + 1];
+    const startTone = metricTone(start.deltaPr);
+    const endTone = metricTone(end.deltaPr);
+    const startsOnSameSide = (start.deltaPr >= 0) === (end.deltaPr >= 0);
+
+    if (startsOnSameSide || start.deltaPr === 0 || end.deltaPr === 0) {
+      return [{ d: `M${start.x},${start.y} L${end.x},${end.y}`, color: startTone }];
+    }
+
+    const zeroRatio = -start.deltaPr / (end.deltaPr - start.deltaPr);
+    const zeroX = start.x + zeroRatio * (end.x - start.x);
+    return [
+      { d: `M${start.x},${start.y} L${zeroX},${zeroY}`, color: startTone },
+      { d: `M${zeroX},${zeroY} L${end.x},${end.y}`, color: endTone },
+    ];
+  });
+}
+
+function areaSegments(points: readonly PlottedPoint[], zeroY: number) {
+  return points.slice(0, -1).flatMap((start, index) => {
+    const end = points[index + 1];
+    const startTone = metricTone(start.deltaPr);
+    const endTone = metricTone(end.deltaPr);
+    const startsOnSameSide = (start.deltaPr >= 0) === (end.deltaPr >= 0);
+
+    if (startsOnSameSide || start.deltaPr === 0 || end.deltaPr === 0) {
+      return [{ d: `M${start.x},${zeroY} L${start.x},${start.y} L${end.x},${end.y} L${end.x},${zeroY} Z`, color: startTone }];
+    }
+
+    const zeroRatio = -start.deltaPr / (end.deltaPr - start.deltaPr);
+    const zeroX = start.x + zeroRatio * (end.x - start.x);
+    return [
+      { d: `M${start.x},${zeroY} L${start.x},${start.y} L${zeroX},${zeroY} Z`, color: startTone },
+      { d: `M${zeroX},${zeroY} L${end.x},${end.y} L${end.x},${zeroY} Z`, color: endTone },
+    ];
+  });
+}
+
 const FOLD_GUIDE = [
   { fold: "F1", train: "1–504", gap: "505–524", validation: "525–624" },
   { fold: "F2", train: "1–624", gap: "625–644", validation: "645–744" },
@@ -76,11 +126,9 @@ const FOLD_GUIDE = [
 
 function EvidenceChart({
   series,
-  status,
   metricLabel,
 }: {
   series: readonly ResearchEvidenceSeries[];
-  status: ResearchStatus;
   metricLabel: string;
 }) {
   const [hovered, setHovered] = useState<{ series: number; point: number } | null>(null);
@@ -97,12 +145,8 @@ function EvidenceChart({
   const extent = Math.max(0.005, ...values.map((value) => Math.abs(value))) * 1.15;
   const gridValues = [extent, extent / 2, 0, -extent / 2, -extent];
   const zeroY = top + chartHeight / 2;
-  const palette = status === "FAIL"
-    ? ["#d84b56", "#b96b74", "#a44852"]
-    : ["#00a66a", "#477d68", "#8a9f62"];
   const plottedSeries = series.map((line, seriesIndex) => ({
     ...line,
-    color: palette[seriesIndex % palette.length],
     points: line.points.map((point, pointIndex) => {
       const x = left + (pointIndex / Math.max(1, line.points.length - 1)) * chartWidth;
       const y = top + chartHeight / 2 - (point.deltaPr / extent) * (chartHeight / 2);
@@ -134,17 +178,13 @@ function EvidenceChart({
             )}
           </div>
         </div>
-        <div className="evidenceChartLegend">{series.map((line, index) => <small key={line.label}><i style={{ background: palette[index % palette.length] }} />{line.label}</small>)}</div>
+        <div className="evidenceChartLegend">
+          {series.map((line) => <small key={line.label}><i className="seriesMarker" />{line.label}</small>)}
+          <small><i className="positiveMarker" />Positive</small>
+          <small><i className="negativeMarker" />Negative</small>
+        </div>
       </div>
       <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel} across evaluation folds`}>
-        <defs>
-          {plottedSeries.map((line, index) => (
-            <linearGradient id={`area-evidence-${index}`} key={line.label} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={line.color} stopOpacity="0.18" />
-              <stop offset="100%" stopColor={line.color} stopOpacity="0" />
-            </linearGradient>
-          ))}
-        </defs>
         {gridValues.map((value) => {
           const y = top + chartHeight / 2 - (value / extent) * (chartHeight / 2);
           return (
@@ -155,17 +195,17 @@ function EvidenceChart({
           );
         })}
         {plottedSeries.map((line, seriesIndex) => {
-          const linePath = line.points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
-          const areaPath = `${linePath} L${line.points[line.points.length - 1].x},${zeroY} L${line.points[0].x},${zeroY} Z`;
+          const segments = lineSegments(line.points, zeroY);
+          const fills = areaSegments(line.points, zeroY);
           return (
             <g key={line.label}>
-              {series.length === 1 && <path className="areaPath" d={areaPath} fill={`url(#area-evidence-${seriesIndex})`} />}
-              <path className="linePath" d={linePath} style={{ stroke: line.color }} />
+              {series.length === 1 && fills.map((segment, segmentIndex) => <path className="areaPath" key={`area-${segmentIndex}`} d={segment.d} style={{ fill: segment.color }} />)}
+              {segments.map((segment, segmentIndex) => <path className="linePath" key={`line-${segmentIndex}`} d={segment.d} style={{ stroke: segment.color }} />)}
               {line.points.map((point, pointIndex) => (
-                <g className="chartPoint" key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}>
-                  <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: line.color }} />
+                <g className={`chartPoint ${point.deltaPr >= 0 ? "positive" : "negative"}`} key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}>
+                  <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: metricTone(point.deltaPr) }} />
                   {(series.length === 1 || (hovered?.series === seriesIndex && hovered.point === pointIndex)) && (
-                    <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: line.color }}>{signedPct(point.deltaPr)}</text>
+                    <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: metricTone(point.deltaPr) }}>{signedPct(point.deltaPr)}</text>
                   )}
                   {seriesIndex === 0 && <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>}
                 </g>
@@ -366,7 +406,6 @@ export default function Home() {
                 <EvidenceChart
                   metricLabel={selectedExperiment.evidence.metricLabel}
                   series={selectedExperiment.evidence.series}
-                  status={selectedExperiment.status}
                 />
               </>
             ) : (

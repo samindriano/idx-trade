@@ -197,16 +197,20 @@ body {
 .editorialChart .gridLine.zeroLine { stroke: rgba(17,21,18,.24); stroke-width: 1.2; }
 .editorialChart .axisLabel,
 .editorialChart .foldAxis { fill: #747a74; font-size: 9px; }
-.editorialChart .linePath { stroke: var(--editorial-green); stroke-width: 3; }
-.editorialChart .chartPoint circle { fill: var(--editorial-paper); stroke: var(--editorial-green); }
+.editorialChart .areaPath { fill-opacity: .14; }
+.editorialChart .linePath { stroke-width: 3; }
+.editorialChart .chartPoint circle { fill: var(--editorial-paper); }
+.editorialChart .chartPoint.positive:hover circle { fill: rgba(0, 166, 106, .12); }
+.editorialChart .chartPoint.negative:hover circle { fill: rgba(227, 74, 59, .12); }
 .editorialChart .pointValue { fill: var(--editorial-ink); font-size: 10px; }
 .evidenceChartMeta { display: flex; justify-content: space-between; gap: 14px; margin: 0 0 2px; color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .evidenceChartLabel { display: flex; align-items: center; gap: 6px; }
 .evidenceChartLegend { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
 .evidenceChartMeta small { display: inline-flex; align-items: center; gap: 4px; color: var(--editorial-muted); font-size: 8px; }
-.evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-green); }
-.evidenceChartMeta small:nth-child(2) i { background: #477d68; }
-.evidenceChartMeta small:nth-child(3) i { background: #8a9f62; }
+.evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-muted); }
+.evidenceChartMeta .seriesMarker { background: var(--editorial-muted); }
+.evidenceChartMeta .positiveMarker { background: var(--editorial-green); }
+.evidenceChartMeta .negativeMarker { background: var(--editorial-red); }
 .evidenceHelp { position: relative; }
 .evidenceHelpButton { width: 16px; height: 16px; display: grid; place-items: center; padding: 0; border: 1px solid var(--editorial-muted); border-radius: 50%; background: transparent; color: var(--editorial-muted); font: inherit; font-size: 10px; font-weight: 800; line-height: 1; cursor: pointer; }
 .evidenceHelpButton:hover, .evidenceHelpButton[aria-expanded="true"] { border-color: var(--editorial-green); color: var(--editorial-green-dark); }
