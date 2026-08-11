@@ -47,28 +47,29 @@ or substitute dataset was used.
 
 Current canonical inventory state:
 
-- `IDX_IC_BASELINE_2021`, `IDX_IC_ANNUAL_CLASSIFICATION_2021`, and
-  `IDX_IC_ANNUAL_CLASSIFICATION_2025` have verified official URLs and explicit
-  announced/effective dates, so they are `READY_FOR_ACQUISITION`.
-- Raw attachments for `IDX_IC_ANNUAL_CLASSIFICATION_2024`,
-  `IDX_IC_ANNUAL_CLASSIFICATION_2026`, and `IDX_IC_INCIDENTAL_PALM_2023` were
-  recovered and inspected, but remain `DISCOVERY_REQUIRED` where the canonical
-  raw document does not state an effective date. No date is inferred from an
+- `IDX_IC_BASELINE_2021`, `IDX_IC_ANNUAL_CLASSIFICATION_2021`,
+  `IDX_IC_INCIDENTAL_PALM_2023`, and `IDX_IC_ANNUAL_CLASSIFICATION_2025`
+  have verified official provenance and explicit effective dates, so they are
+  `READY_FOR_ACQUISITION`.
+- Raw attachments for `IDX_IC_ANNUAL_CLASSIFICATION_2024` and
+  `IDX_IC_ANNUAL_CLASSIFICATION_2026` were recovered and inspected but remain
+  `DISCOVERY_REQUIRED` because no explicit effective-date evidence has yet
+  been bound to those canonical events. No date is inferred from an
   announcement date or a generic July convention.
 - `Peng-00150/06-2022` and `Peng-00156/06-2023` were recovered as official
   sector-index evaluation packages and remain reconciliation evidence, not
   canonical issuer classification events. The dedicated annual classification
   sources for 2022 and 2023 therefore remain unresolved.
 
-The CLI inventory audit reports `3` ready and `5` discovery-blocked canonical
+The CLI inventory audit reports `4` ready and `4` discovery-blocked canonical
 sources. Full acquisition remains intentionally blocked until every required
 canonical source has verified key dates and provenance.
 
 ## Multi-document effective-date provenance contract — 2026-08-11
 
-The independent review permits a separate official IDX document to establish
-the effective date of a canonical classification event. This is valid only
-when the nested `effective_date_evidence` object contains:
+A separate official IDX document may establish the effective date of a
+canonical classification event. This is valid only when the nested
+`effective_date_evidence` object contains:
 
 - an official HTTPS IDX URL and its 64-hex SHA-256;
 - an explicit announced date and effective date;
@@ -84,11 +85,51 @@ missing canonical date. When acquisition is complete, the linked evidence is
 downloaded, hash-checked, and recorded as a nested manifest entry alongside
 the canonical raw document.
 
-PALM now validates this contract: canonical `Peng-00236/09-2023` supplies the
+PALM validates this contract: canonical `Peng-00236/09-2023` supplies the
 classification change and linked official `Peng-00016/10-2023` supplies the
-explicit 2 October 2023 effective date. The inventory audit is now `4` ready
-and `4` blocked. Remaining blockers are annual 2022, annual 2023, annual 2024,
-and annual 2026 canonical/effective-date evidence.
+explicit 2 October 2023 effective date.
+
+### PIT knowledge-time refinement
+
+Supporting official evidence is allowed to be published **after** the stated
+effective date. Such evidence is still valid historical provenance; rejecting
+it would be unnecessarily strict. However, it cannot make the classification
+knowable before the evidence itself existed.
+
+The source validation therefore keeps three distinct dates:
+
+```text
+effective_from
+canonical announced_at
+supporting evidence announced_at
+```
+
+For linked effective-date evidence the validation derives:
+
+```text
+knowledge_at = max(
+  effective_from,
+  canonical announced_at,
+  supporting evidence announced_at
+)
+```
+
+Example:
+
+```text
+effective_from                 2024-07-01
+canonical announced_at         2024-06-24
+supporting evidence announced  2024-07-05
+
+knowledge_at / PIT usable      2024-07-05
+```
+
+The event is historically effective on 1 July, but a backtest may not use that
+classification before 5 July because the decision-critical supporting evidence
+was not yet knowable.
+
+PALM is unchanged by this refinement because its supporting official evidence
+was announced on the same date as its effective date: 2 October 2023.
 
 ## Raw acquisition contract
 
@@ -99,6 +140,7 @@ and annual 2026 canonical/effective-date evidence.
 - rejects empty and non-200 responses;
 - stores raw source bytes outside Git;
 - records exact SHA-256, requested/final URL, retrieval timestamp, content type, announcement reference and effective date;
+- records linked evidence `announced_at` and derived `knowledge_at` in the acquisition manifest;
 - never rewrites a source into a synthetic historical snapshot.
 
 CLI audit only:
@@ -130,6 +172,16 @@ source_id
 source_sha256
 ```
 
+When a decision-critical linked document becomes knowable later than the
+canonical announcement, the parser/event builder must also carry:
+
+```text
+knowledge_at
+```
+
+If no later decision-critical evidence is needed, `knowledge_at` defaults to
+`announced_at` for backward-compatible event construction.
+
 Optional lower IDX-IC hierarchy fields:
 
 ```text
@@ -141,10 +193,10 @@ subindustry_code
 The implementation derives:
 
 ```text
-pit_from = max(effective_from, announced_at)
+pit_from = max(effective_from, announced_at, knowledge_at)
 ```
 
-This distinction is deliberate. A classification cannot be used by the model before it is both effective and knowable.
+This distinction is deliberate. A classification cannot be used by the model before it is both effective and knowable from all decision-critical official evidence.
 
 ## PIT join behavior
 
@@ -154,6 +206,7 @@ Consequences:
 
 - current sector labels are never backfilled into the past;
 - an announcement made before its effective date starts only on the effective date;
+- a supporting official document published after the effective date delays PIT usability until that document's announcement date;
 - a late-discovered/late-announced classification starts only when knowable;
 - no prior event means `sector_pit_known=false`, not a guessed current sector.
 
@@ -183,7 +236,14 @@ The current branch implements the inventory/acquisition contract and canonical e
 
 ## Current blockers
 
-Before raw acquisition may run, locate and verify the missing official annual classification announcement attachments/URLs for the unresolved inventory rows, then separately enumerate IPO classifications between annual snapshots.
+Before raw acquisition may run, resolve the remaining four canonical blockers:
+
+- annual 2022 dedicated issuer-classification source;
+- annual 2023 dedicated issuer-classification source;
+- annual 2024 explicit official effective-date evidence;
+- annual 2026 explicit official effective-date evidence.
+
+After the annual/event foundation is complete, separately enumerate IPO classifications and other incidental changes before treating historical coverage as complete.
 
 Do not infer missing annual events from the current IDX sector list.
 
