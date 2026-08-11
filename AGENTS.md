@@ -20,6 +20,25 @@ Then verify the actual current branch/HEAD and worktree state before acting.
 
 Do not delete failed approaches from continuity records merely because they were fixed. Failure history is part of the research knowledge and prevents repeated mistakes after handoff/context loss.
 
+## Research thought capture
+
+Materially new research thinking must be recorded durably in GitHub rather than left only in chat context.
+
+When a discussion produces a new hypothesis, data avenue, model family, interpretation, research constraint, or future decision path that could matter later, create or update an appropriate checkpoint under `docs/checkpoints/` even when no experiment is authorized yet.
+
+A research-thought checkpoint should distinguish clearly between **recorded direction** and **authorized work**. It should capture, as applicable:
+
+- why the idea emerged;
+- what existing evidence or prior blocked/failed work it connects to;
+- what genuinely new information or hypothesis it would add;
+- key leakage/PIT/provenance or methodology risks;
+- hard boundaries and what is explicitly not authorized;
+- the possible future sequence if separately approved.
+
+Use an explicit status such as `RESEARCH_DIRECTION_RECORDED_NOT_AUTHORIZED` when the thought is worth preserving but is not yet an approved experiment.
+
+Do not silently promote a checkpointed idea into an experiment. If it becomes a controlling priority, reflect it in `docs/CURRENT_STATUS.md`; if it changes an authorization or research decision, also update the appropriate ledger/decision record.
+
 ## Repository-wide principles
 
 This repository is **EXPLORATORY_RESEARCH_ONLY**. It is not investment advice and must never silently become a live trading system.
@@ -44,8 +63,9 @@ The exact current state remains controlled by `docs/CURRENT_STATUS.md`. As of th
 - exact 33-feature order SHA-256: `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
 - V3/V4 alpha exploration is closed; do not reopen it automatically;
 - Path Risk V1 PR-001: failed/closed and may not be rescued;
-- Path Risk V2 PR-002/PR-003: frozen + implemented, F1-F4 discovery outcomes not yet viewed;
-- Path Risk F5/F6: sealed;
+- Path Risk V2 PR-002/PR-003: **closed fail-close**, winner none;
+- Path Risk F5/F6: sealed / not needed after V2 fail-close;
+- PIT historical sector mapping is a recorded future research direction, not an authorized experiment;
 - post-2026-07-31 fresh-forward realized outcomes: locked/unaccessed;
 - calibration, alpha+risk integration, execution-PnL, Kelly, paper/live: not automatically authorized.
 
@@ -104,24 +124,25 @@ Within the current frozen experiment, however, implementation, tests, audit, pro
 
 Never change a frozen target, source, candidate definition, fold, holdout, metric, threshold, or acceptance gate after seeing results merely to rescue a failure.
 
-## Current Path Risk V2 hard boundary
+## Current research boundary after Path Risk V2
 
-Immediate next action remains:
+Path Risk V2 is closed with `PATH_RISK_V2_DISCOVERY_FAIL_CLOSE`; PR-002 and PR-003 are permanently viewed and no winner exists.
 
-1. verify current-checkout import resolution and run the full repository test suite;
-2. if preflight passes, execute exactly one frozen Path Risk V2 PR-002/PR-003 F1-F4 development run using `coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`;
-3. review the result against the frozen V2 gate;
-4. do not touch F5/F6 until a separate one-shot confirmation specification exists.
+Current research-safe work is:
 
-The final evidence-producing discovery run is intentionally serialized after preflight. Supporting read-only audit/test diagnosis may run in parallel if it cannot contaminate or redefine the run.
+1. preserve the frozen final V3-B model and continue outcome-blind fresh-forward operation under the existing 100-session contract;
+2. research genuinely new information/data families without silently turning them into model experiments;
+3. use `docs/checkpoints/2026-08-11_PIT_SECTOR_HISTORY_RESEARCH_DIRECTION.md` as the current recorded example of such a direction;
+4. preregister any future model family separately before outcome-bearing execution.
 
 Do not:
 
 - reopen/modify the final V3-B alpha architecture automatically;
-- rescue/rewrite PR-001;
-- add PR-004 after seeing PR-002/PR-003;
-- access Path Risk F5/F6 during V2 discovery;
-- use F5/F6 to choose PR-002 vs PR-003;
+- rescue/rewrite PR-001, PR-002, or PR-003;
+- add PR-004 as an immediate post-result rescue;
+- access Path Risk F5/F6 after the V2 fail-close;
+- reinterpret V2 ranking diagnostics as a probability-model PASS;
+- run a sector-relative candidate merely because PIT-sector research is checkpointed;
 - access/summarize post-2026-07-31 fresh-forward realized outcomes early;
 - create risk-veto, reranking, sizing, execution-PnL, paper/live rules automatically.
 
