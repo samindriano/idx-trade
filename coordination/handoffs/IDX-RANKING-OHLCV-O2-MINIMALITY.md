@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\.codex\worktrees\idx-ranking-ohlcv-o2-minimality-v1
 source_commit: 980c741c266c7ac4c17fc4496f41b797f6090a6b
 branch: research/idx-ranking-ohlcv-o2-minimality-v1
-head_commit: pending local commit after checkpoint authoring
+head_commit: 505df81815f4c462be1704b39f0a4a47d91c1c1c
 scope: Frozen eight-model O2 minimality ablation on the accepted 278,168-row common-support population.
 files_changed:
   - src/idx_trade/ohlcv_o2_minimality.py
