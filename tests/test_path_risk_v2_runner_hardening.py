@@ -28,10 +28,12 @@ def _row(
         "ticker": ticker,
         "date": date if date is not None else pd.Timestamp("2026-01-02") + pd.Timedelta(days=session),
         "signal_session_index": session,
+        "universe_primary_liquid": True,
+        **{column: 1.0 for column in PATH_RISK_V2_FEATURE_COLUMNS},
         "label_status": status,
         "first_barrier_date": pd.NaT,
+        "target_tau_date": pd.NaT,
         "adverse_excursion_r": 0.5 if status in {"TP_FIRST", "NO_BARRIER_HIT"} else 1.0,
-        **{column: 1.0 for column in PATH_RISK_V2_FEATURE_COLUMNS},
     }
 
 
@@ -63,6 +65,29 @@ def test_frozen_spec_and_identity_constants_are_exact() -> None:
         "100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e"
     )
     assert run._assert_spec(spec_path) == run.PATH_RISK_V2_SPEC_GIT_BLOB
+
+
+def test_frozen_v1_model_table_physical_schema_is_exact() -> None:
+    assert run.V1_MODEL_TABLE_SCHEMA_COLUMNS == (
+        "ticker",
+        "date",
+        "signal_session_index",
+        "universe_primary_liquid",
+        *PATH_RISK_V2_FEATURE_COLUMNS,
+        "label_status",
+        "first_barrier_date",
+        "target_tau_date",
+        "adverse_excursion_r",
+    )
+    assert run.V2_MODEL_TABLE_READ_COLUMNS == (
+        "ticker",
+        "date",
+        "signal_session_index",
+        "label_status",
+        "first_barrier_date",
+        "adverse_excursion_r",
+        *PATH_RISK_V2_FEATURE_COLUMNS,
+    )
 
 
 def test_spec_blob_change_is_rejected(tmp_path: Path) -> None:
@@ -130,30 +155,20 @@ def test_model_table_duplicate_normalized_identity_is_rejected(
 
 
 @pytest.mark.parametrize("schema_case", ["missing", "extra", "reordered"])
-def test_model_table_schema_must_reject_missing_extra_or_reordered_features(
+def test_model_table_schema_must_reject_missing_extra_or_reordered_physical_columns(
     schema_case: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    columns = [
-        "ticker",
-        "date",
-        "signal_session_index",
-        "label_status",
-        "first_barrier_date",
-        "adverse_excursion_r",
-        *PATH_RISK_V2_FEATURE_COLUMNS,
-    ]
     frame = pd.DataFrame([_row(1)])
+    assert list(frame.columns) == list(run.V1_MODEL_TABLE_SCHEMA_COLUMNS)
     if schema_case == "missing":
         frame = frame.drop(columns=[PATH_RISK_V2_FEATURE_COLUMNS[-1]])
     elif schema_case == "extra":
         frame["unexpected_feature"] = 1.0
     elif schema_case == "reordered":
-        frame = frame[
-            [
-                *columns[:6],
-                *reversed(PATH_RISK_V2_FEATURE_COLUMNS),
-            ]
-        ]
+        columns = list(run.V1_MODEL_TABLE_SCHEMA_COLUMNS)
+        first_feature = columns.index(PATH_RISK_V2_FEATURE_COLUMNS[0])
+        columns[first_feature], columns[first_feature + 1] = columns[first_feature + 1], columns[first_feature]
+        frame = frame[columns]
     else:  # pragma: no cover - guarded by parametrization
         raise AssertionError(schema_case)
 
@@ -162,11 +177,8 @@ def test_model_table_schema_must_reject_missing_extra_or_reordered_features(
     monkeypatch.setattr(run, "PATH_RISK_V2_V1_MODEL_TABLE_SHA256", sha256_file(path))
     monkeypatch.setattr(run, "PATH_RISK_V2_MODEL_TABLE_ROWS", 1)
 
-    try:
+    with pytest.raises(RuntimeError, match="model-table schema mismatch"):
         run._read_v1_model_table(path)
-    except Exception:
-        return
-    pytest.fail(f"{schema_case} model-table schema was accepted")
 
 
 def test_calendar_sha_and_coverage_are_fail_closed(
