@@ -480,6 +480,8 @@ def classify_zapi_access_failure(status_code: int, body_text: str) -> str:
         return "PLAN_GATED"
     if status_code in {401, 403}:
         return "ACCESS_DENIED"
+    if status_code == 404:
+        return "REQUEST_ERROR"
     if status_code >= 500:
         return "REQUEST_ERROR"
     if status_code >= 400:

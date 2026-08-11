@@ -115,3 +115,40 @@ Also return:
 Write a dated factual runtime checkpoint and update this handoff with the result. Commit/push normal fast-forward, then STOP for independent ChatGPT review.
 
 Do not start a full-universe backfill, another source, corporate-action repair, model/ranking work, execution PnL, or main merge.
+
+## Runtime result — 2026-08-11
+
+Final runtime checkpoint:
+`docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_ALT_ENDPOINTS_AUDIT_RUNTIME.md`
+
+The frozen 240-row sample was reused unchanged with SHA
+`9704fcba50ad8c19367025bdac0d5c12e0745425590425f166f619248a52a344`.
+The immutable panel SHA remained
+`67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`.
+
+Focused tests passed 6/6 and full pytest passed 248 tests with 5 existing
+warnings. A small shared-classifier fix changed HTTP 404 from `ACCESS_DENIED`
+to `REQUEST_ERROR`, because a symbol-level 404 is not a credential/plan gate;
+the added regression test confirms the next sorted TradingView ticker is still
+audited.
+
+Final runtime summary:
+
+- TradingView: `ACCESSIBLE`, 206 ticker attempts, 348 requests, 142 retries,
+  213 rate-limit events, 130,044 provider rows, 101/240 exact sample dates,
+  84 H/L/C exact, 23/40 known-control Open exact, and 61 recovery candidates.
+- Investing: `ACCESSIBLE`, but all 206 search identities were rate-limited;
+  618 requests, 412 retries, 618 rate-limit events, zero verified identities,
+  zero historical calls, and zero recovery candidates.
+- Provider overlap: 0 rows and 0 exact raw-OHLC agreements.
+- Final artifact manifest SHA:
+  `b5008e9942ca8681499f544c98a8bccda9c1e03b82ceb46ba1fbc45d3b1a6a80`.
+
+The first pre-404-fix runtime was preserved outside Git at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_alt_endpoints_audit_v1_20260811_pre_404_fix`.
+The final runtime is outside Git at
+`D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_alt_endpoints_audit_v1_20260811`.
+
+`execution_grade_promoted=false`, `bulk_backfill_authorized=false`, and
+`corporate_action_repair_performed=false`. Stop for independent ChatGPT
+review; do not start bulk backfill or downstream research.

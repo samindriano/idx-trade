@@ -7,6 +7,7 @@ from idx_trade.zapi_alt_open_audit import (
     fetch_investing,
     fetch_tradingview,
 )
+from idx_trade.tier2_open_audit import classify_zapi_access_failure
 
 
 class FakeResponse:
@@ -79,6 +80,31 @@ def test_tradingview_fetch_parses_idx_daily_candle(monkeypatch):
     assert row["date"] == pd.Timestamp("2026-06-22")
     assert row["raw_open"] == 6400
     assert result["ticker_status"].iloc[0]["status"] == "SUCCESS"
+
+
+def test_tradingview_symbol_404_is_provider_error_not_access_gate(monkeypatch):
+    monkeypatch.setattr("idx_trade.zapi_alt_open_audit.time.sleep", lambda *_: None)
+    session = FakeSession(
+        [
+            FakeResponse(
+                {
+                    "content": {
+                        "symbol": "IDX:BBRI",
+                        "exchange": "IDX",
+                        "market": "indonesia",
+                        "candles": [],
+                    }
+                }
+            ),
+            FakeResponse({}, status_code=404),
+        ]
+    )
+    sample = pd.DataFrame({"ticker": ["FREN", "BBRI"]})
+    result = fetch_tradingview(sample, "secret", session=session)
+    assert classify_zapi_access_failure(404, "not found") == "REQUEST_ERROR"
+    assert len(session.calls) == 2
+    assert result["ticker_status"].iloc[0]["status"] == "NO_DATA"
+    assert result["ticker_status"].iloc[1]["status"] == "REQUEST_ERROR"
 
 
 def test_investing_fetch_uses_verified_pair_id(monkeypatch):
