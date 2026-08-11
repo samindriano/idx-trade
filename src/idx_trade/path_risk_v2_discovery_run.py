@@ -54,6 +54,28 @@ RUN_STATUS = "PATH_RISK_V2_DISCOVERY_F1_F4_COMPLETE"
 ALPHA_BASELINE = "FOLD_V3_B_ALPHA_ONLY_LOGIT"
 BASE_RATE_BASELINE = "TRAIN_STOP_TOUCH_BASE_RATE"
 
+V1_MODEL_TABLE_SCHEMA_COLUMNS = (
+    "ticker",
+    "date",
+    "signal_session_index",
+    "universe_primary_liquid",
+    *PATH_RISK_V2_FEATURE_COLUMNS,
+    "label_status",
+    "first_barrier_date",
+    "target_tau_date",
+    "adverse_excursion_r",
+)
+
+V2_MODEL_TABLE_READ_COLUMNS = (
+    "ticker",
+    "date",
+    "signal_session_index",
+    "label_status",
+    "first_barrier_date",
+    "adverse_excursion_r",
+    *PATH_RISK_V2_FEATURE_COLUMNS,
+)
+
 
 def _assert_new_or_empty(path: Path) -> None:
     if path.exists() and any(path.iterdir()):
@@ -101,22 +123,14 @@ def _read_v1_model_table(path: Path) -> pd.DataFrame:
         raise ValueError("Path Risk V2 requires the frozen V1 Parquet model table")
     if sha256_file(path) != PATH_RISK_V2_V1_MODEL_TABLE_SHA256:
         raise RuntimeError("Path Risk V2 V1-model-table SHA mismatch")
-    columns = [
-        "ticker",
-        "date",
-        "signal_session_index",
-        "label_status",
-        "first_barrier_date",
-        "adverse_excursion_r",
-        *PATH_RISK_V2_FEATURE_COLUMNS,
-    ]
     schema_columns = list(pq.ParquetFile(path).schema.names)
-    if schema_columns != columns:
+    if schema_columns != list(V1_MODEL_TABLE_SCHEMA_COLUMNS):
         raise RuntimeError(
             "Path Risk V2 model-table schema mismatch: "
-            f"expected exact columns/order={columns} actual={schema_columns}"
+            f"expected exact frozen columns/order={list(V1_MODEL_TABLE_SCHEMA_COLUMNS)} "
+            f"actual={schema_columns}"
         )
-    frame = pd.read_parquet(path, columns=columns)
+    frame = pd.read_parquet(path, columns=list(V2_MODEL_TABLE_READ_COLUMNS))
     if len(frame) != PATH_RISK_V2_MODEL_TABLE_ROWS:
         raise RuntimeError(
             f"Path Risk V2 model-table row mismatch: expected={PATH_RISK_V2_MODEL_TABLE_ROWS} actual={len(frame)}"
