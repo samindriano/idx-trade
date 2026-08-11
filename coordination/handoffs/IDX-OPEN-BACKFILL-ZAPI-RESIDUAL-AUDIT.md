@@ -232,3 +232,54 @@ No sample, provider, coverage, arbitration, or artifact result exists for this
 attempt. Stop and request a credential visible to this runtime process before
 retrying the already-frozen command. Do not substitute another provider or
 widen scope.
+
+## Final credentialed runtime result — 2026-08-11
+
+runtime_status: `ZAPI_TARGETED_RESIDUAL_AUDIT_COMPLETE_STOP_FOR_INDEPENDENT_REVIEW`
+runtime_base_head: `574f7223bf4f98ff933d8d7c31c44007e85aa78f`
+final_checkpoint: `docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_RESIDUAL_AUDIT_RUNTIME_FINAL.md`
+
+Zapi access was `ACCESSIBLE` / `EMPIRICALLY_REACHED`. The frozen sample was
+`240` rows, `206` tickers, `178` dates, with sample SHA
+`9704fcba50ad8c19367025bdac0d5c12e0745425590425f166f619248a52a344`.
+All five Yahoo provider-error tickers were represented.
+
+requests: `178`; retries: `0`; HTTP 429/rate-limit events: `0`; request errors:
+`[]`; provider rows: `240`; exact ticker/date rows: `240/240`.
+
+quality:
+
+- H/L/C exact: `240/240`;
+- known-control H/L/C exact: `40/40`;
+- known-control Open exact: `20/40` (`50%`);
+- provider-gap recovery candidates: `0`;
+- `SOURCE2_SUPPORTS_CERTIFIED_PANEL`: `120`;
+- `SOURCE2_SUPPORTS_YAHOO`: `0`;
+- `SOURCE2_PANEL_HLC_MATCH_OPEN_REJECTED`: `80`;
+- `SOURCE2_RECOVERY_CANDIDATE`: `0`;
+- `SOURCE2_NO_ROW`: `0`;
+- `THREE_WAY_DISAGREEMENT`: `0`;
+- controls: `CONTROL_PANEL_HLC_OPEN_EXACT=20`,
+  `CONTROL_PANEL_HLC_ONLY=20`.
+
+The first credentialed runtime was preserved externally and superseded because
+the shared auditor did not recognize `KNOWN_CONTROL`; the final run used the
+smallest role-alias fix. No quota, methodology, admission, provider, or
+arbitration redesign occurred.
+
+final artifact manifest SHA:
+`899def2f280d49695a85f6fa2ddc34a4c793dcdf240ce114a02dd0055787fd1d`.
+Panel SHA before/after remained
+`67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`.
+
+validation_run:
+
+- focused pytest after fix: `6 passed`, `2 warnings`;
+- full pytest after fix: `236 passed`, `5 warnings`.
+
+execution_grade_promoted: `false`
+bulk_backfill_authorized: `false`
+corporate_action_repair_performed: `false`
+
+recommended_next_action: STOP for independent ChatGPT review. Do not start
+bulk backfill or any downstream research/modeling lane.

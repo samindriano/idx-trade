@@ -11,6 +11,7 @@ from idx_trade.zapi_residual_audit import (
     fetch_zapi_date_grouped,
     _write_artifact_manifest,
 )
+from idx_trade.tier2_open_audit import audit_provider_rows
 
 
 def _audit_frame():
@@ -236,3 +237,37 @@ def test_artifact_manifest_excludes_summary_and_manifest(tmp_path):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert set(manifest["files"]) == {"sample.csv"}
     assert manifest_sha == hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+
+
+def test_known_control_role_is_compared_as_existing_open():
+    sample = pd.DataFrame(
+        {
+            "sample_id": ["CONTROL-1"],
+            "sample_role": ["KNOWN_CONTROL"],
+            "ticker": ["BBCA"],
+            "date": [pd.Timestamp("2025-01-02")],
+            "panel_open": [100.0],
+            "panel_high": [110.0],
+            "panel_low": [90.0],
+            "panel_close": [105.0],
+        }
+    )
+    provider = pd.DataFrame(
+        {
+            "ticker": ["BBCA"],
+            "date": [pd.Timestamp("2025-01-02")],
+            "raw_open": [100.0],
+            "raw_high": [110.0],
+            "raw_low": [90.0],
+            "raw_close": [105.0],
+            "raw_volume": [1.0],
+            "source_ref": ["test://zapi"],
+        }
+    )
+
+    audit, summary = audit_provider_rows(sample, provider, "TEST_ZAPI")
+
+    assert summary["known_open_sample_rows"] == 1
+    assert summary["known_open_comparison_rows"] == 1
+    assert summary["known_open_exact_count"] == 1
+    assert audit.loc[0, "admission_status"] == "PRESERVED_EXISTING_OPEN"

@@ -412,7 +412,7 @@ def audit_provider_rows(sample: pd.DataFrame, provider_rows: pd.DataFrame, sourc
             rows.append(base)
             continue
         base["hlc_exact"] = all(provider_value == panel_value for provider_value, panel_value in zip(values, panel_values))
-        if sample_row.sample_role == "KNOWN_EXISTING_OPEN":
+        if sample_row.sample_role in {"KNOWN_EXISTING_OPEN", "KNOWN_CONTROL"}:
             provider_open = _as_float(candidate["raw_open"])
             base["known_open_exact"] = bool(np.isfinite(provider_open) and provider_open == _as_float(sample_row.panel_open))
             base["admission_status"] = "PRESERVED_EXISTING_OPEN"
@@ -440,13 +440,13 @@ def audit_provider_rows(sample: pd.DataFrame, provider_rows: pd.DataFrame, sourc
         rows.append(base)
 
     audit = pd.DataFrame(rows)
-    known = audit[audit["sample_role"].eq("KNOWN_EXISTING_OPEN")]
+    known = audit[audit["sample_role"].isin(["KNOWN_EXISTING_OPEN", "KNOWN_CONTROL"])]
     known_comparisons = int(known["known_open_exact"].notna().sum())
     known_exact = int(known["known_open_exact"].fillna(False).sum())
     returned = audit[audit["diagnostic"].ne("NO_PROVIDER_ROW")]
     hlc_comparisons = int(returned["hlc_exact"].notna().sum())
     hlc_exact = int(returned["hlc_exact"].fillna(False).sum())
-    missing = audit[audit["sample_role"].ne("KNOWN_EXISTING_OPEN")]
+    missing = audit[~audit["sample_role"].isin(["KNOWN_EXISTING_OPEN", "KNOWN_CONTROL"])]
     summary: dict[str, Any] = {
         "source": source,
         "sample_rows_requested": int(len(sample_data)),
