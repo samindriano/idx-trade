@@ -104,6 +104,7 @@ const monitoringLayers = [
 
 export default function MonitoringPage() {
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -134,6 +135,8 @@ export default function MonitoringPage() {
     } catch (error) {
       setConnected(false);
       setRequestError(error instanceof Error ? error.message : "Runtime unavailable");
+    } finally {
+      setStatusLoading(false);
     }
   }, []);
 
@@ -226,7 +229,7 @@ export default function MonitoringPage() {
   const anyFetching = status?.sessions.some((session) => session.state === "FETCHING") ?? false;
   const calendarReady = status?.calendar_ready ?? false;
   const captureTarget = targetDate || status?.next_missing_session || null;
-  const canCapture = configured && connected && !submitting && !anyFetching;
+  const canCapture = !statusLoading && configured && connected && !submitting && !anyFetching;
   const scoringProgress = Math.min(100, finalScoredDates.size);
 
   return (
@@ -251,14 +254,14 @@ export default function MonitoringPage() {
           </div>
           <div className="monitorHeroBadges">
             <span className="lockBadge"><span className="lockDot" /> Outcomes locked</span>
-            <span className={`runtimeBadge ${connected ? "online" : "offline"}`}><i /> {connected ? "Runtime connected" : "Runtime offline"}</span>
+            <span className={`runtimeBadge ${statusLoading ? "checking" : connected ? "online" : "offline"}`}><i /> {statusLoading ? "Checking runtime" : connected ? "Runtime connected" : "Runtime offline"}</span>
           </div>
         </section>
 
         <section className="monitorSummaryGrid">
-          <article className="summaryBlock prominent"><span>Final V3-B scores</span><div><strong>{finalScoredDates.size}</strong><em>/ {FINAL_RANKER.forwardTargetSessions}</em></div></article>
-          <article className="summaryBlock"><span>EOD snapshots</span><strong>{status?.data_ready_sessions ?? 0}</strong></article>
-          <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{shortDate(status?.next_missing_session ?? null)}</strong></article>
+          <article className="summaryBlock prominent"><span>Final V3-B scores</span><div><strong>{statusLoading ? "—" : finalScoredDates.size}</strong>{!statusLoading && <em>/ {FINAL_RANKER.forwardTargetSessions}</em>}</div></article>
+          <article className="summaryBlock"><span>EOD snapshots</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
+          <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
           <article className="summaryBlock"><span>Outcome vault</span><strong className="summaryTextValue">LOCKED</strong></article>
         </section>
 
@@ -278,11 +281,11 @@ export default function MonitoringPage() {
                   />
                 </label>
                 <button className="captureButton" type="button" disabled={!canCapture} onClick={() => void capture()}>
-                  {submitting ? "Starting..." : anyFetching ? "Fetching..." : `Capture EOD ${buttonDate(captureTarget)}`}
+                  {statusLoading ? "Reading runtime..." : submitting ? "Starting..." : anyFetching ? "Fetching..." : `Capture EOD ${buttonDate(captureTarget)}`}
                 </button>
               </div>
 
-              {!configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
+              {!statusLoading && !configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
               {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Calendar syncs on first capture</strong></div></div>}
               {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
               {latestFailure && !requestError && (
@@ -298,7 +301,9 @@ export default function MonitoringPage() {
                 </div>
               </div>
 
-              {status?.sessions.length ? (
+              {statusLoading ? (
+                <div className="loadingSessionState"><i />Reading forward session status...</div>
+              ) : status?.sessions.length ? (
                 <div className="sessionStrip">
                   {status.sessions.slice(-12).map((session) => (
                     <button
@@ -331,8 +336,8 @@ export default function MonitoringPage() {
               <span className="modelBadge champion">FINAL V3</span>
             </div>
             <div className="contractProgress">
-              <div className="contractNumber"><strong>{finalScoredDates.size}</strong><span>/ {FINAL_RANKER.forwardTargetSessions}</span></div>
-              <div className="progressTrack indigoTrack"><span style={{ width: `${scoringProgress}%` }} /></div>
+                <div className="contractNumber"><strong>{statusLoading ? "—" : finalScoredDates.size}</strong>{!statusLoading && <span>/ {FINAL_RANKER.forwardTargetSessions}</span>}</div>
+                <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : scoringProgress}%` }} /></div>
             </div>
             <div className="modelMeta">
               <span>{FINAL_RANKER.featureCount} features</span>
@@ -358,8 +363,8 @@ export default function MonitoringPage() {
               <span className="modelBadge">FROZEN</span>
             </div>
             <div className="contractProgress">
-              <div className="contractNumber"><strong>{v2ScoredDates.size}</strong><span>/ {V2_CHAMPION.forwardTargetSessions}</span></div>
-              <div className="progressTrack indigoTrack"><span style={{ width: `${Math.min(100, v2ScoredDates.size)}%` }} /></div>
+                <div className="contractNumber"><strong>{statusLoading ? "—" : v2ScoredDates.size}</strong>{!statusLoading && <span>/ {V2_CHAMPION.forwardTargetSessions}</span>}</div>
+                <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : Math.min(100, v2ScoredDates.size)}%` }} /></div>
             </div>
             <div className="modelMeta">
               <span>{V2_CHAMPION.featureCount} features</span>
@@ -381,15 +386,17 @@ export default function MonitoringPage() {
           </div>
 
           <div className="modelPerformanceMetrics">
-            <div><span>Score coverage</span><strong>{selectedModelSummary.completedRuns.length}<em>/ {selectedModel.forwardTargetSessions}</em></strong><small>forward sessions scored</small></div>
-            <div><span>Latest scored</span><strong>{selectedModelSummary.latestCompletedRun ? shortDate(selectedModelSummary.latestCompletedRun.session_date) : "Not yet"}</strong><small>verified score artifact</small></div>
-            <div><span>Latest run</span><strong>{selectedModelSummary.latestRun?.state ?? "Not started"}</strong><small>{selectedModelSummary.latestRun ? shortDate(selectedModelSummary.latestRun.session_date) : "Waiting for data"}</small></div>
-            <div><span>Run issues</span><strong>{selectedModelSummary.failedRuns.length}</strong><small>failed or incomplete</small></div>
+            <div><span>Score coverage</span><strong>{statusLoading ? "—" : selectedModelSummary.completedRuns.length}{!statusLoading && <em>/ {selectedModel.forwardTargetSessions}</em>}</strong><small>forward sessions scored</small></div>
+            <div><span>Latest scored</span><strong>{statusLoading ? "Reading..." : selectedModelSummary.latestCompletedRun ? shortDate(selectedModelSummary.latestCompletedRun.session_date) : "Not yet"}</strong><small>verified score artifact</small></div>
+            <div><span>Latest run</span><strong>{statusLoading ? "Reading..." : selectedModelSummary.latestRun?.state ?? "Not started"}</strong><small>{statusLoading ? "Waiting for status" : selectedModelSummary.latestRun ? shortDate(selectedModelSummary.latestRun.session_date) : "Waiting for data"}</small></div>
+            <div><span>Run issues</span><strong>{statusLoading ? "—" : selectedModelSummary.failedRuns.length}</strong><small>failed or incomplete</small></div>
           </div>
 
           <div className="modelPerformanceSessions">
             <div className="modelPerformanceSessionsHead"><span>FORWARD SESSION EVIDENCE</span><small>Most recent model runs</small></div>
-            {selectedModelSummary.runs.length ? (
+            {statusLoading ? (
+              <div className="modelPerformanceLoading"><i />Reading score artifacts...</div>
+            ) : selectedModelSummary.runs.length ? (
               <div className="modelPerformanceRunList">
                 {selectedModelSummary.runs.slice(0, 8).map((run) => (
                   <div className="modelPerformanceRun" key={`${run.model_id}-${run.session_date}`}>
