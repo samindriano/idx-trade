@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "SOURCE_INVENTORY_INCOMPLETE",
+  "notes": "Official IDX sources only. DISCOVERY_REQUIRED rows must be resolved before acquisition may run.",
+  "sources": [
+    {
+      "source_id": "IDX_IC_BASELINE_2021",
+      "source_type": "INITIAL_BASELINE_PACKAGE",
+      "announcement_ref": "Peng-00007/BEI.POP/01-2021",
+      "announced_at": "2021-01-13",
+      "effective_from": "2021-01-25",
+      "status": "READY_FOR_ACQUISITION",
+      "download_url": "https://www.idx.co.id/media/9594/idx-industrial-classification.zip"
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2021",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "UNRESOLVED",
+      "announced_at": "2021-06-30",
+      "effective_from": "2021-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2022",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "UNRESOLVED",
+      "announced_at": "2022-06-30",
+      "effective_from": "2022-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2023",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "UNRESOLVED",
+      "announced_at": "2023-06-30",
+      "effective_from": "2023-07-03",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2024",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "Peng-00127/BEI.POP/06-2024",
+      "announced_at": "2024-06-24",
+      "effective_from": "2024-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2025",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "Peng-00111/BEI.POP/06-2025",
+      "announced_at": "2025-06-23",
+      "effective_from": "2025-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_2026",
+      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
+      "announcement_ref": "UNRESOLVED",
+      "announced_at": "2026-06-30",
+      "effective_from": "2026-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": ""
+    }
+  ]
+}
