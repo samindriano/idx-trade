@@ -1732,3 +1732,24 @@ Validation: focused PIT tests `14 passed`; full pytest `483 passed, 0 failed,
 3 warnings`. No parser/materialization, IPO/incidental census expansion, model,
 fresh-forward, Path Risk, V3-D/V3-B, or main merge was started. See the dated
 provenance checkpoint and result handoff.
+
+## 37. Official 2024 IDX effective-date evidence — 2026-08-11
+
+The official IDX `ListedCompany/GetAnnouncement` endpoint was queried for
+January 2025 issuer disclosures. MDKA returned `Peng-00001/BEI.PP1/01-2025`
+with an official `FullSavePath`; the acquired PDF explicitly lists `PKIE
+Peng-00128.pdf` and states that the classification change is effective
+2024-06-24. The evidence SHA-256 is
+`860a0ab9aa0227b182d7a9c11f68a76fd775651763a962427cfca8cdc66d8f9f` and its
+size is 5,709 bytes. PANI `Peng-00004/BEI.PP3/01-2025` independently confirms
+the same date. The canonical 2024 source is promoted to
+`READY_FOR_ACQUISITION`; knowledge/PIT usability begins on 2025-01-22 because
+the decision-critical evidence was published then.
+
+The canonical inventory is now `5 ready / 3 blocked`. The remaining blockers
+are dedicated annual 2022, dedicated annual 2023, and linked official
+effective-date evidence for canonical 2026 `Peng-00100`. The official endpoint
+returned only the 2026 canonical/sector-index pair in the targeted 2026 search;
+the 2022/2023 historical queries returned no canonical records. Validation:
+focused PIT tests `18 passed`; no parser/materialization, IPO/incidental census,
+model, outcome, Path Risk, or main merge was started.

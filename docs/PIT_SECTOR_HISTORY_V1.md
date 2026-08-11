@@ -236,12 +236,48 @@ The current branch implements the inventory/acquisition contract and canonical e
 
 ## Current blockers
 
-Before raw acquisition may run, resolve the remaining four canonical blockers:
+Before raw acquisition may run, resolve the remaining three canonical blockers:
 
 - annual 2022 dedicated issuer-classification source;
 - annual 2023 dedicated issuer-classification source;
-- annual 2024 explicit official effective-date evidence;
 - annual 2026 explicit official effective-date evidence.
+
+## 2024 official effective-date evidence — 2026-08-11
+
+The official IDX `ListedCompany/GetAnnouncement` endpoint was queried for
+MDKA/PANI during January 2025. It returned the following issuer disclosures
+and official attachment paths:
+
+- MDKA `Peng-00001/BEI.PP1/01-2025`, announced 2025-01-22, main attachment
+  `ca7aa2745d_f7e429b92b.pdf`;
+- PANI `Peng-00004/BEI.PP3/01-2025`, announced 2025-01-22, main attachment
+  `1fc07ee49c_53907a952a.pdf`.
+
+Both are official IDX documents titled `Perubahan Klasifikasi Industri`, both
+explicitly reference `PKIE Peng-00128.pdf`, and both state that the change is
+effective 24 June 2024. The pinned decision-critical MDKA evidence is:
+
+```text
+source_id       IDX_IC_ANNUAL_2024_MDKA_EFFECTIVE_2025
+announcement   Peng-00001/BEI.PP1/01-2025
+announced_at   2025-01-22
+effective_from 2024-06-24
+knowledge_at   2025-01-22
+sha256         860a0ab9aa0227b182d7a9c11f68a76fd775651763a962427cfca8cdc66d8f9f
+bytes          5709
+```
+
+The endpoint's `FullSavePath` used the official `idx.co.id` host; the same
+official attachment was acquired from the equivalent `idx.id` host because
+`idx.co.id` returned HTTP 403 in this runtime. PANI is retained as independent
+official corroboration with SHA-256
+`a815a268a3da6a964e13f844523e3e16519e1c291d2b8ca0c228f3518903b257` (5,714
+bytes), not as a second canonical event.
+
+The inventory now has `5/8` sources ready and `3/8` blocked. The 2026 query
+returned canonical `Peng-00100` and sector-index `Peng-00099`, but no linked
+official effective-date document. Historical 2022/2023 endpoint queries did
+not return canonical records, so no annual source or date was inferred.
 
 After the annual/event foundation is complete, separately enumerate IPO classifications and other incidental changes before treating historical coverage as complete.
 

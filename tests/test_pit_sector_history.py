@@ -242,6 +242,18 @@ def test_committed_palm_is_promoted_only_with_valid_official_evidence() -> None:
     assert validate_effective_date_evidence(palm)["effective_from"] == pd.Timestamp("2023-10-02")
 
 
+def test_committed_2024_is_promoted_only_with_valid_official_evidence() -> None:
+    inventory_path = Path(__file__).parents[1] / "config" / "pit_sector_sources_v1.json"
+    inventory = load_source_inventory(inventory_path)
+    source = next(item for item in inventory["sources"] if item["source_id"] == "IDX_IC_ANNUAL_CLASSIFICATION_2024")
+    assert source["status"] == "READY_FOR_ACQUISITION"
+    evidence = validate_effective_date_evidence(source)
+    assert evidence["effective_from"] == pd.Timestamp("2024-06-24")
+    assert evidence["announced_at"] == pd.Timestamp("2025-01-22")
+    assert evidence["source_sha256"] == "860a0ab9aa0227b182d7a9c11f68a76fd775651763a962427cfca8cdc66d8f9f"
+    assert evidence["linked_tickers"] == ["MDKA"]
+
+
 def test_pit_join_does_not_backfill_future_sector() -> None:
     signals = pd.DataFrame(
         {

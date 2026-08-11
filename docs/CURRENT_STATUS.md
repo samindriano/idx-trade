@@ -235,6 +235,26 @@ issuer-classification attachments for 2022 or 2023. `Peng-00150` and
 `Peng-00156` remain sector-index reconciliation evidence only. Focused PIT
 tests passed `14/14`; full pytest passed `483/483` with 3 existing warnings.
 
+## PIT sector 2024 effective-date evidence resolved — 2026-08-11
+
+The official IDX `ListedCompany/GetAnnouncement` endpoint returned the
+22-January-2025 MDKA disclosure `Peng-00001/BEI.PP1/01-2025` and its official
+`FullSavePath`. The acquired IDX PDF explicitly references `PKIE Peng-00128.pdf`
+and states that the classification change is effective `2024-06-24`. Its
+SHA-256 is `860a0ab9aa0227b182d7a9c11f68a76fd775651763a962427cfca8cdc66d8f9f`
+(5,709 bytes). PANI `Peng-00004/BEI.PP3/01-2025` independently corroborates
+the same date. The 2024 canonical source is therefore promoted to
+`READY_FOR_ACQUISITION`; its PIT knowledge date is `2025-01-22`.
+
+The inventory is now `5/8` ready and `3/8` blocked: dedicated annual 2022,
+dedicated annual 2023, and official 2026 effective-date evidence. Official
+queries found only the 2026 canonical `Peng-00100` and sector-index
+reconciliation `Peng-00099`; no linked effective-date document was found.
+The 2022/2023 historical endpoint queries returned no canonical records.
+Focused PIT tests passed `18/18`; full pytest passed `489/489` with 3 existing
+FutureWarnings. No parser/materialization, IPO/incidental census expansion,
+model, outcome, or `main` merge was started.
+
 ## Hard boundary
 
 Do not:

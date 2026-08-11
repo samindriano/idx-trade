@@ -105,12 +105,12 @@
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2024",
       "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
       "announcement_ref": "Peng-00128/BEI.POP/06-2024",
-      "effective_from": null,
-      "status": "DISCOVERY_REQUIRED",
-      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
-      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED_EFFECTIVE_DATE_UNRESOLVED",
-      "discovery_note": "Official IDX announcement attachment recovered. Publish date is 24 June 2024; the raw PDF does not state an effective date, so no effective date is inferred and the source remains discovery-blocked.",
       "announced_at": "2024-06-24",
+      "effective_from": "2024-06-24",
+      "status": "READY_FOR_ACQUISITION",
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_PLUS_LINKED_OFFICIAL_EFFECTIVE_DATE_EVIDENCE",
+      "discovery_note": "The official IDX issuer disclosure Peng-00001/BEI.PP1/01-2025 for MDKA was recovered from the ListedCompany/GetAnnouncement FullSavePath. It explicitly references the attached PKIE Peng-00128.pdf and states that the classification change is effective 24 June 2024. PANI Peng-00004/BEI.PP3/01-2025 independently corroborates the same effective date; MDKA is the decision-critical evidence pinned below.",
       "raw_attachment": {
         "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
         "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
@@ -118,6 +118,25 @@
         "bytes": 199188,
         "content_type": "application/x-zip-compressed",
         "layout": "ZIP with PKIE Peng-00128.pdf (327152 bytes, 4 pages)."
+      },
+      "effective_date_evidence": {
+        "source_id": "IDX_IC_ANNUAL_2024_MDKA_EFFECTIVE_2025",
+        "source_type": "OFFICIAL_EFFECTIVE_DATE_EVIDENCE",
+        "announcement_ref": "Peng-00001/BEI.PP1/01-2025",
+        "announced_at": "2025-01-22",
+        "effective_from": "2024-06-24",
+        "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202607/ca7aa2745d_f7e429b92b.pdf",
+        "source_sha256": "860a0ab9aa0227b182d7a9c11f68a76fd775651763a962427cfca8cdc66d8f9f",
+        "bytes": 5709,
+        "content_type": "application/pdf",
+        "linkage": {
+          "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2024",
+          "canonical_announcement_ref": "Peng-00128/BEI.POP/06-2024",
+          "canonical_source_sha256": "4ecf5ebb2809c9007b68bfe0aa1c426428d77178ff9acbf744364afba00ad223",
+          "linked_tickers": ["MDKA"],
+          "classification_change": "MDKA Gold to Diversified Metals & Minerals under IDX-IC",
+          "linkage_statement": "The official IDX MDKA disclosure explicitly lists PKIE Peng-00128.pdf as an attachment and states that all classification changes are effective starting from 24 June 2024."
+        }
       }
     },
     {
