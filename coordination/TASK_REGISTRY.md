@@ -6,6 +6,7 @@ Only MAIN changes task ownership, dependencies, parallel grouping, model routing
 
 | Task ID | Owner | Scope | Model / reasoning | Base source commit | Branch/worktree | Parallel group | Dependencies | Status |
 |---|---|---|---|---|---|---|---|---|
+| IDX-PRV2-PARALLEL-HARDENING | MAIN + VALIDATION / PRODUCTION | Pre-outcome hardening of PR-002/PR-003 tests, comparator, runner schema validation, and gate selection | Orchestra HEAVY; Luna xhigh | `477b4411c8c294e9ca5012a3079248033de5641c` | five isolated worker worktrees + source checkout | `PRV2-HARDENING` | frozen V2 implementation | COMPLETED — `PATH_RISK_V2_PARALLEL_HARDENING_PASS_READY_FOR_LOCAL_DISCOVERY` |
 | IDX-PRV2-PREFLIGHT-TESTS | VALIDATION | Verify current-checkout import resolution and run/assess the full repository test suite required before the frozen Path Risk V2 discovery run | Luna xhigh / xhigh | current branch HEAD | source checkout or isolated validation worktree | `PRV2-PREFLIGHT` | current source state | READY |
 | IDX-PRV2-PREFLIGHT-AUDIT | VALIDATION | Read-only audit that frozen PR-002/PR-003 definitions, immutable V1 joined table identity, F1-F4-only discovery boundary, and F5/F6 seal still match controlling specs/checkpoints | Luna xhigh / xhigh | current branch HEAD | read-only | `PRV2-PREFLIGHT` | current source state | READY |
 | IDX-PRV2-DISCOVERY-RUN | EXPERIMENT | Execute exactly one frozen PR-002/PR-003 Path Risk V2 F1-F4 development run using the authorized handoff; no new candidate; no F5/F6 | Luna xhigh / xhigh | post-preflight same source state | authoritative local execution checkout | `SEQUENTIAL_EVIDENCE_RUN` | both preflight checks PASS | BLOCKED_ON_PREFLIGHT |
@@ -21,7 +22,7 @@ Only MAIN changes task ownership, dependencies, parallel grouping, model routing
 
 ## Parallel launch rule
 
-`IDX-PRV2-PREFLIGHT-TESTS` and `IDX-PRV2-PREFLIGHT-AUDIT` may run together when checkouts/ownership remain non-overlapping. The evidence-producing discovery run itself stays serialized until both preflight checks pass.
+`IDX-PRV2-PREFLIGHT-TESTS` and `IDX-PRV2-PREFLIGHT-AUDIT` may run together when checkouts/ownership remain non-overlapping. The pre-outcome hardening milestone is complete; the evidence-producing discovery run itself stays serialized until both preflight checks pass.
 
 For future meaningful tasks, MAIN should explicitly create the execution frontier and launch independent READY tasks in the same parallel group together rather than processing them serially by habit.
 

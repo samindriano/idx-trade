@@ -17,6 +17,7 @@ from typing import Any, Sequence
 import joblib
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 from sklearn.linear_model import LogisticRegression
 
 from .path_risk_v2 import (
@@ -109,6 +110,12 @@ def _read_v1_model_table(path: Path) -> pd.DataFrame:
         "adverse_excursion_r",
         *PATH_RISK_V2_FEATURE_COLUMNS,
     ]
+    schema_columns = list(pq.ParquetFile(path).schema.names)
+    if schema_columns != columns:
+        raise RuntimeError(
+            "Path Risk V2 model-table schema mismatch: "
+            f"expected exact columns/order={columns} actual={schema_columns}"
+        )
     frame = pd.read_parquet(path, columns=columns)
     if len(frame) != PATH_RISK_V2_MODEL_TABLE_ROWS:
         raise RuntimeError(

@@ -19,7 +19,7 @@ file plus the newest controlling checkpoint wins.
 - exact 33-feature order SHA-256:
   `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
 - Path Risk V1 / PR-001: **CLOSED — `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`**;
-- Path Risk V2: **FROZEN + IMPLEMENTED PRE-OUTCOME**;
+- Path Risk V2: **FROZEN + IMPLEMENTED; HARDENING PASS PRE-OUTCOME**;
 - Path Risk V2 PR-002/PR-003: **RESERVED / UNVIEWED**;
 - Path Risk F5/F6: **SEALED**;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
@@ -124,7 +124,9 @@ Implementation:
 - `src/idx_trade/path_risk_v2.py`;
 - `src/idx_trade/path_risk_v2_discovery_run.py`;
 - `tests/test_path_risk_v2.py`;
-- `tests/test_path_risk_v2_discovery_run.py`.
+- `tests/test_path_risk_v2_discovery_run.py`;
+- pre-outcome hardening tests for PR-002, PR-003, alpha comparison, runner
+  schema, and gate selection.
 
 Ledger/checkpoint:
 
@@ -138,6 +140,30 @@ At this point:
 - real V2 model fit/metrics: not run;
 - F5/F6: sealed;
 - no calibration/risk-veto/alpha+risk integration exists.
+
+## Path Risk V2 parallel hardening — passed
+
+The Orchestra HEAVY pre-outcome hardening task completed on 2026-08-11 using
+five isolated Luna xhigh workers. The hardening scope covered PR-002, PR-003,
+the alpha comparator, the discovery runner, and gate-selection behavior.
+
+- focused hardening suite: `89 passed`;
+- full repository suite: `470 passed, 0 failed, 3 warnings, 34.73s`;
+- `git diff --check`: passed;
+- result: `PATH_RISK_V2_PARALLEL_HARDENING_PASS_READY_FOR_LOCAL_DISCOVERY`;
+- checkpoint:
+  `docs/checkpoints/2026-08-11_PATH_RISK_V2_PARALLEL_HARDENING_RESULT.md`;
+- result handoff:
+  `coordination/handoffs/IDX-PATH-RISK-V2-PARALLEL-HARDENING-RESULT.md`.
+
+One engineering defect was found and fixed in
+`src/idx_trade/path_risk_v2_discovery_run.py`: model-table loading now rejects
+extra, missing, or reordered Parquet columns before projection. The guard
+does not change the frozen features, target, folds, model, or gates.
+
+No PR-002/PR-003 F1-F4 outcome run was started. Path Risk F5/F6, reserved
+post-2026-07-31 outcomes, and `FORWARD_OUTCOME_ACCESS_STARTED` remain
+untouched.
 
 ## Fresh-forward independent alpha verdict
 
@@ -185,13 +211,16 @@ Controlling orchestration documents:
 
 ## Immediate next action
 
-Run the full repository test suite locally after pulling the latest branch. If
-it passes and current-checkout import resolution is correct, execute exactly one
-Path Risk V2 PR-002/PR-003 F1-F4 development run using:
+The pre-outcome hardening is complete. The next authorized sequence is to run
+the full repository test suite after pulling the latest branch, verify
+current-checkout import resolution and the frozen-spec/seal audit, and only if
+both preflight checks pass execute exactly one Path Risk V2 PR-002/PR-003 F1-F4
+development run using:
 
 `coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`
 
-Return the result to ChatGPT. Do not touch F5/F6 after the run even if a winner
+This hardening task itself did not execute that evidence-producing run. Return
+the later run result to ChatGPT. Do not touch F5/F6 after the run even if a winner
 is selected; a separate one-shot confirmation specification is required.
 
 ## Hard boundary

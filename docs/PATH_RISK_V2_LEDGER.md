@@ -2,7 +2,7 @@
 
 Date: 2026-08-11 (Asia/Jakarta)
 
-Status: **V2 FROZEN / IMPLEMENTED PRE-OUTCOME — PR-002/PR-003 RESERVED, UNVIEWED**
+Status: **V2 FROZEN / IMPLEMENTED + HARDENING PASS PRE-OUTCOME — PR-002/PR-003 RESERVED, UNVIEWED**
 
 Path Risk is separate from the alpha-ranking candidate ledger.  The permanent
 alpha evaluated-candidate denominator remains `17`.
@@ -19,6 +19,27 @@ Comparators are not candidate ordinals:
 
 - `TRAIN_STOP_TOUCH_BASE_RATE`;
 - `FOLD_V3_B_ALPHA_ONLY_LOGIT`.
+
+## 2026-08-11 parallel hardening result
+
+The Orchestra HEAVY pre-outcome hardening task used five isolated Luna xhigh
+workers and completed with:
+
+- focused hardening suite: `89 passed`;
+- full repository suite: `470 passed, 0 failed, 3 warnings, 34.73s`;
+- result: `PATH_RISK_V2_PARALLEL_HARDENING_PASS_READY_FOR_LOCAL_DISCOVERY`.
+
+Worker scopes covered PR-002, PR-003, the alpha comparator, the discovery
+runner, and gate selection. The runner worker exposed one real engineering
+defect: `_read_v1_model_table` projected requested columns before checking the
+physical Parquet schema, allowing extra or reordered source columns to pass.
+MAIN fixed this with an exact physical column-name/order check using PyArrow;
+the corrected focused suite passed. The frozen research contract was not
+changed.
+
+The next step is the separate authorized preflight followed by exactly one
+F1-F4 evidence run. No PR-002/PR-003 outcome has been viewed in this
+hardening milestone; F5/F6 and fresh-forward outcomes remain sealed.
 
 ## Frozen V2 selection
 
