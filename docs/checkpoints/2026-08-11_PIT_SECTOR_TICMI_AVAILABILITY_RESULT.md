@@ -1,7 +1,7 @@
 # PIT sector TICMI/TICMIDATA availability investigation
 
-Date: 2026-08-11 (Asia/Jakarta)  
-Branch: `data/idx-pit-sector-history-v1`  
+Date: 2026-08-11 (Asia/Jakarta)
+Branch: `data/idx-pit-sector-history-v1`
 Scope: public TICMI/TICMIDATA availability only; no purchase or authentication
 
 ## Decision

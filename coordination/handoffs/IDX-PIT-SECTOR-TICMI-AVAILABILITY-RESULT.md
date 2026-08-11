@@ -1,12 +1,12 @@
 # Handoff
 
-from: Codex MAIN  
-to: ChatGPT reviewer  
-task_id: IDX-PIT-SECTOR-TICMI-AVAILABILITY  
-model_used: Codex MAIN  
-reasoning_level: xhigh  
-source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`  
-source_commit: `39c60475bfa3fed3adbff5d87e63c4ac15f1014f`  
+from: Codex MAIN
+to: ChatGPT reviewer
+task_id: IDX-PIT-SECTOR-TICMI-AVAILABILITY
+model_used: Codex MAIN
+reasoning_level: xhigh
+source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
+source_commit: `39c60475bfa3fed3adbff5d87e63c4ac15f1014f`
 branch: `data/idx-pit-sector-history-v1`
 
 ## Scope
