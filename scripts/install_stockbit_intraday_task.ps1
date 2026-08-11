@@ -72,6 +72,7 @@ $primary = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $primaryAt
 $recovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $recoveryAt
 $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
+    -WakeToRun `
     -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Hours 2) `
     -AllowStartIfOnBatteries `
@@ -85,6 +86,7 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $task -Force | Out-Null
 Write-Host "Registered scheduled task: $TaskName"
 Write-Host "Triggers: weekdays 16:35 and 17:30 local time"
 Write-Host "First trigger boundary: $($startBoundary.ToString('yyyy-MM-dd'))"
+Write-Host "WakeToRun: enabled"
 Write-Host "Data root: $DataRoot"
 Write-Host "Python: $PythonExe"
 Write-Host "Credential source: persistent ZAPI_API_KEY environment variable (value not displayed)"
