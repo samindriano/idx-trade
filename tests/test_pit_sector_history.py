@@ -322,6 +322,33 @@ def test_pit_join_waits_for_late_supporting_knowledge() -> None:
     assert joined.loc[2, "knowledge_at"] == pd.Timestamp("2024-07-05")
 
 
+def test_non_monotonic_pit_knowledge_order_fails_closed() -> None:
+    events = pd.DataFrame(
+        [
+            {
+                "ticker": "DDDD",
+                "sector_code": "A",
+                "effective_from": "2024-07-01",
+                "announced_at": "2024-06-24",
+                "knowledge_at": "2024-08-01",
+                "source_id": "OLDER_EVENT_KNOWN_LATE",
+                "source_sha256": SHA_A,
+            },
+            {
+                "ticker": "DDDD",
+                "sector_code": "B",
+                "effective_from": "2024-07-15",
+                "announced_at": "2024-07-10",
+                "knowledge_at": "2024-07-15",
+                "source_id": "NEWER_EVENT_KNOWN_EARLIER",
+                "source_sha256": SHA_B,
+            },
+        ]
+    )
+    with pytest.raises(ValueError, match="non-monotonic PIT knowledge order"):
+        normalise_sector_events(events)
+
+
 def test_conflicting_same_effective_date_fails_closed() -> None:
     events = pd.DataFrame(
         [
