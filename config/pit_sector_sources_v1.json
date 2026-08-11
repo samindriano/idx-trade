@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "SOURCE_INVENTORY_INCOMPLETE",
-  "notes": "Official IDX sources only. DISCOVERY_REQUIRED rows must be resolved before acquisition may run.",
+  "notes": "Official IDX sources only. Unknown dates/refs/URLs stay null or UNRESOLVED; do not infer them. DISCOVERY_REQUIRED rows must be resolved before acquisition may run.",
   "sources": [
     {
       "source_id": "IDX_IC_BASELINE_2021",
@@ -16,8 +16,8 @@
       "source_id": "IDX_IC_ANNUAL_2021",
       "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
       "announcement_ref": "UNRESOLVED",
-      "announced_at": "2021-06-30",
-      "effective_from": "2021-07-01",
+      "announced_at": null,
+      "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
       "download_url": ""
     },
@@ -25,8 +25,8 @@
       "source_id": "IDX_IC_ANNUAL_2022",
       "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
       "announcement_ref": "UNRESOLVED",
-      "announced_at": "2022-06-30",
-      "effective_from": "2022-07-01",
+      "announced_at": null,
+      "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
       "download_url": ""
     },
@@ -34,8 +34,8 @@
       "source_id": "IDX_IC_ANNUAL_2023",
       "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
       "announcement_ref": "UNRESOLVED",
-      "announced_at": "2023-06-30",
-      "effective_from": "2023-07-03",
+      "announced_at": null,
+      "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
       "download_url": ""
     },
@@ -61,8 +61,8 @@
       "source_id": "IDX_IC_ANNUAL_2026",
       "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
       "announcement_ref": "UNRESOLVED",
-      "announced_at": "2026-06-30",
-      "effective_from": "2026-07-01",
+      "announced_at": null,
+      "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
       "download_url": ""
     }
