@@ -87,9 +87,9 @@ function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
         <div className={`${styles.tooltip} ${activePoint.x > width * 0.7 ? styles.tooltipLeft : ""}`} style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}>
           <div className={styles.tooltipHead}><strong>{activePoint.fold}</strong><span>V3-B / V2</span></div>
           <div className={styles.tooltipRows}>
-            <div><span>ΔPR-AUC</span><strong className={styles.positive}>+{pct(activePoint.deltaPr)}</strong></div>
-            <div><span>ΔROC</span><strong className={styles.positive}>+{activePoint.roc.toFixed(4)}</strong></div>
-            <div><span>ΔQ5−Q1</span><strong className={styles.positive}>+{pct(activePoint.qSpread)}</strong></div>
+            <div><span>Delta PR-AUC</span><strong className={styles.positive}>+{pct(activePoint.deltaPr)}</strong></div>
+            <div><span>Delta ROC</span><strong className={styles.positive}>+{activePoint.roc.toFixed(4)}</strong></div>
+            <div><span>Delta Q5-Q1</span><strong className={styles.positive}>+{pct(activePoint.qSpread)}</strong></div>
           </div>
         </div>
       )}
@@ -111,71 +111,69 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="page editorialPage" id="top">
-        <section className="editorialHero" id="overview">
-          <div className="heroTopline"><span>01 / FINAL RANKER</span><span>IDX · OUTCOME-BLIND RESEARCH</span></div>
-          <div className="heroDisplay" aria-label="V3-B Structure Lite">
-            <span>V3—B</span>
-            <span>STRUCTURE</span>
-            <span className="heroDisplayAccent">LITE</span>
+      <div className="page overviewPage" id="top">
+        <section className="overviewHero" id="overview">
+          <div>
+            <p className="overviewKicker">MODEL OVERVIEW / RESEARCH ONLY</p>
+            <h1>Research overview</h1>
+            <p className="overviewLead">A compact view of the frozen ranker, its promotion evidence, and the forward monitoring lane.</p>
           </div>
-          <div className="heroBottomGrid">
-            <p>Frozen cross-sectional opportunity ranker for the independent 100-session forward block.</p>
-            <div><span>MODEL</span><strong>{FINAL_RANKER.id}</strong></div>
-            <div><span>STATUS</span><strong className="positiveText">FINAL / FROZEN</strong></div>
+          <div className="overviewStatus">
+            <span className="overviewStatusDot" />
+            <span>V3-B / FINAL</span>
+            <strong>Frozen ranker</strong>
           </div>
         </section>
 
-        <section className="editorialStats" aria-label="Final model facts">
+        <section className="overviewStats" aria-label="Final model facts">
+          <article><span>ACTIVE MODEL</span><strong>{FINAL_RANKER.shortName}</strong><small>V3-B Structure-Lite</small></article>
           <article><span>FEATURES</span><strong>{FINAL_RANKER.featureCount}</strong><small>25 V2 + 8 structure</small></article>
-          <article><span>TRAINING ROWS</span><strong>{FINAL_RANKER.finalRefitRows.toLocaleString("en-US")}</strong><small>{FINAL_RANKER.finalRefitTickers} tickers</small></article>
-          <article><span>DISCOVERY ΔPR</span><strong className="positiveText">+{pct(FINAL_RANKER.discoveryMedianPairedDeltaPr)}</strong><small>median F1–F4</small></article>
-          <article><span>LATE CONFIRMATION</span><strong className="positiveText">+{pct(FINAL_RANKER.lateMedianPairedDeltaPr)}</strong><small>median F5/F6</small></article>
+          <article><span>DISCOVERY DELTA PR</span><strong className="positiveText">+{pct(FINAL_RANKER.discoveryMedianPairedDeltaPr)}</strong><small>median F1-F4</small></article>
+          <article><span>FORWARD BLOCK</span><strong>0 / 100</strong><small>scores accumulating</small></article>
         </section>
 
-        <section className="editorialSection promotionSection">
-          <div className="sectionIndex"><span>02</span><p>PROMOTION EVIDENCE</p></div>
-          <div className="sectionContent">
-            <div className="editorialHeadingRow">
-              <h2>WHY<br />IT WON</h2>
-              <div className="sectionAside"><span>4 / 4</span><p>paired discovery PR improvements positive</p></div>
+        <section className="overviewGrid">
+          <article className="overviewCard overviewEvidenceCard">
+            <div className="overviewCardHead">
+              <div><span>PROMOTION EVIDENCE</span><h2>Why V3-B is frozen</h2></div>
+              <strong className="overviewEvidenceScore">4 / 4</strong>
             </div>
+            <p className="overviewCardLead">Paired discovery PR-AUC improved across every F1-F4 fold.</p>
             <FoldChart folds={V3_B_DISCOVERY_FOLDS} />
-            <div className="editorialRuleNote"><span>F1—F4 discovery</span><span>F5—F6 late confirmation</span><span>V2 remains frozen baseline</span></div>
-          </div>
+            <div className="overviewNote"><span>F1-F4 discovery</span><span>V2 frozen baseline</span></div>
+          </article>
+
+          <article className="overviewCard overviewModelCard">
+            <div className="overviewCardHead">
+              <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
+              <span className="overviewBadge">FINAL</span>
+            </div>
+            <div className="overviewModelIdentity"><strong>{FINAL_RANKER.id}</strong><span>Outcome-blind scoring</span></div>
+            <dl className="overviewFacts">
+              <div><dt>Training rows</dt><dd>{FINAL_RANKER.finalRefitRows.toLocaleString("en-US")}</dd></div>
+              <div><dt>Universe</dt><dd>{FINAL_RANKER.finalRefitTickers} tickers</dd></div>
+              <div><dt>Model SHA</dt><dd>{FINAL_RANKER.modelSha256.slice(0, 12)}...</dd></div>
+              <div><dt>Baseline</dt><dd>V2 champion</dd></div>
+            </dl>
+            <a className="overviewLink" href="/monitoring">Open forward monitoring -&gt;</a>
+          </article>
         </section>
 
-        <section className="editorialSection forwardEditorial">
-          <div className="sectionIndex"><span>03</span><p>FORWARD TEST</p></div>
-          <div className="sectionContent forwardEditorialGrid">
-            <div>
-              <h2>0<span>/100</span></h2>
-              <p className="forwardEditorialLead">Scores may accumulate. Outcomes do not.</p>
-            </div>
-            <div className="forwardEditorialFacts">
-              <div><span>ACTIVE MODEL</span><strong>{FINAL_RANKER.shortName}</strong></div>
-              <div><span>MODEL SHA</span><strong>{FINAL_RANKER.modelSha256.slice(0, 14)}…</strong></div>
-              <div><span>OUTCOME VAULT</span><strong className="negativeText">LOCKED</strong></div>
-              <a href="/monitoring">OPEN FORWARD MONITORING ↗</a>
-            </div>
+        <section className="overviewCard overviewArchiveCard" id="research-lineage">
+          <div className="overviewCardHead">
+            <div><span>RESEARCH ARCHIVE</span><h2>What we tested</h2></div>
+            <p>Failed candidates remain visible for context.</p>
           </div>
-        </section>
-
-        <section className="editorialSection lineageSection" id="research-lineage">
-          <div className="sectionIndex"><span>04</span><p>RESEARCH ARCHIVE</p></div>
-          <div className="sectionContent">
-            <div className="editorialHeadingRow archiveHeading"><h2>WHAT<br />WE TESTED</h2><p>Every failed candidate stays visible.</p></div>
-            <div className="editorialArchive">
-              {RESEARCH_EXPERIMENTS.map((item, index) => (
-                <article className={`archiveRow status-${item.status.toLowerCase()}`} key={`${item.generation}-${item.candidate}`}>
-                  <span className="archiveIndex">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="archiveGeneration">{item.generation}</span>
-                  <div className="archiveName"><strong>{item.name}</strong><small>{item.candidate}</small></div>
-                  <span className="archiveResult">{item.result}</span>
-                  <span className="archiveStatus">{statusLabel(item.status)}</span>
-                </article>
-              ))}
-            </div>
+          <div className="overviewArchive">
+            {RESEARCH_EXPERIMENTS.map((item, index) => (
+              <article className={`overviewArchiveRow status-${item.status.toLowerCase()}`} key={`${item.generation}-${item.candidate}`}>
+                <span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span>
+                <span className="overviewArchiveGeneration">{item.generation}</span>
+                <div><strong>{item.name}</strong><small>{item.candidate}</small></div>
+                <span className="overviewArchiveResult">{item.result}</span>
+                <span className="overviewArchiveStatus">{statusLabel(item.status)}</span>
+              </article>
+            ))}
           </div>
         </section>
 
