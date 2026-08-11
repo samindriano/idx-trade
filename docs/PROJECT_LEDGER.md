@@ -1687,3 +1687,28 @@ The cache manifest/audit flags are all fail-closed pre-outcome values:
 ranking historical denominator remains `17`. No risk-veto/integration,
 ranking change, fresh-forward access, or main merge was started. See the dated
 Path Risk checkpoint and result handoff for the complete per-feature audit.
+
+## 2026-08-11 — Historical Universe V1 bounded Listing Activities audit
+
+Branch `data/historical-universe-v1` investigated the official IDX
+`Aktivitas Pencatatan` frontend and its backend. The usable canonical route for
+new listings and relistings is
+`/primary/ListingActivity/GetIpoRelisting`; its returned `RencanaStatus` field
+distinguishes `baru` from `relisting`. The frontend's Delisting route was
+present but returned HTTP 404, so the already-acquired direct official
+`DigitalStatistic` `LINK_DELISTING` monthly source remains canonical for exits.
+
+For the exact `2024-06-21..2026-07-31` window, official evidence covers all
+membership entry/exit mechanisms: current-at-boundary snapshot, 47 new
+listings, zero relistings, and 16 delistings. The bounded union is 976 valid
+four-character codes after explicit MAMIP/MYRXP scope exclusions. BUKK's
+2015-06-29 relisting is explicit. INRU, ITMA, KIAS, and SKBM have no
+entry/exit event in the candidate window but retain unresolved pre-window
+interval starts; UNTX has no candidate-window exposure.
+
+Decision: **`FAIL_NO_COMPLETE_WINDOW`**. The exact Relisting route has no
+completeness metadata and omits the known BUKK relisting that appears in the
+IPO response. The strict lifecycle table remains fail-closed and 2,280 price
+rows remain quarantined. This does not freeze Historical Universe V1 or
+authorize a wider historical window. See
+`docs/checkpoints/2026-08-11_HISTORICAL_UNIVERSE_V1_BOUNDED_LISTING_ACTIVITY_AUDIT.md`.

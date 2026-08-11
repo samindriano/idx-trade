@@ -214,3 +214,26 @@ Do not:
 - write `FORWARD_OUTCOME_ACCESS_STARTED` now;
 - create risk-veto, reranking, position-sizing or alpha+risk integration rules;
 - start execution/PnL/Kelly/paper/live automatically.
+
+## Historical Universe V1 bounded-window audit — 2026-08-11
+
+The official IDX Listing Activities frontend/backend was audited on branch
+`data/historical-universe-v1`. The exact bounded membership window
+`2024-06-21..2026-07-31` was investigated but remains
+`FAIL_NO_COMPLETE_WINDOW`.
+
+The evidence covers the official current snapshot, 2013–2026 New Listing /
+Relisting responses from `ListingActivity/GetIpoRelisting`, and the direct
+official monthly `LINK_DELISTING` source. It found 47 new listings and no
+observed relisting rows in the candidate window, plus 16 delisting rows. The
+public Relisting filter is not a completeness proof: BUKK's 2015 relisting is
+present only in the IPO response with `RencanaStatus=relisting`, while exact
+Relisting responses identify SKBM (2012), TALF (2014), and INCF (2016).
+INRU, ITMA, and KIAS still lack authoritative post-delisting interval starts;
+UNTX is historical-only and outside the window. The strict lifecycle audit
+therefore keeps 2,280 price rows quarantined.
+
+This is bounded membership metadata only; Historical Universe V1 is not
+frozen and no wider window is approved. See
+`docs/checkpoints/2026-08-11_HISTORICAL_UNIVERSE_V1_BOUNDED_LISTING_ACTIVITY_AUDIT.md`
+and the corresponding bounded Listing Activities handoff.
