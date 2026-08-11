@@ -160,11 +160,27 @@ def test_multidocument_official_effective_date_evidence_validates() -> None:
     evidence = validate_effective_date_evidence(source)
     assert evidence is not None
     assert evidence["effective_from"] == pd.Timestamp("2023-10-02")
+    assert evidence["knowledge_at"] == pd.Timestamp("2023-10-02")
     assert evidence["linked_tickers"] == ["PALM"]
 
     audit = validate_source_inventory({"schema_version": 2, "sources": [source]})
     assert audit["sources_ready"] == 1
     assert audit["effective_date_evidence_validated"] == 1
+
+
+def test_multidocument_effective_date_evidence_can_be_announced_after_effective_date() -> None:
+    source = _palm_source()
+    source["announced_at"] = "2024-06-24"
+    source["effective_from"] = "2024-07-01"
+    evidence = source["effective_date_evidence"]
+    evidence["announced_at"] = "2024-07-05"
+    evidence["effective_from"] = "2024-07-01"
+
+    validated = validate_effective_date_evidence(source)
+    assert validated is not None
+    assert validated["effective_from"] == pd.Timestamp("2024-07-01")
+    assert validated["announced_at"] == pd.Timestamp("2024-07-05")
+    assert validated["knowledge_at"] == pd.Timestamp("2024-07-05")
 
 
 def test_multidocument_effective_date_evidence_rejects_cross_event_linkage() -> None:
@@ -213,6 +229,8 @@ def test_acquisition_records_and_hashes_nested_effective_date_evidence(tmp_path:
     entry = manifest["entries"][0]
     assert entry["raw_sha256"] == hashlib.sha256(canonical_payload).hexdigest()
     assert entry["effective_date_evidence"]["raw_sha256"] == hashlib.sha256(evidence_payload).hexdigest()
+    assert entry["effective_date_evidence"]["announced_at"] == "2023-10-02 00:00:00"
+    assert entry["effective_date_evidence"]["knowledge_at"] == "2023-10-02 00:00:00"
     assert (tmp_path / "raw" / entry["effective_date_evidence"]["raw_file"]).read_bytes() == evidence_payload
 
 
@@ -272,6 +290,36 @@ def test_pit_from_is_max_of_effective_and_announcement() -> None:
     joined = attach_sector_asof(signals, events)
     assert pd.isna(joined.loc[0, "sector_code"])
     assert joined.loc[1, "sector_code"] == "B"
+
+
+def test_pit_join_waits_for_late_supporting_knowledge() -> None:
+    events = pd.DataFrame(
+        [
+            {
+                "ticker": "CCCC",
+                "sector_code": "C",
+                "effective_from": "2024-07-01",
+                "announced_at": "2024-06-24",
+                "knowledge_at": "2024-07-05",
+                "source_id": "ANNUAL_WITH_LATE_EVIDENCE",
+                "source_sha256": SHA_A,
+            }
+        ]
+    )
+    normalised = normalise_sector_events(events)
+    assert normalised.loc[0, "pit_from"] == pd.Timestamp("2024-07-05")
+
+    signals = pd.DataFrame(
+        {
+            "ticker": ["CCCC", "CCCC", "CCCC"],
+            "date": ["2024-07-01", "2024-07-04", "2024-07-05"],
+        }
+    )
+    joined = attach_sector_asof(signals, events)
+    assert pd.isna(joined.loc[0, "sector_code"])
+    assert pd.isna(joined.loc[1, "sector_code"])
+    assert joined.loc[2, "sector_code"] == "C"
+    assert joined.loc[2, "knowledge_at"] == pd.Timestamp("2024-07-05")
 
 
 def test_conflicting_same_effective_date_fails_closed() -> None:
