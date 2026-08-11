@@ -19,9 +19,9 @@ file plus the newest controlling checkpoint wins.
 - exact 33-feature order SHA-256:
   `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
 - Path Risk V1 / PR-001: **CLOSED — `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`**;
-- Path Risk V2: **FROZEN + IMPLEMENTED; HARDENING PASS PRE-OUTCOME**;
-- Path Risk V2 PR-002/PR-003: **RESERVED / UNVIEWED**;
-- Path Risk F5/F6: **SEALED**;
+- Path Risk V2 / PR-002 + PR-003: **CLOSED — `PATH_RISK_V2_DISCOVERY_FAIL_CLOSE`**;
+- Path Risk V2 winner: **none**;
+- Path Risk F5/F6: **SEALED / NOT NEEDED AFTER V2 FAIL_CLOSE**;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
 - calibration / alpha+risk integration / execution-PnL / Kelly / paper/live:
@@ -78,7 +78,7 @@ Controlling files:
 - `docs/PATH_RISK_V1_LEDGER.md`;
 - `docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_RESULT_FAIL_CLOSE.md`.
 
-## Path Risk V2 — implemented, not yet run
+## Path Risk V2 — closed
 
 Frozen specification:
 
@@ -88,7 +88,8 @@ Spec Git blob:
 
 `6d171d3f492b9cd15e0a176428eb9d6e4f6c20c5`
 
-Exactly two V2 candidates exist:
+V2 tested exactly two preregistered candidates on Path Risk development folds
+F1-F4:
 
 1. PR-002 `PATH-RISK-V2-STOP-H10-HGB-002`
    - exact 33 features;
@@ -98,72 +99,59 @@ Exactly two V2 candidates exist:
    - multiclass CONTINUE/STOP/TP discrete hazard model;
    - comparable output = H10 stop cumulative incidence.
 
-Binary risk endpoint:
+The one authorized F1-F4 discovery run completed on code HEAD
+`9378943bde44b33e311bec1e1daf38ca5cd9b5d3` after a clean preflight of
+`471 passed, 0 failed, 3 warnings`.
 
-- positive: `SL_FIRST`, `AMBIGUOUS_SAME_BAR`;
-- negative: `TP_FIRST`, `NO_BARRIER_HIT`.
+Frozen result:
 
-F1-F4 are already-consumed Path Risk development knowledge and are the only
-folds allowed in V2 discovery. V2 reuses the immutable V1 joined model table:
+`PATH_RISK_V2_DISCOVERY_FAIL_CLOSE`
 
-- SHA-256:
-  `b66fc7e40f18940ae9db418331a421e0f36d23b86597500b1d3ba73a8e3777fe`;
-- rows: `252,198`;
-- max signal session: `984`.
+Winner: none.
 
-The V2 runner additionally compares both candidates against:
+Both PR-002 and PR-003 showed positive risk ordering/discrimination:
 
-- training stop-touch base rate;
-- a fold-specific V3-B alpha-only -> stop-risk logistic mapping.
+- ROC-AUC > 0.5 on all folds;
+- Q5-Q1 stop-touch spread positive on all folds;
+- both improved log loss versus the fold-specific V3-B alpha-only stop-risk
+  mapping on all folds.
 
-This checks whether a separate risk layer adds information beyond alpha itself.
-No final all-history alpha model is used as a historical comparator.
+But both failed the decision-critical proper-scoring comparison against the
+training stop-touch base-rate comparator:
 
-Implementation:
+- PR-002 nonnegative log-loss improvement vs base: `0/4`;
+- PR-003 nonnegative log-loss improvement vs base: `0/4`;
+- PR-002 nonnegative Brier improvement vs base: `1/4`;
+- PR-003 nonnegative Brier improvement vs base: `0/4`.
 
-- `src/idx_trade/path_risk_v2.py`;
-- `src/idx_trade/path_risk_v2_discovery_run.py`;
-- `tests/test_path_risk_v2.py`;
-- `tests/test_path_risk_v2_discovery_run.py`;
-- pre-outcome hardening tests for PR-002, PR-003, alpha comparison, runner
-  schema, and gate selection.
+Therefore neither candidate is eligible for promotion. Their useful ordering
+signal may not be reinterpreted post hoc as a validated V2 probability/risk
+layer.
 
-Ledger/checkpoint:
+Artifact hashes:
+
+- candidate metrics:
+  `c9e5ea87f66252461bebff2bcbfe91d044618166142b6e9e5de48290ffc22f3c`;
+- comparator metrics:
+  `c99c89e65710c9aaa2fb95eab57d134885b8054d68f13445b1cae44f4bf06da6`;
+- predictions:
+  `2fa1204698c207920b6c439eebc5e6123d3b24497c6432e2ba3a23db1b16a7b3`;
+- summary:
+  `67689476b1cad17b0f39144bcce82e01a00c3f62e30a991ce2c381c5f7b0f332`.
+
+Controlling files:
 
 - `docs/PATH_RISK_V2_LEDGER.md`;
-- `docs/checkpoints/2026-08-11_PATH_RISK_V2_IMPLEMENTED_PRE_OUTCOME.md`.
+- `docs/checkpoints/2026-08-11_PATH_RISK_V2_DISCOVERY_RESULT_FAIL_CLOSE.md`.
 
-At this point:
+Consequences:
 
-- PR-002 result viewed: `false`;
-- PR-003 result viewed: `false`;
-- real V2 model fit/metrics: not run;
-- F5/F6: sealed;
-- no calibration/risk-veto/alpha+risk integration exists.
-
-## Path Risk V2 parallel hardening — passed
-
-The Orchestra HEAVY pre-outcome hardening task completed on 2026-08-11 using
-five isolated Luna xhigh workers. The hardening scope covered PR-002, PR-003,
-the alpha comparator, the discovery runner, and gate-selection behavior.
-
-- focused hardening suite: `89 passed`;
-- full repository suite: `470 passed, 0 failed, 3 warnings, 34.73s`;
-- `git diff --check`: passed;
-- result: `PATH_RISK_V2_PARALLEL_HARDENING_PASS_READY_FOR_LOCAL_DISCOVERY`;
-- checkpoint:
-  `docs/checkpoints/2026-08-11_PATH_RISK_V2_PARALLEL_HARDENING_RESULT.md`;
-- result handoff:
-  `coordination/handoffs/IDX-PATH-RISK-V2-PARALLEL-HARDENING-RESULT.md`.
-
-One engineering defect was found and fixed in
-`src/idx_trade/path_risk_v2_discovery_run.py`: model-table loading now rejects
-extra, missing, or reordered Parquet columns before projection. The guard
-does not change the frozen features, target, folds, model, or gates.
-
-No PR-002/PR-003 F1-F4 outcome run was started. Path Risk F5/F6, reserved
-post-2026-07-31 outcomes, and `FORWARD_OUTCOME_ACCESS_STARTED` remain
-untouched.
+- PR-002 and PR-003 are permanently viewed / closed;
+- no Path Risk F5/F6 access is needed or authorized;
+- no PR-004 rescue is pre-authorized;
+- any future Path Risk V3 must be a genuinely new preregistered hypothesis
+  family, not a retune/recalibration/relabeling of V1/V2;
+- no risk-veto, alpha reranking, sizing, or alpha+risk integration exists.
 
 ## Fresh-forward independent alpha verdict
 
@@ -182,56 +170,46 @@ before outcomes are loaded.
 
 ## Orchestration execution policy — refreshed 2026-08-11
 
-The project now uses **parallel-first LIGHT orchestration for meaningful work**
-to reduce wall-clock time with Luna xhigh while preserving all frozen research
+The project uses **parallel-first LIGHT orchestration for meaningful work** to
+reduce wall-clock time with Luna xhigh while preserving frozen research
 boundaries.
 
-- MAIN must build the execution frontier before substantial implementation;
+- MAIN identifies the ready execution frontier before substantial work;
 - independent ready scopes should be spawned before MAIN duplicates them;
 - `LIGHT` = default for roughly 2–3 useful independent workstreams;
 - `HEAVY` = 3–6 independent critical-path scopes or decision-changing review;
-- `DIRECT` = small/inherently sequential work; substantial DIRECT requires a
-  reason that workers would not materially shorten the critical path;
+- `DIRECT` = small/inherently sequential work;
 - dependent scientific experiments remain sequential even when supporting
   implementation/tests/audit work can run concurrently;
-- `Luna xhigh` remains the MAIN/worker default; `Sol High` remains a bounded
-  decision-changing escalation, not a persistent default.
+- `Luna xhigh` remains MAIN/worker default; `Sol High` remains a bounded
+  decision-changing escalation.
 
-For the immediate Path Risk V2 milestone, import/full-suite verification and
-independent frozen-spec/seal audit may run in parallel when isolated. The one
-evidence-producing PR-002/PR-003 F1-F4 discovery execution remains serialized
-after preflight because its result controls the next scientific decision.
-
-Controlling orchestration documents:
-
-- `AGENTS.md`;
-- `docs/ORCHESTRATION.md`;
-- `coordination/TEAM_STATUS.md`;
-- `coordination/TASK_REGISTRY.md`.
+The Path Risk V2 hardening milestone demonstrated this with five parallel Luna
+workers before the serialized evidence-producing discovery run.
 
 ## Immediate next action
 
-The pre-outcome hardening is complete. The next authorized sequence is to run
-the full repository test suite after pulling the latest branch, verify
-current-checkout import resolution and the frozen-spec/seal audit, and only if
-both preflight checks pass execute exactly one Path Risk V2 PR-002/PR-003 F1-F4
-development run using:
+Path Risk V2 is closed. Do not automatically open F5/F6 or create PR-004.
 
-`coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`
+Current research-safe priorities are:
 
-This hardening task itself did not execute that evidence-producing run. Return
-the later run result to ChatGPT. Do not touch F5/F6 after the run even if a winner
-is selected; a separate one-shot confirmation specification is required.
+1. preserve the final V3-B ranker and continue outcome-blind fresh-forward
+   operation/accumulation under the existing 100-session contract;
+2. keep Path Risk inactive unless a separately researched and preregistered V3
+   hypothesis family is explicitly authorized;
+3. keep probability calibration, alpha+risk integration, execution-PnL, Kelly,
+   paper/live and forward realized-outcome access blocked unless separately
+   authorized.
 
 ## Hard boundary
 
 Do not:
 
 - reopen or modify the final V3-B alpha architecture;
-- rescue/rewrite PR-001;
-- add PR-004 after seeing PR-002/PR-003;
-- access Path Risk F5/F6 during V2 discovery;
-- use F5/F6 to choose between PR-002 and PR-003;
+- rescue/rewrite PR-001, PR-002, or PR-003;
+- add PR-004 as an immediate post-result rescue;
+- access Path Risk F5/F6 after the V2 fail-close;
+- reinterpret ranking diagnostics as a probability-model PASS;
 - access or summarize post-2026-07-31 fresh-forward outcomes;
 - write `FORWARD_OUTCOME_ACCESS_STARTED` now;
 - create risk-veto, reranking, position-sizing or alpha+risk integration rules;
