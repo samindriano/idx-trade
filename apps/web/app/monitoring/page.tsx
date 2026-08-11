@@ -218,7 +218,6 @@ export default function MonitoringPage() {
             <a href="/#overview">Overview</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
           </nav>
-          <div className="researchPill"><span className="liveDot" /> Research only</div>
         </div>
       </header>
 
@@ -227,11 +226,7 @@ export default function MonitoringPage() {
           <div>
             <p className="eyebrow">FINAL V3-B · OUTCOME-BLIND</p>
             <h1>Forward Monitoring</h1>
-            <p className="heroCopy">Capture EOD data and track the frozen V2 and V3-B rankers. Outcomes stay locked.</p>
-          </div>
-          <div className="monitorHeroBadges">
-            <span className="lockBadge"><span className="lockDot" /> Outcomes locked</span>
-            <span className={`runtimeBadge ${statusLoading ? "checking" : connected ? "online" : "offline"}`}><i /> {statusLoading ? "Checking runtime" : connected ? "Runtime connected" : "Runtime offline"}</span>
+            <p className="heroCopy">Capture EOD data and track both monitored rankers.</p>
           </div>
         </section>
 
@@ -239,7 +234,6 @@ export default function MonitoringPage() {
           <article className="summaryBlock prominent"><span>Final V3-B scores</span><div><strong>{statusLoading ? "—" : finalScoredDates.size}</strong>{!statusLoading && <em>/ {FINAL_RANKER.forwardTargetSessions}</em>}</div></article>
           <article className="summaryBlock"><span>EOD snapshots</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
           <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
-          <article className="summaryBlock"><span>Outcome vault</span><strong className="summaryTextValue">LOCKED</strong></article>
         </section>
 
         <section className="monitorMainGrid">
@@ -304,8 +298,7 @@ export default function MonitoringPage() {
           <div className="modelCardsGrid" aria-label="Monitored models">
           <a className="surface modelCardLink finalModelPanel" href="/monitoring/models/v3" aria-label={`View forward detail for ${FINAL_RANKER.shortName}`}>
             <div className="sectionHead compact">
-              <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
-              <span className="modelBadge champion">FINAL V3</span>
+              <div><span>MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
             </div>
             <div className="contractProgress">
                 <div className="contractNumber"><strong>{statusLoading ? "—" : finalScoredDates.size}</strong>{!statusLoading && <span>/ {FINAL_RANKER.forwardTargetSessions}</span>}</div>
@@ -320,8 +313,7 @@ export default function MonitoringPage() {
 
           <a className="surface modelCardLink finalModelPanel legacyChampionPanel" href="/monitoring/models/v2" aria-label={`View forward detail for ${V2_CHAMPION.shortName}`}>
             <div className="sectionHead compact">
-              <div><span>V2 CHAMPION</span><h2>{V2_CHAMPION.shortName}</h2></div>
-              <span className="modelBadge">FROZEN</span>
+              <div><span>MODEL</span><h2>{V2_CHAMPION.shortName}</h2></div>
             </div>
             <div className="contractProgress">
                 <div className="contractNumber"><strong>{statusLoading ? "—" : v2ScoredDates.size}</strong>{!statusLoading && <span>/ {V2_CHAMPION.forwardTargetSessions}</span>}</div>
@@ -341,15 +333,12 @@ export default function MonitoringPage() {
           <div className="modelRunList">
             <article className="modelRunRow">
               <div className="runIdentity"><span className="generationPill v3">V3</span><div><strong>Alpha ranker · {FINAL_RANKER.shortName}</strong><small>{FINAL_RANKER.id}</small></div></div>
-              <div className="runMeta"><strong>ACTIVE / FROZEN</strong></div>
             </article>
             <article className="modelRunRow futureRun">
               <div className="runIdentity"><span className="generationPill v4">RISK</span><div><strong>Path Risk V1</strong><small>Separate historical research lane; not a forward trade filter yet.</small></div></div>
-              <div className="runMeta"><strong>NOT INTEGRATED</strong></div>
             </article>
             <article className="modelRunRow futureRun">
               <div className="runIdentity"><span className="generationPill v4">P</span><div><strong>Probability / calibration</strong><small>No validated probability layer exists yet.</small></div></div>
-              <div className="runMeta"><strong>NOT STARTED</strong></div>
             </article>
           </div>
         </section>

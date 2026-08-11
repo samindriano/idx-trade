@@ -108,7 +108,6 @@ export default function ModelDetailPage() {
             <a href="/#overview">Overview</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
           </nav>
-          <div className="researchPill"><span className="liveDot" /> Research only</div>
         </div>
       </header>
 
@@ -117,16 +116,15 @@ export default function ModelDetailPage() {
 
         <section className="modelDetailHero">
           <div>
-            <p className="overviewKicker">FORWARD PERFORMANCE / {model.generation === "V2" ? "V2 CHAMPION" : "FINAL V3-B"}</p>
+            <p className="overviewKicker">FORWARD PERFORMANCE</p>
             <h1>{model.shortName}</h1>
-            <p>Detailed forward-session evidence for the frozen ranker. This view reports score-artifact progress only; realized outcomes remain locked.</p>
+            <p>Detailed forward-session evidence for this model. This view reports score-artifact progress only.</p>
           </div>
-          <div className={`modelDetailRuntime ${loading ? "checking" : connected ? "online" : "offline"}`}><i /> {loading ? "Checking runtime" : connected ? "Runtime connected" : "Runtime offline"}</div>
         </section>
 
         <section className="modelDetailMetrics" aria-label="Forward model performance summary">
           <article><span>SCORE COVERAGE</span><strong>{loading ? "—" : scoredRuns.length}<em>{!loading && `/ ${model.forwardTargetSessions}`}</em></strong><small>verified score artifacts</small></article>
-          <article><span>LATEST SCORED</span><strong>{loading ? "Reading..." : shortDate(latestScored?.session_date)}</strong><small>most recent forward session</small></article>
+          <article className="latestScoredMetric"><span>LATEST SCORED</span><strong>{loading ? "Reading..." : shortDate(latestScored?.session_date)}</strong><small>most recent forward session</small></article>
           <article><span>LATEST RUN</span><strong>{loading ? "Reading..." : latestRun?.state ?? "Not started"}</strong><small>{loading ? "Waiting for status" : formatTimestamp(latestRun?.completed_at)}</small></article>
           <article><span>RUN ISSUES</span><strong>{loading ? "—" : failedRuns.length}</strong><small>failed or incomplete runs</small></article>
         </section>
@@ -139,15 +137,14 @@ export default function ModelDetailPage() {
               <div><dt>Model ID</dt><dd>{model.id}</dd></div>
               <div><dt>Feature contract</dt><dd>{model.featureCount} features</dd></div>
               <div><dt>Model SHA</dt><dd>{model.modelSha256.slice(0, 14)}...</dd></div>
-              <div><dt>Outcome vault</dt><dd>Locked</dd></div>
             </dl>
           </article>
 
           <article className="modelDetailCard modelDetailNoteCard">
             <span>READING THE RESULT</span>
             <h2>What this page measures</h2>
-            <p>This page confirms whether the frozen model has produced a valid forward score artifact for each captured session.</p>
-            <p>It does not expose realized returns, PR-AUC, ROC-AUC, PnL, or any other outcome metric before the locked evaluation window is authorized.</p>
+            <p>This page confirms whether the model has produced a valid forward score artifact for each captured session.</p>
+            <p>It reports forward score evidence only; realized returns and other outcome metrics are not shown here.</p>
           </article>
         </section>
 

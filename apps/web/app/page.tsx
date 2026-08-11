@@ -107,7 +107,6 @@ export default function Home() {
             <a className="active" href="/#overview">Overview</a>
             <a href="/monitoring">Forward Monitoring</a>
           </nav>
-          <div className="researchPill"><span className="liveDot" /> RESEARCH SYSTEM</div>
         </div>
       </header>
 

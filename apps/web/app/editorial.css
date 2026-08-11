@@ -325,15 +325,16 @@ body {
 .captureButton {
   min-height: 52px;
   border-radius: 0;
-  background: var(--editorial-green);
-  color: #07150f;
+  border: 1px solid #b8dfc9;
+  background: #dcefe5;
+  color: var(--editorial-green-dark);
   box-shadow: none;
   padding-inline: 26px;
   font-weight: 820;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.captureButton:not(:disabled):hover { transform: none; background: #18b979; }
+.captureButton:not(:disabled):hover { transform: none; background: #cce7d8; }
 .sessionStripHeader { margin-top: 34px; padding-top: 16px; border-color: var(--editorial-line); }
 .sessionStrip { gap: 1px !important; background: var(--editorial-line); }
 .sessionTile {
@@ -709,7 +710,10 @@ body {
 
 /* Give monitoring the same measured card rhythm as the overview page. */
 .monitoringPage { max-width: 1180px; padding: 28px 30px 36px; }
+.monitorHero .eyebrow { display: none; }
+.monitorHeroBadges { display: none; }
 .monitorSummaryGrid { margin: 14px 0 0; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.monitorSummaryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .monitorMainGrid { gap: 14px !important; background: transparent; border: 0; }
 .monitorMainGrid > .sessionCapturePanel {
   border: 1px solid var(--editorial-line) !important;
@@ -719,8 +723,7 @@ body {
 .sessionCapturePanel { padding-inline: 20px; }
 .modelCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; overflow: visible; border: 0; background: transparent; }
 .modelCardLink {
-  display: flex;
-  flex-direction: column;
+  display: block;
   min-height: 310px;
   min-width: 0;
   overflow: hidden;
@@ -733,16 +736,17 @@ body {
 .modelCardLink:hover { border-color: var(--editorial-green); background: #f5fbf7; transform: translateY(-1px); }
 .modelCardLink:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 3px; }
 .modelCardLink .sectionHead { padding: 18px 20px 10px; }
+.modelCardLink .sectionHead > div > span { color: var(--editorial-muted); }
 .modelCardLink .contractProgress { margin: 20px 20px 0; }
 .modelCardLink .modelMeta { margin: 16px 20px 0 !important; }
 .modelCardLink .modelCardAction { margin-inline: 20px; }
 .modelCardLink .contractNumber strong { font-size: 42px; }
-.modelCardLink .modelCardAction { margin-top: auto; padding-bottom: 20px; }
+.modelCardLink .modelCardAction { margin-top: 18px; padding-bottom: 28px; }
 .sessionStrip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; background: transparent !important; }
 .sessionTile {
-  flex: 0 0 108px;
-  min-height: 66px;
-  padding: 11px 10px;
+  flex: 0 0 128px;
+  min-height: 78px;
+  padding: 13px 12px;
   border: 1px solid var(--editorial-line) !important;
   border-radius: 4px !important;
   background: rgba(255,255,255,.46) !important;
@@ -779,6 +783,7 @@ body {
 .modelDetailMetrics article:last-child { border-right: 0; }
 .modelDetailMetrics span, .modelDetailMetrics small { display: block; color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; }
 .modelDetailMetrics strong { display: block; margin-top: 11px; overflow: hidden; color: var(--editorial-ink); font-size: 20px; line-height: 1; letter-spacing: -.045em; text-overflow: ellipsis; white-space: nowrap; }
+.modelDetailMetrics article.latestScoredMetric strong { overflow: visible; font-size: 18px; letter-spacing: -.035em; text-overflow: clip; }
 .modelDetailMetrics strong em { margin-left: 4px; color: var(--editorial-muted); font-size: 11px; font-style: normal; letter-spacing: 0; }
 .modelDetailMetrics small { margin-top: 7px; font-size: 8px; font-weight: 500; letter-spacing: 0; }
 .modelDetailGrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 14px; margin-top: 14px; }
