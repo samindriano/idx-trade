@@ -209,3 +209,26 @@ validation_run:
 decision: stop for independent ChatGPT review. Do not start the Zapi runtime,
 Source-2 backfill, corporate-action repair, modelling, Ranking/PIT-sector work,
 or execution-PnL until credential/access is separately authorized.
+
+## Credentialed runtime attempt — 2026-08-11
+
+The branch was fast-forwarded to remote HEAD
+`2274342c775074230326fb1bc241daa4a0fa4c37` and remained clean. The immutable
+panel SHA remained
+`67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`.
+
+Credential preflight found `ZAPI_API_KEY` absent from the process, Windows User,
+and Windows Machine environments. The key was not printed or persisted. The
+Zapi endpoint was not called, zero Zapi network requests were made, and the
+external output directory was not created. Runtime status remains
+`ZAPI_BLOCKED_CREDENTIAL_ABSENT`.
+
+validation_run:
+
+- focused pytest: `5 passed`, `2 warnings`;
+- full pytest: `236 passed`, `5 warnings`.
+
+No sample, provider, coverage, arbitration, or artifact result exists for this
+attempt. Stop and request a credential visible to this runtime process before
+retrying the already-frozen command. Do not substitute another provider or
+widen scope.

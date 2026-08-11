@@ -76,3 +76,31 @@ this handoff.
 
 Stop here. A future run may proceed only after the credential/access posture is
 separately authorized and the local environment supplies `ZAPI_API_KEY`.
+
+## Credentialed runtime attempt — 2026-08-11
+
+The branch was fetched and fast-forwarded to the expected remote HEAD
+`2274342c775074230326fb1bc241daa4a0fa4c37`. The required preflight checks
+passed for branch cleanliness and immutable panel SHA, but the credential was
+not visible to the Codex runtime process:
+
+- process environment `ZAPI_API_KEY`: absent;
+- Windows User environment `ZAPI_API_KEY`: absent;
+- Windows Machine environment `ZAPI_API_KEY`: absent;
+- secret value: not read, printed, persisted, hashed, or committed;
+- Zapi endpoint calls: `0`;
+- Zapi network requests: `0`;
+- output directory created: `false`.
+
+The targeted runtime therefore remained fail-closed as
+`ZAPI_BLOCKED_CREDENTIAL_ABSENT`. This attempt produced no sample/runtime
+artifacts and did not alter the panel or Yahoo census inputs.
+
+Validation on the fetched branch:
+
+- focused pytest: `5 passed`, `2 warnings`;
+- full pytest: `236 passed`, `5 warnings`.
+
+The warnings remain non-blocking pandas FutureWarnings. No Zapi access, plan,
+rate-limit, coverage, arbitration, or data-quality result can be reported
+until the key is visible in the environment of the runtime process.
