@@ -81,6 +81,16 @@ A reversed knowledge/effective ordering across two events is rejected fail-close
 
 Existing PALM treatment remains unchanged because its canonical effective date and linked official evidence publication date are both 2 October 2023.
 
+## Validation
+
+GitHub Actions on the refined branch completed successfully:
+
+- full repository pytest: `488 passed`;
+- PIT source test file now contains `17` focused tests, including delayed-evidence and non-monotonic-order adversarial cases;
+- no new test failure was introduced.
+
+The workflow still reports existing repository-wide warning noise; the knowledge-time change itself is green.
+
 ## Inventory implication
 
 This refinement does not promote any new source by itself. The canonical inventory remains:
