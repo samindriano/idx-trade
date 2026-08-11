@@ -103,6 +103,10 @@ def validate_effective_date_evidence(source: dict[str, Any]) -> dict[str, Any] |
     This nested evidence may establish the effective date only when it is an
     official IDX document, hash-pinned, and explicitly linked to the same
     canonical source and affected ticker(s).
+
+    Supporting evidence may be published after the effective date. In that
+    case the historical event is valid, but it is not PIT-knowable until the
+    supporting evidence is published. ``knowledge_at`` captures that boundary.
     """
 
     raw = source.get("effective_date_evidence")
@@ -126,16 +130,19 @@ def validate_effective_date_evidence(source: dict[str, Any]) -> dict[str, Any] |
     if not evidence_ref:
         raise ValueError(f"effective-date evidence has empty announcement_ref: {canonical_source_id}")
 
+    canonical_announced_at = _parse_optional_date(
+        source.get("announced_at"), source_id=canonical_source_id, field="announced_at"
+    )
     evidence_announced_at = _parse_optional_date(
         raw.get("announced_at"), source_id=evidence_id, field="announced_at"
     )
     evidence_effective_from = _parse_optional_date(
         raw.get("effective_from"), source_id=evidence_id, field="effective_from"
     )
+    if canonical_announced_at is None:
+        raise ValueError(f"canonical announced_at must be explicit: {canonical_source_id}")
     if evidence_announced_at is None or evidence_effective_from is None:
         raise ValueError(f"effective-date evidence lacks explicit dates: {canonical_source_id}")
-    if evidence_announced_at > evidence_effective_from:
-        raise ValueError(f"effective-date evidence is announced after effective date: {canonical_source_id}")
 
     canonical_effective_from = _parse_optional_date(
         source.get("effective_from"), source_id=canonical_source_id, field="effective_from"
@@ -144,6 +151,8 @@ def validate_effective_date_evidence(source: dict[str, Any]) -> dict[str, Any] |
         raise ValueError(f"canonical effective_from must be explicit: {canonical_source_id}")
     if canonical_effective_from != evidence_effective_from:
         raise ValueError(f"canonical/evidence effective dates disagree: {canonical_source_id}")
+
+    knowledge_at = max(canonical_effective_from, canonical_announced_at, evidence_announced_at)
 
     download_url = str(raw.get("download_url") or "").strip()
     if not is_official_idx_url(download_url):
@@ -188,6 +197,7 @@ def validate_effective_date_evidence(source: dict[str, Any]) -> dict[str, Any] |
         "announcement_ref": evidence_ref,
         "announced_at": evidence_announced_at,
         "effective_from": evidence_effective_from,
+        "knowledge_at": knowledge_at,
         "download_url": download_url,
         "source_sha256": source_sha256,
         "linked_tickers": normalised_tickers,
@@ -222,7 +232,7 @@ def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
         effective_from = _parse_optional_date(
             raw.get("effective_from"), source_id=source_id, field="effective_from"
         )
-        effective_date_evidence = validate_effective_date_evidence(raw)
+        validate_effective_date_evidence(raw)
         url = str(raw.get("download_url") or "").strip()
 
         if status == "READY_FOR_ACQUISITION":
@@ -332,7 +342,9 @@ def acquire_official_sources(
             entry["effective_date_evidence"] = {
                 "source_id": effective_date_evidence["source_id"],
                 "announcement_ref": effective_date_evidence["announcement_ref"],
+                "announced_at": str(effective_date_evidence["announced_at"]),
                 "effective_from": str(effective_date_evidence["effective_from"]),
+                "knowledge_at": str(effective_date_evidence["knowledge_at"]),
                 "requested_url": evidence["download_url"],
                 "final_url": evidence_final_url,
                 "content_type": evidence_content_type,
@@ -364,7 +376,13 @@ def normalise_sector_events(events: pd.DataFrame) -> pd.DataFrame:
     data["sector_code"] = data["sector_code"].astype(str).str.strip().str.upper()
     data["effective_from"] = pd.to_datetime(data["effective_from"], errors="raise").dt.normalize()
     data["announced_at"] = pd.to_datetime(data["announced_at"], errors="raise").dt.normalize()
-    data["pit_from"] = data[["effective_from", "announced_at"]].max(axis=1)
+    if "knowledge_at" not in data.columns:
+        data["knowledge_at"] = data["announced_at"]
+    else:
+        data["knowledge_at"] = pd.to_datetime(data["knowledge_at"], errors="raise").dt.normalize()
+    if data["knowledge_at"].isna().any():
+        raise ValueError("knowledge_at must not be null when provided")
+    data["pit_from"] = data[["effective_from", "announced_at", "knowledge_at"]].max(axis=1)
 
     if data["ticker"].eq("").any() or data["sector_code"].eq("").any():
         raise ValueError("ticker and sector_code must be non-empty")
@@ -380,7 +398,9 @@ def normalise_sector_events(events: pd.DataFrame) -> pd.DataFrame:
         bad = conflicts.loc[conflicts["sector_count"].gt(1), key].to_dict(orient="records")
         raise ValueError(f"conflicting sector events for same ticker/effective date: {bad}")
 
-    data = data.sort_values(["ticker", "effective_from", "announced_at", "source_id"], kind="mergesort")
+    data = data.sort_values(
+        ["ticker", "effective_from", "announced_at", "knowledge_at", "source_id"], kind="mergesort"
+    )
     data = data.drop_duplicates(key + ["sector_code"], keep="first").reset_index(drop=True)
     return data
 
@@ -414,6 +434,7 @@ def attach_sector_asof(
         "sector_code",
         "effective_from",
         "announced_at",
+        "knowledge_at",
         "source_id",
         "source_sha256",
     ]
