@@ -1,0 +1,78 @@
+param(
+    [Parameter(Mandatory = $true)][string]$RepoRoot,
+    [Parameter(Mandatory = $true)][string]$DataRoot,
+    [string]$PythonExe = "",
+    [string]$TaskName = "IDX-Trade Stockbit Intraday Daily",
+    [switch]$AllowNonJakartaTimezone
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$RepoRoot = (Resolve-Path $RepoRoot).Path
+$runner = Join-Path $RepoRoot "scripts\run_stockbit_intraday_daily.ps1"
+if (-not (Test-Path $runner)) {
+    throw "Runner script not found: $runner"
+}
+
+if (-not (Test-Path $DataRoot)) {
+    New-Item -ItemType Directory -Path $DataRoot -Force | Out-Null
+}
+$DataRoot = (Resolve-Path $DataRoot).Path
+
+$localZone = [System.TimeZoneInfo]::Local.Id
+if (-not $AllowNonJakartaTimezone -and $localZone -ne "SE Asia Standard Time") {
+    throw "Windows timezone is '$localZone'. Set it to SE Asia Standard Time (WIB) or explicitly use -AllowNonJakartaTimezone."
+}
+
+$userKey = [Environment]::GetEnvironmentVariable("ZAPI_API_KEY", "User")
+$machineKey = [Environment]::GetEnvironmentVariable("ZAPI_API_KEY", "Machine")
+if ([string]::IsNullOrWhiteSpace($userKey) -and [string]::IsNullOrWhiteSpace($machineKey)) {
+    throw "Persistent ZAPI_API_KEY was not found in User or Machine environment. The scheduler will not embed credentials."
+}
+
+if ([string]::IsNullOrWhiteSpace($PythonExe)) {
+    $venvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+    if (Test-Path $venvPython) {
+        $PythonExe = $venvPython
+    }
+    else {
+        $PythonExe = (Get-Command python.exe -ErrorAction Stop).Source
+    }
+}
+if (-not (Test-Path $PythonExe)) {
+    throw "Python executable not found: $PythonExe"
+}
+$PythonExe = (Resolve-Path $PythonExe).Path
+
+$powerShellExe = (Get-Command powershell.exe -ErrorAction Stop).Source
+$arguments = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", ('"' + $runner + '"'),
+    "-RepoRoot", ('"' + $RepoRoot + '"'),
+    "-DataRoot", ('"' + $DataRoot + '"'),
+    "-PythonExe", ('"' + $PythonExe + '"')
+) -join " "
+
+$action = New-ScheduledTaskAction -Execute $powerShellExe -Argument $arguments -WorkingDirectory $RepoRoot
+$days = @("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+$primary = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At 4:35PM
+$recovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At 5:30PM
+$settings = New-ScheduledTaskSettingsSet `
+    -StartWhenAvailable `
+    -MultipleInstances IgnoreNew `
+    -ExecutionTimeLimit (New-TimeSpan -Hours 2) `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries
+
+$currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+$principal = New-ScheduledTaskPrincipal -UserId $currentIdentity -LogonType Interactive -RunLevel Limited
+$task = New-ScheduledTask -Action $action -Trigger @($primary, $recovery) -Settings $settings -Principal $principal
+Register-ScheduledTask -TaskName $TaskName -InputObject $task -Force | Out-Null
+
+Write-Host "Registered scheduled task: $TaskName"
+Write-Host "Triggers: weekdays 16:35 and 17:30 local time"
+Write-Host "Data root: $DataRoot"
+Write-Host "Python: $PythonExe"
+Write-Host "Credential source: persistent ZAPI_API_KEY environment variable (value not displayed)"
