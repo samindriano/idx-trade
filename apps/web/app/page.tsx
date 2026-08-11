@@ -136,7 +136,9 @@ function EvidenceChart({
               {line.points.map((point, pointIndex) => (
                 <g className="chartPoint" key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}>
                   <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: line.color }} />
-                  <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: line.color }}>{signedPct(point.deltaPr)}</text>
+                  {(series.length === 1 || (hovered?.series === seriesIndex && hovered.point === pointIndex)) && (
+                    <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: line.color }}>{signedPct(point.deltaPr)}</text>
+                  )}
                   {seriesIndex === 0 && <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>}
                 </g>
               ))}
