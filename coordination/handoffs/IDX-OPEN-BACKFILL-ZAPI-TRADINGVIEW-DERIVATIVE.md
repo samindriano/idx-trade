@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `9ffa1b9738f8fc77bd8fb8b29e3aed42ad6cd941`
 branch: `data/idx-open-backfill-zapi-tradingview-targeted-census-v1`
-head_commit: pending documentation commit
+head_commit: `4558d2998f4bc9ce5f71c717bb96639cb26db4ba` (application commit; this handoff metadata is the subsequent docs-only publication)
 scope: Apply exactly 5,675 independently accepted non-corporate-action TradingView Open candidates to the accepted Yahoo derivative, preserving existing non-null Open values and row-level provenance.
 files_changed: `src/idx_trade/zapi_tradingview_derivative.py`, `tests/test_zapi_tradingview_derivative.py`, `docs/checkpoints/2026-08-11_ZAPI_TRADINGVIEW_DERIVATIVE_APPLICATION_RUNTIME.md`, `coordination/handoffs/IDX-OPEN-BACKFILL-ZAPI-TRADINGVIEW-DERIVATIVE.md`
 
