@@ -491,14 +491,14 @@ export default function Home() {
                     <div><strong>{item.name}</strong><small>{item.candidate}</small></div>
                     <span className="overviewArchiveResult">{item.result}</span>
                     <span className="overviewArchiveStatus">{statusLabel(item.status)}</span>
-                    <span className="overviewArchiveChevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
+                    <span className={`overviewArchiveChevron ${expanded ? "isExpanded" : ""}`} aria-hidden="true" />
                   </button>
-                  {expanded && (
+                  <div className={`overviewArchiveDetailWrap ${expanded ? "isOpen" : ""}`} aria-hidden={!expanded}>
                     <div className="overviewArchiveDetail">
                       <div><span>Decision</span><strong>{item.result}</strong></div>
                       <div><span>Why</span><p>{item.note}</p></div>
                     </div>
-                  )}
+                  </div>
                 </article>
               );
             }) : <div className="overviewArchiveEmpty">No tested models match these filters.</div>}
