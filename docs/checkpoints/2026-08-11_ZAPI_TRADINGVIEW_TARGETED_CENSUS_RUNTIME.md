@@ -3,6 +3,7 @@
 Date: 2026-08-11 (Asia/Jakarta)
 Branch: `data/idx-open-backfill-zapi-tradingview-targeted-census-v1`
 Starting HEAD: `1510585f6a11c52411edb47f08127b9ee3525685`
+Implementation commit: `dadc016`
 Decision: `TRADINGVIEW_NON_CA_RESIDUAL_CENSUS_COMPLETE_STOP_FOR_INDEPENDENT_REVIEW`
 
 ## Scope and controls
