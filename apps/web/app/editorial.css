@@ -209,8 +209,8 @@ body {
 .evidenceChartMeta small { display: inline-flex; align-items: center; gap: 5px; color: var(--editorial-muted); font-size: 9px; }
 .evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-muted); }
 .evidenceChartMeta .seriesMarker { background: var(--editorial-muted); }
-.evidenceChartMeta .positiveMarker { background: var(--editorial-green); }
-.evidenceChartMeta .negativeMarker { background: var(--editorial-red); }
+.evidenceChartMeta .directionHint { gap: 4px; }
+.evidenceChartMeta .directionHint b { color: var(--editorial-ink); font-size: 11px; line-height: 1; }
 .evidenceHelp { position: relative; }
 .evidenceHelpButton { width: 16px; height: 16px; display: grid; place-items: center; padding: 0; border: 1px solid var(--editorial-muted); border-radius: 50%; background: transparent; color: var(--editorial-muted); font: inherit; font-size: 10px; font-weight: 800; line-height: 1; cursor: pointer; }
 .evidenceHelpButton:hover, .evidenceHelpButton[aria-expanded="true"] { border-color: var(--editorial-green); color: var(--editorial-green-dark); }

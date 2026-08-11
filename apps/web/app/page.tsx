@@ -68,49 +68,50 @@ function signedPct(value: number) {
 
 const POSITIVE_TONE = "#00a66a";
 const NEGATIVE_TONE = "#d84b56";
+const SERIES_TONES = ["#216b8c", "#a56812", "#7353a6", "#007c70"];
 
 function metricTone(value: number) {
   return value >= 0 ? POSITIVE_TONE : NEGATIVE_TONE;
 }
 
+function seriesTone(index: number) {
+  return SERIES_TONES[index % SERIES_TONES.length];
+}
+
 type PlottedPoint = ResearchFoldMetric & { x: number; y: number };
 
-function lineSegments(points: readonly PlottedPoint[], zeroY: number) {
+function lineSegments(points: readonly PlottedPoint[], zeroY: number, color: string) {
   return points.slice(0, -1).flatMap((start, index) => {
     const end = points[index + 1];
-    const startTone = metricTone(start.deltaPr);
-    const endTone = metricTone(end.deltaPr);
     const startsOnSameSide = (start.deltaPr >= 0) === (end.deltaPr >= 0);
 
     if (startsOnSameSide || start.deltaPr === 0 || end.deltaPr === 0) {
-      return [{ d: `M${start.x},${start.y} L${end.x},${end.y}`, color: startTone }];
+      return [{ d: `M${start.x},${start.y} L${end.x},${end.y}`, color }];
     }
 
     const zeroRatio = -start.deltaPr / (end.deltaPr - start.deltaPr);
     const zeroX = start.x + zeroRatio * (end.x - start.x);
     return [
-      { d: `M${start.x},${start.y} L${zeroX},${zeroY}`, color: startTone },
-      { d: `M${zeroX},${zeroY} L${end.x},${end.y}`, color: endTone },
+      { d: `M${start.x},${start.y} L${zeroX},${zeroY}`, color },
+      { d: `M${zeroX},${zeroY} L${end.x},${end.y}`, color },
     ];
   });
 }
 
-function areaSegments(points: readonly PlottedPoint[], zeroY: number) {
+function areaSegments(points: readonly PlottedPoint[], zeroY: number, color: string) {
   return points.slice(0, -1).flatMap((start, index) => {
     const end = points[index + 1];
-    const startTone = metricTone(start.deltaPr);
-    const endTone = metricTone(end.deltaPr);
     const startsOnSameSide = (start.deltaPr >= 0) === (end.deltaPr >= 0);
 
     if (startsOnSameSide || start.deltaPr === 0 || end.deltaPr === 0) {
-      return [{ d: `M${start.x},${zeroY} L${start.x},${start.y} L${end.x},${end.y} L${end.x},${zeroY} Z`, color: startTone }];
+      return [{ d: `M${start.x},${zeroY} L${start.x},${start.y} L${end.x},${end.y} L${end.x},${zeroY} Z`, color }];
     }
 
     const zeroRatio = -start.deltaPr / (end.deltaPr - start.deltaPr);
     const zeroX = start.x + zeroRatio * (end.x - start.x);
     return [
-      { d: `M${start.x},${zeroY} L${start.x},${start.y} L${zeroX},${zeroY} Z`, color: startTone },
-      { d: `M${zeroX},${zeroY} L${end.x},${end.y} L${end.x},${zeroY} Z`, color: endTone },
+      { d: `M${start.x},${zeroY} L${start.x},${start.y} L${zeroX},${zeroY} Z`, color },
+      { d: `M${zeroX},${zeroY} L${end.x},${end.y} L${end.x},${zeroY} Z`, color },
     ];
   });
 }
@@ -173,15 +174,15 @@ function EvidenceChart({
                     <div key={fold.fold}><b>{fold.fold}</b><span>train {fold.train}</span><span>gap {fold.gap}</span><span>validation {fold.validation}</span></div>
                   ))}
                 </div>
-                <small>Positive PR-AUC change means the candidate beat the comparator shown above. These are historical development folds, not fresh-forward outcomes.</small>
+                <small>Each line is a separate candidate or variant. The line color identifies the series; the + or − value shows whether it is above or below zero. Positive PR-AUC change means the candidate beat the comparator shown above. These are historical development folds, not fresh-forward outcomes.</small>
               </div>
             )}
           </div>
         </div>
         <div className="evidenceChartLegend">
-          {series.map((line) => <small key={line.label}><i className="seriesMarker" />{line.label}</small>)}
-          <small><i className="positiveMarker" />Positive</small>
-          <small><i className="negativeMarker" />Negative</small>
+          {series.map((line, seriesIndex) => <small key={line.label}><i className="seriesMarker" style={{ background: seriesTone(seriesIndex) }} />{line.label}</small>)}
+          <small className="directionHint"><b>+</b> above zero</small>
+          <small className="directionHint"><b>−</b> below zero</small>
         </div>
       </div>
       <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel} across evaluation folds`}>
@@ -195,17 +196,18 @@ function EvidenceChart({
           );
         })}
         {plottedSeries.map((line, seriesIndex) => {
-          const segments = lineSegments(line.points, zeroY);
-          const fills = areaSegments(line.points, zeroY);
+          const color = seriesTone(seriesIndex);
+          const segments = lineSegments(line.points, zeroY, color);
+          const fills = areaSegments(line.points, zeroY, color);
           return (
             <g key={line.label}>
               {series.length === 1 && fills.map((segment, segmentIndex) => <path className="areaPath" key={`area-${segmentIndex}`} d={segment.d} style={{ fill: segment.color }} />)}
               {segments.map((segment, segmentIndex) => <path className="linePath" key={`line-${segmentIndex}`} d={segment.d} style={{ stroke: segment.color }} />)}
               {line.points.map((point, pointIndex) => (
                 <g className={`chartPoint ${point.deltaPr >= 0 ? "positive" : "negative"}`} key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}>
-                  <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: metricTone(point.deltaPr) }} />
+                  <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: color }} />
                   {(series.length === 1 || (hovered?.series === seriesIndex && hovered.point === pointIndex)) && (
-                    <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: metricTone(point.deltaPr) }}>{signedPct(point.deltaPr)}</text>
+                    <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: color }}>{signedPct(point.deltaPr)}</text>
                   )}
                   {seriesIndex === 0 && <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>}
                 </g>
