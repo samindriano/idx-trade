@@ -1,8 +1,8 @@
 # OHLCV O2 Minimality Ablation Runtime
 
-Date: 2026-08-12 (Asia/Jakarta)  
-Branch: `research/idx-ranking-ohlcv-o2-minimality-v1`  
-Starting remote HEAD: `980c741c266c7ac4c17fc4496f41b797f6090a6b`  
+Date: 2026-08-12 (Asia/Jakarta)
+Branch: `research/idx-ranking-ohlcv-o2-minimality-v1`
+Starting remote HEAD: `980c741c266c7ac4c17fc4496f41b797f6090a6b`
 Runtime status: `O2_MINIMALITY_EVIDENCE_COMPLETE`
 
 ## Scope and boundary
