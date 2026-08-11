@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./model-monitor.module.css";
 import {
   FINAL_RANKER,
@@ -14,6 +14,19 @@ type FoldMetric = {
   deltaPr: number;
   roc: number;
   qSpread: number;
+};
+
+type OverviewRuntimeStatus = {
+  model_runs: Array<{
+    session_date: string;
+    model_id: string;
+    state: string;
+    artifact_sha256?: string | null;
+  }>;
+};
+
+type OverviewStatusResponse = {
+  status?: OverviewRuntimeStatus;
 };
 
 type ArchiveSort = "best" | "latest" | "name";
@@ -121,11 +134,29 @@ function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
 }
 
 export default function Home() {
+  const [forwardStatus, setForwardStatus] = useState<OverviewRuntimeStatus | null>(null);
+  const [forwardStatusLoading, setForwardStatusLoading] = useState(true);
   const [archiveSort, setArchiveSort] = useState<ArchiveSort>("best");
   const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
   const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
   const [expandedArchiveKey, setExpandedArchiveKey] = useState<string | null>(null);
   const [selectedModelKey, setSelectedModelKey] = useState(experimentKey(RESEARCH_EXPERIMENTS[2]));
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/monitor/status", { cache: "no-store" })
+      .then((response) => response.json() as Promise<OverviewStatusResponse>)
+      .then((payload) => {
+        if (!cancelled) setForwardStatus(payload.status ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setForwardStatus(null);
+      })
+      .finally(() => {
+        if (!cancelled) setForwardStatusLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const visibleExperiments = [...RESEARCH_EXPERIMENTS]
     .filter((item) => {
@@ -146,6 +177,11 @@ export default function Home() {
         || RESEARCH_EXPERIMENTS.indexOf(left) - RESEARCH_EXPERIMENTS.indexOf(right);
     });
   const selectedExperiment = RESEARCH_EXPERIMENTS.find((item) => experimentKey(item) === selectedModelKey) ?? RESEARCH_EXPERIMENTS[0];
+  const finalScoredSessions = new Set(
+    (forwardStatus?.model_runs ?? [])
+      .filter((run) => run.model_id === FINAL_RANKER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+      .map((run) => run.session_date),
+  ).size;
 
   return (
     <main className="appShell editorialShell">
@@ -177,7 +213,7 @@ export default function Home() {
           <article><span>ACTIVE MODEL</span><strong>{FINAL_RANKER.shortName}</strong><small>V3-B Structure-Lite</small></article>
           <article><span>FEATURES</span><strong>{FINAL_RANKER.featureCount}</strong><small>25 V2 + 8 structure</small></article>
           <article><span>DISCOVERY DELTA PR</span><strong className="positiveText">+{pct(FINAL_RANKER.discoveryMedianPairedDeltaPr)}</strong><small>median F1-F4</small></article>
-          <article><span>FORWARD BLOCK</span><strong>0 / 100</strong><small>scores accumulating</small></article>
+          <article><span>FORWARD BLOCK</span><strong>{forwardStatusLoading ? "—" : `${finalScoredSessions} / ${FINAL_RANKER.forwardTargetSessions}`}</strong><small>{forwardStatusLoading ? "reading runtime" : "verified score artifacts"}</small></article>
         </section>
 
         <section className="overviewGrid">
