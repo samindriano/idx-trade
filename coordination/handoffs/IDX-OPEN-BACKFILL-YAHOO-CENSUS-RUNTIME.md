@@ -167,3 +167,38 @@ Push only a fast-forward to the same branch if remote HEAD has not advanced. If 
 - no force push/rebase.
 
 Then STOP for independent ChatGPT review.
+
+## Runtime result — 2026-08-11
+
+runtime_status: `YAHOO_FULL_UNIVERSE_OPEN_CENSUS_COMPLETE_STOP_FOR_INDEPENDENT_REVIEW`
+runtime_head: `c338fe8fafd711eb40dee211897d0ee79842d990`
+checkpoint: `docs/checkpoints/2026-08-11_OPEN_BACKFILL_YAHOO_CENSUS_RUNTIME.md`
+runtime_output: `D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_yahoo_census_v1_20260810`
+
+findings:
+- full panel: `981,940` rows / `945` tickers attempted;
+- Yahoo: `940` success, `0` no-data, `5` errors;
+- network attempts `955`, retries `10`, cache hits `0`, provider rows `1,045,683`;
+- exact ticker/date coverage: `975,069 / 981,940`;
+- known-Open H/L/C exact: `526,756 / 534,942`;
+- known-Open raw Open exact after H/L/C gate: `526,656 / 526,756`;
+- direct missing-Open fills: `386,157`;
+- verified split-scale missing-Open fills: `11,210`;
+- total fills: `397,367`;
+- initial null `446,843`, final null `49,476`, gap closure `88.9277%`;
+- error tickers: `FREN`, `MASA`, `MFIN`, `RMBA`, `TURI`;
+- PURE succeeded with one provider row;
+- derivative SHA: `d8d3463362a8c43bdb9e8d3aaba5e66ceffe86803b76979d18e3e2e71a276ea4`;
+- provenance SHA: `1c11b832c9a8b049202547e8b76c1a4972e9177afefd9a02deb3ca49795bb17d`;
+- raw-cache manifest SHA: `08f37a4100e911049a3535357959e43df94c748cdd7bc8cb525a84d870b3b0f6`;
+- artifact manifest SHA: `b6e47c98ac256cb07ac0441be41f599ba21481a5340c6b306b5f3301e207da2f`;
+- panel SHA before/after unchanged: `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
+- original columns/order and existing Open values preserved; unresolved rows remain null;
+- `execution_grade_promoted=false`.
+
+validation_run:
+- full pytest before runtime: `236 passed, 3 warnings`;
+- source/test changes: none; no concrete runtime bug occurred.
+
+recommended_next_action:
+- independent ChatGPT review of the factual checkpoint and external census artifacts; do not begin execution-grade promotion or downstream modelling from this result.
