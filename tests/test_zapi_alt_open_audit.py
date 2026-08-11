@@ -2,6 +2,9 @@ import pandas as pd
 
 from idx_trade.zapi_alt_open_audit import (
     _investing_identity_candidates,
+    _load_provider_csv,
+    _load_status_csv,
+    _request_json,
     _session_date,
     classify_provider,
     fetch_investing,
@@ -11,11 +14,11 @@ from idx_trade.tier2_open_audit import classify_zapi_access_failure
 
 
 class FakeResponse:
-    def __init__(self, payload, status_code=200, text=""):
+    def __init__(self, payload, status_code=200, text="", headers=None):
         self._payload = payload
         self.status_code = status_code
         self.text = text
-        self.headers = {}
+        self.headers = headers or {}
 
     def json(self):
         return self._payload
@@ -153,6 +156,81 @@ def test_investing_fetch_uses_verified_pair_id(monkeypatch):
     assert result["rows"].iloc[0]["raw_open"] == 6400
     assert session.calls[1][1]["pairId"] == 123
     assert session.calls[1][1]["pointscount"] == 1500
+
+
+def test_rate_limit_month_captures_safe_metadata_and_stops(monkeypatch):
+    monkeypatch.setattr("idx_trade.zapi_alt_open_audit.time.sleep", lambda *_: None)
+    secret = "zpi_test_secret"
+    session = FakeSession(
+        [
+            FakeResponse(
+                {"window": "month", "secret": secret},
+                status_code=429,
+                headers={
+                    "Retry-After": "60",
+                    "X-RateLimit-Limit": "2000",
+                    "X-RateLimit-Remaining-Minute": "0",
+                    "X-RateLimit-Remaining-Month": "0",
+                    "X-Plan-Expired": "true",
+                },
+            )
+        ]
+    )
+    payload, meta = _request_json(
+        session,
+        "https://example.test",
+        params={},
+        api_key=secret,
+        delay_seconds=0,
+    )
+    assert payload is None
+    assert len(session.calls) == 1
+    assert meta["rate_limit_stop_reason"] == "MONTH_QUOTA"
+    assert meta["rate_limit_diagnostics"] == [
+        {
+            "window": "month",
+            "retry_after": "60",
+            "rate_limit_limit": "2000",
+            "remaining_minute": "0",
+            "remaining_month": "0",
+            "plan_expired_present": True,
+        }
+    ]
+    assert secret not in str(meta)
+
+
+def test_rate_limit_minute_retries_with_bounded_delay(monkeypatch):
+    waits = []
+    monkeypatch.setattr("idx_trade.zapi_alt_open_audit.time.sleep", lambda value: waits.append(value))
+    session = FakeSession(
+        [
+            FakeResponse(
+                {"window": "minute"},
+                status_code=429,
+                headers={"Retry-After": "1"},
+            ),
+            FakeResponse({"content": {"ok": True}}),
+        ]
+    )
+    payload, meta = _request_json(
+        session,
+        "https://example.test",
+        params={},
+        api_key="secret",
+        delay_seconds=0,
+    )
+    assert payload == {"content": {"ok": True}}
+    assert len(session.calls) == 2
+    assert waits == [1.0]
+    assert meta["rate_limit_diagnostics"][0]["window"] == "minute"
+    assert meta["rate_limit_stop_reason"] is None
+
+
+def test_followup_loaders_accept_empty_prior_csvs(tmp_path):
+    empty = tmp_path / "empty.csv"
+    empty.write_text("", encoding="utf-8")
+    assert _load_provider_csv(empty).empty
+    assert _load_status_csv(empty).empty
 
 
 def test_classification_distinguishes_history_window_unavailable():

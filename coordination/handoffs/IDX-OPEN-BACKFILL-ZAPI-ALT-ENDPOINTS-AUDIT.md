@@ -152,3 +152,31 @@ The final runtime is outside Git at
 `execution_grade_promoted=false`, `bulk_backfill_authorized=false`, and
 `corporate_action_repair_performed=false`. Stop for independent ChatGPT
 review; do not start bulk backfill or downstream research.
+
+## Quota-aware follow-up result — 2026-08-11
+
+Final checkpoint:
+`docs/checkpoints/2026-08-11_OPEN_BACKFILL_ZAPI_ALT_ENDPOINTS_FOLLOWUP_RUNTIME.md`
+
+The existing 61 TradingView candidates were first broken down offline:
+37 `RESIDUAL_PROVIDER_GAP`, 24 `RESIDUAL_HLC_MISMATCH`; years 2021=10,
+2022=18, 2023=20, 2024=13; HKMU was the largest ticker concentration with 5.
+
+The quota-aware follow-up selected only the prior 71 terminal
+`RATE_LIMITED` TradingView tickers and refetched 0 prior successes. The first
+selected ticker (`MAIN`) returned HTTP 429 without a JSON `window`; the runner
+captured `remaining_minute=100`, `remaining_month=0`, no Retry-After, and no
+plan-expired header, then stopped with `UNKNOWN_QUOTA_WINDOW`. The remaining
+70 selected tickers were not called. Investing was skipped because quota
+status was not clear.
+
+The frozen sample SHA and immutable panel SHA remained unchanged. Combined
+TradingView evidence therefore remains 130,044 provider rows, 101/240 exact
+sample dates, 84/240 H/L/C exact, 23/40 known-control Open exact, and 61
+recovery candidates. The follow-up manifest SHA is
+`87e40d23e02f7557d8a90120577ff68fd3e3567ee339c856386c141fdb61802d`.
+
+Focused tests passed 9/9 and full pytest passed 251 tests with 5 existing
+warnings. Stop for independent ChatGPT review; do not infer the unknown 429
+window, retry the remaining tickers, call Investing, or start bulk backfill
+without a new authorization.
