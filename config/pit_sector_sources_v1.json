@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
-  "status": "SOURCE_INVENTORY_INCOMPLETE",
-  "notes": "Official IDX sources only. Unknown dates/refs/URLs stay null or UNRESOLVED; do not infer them. Secondary-source discovery may populate candidate announcement metadata while status remains DISCOVERY_REQUIRED until the corresponding official IDX attachment is located and verified.",
+  "schema_version": 2,
+  "status": "SOURCE_DISCOVERY_BOUNDED_COMPLETE_RAW_ATTACHMENTS_INCOMPLETE",
+  "notes": "Canonical PIT history is event-sourced from actual IDX-IC classification events. Sector-index constituent/evaluation announcements are reconciliation evidence only and are kept separate. Unknown dates/refs/URLs stay null or UNRESOLVED; do not infer them. A source becomes READY_FOR_ACQUISITION only after its official IDX HTTPS attachment URL and key dates are verified.",
   "sources": [
     {
       "source_id": "IDX_IC_BASELINE_2021",
@@ -10,61 +10,124 @@
       "announced_at": "2021-01-13",
       "effective_from": "2021-01-25",
       "status": "READY_FOR_ACQUISITION",
-      "download_url": "https://www.idx.co.id/media/9594/idx-industrial-classification.zip"
+      "download_url": "https://www.idx.co.id/media/9594/idx-industrial-classification.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_URL",
+      "discovery_note": "Initial IDX-IC launch package; canonical baseline."
     },
     {
-      "source_id": "IDX_IC_ANNUAL_2021",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "UNRESOLVED",
-      "announced_at": null,
-      "effective_from": null,
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2021",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "Peng-00171/BEI.POP/06-2021",
+      "announced_at": "2021-06-24",
+      "effective_from": "2021-07-01",
       "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
+      "download_url": "",
+      "evidence_level": "EXACT_REF_AND_DATES_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
+      "discovery_note": "Dedicated listed-company industrial-classification change announcement recovered from issuer/IDX-derived evidence."
     },
     {
-      "source_id": "IDX_IC_ANNUAL_2022",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "Peng-00150/BEI.POP/06-2022",
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2022",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "UNRESOLVED",
       "announced_at": "2022-06-24",
       "effective_from": "2022-07-01",
       "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
+      "download_url": "",
+      "evidence_level": "EVENT_DATE_AND_EFFECTIVE_DATE_RECOVERED_DEDICATED_REF_MISSING",
+      "discovery_note": "BEI annual classification change event and affected issuers are independently reported; Peng-00150/BEI.POP/06-2022 is an index/sector evaluation reference and is not treated as the canonical classification-change announcement."
     },
     {
-      "source_id": "IDX_IC_ANNUAL_2023",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "Peng-00156/BEI.POP/06-2023",
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2023",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "UNRESOLVED",
       "announced_at": "2023-06-22",
       "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
+      "download_url": "",
+      "evidence_level": "EVENT_DATE_AND_CHANGE_COUNT_RECOVERED_DEDICATED_REF_MISSING",
+      "discovery_note": "BEI annual classification change event covering 14 issuers is independently reported; Peng-00156/BEI.POP/06-2023 is an index/sector evaluation reference and is not treated as the canonical classification-change announcement."
     },
     {
-      "source_id": "IDX_IC_ANNUAL_2024",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "Peng-00127/BEI.POP/06-2024",
-      "announced_at": "2024-06-24",
-      "effective_from": "2024-07-01",
+      "source_id": "IDX_IC_INCIDENTAL_PALM_2023",
+      "source_type": "INCIDENTAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "Peng-00236/BEI.POP/09-2023",
+      "announced_at": "2023-09-29",
+      "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
+      "download_url": "",
+      "evidence_level": "EXACT_REF_AND_ANNOUNCEMENT_DATE_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
+      "discovery_note": "PALM moved from Consumer Non-Cyclicals to Financials after an incidental classification evaluation. This proves annual-only reconstruction is insufficient."
     },
     {
-      "source_id": "IDX_IC_ANNUAL_2025",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "Peng-00111/BEI.POP/06-2025",
-      "announced_at": "2025-06-23",
-      "effective_from": "2025-07-01",
-      "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
-    },
-    {
-      "source_id": "IDX_IC_ANNUAL_2026",
-      "source_type": "ANNUAL_CLASSIFICATION_EVALUATION",
-      "announcement_ref": "UNRESOLVED",
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2024",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "Peng-00128/BEI.POP/06-2024",
       "announced_at": null,
       "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": ""
+      "download_url": "",
+      "evidence_level": "REF_RECOVERED_FROM_OFFICIAL_IDX_GENERATED_ISSUER_DISCLOSURE_ATTACHMENT_NAME",
+      "discovery_note": "An official IDX-generated PANI disclosure names attachment 'PKIE Peng-00128.pdf'. Direct announcement attachment and authoritative dates still need retrieval; do not substitute Peng-00127, which is the sector-index evaluation announcement."
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2025",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "Peng-00110/BEI.POP/06-2025",
+      "announced_at": "2025-06-23",
+      "effective_from": "2025-07-01",
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": "",
+      "evidence_level": "EXACT_REF_AND_DATES_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
+      "discovery_note": "Dedicated classification-change announcement for IRRA and OKAS. Peng-00111/BEI.POP/06-2025 is kept only as sector-index reconciliation evidence."
+    },
+    {
+      "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2026",
+      "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
+      "announcement_ref": "Peng-00100/BEI.POP/06-2026",
+      "announced_at": "2026-06-24",
+      "effective_from": null,
+      "status": "DISCOVERY_REQUIRED",
+      "download_url": "",
+      "evidence_level": "EXACT_REF_AND_DOCUMENT_DATE_RECOVERED_FROM_IDX_DOCUMENT_MIRROR_RAW_IDX_URL_MISSING",
+      "discovery_note": "Annual classification evaluation changes ARGO, HRUM and PACK; direct idx.co.id/idx.id attachment URL and explicit effective date remain to be verified."
+    }
+  ],
+  "reconciliation_sources": [
+    {
+      "source_id": "IDX_SECTOR_INDEX_EVAL_2022",
+      "announcement_ref": "Peng-00150/BEI.POP/06-2022",
+      "announced_at": "2022-06-24",
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+    },
+    {
+      "source_id": "IDX_SECTOR_INDEX_EVAL_2023",
+      "announcement_ref": "Peng-00156/BEI.POP/06-2023",
+      "announced_at": "2023-06-22",
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+    },
+    {
+      "source_id": "IDX_SECTOR_INDEX_EVAL_2024",
+      "announcement_ref": "Peng-00127/BEI.POP/06-2024",
+      "announced_at": "2024-06-24",
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+    },
+    {
+      "source_id": "IDX_SECTOR_INDEX_EVAL_2025",
+      "announcement_ref": "Peng-00111/BEI.POP/06-2025",
+      "announced_at": "2025-06-23",
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+    }
+  ],
+  "remaining_source_classes": [
+    {
+      "source_type": "IPO_INITIAL_CLASSIFICATION",
+      "status": "CENSUS_REQUIRED",
+      "note": "Every listing after the applicable baseline/evaluation state requires an initial IDX-IC assignment from official listing/prospectus evidence effective from listing."
+    },
+    {
+      "source_type": "OTHER_INCIDENTAL_CLASSIFICATION_CHANGE",
+      "status": "CENSUS_REQUIRED",
+      "note": "Search the IDX announcement history for additional out-of-cycle changes; PALM 2023 proves this class exists."
     }
   ]
 }
