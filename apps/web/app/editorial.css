@@ -1,11 +1,11 @@
 /* IDX Trade — Post-Swiss Interactive Editorial direction */
 :root {
-  --editorial-paper: #ebe9e2;
-  --editorial-paper-2: #e4e1da;
+  --editorial-paper: #e6e4dd;
+  --editorial-paper-2: #ddd9d1;
   --editorial-ink: #111512;
-  --editorial-muted: #737871;
-  --editorial-line: rgba(17, 21, 18, .15);
-  --editorial-line-soft: rgba(17, 21, 18, .075);
+  --editorial-muted: #606862;
+  --editorial-line: rgba(17, 21, 18, .24);
+  --editorial-line-soft: rgba(17, 21, 18, .12);
   --editorial-green: #00a66a;
   --editorial-green-dark: #007b4f;
   --editorial-red: #e34a3b;
@@ -14,16 +14,16 @@
 
 body {
   background:
-    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.025) 25%, transparent calc(25% + .5px)),
-    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.025) 50%, transparent calc(50% + .5px)),
-    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.025) 75%, transparent calc(75% + .5px)),
+    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.04) 25%, transparent calc(25% + .5px)),
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.04) 50%, transparent calc(50% + .5px)),
+    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.04) 75%, transparent calc(75% + .5px)),
     var(--editorial-paper);
   color: var(--editorial-ink);
 }
 
 .editorialNav,
 .monitorShell .topNav {
-  background: rgba(235, 233, 226, .92);
+  background: rgba(235, 233, 226, .98);
   border-bottom: 1px solid var(--editorial-line);
   backdrop-filter: blur(18px);
 }
@@ -193,10 +193,10 @@ body {
   border-top: 1px solid var(--editorial-line);
   border-bottom: 1px solid var(--editorial-line);
 }
-.editorialChart .gridLine { stroke: rgba(17,21,18,.10); }
-.editorialChart .gridLine.zeroLine { stroke: rgba(17,21,18,.24); stroke-width: 1.2; }
+.editorialChart .gridLine { stroke: rgba(17,21,18,.16); }
+.editorialChart .gridLine.zeroLine { stroke: rgba(17,21,18,.34); stroke-width: 1.2; }
 .editorialChart .axisLabel,
-.editorialChart .foldAxis { fill: #747a74; font-size: 10px; }
+.editorialChart .foldAxis { fill: #626a64; font-size: 10px; }
 .editorialChart .areaPath { fill-opacity: .14; }
 .editorialChart .linePath { stroke-width: 3; }
 .editorialChart .chartPoint circle { fill: var(--editorial-paper); }
@@ -285,9 +285,9 @@ body {
 /* Monitoring inherits the same visual language while keeping operator clarity. */
 .monitorShell {
   background:
-    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.022) 25%, transparent calc(25% + .5px)),
-    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.022) 50%, transparent calc(50% + .5px)),
-    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.022) 75%, transparent calc(75% + .5px)),
+    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.04) 25%, transparent calc(25% + .5px)),
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.04) 50%, transparent calc(50% + .5px)),
+    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.04) 75%, transparent calc(75% + .5px)),
     var(--editorial-paper) !important;
 }
 .monitoringPage { max-width: 1320px; padding: 40px 30px 50px; }
@@ -350,16 +350,16 @@ body {
 .captureButton {
   min-height: 52px;
   border-radius: 0;
-  border: 1px solid #b8dfc9;
-  background: #dcefe5;
-  color: var(--editorial-green-dark);
+  border: 1px solid #008756;
+  background: var(--editorial-green);
+  color: #ffffff;
   box-shadow: none;
   padding-inline: 26px;
   font-weight: 820;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.captureButton:not(:disabled):hover { transform: none; background: #cce7d8; }
+.captureButton:not(:disabled):hover { transform: none; background: #008f5b; }
 .sessionStripHeader { margin-top: 34px; padding-top: 16px; border-color: var(--editorial-line); }
 .sessionStrip { gap: 1px !important; background: var(--editorial-line); }
 .sessionTile {
@@ -376,7 +376,7 @@ body {
 .sessionTile.fetching { box-shadow: inset 0 -3px 0 var(--editorial-amber); }
 .contractProgress { margin: 30px 0 0; }
 .contractNumber strong { color: var(--editorial-green-dark); font-size: 88px; }
-.progressTrack { margin-inline: 0; height: 4px; border-radius: 0; background: rgba(17,21,18,.10); }
+.progressTrack { margin-inline: 0; height: 4px; border-radius: 0; background: rgba(17,21,18,.16); }
 .progressTrack span { border-radius: 0; background: var(--editorial-green); }
 .modelMeta { margin: 26px 0 0 !important; border-color: var(--editorial-line); }
 .runtimeNotice { border-radius: 0; box-shadow: none; }
@@ -932,4 +932,55 @@ body {
   .modelDetailRuntime { justify-self: start; }
   .modelDetailCard, .modelDetailRuns { padding-inline: 16px; }
   .modelDetailRunGrid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Contrast experiment: clearer surfaces and boundaries without changing the editorial language. */
+.overviewCard,
+.modelCardLink,
+.modelDetailCard,
+.modelDetailRuns,
+.modelPerformancePanel {
+  border-color: var(--editorial-line);
+  background: rgba(255, 255, 255, .48);
+  box-shadow: 0 1px 0 rgba(17, 21, 18, .10), 0 10px 24px rgba(17, 21, 18, .035);
+}
+
+.monitorMainGrid > .sessionCapturePanel {
+  border-color: var(--editorial-line) !important;
+  background: rgba(255, 255, 255, .48) !important;
+  box-shadow: 0 1px 0 rgba(17, 21, 18, .10), 0 10px 24px rgba(17, 21, 18, .035) !important;
+}
+
+.overviewStatus,
+.modelEvidencePickerTrigger,
+.overviewArchiveToolbar select,
+.modelDetailRun,
+.modelPerformanceLoading {
+  border-color: var(--editorial-line);
+  background: rgba(255, 255, 255, .62);
+}
+
+.modelCardLink:hover,
+.modelCardButton:hover,
+.overviewArchiveRow:hover,
+.sessionTile:hover {
+  background: #f8fbf8 !important;
+}
+
+.modelCardButton.isSelected {
+  background: #eef9f2;
+  box-shadow: inset 3px 0 0 var(--editorial-green), 0 1px 0 rgba(17, 21, 18, .08);
+}
+
+.modelPerformanceRunList {
+  background: var(--editorial-line);
+}
+
+.modelPerformanceRun {
+  background: #efede6;
+}
+
+.modelDetailProgress,
+.progressTrack.isLoading {
+  background: rgba(17, 21, 18, .18);
 }
