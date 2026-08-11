@@ -194,11 +194,18 @@ body {
   border-bottom: 1px solid var(--editorial-line);
 }
 .editorialChart .gridLine { stroke: rgba(17,21,18,.10); }
+.editorialChart .gridLine.zeroLine { stroke: rgba(17,21,18,.24); stroke-width: 1.2; }
 .editorialChart .axisLabel,
 .editorialChart .foldAxis { fill: #747a74; font-size: 9px; }
 .editorialChart .linePath { stroke: var(--editorial-green); stroke-width: 3; }
 .editorialChart .chartPoint circle { fill: var(--editorial-paper); stroke: var(--editorial-green); }
 .editorialChart .pointValue { fill: var(--editorial-ink); font-size: 10px; }
+.evidenceChartMeta { display: flex; justify-content: space-between; gap: 14px; margin: 0 0 2px; color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.evidenceChartMeta > div { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
+.evidenceChartMeta small { display: inline-flex; align-items: center; gap: 4px; color: var(--editorial-muted); font-size: 8px; }
+.evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-green); }
+.evidenceChartMeta small:nth-child(2) i { background: #477d68; }
+.evidenceChartMeta small:nth-child(3) i { background: #8a9f62; }
 .editorialRuleNote { padding-top: 14px; color: var(--editorial-muted); }
 
 .forwardEditorial { background: var(--editorial-ink); color: var(--editorial-paper); margin-inline: -30px; padding-inline: 30px; }
@@ -538,6 +545,14 @@ body {
 .overviewDecisionGraphic.status-blocked .overviewDecisionTrack strong { border-color: #ecd9b6; color: var(--editorial-amber); }
 .overviewDecisionTrack i { color: var(--editorial-muted); font-size: 16px; font-style: normal; text-align: center; }
 .overviewDecisionGraphic > p { margin: 14px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; }
+.overviewDiagnosticGraphic { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; margin-top: 18px; padding: 18px 0; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.overviewDiagnosticMark { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid #ecd9b6; border-radius: 50%; color: var(--editorial-amber); font-size: 15px; font-weight: 800; }
+.overviewDiagnosticGraphic > div:last-child { display: grid; gap: 5px; }
+.overviewDiagnosticGraphic span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewDiagnosticGraphic strong { color: var(--editorial-amber); font-size: 14px; letter-spacing: -.02em; }
+.overviewDiagnosticGraphic p { margin: 2px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+.overviewDiagnosticGraphic.status-fail .overviewDiagnosticMark { border-color: #efc9cc; color: var(--editorial-red); }
+.overviewDiagnosticGraphic.status-fail strong { color: var(--editorial-red); }
 .overviewEvidenceReason { display: grid; gap: 5px; margin-top: 14px; }
 .overviewEvidenceReason span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .overviewEvidenceReason p { margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
@@ -629,6 +644,8 @@ body {
   .overviewArchiveDetail { grid-template-columns: 1fr; gap: 10px; padding: 12px 0 16px; }
   .overviewArchiveRow strong { font-size: 11px; }
   .overviewArchiveStatus { font-size: 7px; }
+  .evidenceChartMeta { display: grid; gap: 6px; }
+  .evidenceChartMeta > div { justify-content: start; }
 .monitorHero { min-height: 126px; }
 }
 

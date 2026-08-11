@@ -1,5 +1,23 @@
 export type ResearchStatus = "FINAL" | "BASELINE" | "FAIL" | "BLOCKED" | "RESEARCH";
 
+export type ResearchFoldMetric = {
+  fold: string;
+  deltaPr: number;
+  roc?: number;
+  qSpread?: number;
+};
+
+export type ResearchEvidenceSeries = {
+  label: string;
+  points: readonly ResearchFoldMetric[];
+};
+
+export type ResearchEvidence = {
+  metricLabel: string;
+  caption: string;
+  series: readonly ResearchEvidenceSeries[];
+};
+
 export type ResearchExperiment = {
   generation: string;
   name: string;
@@ -7,6 +25,8 @@ export type ResearchExperiment = {
   status: ResearchStatus;
   result: string;
   note: string;
+  evidence?: ResearchEvidence;
+  dataBlocker?: boolean;
 };
 
 export const FINAL_RANKER = {
@@ -44,6 +64,88 @@ export const V3_B_DISCOVERY_FOLDS = [
   { fold: "F4", deltaPr: 0.002973, roc: 0.001748, qSpread: 0.005156 },
 ] as const;
 
+const V2_CHAMPION_FOLDS = [
+  { fold: "F1", deltaPr: 0.0216774918 },
+  { fold: "F2", deltaPr: 0.0289990901 },
+  { fold: "F3", deltaPr: 0.0087894853 },
+  { fold: "F4", deltaPr: 0.0382948851 },
+  { fold: "F5", deltaPr: 0.0260816692 },
+  { fold: "F6", deltaPr: 0.0186432663 },
+] as const;
+
+const V3_A_H252_FOLDS = [
+  { fold: "F1", deltaPr: 0.0075943698 },
+  { fold: "F2", deltaPr: 0.0059093010 },
+  { fold: "F3", deltaPr: -0.0062116193 },
+  { fold: "F4", deltaPr: -0.0091929210 },
+] as const;
+
+const V3_A_H504_FOLDS = [
+  { fold: "F1", deltaPr: 0.0051240318 },
+  { fold: "F2", deltaPr: 0.0019016524 },
+  { fold: "F3", deltaPr: -0.0017879420 },
+  { fold: "F4", deltaPr: -0.0345301016 },
+] as const;
+
+const V3_C_FOLDS = [
+  { fold: "F1", deltaPr: -0.0111186352 },
+  { fold: "F2", deltaPr: -0.0221428730 },
+  { fold: "F3", deltaPr: 0.0222075419 },
+  { fold: "F4", deltaPr: -0.0135157431 },
+] as const;
+
+const V3_E_FOLDS = [
+  { fold: "F1", deltaPr: 0.0061055536 },
+  { fold: "F2", deltaPr: 0.0037787365 },
+  { fold: "F3", deltaPr: 0.0191587603 },
+  { fold: "F4", deltaPr: -0.0253353754 },
+] as const;
+
+const V4_A_IMPACT_FOLDS = [
+  { fold: "F1", deltaPr: 0.0040161320 },
+  { fold: "F2", deltaPr: 0.0015336871 },
+  { fold: "F3", deltaPr: -0.0013733281 },
+  { fold: "F4", deltaPr: 0.0022205772 },
+  { fold: "F5", deltaPr: -0.0014500930 },
+  { fold: "F6", deltaPr: -0.0116775888 },
+] as const;
+
+const V4_A_PERSISTENCE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0034991328 },
+  { fold: "F2", deltaPr: 0.0021464711 },
+  { fold: "F3", deltaPr: -0.0053115173 },
+  { fold: "F4", deltaPr: -0.0072388702 },
+  { fold: "F5", deltaPr: 0.0014138400 },
+  { fold: "F6", deltaPr: 0.0006198268 },
+] as const;
+
+const V4_B_COHERENCE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0024449252 },
+  { fold: "F2", deltaPr: 0.0027391273 },
+  { fold: "F3", deltaPr: -0.0043080206 },
+  { fold: "F4", deltaPr: -0.0114229736 },
+  { fold: "F5", deltaPr: 0.0013810536 },
+  { fold: "F6", deltaPr: -0.0032163378 },
+] as const;
+
+const V4_B_RANGE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0103945841 },
+  { fold: "F2", deltaPr: 0.0218949329 },
+  { fold: "F3", deltaPr: -0.0014045382 },
+  { fold: "F4", deltaPr: 0.0032085928 },
+  { fold: "F5", deltaPr: 0.0039737952 },
+  { fold: "F6", deltaPr: -0.0097175361 },
+] as const;
+
+const V4_C_FOLDS = [
+  { fold: "F1", deltaPr: 0.0102384577 },
+  { fold: "F2", deltaPr: 0.0023095349 },
+  { fold: "F3", deltaPr: -0.0072453235 },
+  { fold: "F4", deltaPr: 0.0006307876 },
+  { fold: "F5", deltaPr: 0.0085398031 },
+  { fold: "F6", deltaPr: -0.0265794272 },
+] as const;
+
 export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   {
     generation: "V2",
@@ -52,6 +154,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "BASELINE",
     result: "Historical V2 champion",
     note: "Median ΔPR +2.39%, median ROC 0.5244, median Q5−Q1 +5.12% across six folds.",
+    evidence: {
+      metricLabel: "PR-AUC delta vs base rate",
+      caption: "Six historical development folds from the selected V2 champion.",
+      series: [{ label: "HGB XS + Market", points: V2_CHAMPION_FOLDS }],
+    },
   },
   {
     generation: "V3-A",
@@ -60,6 +167,14 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Both recency variants failed the paired promotion gate; no rescue.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V2",
+      caption: "The two recency variants are shown together across the four discovery folds.",
+      series: [
+        { label: "H252", points: V3_A_H252_FOLDS },
+        { label: "H504", points: V3_A_H504_FOLDS },
+      ],
+    },
   },
   {
     generation: "V3-B",
@@ -68,6 +183,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FINAL",
     result: "Promoted + late confirmation PASS",
     note: "Only surviving V3 component. Exact V2 information set plus eight causal price-geometry features.",
+    evidence: {
+      metricLabel: "Paired PR-AUC delta vs V2",
+      caption: "Paired discovery PR-AUC improved across every F1-F4 fold.",
+      series: [{ label: "V3-B / V2", points: V3_B_DISCOVERY_FOLDS }],
+    },
   },
   {
     generation: "V3-C",
@@ -76,6 +196,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Overall median paired ΔPR −1.23%; stress regime degraded materially.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "The regime-specialization candidate falls below its control in three of four folds.",
+      series: [{ label: "Two-expert", points: V3_C_FOLDS }],
+    },
   },
   {
     generation: "V3-D",
@@ -84,6 +209,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "BLOCKED",
     result: "PIT data blocked",
     note: "No defensible historical ticker-by-date IDX-IC membership chain; outcomes remain unviewed.",
+    dataBlocker: true,
   },
   {
     generation: "V3-E",
@@ -92,6 +218,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Some PR uplift, but robustness and Q5−Q1 promotion gates failed.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "LambdaMART's PR-AUC improvement reversed in the final discovery fold.",
+      series: [{ label: "LambdaMART", points: V3_E_FOLDS }],
+    },
   },
   {
     generation: "V4-A",
@@ -100,6 +231,14 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Impact/Absorption and Persistent Directional Participation both failed.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "Both participation candidates are shown across the six development folds.",
+      series: [
+        { label: "Impact", points: V4_A_IMPACT_FOLDS },
+        { label: "Persistent direction", points: V4_A_PERSISTENCE_FOLDS },
+      ],
+    },
   },
   {
     generation: "V4-B",
@@ -108,6 +247,14 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Coherence failed; Range Acceptance had positive aggregate uplift but failed late-fold protection.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "The two price-path candidates are shown together; late-fold weakness remains visible.",
+      series: [
+        { label: "Coherence", points: V4_B_COHERENCE_FOLDS },
+        { label: "Range acceptance", points: V4_B_RANGE_FOLDS },
+      ],
+    },
   },
   {
     generation: "V4-C",
@@ -116,6 +263,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Median paired ΔPR +0.147% missed the +0.150% gate and other robustness gates also failed.",
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "Cross-sectional dispersion shows a strong early profile but reverses in the final fold.",
+      series: [{ label: "Dispersion", points: V4_C_FOLDS }],
+    },
   },
   {
     generation: "Risk",
@@ -124,5 +276,6 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Discovery FAIL_CLOSE",
     note: "Ordering diagnostics were positive, but q75 pinball robustness failed the frozen gate; no F5/F6, rescue, or alpha+risk integration.",
+    dataBlocker: true,
   },
 ];

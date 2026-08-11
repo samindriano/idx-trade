@@ -5,16 +5,9 @@ import styles from "./model-monitor.module.css";
 import {
   FINAL_RANKER,
   RESEARCH_EXPERIMENTS,
-  V3_B_DISCOVERY_FOLDS,
+  type ResearchEvidenceSeries,
   type ResearchStatus,
 } from "@/lib/model-catalog";
-
-type FoldMetric = {
-  fold: string;
-  deltaPr: number;
-  roc: number;
-  qSpread: number;
-};
 
 type OverviewRuntimeStatus = {
   model_runs: Array<{
@@ -68,67 +61,112 @@ function experimentKey(item: (typeof RESEARCH_EXPERIMENTS)[number]) {
   return `${item.generation}:${item.candidate}`;
 }
 
-function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
-  const [hovered, setHovered] = useState<number | null>(null);
+function signedPct(value: number) {
+  return `${value >= 0 ? "+" : ""}${pct(value)}`;
+}
+
+function EvidenceChart({
+  series,
+  status,
+  metricLabel,
+}: {
+  series: readonly ResearchEvidenceSeries[];
+  status: ResearchStatus;
+  metricLabel: string;
+}) {
+  const [hovered, setHovered] = useState<{ series: number; point: number } | null>(null);
   const width = 760;
   const height = 300;
-  const left = 54;
+  const left = 58;
   const right = 22;
-  const top = 30;
+  const top = 34;
   const bottom = 44;
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
-  const maxY = 0.01;
-
-  const points = folds.map((fold, index) => {
-    const x = left + (index / (folds.length - 1)) * chartWidth;
-    const y = top + chartHeight - (fold.deltaPr / maxY) * chartHeight;
-    return { ...fold, x, y };
-  });
-
-  const linePath = points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
-  const areaPath = `${linePath} L${points[points.length - 1].x},${top + chartHeight} L${points[0].x},${top + chartHeight} Z`;
-  const gridValues = [0, 0.0025, 0.005, 0.0075, 0.01];
-  const activePoint = hovered === null ? null : points[hovered];
+  const values = series.flatMap((line) => line.points.map((point) => point.deltaPr));
+  const extent = Math.max(0.005, ...values.map((value) => Math.abs(value))) * 1.15;
+  const gridValues = [extent, extent / 2, 0, -extent / 2, -extent];
+  const zeroY = top + chartHeight / 2;
+  const palette = status === "FAIL"
+    ? ["#d84b56", "#b96b74", "#a44852"]
+    : ["#00a66a", "#477d68", "#8a9f62"];
+  const plottedSeries = series.map((line, seriesIndex) => ({
+    ...line,
+    color: palette[seriesIndex % palette.length],
+    points: line.points.map((point, pointIndex) => {
+      const x = left + (pointIndex / Math.max(1, line.points.length - 1)) * chartWidth;
+      const y = top + chartHeight / 2 - (point.deltaPr / extent) * (chartHeight / 2);
+      return { ...point, x, y };
+    }),
+  }));
+  const activePoint = hovered ? plottedSeries[hovered.series]?.points[hovered.point] : null;
+  const activeSeries = hovered ? plottedSeries[hovered.series] : null;
 
   return (
     <div className={`chartWrap editorialChart ${styles.chartStage}`} onMouseLeave={() => setHovered(null)}>
-      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="V3-B paired delta PR-AUC versus V2 across discovery folds">
+      <div className="evidenceChartMeta">
+        <span>{metricLabel}</span>
+        <div>{series.map((line, index) => <small key={line.label}><i style={{ background: palette[index % palette.length] }} />{line.label}</small>)}</div>
+      </div>
+      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel} across evaluation folds`}>
         <defs>
-          <linearGradient id="area-v3b-editorial" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#00a66a" stopOpacity="0.24" />
-            <stop offset="100%" stopColor="#00a66a" stopOpacity="0" />
-          </linearGradient>
+          {plottedSeries.map((line, index) => (
+            <linearGradient id={`area-evidence-${index}`} key={line.label} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={line.color} stopOpacity="0.18" />
+              <stop offset="100%" stopColor={line.color} stopOpacity="0" />
+            </linearGradient>
+          ))}
         </defs>
         {gridValues.map((value) => {
-          const y = top + chartHeight - (value / maxY) * chartHeight;
+          const y = top + chartHeight / 2 - (value / extent) * (chartHeight / 2);
           return (
             <g key={value}>
-              <line className="gridLine" x1={left} x2={width - right} y1={y} y2={y} />
-              <text className="axisLabel" x={left - 12} y={y + 4} textAnchor="end">{pct(value)}</text>
+              <line className={`gridLine ${value === 0 ? "zeroLine" : ""}`} x1={left} x2={width - right} y1={y} y2={y} />
+              <text className="axisLabel" x={left - 12} y={y + 4} textAnchor="end">{signedPct(value)}</text>
             </g>
           );
         })}
-        <path className="areaPath" d={areaPath} fill="url(#area-v3b-editorial)" />
-        <path className="linePath" d={linePath} />
-        {points.map((point, index) => (
-          <g className="chartPoint" key={point.fold} onMouseEnter={() => setHovered(index)}>
-            <circle cx={point.x} cy={point.y} r={hovered === index ? 7 : 5} />
-            <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle">+{pct(point.deltaPr)}</text>
-            <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>
-          </g>
-        ))}
+        {plottedSeries.map((line, seriesIndex) => {
+          const linePath = line.points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+          const areaPath = `${linePath} L${line.points[line.points.length - 1].x},${zeroY} L${line.points[0].x},${zeroY} Z`;
+          return (
+            <g key={line.label}>
+              {series.length === 1 && <path className="areaPath" d={areaPath} fill={`url(#area-evidence-${seriesIndex})`} />}
+              <path className="linePath" d={linePath} style={{ stroke: line.color }} />
+              {line.points.map((point, pointIndex) => (
+                <g className="chartPoint" key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}>
+                  <circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} style={{ stroke: line.color }} />
+                  <text className="pointValue" x={point.x} y={point.y - 15} textAnchor="middle" style={{ fill: line.color }}>{signedPct(point.deltaPr)}</text>
+                  {seriesIndex === 0 && <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>}
+                </g>
+              ))}
+            </g>
+          );
+        })}
       </svg>
-      {activePoint && (
+      {activePoint && activeSeries && (
         <div className={`${styles.tooltip} ${activePoint.x > width * 0.7 ? styles.tooltipLeft : ""}`} style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}>
-          <div className={styles.tooltipHead}><strong>{activePoint.fold}</strong><span>V3-B / V2</span></div>
+          <div className={styles.tooltipHead}><strong>{activePoint.fold}</strong><span>{activeSeries.label}</span></div>
           <div className={styles.tooltipRows}>
-            <div><span>Delta PR-AUC</span><strong className={styles.positive}>+{pct(activePoint.deltaPr)}</strong></div>
-            <div><span>Delta ROC</span><strong className={styles.positive}>+{activePoint.roc.toFixed(4)}</strong></div>
-            <div><span>Delta Q5-Q1</span><strong className={styles.positive}>+{pct(activePoint.qSpread)}</strong></div>
+            <div><span>Delta PR-AUC</span><strong className={activePoint.deltaPr >= 0 ? styles.positive : styles.negative}>{signedPct(activePoint.deltaPr)}</strong></div>
+            {activePoint.roc !== undefined && <div><span>Delta ROC</span><strong className={activePoint.roc >= 0 ? styles.positive : styles.negative}>{signedPct(activePoint.roc)}</strong></div>}
+            {activePoint.qSpread !== undefined && <div><span>Delta Q5-Q1</span><strong className={activePoint.qSpread >= 0 ? styles.positive : styles.negative}>{signedPct(activePoint.qSpread)}</strong></div>}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DiagnosticEvidence({ result, note, status, dataBlocker }: { result: string; note: string; status: ResearchStatus; dataBlocker?: boolean }) {
+  return (
+    <div className={`overviewDiagnosticGraphic status-${status.toLowerCase()}`}>
+      <div className="overviewDiagnosticMark">!</div>
+      <div>
+        <span>{dataBlocker ? "Data blocker" : "Diagnostic view"}</span>
+        <strong>{result}</strong>
+        <p>{note}</p>
+      </div>
     </div>
   );
 }
@@ -292,16 +330,17 @@ export default function Home() {
               <span>Inspect model</span>
               <ModelEvidencePicker items={RESEARCH_EXPERIMENTS} value={selectedModelKey} onChange={setSelectedModelKey} />
             </div>
-            {selectedExperiment.generation === "V3-B" ? (
+            {selectedExperiment.evidence ? (
               <>
-                <p className="overviewCardLead">Paired discovery PR-AUC improved across every F1-F4 fold.</p>
-                <FoldChart folds={V3_B_DISCOVERY_FOLDS} />
+                <p className="overviewCardLead">{selectedExperiment.evidence.caption}</p>
+                <EvidenceChart
+                  metricLabel={selectedExperiment.evidence.metricLabel}
+                  series={selectedExperiment.evidence.series}
+                  status={selectedExperiment.status}
+                />
               </>
             ) : (
-              <div className={`overviewDecisionGraphic status-${selectedExperiment.status.toLowerCase()}`}>
-                <div className="overviewDecisionTrack"><span>Candidate</span><i>→</i><span>Evidence review</span><i>→</i><strong>{statusLabel(selectedExperiment.status)}</strong></div>
-                <p>{selectedExperiment.result}</p>
-              </div>
+              <DiagnosticEvidence result={selectedExperiment.result} note={selectedExperiment.note} status={selectedExperiment.status} dataBlocker={selectedExperiment.dataBlocker} />
             )}
             <div className="overviewEvidenceReason"><span>Decision rationale</span><p>{selectedExperiment.note}</p></div>
           </article>
