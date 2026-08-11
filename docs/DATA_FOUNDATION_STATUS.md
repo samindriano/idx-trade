@@ -10,12 +10,19 @@ This file is the short dashboard for independent data-foundation lanes. Detailed
 | Historical Universe V1 | #18 | PARKED / FAIL-CLOSED | `FAIL_NO_COMPLETE_WINDOW`; public relisting path cannot prove complete lifecycle census | Reopen only with stronger official historical listing/relisting evidence |
 | Corporate Actions V1 | #19 | PARKED / DISCOVERY-ONLY | `SPLIT_METADATA_DISCOVERY_ONLY_CANONICAL_PROMOTION_FAIL_CLOSED`; official metadata useful, but effective-session semantics and provider price alignment are insufficient for canonical adjustment | Do not adjust prices; reopen only for document-level effective-session work |
 | Financial Statements PIT V1 | #20 | PARKED / CONDITIONAL | `CONDITIONAL_PASS_SOURCE_DISCOVERY_ONLY_NO_GO_FOR_COMPLETE_FINANCIAL_PIT_ACQUISITION`; recent publication joins work, but public announcement retention is ~3 years and revision completeness is unproven | Keep recent sample methodology; do not bulk acquire 2021–2026 until archive/revision coverage is solved |
+| Foreign Flow V1 | #22 | PARKED / SOURCE-USABLE | `SOURCE_AND_UNIT_USABLE_BUT_PIT_TIMING_UNRESOLVED_COVERAGE_INCOMPLETE`; shares/buy/sell/net semantics and sampled IDX parity pass, but source exposes only session date with no first-publication timestamp and no certified complete historical window | Preserve contract; no historical PIT bulk acquisition. A future forward EOD capture may establish actual availability timing prospectively |
 | Historical OPEN recovery | #11–#15 | ACTIVE IN SEPARATE LANE | Dedicated OPEN source/backfill work continues separately | Do not mix into these data-foundation lanes |
 
 ## Current data-priority frontier
 
-The next independent data lane is **Foreign Flow V1**.
+The next independent data lane is **Ownership / KSEI V1**.
 
-Goal: determine whether official IDX/Zapi data can provide a historically consistent per-ticker foreign buy/sell/net-flow series with defensible date, unit, coverage, and provenance semantics over the research window.
+Goal: determine whether official IDX/KSEI/Zapi sources can provide historically dated ownership snapshots or files with explicit publication timing, stable holder/investor-category semantics, and defensible coverage for foreign/local ownership, concentration, large-holder, and free-float-related research.
+
+Priority source families to inspect first:
+
+- IDX ownership-file inventory / official KSEI-linked ownership artifacts;
+- KSEI local/foreign ownership data;
+- any official publication timestamp and effective/as-of date carried by those files.
 
 Do not treat this dashboard as authorization to alter the frozen V3-B model, access realized forward outcomes, modify OPEN work, or start execution/PnL/paper/live trading.
