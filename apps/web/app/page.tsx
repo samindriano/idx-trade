@@ -16,6 +16,18 @@ type FoldMetric = {
   qSpread: number;
 };
 
+type ArchiveSort = "best" | "latest" | "name";
+type ArchiveStatusFilter = "all" | "positive" | "FAIL" | "BLOCKED";
+type ArchiveModelFilter = "all" | string;
+
+const archiveStatusPriority: Record<ResearchStatus, number> = {
+  FINAL: 0,
+  BASELINE: 1,
+  RESEARCH: 2,
+  BLOCKED: 3,
+  FAIL: 4,
+};
+
 function pct(value: number, digits = 2) {
   return `${(value * 100).toFixed(digits)}%`;
 }
@@ -98,6 +110,28 @@ function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
 }
 
 export default function Home() {
+  const [archiveSort, setArchiveSort] = useState<ArchiveSort>("best");
+  const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
+  const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
+
+  const visibleExperiments = [...RESEARCH_EXPERIMENTS]
+    .filter((item) => {
+      const matchesStatus = archiveStatusFilter === "all"
+        || (archiveStatusFilter === "positive" && (item.status === "FINAL" || item.status === "BASELINE"))
+        || item.status === archiveStatusFilter;
+      const modelKey = `${item.generation}:${item.candidate}`;
+      const matchesModel = archiveModelFilter === "all" || modelKey === archiveModelFilter;
+      return matchesStatus && matchesModel;
+    })
+    .sort((left, right) => {
+      if (archiveSort === "name") return left.name.localeCompare(right.name);
+      if (archiveSort === "latest") {
+        return RESEARCH_EXPERIMENTS.indexOf(right) - RESEARCH_EXPERIMENTS.indexOf(left);
+      }
+      return archiveStatusPriority[left.status] - archiveStatusPriority[right.status]
+        || RESEARCH_EXPERIMENTS.indexOf(left) - RESEARCH_EXPERIMENTS.indexOf(right);
+    });
+
   return (
     <main className="appShell editorialShell">
       <header className="topNav editorialNav">
@@ -113,7 +147,7 @@ export default function Home() {
       <div className="page overviewPage" id="top">
         <section className="overviewHero" id="overview">
           <div>
-            <p className="overviewKicker">MODEL OVERVIEW / RESEARCH ONLY</p>
+          <p className="overviewKicker">MODEL OVERVIEW</p>
             <h1>Research overview</h1>
             <p className="overviewLead">A compact view of the frozen ranker, its promotion evidence, and the forward monitoring lane.</p>
           </div>
@@ -161,10 +195,41 @@ export default function Home() {
         <section className="overviewCard overviewArchiveCard" id="research-lineage">
           <div className="overviewCardHead">
             <div><span>RESEARCH ARCHIVE</span><h2>What we tested</h2></div>
-            <p>Failed candidates remain visible for context.</p>
+            <p>Browse tested candidates by result, model, or ranking.</p>
+          </div>
+          <div className="overviewArchiveToolbar" aria-label="Research archive filters">
+            <label>
+              <span>Sort</span>
+              <select value={archiveSort} onChange={(event) => setArchiveSort(event.target.value as ArchiveSort)}>
+                <option value="best">Best to worst</option>
+                <option value="latest">Latest tested</option>
+                <option value="name">Name A-Z</option>
+              </select>
+            </label>
+            <label>
+              <span>Result</span>
+              <select value={archiveStatusFilter} onChange={(event) => setArchiveStatusFilter(event.target.value as ArchiveStatusFilter)}>
+                <option value="all">All results</option>
+                <option value="positive">Final + baseline</option>
+                <option value="FAIL">Failed</option>
+                <option value="BLOCKED">Blocked</option>
+              </select>
+            </label>
+            <label>
+              <span>Model</span>
+              <select value={archiveModelFilter} onChange={(event) => setArchiveModelFilter(event.target.value)}>
+                <option value="all">All models</option>
+                {RESEARCH_EXPERIMENTS.map((item) => (
+                  <option key={`${item.generation}:${item.candidate}`} value={`${item.generation}:${item.candidate}`}>
+                    {item.generation} · {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="overviewArchiveCount">{visibleExperiments.length} / {RESEARCH_EXPERIMENTS.length} tested</span>
           </div>
           <div className="overviewArchive">
-            {RESEARCH_EXPERIMENTS.map((item, index) => (
+            {visibleExperiments.length ? visibleExperiments.map((item, index) => (
               <article className={`overviewArchiveRow status-${item.status.toLowerCase()}`} key={`${item.generation}-${item.candidate}`}>
                 <span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span>
                 <span className="overviewArchiveGeneration">{item.generation}</span>
@@ -172,11 +237,9 @@ export default function Home() {
                 <span className="overviewArchiveResult">{item.result}</span>
                 <span className="overviewArchiveStatus">{statusLabel(item.status)}</span>
               </article>
-            ))}
+            )) : <div className="overviewArchiveEmpty">No tested models match these filters.</div>}
           </div>
         </section>
-
-        <footer className="editorialFooter"><span>IDX TRADE / RESEARCH ONLY</span><span>OUTCOMES REMAIN SEALED</span></footer>
       </div>
     </main>
   );

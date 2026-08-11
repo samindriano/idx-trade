@@ -252,7 +252,7 @@ export default function MonitoringPage() {
                   />
                 </label>
                 <button className="captureButton" type="button" disabled={!canCapture} onClick={() => void capture()}>
-                  {statusLoading ? "Reading runtime..." : submitting ? "Starting..." : anyFetching ? "Fetching..." : `Capture EOD ${buttonDate(captureTarget)}`}
+                  {statusLoading ? "Reading runtime..." : submitting ? "Starting..." : anyFetching ? "Fetching..." : "Capture EOD"}
                 </button>
               </div>
 

@@ -523,7 +523,15 @@ body {
 .overviewArchiveCard { margin-top: 14px; }
 .overviewArchiveCard > .overviewCardHead { align-items: end; padding-bottom: 16px; }
 .overviewArchiveCard > .overviewCardHead p { max-width: 230px; margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; text-align: right; }
+.overviewArchiveToolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 0 0 14px; border-bottom: 1px solid var(--editorial-line); }
+.overviewArchiveToolbar label { display: grid; gap: 5px; min-width: 132px; }
+.overviewArchiveToolbar label:last-of-type { min-width: 220px; }
+.overviewArchiveToolbar label > span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewArchiveToolbar select { min-height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; }
+.overviewArchiveToolbar select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.overviewArchiveCount { margin-left: auto; padding-bottom: 8px; color: var(--editorial-muted); font-size: 9px; }
 .overviewArchive { border-top: 1px solid var(--editorial-line); }
+.overviewArchiveEmpty { padding: 24px 0 8px; color: var(--editorial-muted); font-size: 10px; }
 .overviewArchiveRow { min-height: 56px; display: grid; grid-template-columns: 38px 64px minmax(180px, 1.25fr) minmax(180px, 1fr) 82px; align-items: center; gap: 12px; border-bottom: 1px solid var(--editorial-line); }
 .overviewArchiveIndex { color: var(--editorial-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
 .overviewArchiveGeneration { font-size: 10px; font-weight: 800; }
@@ -537,7 +545,7 @@ body {
 .overviewArchiveRow.status-blocked .overviewArchiveStatus { color: var(--editorial-amber); }
 
 /* Keep the operator page in the same compact scale. */
-.monitorHero { min-height: 166px; padding-bottom: 20px; }
+.monitorHero { min-height: 126px; padding-top: 8px; padding-bottom: 18px; }
 .monitorHero h1 { font-size: clamp(30px, 3.4vw, 44px); line-height: .95; }
 .monitorHero > div:first-child > p.heroCopy { font-size: 10px; }
 .summaryBlock { min-height: 92px; padding-block: 13px; }
@@ -568,10 +576,14 @@ body {
   .overviewCardHead h2 { font-size: 19px; }
   .overviewArchiveCard > .overviewCardHead { align-items: flex-start; display: block; }
   .overviewArchiveCard > .overviewCardHead p { margin-top: 8px; text-align: left; }
+  .overviewArchiveToolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .overviewArchiveToolbar label { min-width: 0; }
+  .overviewArchiveToolbar label:last-of-type { min-width: 0; }
+  .overviewArchiveCount { grid-column: 1 / -1; margin-left: 0; padding-bottom: 0; }
   .overviewArchiveRow { grid-template-columns: 28px 50px minmax(0, 1fr) 68px; gap: 8px; }
   .overviewArchiveRow strong { font-size: 11px; }
   .overviewArchiveStatus { font-size: 7px; }
-  .monitorHero { min-height: 170px; }
+.monitorHero { min-height: 126px; }
 }
 
 /* Clickable model cards and a safe forward-evidence detail view. */
@@ -710,6 +722,8 @@ body {
 
 /* Give monitoring the same measured card rhythm as the overview page. */
 .monitoringPage { max-width: 1180px; padding: 28px 30px 36px; }
+.monitorHero { position: relative; }
+.monitorHero::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 72px; height: 3px; background: var(--editorial-green); }
 .monitorHero .eyebrow { display: none; }
 .monitorHeroBadges { display: none; }
 .monitorSummaryGrid { margin: 14px 0 0; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
