@@ -17,7 +17,7 @@ type FoldMetric = {
 };
 
 type ArchiveSort = "best" | "latest" | "name";
-type ArchiveStatusFilter = "all" | "positive" | "FAIL" | "BLOCKED";
+type ArchiveStatusFilter = "all" | "passed" | "not-passed";
 type ArchiveModelFilter = "all" | string;
 
 const archiveStatusPriority: Record<ResearchStatus, number> = {
@@ -113,12 +113,14 @@ export default function Home() {
   const [archiveSort, setArchiveSort] = useState<ArchiveSort>("best");
   const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
   const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
+  const [expandedArchiveKey, setExpandedArchiveKey] = useState<string | null>(null);
 
   const visibleExperiments = [...RESEARCH_EXPERIMENTS]
     .filter((item) => {
+      const passed = item.status === "FINAL" || item.status === "BASELINE";
       const matchesStatus = archiveStatusFilter === "all"
-        || (archiveStatusFilter === "positive" && (item.status === "FINAL" || item.status === "BASELINE"))
-        || item.status === archiveStatusFilter;
+        || (archiveStatusFilter === "passed" && passed)
+        || (archiveStatusFilter === "not-passed" && !passed);
       const modelKey = `${item.generation}:${item.candidate}`;
       const matchesModel = archiveModelFilter === "all" || modelKey === archiveModelFilter;
       return matchesStatus && matchesModel;
@@ -199,9 +201,9 @@ export default function Home() {
           </div>
           <div className="overviewArchiveToolbar" aria-label="Research archive filters">
             <label>
-              <span>Sort</span>
+              <span>Ranking</span>
               <select value={archiveSort} onChange={(event) => setArchiveSort(event.target.value as ArchiveSort)}>
-                <option value="best">Best to worst</option>
+                <option value="best">Best → worst</option>
                 <option value="latest">Latest tested</option>
                 <option value="name">Name A-Z</option>
               </select>
@@ -210,9 +212,8 @@ export default function Home() {
               <span>Result</span>
               <select value={archiveStatusFilter} onChange={(event) => setArchiveStatusFilter(event.target.value as ArchiveStatusFilter)}>
                 <option value="all">All results</option>
-                <option value="positive">Final + baseline</option>
-                <option value="FAIL">Failed</option>
-                <option value="BLOCKED">Blocked</option>
+                <option value="passed">Passed</option>
+                <option value="not-passed">Not passed</option>
               </select>
             </label>
             <label>
@@ -229,15 +230,34 @@ export default function Home() {
             <span className="overviewArchiveCount">{visibleExperiments.length} / {RESEARCH_EXPERIMENTS.length} tested</span>
           </div>
           <div className="overviewArchive">
-            {visibleExperiments.length ? visibleExperiments.map((item, index) => (
-              <article className={`overviewArchiveRow status-${item.status.toLowerCase()}`} key={`${item.generation}-${item.candidate}`}>
-                <span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span>
-                <span className="overviewArchiveGeneration">{item.generation}</span>
-                <div><strong>{item.name}</strong><small>{item.candidate}</small></div>
-                <span className="overviewArchiveResult">{item.result}</span>
-                <span className="overviewArchiveStatus">{statusLabel(item.status)}</span>
-              </article>
-            )) : <div className="overviewArchiveEmpty">No tested models match these filters.</div>}
+            {visibleExperiments.length ? visibleExperiments.map((item, index) => {
+              const key = `${item.generation}-${item.candidate}`;
+              const expanded = expandedArchiveKey === key;
+              return (
+                <article className={`overviewArchiveItem status-${item.status.toLowerCase()}`} key={key}>
+                  <button
+                    type="button"
+                    className="overviewArchiveRow"
+                    aria-expanded={expanded}
+                    aria-label={`${item.name}: view performance and decision reason`}
+                    onClick={() => setExpandedArchiveKey(expanded ? null : key)}
+                  >
+                    <span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="overviewArchiveGeneration">{item.generation}</span>
+                    <div><strong>{item.name}</strong><small>{item.candidate}</small></div>
+                    <span className="overviewArchiveResult">{item.result}</span>
+                    <span className="overviewArchiveStatus">{statusLabel(item.status)}</span>
+                    <span className="overviewArchiveChevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
+                  </button>
+                  {expanded && (
+                    <div className="overviewArchiveDetail">
+                      <div><span>Decision</span><strong>{item.result}</strong></div>
+                      <div><span>Why</span><p>{item.note}</p></div>
+                    </div>
+                  )}
+                </article>
+              );
+            }) : <div className="overviewArchiveEmpty">No tested models match these filters.</div>}
           </div>
         </section>
       </div>
