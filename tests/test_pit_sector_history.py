@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -9,14 +10,65 @@ from idx_trade.pit_sector_history import (
     acquire_official_sources,
     attach_sector_asof,
     is_official_idx_url,
+    load_source_inventory,
     materialize_sector_intervals,
     normalise_sector_events,
     validate_source_inventory,
+    validate_effective_date_evidence,
 )
 
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
+
+
+def _palm_source() -> dict:
+    return {
+        "source_id": "IDX_IC_INCIDENTAL_PALM_2023",
+        "source_type": "INCIDENTAL_CLASSIFICATION_CHANGE",
+        "announcement_ref": "Peng-00236/BEI.POP/09-2023",
+        "announced_at": "2023-09-29",
+        "effective_from": "2023-10-02",
+        "status": "READY_FOR_ACQUISITION",
+        "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
+        "raw_attachment": {"sha256": "3b85b0f1bbd0cdee1ef6dc99de2b5570da892e908458303d0fbfe29bf81959d9"},
+        "effective_date_evidence": {
+            "source_id": "IDX_IC_INCIDENTAL_PALM_EFFECTIVE_2023",
+            "source_type": "OFFICIAL_EFFECTIVE_DATE_EVIDENCE",
+            "announcement_ref": "Peng-00016/BEI.PP1/10-2023",
+            "announced_at": "2023-10-02",
+            "effective_from": "2023-10-02",
+            "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202310/3fc602c18b_d3dffbcb7c.pdf",
+            "source_sha256": "2088a9fde16bc8ac8c0da687901eb79cc7dc2124bf9c673315ebb70c1c496fb4",
+            "bytes": 5738,
+            "content_type": "application/pdf",
+            "linkage": {
+                "canonical_source_id": "IDX_IC_INCIDENTAL_PALM_2023",
+                "canonical_announcement_ref": "Peng-00236/BEI.POP/09-2023",
+                "canonical_source_sha256": "3b85b0f1bbd0cdee1ef6dc99de2b5570da892e908458303d0fbfe29bf81959d9",
+                "linked_tickers": ["PALM"],
+                "classification_change": "PALM Consumer Non-Cyclicals to Financials",
+                "linkage_statement": "The official IDX issuer disclosure embeds and references the Peng-00236 classification attachment and states the effective date."
+            }
+        }
+    }
+
+
+class _FakeResponse:
+    def __init__(self, payload: bytes, content_type: str) -> None:
+        self.status_code = 200
+        self.headers = {"Content-Type": content_type}
+        self.content = payload
+
+
+class _FakeSession:
+    def __init__(self, responses: dict[str, _FakeResponse]) -> None:
+        self.responses = responses
+
+    def get(self, url: str, *, allow_redirects: bool, timeout: tuple[float, float]) -> _FakeResponse:
+        assert allow_redirects is False
+        assert timeout == (10.0, 60.0)
+        return self.responses[url]
 
 
 def _events() -> pd.DataFrame:
@@ -101,6 +153,75 @@ def test_ready_source_requires_verified_dates_and_official_url() -> None:
     }
     with pytest.raises(ValueError, match="verified announced/effective date"):
         validate_source_inventory(inventory)
+
+
+def test_multidocument_official_effective_date_evidence_validates() -> None:
+    source = _palm_source()
+    evidence = validate_effective_date_evidence(source)
+    assert evidence is not None
+    assert evidence["effective_from"] == pd.Timestamp("2023-10-02")
+    assert evidence["linked_tickers"] == ["PALM"]
+
+    audit = validate_source_inventory({"schema_version": 2, "sources": [source]})
+    assert audit["sources_ready"] == 1
+    assert audit["effective_date_evidence_validated"] == 1
+
+
+def test_multidocument_effective_date_evidence_rejects_cross_event_linkage() -> None:
+    source = _palm_source()
+    source["effective_date_evidence"]["linkage"]["canonical_announcement_ref"] = "Peng-WRONG"
+    with pytest.raises(ValueError, match="canonical ref linkage mismatch"):
+        validate_effective_date_evidence(source)
+
+
+def test_multidocument_effective_date_evidence_rejects_inferred_canonical_date() -> None:
+    source = _palm_source()
+    source["effective_from"] = None
+    with pytest.raises(ValueError, match="canonical effective_from must be explicit"):
+        validate_effective_date_evidence(source)
+
+
+def test_multidocument_effective_date_evidence_rejects_canonical_hash_mismatch() -> None:
+    source = _palm_source()
+    source["effective_date_evidence"]["linkage"]["canonical_source_sha256"] = SHA_A
+    with pytest.raises(ValueError, match="canonical hash linkage mismatch"):
+        validate_effective_date_evidence(source)
+
+
+def test_acquisition_records_and_hashes_nested_effective_date_evidence(tmp_path: Path) -> None:
+    source = _palm_source()
+    canonical_url = "https://www.idx.id/canonical.zip"
+    evidence_url = "https://www.idx.id/effective.pdf"
+    canonical_payload = b"canonical"
+    evidence_payload = b"official effective date evidence"
+    source["download_url"] = canonical_url
+    source["raw_attachment"] = {}
+    source["effective_date_evidence"]["download_url"] = evidence_url
+    source["effective_date_evidence"]["source_sha256"] = hashlib.sha256(evidence_payload).hexdigest()
+    session = _FakeSession(
+        {
+            canonical_url: _FakeResponse(canonical_payload, "application/zip"),
+            evidence_url: _FakeResponse(evidence_payload, "application/pdf"),
+        }
+    )
+
+    manifest = acquire_official_sources(
+        {"schema_version": 2, "sources": [source]},
+        output_dir=tmp_path,
+        session=session,
+    )
+    entry = manifest["entries"][0]
+    assert entry["raw_sha256"] == hashlib.sha256(canonical_payload).hexdigest()
+    assert entry["effective_date_evidence"]["raw_sha256"] == hashlib.sha256(evidence_payload).hexdigest()
+    assert (tmp_path / "raw" / entry["effective_date_evidence"]["raw_file"]).read_bytes() == evidence_payload
+
+
+def test_committed_palm_is_promoted_only_with_valid_official_evidence() -> None:
+    inventory_path = Path(__file__).parents[1] / "config" / "pit_sector_sources_v1.json"
+    inventory = load_source_inventory(inventory_path)
+    palm = next(source for source in inventory["sources"] if source["source_id"] == "IDX_IC_INCIDENTAL_PALM_2023")
+    assert palm["status"] == "READY_FOR_ACQUISITION"
+    assert validate_effective_date_evidence(palm)["effective_from"] == pd.Timestamp("2023-10-02")
 
 
 def test_pit_join_does_not_backfill_future_sector() -> None:

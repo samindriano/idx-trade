@@ -33,6 +33,18 @@ REQUIRED_EVENT_COLUMNS = {
     "source_id",
     "source_sha256",
 }
+REQUIRED_EFFECTIVE_DATE_EVIDENCE_FIELDS = {
+    "source_id",
+    "source_type",
+    "announcement_ref",
+    "announced_at",
+    "effective_from",
+    "download_url",
+    "source_sha256",
+    "bytes",
+    "content_type",
+    "linkage",
+}
 
 
 def _utc_now() -> str:
@@ -84,6 +96,104 @@ def _parse_optional_date(value: Any, *, source_id: str, field: str) -> pd.Timest
     return result
 
 
+def validate_effective_date_evidence(source: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate a second, official IDX document that dates a canonical event.
+
+    The canonical source remains authoritative for the classification change.
+    This nested evidence may establish the effective date only when it is an
+    official IDX document, hash-pinned, and explicitly linked to the same
+    canonical source and affected ticker(s).
+    """
+
+    raw = source.get("effective_date_evidence")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError(f"effective_date_evidence must be an object: {source.get('source_id')}")
+
+    missing = REQUIRED_EFFECTIVE_DATE_EVIDENCE_FIELDS - set(raw)
+    if missing:
+        raise ValueError(
+            f"effective-date evidence missing fields for {source.get('source_id')}: {sorted(missing)}"
+        )
+
+    canonical_source_id = str(source.get("source_id") or "").strip()
+    canonical_ref = str(source.get("announcement_ref") or "").strip()
+    evidence_id = str(raw["source_id"]).strip()
+    evidence_ref = str(raw["announcement_ref"]).strip()
+    if not evidence_id or evidence_id == canonical_source_id:
+        raise ValueError(f"effective-date evidence must have a distinct source_id: {canonical_source_id}")
+    if not evidence_ref:
+        raise ValueError(f"effective-date evidence has empty announcement_ref: {canonical_source_id}")
+
+    evidence_announced_at = _parse_optional_date(
+        raw.get("announced_at"), source_id=evidence_id, field="announced_at"
+    )
+    evidence_effective_from = _parse_optional_date(
+        raw.get("effective_from"), source_id=evidence_id, field="effective_from"
+    )
+    if evidence_announced_at is None or evidence_effective_from is None:
+        raise ValueError(f"effective-date evidence lacks explicit dates: {canonical_source_id}")
+    if evidence_announced_at > evidence_effective_from:
+        raise ValueError(f"effective-date evidence is announced after effective date: {canonical_source_id}")
+
+    canonical_effective_from = _parse_optional_date(
+        source.get("effective_from"), source_id=canonical_source_id, field="effective_from"
+    )
+    if canonical_effective_from is None:
+        raise ValueError(f"canonical effective_from must be explicit: {canonical_source_id}")
+    if canonical_effective_from != evidence_effective_from:
+        raise ValueError(f"canonical/evidence effective dates disagree: {canonical_source_id}")
+
+    download_url = str(raw.get("download_url") or "").strip()
+    if not is_official_idx_url(download_url):
+        raise ValueError(f"effective-date evidence URL is not official IDX HTTPS: {canonical_source_id}")
+
+    source_sha256 = str(raw.get("source_sha256") or "").strip().lower()
+    if not pd.Series([source_sha256]).str.fullmatch(r"[0-9a-f]{64}").iloc[0]:
+        raise ValueError(f"effective-date evidence source_sha256 is not 64-hex: {canonical_source_id}")
+    if not isinstance(raw.get("bytes"), int) or raw["bytes"] <= 0:
+        raise ValueError(f"effective-date evidence bytes must be positive: {canonical_source_id}")
+    if not str(raw.get("content_type") or "").strip():
+        raise ValueError(f"effective-date evidence content_type is empty: {canonical_source_id}")
+
+    linkage = raw.get("linkage")
+    if not isinstance(linkage, dict):
+        raise ValueError(f"effective-date evidence linkage must be an object: {canonical_source_id}")
+    if str(linkage.get("canonical_source_id") or "").strip() != canonical_source_id:
+        raise ValueError(f"effective-date evidence canonical source linkage mismatch: {canonical_source_id}")
+    if str(linkage.get("canonical_announcement_ref") or "").strip() != canonical_ref:
+        raise ValueError(f"effective-date evidence canonical ref linkage mismatch: {canonical_source_id}")
+    linked_tickers = linkage.get("linked_tickers")
+    if not isinstance(linked_tickers, list) or not linked_tickers:
+        raise ValueError(f"effective-date evidence must list linked_tickers: {canonical_source_id}")
+    normalised_tickers = [normalise_ticker(ticker) for ticker in linked_tickers]
+    if any(not ticker for ticker in normalised_tickers):
+        raise ValueError(f"effective-date evidence contains an empty ticker: {canonical_source_id}")
+    if not str(linkage.get("classification_change") or "").strip():
+        raise ValueError(f"effective-date evidence lacks classification_change: {canonical_source_id}")
+    if not str(linkage.get("linkage_statement") or "").strip():
+        raise ValueError(f"effective-date evidence lacks linkage_statement: {canonical_source_id}")
+
+    linked_canonical_sha256 = str(linkage.get("canonical_source_sha256") or "").strip().lower()
+    canonical_raw_sha256 = str((source.get("raw_attachment") or {}).get("sha256") or "").strip().lower()
+    if linked_canonical_sha256:
+        if not pd.Series([linked_canonical_sha256]).str.fullmatch(r"[0-9a-f]{64}").iloc[0]:
+            raise ValueError(f"effective-date evidence canonical_source_sha256 is not 64-hex: {canonical_source_id}")
+        if canonical_raw_sha256 and linked_canonical_sha256 != canonical_raw_sha256:
+            raise ValueError(f"effective-date evidence canonical hash linkage mismatch: {canonical_source_id}")
+
+    return {
+        "source_id": evidence_id,
+        "announcement_ref": evidence_ref,
+        "announced_at": evidence_announced_at,
+        "effective_from": evidence_effective_from,
+        "download_url": download_url,
+        "source_sha256": source_sha256,
+        "linked_tickers": normalised_tickers,
+    }
+
+
 def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
     sources = payload.get("sources")
     if not isinstance(sources, list) or not sources:
@@ -112,6 +222,7 @@ def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
         effective_from = _parse_optional_date(
             raw.get("effective_from"), source_id=source_id, field="effective_from"
         )
+        effective_date_evidence = validate_effective_date_evidence(raw)
         url = str(raw.get("download_url") or "").strip()
 
         if status == "READY_FOR_ACQUISITION":
@@ -132,6 +243,9 @@ def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
         "sources_blocked": len(blockers),
         "complete_for_acquisition": not blockers,
         "blockers": blockers,
+        "effective_date_evidence_validated": sum(
+            validate_effective_date_evidence(source) is not None for source in sources
+        ),
     }
 
 
@@ -181,25 +295,53 @@ def acquire_official_sources(
     for source in inventory["sources"]:
         source_id = str(source["source_id"])
         payload, final_url, content_type = _download_one(str(source["download_url"]), session=client)
+        expected_sha256 = str((source.get("raw_attachment") or {}).get("sha256") or "").strip().lower()
+        raw_sha256 = _sha256_bytes(payload)
+        if expected_sha256 and raw_sha256 != expected_sha256:
+            raise RuntimeError(f"canonical raw SHA-256 mismatch for {source_id}")
         suffix = Path(urlparse(final_url).path).suffix or ".bin"
         target = raw_dir / f"{source_id}{suffix}"
         _atomic_write_bytes(target, payload)
-        entries.append(
-            {
-                "source_id": source_id,
-                "source_type": source["source_type"],
-                "announcement_ref": source["announcement_ref"],
-                "announced_at": str(source["announced_at"]),
-                "effective_from": str(source["effective_from"]),
-                "requested_url": source["download_url"],
-                "final_url": final_url,
-                "content_type": content_type,
+        entry = {
+            "source_id": source_id,
+            "source_type": source["source_type"],
+            "announcement_ref": source["announcement_ref"],
+            "announced_at": str(source["announced_at"]),
+            "effective_from": str(source["effective_from"]),
+            "requested_url": source["download_url"],
+            "final_url": final_url,
+            "content_type": content_type,
+            "retrieved_at_utc": _utc_now(),
+            "raw_file": target.name,
+            "raw_sha256": raw_sha256,
+            "bytes": len(payload),
+        }
+
+        effective_date_evidence = validate_effective_date_evidence(source)
+        if effective_date_evidence is not None:
+            evidence = source["effective_date_evidence"]
+            evidence_payload, evidence_final_url, evidence_content_type = _download_one(
+                str(evidence["download_url"]), session=client
+            )
+            evidence_sha256 = _sha256_bytes(evidence_payload)
+            if evidence_sha256 != effective_date_evidence["source_sha256"]:
+                raise RuntimeError(f"effective-date evidence SHA-256 mismatch for {source_id}")
+            evidence_suffix = Path(urlparse(evidence_final_url).path).suffix or ".bin"
+            evidence_target = raw_dir / f"{source_id}__effective_date_evidence{evidence_suffix}"
+            _atomic_write_bytes(evidence_target, evidence_payload)
+            entry["effective_date_evidence"] = {
+                "source_id": effective_date_evidence["source_id"],
+                "announcement_ref": effective_date_evidence["announcement_ref"],
+                "effective_from": str(effective_date_evidence["effective_from"]),
+                "requested_url": evidence["download_url"],
+                "final_url": evidence_final_url,
+                "content_type": evidence_content_type,
                 "retrieved_at_utc": _utc_now(),
-                "raw_file": target.name,
-                "raw_sha256": _sha256_bytes(payload),
-                "bytes": len(payload),
+                "raw_file": evidence_target.name,
+                "raw_sha256": evidence_sha256,
+                "bytes": len(evidence_payload),
             }
-        )
+        entries.append(entry)
 
     manifest = {
         "status": "PIT_SECTOR_OFFICIAL_SOURCE_ACQUISITION_COMPLETE",

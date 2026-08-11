@@ -1709,3 +1709,26 @@ No V3-D/V3-B/model scoring, Path Risk, fresh-forward outcome, or main merge was
 started. The sector-history track remains blocked pending the dedicated annual
 2022/2023 sources and canonical effective-date evidence for PALM/2024/2026,
 followed by the IPO and incidental source census.
+
+## 36. Multi-document official effective-date provenance — 2026-08-11
+
+The independent raw-acquisition review was implemented as an additive,
+fail-closed provenance contract. A nested official IDX effective-date document
+must carry its own ref, explicit dates, URL, SHA-256, bytes/content type,
+canonical source ID/ref/hash linkage, affected ticker list, and explicit
+classification/linkage statements. The canonical top-level `effective_from`
+must already be present and exactly equal to the evidence date; nested evidence
+cannot fill a missing date. Complete acquisition now records and verifies both
+canonical and linked evidence files.
+
+PALM passed the contract and was promoted to `READY_FOR_ACQUISITION` at
+effective date `2023-10-02`. Inventory state is now `4 ready / 4 blocked`, with
+one validated effective-date evidence object. Official discovery did not find
+explicit effective dates for 2024/2026 or dedicated canonical annual
+classification sources for 2022/2023; `Peng-00150` and `Peng-00156` remain
+sector-index reconciliation evidence.
+
+Validation: focused PIT tests `14 passed`; full pytest `483 passed, 0 failed,
+3 warnings`. No parser/materialization, IPO/incidental census expansion, model,
+fresh-forward, Path Risk, V3-D/V3-B, or main merge was started. See the dated
+provenance checkpoint and result handoff.

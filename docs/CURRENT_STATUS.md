@@ -217,6 +217,24 @@ are present, but their canonical PDFs do not state effective dates; no dates
 were inferred. No model, sector score, Path Risk run, or outcome access was
 started. Focused PIT-source tests passed `8/8`.
 
+## PIT sector multi-document effective-date contract — 2026-08-11
+
+The independent review refinement is implemented and tested. A canonical IDX
+classification document may now use a separate hash-pinned official IDX
+effective-date document only when the linkage explicitly binds the canonical
+source ID/ref/hash and affected ticker(s). The canonical top-level
+`effective_from` remains mandatory and equal to the evidence date; no date
+inference is permitted. Linked evidence will also be hash-checked and recorded
+in the acquisition manifest.
+
+PALM passes this contract and is promoted to `READY_FOR_ACQUISITION` with
+effective date `2023-10-02`. The inventory is now `4/8` ready and `4/8`
+blocked. Official discovery found no explicit effective-date evidence for
+`Peng-00128/06-2024` or `Peng-00100/06-2026`, and no dedicated canonical annual
+issuer-classification attachments for 2022 or 2023. `Peng-00150` and
+`Peng-00156` remain sector-index reconciliation evidence only. Focused PIT
+tests passed `14/14`; full pytest passed `483/483` with 3 existing warnings.
+
 ## Hard boundary
 
 Do not:

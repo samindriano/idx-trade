@@ -64,6 +64,32 @@ The CLI inventory audit reports `3` ready and `5` discovery-blocked canonical
 sources. Full acquisition remains intentionally blocked until every required
 canonical source has verified key dates and provenance.
 
+## Multi-document effective-date provenance contract — 2026-08-11
+
+The independent review permits a separate official IDX document to establish
+the effective date of a canonical classification event. This is valid only
+when the nested `effective_date_evidence` object contains:
+
+- an official HTTPS IDX URL and its 64-hex SHA-256;
+- an explicit announced date and effective date;
+- a distinct official announcement reference;
+- explicit linkage to the canonical `source_id`, announcement reference, and
+  canonical raw SHA-256;
+- a non-empty affected-ticker list, classification-change description, and
+  linkage statement.
+
+The canonical source's top-level `effective_from` remains mandatory. The
+nested evidence may validate that date, but can never populate or infer a
+missing canonical date. When acquisition is complete, the linked evidence is
+downloaded, hash-checked, and recorded as a nested manifest entry alongside
+the canonical raw document.
+
+PALM now validates this contract: canonical `Peng-00236/09-2023` supplies the
+classification change and linked official `Peng-00016/10-2023` supplies the
+explicit 2 October 2023 effective date. The inventory audit is now `4` ready
+and `4` blocked. Remaining blockers are annual 2022, annual 2023, annual 2024,
+and annual 2026 canonical/effective-date evidence.
+
 ## Raw acquisition contract
 
 `src/idx_trade/pit_sector_history.py`:

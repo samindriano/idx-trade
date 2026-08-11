@@ -68,11 +68,11 @@
       "source_type": "INCIDENTAL_CLASSIFICATION_CHANGE",
       "announcement_ref": "Peng-00236/BEI.POP/09-2023",
       "announced_at": "2023-09-29",
-      "effective_from": null,
-      "status": "DISCOVERY_REQUIRED",
+      "effective_from": "2023-10-02",
+      "status": "READY_FOR_ACQUISITION",
       "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
-      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED_EFFECTIVE_DATE_UNRESOLVED",
-      "discovery_note": "Official IDX attachment for Peng-00236 establishes PALM's incidental move from Consumer Non-Cyclicals to Financials. The canonical raw PDF does not state an effective date; an official IDX issuer disclosure states 2 October 2023 and is retained as supporting evidence, but the canonical source remains discovery-blocked until the date is bound to the event contract.",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_PLUS_LINKED_OFFICIAL_EFFECTIVE_DATE_EVIDENCE",
+      "discovery_note": "Official IDX attachment for Peng-00236 establishes PALM's incidental move from Consumer Non-Cyclicals to Financials. A separately hash-pinned official IDX issuer disclosure explicitly links the Peng-00236 event and states effective 2 October 2023 under the multi-document provenance contract.",
       "raw_attachment": {
         "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
         "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
@@ -81,13 +81,24 @@
         "content_type": "application/x-zip-compressed",
         "layout": "ZIP with Insidental Peng-00236.pdf (325652 bytes, 1 page)."
       },
-      "supporting_official_attachment": {
+      "effective_date_evidence": {
+        "source_id": "IDX_IC_INCIDENTAL_PALM_EFFECTIVE_2023",
+        "source_type": "OFFICIAL_EFFECTIVE_DATE_EVIDENCE",
         "announcement_ref": "Peng-00016/BEI.PP1/10-2023",
-        "url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202310/3fc602c18b_d3dffbcb7c.pdf",
-        "sha256": "2088a9fde16bc8ac8c0da687901eb79cc7dc2124bf9c673315ebb70c1c496fb4",
+        "announced_at": "2023-10-02",
+        "effective_from": "2023-10-02",
+        "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202310/3fc602c18b_d3dffbcb7c.pdf",
+        "source_sha256": "2088a9fde16bc8ac8c0da687901eb79cc7dc2124bf9c673315ebb70c1c496fb4",
         "bytes": 5738,
         "content_type": "application/pdf",
-        "layout": "Four-page official IDX issuer disclosure; explicitly states effective 2 October 2023 and embeds the Peng-00236 attachment reference."
+        "linkage": {
+          "canonical_source_id": "IDX_IC_INCIDENTAL_PALM_2023",
+          "canonical_announcement_ref": "Peng-00236/BEI.POP/09-2023",
+          "canonical_source_sha256": "3b85b0f1bbd0cdee1ef6dc99de2b5570da892e908458303d0fbfe29bf81959d9",
+          "linked_tickers": ["PALM"],
+          "classification_change": "PALM Consumer Non-Cyclicals to Financials",
+          "linkage_statement": "The official IDX issuer disclosure embeds and references the Peng-00236 classification attachment and states the effective date."
+        }
       }
     },
     {
