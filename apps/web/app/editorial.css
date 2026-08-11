@@ -201,11 +201,25 @@ body {
 .editorialChart .chartPoint circle { fill: var(--editorial-paper); stroke: var(--editorial-green); }
 .editorialChart .pointValue { fill: var(--editorial-ink); font-size: 10px; }
 .evidenceChartMeta { display: flex; justify-content: space-between; gap: 14px; margin: 0 0 2px; color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.evidenceChartMeta > div { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
+.evidenceChartLabel { display: flex; align-items: center; gap: 6px; }
+.evidenceChartLegend { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
 .evidenceChartMeta small { display: inline-flex; align-items: center; gap: 4px; color: var(--editorial-muted); font-size: 8px; }
 .evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-green); }
 .evidenceChartMeta small:nth-child(2) i { background: #477d68; }
 .evidenceChartMeta small:nth-child(3) i { background: #8a9f62; }
+.evidenceHelp { position: relative; }
+.evidenceHelpButton { width: 16px; height: 16px; display: grid; place-items: center; padding: 0; border: 1px solid var(--editorial-muted); border-radius: 50%; background: transparent; color: var(--editorial-muted); font: inherit; font-size: 10px; font-weight: 800; line-height: 1; cursor: pointer; }
+.evidenceHelpButton:hover, .evidenceHelpButton[aria-expanded="true"] { border-color: var(--editorial-green); color: var(--editorial-green-dark); }
+.evidenceHelpButton:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.evidenceHelpPopover { position: absolute; z-index: 12; top: calc(100% + 8px); left: 0; width: min(360px, calc(100vw - 52px)); padding: 13px 14px; border: 1px solid var(--editorial-line); background: #f8f7f2; box-shadow: 0 12px 28px rgba(17,21,18,.14); color: var(--editorial-ink); font-size: 9px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.evidenceHelpPopover::before { content: ""; position: absolute; top: -5px; left: 5px; width: 8px; height: 8px; border-top: 1px solid var(--editorial-line); border-left: 1px solid var(--editorial-line); background: #f8f7f2; transform: rotate(45deg); }
+.evidenceHelpPopover strong { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: -.01em; }
+.evidenceHelpPopover p { margin: 0 0 10px; color: var(--editorial-muted); font-size: 9px; line-height: 1.45; }
+.evidenceHelpTable { display: grid; gap: 5px; padding: 8px 0; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.evidenceHelpTable div { display: grid; grid-template-columns: 24px 1fr 1fr 1.15fr; gap: 5px; align-items: baseline; }
+.evidenceHelpTable b { color: var(--editorial-ink); font-size: 9px; }
+.evidenceHelpTable span, .evidenceHelpPopover > small { color: var(--editorial-muted); font-size: 8px; line-height: 1.35; }
+.evidenceHelpPopover > small { display: block; margin-top: 9px; }
 .editorialRuleNote { padding-top: 14px; color: var(--editorial-muted); }
 
 .forwardEditorial { background: var(--editorial-ink); color: var(--editorial-paper); margin-inline: -30px; padding-inline: 30px; }
@@ -645,7 +659,7 @@ body {
   .overviewArchiveRow strong { font-size: 11px; }
   .overviewArchiveStatus { font-size: 7px; }
   .evidenceChartMeta { display: grid; gap: 6px; }
-  .evidenceChartMeta > div { justify-content: start; }
+  .evidenceChartLegend { justify-content: start; }
 .monitorHero { min-height: 126px; }
 }
 

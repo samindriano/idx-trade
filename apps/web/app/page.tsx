@@ -65,6 +65,15 @@ function signedPct(value: number) {
   return `${value >= 0 ? "+" : ""}${pct(value)}`;
 }
 
+const FOLD_GUIDE = [
+  { fold: "F1", train: "1–504", gap: "505–524", validation: "525–624" },
+  { fold: "F2", train: "1–624", gap: "625–644", validation: "645–744" },
+  { fold: "F3", train: "1–744", gap: "745–764", validation: "765–864" },
+  { fold: "F4", train: "1–864", gap: "865–884", validation: "885–984" },
+  { fold: "F5", train: "1–984", gap: "985–1004", validation: "1005–1104" },
+  { fold: "F6", train: "1–1104", gap: "1105–1124", validation: "1125–1224" },
+] as const;
+
 function EvidenceChart({
   series,
   status,
@@ -75,6 +84,7 @@ function EvidenceChart({
   metricLabel: string;
 }) {
   const [hovered, setHovered] = useState<{ series: number; point: number } | null>(null);
+  const [foldHelpOpen, setFoldHelpOpen] = useState(false);
   const width = 760;
   const height = 300;
   const left = 58;
@@ -101,12 +111,30 @@ function EvidenceChart({
   }));
   const activePoint = hovered ? plottedSeries[hovered.series]?.points[hovered.point] : null;
   const activeSeries = hovered ? plottedSeries[hovered.series] : null;
+  const foldGuide = FOLD_GUIDE.slice(0, Math.max(...series.map((line) => line.points.length)));
 
   return (
     <div className={`chartWrap editorialChart ${styles.chartStage}`} onMouseLeave={() => setHovered(null)}>
       <div className="evidenceChartMeta">
-        <span>{metricLabel}</span>
-        <div>{series.map((line, index) => <small key={line.label}><i style={{ background: palette[index % palette.length] }} />{line.label}</small>)}</div>
+        <div className="evidenceChartLabel">
+          <span>{metricLabel}</span>
+          <div className="evidenceHelp">
+            <button className="evidenceHelpButton" type="button" aria-label="Explain evaluation folds" aria-expanded={foldHelpOpen} onClick={() => setFoldHelpOpen((current) => !current)}>?</button>
+            {foldHelpOpen && (
+              <div className="evidenceHelpPopover" role="dialog" aria-label="Evaluation fold explanation">
+                <strong>How to read these folds</strong>
+                <p>Each fold is a chronological walk-forward check: train on earlier sessions, skip a 20-session purge gap, then evaluate on the next 100 sessions.</p>
+                <div className="evidenceHelpTable">
+                  {foldGuide.map((fold) => (
+                    <div key={fold.fold}><b>{fold.fold}</b><span>train {fold.train}</span><span>gap {fold.gap}</span><span>validation {fold.validation}</span></div>
+                  ))}
+                </div>
+                <small>Positive PR-AUC change means the candidate beat the comparator shown above. These are historical development folds, not fresh-forward outcomes.</small>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="evidenceChartLegend">{series.map((line, index) => <small key={line.label}><i style={{ background: palette[index % palette.length] }} />{line.label}</small>)}</div>
       </div>
       <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel} across evaluation folds`}>
         <defs>
