@@ -5,7 +5,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import pandas as pd
@@ -75,6 +75,15 @@ def load_source_inventory(path: str | Path) -> dict[str, Any]:
     return payload
 
 
+def _parse_optional_date(value: Any, *, source_id: str, field: str) -> pd.Timestamp | None:
+    if value is None or str(value).strip() == "":
+        return None
+    result = pd.Timestamp(value).normalize()
+    if pd.isna(result):
+        raise ValueError(f"invalid {field} for {source_id}")
+    return result
+
+
 def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
     sources = payload.get("sources")
     if not isinstance(sources, list) or not sources:
@@ -99,13 +108,15 @@ def validate_source_inventory(payload: dict[str, Any]) -> dict[str, Any]:
         if status not in SOURCE_STATUSES:
             raise ValueError(f"unsupported source status for {source_id}: {status}")
 
-        announced_at = pd.Timestamp(raw["announced_at"]).normalize()
-        effective_from = pd.Timestamp(raw["effective_from"]).normalize()
-        if pd.isna(announced_at) or pd.isna(effective_from):
-            raise ValueError(f"invalid announced/effective date for {source_id}")
-
+        announced_at = _parse_optional_date(raw.get("announced_at"), source_id=source_id, field="announced_at")
+        effective_from = _parse_optional_date(
+            raw.get("effective_from"), source_id=source_id, field="effective_from"
+        )
         url = str(raw.get("download_url") or "").strip()
+
         if status == "READY_FOR_ACQUISITION":
+            if announced_at is None or effective_from is None:
+                raise ValueError(f"READY source lacks verified announced/effective date: {source_id}")
             if not url:
                 raise ValueError(f"READY source has no download_url: {source_id}")
             if not is_official_idx_url(url):
@@ -205,6 +216,8 @@ def normalise_sector_events(events: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"sector event table missing columns: {sorted(missing)}")
 
     data = events.copy()
+    if data["ticker"].isna().any() or data["sector_code"].isna().any():
+        raise ValueError("ticker and sector_code must not be null")
     data["ticker"] = data["ticker"].map(normalise_ticker)
     data["sector_code"] = data["sector_code"].astype(str).str.strip().str.upper()
     data["effective_from"] = pd.to_datetime(data["effective_from"], errors="raise").dt.normalize()
@@ -213,7 +226,8 @@ def normalise_sector_events(events: pd.DataFrame) -> pd.DataFrame:
 
     if data["ticker"].eq("").any() or data["sector_code"].eq("").any():
         raise ValueError("ticker and sector_code must be non-empty")
-    if data["source_sha256"].astype(str).str.fullmatch(r"[0-9a-fA-F]{64}").fillna(False).all() is False:
+    valid_sha = data["source_sha256"].astype(str).str.fullmatch(r"[0-9a-fA-F]{64}").fillna(False)
+    if not bool(valid_sha.all()):
         raise ValueError("every sector event must carry a 64-hex source_sha256")
 
     key = ["ticker", "effective_from"]
@@ -265,8 +279,8 @@ def attach_sector_asof(
         if optional in right.columns:
             keep.append(optional)
 
-    left_sorted = left.sort_values([ticker_column, date_column], kind="mergesort")
-    right_sorted = right[keep].sort_values([ticker_column, "pit_from"], kind="mergesort")
+    left_sorted = left.sort_values([date_column, ticker_column], kind="mergesort")
+    right_sorted = right[keep].sort_values(["pit_from", ticker_column], kind="mergesort")
     merged = pd.merge_asof(
         left_sorted,
         right_sorted,
