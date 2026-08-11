@@ -1,11 +1,11 @@
 /* IDX Trade — Post-Swiss Interactive Editorial direction */
 :root {
-  --editorial-paper: #f0eee7;
-  --editorial-paper-2: #e9e6de;
+  --editorial-paper: #ebe9e2;
+  --editorial-paper-2: #e4e1da;
   --editorial-ink: #111512;
   --editorial-muted: #737871;
-  --editorial-line: rgba(17, 21, 18, .18);
-  --editorial-line-soft: rgba(17, 21, 18, .09);
+  --editorial-line: rgba(17, 21, 18, .15);
+  --editorial-line-soft: rgba(17, 21, 18, .075);
   --editorial-green: #00a66a;
   --editorial-green-dark: #007b4f;
   --editorial-red: #e34a3b;
@@ -14,16 +14,16 @@
 
 body {
   background:
-    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.035) 25%, transparent calc(25% + .5px)),
-    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.035) 50%, transparent calc(50% + .5px)),
-    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.035) 75%, transparent calc(75% + .5px)),
+    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.025) 25%, transparent calc(25% + .5px)),
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.025) 50%, transparent calc(50% + .5px)),
+    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.025) 75%, transparent calc(75% + .5px)),
     var(--editorial-paper);
   color: var(--editorial-ink);
 }
 
 .editorialNav,
 .monitorShell .topNav {
-  background: rgba(240, 238, 231, .9);
+  background: rgba(235, 233, 226, .92);
   border-bottom: 1px solid var(--editorial-line);
   backdrop-filter: blur(18px);
 }
@@ -260,9 +260,9 @@ body {
 /* Monitoring inherits the same visual language while keeping operator clarity. */
 .monitorShell {
   background:
-    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.03) 25%, transparent calc(25% + .5px)),
-    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.03) 50%, transparent calc(50% + .5px)),
-    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.03) 75%, transparent calc(75% + .5px)),
+    linear-gradient(90deg, transparent calc(25% - .5px), rgba(17,21,18,.022) 25%, transparent calc(25% + .5px)),
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(17,21,18,.022) 50%, transparent calc(50% + .5px)),
+    linear-gradient(90deg, transparent calc(75% - .5px), rgba(17,21,18,.022) 75%, transparent calc(75% + .5px)),
     var(--editorial-paper) !important;
 }
 .monitoringPage { max-width: 1320px; padding: 40px 30px 50px; }
@@ -719,12 +719,14 @@ body {
 .sessionCapturePanel { padding-inline: 20px; }
 .modelCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; overflow: visible; border: 0; background: transparent; }
 .modelCardLink {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 310px;
   min-width: 0;
   overflow: hidden;
   color: var(--editorial-ink);
   text-decoration: none;
-  background: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.16);
   box-shadow: none;
   transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
@@ -735,7 +737,7 @@ body {
 .modelCardLink .modelMeta { margin: 16px 20px 0 !important; }
 .modelCardLink .modelCardAction { margin-inline: 20px; }
 .modelCardLink .contractNumber strong { font-size: 42px; }
-.modelCardLink .modelCardAction { padding-bottom: 2px; }
+.modelCardLink .modelCardAction { margin-top: auto; padding-bottom: 20px; }
 .sessionStrip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; background: transparent !important; }
 .sessionTile {
   flex: 0 0 108px;
@@ -743,7 +745,7 @@ body {
   padding: 11px 10px;
   border: 1px solid var(--editorial-line) !important;
   border-radius: 4px !important;
-  background: rgba(255,255,255,.62) !important;
+  background: rgba(255,255,255,.46) !important;
   box-shadow: none !important;
 }
 .sessionTile:hover { border-color: var(--editorial-green) !important; background: #f5fbf7 !important; }
@@ -754,6 +756,7 @@ body {
 
 @media (max-width: 900px) {
   .modelCardsGrid { grid-template-columns: 1fr; }
+  .modelCardLink { min-height: 290px; }
 }
 
 .modelDetailPage { max-width: 1180px; padding: 28px 30px 42px; }
