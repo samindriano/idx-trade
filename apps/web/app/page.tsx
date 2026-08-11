@@ -134,6 +134,7 @@ function EvidenceChart({
 }) {
   const [hovered, setHovered] = useState<{ series: number; point: number } | null>(null);
   const [foldHelpOpen, setFoldHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement>(null);
   const width = 760;
   const height = 300;
   const left = 58;
@@ -158,12 +159,21 @@ function EvidenceChart({
   const activeSeries = hovered ? plottedSeries[hovered.series] : null;
   const foldGuide = FOLD_GUIDE.slice(0, Math.max(...series.map((line) => line.points.length)));
 
+  useEffect(() => {
+    if (!foldHelpOpen) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(event.target as Node)) setFoldHelpOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [foldHelpOpen]);
+
   return (
     <div className={`chartWrap editorialChart ${styles.chartStage}`} onMouseLeave={() => setHovered(null)}>
       <div className="evidenceChartMeta">
         <div className="evidenceChartLabel">
           <span>{metricLabel}</span>
-          <div className="evidenceHelp">
+          <div className="evidenceHelp" ref={helpRef}>
             <button className="evidenceHelpButton" type="button" aria-label="Explain evaluation folds" aria-expanded={foldHelpOpen} onClick={() => setFoldHelpOpen((current) => !current)}>?</button>
             {foldHelpOpen && (
               <div className="evidenceHelpPopover" role="dialog" aria-label="Evaluation fold explanation">
