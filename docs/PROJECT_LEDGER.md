@@ -1687,3 +1687,25 @@ The cache manifest/audit flags are all fail-closed pre-outcome values:
 ranking historical denominator remains `17`. No risk-veto/integration,
 ranking change, fresh-forward access, or main merge was started. See the dated
 Path Risk checkpoint and result handoff for the complete per-feature audit.
+
+## 35. Official IDX PIT sector raw acquisition — 2026-08-11
+
+On `data/idx-pit-sector-history-v1`, official IDX raw attachments were
+acquired, SHA-256 verified, and layout-inspected outside Git at
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`. The factual
+inventory and complete source table are recorded in
+`docs/checkpoints/2026-08-11_PIT_SECTOR_OFFICIAL_RAW_ACQUISITION_RESULT.md`.
+
+The canonical inventory remains fail-closed with `3/8` sources ready and `5`
+blocked: annual 2022, annual 2023, PALM incidental 2023, annual 2024, and
+annual 2026. The recovered `Peng-00150/06-2022` and `Peng-00156/06-2023`
+packages were inspected and correctly retained as sector-index reconciliation
+evidence, not canonical issuer-classification events. PALM, 2024, and 2026 raw
+attachments were recovered but their canonical PDFs do not state effective
+dates; no date was inferred. The official inventory CLI therefore did not run
+bulk acquisition. Focused `tests/test_pit_sector_history.py` passed `8/8`.
+
+No V3-D/V3-B/model scoring, Path Risk, fresh-forward outcome, or main merge was
+started. The sector-history track remains blocked pending the dedicated annual
+2022/2023 sources and canonical effective-date evidence for PALM/2024/2026,
+followed by the IPO and incidental source census.

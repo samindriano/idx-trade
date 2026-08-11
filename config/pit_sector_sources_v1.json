@@ -12,7 +12,15 @@
       "status": "READY_FOR_ACQUISITION",
       "download_url": "https://www.idx.co.id/media/9594/idx-industrial-classification.zip",
       "evidence_level": "DIRECT_OFFICIAL_IDX_URL",
-      "discovery_note": "Initial IDX-IC launch package; canonical baseline."
+      "discovery_note": "Initial IDX-IC launch package; canonical baseline.",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/media/9594/idx-industrial-classification.zip",
+        "acquired_url": "https://www.idx.id/media/9594/idx-industrial-classification.zip",
+        "sha256": "0b6b2e136e0e729fc80fb5bd97e73623aab7c461af89552d6e030837635bbcdd",
+        "bytes": 1617051,
+        "content_type": "application/zip",
+        "layout": "ZIP containing IDX Industrial Classification(1).rar (1620384 bytes); archive contents retained outside Git."
+      }
     },
     {
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2021",
@@ -20,10 +28,18 @@
       "announcement_ref": "Peng-00171/BEI.POP/06-2021",
       "announced_at": "2021-06-24",
       "effective_from": "2021-07-01",
-      "status": "DISCOVERY_REQUIRED",
-      "download_url": "",
-      "evidence_level": "EXACT_REF_AND_DATES_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
-      "discovery_note": "Dedicated listed-company industrial-classification change announcement recovered from issuer/IDX-derived evidence."
+      "status": "READY_FOR_ACQUISITION",
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00171_BEI.POP_06-2021.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED",
+      "discovery_note": "Dedicated listed-company industrial-classification change announcement; announcement PDF explicitly states effective 1 July 2021.",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00171_BEI.POP_06-2021.zip",
+        "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00171_BEI.POP_06-2021.zip",
+        "sha256": "2eb49058d63dcf16e8bb81dd3788364374adefdf1b92baa4b5fd406bcec51fbf",
+        "bytes": 176549,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Klasifikasi Industri Peng-00171.pdf (298005 bytes, 2 pages)."
+      }
     },
     {
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2022",
@@ -54,20 +70,44 @@
       "announced_at": "2023-09-29",
       "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": "",
-      "evidence_level": "EXACT_REF_AND_ANNOUNCEMENT_DATE_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
-      "discovery_note": "PALM moved from Consumer Non-Cyclicals to Financials after an incidental classification evaluation. This proves annual-only reconstruction is insufficient."
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED_EFFECTIVE_DATE_UNRESOLVED",
+      "discovery_note": "Official IDX attachment for Peng-00236 establishes PALM's incidental move from Consumer Non-Cyclicals to Financials. The canonical raw PDF does not state an effective date; an official IDX issuer disclosure states 2 October 2023 and is retained as supporting evidence, but the canonical source remains discovery-blocked until the date is bound to the event contract.",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
+        "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00236_BEI.POP_09-2023.zip",
+        "sha256": "3b85b0f1bbd0cdee1ef6dc99de2b5570da892e908458303d0fbfe29bf81959d9",
+        "bytes": 214514,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Insidental Peng-00236.pdf (325652 bytes, 1 page)."
+      },
+      "supporting_official_attachment": {
+        "announcement_ref": "Peng-00016/BEI.PP1/10-2023",
+        "url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202310/3fc602c18b_d3dffbcb7c.pdf",
+        "sha256": "2088a9fde16bc8ac8c0da687901eb79cc7dc2124bf9c673315ebb70c1c496fb4",
+        "bytes": 5738,
+        "content_type": "application/pdf",
+        "layout": "Four-page official IDX issuer disclosure; explicitly states effective 2 October 2023 and embeds the Peng-00236 attachment reference."
+      }
     },
     {
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2024",
       "source_type": "ANNUAL_CLASSIFICATION_CHANGE",
       "announcement_ref": "Peng-00128/BEI.POP/06-2024",
-      "announced_at": null,
       "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": "",
-      "evidence_level": "REF_RECOVERED_FROM_OFFICIAL_IDX_GENERATED_ISSUER_DISCLOSURE_ATTACHMENT_NAME",
-      "discovery_note": "An official IDX-generated PANI disclosure names attachment 'PKIE Peng-00128.pdf'. Direct announcement attachment and authoritative dates still need retrieval; do not substitute Peng-00127, which is the sector-index evaluation announcement."
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED_EFFECTIVE_DATE_UNRESOLVED",
+      "discovery_note": "Official IDX announcement attachment recovered. Publish date is 24 June 2024; the raw PDF does not state an effective date, so no effective date is inferred and the source remains discovery-blocked.",
+      "announced_at": "2024-06-24",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
+        "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00128_BEI.POP_06-2024-ID.zip",
+        "sha256": "4ecf5ebb2809c9007b68bfe0aa1c426428d77178ff9acbf744364afba00ad223",
+        "bytes": 199188,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with PKIE Peng-00128.pdf (327152 bytes, 4 pages)."
+      }
     },
     {
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2025",
@@ -75,10 +115,18 @@
       "announcement_ref": "Peng-00110/BEI.POP/06-2025",
       "announced_at": "2025-06-23",
       "effective_from": "2025-07-01",
-      "status": "DISCOVERY_REQUIRED",
-      "download_url": "",
-      "evidence_level": "EXACT_REF_AND_DATES_RECOVERED_RAW_IDX_ATTACHMENT_URL_MISSING",
-      "discovery_note": "Dedicated classification-change announcement for IRRA and OKAS. Peng-00111/BEI.POP/06-2025 is kept only as sector-index reconciliation evidence."
+      "status": "READY_FOR_ACQUISITION",
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00110_BEI.POP_06-2025-ID.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED",
+      "discovery_note": "Dedicated classification-change announcement for IRRA and OKAS; announcement PDF explicitly states effective 1 July 2025. Peng-00111/BEI.POP/06-2025 remains sector-index reconciliation evidence only.",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00110_BEI.POP_06-2025-ID.zip",
+        "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00110_BEI.POP_06-2025-ID.zip",
+        "sha256": "09ecc0b059b6c486aa3220faacb55fa638e1991d26c37e26d9455fec0ceec7de",
+        "bytes": 276316,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Klasifikasi Peng-00110.pdf (397500 bytes, 1 page)."
+      }
     },
     {
       "source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2026",
@@ -87,9 +135,17 @@
       "announced_at": "2026-06-24",
       "effective_from": null,
       "status": "DISCOVERY_REQUIRED",
-      "download_url": "",
-      "evidence_level": "EXACT_REF_AND_DOCUMENT_DATE_RECOVERED_FROM_IDX_DOCUMENT_MIRROR_RAW_IDX_URL_MISSING",
-      "discovery_note": "Annual classification evaluation changes ARGO, HRUM and PACK; direct idx.co.id/idx.id attachment URL and explicit effective date remain to be verified."
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00100_BEI.POP_06-2026-ID.zip",
+      "evidence_level": "DIRECT_OFFICIAL_IDX_ATTACHMENT_VERIFIED_EFFECTIVE_DATE_UNRESOLVED",
+      "discovery_note": "Annual classification evaluation changes ARGO, HRUM and PACK. Publish date is 24 June 2026; the raw PDF does not state an effective date, so no effective date is inferred and the source remains discovery-blocked.",
+      "raw_attachment": {
+        "requested_url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00100_BEI.POP_06-2026-ID.zip",
+        "acquired_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/No.%20Peng-00100_BEI.POP_06-2026-ID.zip",
+        "sha256": "d95b27f4bab74a2da9ab737c3bdd96bc4626cfb97635ffa32a9449be78d7db98",
+        "bytes": 290000,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Peng-00100-ID.pdf (312989 bytes, 2 pages)."
+      }
     }
   ],
   "reconciliation_sources": [
@@ -97,13 +153,27 @@
       "source_id": "IDX_SECTOR_INDEX_EVAL_2022",
       "announcement_ref": "Peng-00150/BEI.POP/06-2022",
       "announced_at": "2022-06-24",
-      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT",
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00150_BEI.POP_06-2022.zip",
+      "raw_attachment": {
+        "sha256": "1f13b7b3cdc75ed22b9848c08666a18488690009a98aaaa6586f745a6e9c18be",
+        "bytes": 1266053,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Indeks Peng-00150.pdf (1173169 bytes, 69 pages) and 7 XLSX sector/index evaluation attachments; its effective 1 July 2022 statement is index applicability, not canonical issuer classification history."
+      }
     },
     {
       "source_id": "IDX_SECTOR_INDEX_EVAL_2023",
       "announcement_ref": "Peng-00156/BEI.POP/06-2023",
       "announced_at": "2023-06-22",
-      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT"
+      "role": "SECTOR_INDEX_RECONCILIATION_NOT_CANONICAL_CLASSIFICATION_EVENT",
+      "download_url": "https://www.idx.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/Exchange/Peng-00156_BEI.POP_06-2023.zip",
+      "raw_attachment": {
+        "sha256": "da4589ee59889e606e5f8cd26cce19b119107e1a89bd9aa13b763b9071a06aca",
+        "bytes": 687933,
+        "content_type": "application/x-zip-compressed",
+        "layout": "ZIP with Indeks Sektor Peng-00156.pdf (658726 bytes, 29 pages) and 1 XLSX sector evaluation attachment; its July 2023-June 2024 period is index applicability, not canonical issuer classification history."
+      }
     },
     {
       "source_id": "IDX_SECTOR_INDEX_EVAL_2024",

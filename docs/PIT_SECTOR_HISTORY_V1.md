@@ -32,6 +32,38 @@ Annual classification sources for 2021-2026 must be fully inventoried before bul
 
 The acquisition runtime fails closed if even one required source remains `DISCOVERY_REQUIRED`. This prevents a partial annual history from being mistaken for complete PIT coverage.
 
+## Official raw acquisition update — 2026-08-11
+
+Official IDX attachment resolution and inspection was completed without placing
+raw bytes in Git. The raw acquisition directory is
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`.
+
+The verified canonical raw attachments are recorded in
+`config/pit_sector_sources_v1.json` and the dated checkpoint
+`docs/checkpoints/2026-08-11_PIT_SECTOR_OFFICIAL_RAW_ACQUISITION_RESULT.md`.
+The files were fetched from the official `idx.id` host because the equivalent
+`idx.co.id` attachment URLs returned HTTP 403 in this runtime; no external host
+or substitute dataset was used.
+
+Current canonical inventory state:
+
+- `IDX_IC_BASELINE_2021`, `IDX_IC_ANNUAL_CLASSIFICATION_2021`, and
+  `IDX_IC_ANNUAL_CLASSIFICATION_2025` have verified official URLs and explicit
+  announced/effective dates, so they are `READY_FOR_ACQUISITION`.
+- Raw attachments for `IDX_IC_ANNUAL_CLASSIFICATION_2024`,
+  `IDX_IC_ANNUAL_CLASSIFICATION_2026`, and `IDX_IC_INCIDENTAL_PALM_2023` were
+  recovered and inspected, but remain `DISCOVERY_REQUIRED` where the canonical
+  raw document does not state an effective date. No date is inferred from an
+  announcement date or a generic July convention.
+- `Peng-00150/06-2022` and `Peng-00156/06-2023` were recovered as official
+  sector-index evaluation packages and remain reconciliation evidence, not
+  canonical issuer classification events. The dedicated annual classification
+  sources for 2022 and 2023 therefore remain unresolved.
+
+The CLI inventory audit reports `3` ready and `5` discovery-blocked canonical
+sources. Full acquisition remains intentionally blocked until every required
+canonical source has verified key dates and provenance.
+
 ## Raw acquisition contract
 
 `src/idx_trade/pit_sector_history.py`:

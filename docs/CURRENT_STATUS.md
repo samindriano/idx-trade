@@ -201,6 +201,22 @@ Current research-safe priorities are:
    paper/live and forward realized-outcome access blocked unless separately
    authorized.
 
+## PIT sector official raw acquisition update — 2026-08-11
+
+On `data/idx-pit-sector-history-v1`, official IDX raw attachments were
+acquired and inspected outside Git at
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`. The factual
+inventory and complete hash/layout table are in
+`docs/checkpoints/2026-08-11_PIT_SECTOR_OFFICIAL_RAW_ACQUISITION_RESULT.md`.
+
+The inventory remains fail-closed: `3` of `8` canonical sources are ready and
+`5` remain `DISCOVERY_REQUIRED`. Annual 2022/2023 packages recovered from
+`Peng-00150` and `Peng-00156` are sector-index evaluation evidence, not
+canonical issuer-classification history. PALM, 2024, and 2026 raw attachments
+are present, but their canonical PDFs do not state effective dates; no dates
+were inferred. No model, sector score, Path Risk run, or outcome access was
+started. Focused PIT-source tests passed `8/8`.
+
 ## Hard boundary
 
 Do not:
