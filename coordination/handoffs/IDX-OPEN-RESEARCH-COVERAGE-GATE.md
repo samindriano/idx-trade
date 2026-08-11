@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `97b4075410cf80b01e9eb33b2883aece3475c0c5`
 branch: `data/idx-open-research-coverage-gate-v1`
-head_commit: pending
+head_commit: `7fcbc521347c90e290ebc26fe274451955dc523a`
 
 ## scope
 

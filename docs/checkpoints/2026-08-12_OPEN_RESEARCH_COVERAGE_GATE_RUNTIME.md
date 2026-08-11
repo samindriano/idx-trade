@@ -3,7 +3,7 @@
 Date: 2026-08-12 (Asia/Jakarta)
 Branch: `data/idx-open-research-coverage-gate-v1`
 Starting HEAD: `97b4075410cf80b01e9eb33b2883aece3475c0c5`
-Implementation commit: pending
+Implementation commit: `7fcbc521347c90e290ebc26fe274451955dc523a`
 Decision: `CONDITIONAL_PASS_FOR_OHLCV_ALPHA_RESEARCH`
 
 ## Scope and controls
@@ -174,7 +174,7 @@ grade promotion, model approval, or a license to access fresh-forward outcomes.
 - Artifact manifest SHA-256:
   `7e15220bedc3f12c9576f43e8e0efcb8f906301828788a56fca36c1a5caf9e87`
 - Coverage summary SHA-256:
-  `bacaa2cf4a098dca3b6d7ec93a2782c22ba2c60a0ee77a1d782cfddc20df9ab1`
+  `04afda3f2eb7841e136f236f42a815ddf9dd13b4fe15aa970d87d33747ac450e`
 
 Source hashes:
 
