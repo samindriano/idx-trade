@@ -216,7 +216,9 @@ def _write_ticker_evidence(
 
 
 def _recursive_manifest(root: Path) -> dict[str, Any]:
-    excluded = {"artifact_manifest.json"}
+    # The final summary stores this manifest's digest. Exclude summaries from
+    # the input set so writing that digest cannot make the manifest self-referential.
+    excluded = {"artifact_manifest.json", "run_summary.json"}
     files: dict[str, str] = {}
     for path in sorted(root.rglob("*")):
         if not path.is_file() or path.name in excluded or path.suffix == ".tmp":
