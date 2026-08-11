@@ -1,6 +1,7 @@
 # Historical Universe V1
 
-Status: implementation scaffold ready; source acquisition/runtime audit pending.
+Status: source acquisition/runtime audit complete; full historical lifecycle
+coverage remains FAIL-closed pending authoritative relisting/conflict evidence.
 
 ## Goal
 
@@ -97,3 +98,29 @@ No model experiment is authorized by passing this data gate.
 `tests/test_historical_universe.py` contains synthetic/adversarial contract tests.
 
 The next task requires local access to Zapi/IDX data to map real endpoint schemas and evaluate actual historical coverage.
+
+## Bounded acquisition audit (2026-08-11)
+
+The bounded acquisition was completed and is recorded in
+`docs/checkpoints/2026-08-11_HISTORICAL_UNIVERSE_V1_SOURCE_AUDIT.md`.
+Direct IDX was used as the canonical source and Zapi was used only as an
+IDX access/discovery layer and cross-check.  The acquisition reached the
+current IDX snapshot and 440 monthly delisting queries covering
+1990-01 through 2026-08 without request errors.  It found 962 current
+securities and 163 delisting rows for 159 ticker codes.
+
+The V1 completeness gate remains **FAIL**.  Strict normalization cannot
+produce a canonical interval table because six four-character tickers have
+overlapping or internally contradictory lifecycle evidence
+(`BUKK`, `INRU`, `ITMA`, `KIAS`, `SKBM`, `UNTX`), while two additional
+delisting rows are non-standard securities (`MAMIP`, preferred stock, and
+`MYRXP`, Series B).  Zapi's historical IPO endpoint confirms one BUKK
+relisting but does not resolve the other conflicts or establish a complete
+historical relisting census.  The existing price panel contains five of the
+six conflict tickers, so the ambiguity is material to the 2024-06-21 through
+2026-07-31 panel.
+
+Consequently no complete bounded research window is promoted.  The source
+captures and normalized audit outputs remain outside Git; only their hashes,
+counts, provenance, and fail-closed diagnostics are committed.  No model,
+feature, outcome, or execution lane is changed by this audit.
