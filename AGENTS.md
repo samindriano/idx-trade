@@ -1,0 +1,59 @@
+# IDX Trade repository-wide orchestra policy
+
+This root instruction file defines the default orchestration policy for the entire `samindriano/idx-trade` repository on this branch.
+
+The purpose is to reduce useful wall-clock time with safe concurrency. Orchestra changes **how work is executed**, not what scientific/research actions are authorized.
+
+## Authority and compatibility
+
+- The user request, branch-local source code, frozen specifications, sealed holdouts/outcomes, and the newest authoritative status/checkpoint remain controlling for project state.
+- If a branch contains stricter research, data, safety, or release constraints, those stricter constraints win.
+- Never use orchestration as justification to open sealed evidence, change a frozen experiment, bypass a gate, or start a downstream scientific decision early.
+- Preserve unrelated user changes and verify repository root, branch, HEAD, and worktree state before material edits.
+
+## Parallel-first objective
+
+For every non-trivial task, MAIN must perform a short **parallelism preflight** before implementation:
+
+1. identify the execution frontier: useful workstreams that can start now without another unfinished result;
+2. identify which scopes are independent and non-overlapping;
+3. retain cross-cutting architecture, gate protection, integration, and final judgment in MAIN;
+4. spawn the ready independent scopes immediately when doing so shortens the critical path.
+
+MAIN must not keep independent critical-path work merely because one model could eventually do all of it sequentially. If a substantial task stays DIRECT, MAIN must state why worker startup/coordination would not materially reduce wall-clock time.
+
+## Execution levels
+
+- **DIRECT** — small or inherently sequential work with at most one useful immediate path.
+- **LIGHT** — default for meaningful work when roughly 2–3 independent scopes are ready; MAIN + 1–3 workers launch early.
+- **HEAVY** — use when roughly 3–6 independent critical-path scopes exist, a broad migration/debugging task has separable dimensions, or independent adversarial review is decision-changing.
+
+De-escalate when dependencies collapse the execution frontier back to sequential work. Do not spawn workers merely because capacity exists.
+
+## Worker and integration rules
+
+- Default MAIN/root model: `Luna xhigh` unless the user overrides it.
+- Default worker model: `Luna xhigh` unless the user overrides it.
+- `Sol High` is a bounded decision-changing escalation for unresolved architecture conflict, repeated integration failure, methodology certification, suspiciously strong evidence, or a final high-risk gate; HEAVY does not imply Sol.
+- Workers never spawn nested workers.
+- Concurrent writers require isolated worktrees/branches or otherwise provably disjoint ownership.
+- Workers do not merge, rebase, force-push, rewrite history, or integrate their own branches.
+- MAIN alone integrates after reviewing scope, diff, validation, provenance, and branch-specific frozen boundaries.
+- Spawn a delegated worker before MAIN begins doing the same delegated scope.
+- Do not duplicate implementation unless the explicit purpose is independent comparison or adversarial review.
+
+## Research sequencing integrity
+
+Preserve scientific dependency order:
+
+`hypothesis -> frozen experiment -> evidence -> compare/prune -> next hypothesis`
+
+Parallelize orthogonal work **inside** the current authorized milestone when safe, for example implementation, regression tests, leakage/PIT/provenance audit, runtime/cache inspection, frontend/backend contract inspection, and independent validation.
+
+Do not parallelize downstream experiments whose definition should depend on the current result. Never alter a frozen target, candidate definition, source, fold, holdout, metric, threshold, or acceptance gate after seeing results merely to rescue a failure.
+
+## Status freshness
+
+A branch must bootstrap from its newest authoritative project/status documents, not from stale orchestration snapshots. When `docs/CURRENT_STATUS.md` exists, treat it as the first-read status layer unless a newer branch-local checkpoint explicitly supersedes it.
+
+The separate `samindriano/codex-orchestra` repository is a control-plane/template snapshot and is not a live mirror. Stale orchestra state never overrides this repository.
