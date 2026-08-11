@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`  
 source_commit: `b9567f212bf7af94ad58bd6b78bfe192ee52ee78`  
 branch: `research/idx-ranking-ohlcv-o1-v1`  
-head_commit: pending push  
+head_commit: `8ba312d` before handoff-finalization commit  
 
 scope: Execute the frozen historical-development OHLCV O1 experiment only.
 
