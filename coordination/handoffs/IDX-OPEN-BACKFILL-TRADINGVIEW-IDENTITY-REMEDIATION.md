@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `a8f4c2fb4c8be02405b5d00ce9272b91459daf9e`
 branch: `data/idx-open-backfill-tradingview-identity-remediation-v1`
-head_commit: pending
+head_commit: `89b7540`
 
 ## scope
 

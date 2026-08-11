@@ -3,7 +3,7 @@
 Date: 2026-08-12 (Asia/Jakarta)
 Branch: `data/idx-open-backfill-tradingview-identity-remediation-v1`
 Starting HEAD: `a8f4c2fb4c8be02405b5d00ce9272b91459daf9e`
-Implementation commit: pending
+Implementation commit: `89b7540`
 Decision: `TRADINGVIEW_IDENTITY_REMEDIATION_COMPLETE_STOP_FOR_INDEPENDENT_REVIEW`
 
 ## Scope and controls
