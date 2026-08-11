@@ -196,17 +196,17 @@ body {
 .editorialChart .gridLine { stroke: rgba(17,21,18,.10); }
 .editorialChart .gridLine.zeroLine { stroke: rgba(17,21,18,.24); stroke-width: 1.2; }
 .editorialChart .axisLabel,
-.editorialChart .foldAxis { fill: #747a74; font-size: 9px; }
+.editorialChart .foldAxis { fill: #747a74; font-size: 10px; }
 .editorialChart .areaPath { fill-opacity: .14; }
 .editorialChart .linePath { stroke-width: 3; }
 .editorialChart .chartPoint circle { fill: var(--editorial-paper); }
 .editorialChart .chartPoint.positive:hover circle { fill: rgba(0, 166, 106, .12); }
 .editorialChart .chartPoint.negative:hover circle { fill: rgba(227, 74, 59, .12); }
-.editorialChart .pointValue { fill: var(--editorial-ink); font-size: 10px; }
-.evidenceChartMeta { display: flex; justify-content: space-between; gap: 14px; margin: 0 0 2px; color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.editorialChart .pointValue { fill: var(--editorial-ink); font-size: 11px; }
+.evidenceChartMeta { display: flex; justify-content: space-between; gap: 14px; margin: 0 0 2px; color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .evidenceChartLabel { display: flex; align-items: center; gap: 6px; }
 .evidenceChartLegend { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; font-weight: 700; letter-spacing: .02em; text-transform: none; }
-.evidenceChartMeta small { display: inline-flex; align-items: center; gap: 4px; color: var(--editorial-muted); font-size: 8px; }
+.evidenceChartMeta small { display: inline-flex; align-items: center; gap: 5px; color: var(--editorial-muted); font-size: 9px; }
 .evidenceChartMeta i { width: 6px; height: 6px; display: inline-block; border-radius: 50%; background: var(--editorial-muted); }
 .evidenceChartMeta .seriesMarker { background: var(--editorial-muted); }
 .evidenceChartMeta .positiveMarker { background: var(--editorial-green); }
@@ -461,7 +461,7 @@ body {
 .overviewStats span {
   margin: 0;
   color: var(--editorial-muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -491,13 +491,13 @@ body {
   border: 1px solid var(--editorial-line);
   background: rgba(255,255,255,.24);
   color: var(--editorial-muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: .09em;
   text-transform: uppercase;
 }
 .overviewStatusDot { width: 7px; height: 7px; grid-row: span 2; border-radius: 50%; background: var(--editorial-green); }
-.overviewStatus strong { grid-column: 2; color: var(--editorial-ink); font-size: 11px; letter-spacing: -.01em; text-transform: none; }
+.overviewStatus strong { grid-column: 2; color: var(--editorial-ink); font-size: 12px; letter-spacing: -.01em; text-transform: none; }
 .overviewStats {
   display: grid;
   grid-template-columns: 1.45fr repeat(3, 1fr);
@@ -526,30 +526,30 @@ body {
   white-space: nowrap;
 }
 .overviewStats article:first-child strong { font-size: 14px; letter-spacing: -.02em; }
-.overviewStats small { color: var(--editorial-muted); font-size: 9px; }
+.overviewStats small { color: var(--editorial-muted); font-size: 10px; }
 .overviewGrid { display: grid; grid-template-columns: minmax(0, 1.32fr) minmax(300px, .82fr); gap: 14px; margin-top: 14px; }
 .overviewCard { border: 1px solid var(--editorial-line); background: rgba(255,255,255,.22); }
 .overviewEvidenceCard, .overviewModelCard, .overviewArchiveCard { padding: 17px 19px; }
 .overviewCardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .overviewCardHead h2 { margin: 7px 0 0; color: var(--editorial-ink); font-size: 19px; line-height: 1.08; letter-spacing: -.04em; font-weight: 700; }
 .overviewEvidenceScore { color: var(--editorial-green-dark); font-size: 21px; line-height: 1; letter-spacing: -.06em; }
-.overviewEvidenceStatus { font-size: 9px; font-weight: 840; letter-spacing: .08em; }
+.overviewEvidenceStatus { font-size: 10px; font-weight: 840; letter-spacing: .08em; }
 .overviewEvidenceStatus.status-final,
 .overviewEvidenceStatus.status-baseline { color: var(--editorial-green-dark); }
 .overviewEvidenceStatus.status-fail { color: var(--editorial-red); }
 .overviewEvidenceStatus.status-blocked { color: var(--editorial-amber); }
 .overviewEvidenceSelector { display: grid; gap: 5px; max-width: 280px; margin-top: 16px; }
-.overviewEvidenceSelector span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceSelector span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .modelEvidencePicker { position: relative; }
-.modelEvidencePickerTrigger { width: 100%; min-height: 32px; display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; text-align: left; cursor: pointer; }
+.modelEvidencePickerTrigger { width: 100%; min-height: 34px; display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 0 10px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 .modelEvidencePickerTrigger:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
 .modelEvidencePickerTrigger b { color: var(--editorial-muted); font-size: 15px; font-weight: 500; line-height: 1; }
 .modelEvidencePickerMenu { position: absolute; z-index: 8; top: calc(100% + 3px); left: 0; right: 0; max-height: 360px; overflow-y: auto; border: 1px solid var(--editorial-line); background: #f8f7f2; box-shadow: 0 10px 24px rgba(17,21,18,.12); }
 .modelPickerGroup + .modelPickerGroup { border-top: 1px solid var(--editorial-line); }
-.modelPickerGroupLabel { padding: 8px 10px 5px; color: var(--editorial-muted); font-size: 8px; font-weight: 840; letter-spacing: .14em; text-transform: uppercase; }
-.modelPickerOption { width: 100%; min-height: 32px; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; border: 0; background: transparent; color: var(--editorial-ink); font: inherit; font-size: 9px; text-align: left; cursor: pointer; }
+.modelPickerGroupLabel { padding: 8px 10px 5px; color: var(--editorial-muted); font-size: 9px; font-weight: 840; letter-spacing: .14em; text-transform: uppercase; }
+.modelPickerOption { width: 100%; min-height: 34px; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border: 0; background: transparent; color: var(--editorial-ink); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 .modelPickerOption:hover, .modelPickerOption.isSelected { background: #edf7f1; }
-.modelPickerOption small { color: var(--editorial-muted); font-size: 7px; font-weight: 820; letter-spacing: .07em; text-transform: uppercase; }
+.modelPickerOption small { color: var(--editorial-muted); font-size: 8px; font-weight: 820; letter-spacing: .07em; text-transform: uppercase; }
 .modelPickerDot { width: 7px; height: 7px; border-radius: 50%; background: var(--editorial-muted); }
 .modelPickerDot.final, .modelPickerDot.baseline { background: var(--editorial-green); }
 .modelPickerDot.fail { background: var(--editorial-red); }
@@ -572,53 +572,53 @@ body {
 .overviewDiagnosticGraphic.status-fail .overviewDiagnosticMark { border-color: #efc9cc; color: var(--editorial-red); }
 .overviewDiagnosticGraphic.status-fail strong { color: var(--editorial-red); }
 .overviewEvidenceReason { display: grid; gap: 5px; margin-top: 14px; }
-.overviewEvidenceReason span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.overviewEvidenceReason p { margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+.overviewEvidenceReason span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceReason p { margin: 0; color: var(--editorial-muted); font-size: 12px; line-height: 1.5; }
 .overviewEvidenceFindings { display: grid; gap: 8px; margin-top: 16px; }
-.overviewEvidenceFindings > span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceFindings > span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .overviewEvidenceFindings ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
-.overviewEvidenceFindings li { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; }
+.overviewEvidenceFindings li { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 9px; align-items: start; color: var(--editorial-muted); font-size: 12px; line-height: 1.5; }
 .overviewEvidenceFindings li::before { content: ""; width: 5px; height: 5px; margin-top: 5px; background: var(--editorial-ink); }
-.overviewCardLead { max-width: 440px; margin: 9px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+.overviewCardLead { max-width: 440px; margin: 10px 0 0; color: var(--editorial-muted); font-size: 12px; line-height: 1.5; }
 .overviewEvidenceCard .editorialChart { margin-top: 14px; padding-top: 12px; }
 .overviewNote { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; color: var(--editorial-muted); font-size: 9px; }
 .overviewBadge { padding: 5px 7px; background: #16b878; color: #ffffff; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
 .overviewModelIdentity { display: grid; gap: 3px; margin-top: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--editorial-line); }
 .overviewModelIdentity strong { overflow-wrap: anywhere; font-size: 12px; letter-spacing: -.015em; }
-.overviewModelIdentity span { color: var(--editorial-muted); font-size: 10px; }
+.overviewModelIdentity span { color: var(--editorial-muted); font-size: 11px; }
 .overviewFacts { margin: 0; }
 .overviewFacts div { display: flex; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--editorial-line); }
-.overviewFacts dt { color: var(--editorial-muted); font-size: 10px; }
-.overviewFacts dd { max-width: 62%; margin: 0; overflow-wrap: anywhere; color: var(--editorial-ink); font-size: 10px; font-weight: 700; text-align: right; }
-.overviewLink { display: inline-flex; margin-top: 18px; padding-bottom: 4px; border-bottom: 1px solid var(--editorial-green); color: var(--editorial-green-dark); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
+.overviewFacts dt { color: var(--editorial-muted); font-size: 11px; }
+.overviewFacts dd { max-width: 62%; margin: 0; overflow-wrap: anywhere; color: var(--editorial-ink); font-size: 11px; font-weight: 700; text-align: right; }
+.overviewLink { display: inline-flex; margin-top: 18px; padding-bottom: 4px; border-bottom: 1px solid var(--editorial-green); color: var(--editorial-green-dark); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
 .overviewArchiveCard { margin-top: 14px; }
 .overviewArchiveCard > .overviewCardHead { align-items: end; padding-bottom: 16px; }
-.overviewArchiveCard > .overviewCardHead p { max-width: 230px; margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; text-align: right; }
+.overviewArchiveCard > .overviewCardHead p { max-width: 230px; margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.45; text-align: right; }
 .overviewArchiveToolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 0 0 14px; border-bottom: 1px solid var(--editorial-line); }
 .overviewArchiveToolbar label { display: grid; gap: 5px; min-width: 132px; }
 .overviewArchiveToolbar label:last-of-type { min-width: 220px; }
-.overviewArchiveToolbar label > span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.overviewArchiveToolbar select { min-height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; }
+.overviewArchiveToolbar label > span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewArchiveToolbar select { min-height: 34px; padding: 0 28px 0 10px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 11px; }
 .overviewArchiveToolbar select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
-.overviewArchiveCount { margin-left: auto; padding-bottom: 8px; color: var(--editorial-muted); font-size: 9px; }
+.overviewArchiveCount { margin-left: auto; padding-bottom: 8px; color: var(--editorial-muted); font-size: 10px; }
 .overviewArchive { border-top: 1px solid var(--editorial-line); }
-.overviewArchiveEmpty { padding: 24px 0 8px; color: var(--editorial-muted); font-size: 10px; }
+.overviewArchiveEmpty { padding: 24px 0 8px; color: var(--editorial-muted); font-size: 11px; }
 .overviewArchiveItem { border-bottom: 1px solid var(--editorial-line); }
 .overviewArchiveRow { width: 100%; min-height: 56px; display: grid; grid-template-columns: 38px 64px minmax(180px, 1.25fr) minmax(180px, 1fr) 82px 24px; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; color: var(--editorial-ink); font: inherit; text-align: left; cursor: pointer; }
 .overviewArchiveRow:hover { background: rgba(255,255,255,.32); }
 .overviewArchiveRow:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: -2px; }
-.overviewArchiveIndex { color: var(--editorial-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
-.overviewArchiveGeneration { font-size: 10px; font-weight: 800; }
+.overviewArchiveIndex { color: var(--editorial-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.overviewArchiveGeneration { font-size: 11px; font-weight: 800; }
 .overviewArchiveRow > div { display: grid; gap: 3px; min-width: 0; }
 .overviewArchiveRow strong { overflow: hidden; font-size: 12px; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
-.overviewArchiveRow small { overflow: hidden; color: var(--editorial-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.overviewArchiveResult { color: var(--editorial-muted); font-size: 9px; line-height: 1.35; }
-.overviewArchiveStatus { justify-self: end; font-size: 8px; font-weight: 820; letter-spacing: .07em; }
+.overviewArchiveRow small { overflow: hidden; color: var(--editorial-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.overviewArchiveResult { color: var(--editorial-muted); font-size: 10px; line-height: 1.35; }
+.overviewArchiveStatus { justify-self: end; font-size: 9px; font-weight: 820; letter-spacing: .07em; }
 .overviewArchiveChevron { justify-self: end; color: var(--editorial-green-dark); font-size: 17px; line-height: 1; }
 .overviewArchiveDetail { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(0, 2fr); gap: 24px; padding: 12px 36px 16px 114px; border-top: 1px dashed var(--editorial-line); background: rgba(255,255,255,.18); }
 .overviewArchiveDetail > div { display: grid; gap: 5px; align-content: start; }
-.overviewArchiveDetail span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.overviewArchiveDetail strong, .overviewArchiveDetail p { margin: 0; font-size: 10px; line-height: 1.45; }
+.overviewArchiveDetail span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewArchiveDetail strong, .overviewArchiveDetail p { margin: 0; font-size: 11px; line-height: 1.45; }
 .overviewArchiveDetail p { color: var(--editorial-muted); }
 .overviewArchiveItem.status-final .overviewArchiveStatus,
 .overviewArchiveItem.status-baseline .overviewArchiveStatus { color: var(--editorial-green-dark); }
