@@ -283,6 +283,39 @@ After the annual/event foundation is complete, separately enumerate IPO classifi
 
 Do not infer missing annual events from the current IDX sector list.
 
+## Exchange-level announcement retrieval audit — 2026-08-11
+
+The official IDX announcements page was inspected through its published
+frontend bundle. The exchange-level listing calls
+`/primary/NewsAnnouncement/GetAllAnnouncement` with `keywords`, `pageNumber`,
+`pageSize`, `dateFrom`, `dateTo`, and `lang`. Its attachment renderer consumes
+`Attachments[].FullSavePath`, selecting the `IsAttachment=0` item as the main
+document. The page states that the public listing exposes only the latest
+three years and directs older history to TICMI.
+
+Targeted calls for the annual classification windows around 2022-06-24 and
+2023-06-22 returned `ItemCount=0`. This endpoint result does not prove that the
+announcements never existed; it establishes that the current public exchange
+listing cannot supply a canonical ref/attachment for those years. No ref or
+effective date was guessed, and the existing `Peng-00150`/`Peng-00156` index
+documents remain reconciliation evidence only.
+
+The 2026 June query returned `Peng-00100/BEI.POP/06-2026` at
+2026-06-24 18:55. Its official attachment was acquired and SHA-256 verified:
+312,989 bytes,
+`8b5413f18afc75cc17260c2400611d710e8f270d46a49c5a396f557b27cf8b25`. The
+canonical PDF lists issuer classification changes but gives no explicit
+effective date. The nearby `Peng-00099/BEI.POP/06-2026` sector-index
+evaluation states a 2026-07-01 index period, but it is not canonical issuer
+classification evidence and was not promoted or used to infer a date.
+
+The canonical inventory remains `5 ready / 3 blocked`: dedicated annual 2022,
+dedicated annual 2023, and 2026 effective-date evidence. Frontend bundles and
+raw attachments are retained outside Git under
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`. No parser,
+materialization, census expansion, model, outcome, Path Risk, or `main` work
+was started.
+
 ## Hard boundaries
 
 This track does not authorize:

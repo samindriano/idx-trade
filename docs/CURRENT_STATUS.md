@@ -255,6 +255,42 @@ Focused PIT tests passed `18/18`; full pytest passed `489/489` with 3 existing
 FutureWarnings. No parser/materialization, IPO/incidental census expansion,
 model, outcome, or `main` merge was started.
 
+## PIT sector exchange-announcement retrieval audit — 2026-08-11
+
+The official IDX public announcements page was traced through the downloaded
+frontend bundle. The page calls
+`/primary/NewsAnnouncement/GetAllAnnouncement` with `keywords`, `pageNumber`,
+`pageSize`, `dateFrom`, `dateTo`, and `lang`; the attachment renderer selects
+`Attachments[].FullSavePath` and uses the `IsAttachment=0` file as the primary
+document. The page itself states that its public listing covers only the most
+recent three years and directs older history to TICMI. The audited frontend
+bundles and the raw 2026 attachments are retained outside Git under
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`.
+
+Targeted exchange-level queries through the official endpoint returned no
+records for the 2022 June/July and 2023 June/July classification searches
+(`ItemCount=0`), so no annual 2022/2023 canonical source or effective date was
+promoted. This is a public-retention boundary, not evidence that the historical
+announcements did not exist.
+
+The 2026 June query returned canonical exchange announcement
+`Peng-00100/BEI.POP/06-2026` on 2026-06-24 18:55 with its official PDF and ZIP
+attachments. The PDF was acquired from the equivalent official `idx.id` host;
+it is 312,989 bytes with SHA-256
+`8b5413f18afc75cc17260c2400611d710e8f270d46a49c5a396f557b27cf8b25`. It lists
+the affected issuer classifications but does not state an explicit effective
+date. The nearby `Peng-00099/BEI.POP/06-2026` document states that sector-index
+periods begin 2026-07-01, but it is an index evaluation/reconciliation source,
+not canonical issuer-classification evidence, and was not promoted or used to
+infer a date.
+
+The inventory therefore remains `5 ready / 3 blocked`: dedicated annual 2022,
+dedicated annual 2023, and linked official effective-date evidence for the
+canonical 2026 source. No source inventory or parser behavior changed in this
+audit. Focused PIT tests passed `18/18`; full pytest passed `489/489` with the
+same 3 existing FutureWarnings. No parser/materialization, IPO/incidental
+census expansion, model, outcome, Path Risk, or `main` merge was started.
+
 ## Hard boundary
 
 Do not:

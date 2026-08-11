@@ -1753,3 +1753,30 @@ returned only the 2026 canonical/sector-index pair in the targeted 2026 search;
 the 2022/2023 historical queries returned no canonical records. Validation:
 focused PIT tests `18 passed`; no parser/materialization, IPO/incidental census,
 model, outcome, Path Risk, or main merge was started.
+
+## 38. Exchange-level IDX announcement retrieval audit — 2026-08-11
+
+The IDX public announcement page was traced to the official frontend/API path
+`/primary/NewsAnnouncement/GetAllAnnouncement`. Its request contract is
+`keywords`, `pageNumber`, `pageSize`, `dateFrom`, `dateTo`, and `lang`; the
+frontend consumes `Attachments[].FullSavePath` and the `IsAttachment=0` file as
+the primary attachment. The page discloses a three-year public-history limit
+and points older history to TICMI.
+
+Exchange-level classification queries returned `ItemCount=0` for the targeted
+2022 June/July and 2023 June/July windows. No annual 2022 or 2023 source was
+therefore promoted, and no ref or effective date was guessed. The June 2026
+query returned `Peng-00100/BEI.POP/06-2026` on 2026-06-24 18:55 with official
+PDF/ZIP attachments. The acquired PDF is 312,989 bytes,
+SHA-256 `8b5413f18afc75cc17260c2400611d710e8f270d46a49c5a396f557b27cf8b25`,
+but it contains no explicit effective date. Nearby `Peng-00099` is a sector
+index evaluation/reconciliation document; its 2026-07-01 index-period text is
+not canonical issuer-classification evidence and was not promoted.
+
+Result: inventory remains `5 ready / 3 blocked` (annual 2022, annual 2023,
+and 2026 effective-date evidence). No inventory/test contract changed. The
+frontend audit bundles and 2026 raw attachments remain outside Git under
+`D:\Documents\Project\idx-pit-sector-official-raw-20260811`. Focused tests
+passed `18/18`; full pytest passed `489/489` with 3 existing warnings. No
+parser/materialization, census expansion, model, outcome, or `main` merge was
+started.
