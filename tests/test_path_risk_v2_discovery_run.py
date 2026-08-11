@@ -12,10 +12,12 @@ def _row(session: int) -> dict[str, object]:
         "ticker": f"T{session:03d}",
         "date": pd.Timestamp("2026-01-02") + pd.Timedelta(days=session),
         "signal_session_index": session,
+        "universe_primary_liquid": True,
+        **{column: 1.0 for column in run.PATH_RISK_V2_FEATURE_COLUMNS},
         "label_status": "NO_BARRIER_HIT",
         "first_barrier_date": pd.NaT,
+        "target_tau_date": pd.NaT,
         "adverse_excursion_r": 0.5,
-        **{column: 1.0 for column in run.PATH_RISK_V2_FEATURE_COLUMNS},
     }
 
 
