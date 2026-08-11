@@ -46,9 +46,26 @@ When no later decision-critical supporting evidence is needed, `knowledge_at` de
 
 `attach_sector_asof` exposes `knowledge_at` in joined output so the temporal decision boundary remains auditable.
 
+## Ordering safety guard
+
+Allowing delayed evidence introduces a second edge case: an older classification could theoretically become knowable only after a newer classification is already known. A simple as-of join on `pit_from` would then risk letting the older event overwrite the newer effective state.
+
+Until a dedicated two-dimensional state resolver is explicitly designed, the current implementation fails closed when the per-ticker `pit_from` sequence moves backward relative to increasing `effective_from`.
+
+Example that is rejected:
+
+```text
+older event: effective 2024-07-01, knowledge 2024-08-01
+newer event: effective 2024-07-15, knowledge 2024-07-15
+```
+
+This guard preserves correctness of the current interval/as-of implementation instead of silently resolving an ambiguous event topology.
+
 ## Adversarial coverage
 
-New tests cover the key counterexample:
+Tests cover both knowledge-time cases.
+
+Delayed evidence is accepted and time-gated:
 
 ```text
 effective_from                 2024-07-01
@@ -59,6 +76,8 @@ PIT usable                     2024-07-05
 ```
 
 The event is deliberately invisible on 1–4 July and becomes available only on 5 July.
+
+A reversed knowledge/effective ordering across two events is rejected fail-closed rather than allowed to overwrite a newer classification.
 
 Existing PALM treatment remains unchanged because its canonical effective date and linked official evidence publication date are both 2 October 2023.
 
