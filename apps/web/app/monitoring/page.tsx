@@ -85,8 +85,8 @@ const monitoringLayers = [
   },
   {
     title: "Signal scoring",
-    state: "FINAL V3-B ONLY",
-    copy: "Persist the full same-day V3-B cross-sectional score/rank artifact and exact model fingerprint. No V2 fallback selection.",
+    state: "V3-B + V2 CHAMPION",
+    copy: "Persist independent same-day cross-sectional score/rank artifacts for the frozen V3-B ranker and V2 champion.",
   },
   {
     title: "Forward accumulation",

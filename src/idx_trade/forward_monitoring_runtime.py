@@ -65,11 +65,16 @@ def capture_session(
     original_sync = base.sync_forward_calendar
     base.sync_forward_calendar = sync_forward_calendar
     try:
-        return base.capture_session(
+        result = base.capture_session(
             runtime_root,
             target_date=target_date,
             batch_size=batch_size,
         )
+        if result.get("status") == "DATA_READY":
+            from .forward_model_runtime import request_model_worker
+
+            request_model_worker(runtime_root, [result["session_date"]])
+        return result
     finally:
         base.sync_forward_calendar = original_sync
 
@@ -83,6 +88,17 @@ def monitoring_status(runtime_root: str | Path) -> dict[str, Any]:
     calendar = _load_forward_calendar(paths)
     states = base._session_states(paths)
     earliest = base._earliest_missing(paths, calendar) if len(calendar) else None
+
+    ready_dates = [
+        pd.Timestamp(date).date().isoformat()
+        for date in calendar
+        if states.get(pd.Timestamp(date).date().isoformat()) is not None
+        and states[pd.Timestamp(date).date().isoformat()]["state"] == "DATA_READY"
+    ]
+    if ready_dates:
+        from .forward_model_runtime import request_model_worker
+
+        request_model_worker(runtime_root, ready_dates)
 
     session_rows: list[dict[str, Any]] = []
     for date in calendar:
@@ -146,9 +162,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="IDX Trade operator-facing outcome-blind forward monitoring runtime"
     )
-    parser.add_argument("command", choices=("status", "capture", "sync-calendar"))
+    parser.add_argument("command", choices=("status", "capture", "sync-calendar", "run-models"))
     parser.add_argument("--runtime-root", type=Path, required=True)
     parser.add_argument("--date", default=None)
+    parser.add_argument("--dates", nargs="*", default=None)
     parser.add_argument("--batch-size", type=int, default=100)
     return parser
 
@@ -166,12 +183,19 @@ def main() -> int:
             "first": sessions.min().date().isoformat() if len(sessions) else None,
             "last": sessions.max().date().isoformat() if len(sessions) else None,
         }
-    else:
+    elif args.command == "capture":
         result = capture_session(
             args.runtime_root,
             target_date=args.date,
             batch_size=args.batch_size,
         )
+    else:
+        from .forward_model_runtime import release_worker_lock, run_queued_model_jobs
+
+        try:
+            result = run_queued_model_jobs(args.runtime_root, session_dates=args.dates)
+        finally:
+            release_worker_lock(args.runtime_root)
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
     return 0
 
