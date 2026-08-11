@@ -1,8 +1,8 @@
 # Historical Universe V1 Source Audit
 
-Date: 2026-08-11  
-Branch: `data/historical-universe-v1`  
-Scope: IDX listing lifecycle acquisition and survivorship audit only  
+Date: 2026-08-11
+Branch: `data/historical-universe-v1`
+Scope: IDX listing lifecycle acquisition and survivorship audit only
 Verdict: **FAIL** for a promoted complete historical universe
 
 ## Execution boundary

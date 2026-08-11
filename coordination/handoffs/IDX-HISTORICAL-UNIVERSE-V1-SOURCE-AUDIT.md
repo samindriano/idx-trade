@@ -1,13 +1,13 @@
 # Handoff
 
-from: Codex MAIN  
-to: ChatGPT reviewer  
-task_id: IDX-HISTORICAL-UNIVERSE-V1-SOURCE-AUDIT  
-model_used: GPT-5.6 Luna xhigh with Orchestra read-only explorers  
-reasoning_level: xhigh  
-source_repository: `samindriano/idx-trade`  
-source_commit: `952c68c1ef5cf7a25e5b130f4fc8db3c65250af1`  
-branch: `data/historical-universe-v1`  
+from: Codex MAIN
+to: ChatGPT reviewer
+task_id: IDX-HISTORICAL-UNIVERSE-V1-SOURCE-AUDIT
+model_used: GPT-5.6 Luna xhigh with Orchestra read-only explorers
+reasoning_level: xhigh
+source_repository: `samindriano/idx-trade`
+source_commit: `952c68c1ef5cf7a25e5b130f4fc8db3c65250af1`
+branch: `data/historical-universe-v1`
 head_commit: see final commit  
 
 ## Scope
