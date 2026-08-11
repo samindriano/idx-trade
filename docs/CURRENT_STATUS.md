@@ -1,205 +1,180 @@
 # IDX Trade — Current Status
 
-Date: 2026-08-10 (Asia/Jakarta)
+Date: 2026-08-11 (Asia/Jakarta)
 
-This is the authoritative short first-read layer. For chronology use `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, `docs/RANKING_V3_HYPOTHESIS_LEDGER_V1.md`, `docs/RANKING_V4_HYPOTHESIS_LEDGER_V1.md`, `docs/PATH_RISK_V1_LEDGER.md`, and the newest dated checkpoint/handoff. If older text conflicts, this file plus the newest controlling checkpoint wins.
+This is the authoritative short first-read layer.  For chronology use the
+project ledgers and newest dated checkpoints.  If older text conflicts, this
+file plus the newest controlling checkpoint wins.
 
 ## Current phase
 
 - active research branch: `research/idx-ranking-v2-spec-v1`;
-- Ranking V1 historical benchmark failed and its consumed holdout is never rerun;
-- Ranking V2 historical champion/control: exact `HGB_XS_MARKET`;
-- Ranking V3 architecture search: **CLOSED**;
-- final historical-development ranker: `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`;
-- V3-B one-shot V2F5/V2F6 late-development confirmation: **PASS**;
-- V3-A Recency: killed;
-- V3-C Regime-Specialization: killed;
-- V3-D Sector-Relative: parked `BLOCKED_PIT_SECTOR_HISTORY`, outcomes unconsumed;
-- V3-E True Ranking: killed;
-- V4 final alpha-generation program: **CLOSED — NO SURVIVOR**;
-- cumulative historical evaluated alpha-candidate count: `17`;
-- final V3-B refit/runtime: **FROZEN SUCCESSFULLY, NO PERFORMANCE METRICS COMPUTED**;
-- Path Risk V1: **CLOSED — `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`**;
-- Path Risk PR-001 is permanently viewed; F5/F6 remain sealed and are not authorized;
+- alpha architecture search: **CLOSED**;
+- cumulative viewed historical alpha candidates: `17`;
+- final historical-development ranker:
+  `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`;
+- final V3-B refit: **FROZEN SUCCESSFULLY**;
+- final model SHA-256:
+  `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`;
+- exact 33-feature order SHA-256:
+  `100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e`;
+- Path Risk V1 / PR-001: **CLOSED — `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`**;
+- Path Risk V2: **FROZEN + IMPLEMENTED PRE-OUTCOME**;
+- Path Risk V2 PR-002/PR-003: **RESERVED / UNVIEWED**;
+- Path Risk F5/F6: **SEALED**;
 - post-2026-07-31 fresh-forward outcomes: **NOT ACCESSED**;
 - `FORWARD_OUTCOME_ACCESS_STARTED`: **NOT WRITTEN**;
-- calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge: not authorized.
+- calibration / alpha+risk integration / execution-PnL / Kelly / paper/live:
+  not authorized automatically.
 
-## Final historical ranker
+## Final alpha ranker
 
 `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`
 
-It is exact V2 `HGB_XS_MARKET` information plus eight frozen causal Structure-Lite geometry features. Across V3-B F1-F4, median paired PR improvement versus V2 was `+0.0039258450`; the one-shot F5/F6 late-development confirmation passed with median paired PR improvement `+0.0075911303`.
+V3-B is exact V2 `HGB_XS_MARKET` information plus eight frozen causal
+Structure-Lite geometry features.  It was the only V3 survivor and later passed
+its one-shot V2F5/V2F6 late-development confirmation.  V4-A Participation,
+V4-B Price Path and V4-C Cross-Sectional Context produced no survivor.
 
-This is historical-development ranking evidence only. It is not calibrated probability, execution/PnL evidence, live readiness, or independent future validation.
+Final refit facts:
 
-Frozen signal-research identities:
-
-- window `2021-04-29..2026-07-31`;
-- panel SHA-256 `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
-- calendar SHA-256 `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`;
-- security master SHA-256 `9d0d30215ab129f196f494e4af499fff92fe510f5a432dd2dad321f02ff7a2f9`.
-
-Frozen V2 resolved-primary-H10 prepared cache for the final fit:
-
-- cache SHA-256 `522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`;
-- manifest SHA-256 `6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`;
-- rows/tickers/sessions `292,633 / 737 / 20..1250`.
-
-Final V3-B refit result:
-
-- status `RANKING_V3_B_FINAL_REFIT_FROZEN`;
-- training table SHA-256 `5893c9f2872aae0f33acd4104d82ee8c1d4474aae7d54e9d01879724b86dffbe`;
-- model SHA-256 `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`;
-- model manifest SHA-256 `4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9`;
-- summary SHA-256 `e8e42dec10c73257fe4776f682f55d146ed8ca49b4aed7ce63ddb7488419e6a0`;
-- rows/tickers/sessions `292,633 / 737 / 20..1250`;
+- rows/tickers/sessions: `292,633 / 737 / 20..1250`;
+- training table SHA-256:
+  `5893c9f2872aae0f33acd4104d82ee8c1d4474aae7d54e9d01879724b86dffbe`;
+- model SHA-256:
+  `1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6`;
+- manifest SHA-256:
+  `4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9`;
 - sessions `1225..1250` were training-only;
-- historical performance metrics were not computed;
-- model/manifest verification: `valid=true`;
+- no new historical performance metric was computed in final refit;
 - fresh-forward outcomes were not accessed.
 
 Controlling checkpoint:
 
 `docs/checkpoints/2026-08-10_RANKING_V3_FINAL_REFIT_RUNTIME_RESULT.md`
 
-## Path Risk V1 — CLOSED
+## Path Risk V1 — closed
 
-Frozen hypothesis:
+PR-001 tested q75 pre-resolution adverse-excursion regression using the exact
+33 causal features.  It showed useful ordering diagnostics but failed the
+frozen proper-scoring gate:
 
-`PATH-RISK-A-ADVERSE-EXCURSION-Q75-V1`
+- F1/F2/F3 relative pinball improvement:
+  `+0.004267 / +0.011273 / +0.014061`;
+- F4: `-0.033463`;
+- median improvement: about `+0.00777`, below the `+0.02` gate;
+- q25 and worst-fold gates failed;
+- Spearman and Q5-Q1 adverse-excursion ordering gates passed.
 
-Frozen candidate:
-
-`PATH-RISK-A-Q75-HGB-001`
-
-The outcome-blind 33-feature discovery cache passed pre-outcome review, then PR-001 was executed exactly once on F1-F4 with the corrected current-checkout import path.
-
-Execution facts:
-
-- code HEAD used: `878898b70e930269e11cf00e18e263735fd3928c`;
-- pytest: `381 passed, 0 failed, 3 warnings`;
-- target rows: `660,721`;
-- feature rows: `254,383`;
-- joined model rows: `252,198`;
-- feature-to-target join coverage: `99.1411%`;
-- prediction finite rate: `100%` on all four folds.
-
-Relative pinball improvement by fold:
-
-- V2F1: `+0.004267`;
-- V2F2: `+0.011273`;
-- V2F3: `+0.014061`;
-- V2F4: `-0.033463`.
-
-Frozen gate summary:
-
-- nonnegative pinball improvement on >=3/4: **PASS**, `3/4`;
-- median pinball improvement >= `+0.02`: **FAIL**, approximately `+0.00777`;
-- q25 pinball improvement >= `0`: **FAIL**, approximately `-0.00517`;
-- worst pinball improvement >= `-0.01`: **FAIL**, `-0.033463`;
-- positive Spearman on >=3/4: **PASS**, `4/4`;
-- median Spearman >= `+0.10`: **PASS**;
-- positive Q5-Q1 realized adverse-excursion spread on >=3/4: **PASS**, `4/4`;
-- median Q5-Q1 spread >= `+0.10 R`: **PASS**.
-
-Final verdict:
+Frozen verdict:
 
 `PATH_RISK_A_DISCOVERY_FAIL_CLOSE`
 
-Interpretation: the frozen representation contains some cross-sectional risk-ordering information, but the q75 model does not robustly beat the unconditional training-q75 comparator on the proper scoring objective. F4 materially degrades pinball loss and shows strong q75 undercoverage. The experiment may not be rescued after the fact as a pure ordering model.
-
-Therefore:
-
-- PR-001 is permanently viewed;
-- Path Risk V1 is closed;
-- no Path Risk F5/F6 confirmation;
-- no alternate quantile/model/feature/target rescue;
-- no risk-veto or alpha+risk integration rule;
-- final V3-B ranker remains unchanged.
+PR-001 remains permanently viewed and cannot be rescued/reinterpreted as a
+winner.
 
 Controlling files:
 
 - `docs/PATH_RISK_V1_LEDGER.md`;
 - `docs/checkpoints/2026-08-10_PATH_RISK_V1_DISCOVERY_RESULT_FAIL_CLOSE.md`.
 
-## V4 final alpha review — CLOSED
+## Path Risk V2 — implemented, not yet run
 
-V4-A:
+Frozen specification:
 
-- `012` exact control: equivalence PASS;
-- `013` Impact/Absorption: FAIL;
-- `014` Persistent Directional Participation: FAIL.
+`docs/PATH_RISK_V2_SPEC.md`
 
-V4-B:
+Spec Git blob:
 
-- `015` exact control: equivalence PASS;
-- `016` Path Coherence / Jump Concentration: FAIL;
-- `017` Range Acceptance / Rejection: FAIL.
+`6d171d3f492b9cd15e0a176428eb9d6e4f6c20c5`
 
-V4-C:
+Exactly two V2 candidates exist:
 
-- `018` exact control: equivalence PASS;
-- `019` Cross-Sectional Dispersion: FAIL.
+1. PR-002 `PATH-RISK-V2-STOP-H10-HGB-002`
+   - exact 33 features;
+   - direct HGB `P(stop touch within H10)`.
+2. PR-003 `PATH-RISK-V2-DISCRETE-CR-HGB-003`
+   - exact 33 features + deterministic horizon step H1..H10;
+   - multiclass CONTINUE/STOP/TP discrete hazard model;
+   - comparable output = H10 stop cumulative incidence.
 
-No V4 survivor, integration, rescue, threshold relaxation, or additional post-result market-derived alpha family is authorized.
+Binary risk endpoint:
 
-Controlling review:
+- positive: `SL_FIRST`, `AMBIGUOUS_SAME_BAR`;
+- negative: `TP_FIRST`, `NO_BARRIER_HIT`.
 
-`docs/checkpoints/2026-08-10_RANKING_V4_FINAL_ALPHA_REVIEW_CLOSED.md`
+F1-F4 are already-consumed Path Risk development knowledge and are the only
+folds allowed in V2 discovery.  V2 reuses the immutable V1 joined model table:
 
-## V3-D PIT sector history
+- SHA-256:
+  `b66fc7e40f18940ae9db418331a421e0f36d23b86597500b1d3ba73a8e3777fe`;
+- rows: `252,198`;
+- max signal session: `984`.
 
-Status remains `BLOCKED_PIT_SECTOR_HISTORY`.
+The V2 runner additionally compares both candidates against:
 
-No complete immutable ticker-by-date IDX-IC source chain with defensible `effective_from`, `effective_to_exclusive`, and `available_at` was established. Ordinals `008/009` remain unviewed.
+- training stop-touch base rate;
+- a fold-specific V3-B alpha-only -> stop-risk logistic mapping.
 
-## Fresh-forward independent verdict
+This checks whether a separate risk layer adds information beyond alpha itself.
+No final all-history alpha model is used as a historical comparator.
 
-The first independent final-ranker verdict is frozen to the first exact **100 consecutive H10-mature official signal sessions strictly after 2026-07-31**.
+Implementation:
 
-The PASS/MIXED/FAIL semantics reuse the already-frozen forward rule unchanged. No shorter interim verdict, rolling performance peek, alternate block, V2 fallback selection, or post-result rescue is allowed.
+- `src/idx_trade/path_risk_v2.py`;
+- `src/idx_trade/path_risk_v2_discovery_run.py`;
+- `tests/test_path_risk_v2.py`;
+- `tests/test_path_risk_v2_discovery_run.py`.
 
-Daily outcome-blind operation may record:
+Ledger/checkpoint:
 
-- official-session data capture and provenance;
-- exact final V3-B features;
-- final V3-B score/rank artifacts;
-- model/feature/artifact fingerprints;
-- feature completeness and runtime health;
-- count of verified scored sessions toward the future 100-session block;
-- calendar/data maturity state without loading realized TP/SL outcomes.
+- `docs/PATH_RISK_V2_LEDGER.md`;
+- `docs/checkpoints/2026-08-11_PATH_RISK_V2_IMPLEMENTED_PRE_OUTCOME.md`.
 
-Daily operation must not display or summarize realized TP/SL, PR-AUC, ROC-AUC, Q5-Q1 performance, realized return, PnL, hit rate, or any other reserved forward outcome before the one-shot access boundary.
+At this point:
 
-Before future outcome access, the exact 100-session block and immutable source snapshots must be hash-pinned in a pre-outcome manifest. Then the global `FORWARD_OUTCOME_ACCESS_STARTED` marker must be atomically written before labels/outcomes are loaded. A crash after the marker consumes the block.
+- PR-002 result viewed: `false`;
+- PR-003 result viewed: `false`;
+- real V2 model fit/metrics: not run;
+- F5/F6: sealed;
+- no calibration/risk-veto/alpha+risk integration exists.
+
+## Fresh-forward independent alpha verdict
+
+The final V3-B ranker is independently evaluated only on the first exact
+**100 consecutive H10-mature official signal sessions strictly after
+2026-07-31**.
+
+Daily outcome-blind operation may record data provenance, exact V3-B features,
+scores/ranks, model/artifact fingerprints and maturity state.  It must not
+expose realized TP/SL, PR-AUC, ROC-AUC, Q5-Q1 performance, realized return or
+PnL before the one-shot outcome-access boundary.
+
+Before future outcome access, the exact block and source snapshots must be
+hash-pinned, then `FORWARD_OUTCOME_ACCESS_STARTED` must be written atomically
+before outcomes are loaded.
 
 ## Immediate next action
 
-Primary attention moves to **outcome-blind forward operations for the frozen V3-B ranker**:
+Run the full repository test suite locally after pulling the latest branch.  If
+it passes and current-checkout import resolution is correct, execute exactly one
+Path Risk V2 PR-002/PR-003 F1-F4 development run using:
 
-1. capture each closed official IDX session with provenance/hash checks;
-2. build exact frozen 33-feature V3-B scoring rows;
-3. score/rank with exact final model SHA `1a702031...`;
-4. persist immutable same-day score/rank artifacts and fingerprints;
-5. monitor data/runtime health and verified-session accumulation;
-6. keep the forward outcome vault sealed.
+`coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`
 
-Path Risk V1 requires no further execution.
+Return the result to ChatGPT.  Do not touch F5/F6 after the run even if a winner
+is selected; a separate one-shot confirmation specification is required.
 
 ## Hard boundary
 
 Do not:
 
-- reopen V3/V4 architecture selection;
-- rescue V4-A/B/C or create a fourth post-result alpha family;
-- rerun or rescue Path Risk PR-001;
-- access Path Risk F5/F6 outcomes;
-- reinterpret PR-001 as a post-hoc pure ordering model;
-- create a risk-veto or alpha+risk integration rule;
-- bypass the V3-D PIT sector-history block;
-- inspect sessions `1225..1250` as a validation slice;
-- inspect or summarize post-2026-07-31 fresh-forward labels/outcomes;
-- write the real `FORWARD_OUTCOME_ACCESS_STARTED` marker now;
-- change the 33-feature ranker, model parameters, labels, universe, or fresh-forward verdict rule;
-- start calibration / Stage 6 / `IDX-VAL-002` / execution-PnL / Kelly / paper/live / main merge automatically.
+- reopen or modify the final V3-B alpha architecture;
+- rescue/rewrite PR-001;
+- add PR-004 after seeing PR-002/PR-003;
+- access Path Risk F5/F6 during V2 discovery;
+- use F5/F6 to choose between PR-002 and PR-003;
+- access or summarize post-2026-07-31 fresh-forward outcomes;
+- write `FORWARD_OUTCOME_ACCESS_STARTED` now;
+- create risk-veto, reranking, position-sizing or alpha+risk integration rules;
+- start execution/PnL/Kelly/paper/live automatically.
