@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$DataRoot,
     [string]$PythonExe = "",
     [string]$TaskName = "IDX-Trade Stockbit Intraday Daily",
+    [datetime]$StartDate = (Get-Date).Date.AddDays(1),
     [switch]$AllowNonJakartaTimezone
 )
 
@@ -57,8 +58,18 @@ $arguments = @(
 
 $action = New-ScheduledTaskAction -Execute $powerShellExe -Argument $arguments -WorkingDirectory $RepoRoot
 $days = @("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
-$primary = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At 4:35PM
-$recovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At 5:30PM
+
+# Give the trigger an explicit future StartBoundary. This prevents registering
+# the task late at night with StartWhenAvailable from being interpreted as a
+# missed same-day 16:35/17:30 run.
+$startBoundary = $StartDate.Date
+if ($startBoundary -le (Get-Date).Date) {
+    $startBoundary = (Get-Date).Date.AddDays(1)
+}
+$primaryAt = $startBoundary.AddHours(16).AddMinutes(35)
+$recoveryAt = $startBoundary.AddHours(17).AddMinutes(30)
+$primary = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $primaryAt
+$recovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $recoveryAt
 $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -MultipleInstances IgnoreNew `
@@ -73,6 +84,7 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $task -Force | Out-Null
 
 Write-Host "Registered scheduled task: $TaskName"
 Write-Host "Triggers: weekdays 16:35 and 17:30 local time"
+Write-Host "First trigger boundary: $($startBoundary.ToString('yyyy-MM-dd'))"
 Write-Host "Data root: $DataRoot"
 Write-Host "Python: $PythonExe"
 Write-Host "Credential source: persistent ZAPI_API_KEY environment variable (value not displayed)"
