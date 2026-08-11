@@ -8,13 +8,18 @@ Status: **RUN-ONLY LOCAL EXECUTION — NO SOURCE/DOC EDITS; F5/F6 PROHIBITED**
 Run the frozen Path Risk V2 F1-F4 development comparison exactly once after a
 clean full-test preflight.
 
+A prior attempt using output suffix `_001` stopped before row/outcome values
+were read because an over-strict physical-schema guard described the frozen V1
+artifact incorrectly. No PR-002/PR-003 fit, score, metric, or ordinal was
+consumed. That empty `_001` directory is abandoned as pre-outcome evidence.
+
 Candidates:
 
 - PR-002 `PATH-RISK-V2-STOP-H10-HGB-002`;
 - PR-003 `PATH-RISK-V2-DISCRETE-CR-HGB-003`.
 
 This task may view only the already-consumed Path Risk development period
-through signal session `984`.  It must not access Path Risk F5/F6 or any
+through signal session `984`. It must not access Path Risk F5/F6 or any
 post-2026-07-31 fresh-forward outcome.
 
 ## Mandatory reads
@@ -23,11 +28,13 @@ post-2026-07-31 fresh-forward outcome.
 2. `docs/PATH_RISK_V2_SPEC.md`
 3. `docs/PATH_RISK_V2_LEDGER.md`
 4. `docs/checkpoints/2026-08-11_PATH_RISK_V2_IMPLEMENTED_PRE_OUTCOME.md`
-5. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
-6. `src/idx_trade/path_risk_v2.py`
-7. `src/idx_trade/path_risk_v2_discovery_run.py`
-8. `tests/test_path_risk_v2.py`
-9. `tests/test_path_risk_v2_discovery_run.py`
+5. `docs/checkpoints/2026-08-11_PATH_RISK_V2_SCHEMA_GUARD_PRE_OUTCOME_BLOCK.md`
+6. `docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
+7. `src/idx_trade/path_risk_v2.py`
+8. `src/idx_trade/path_risk_v2_discovery_run.py`
+9. `tests/test_path_risk_v2.py`
+10. `tests/test_path_risk_v2_discovery_run.py`
+11. `tests/test_path_risk_v2_runner_hardening.py`
 
 Acknowledge before running:
 
@@ -40,7 +47,6 @@ Acknowledge before running:
 
 ## Import-path preflight
 
-The previous Path Risk V1 attempt exposed a stale-worktree `PYTHONPATH` risk.
 Force the current checkout's `src` directory and verify module resolution before
 pytest or the real run.
 
@@ -68,7 +74,7 @@ Require:
 - all three Python module paths resolve from this checkout;
 - full pytest has `0 failed`.
 
-If any preflight fails, STOP.  Do not patch locally.
+If any preflight fails, STOP. Do not patch locally.
 
 ## Frozen local inputs
 
@@ -86,7 +92,11 @@ Required facts:
 
 - `252,198` rows;
 - max signal session `984`;
-- contains only the already-viewed Path Risk F1-F4 development population.
+- contains only the already-viewed Path Risk F1-F4 development population;
+- physical schema must exactly match the artifact produced by the frozen V1
+  join: identity + `universe_primary_liquid` + exact 33 features + target
+  metadata (`label_status`, `first_barrier_date`, `target_tau_date`,
+  `adverse_excursion_r`).
 
 ### Official calendar
 
@@ -112,10 +122,10 @@ Required Git blob:
 
 ## One authorized run
 
-Use a new empty output directory:
+Use a new empty output directory. Do not reuse `_001`.
 
 ```powershell
-$OUT = "D:\Documents\Project\idx-trade-data-gate-20260808v\path_risk_v2_discovery_run_20260811_001"
+$OUT = "D:\Documents\Project\idx-trade-data-gate-20260808v\path_risk_v2_discovery_run_20260811_002"
 ```
 
 Run exactly once:
@@ -132,7 +142,7 @@ python -m idx_trade.path_risk_v2_discovery_run `
 Do not run this command twice.
 
 If the process fails after the real runner starts and the output directory is
-nonempty, STOP and return the exact failure boundary.  Do not delete/retry until
+nonempty, STOP and return the exact failure boundary. Do not delete/retry until
 ChatGPT reviews whether an ordinal was partially consumed.
 
 ## Required report
