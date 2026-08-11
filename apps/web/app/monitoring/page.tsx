@@ -47,8 +47,6 @@ type StatusResponse = {
   detail?: string | null;
 };
 
-type MonitoredModelId = typeof FINAL_RANKER.id | typeof V2_CHAMPION.id;
-
 function Logo() {
   return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
 }
@@ -111,7 +109,6 @@ export default function MonitoringPage() {
   const [requestDetail, setRequestDetail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [targetDate, setTargetDate] = useState("");
-  const [selectedModelId, setSelectedModelId] = useState<MonitoredModelId>(FINAL_RANKER.id);
 
   const refresh = useCallback(async () => {
     try {
@@ -203,26 +200,6 @@ export default function MonitoringPage() {
         .filter((run) => run.model_id === V2_CHAMPION.id && run.state === "DONE" && Boolean(run.artifact_sha256))
         .map((run) => run.session_date),
     );
-  }, [status]);
-
-  const selectedModel = selectedModelId === V2_CHAMPION.id ? V2_CHAMPION : FINAL_RANKER;
-  const selectedModelSummary = useMemo(() => {
-    const runs = (status?.model_runs ?? [])
-      .filter((run) => run.model_id === selectedModelId)
-      .sort((a, b) => b.session_date.localeCompare(a.session_date));
-    const completedRuns = runs.filter((run) => run.state === "DONE" && Boolean(run.artifact_sha256));
-    return {
-      runs,
-      completedRuns,
-      latestRun: runs[0] ?? null,
-      latestCompletedRun: completedRuns[0] ?? null,
-      failedRuns: runs.filter((run) => run.state === "FAILED" || run.error_code),
-    };
-  }, [selectedModelId, status]);
-
-  const latestFinalRun = useMemo(() => {
-    const runs = (status?.model_runs ?? []).filter((run) => run.model_id === FINAL_RANKER.id);
-    return [...runs].sort((a, b) => b.session_date.localeCompare(a.session_date))[0] ?? null;
   }, [status]);
 
   const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
@@ -325,12 +302,7 @@ export default function MonitoringPage() {
           </article>
 
           <div className="modelCardsGrid" aria-label="Monitored models">
-          <button
-            type="button"
-            className={`surface modelCardButton finalModelPanel ${selectedModelId === FINAL_RANKER.id ? "isSelected" : ""}`}
-            aria-pressed={selectedModelId === FINAL_RANKER.id}
-            onClick={() => setSelectedModelId(FINAL_RANKER.id)}
-          >
+          <a className="surface modelCardLink finalModelPanel" href="/monitoring/models/v3" aria-label={`View forward detail for ${FINAL_RANKER.shortName}`}>
             <div className="sectionHead compact">
               <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
               <span className="modelBadge champion">FINAL V3</span>
@@ -343,21 +315,10 @@ export default function MonitoringPage() {
               <span>{FINAL_RANKER.featureCount} features</span>
               <span>SHA {FINAL_RANKER.modelSha256.slice(0, 10)}...</span>
             </div>
-            <div className="contractFacts">
-              <div><span>Architecture</span><strong><i className="okDot" /> 33 features</strong></div>
-              <div><span>Model SHA</span><strong>{FINAL_RANKER.modelSha256.slice(0, 10)}…</strong></div>
-              <div><span>Latest score run</span><strong>{latestFinalRun ? shortDate(latestFinalRun.session_date) : "Not produced yet"}</strong></div>
-              <div><span>Outcomes</span><strong>Locked</strong></div>
-            </div>
-            <div className="modelCardAction"><span>{selectedModelId === FINAL_RANKER.id ? "Selected" : "View forward detail"}</span><b aria-hidden="true">→</b></div>
-          </button>
+            <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
+          </a>
 
-          <button
-            type="button"
-            className={`surface modelCardButton finalModelPanel legacyChampionPanel ${selectedModelId === V2_CHAMPION.id ? "isSelected" : ""}`}
-            aria-pressed={selectedModelId === V2_CHAMPION.id}
-            onClick={() => setSelectedModelId(V2_CHAMPION.id)}
-          >
+          <a className="surface modelCardLink finalModelPanel legacyChampionPanel" href="/monitoring/models/v2" aria-label={`View forward detail for ${V2_CHAMPION.shortName}`}>
             <div className="sectionHead compact">
               <div><span>V2 CHAMPION</span><h2>{V2_CHAMPION.shortName}</h2></div>
               <span className="modelBadge">FROZEN</span>
@@ -370,45 +331,8 @@ export default function MonitoringPage() {
               <span>{V2_CHAMPION.featureCount} features</span>
               <span>SHA {V2_CHAMPION.modelSha256.slice(0, 10)}...</span>
             </div>
-            <div className="modelCardAction"><span>{selectedModelId === V2_CHAMPION.id ? "Selected" : "View forward detail"}</span><b aria-hidden="true">→</b></div>
-          </button>
-          </div>
-        </section>
-
-        <section className="surface modelPerformancePanel" aria-live="polite">
-          <div className="modelPerformanceHead">
-            <div>
-              <span>FORWARD PERFORMANCE</span>
-              <h2>{selectedModel.shortName}</h2>
-              <p>Rangkuman score artifact yang sudah dibuat dari sesi forward. Outcome realized tetap terpisah dan belum dibuka.</p>
-            </div>
-            <span className="modelPerformanceBadge">{selectedModel.generation} / SELECTED</span>
-          </div>
-
-          <div className="modelPerformanceMetrics">
-            <div><span>Score coverage</span><strong>{statusLoading ? "—" : selectedModelSummary.completedRuns.length}{!statusLoading && <em>/ {selectedModel.forwardTargetSessions}</em>}</strong><small>forward sessions scored</small></div>
-            <div><span>Latest scored</span><strong>{statusLoading ? "Reading..." : selectedModelSummary.latestCompletedRun ? shortDate(selectedModelSummary.latestCompletedRun.session_date) : "Not yet"}</strong><small>verified score artifact</small></div>
-            <div><span>Latest run</span><strong>{statusLoading ? "Reading..." : selectedModelSummary.latestRun?.state ?? "Not started"}</strong><small>{statusLoading ? "Waiting for status" : selectedModelSummary.latestRun ? shortDate(selectedModelSummary.latestRun.session_date) : "Waiting for data"}</small></div>
-            <div><span>Run issues</span><strong>{statusLoading ? "—" : selectedModelSummary.failedRuns.length}</strong><small>failed or incomplete</small></div>
-          </div>
-
-          <div className="modelPerformanceSessions">
-            <div className="modelPerformanceSessionsHead"><span>FORWARD SESSION EVIDENCE</span><small>Most recent model runs</small></div>
-            {statusLoading ? (
-              <div className="modelPerformanceLoading"><i />Reading score artifacts...</div>
-            ) : selectedModelSummary.runs.length ? (
-              <div className="modelPerformanceRunList">
-                {selectedModelSummary.runs.slice(0, 8).map((run) => (
-                  <div className="modelPerformanceRun" key={`${run.model_id}-${run.session_date}`}>
-                    <strong>{shortDate(run.session_date)}</strong>
-                    <span className={run.state === "DONE" ? "runStateDone" : "runStateOther"}>{run.state === "DONE" ? "Scored" : run.state}</span>
-                    <small>{run.artifact_sha256 ? `Artifact ${run.artifact_sha256.slice(0, 12)}...` : run.error_message ?? "No score artifact"}</small>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="modelPerformanceEmpty">Belum ada score artifact untuk model ini.</p>
-            )}
+            <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
+          </a>
           </div>
         </section>
 
