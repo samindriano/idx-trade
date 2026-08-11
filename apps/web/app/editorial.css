@@ -570,6 +570,11 @@ body {
 .overviewEvidenceReason { display: grid; gap: 5px; margin-top: 14px; }
 .overviewEvidenceReason span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .overviewEvidenceReason p { margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+.overviewEvidenceFindings { display: grid; gap: 8px; margin-top: 16px; }
+.overviewEvidenceFindings > span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceFindings ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.overviewEvidenceFindings li { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; }
+.overviewEvidenceFindings li::before { content: ""; width: 5px; height: 5px; margin-top: 5px; background: var(--editorial-ink); }
 .overviewCardLead { max-width: 440px; margin: 9px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
 .overviewEvidenceCard .editorialChart { margin-top: 14px; padding-top: 12px; }
 .overviewNote { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; color: var(--editorial-muted); font-size: 9px; }

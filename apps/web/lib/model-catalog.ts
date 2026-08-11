@@ -27,6 +27,7 @@ export type ResearchExperiment = {
   note: string;
   evidence?: ResearchEvidence;
   dataBlocker?: boolean;
+  keyFindings: readonly string[];
 };
 
 export const FINAL_RANKER = {
@@ -154,6 +155,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "BASELINE",
     result: "Historical V2 champion",
     note: "Median ΔPR +2.39%, median ROC 0.5244, median Q5−Q1 +5.12% across six folds.",
+    keyFindings: [
+      "PR-AUC delta stayed positive across all six development folds.",
+      "Median PR-AUC delta was +2.39% with median ROC-AUC 0.5244.",
+      "Selected as the historical V2 champion; fresh-forward validation remains separate.",
+    ],
     evidence: {
       metricLabel: "PR-AUC delta vs base rate",
       caption: "Six historical development folds from the selected V2 champion.",
@@ -167,6 +173,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Both recency variants failed the paired promotion gate; no rescue.",
+    keyFindings: [
+      "Both recency variants showed late-fold deterioration.",
+      "The paired promotion gate was not satisfied consistently.",
+      "The candidate was stopped without rescue or further tuning.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V2",
       caption: "The two recency variants are shown together across the four discovery folds.",
@@ -183,6 +194,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FINAL",
     result: "Promoted + late confirmation PASS",
     note: "Only surviving V3 component. Exact V2 information set plus eight causal price-geometry features.",
+    keyFindings: [
+      "Paired PR-AUC improved across every F1-F4 discovery fold.",
+      "The structure-lite feature family was the only surviving V3 component.",
+      "Late confirmation also passed under the frozen promotion process.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC delta vs V2",
       caption: "Paired discovery PR-AUC improved across every F1-F4 fold.",
@@ -196,6 +212,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Overall median paired ΔPR −1.23%; stress regime degraded materially.",
+    keyFindings: [
+      "The candidate underperformed its control in three of four folds.",
+      "Stress-regime performance degraded materially.",
+      "Median paired PR-AUC change was −1.23%.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V3-B",
       caption: "The regime-specialization candidate falls below its control in three of four folds.",
@@ -210,6 +231,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     result: "PIT data blocked",
     note: "No defensible historical ticker-by-date IDX-IC membership chain; outcomes remain unviewed.",
     dataBlocker: true,
+    keyFindings: [
+      "Historical ticker-by-date IDX-IC membership could not be reconstructed defensibly.",
+      "The candidate was blocked before a valid performance comparison.",
+      "No performance conclusion was drawn from the incomplete PIT data.",
+    ],
   },
   {
     generation: "V3-E",
@@ -218,6 +244,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "Killed",
     note: "Some PR uplift, but robustness and Q5−Q1 promotion gates failed.",
+    keyFindings: [
+      "Early folds showed PR-AUC uplift against the control.",
+      "The final discovery fold reversed negative.",
+      "Robustness and Q5-Q1 promotion gates failed.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V3-B",
       caption: "LambdaMART's PR-AUC improvement reversed in the final discovery fold.",
@@ -231,6 +262,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Impact/Absorption and Persistent Directional Participation both failed.",
+    keyFindings: [
+      "Neither participation candidate survived the full gate.",
+      "Both candidates showed weakness in later development folds.",
+      "No participation variant was promoted.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V3-B",
       caption: "Both participation candidates are shown across the six development folds.",
@@ -247,6 +283,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Coherence failed; Range Acceptance had positive aggregate uplift but failed late-fold protection.",
+    keyFindings: [
+      "Coherence produced mixed results and failed its robustness gate.",
+      "Range Acceptance had aggregate uplift but failed late-fold protection.",
+      "Neither price-path candidate survived promotion.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V3-B",
       caption: "The two price-path candidates are shown together; late-fold weakness remains visible.",
@@ -263,6 +304,11 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     status: "FAIL",
     result: "No survivor",
     note: "Median paired ΔPR +0.147% missed the +0.150% gate and other robustness gates also failed.",
+    keyFindings: [
+      "Early folds were positive, but the final fold reversed negative.",
+      "Median paired PR-AUC delta was +0.147%, below the +0.150% gate.",
+      "Additional robustness gates also failed.",
+    ],
     evidence: {
       metricLabel: "Paired PR-AUC change vs V3-B",
       caption: "Cross-sectional dispersion shows a strong early profile but reverses in the final fold.",
@@ -277,5 +323,10 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     result: "Discovery FAIL_CLOSE",
     note: "Ordering diagnostics were positive, but q75 pinball robustness failed the frozen gate; no F5/F6, rescue, or alpha+risk integration.",
     dataBlocker: true,
+    keyFindings: [
+      "Ordering diagnostics were directionally positive.",
+      "q75 pinball robustness failed the frozen gate.",
+      "No F5/F6 expansion, rescue, or alpha-plus-risk integration was allowed.",
+    ],
   },
 ];

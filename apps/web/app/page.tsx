@@ -372,7 +372,12 @@ export default function Home() {
             ) : (
               <DiagnosticEvidence result={selectedExperiment.result} note={selectedExperiment.note} status={selectedExperiment.status} dataBlocker={selectedExperiment.dataBlocker} />
             )}
-            <div className="overviewEvidenceReason"><span>Decision rationale</span><p>{selectedExperiment.note}</p></div>
+            <div className="overviewEvidenceFindings">
+              <span>Key findings</span>
+              <ul>
+                {selectedExperiment.keyFindings.slice(0, 3).map((finding) => <li key={finding}>{finding}</li>)}
+              </ul>
+            </div>
           </article>
 
           <article className="overviewCard overviewModelCard">
