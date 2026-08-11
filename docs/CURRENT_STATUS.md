@@ -311,6 +311,33 @@ No inventory or test contract changed. This was documentation-only discovery;
 no parser/materialization, census, model, outcome, OPEN-backfill, Path Risk,
 execution/PnL, or `main` work was started.
 
+## PIT sector TICMI/TICMIDATA availability investigation — 2026-08-11
+
+The bounded public-only TICMI/TICMIDATA investigation did not expose a
+searchable historical Exchange-announcement record for the annual 2022 or 2023
+IDX-IC changes. Public TICMIDATA sitemap routes include pricing, pay-per-use,
+custom data, document area, and customer area, but their unauthenticated pages
+render only the application shell and no announcement refs or attachment
+metadata. The legacy TICMI data-service paths referenced by public terms are
+currently 404 in the public deployment.
+
+Public TICMI terms do confirm a `Layanan Data Khusus` route for data not
+available in the general service, including custom `.xlsx`/`.txt`/`.pdf`
+delivery. A narrow custom request for the two exact annual Exchange
+announcements is therefore the next least-expansive route; no purchase was
+made, and public pricing/individual fulfillment was not visible.
+
+The 2026 search remains bounded/exhausted: canonical `Peng-00100` has no
+explicit effective date, no linked ARGO/HRUM/PACK evidence was found through
+2026-08-11, and `Peng-00099` remains reconciliation-only. Inventory remains
+`5 ready / 3 blocked`; no source was promoted.
+
+Fail-closed policy: if approved official archive escalation permanently fails,
+keep the item unresolved, never infer dates or current sectors, keep affected
+PIT assignments unknown, fail downstream sector data gates, and do not
+materialize/score V3-D from incomplete history. See the dated checkpoint and
+handoff for the exact public routes and request fields.
+
 ## Hard boundary
 
 Do not:

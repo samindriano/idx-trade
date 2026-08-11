@@ -1805,3 +1805,28 @@ discovery. No parser/materialization, census, model, outcome, OPEN backfill,
 Path Risk, execution/PnL, or `main` work was started. See checkpoint
 `docs/checkpoints/2026-08-11_PIT_SECTOR_ZAPI_ARCHIVE_DISCOVERY_RESULT.md` and
 handoff `coordination/handoffs/IDX-PIT-SECTOR-ZAPI-ARCHIVE-DISCOVERY-RESULT.md`.
+
+## 40. Bounded TICMI/TICMIDATA public availability investigation — 2026-08-11
+
+The public-only TICMI/TICMIDATA investigation followed the official IDX
+direction for history older than three years. TICMIDATA's public sitemap
+exposes pricing, pay-per-use, custom-data, document-area, and customer-area
+routes, but the unauthenticated application shell exposes no searchable 2022 or
+2023 Exchange-announcement record, ref, attachment metadata, or effective-date
+evidence. The legacy TICMI paths named in the public data-service terms are
+currently 404 in the public deployment.
+
+The TICMI terms nevertheless confirm a `Layanan Data Khusus` service for data
+not available in the general service, with custom processing and `.xlsx`, `.txt`,
+or `.pdf` output. The recommended next step is a narrow custom request for the
+dedicated annual 2022 and 2023 IDX-IC Exchange announcements and the full
+immutable provenance fields, rather than an unbounded package purchase. Exact
+price and single-file fulfillment remain unknown until TICMI responds.
+
+The 2026 search remains bounded/exhausted; no new 2026 query was run. Inventory
+stays `5 ready / 3 blocked`, and no source was promoted. A permanent unresolved
+source must remain fail-closed: no inferred date/current-sector backfill, unknown
+affected PIT assignments, blocked downstream sector gate, and no V3-D
+materialization or scoring from incomplete history. See
+`docs/checkpoints/2026-08-11_PIT_SECTOR_TICMI_AVAILABILITY_RESULT.md` and
+`coordination/handoffs/IDX-PIT-SECTOR-TICMI-AVAILABILITY-RESULT.md`.
