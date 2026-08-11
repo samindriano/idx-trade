@@ -402,6 +402,19 @@ def normalise_sector_events(events: pd.DataFrame) -> pd.DataFrame:
         ["ticker", "effective_from", "announced_at", "knowledge_at", "source_id"], kind="mergesort"
     )
     data = data.drop_duplicates(key + ["sector_code"], keep="first").reset_index(drop=True)
+
+    # The current interval/as-of implementation assumes that PIT knowledge
+    # boundaries preserve the same order as classification effective dates.
+    # A late-discovered older event must never be allowed to override a newer
+    # already-known classification. Fail closed on that rare topology until a
+    # dedicated two-dimensional state resolver is explicitly implemented.
+    pit_backstep = data.groupby("ticker", sort=False)["pit_from"].diff().lt(pd.Timedelta(0))
+    if bool(pit_backstep.any()):
+        bad = data.loc[pit_backstep, ["ticker", "effective_from", "pit_from", "source_id"]].to_dict(
+            orient="records"
+        )
+        raise ValueError(f"non-monotonic PIT knowledge order for effective-date sequence: {bad}")
+
     return data
 
 
