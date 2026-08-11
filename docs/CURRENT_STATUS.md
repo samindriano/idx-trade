@@ -291,6 +291,26 @@ audit. Focused PIT tests passed `18/18`; full pytest passed `489/489` with the
 same 3 existing FutureWarnings. No parser/materialization, IPO/incidental
 census expansion, model, outcome, Path Risk, or `main` merge was started.
 
+## PIT sector Zapi/archive discovery — 2026-08-11
+
+The prioritized 2026 issuer-history search covered ARGO, HRUM and PACK from
+2026-06-24 through the latest available 2026-08-11 records. The Zapi company
+captures contained 6/8/25 rows in that window and zero classification-keyword
+matches; bounded Zapi raw issuer probes also returned `ResultCount=0`. No
+later official disclosure linking `Peng-00100/BEI.POP/06-2026` with an
+explicit effective date was found. The canonical PDF remains hash-pinned but
+date-incomplete; no date was inferred from `Peng-00099` or publication time.
+
+For 2022/2023, the stored Zapi/raw captures remain empty (`ItemCount=0`) and
+no dedicated official ref, attachment, or effective-date evidence was
+recovered. Zapi's raw passthrough did not establish an archive beyond the
+public retention boundary. The next highest-value official route is authorized
+TICMI/TICMIDATA archive access. Inventory remains `5 ready / 3 blocked`.
+
+No inventory or test contract changed. This was documentation-only discovery;
+no parser/materialization, census, model, outcome, OPEN-backfill, Path Risk,
+execution/PnL, or `main` work was started.
+
 ## Hard boundary
 
 Do not:

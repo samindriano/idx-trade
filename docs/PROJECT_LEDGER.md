@@ -1780,3 +1780,28 @@ frontend audit bundles and 2026 raw attachments remain outside Git under
 passed `18/18`; full pytest passed `489/489` with 3 existing warnings. No
 parser/materialization, census expansion, model, outcome, or `main` merge was
 started.
+
+## 39. Zapi and official archive discovery for remaining PIT blockers — 2026-08-11
+
+The 2026 blocker was prioritized. Zapi company-announcement captures covered
+the full 2026-06-24 through 2026-08-11 window for ARGO, HRUM and PACK: 6, 8 and
+25 rows respectively, with zero matches for classification/industry/IDX-IC or
+`Peng-00100`. Bounded Zapi raw issuer probes also returned `ResultCount=0`.
+The official `Peng-00100` PDF remains 312,989 bytes with SHA-256
+`8b5413f18afc75cc17260c2400611d710e8f270d46a49c5a396f557b27cf8b25` and no
+explicit effective date. `Peng-00099` remains non-canonical; no 2026 date was
+inferred.
+
+For annual 2022 and 2023, the existing Zapi/raw captures remain empty and no
+dedicated canonical ref, official attachment, bytes/SHA, or effective-date
+evidence was recovered. The raw passthrough did not establish access beyond
+the public retention boundary. The public IDX route points older history to
+TICMI; official TICMI/TICMIDATA archive access is the next highest-value route,
+subject to authorized access and the same immutable provenance contract.
+
+Decision: remain fail-closed at `5 ready / 3 blocked`; do not modify the source
+inventory or promote sector-index packages. This was documentation-only
+discovery. No parser/materialization, census, model, outcome, OPEN backfill,
+Path Risk, execution/PnL, or `main` work was started. See checkpoint
+`docs/checkpoints/2026-08-11_PIT_SECTOR_ZAPI_ARCHIVE_DISCOVERY_RESULT.md` and
+handoff `coordination/handoffs/IDX-PIT-SECTOR-ZAPI-ARCHIVE-DISCOVERY-RESULT.md`.
