@@ -52,6 +52,16 @@ def test_parse_stock_summary_preserves_exact_activity_fields():
     ]
 
 
+def test_parse_stock_summary_accepts_zapi_data_envelope():
+    inner = _payload([_row("BBCA", 1000, 10_000_000, 20)], records_total=1)
+    frame = parse_stock_summary_payload(
+        {"data": {"data": inner["data"], "recordsTotal": inner["recordsTotal"]}},
+        expected_date=EXPECTED_DATE,
+    )
+    assert frame.loc[0, "ticker"] == "BBCA"
+    assert frame.loc[0, "volume"] == 1000
+
+
 def test_parse_stock_summary_fails_closed_on_wrong_session():
     with pytest.raises(ValueError, match="wrong/ambiguous session"):
         parse_stock_summary_payload(

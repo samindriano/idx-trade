@@ -60,11 +60,16 @@ def _provider_date(value: object) -> date | None:
 def parse_stock_summary_payload(payload: object, *, expected_date: date) -> pd.DataFrame:
     if not isinstance(payload, dict):
         raise ValueError("IDX stock-summary payload must be an object")
-    rows = payload.get("data")
+    data_section = payload.get("data")
+    if isinstance(data_section, dict):
+        rows = data_section.get("data")
+        records_total = data_section.get("recordsTotal")
+    else:
+        rows = data_section
+        records_total = payload.get("recordsTotal")
     if not isinstance(rows, list):
         raise ValueError("IDX stock-summary payload missing data list")
 
-    records_total = payload.get("recordsTotal")
     if records_total not in (None, ""):
         try:
             total = int(records_total)
@@ -296,9 +301,11 @@ def run_audit(
         "accepted_zero_false_negative_gate": int(selected["false_negative"]) == 0,
     }
     report_path = output_root / "run_summary.json"
-    _atomic_json(report_path, report)
-    manifest = _manifest(output_root, [raw_path, summary_rows_path, comparison_path, report_path])
+    # Keep the report's manifest digest out of the manifest inputs so the
+    # digest remains stable after it is persisted in run_summary.json.
+    manifest = _manifest(output_root, [raw_path, summary_rows_path, comparison_path])
     report["artifact_manifest_sha256"] = manifest["manifest_sha256"]
+    _atomic_json(report_path, report)
     return report
 
 
