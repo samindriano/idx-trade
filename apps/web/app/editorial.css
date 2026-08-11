@@ -508,6 +508,27 @@ body {
 .overviewCardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .overviewCardHead h2 { margin: 7px 0 0; color: var(--editorial-ink); font-size: 19px; line-height: 1.08; letter-spacing: -.04em; font-weight: 700; }
 .overviewEvidenceScore { color: var(--editorial-green-dark); font-size: 21px; line-height: 1; letter-spacing: -.06em; }
+.overviewEvidenceStatus { font-size: 9px; font-weight: 840; letter-spacing: .08em; }
+.overviewEvidenceStatus.status-final,
+.overviewEvidenceStatus.status-baseline { color: var(--editorial-green-dark); }
+.overviewEvidenceStatus.status-fail { color: var(--editorial-red); }
+.overviewEvidenceStatus.status-blocked { color: var(--editorial-amber); }
+.overviewEvidenceSelector { display: grid; gap: 5px; max-width: 280px; margin-top: 16px; }
+.overviewEvidenceSelector span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceSelector select { min-height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; }
+.overviewEvidenceSelector select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.overviewDecisionGraphic { margin-top: 18px; padding: 22px 0 16px; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.overviewDecisionTrack { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; gap: 10px; align-items: center; }
+.overviewDecisionTrack span,
+.overviewDecisionTrack strong { padding: 11px 9px; border: 1px solid var(--editorial-line); color: var(--editorial-muted); font-size: 9px; font-weight: 700; text-align: center; }
+.overviewDecisionTrack strong { color: var(--editorial-green-dark); }
+.overviewDecisionGraphic.status-fail .overviewDecisionTrack strong { border-color: #efc9cc; color: var(--editorial-red); }
+.overviewDecisionGraphic.status-blocked .overviewDecisionTrack strong { border-color: #ecd9b6; color: var(--editorial-amber); }
+.overviewDecisionTrack i { color: var(--editorial-muted); font-size: 16px; font-style: normal; text-align: center; }
+.overviewDecisionGraphic > p { margin: 14px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; }
+.overviewEvidenceReason { display: grid; gap: 5px; margin-top: 14px; }
+.overviewEvidenceReason span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.overviewEvidenceReason p { margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
 .overviewCardLead { max-width: 440px; margin: 9px 0 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
 .overviewEvidenceCard .editorialChart { margin-top: 14px; padding-top: 12px; }
 .overviewNote { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; color: var(--editorial-muted); font-size: 9px; }
@@ -549,9 +570,10 @@ body {
 .overviewArchiveDetail span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .overviewArchiveDetail strong, .overviewArchiveDetail p { margin: 0; font-size: 10px; line-height: 1.45; }
 .overviewArchiveDetail p { color: var(--editorial-muted); }
-.overviewArchiveRow.status-final .overviewArchiveStatus { color: var(--editorial-green-dark); }
-.overviewArchiveRow.status-fail .overviewArchiveStatus { color: var(--editorial-red); }
-.overviewArchiveRow.status-blocked .overviewArchiveStatus { color: var(--editorial-amber); }
+.overviewArchiveItem.status-final .overviewArchiveStatus,
+.overviewArchiveItem.status-baseline .overviewArchiveStatus { color: var(--editorial-green-dark); }
+.overviewArchiveItem.status-fail .overviewArchiveStatus { color: var(--editorial-red); }
+.overviewArchiveItem.status-blocked .overviewArchiveStatus { color: var(--editorial-amber); }
 
 /* Keep the operator page in the same compact scale. */
 .monitorHero { min-height: 126px; padding-top: 8px; padding-bottom: 18px; }
@@ -583,6 +605,8 @@ body {
   .overviewStatus { width: 100%; }
   .overviewEvidenceCard, .overviewModelCard, .overviewArchiveCard { padding: 18px 16px; }
   .overviewCardHead h2 { font-size: 19px; }
+  .overviewDecisionTrack { grid-template-columns: 1fr; gap: 5px; }
+  .overviewDecisionTrack i { transform: rotate(90deg); }
   .overviewArchiveCard > .overviewCardHead { align-items: flex-start; display: block; }
   .overviewArchiveCard > .overviewCardHead p { margin-top: 8px; text-align: left; }
   .overviewArchiveToolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }

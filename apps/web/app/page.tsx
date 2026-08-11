@@ -44,6 +44,17 @@ function statusLabel(status: ResearchStatus) {
   return "RESEARCH";
 }
 
+function decisionVerb(status: ResearchStatus) {
+  if (status === "FINAL" || status === "BASELINE") return "passed";
+  if (status === "BLOCKED") return "blocked";
+  if (status === "FAIL") return "failed";
+  return "under review";
+}
+
+function experimentKey(item: (typeof RESEARCH_EXPERIMENTS)[number]) {
+  return `${item.generation}:${item.candidate}`;
+}
+
 function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const width = 760;
@@ -114,6 +125,7 @@ export default function Home() {
   const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
   const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
   const [expandedArchiveKey, setExpandedArchiveKey] = useState<string | null>(null);
+  const [selectedModelKey, setSelectedModelKey] = useState(experimentKey(RESEARCH_EXPERIMENTS[2]));
 
   const visibleExperiments = [...RESEARCH_EXPERIMENTS]
     .filter((item) => {
@@ -121,7 +133,7 @@ export default function Home() {
       const matchesStatus = archiveStatusFilter === "all"
         || (archiveStatusFilter === "passed" && passed)
         || (archiveStatusFilter === "not-passed" && !passed);
-      const modelKey = `${item.generation}:${item.candidate}`;
+      const modelKey = experimentKey(item);
       const matchesModel = archiveModelFilter === "all" || modelKey === archiveModelFilter;
       return matchesStatus && matchesModel;
     })
@@ -133,6 +145,7 @@ export default function Home() {
       return archiveStatusPriority[left.status] - archiveStatusPriority[right.status]
         || RESEARCH_EXPERIMENTS.indexOf(left) - RESEARCH_EXPERIMENTS.indexOf(right);
     });
+  const selectedExperiment = RESEARCH_EXPERIMENTS.find((item) => experimentKey(item) === selectedModelKey) ?? RESEARCH_EXPERIMENTS[0];
 
   return (
     <main className="appShell editorialShell">
@@ -170,12 +183,29 @@ export default function Home() {
         <section className="overviewGrid">
           <article className="overviewCard overviewEvidenceCard">
             <div className="overviewCardHead">
-              <div><span>PROMOTION EVIDENCE</span><h2>Why V3-B is frozen</h2></div>
-              <strong className="overviewEvidenceScore">4 / 4</strong>
+              <div><span>MODEL EVIDENCE</span><h2>Why {selectedExperiment.generation} {decisionVerb(selectedExperiment.status)}?</h2></div>
+              <strong className={`overviewEvidenceStatus status-${selectedExperiment.status.toLowerCase()}`}>{statusLabel(selectedExperiment.status)}</strong>
             </div>
-            <p className="overviewCardLead">Paired discovery PR-AUC improved across every F1-F4 fold.</p>
-            <FoldChart folds={V3_B_DISCOVERY_FOLDS} />
-            <div className="overviewNote"><span>F1-F4 discovery</span><span>V2 frozen baseline</span></div>
+            <label className="overviewEvidenceSelector">
+              <span>Inspect model</span>
+              <select value={selectedModelKey} onChange={(event) => setSelectedModelKey(event.target.value)}>
+                {RESEARCH_EXPERIMENTS.map((item) => (
+                  <option key={experimentKey(item)} value={experimentKey(item)}>{item.generation} · {item.name}</option>
+                ))}
+              </select>
+            </label>
+            {selectedExperiment.generation === "V3-B" ? (
+              <>
+                <p className="overviewCardLead">Paired discovery PR-AUC improved across every F1-F4 fold.</p>
+                <FoldChart folds={V3_B_DISCOVERY_FOLDS} />
+              </>
+            ) : (
+              <div className={`overviewDecisionGraphic status-${selectedExperiment.status.toLowerCase()}`}>
+                <div className="overviewDecisionTrack"><span>Candidate</span><i>→</i><span>Evidence review</span><i>→</i><strong>{statusLabel(selectedExperiment.status)}</strong></div>
+                <p>{selectedExperiment.result}</p>
+              </div>
+            )}
+            <div className="overviewEvidenceReason"><span>Decision rationale</span><p>{selectedExperiment.note}</p></div>
           </article>
 
           <article className="overviewCard overviewModelCard">
@@ -221,7 +251,7 @@ export default function Home() {
               <select value={archiveModelFilter} onChange={(event) => setArchiveModelFilter(event.target.value)}>
                 <option value="all">All models</option>
                 {RESEARCH_EXPERIMENTS.map((item) => (
-                  <option key={`${item.generation}:${item.candidate}`} value={`${item.generation}:${item.candidate}`}>
+                  <option key={experimentKey(item)} value={experimentKey(item)}>
                     {item.generation} · {item.name}
                   </option>
                 ))}
@@ -231,7 +261,7 @@ export default function Home() {
           </div>
           <div className="overviewArchive">
             {visibleExperiments.length ? visibleExperiments.map((item, index) => {
-              const key = `${item.generation}-${item.candidate}`;
+              const key = experimentKey(item);
               const expanded = expandedArchiveKey === key;
               return (
                 <article className={`overviewArchiveItem status-${item.status.toLowerCase()}`} key={key}>
@@ -240,7 +270,10 @@ export default function Home() {
                     className="overviewArchiveRow"
                     aria-expanded={expanded}
                     aria-label={`${item.name}: view performance and decision reason`}
-                    onClick={() => setExpandedArchiveKey(expanded ? null : key)}
+                    onClick={() => {
+                      setSelectedModelKey(key);
+                      setExpandedArchiveKey(expanded ? null : key);
+                    }}
                   >
                     <span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span>
                     <span className="overviewArchiveGeneration">{item.generation}</span>
