@@ -285,7 +285,7 @@ def run_audit(
         "idx_summary_rows": len(idx_summary),
         "idx_summary_coverage_of_universe": int(comparison["idx_summary_present"].sum()),
         "stockbit_success": int(comparison["stockbit_status"].eq("SUCCESS").sum()),
-        "stockbit_non_success": int(~comparison["stockbit_status"].eq("SUCCESS").sum()),
+        "stockbit_non_success": int((~comparison["stockbit_status"].eq("SUCCESS")).sum()),
         "field_non_null": {
             column: int(idx_summary[column].notna().sum())
             for column in ("volume", "value", "frequency")
