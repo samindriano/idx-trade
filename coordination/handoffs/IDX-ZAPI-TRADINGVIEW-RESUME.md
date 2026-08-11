@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\.codex\worktrees\idx-open-backfill-zapi-tradingview-resume-v1`
 source_commit: `288fc109bb042372885ee63be9c884eca9beceb5`
 branch: `data/idx-open-backfill-zapi-tradingview-resume-v1`
-head_commit: pending documentation commit
+head_commit: `90a51863c8a9f63d60a1e625661ba462d668622e` (runtime implementation and checkpoint commit)
 scope: retry only the 71 prior RATE_LIMITED TradingView tickers; combine offline with preserved original evidence
 files_changed: bounded resume harness, focused tests, dated runtime checkpoint, this handoff
 findings: 67/71 resume tickers succeeded; combined status is 201 SUCCESS and 5 REQUEST_ERROR; combined coverage 156/240; H/L/C exact 117/240; 85 recovery candidates; immutable panel unchanged.
