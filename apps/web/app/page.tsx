@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./model-monitor.module.css";
 import {
   FINAL_RANKER,
@@ -133,6 +133,72 @@ function FoldChart({ folds }: { folds: readonly FoldMetric[] }) {
   );
 }
 
+function ModelEvidencePicker({
+  items,
+  value,
+  onChange,
+}: {
+  items: readonly (typeof RESEARCH_EXPERIMENTS)[number][];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = items.find((item) => experimentKey(item) === value) ?? items[0];
+  const versionOrder = ["V1", "V2", "V3", "V4", "Risk"];
+  const versions = versionOrder.filter((version) => items.some((item) => {
+    const group = item.generation.startsWith("V") ? item.generation.split("-")[0] : item.generation;
+    return group === version;
+  }));
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [open]);
+
+  return (
+    <div className="modelEvidencePicker" ref={rootRef}>
+      <button className="modelEvidencePickerTrigger" type="button" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+        <span>{selected.generation} · {selected.name}</span><b aria-hidden="true">⌄</b>
+      </button>
+      {open && (
+        <div className="modelEvidencePickerMenu" role="listbox" aria-label="Models grouped by version">
+          {versions.map((version) => (
+            <div className="modelPickerGroup" key={version}>
+              <div className="modelPickerGroupLabel">{version}</div>
+              {items.filter((item) => {
+                const group = item.generation.startsWith("V") ? item.generation.split("-")[0] : item.generation;
+                return group === version;
+              }).map((item) => {
+                const statusClass = item.status.toLowerCase();
+                const isSelected = experimentKey(item) === value;
+                return (
+                  <button
+                    className={`modelPickerOption ${isSelected ? "isSelected" : ""}`}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    key={experimentKey(item)}
+                    onClick={() => { onChange(experimentKey(item)); setOpen(false); }}
+                  >
+                    <i className={`modelPickerDot ${statusClass}`} aria-hidden="true" />
+                    <span>{item.name}</span>
+                    <small>{statusLabel(item.status)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [forwardStatus, setForwardStatus] = useState<OverviewRuntimeStatus | null>(null);
   const [forwardStatusLoading, setForwardStatusLoading] = useState(true);
@@ -222,14 +288,10 @@ export default function Home() {
               <div><span>MODEL EVIDENCE</span><h2>Why {selectedExperiment.generation} {decisionVerb(selectedExperiment.status)}?</h2></div>
               <strong className={`overviewEvidenceStatus status-${selectedExperiment.status.toLowerCase()}`}>{statusLabel(selectedExperiment.status)}</strong>
             </div>
-            <label className="overviewEvidenceSelector">
+            <div className="overviewEvidenceSelector">
               <span>Inspect model</span>
-              <select value={selectedModelKey} onChange={(event) => setSelectedModelKey(event.target.value)}>
-                {RESEARCH_EXPERIMENTS.map((item) => (
-                  <option key={experimentKey(item)} value={experimentKey(item)}>{item.generation} · {item.name}</option>
-                ))}
-              </select>
-            </label>
+              <ModelEvidencePicker items={RESEARCH_EXPERIMENTS} value={selectedModelKey} onChange={setSelectedModelKey} />
+            </div>
             {selectedExperiment.generation === "V3-B" ? (
               <>
                 <p className="overviewCardLead">Paired discovery PR-AUC improved across every F1-F4 fold.</p>

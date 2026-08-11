@@ -515,8 +515,20 @@ body {
 .overviewEvidenceStatus.status-blocked { color: var(--editorial-amber); }
 .overviewEvidenceSelector { display: grid; gap: 5px; max-width: 280px; margin-top: 16px; }
 .overviewEvidenceSelector span { color: var(--editorial-muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.overviewEvidenceSelector select { min-height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; }
-.overviewEvidenceSelector select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.modelEvidencePicker { position: relative; }
+.modelEvidencePickerTrigger { width: 100%; min-height: 32px; display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 0 9px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.3); color: var(--editorial-ink); font: inherit; font-size: 9px; text-align: left; cursor: pointer; }
+.modelEvidencePickerTrigger:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.modelEvidencePickerTrigger b { color: var(--editorial-muted); font-size: 15px; font-weight: 500; line-height: 1; }
+.modelEvidencePickerMenu { position: absolute; z-index: 8; top: calc(100% + 3px); left: 0; right: 0; max-height: 360px; overflow-y: auto; border: 1px solid var(--editorial-line); background: #f8f7f2; box-shadow: 0 10px 24px rgba(17,21,18,.12); }
+.modelPickerGroup + .modelPickerGroup { border-top: 1px solid var(--editorial-line); }
+.modelPickerGroupLabel { padding: 8px 10px 5px; color: var(--editorial-muted); font-size: 8px; font-weight: 840; letter-spacing: .14em; text-transform: uppercase; }
+.modelPickerOption { width: 100%; min-height: 32px; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; border: 0; background: transparent; color: var(--editorial-ink); font: inherit; font-size: 9px; text-align: left; cursor: pointer; }
+.modelPickerOption:hover, .modelPickerOption.isSelected { background: #edf7f1; }
+.modelPickerOption small { color: var(--editorial-muted); font-size: 7px; font-weight: 820; letter-spacing: .07em; text-transform: uppercase; }
+.modelPickerDot { width: 7px; height: 7px; border-radius: 50%; background: var(--editorial-muted); }
+.modelPickerDot.final, .modelPickerDot.baseline { background: var(--editorial-green); }
+.modelPickerDot.fail { background: var(--editorial-red); }
+.modelPickerDot.blocked { background: var(--editorial-amber); }
 .overviewDecisionGraphic { margin-top: 18px; padding: 22px 0 16px; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
 .overviewDecisionTrack { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; gap: 10px; align-items: center; }
 .overviewDecisionTrack span,
