@@ -907,6 +907,8 @@ def run_queued_model_jobs(runtime_root: str | Path, session_dates: Iterable[obje
         connection.close()
     shadow_runs: list[dict[str, Any]] = []
     shadow_errors: list[dict[str, str]] = []
+    reliability_runs: list[dict[str, Any]] = []
+    reliability_errors: list[dict[str, str]] = []
     for session_key in sessions:
         shadow_inputs = _run_session(paths, session_key)
         if shadow_inputs is None:
@@ -922,11 +924,23 @@ def run_queued_model_jobs(runtime_root: str | Path, session_dates: Iterable[obje
             continue
         except Exception as error:
             shadow_errors.append({"session_date": session_key, "error": str(error)[:4000]})
+        try:
+            from .reliability_v1_forward_shadow import score_reliability_v1_session
+
+            reliability_runs.append(score_reliability_v1_session(paths, session_key))
+        except FileNotFoundError:
+            # Reliability V1 is subordinate to an accepted O2 artifact and
+            # must not make the primary model fan-out fail when O2 is absent.
+            continue
+        except Exception as error:
+            reliability_errors.append({"session_date": session_key, "error": str(error)[:4000]})
     return {
         "status": "MODEL_RUNS_RECONCILED",
         "sessions": sessions,
         "shadow_runs": shadow_runs,
         "shadow_errors": shadow_errors,
+        "reliability_runs": reliability_runs,
+        "reliability_errors": reliability_errors,
         "outcome_access": "LOCKED",
     }
 
