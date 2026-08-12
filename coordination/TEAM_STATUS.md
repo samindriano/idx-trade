@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-12 19:29 Asia/Jakarta
+Last coordinated update: 2026-08-12 19:40 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -48,6 +48,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Stockbit intraday forward capture | `AUTOMATED` | Existing runtime | `data/stockbit-intraday-forward-capture-v1` | Daily capture infrastructure already exists. **Do not build it again.** Accumulate evidence for possible future Path Risk research. |
 | Path Risk | `WAITING` | none | prior V1/V2 lineage | V1/V2 failed. Do not restart/retune now; wait for richer intraday accumulation and a genuinely new preregistered hypothesis family. |
 | O2 fresh-forward | `ACTIVE` | Existing forward runtime | `integration/forward-eod-automation-monitoring` / acceptance `c5b356ad1a21646c4d6b50352872c7e6718c6df9` | First official post-freeze session accepted: 2026-08-12 / index 1268, 806 scored, 30 true flat-range row exclusions, counter `1/100`; outcomes locked. Continue prospectively under identical frozen eligibility/counter/provenance rules. |
+| O2.1 flat-range challenger hypothesis | `PARKED` | none | `research/idx-ranking-ohlcv-o2-forward-v1` / boundary `84fd87059a0d8730335d89c33735cb1bc077a16b` | Hypothesis recorded only. **No O2.1 implementation, historical experiment, refit, or benchmark is authorized now.** Revisit only after explicit future preregistration/authorization; do not disturb active O2 gate. |
 | IDX forward calendar extension | `WAITING` | existing data lane | `data/idx-forward-calendar-extension-v1` | Evidence-only extension; rerun when a new official session is source-certified. Do not infer dates. |
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
@@ -60,6 +61,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 - Do not recreate Stockbit intraday automation.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
 - Do not rerun the completed O2-vs-V2 comparator unless a specific audit/reproduction request requires it.
+- Do not start O2.1 flat-range experiments while the current O2 fresh-forward gate is active unless a separate explicit authorization and frozen experiment contract are created.
 - Do not treat Market/Index/Breadth historical session-date data as PIT-complete or bulk-model-ready.
 - Before suggesting a “next task,” check this file first; a suggestion counts as coordination and can itself cause duplicate work.
 
