@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { FINAL_RANKER, V2_CHAMPION } from "@/lib/model-catalog";
+import { FINAL_RANKER, O2_CHALLENGER, V2_CHAMPION } from "@/lib/model-catalog";
 
 type RuntimeModelRun = {
   session_date: string;
@@ -56,7 +56,7 @@ function formatTimestamp(value: string | null | undefined) {
 
 export default function ModelDetailPage() {
   const params = useParams<{ modelId: string }>();
-  const model = params.modelId === "v2" ? V2_CHAMPION : FINAL_RANKER;
+  const model = params.modelId === "o2" ? O2_CHALLENGER : params.modelId === "v2" ? V2_CHAMPION : FINAL_RANKER;
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -118,7 +118,7 @@ export default function ModelDetailPage() {
           <div>
             <p className="overviewKicker">FORWARD PERFORMANCE</p>
             <h1>{model.shortName}</h1>
-            <p>Detailed forward-session evidence for this model. This view reports score-artifact progress only.</p>
+            <p>{params.modelId === "o2" ? "Primary challenger detail, paired against the V3-B incumbent. This view reports score-artifact progress only." : "Detailed forward-session evidence for this model. This view reports score-artifact progress only."}</p>
           </div>
         </section>
 

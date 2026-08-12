@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./model-monitor.module.css";
 import {
   FINAL_RANKER,
+  O2_CHALLENGER,
   RESEARCH_EXPERIMENTS,
   type ResearchFoldMetric,
   type ResearchEvidenceSeries,
@@ -56,6 +57,13 @@ function decisionVerb(status: ResearchStatus) {
   if (status === "BLOCKED") return "blocked";
   if (status === "FAIL") return "failed";
   return "under review";
+}
+
+function trackingLabel(item: (typeof RESEARCH_EXPERIMENTS)[number]) {
+  if (item.trackingRole === "PRIMARY_CHALLENGER") return "PRIMARY CHALLENGER";
+  if (item.trackingRole === "INCUMBENT") return "INCUMBENT";
+  if (item.trackingRole === "REFERENCE") return "REFERENCE";
+  return statusLabel(item.status);
 }
 
 function experimentKey(item: (typeof RESEARCH_EXPERIMENTS)[number]) {
@@ -326,7 +334,7 @@ export default function Home() {
   const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
   const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
   const [expandedArchiveKey, setExpandedArchiveKey] = useState<string | null>(null);
-  const [selectedModelKey, setSelectedModelKey] = useState(experimentKey(RESEARCH_EXPERIMENTS[2]));
+  const [selectedModelKey, setSelectedModelKey] = useState(() => experimentKey(RESEARCH_EXPERIMENTS.find((item) => item.trackingRole === "PRIMARY_CHALLENGER") ?? RESEARCH_EXPERIMENTS[0]));
 
   useEffect(() => {
     let cancelled = false;
@@ -359,15 +367,23 @@ export default function Home() {
       if (archiveSort === "latest") {
         return RESEARCH_EXPERIMENTS.indexOf(right) - RESEARCH_EXPERIMENTS.indexOf(left);
       }
-      return archiveStatusPriority[left.status] - archiveStatusPriority[right.status]
+      return (left.historicalRank ?? 999) - (right.historicalRank ?? 999)
+        || archiveStatusPriority[left.status] - archiveStatusPriority[right.status]
         || RESEARCH_EXPERIMENTS.indexOf(left) - RESEARCH_EXPERIMENTS.indexOf(right);
     });
   const selectedExperiment = RESEARCH_EXPERIMENTS.find((item) => experimentKey(item) === selectedModelKey) ?? RESEARCH_EXPERIMENTS[0];
-  const finalScoredSessions = new Set(
+  const o2ScoredSessions = new Set(
+    (forwardStatus?.model_runs ?? [])
+      .filter((run) => run.model_id === O2_CHALLENGER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+      .map((run) => run.session_date),
+  );
+  const incumbentScoredSessions = new Set(
     (forwardStatus?.model_runs ?? [])
       .filter((run) => run.model_id === FINAL_RANKER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
       .map((run) => run.session_date),
-  ).size;
+  );
+  const pairedScoredSessions = [...o2ScoredSessions].filter((date) => incumbentScoredSessions.has(date)).length;
+  const finalScoredSessions = pairedScoredSessions;
 
   return (
     <main className="appShell editorialShell">
@@ -386,19 +402,19 @@ export default function Home() {
           <div>
           <p className="overviewKicker">MODEL OVERVIEW</p>
             <h1>Research overview</h1>
-            <p className="overviewLead">A compact view of the frozen ranker, its promotion evidence, and the forward monitoring lane.</p>
+            <p className="overviewLead">A compact view of the O2 challenger, its V3-B incumbent reference, and the paired forward monitoring lane.</p>
           </div>
           <div className="overviewStatus">
             <span className="overviewStatusDot" />
-            <span>V3-B / FINAL</span>
-            <strong>Frozen ranker</strong>
+            <span>O2 / PRIMARY CHALLENGER</span>
+            <strong>Forward candidate</strong>
           </div>
         </section>
 
-        <section className="overviewStats" aria-label="Final model facts">
-          <article><span>ACTIVE MODEL</span><strong>{FINAL_RANKER.shortName}</strong><small>V3-B Structure-Lite</small></article>
-          <article><span>FEATURES</span><strong>{FINAL_RANKER.featureCount}</strong><small>25 V2 + 8 structure</small></article>
-          <article><span>DISCOVERY DELTA PR</span><strong className="positiveText">+{pct(FINAL_RANKER.discoveryMedianPairedDeltaPr)}</strong><small>median F1-F4</small></article>
+        <section className="overviewStats" aria-label="Primary challenger and incumbent facts">
+          <article><span>PRIMARY CHALLENGER</span><strong>{O2_CHALLENGER.shortName}</strong><small>O2 Open Geometry · 36 features</small></article>
+          <article><span>INCUMBENT BASELINE</span><strong>V3-B Structure-Lite</strong><small>tracked on the same sessions</small></article>
+          <article><span>HISTORICAL O2</span><strong className="positiveText">6 / 6</strong><small>positive paired folds</small></article>
           <article><span>FORWARD BLOCK</span><strong>{forwardStatusLoading ? "—" : `${finalScoredSessions} / ${FINAL_RANKER.forwardTargetSessions}`}</strong><small>{forwardStatusLoading ? "reading runtime" : "verified score artifacts"}</small></article>
         </section>
 
@@ -406,7 +422,7 @@ export default function Home() {
           <article className="overviewCard overviewEvidenceCard">
             <div className="overviewCardHead">
               <div><span>MODEL EVIDENCE</span><h2>Why {selectedExperiment.generation} {decisionVerb(selectedExperiment.status)}?</h2></div>
-              <strong className={`overviewEvidenceStatus status-${selectedExperiment.status.toLowerCase()}`}>{statusLabel(selectedExperiment.status)}</strong>
+              <strong className={`overviewEvidenceStatus status-${selectedExperiment.status.toLowerCase()}`}>{trackingLabel(selectedExperiment)}</strong>
             </div>
             <div className="overviewEvidenceSelector">
               <span>Inspect model</span>
@@ -433,15 +449,15 @@ export default function Home() {
 
           <article className="overviewCard overviewModelCard">
             <div className="overviewCardHead">
-              <div><span>ACTIVE MODEL</span><h2>{FINAL_RANKER.shortName}</h2></div>
-              <span className="overviewBadge">FINAL</span>
+              <div><span>PRIMARY CHALLENGER</span><h2>{O2_CHALLENGER.shortName}</h2></div>
+              <span className="overviewBadge challengerBadge">O2</span>
             </div>
-            <div className="overviewModelIdentity"><strong>{FINAL_RANKER.id}</strong><span>Outcome-blind scoring</span></div>
+            <div className="overviewModelIdentity"><strong>{O2_CHALLENGER.id}</strong><span>Historical challenger · forward gate pending</span></div>
             <dl className="overviewFacts">
-              <div><dt>Training rows</dt><dd>{FINAL_RANKER.finalRefitRows.toLocaleString("en-US")}</dd></div>
-              <div><dt>Universe</dt><dd>{FINAL_RANKER.finalRefitTickers} tickers</dd></div>
-              <div><dt>Model SHA</dt><dd>{FINAL_RANKER.modelSha256.slice(0, 12)}...</dd></div>
-              <div><dt>Baseline</dt><dd>V2 champion</dd></div>
+              <div><dt>Training rows</dt><dd>{O2_CHALLENGER.finalRefitRows.toLocaleString("en-US")}</dd></div>
+              <div><dt>Universe</dt><dd>{O2_CHALLENGER.finalRefitTickers} tickers</dd></div>
+              <div><dt>Model SHA</dt><dd>{O2_CHALLENGER.modelSha256.slice(0, 12)}...</dd></div>
+              <div><dt>Incumbent</dt><dd>V3-B Structure-Lite</dd></div>
             </dl>
             <a className="overviewLink" href="/monitoring">Open forward monitoring -&gt;</a>
           </article>

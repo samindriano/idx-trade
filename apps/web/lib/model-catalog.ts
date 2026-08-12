@@ -23,6 +23,8 @@ export type ResearchExperiment = {
   name: string;
   candidate: string;
   status: ResearchStatus;
+  trackingRole?: "PRIMARY_CHALLENGER" | "INCUMBENT" | "REFERENCE";
+  historicalRank?: number;
   result: string;
   note: string;
   evidence?: ResearchEvidence;
@@ -58,6 +60,22 @@ export const V2_CHAMPION = {
   forwardTargetSessions: 100,
 } as const;
 
+export const O2_CHALLENGER = {
+  id: "O2-GEOMETRY-FULL3-V1-CANDIDATE-001",
+  shortName: "O2 Open Geometry",
+  generation: "O2",
+  featureCount: 36,
+  finalRefitRows: 278168,
+  finalRefitTickers: 729,
+  modelSha256: "42442e438f04ff40e0637fa3a536bbe9b4ab8f50c8556d350ca0e908d592ccfb",
+  manifestSha256: "535875e74a1b3a6532e95addf819521758798a767bc49ee9b30d54054a0ae7c2",
+  featureOrderSha256: "a2f04da9100eca4c3896330c2188df0e5afa6371f9a4baec2f4fea10495b980f",
+  historicalMedianPairedDeltaPr: 0.007276,
+  historicalPositiveFolds: 6,
+  historicalFoldCount: 6,
+  forwardTargetSessions: 100,
+} as const;
+
 export const V3_B_DISCOVERY_FOLDS = [
   { fold: "F1", deltaPr: 0.007948, roc: 0.002743, qSpread: 0.013084 },
   { fold: "F2", deltaPr: 0.001841, roc: 0.009782, qSpread: 0.015608 },
@@ -72,6 +90,42 @@ const V2_CHAMPION_FOLDS = [
   { fold: "F4", deltaPr: 0.0382948851 },
   { fold: "F5", deltaPr: 0.0260816692 },
   { fold: "F6", deltaPr: 0.0186432663 },
+] as const;
+
+const O1A_OVERNIGHT_FOLDS = [
+  { fold: "F1", deltaPr: -0.001292 },
+  { fold: "F2", deltaPr: 0.002084 },
+  { fold: "F3", deltaPr: 0.001636 },
+  { fold: "F4", deltaPr: -0.014955 },
+  { fold: "F5", deltaPr: -0.001660 },
+  { fold: "F6", deltaPr: 0.012650 },
+] as const;
+
+const O1B_INTRADAY_FOLDS = [
+  { fold: "F1", deltaPr: 0.002337 },
+  { fold: "F2", deltaPr: -0.000978 },
+  { fold: "F3", deltaPr: 0.002112 },
+  { fold: "F4", deltaPr: -0.004234 },
+  { fold: "F5", deltaPr: 0.001520 },
+  { fold: "F6", deltaPr: 0.011821 },
+] as const;
+
+const O1C_DECOMPOSITION_FOLDS = [
+  { fold: "F1", deltaPr: 0.000809 },
+  { fold: "F2", deltaPr: 0.003499 },
+  { fold: "F3", deltaPr: -0.000971 },
+  { fold: "F4", deltaPr: -0.012118 },
+  { fold: "F5", deltaPr: 0.003842 },
+  { fold: "F6", deltaPr: 0.025485 },
+] as const;
+
+const O2_OPEN_GEOMETRY_FOLDS = [
+  { fold: "F1", deltaPr: 0.003866 },
+  { fold: "F2", deltaPr: 0.000451 },
+  { fold: "F3", deltaPr: 0.007242 },
+  { fold: "F4", deltaPr: 0.007310 },
+  { fold: "F5", deltaPr: 0.012031 },
+  { fold: "F6", deltaPr: 0.013823 },
 ] as const;
 
 const V3_A_H252_FOLDS = [
@@ -153,6 +207,8 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     name: "HGB XS + Market",
     candidate: "HGB_XS_MARKET",
     status: "BASELINE",
+    trackingRole: "REFERENCE",
+    historicalRank: 3,
     result: "Historical V2 champion",
     note: "Median ΔPR +2.39%, median ROC 0.5244, median Q5−Q1 +5.12% across six folds.",
     keyFindings: [
@@ -192,6 +248,8 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
     name: "Structure-Lite",
     candidate: FINAL_RANKER.id,
     status: "FINAL",
+    trackingRole: "INCUMBENT",
+    historicalRank: 2,
     result: "Promoted + late confirmation PASS",
     note: "Only surviving V3 component. Exact V2 information set plus eight causal price-geometry features.",
     keyFindings: [
@@ -203,6 +261,48 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
       metricLabel: "Paired PR-AUC delta vs V2",
       caption: "Paired discovery PR-AUC improved across every F1-F4 fold.",
       series: [{ label: "V3-B / V2", points: V3_B_DISCOVERY_FOLDS }],
+    },
+  },
+  {
+    generation: "O1",
+    name: "Raw Open features",
+    candidate: "O1A / O1B / O1C",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Overnight-gap, intraday-return, and decomposition variants all failed the frozen lower-quartile paired-improvement gate.",
+    keyFindings: [
+      "O1A, O1B, and O1C did not produce a robust survivor.",
+      "The strongest median uplift was only +0.215%, with a negative lower quartile.",
+      "O1 was closed without rescue or post-hoc tuning.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "All three O1 Open variants are shown across the six historical development folds.",
+      series: [
+        { label: "O1A overnight", points: O1A_OVERNIGHT_FOLDS },
+        { label: "O1B intraday", points: O1B_INTRADAY_FOLDS },
+        { label: "O1C decomposition", points: O1C_DECOMPOSITION_FOLDS },
+      ],
+    },
+  },
+  {
+    generation: "O2",
+    name: "Open Geometry",
+    candidate: O2_CHALLENGER.id,
+    status: "RESEARCH",
+    trackingRole: "PRIMARY_CHALLENGER",
+    historicalRank: 1,
+    result: "Primary challenger · 6/6 historical folds",
+    note: "Full three-feature Open geometry is the strongest historical challenger, but it remains unpromoted until its separate 100-session fresh-forward gate completes.",
+    keyFindings: [
+      "Paired PR-AUC uplift was positive in all six historical folds.",
+      "Median paired PR-AUC delta was +0.7276%; lower quartile was +0.4710%.",
+      "O2 is tracked against the unchanged V3-B incumbent on identical forward sessions.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "O2 Open Geometry is the primary historical challenger; fresh-forward validation remains separate.",
+      series: [{ label: "O2 Open Geometry", points: O2_OPEN_GEOMETRY_FOLDS }],
     },
   },
   {
