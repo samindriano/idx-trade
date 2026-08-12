@@ -18,6 +18,18 @@ type MonitorRuntimeStatus = {
   data_ready_sessions: number;
   model_runs: RuntimeModelRun[];
   outcome_access: "LOCKED";
+  o2_1_shadow?: {
+    status: string;
+    shadow_sessions_aligned?: number;
+    shadow_target_sessions?: number;
+    o2_coverage?: string | null;
+    shadow_coverage?: string | null;
+    flat_range_included?: number | null;
+    flat_share?: number | null;
+    sealed_shadow: boolean;
+    promotion_eligible: false;
+    independent_official_counter: false;
+  } | null;
 };
 
 type StatusResponse = {
@@ -98,6 +110,8 @@ export default function ModelDetailPage() {
   const latestScored = scoredRuns[0] ?? null;
   const latestRun = modelRuns[0] ?? null;
   const coverage = Math.min(100, scoredRuns.length);
+  const shadow = status?.o2_1_shadow ?? null;
+  const shadowShare = shadow?.flat_share == null ? "—" : `${(shadow.flat_share * 100).toFixed(1)}%`;
 
   return (
     <main className="appShell monitorShell">
@@ -148,6 +162,26 @@ export default function ModelDetailPage() {
             <p>It reports forward score evidence only; realized returns and other outcome metrics are not shown here.</p>
           </article>
         </section>
+
+        {params.modelId === "o2" && (
+          <section className="modelDetailShadow" aria-label="O2.1 sealed shadow diagnostic">
+            <div className="modelDetailShadowHead">
+              <div>
+                <span>O2.1 FLAT-RANGE SHADOW</span>
+                <h2>Experimental · sealed diagnostic</h2>
+              </div>
+              <strong>{shadow?.status === "SEALED" ? "SEALED" : "NOT READY"}</strong>
+            </div>
+            <p className="modelDetailShadowContract">37 features · market-aware base · includes true flat-range rows</p>
+            <div className="modelDetailShadowFacts">
+              <div><span>Shadow sessions</span><strong>{shadow ? `${shadow.shadow_sessions_aligned ?? 0} / ${shadow.shadow_target_sessions ?? 100} aligned` : "—"}</strong></div>
+              <div><span>O2 coverage</span><strong>{shadow?.o2_coverage ?? "—"}</strong></div>
+              <div><span>O2.1 shadow coverage</span><strong>{shadow?.shadow_coverage ?? "—"}</strong></div>
+              <div><span>Flat-range included</span><strong>{shadow?.flat_range_included == null ? "—" : `${shadow.flat_range_included} · ${shadowShare}`}</strong></div>
+            </div>
+            <small>Stored alongside the existing O2 session archive. It has no independent counter or promotion status.</small>
+          </section>
+        )}
 
         <section className="modelDetailRuns">
           <div className="modelDetailRunsHead"><div><span>FORWARD SESSION HISTORY</span><h2>Recent score runs</h2></div><small>{loading ? "Reading runtime..." : `${modelRuns.length} run(s) recorded`}</small></div>

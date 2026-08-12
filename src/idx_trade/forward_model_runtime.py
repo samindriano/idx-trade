@@ -840,7 +840,7 @@ def _finish_model(paths, session_key: str, spec: FrozenModelSpec, artifact: Path
     )
 
 
-def _run_session(paths, session_key: str) -> None:
+def _run_session(paths, session_key: str) -> tuple[pd.DataFrame, dict[str, Any]] | None:
     connection = _connection(paths)
     try:
         queued = [
@@ -853,18 +853,18 @@ def _run_session(paths, session_key: str) -> None:
     finally:
         connection.close()
     if not queued:
-        return
+        return None
 
     specs = [spec for spec in FROZEN_MODELS if any(row["model_id"] == spec.model_id for row in queued)]
     claimed = [spec for spec in specs if _claim_queued(paths, session_key, spec)]
     if not claimed:
-        return
+        return None
     try:
         v2_features, v3_features, metadata = _build_features(paths, session_key)
     except Exception as error:
         for spec in claimed:
             _fail_model(paths, session_key, spec, error)
-        return
+        return None
 
     o2_features: pd.DataFrame | None = None
     if any(spec.model_id == O2_MODEL_ID for spec in claimed):
@@ -889,6 +889,7 @@ def _run_session(paths, session_key: str) -> None:
             _finish_model(paths, session_key, spec, artifact, manifest, artifact_sha, manifest_sha)
         except Exception as error:
             _fail_model(paths, session_key, spec, error)
+    return v3_features, metadata
 
 
 def run_queued_model_jobs(runtime_root: str | Path, session_dates: Iterable[object] | None = None) -> dict[str, Any]:
@@ -904,9 +905,30 @@ def run_queued_model_jobs(runtime_root: str | Path, session_dates: Iterable[obje
         ]
     finally:
         connection.close()
+    shadow_runs: list[dict[str, Any]] = []
+    shadow_errors: list[dict[str, str]] = []
     for session_key in sessions:
-        _run_session(paths, session_key)
-    return {"status": "MODEL_RUNS_RECONCILED", "sessions": sessions, "outcome_access": "LOCKED"}
+        shadow_inputs = _run_session(paths, session_key)
+        if shadow_inputs is None:
+            continue
+        v3_features, metadata = shadow_inputs
+        try:
+            from .o2_1_sealed_shadow_runtime import score_o21_shadow_session
+
+            shadow_runs.append(score_o21_shadow_session(paths, session_key, v3_features, metadata))
+        except FileNotFoundError:
+            # The sealed shadow is intentionally opt-in and is not allowed to
+            # make the primary V2/V3-B/O2 fan-out fail before it is frozen.
+            continue
+        except Exception as error:
+            shadow_errors.append({"session_date": session_key, "error": str(error)[:4000]})
+    return {
+        "status": "MODEL_RUNS_RECONCILED",
+        "sessions": sessions,
+        "shadow_runs": shadow_runs,
+        "shadow_errors": shadow_errors,
+        "outcome_access": "LOCKED",
+    }
 
 
 def _pid_alive(pid: int) -> bool:

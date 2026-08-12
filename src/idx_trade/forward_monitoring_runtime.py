@@ -99,6 +99,9 @@ def monitoring_status(runtime_root: str | Path) -> dict[str, Any]:
         from .forward_model_runtime import request_model_worker
 
         request_model_worker(runtime_root, ready_dates)
+    from .o2_1_sealed_shadow_runtime import shadow_status
+
+    shadow = shadow_status(runtime_root)
 
     session_rows: list[dict[str, Any]] = []
     for date in calendar:
@@ -152,6 +155,7 @@ def monitoring_status(runtime_root: str | Path) -> dict[str, Any]:
         "data_ready_sessions": ready_count,
         "sessions": session_rows[-30:],
         "model_runs": models[-200:],
+        "o2_1_shadow": shadow,
         "outcome_access": "LOCKED",
         "forward_outcomes_accessed": False,
         "generated_at_utc": base._utcnow(),

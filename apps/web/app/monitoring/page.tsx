@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FINAL_RANKER, O2_CHALLENGER } from "@/lib/model-catalog";
+import { FINAL_RANKER, O2_CHALLENGER, V2_CHAMPION } from "@/lib/model-catalog";
 
 type SessionState = "AVAILABLE" | "FETCHING" | "DATA_READY" | "DATA_FAILED";
 
@@ -168,6 +168,15 @@ export default function MonitoringPage() {
     );
   }, [status]);
 
+  const v2ScoredDates = useMemo(() => {
+    if (!status) return new Set<string>();
+    return new Set(
+      status.model_runs
+        .filter((run) => run.model_id === V2_CHAMPION.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+        .map((run) => run.session_date),
+    );
+  }, [status]);
+
   const o2ForwardDates = o2ScoredDates;
 
   const pairedScoredDates = useMemo(
@@ -292,6 +301,22 @@ export default function MonitoringPage() {
               <span>SHA {FINAL_RANKER.modelSha256.slice(0, 10)}...</span>
             </div>
             <p className="modelCardNote">Incumbent reference; tracked on the same captured sessions.</p>
+            <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
+          </a>
+
+          <a className="surface modelCardLink referenceModelPanel" href="/monitoring/models/v2" aria-label={`View forward detail for ${V2_CHAMPION.shortName}`}>
+            <div className="sectionHead compact">
+              <div><span>HISTORICAL BASELINE</span><h2>{V2_CHAMPION.shortName}</h2></div>
+            </div>
+            <div className="contractProgress">
+              <div className="contractNumber"><strong>{statusLoading ? "—" : v2ScoredDates.size}</strong>{!statusLoading && <span>/ {V2_CHAMPION.forwardTargetSessions}</span>}</div>
+              <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : Math.min(100, v2ScoredDates.size)}%` }} /></div>
+            </div>
+            <div className="modelMeta">
+              <span>{V2_CHAMPION.featureCount} features</span>
+              <span>SHA {V2_CHAMPION.modelSha256.slice(0, 10)}...</span>
+            </div>
+            <p className="modelCardNote">Historical reference; retained in the same automated monitoring archive.</p>
             <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
           </a>
           </div>

@@ -32,6 +32,30 @@ export type RuntimeModelRun = {
   error_message?: string | null;
 };
 
+export type O21ShadowStatus = {
+  status: "NOT_FROZEN" | "SEALED" | string;
+  model_id: string;
+  generation?: string;
+  model_sha256?: string;
+  feature_order_sha256?: string;
+  training_support_sha256?: string;
+  feature_count?: number;
+  shadow_sessions_aligned?: number;
+  shadow_target_sessions?: number;
+  latest_session_date?: string | null;
+  o2_coverage?: string | null;
+  shadow_coverage?: string | null;
+  flat_range_included?: number | null;
+  flat_share?: number | null;
+  sealed_shadow: boolean;
+  promotion_eligible: false;
+  independent_official_counter: false;
+  outcome_blind?: boolean;
+  fresh_forward_outcomes_accessed: false;
+  forward_outcome_access_marker_written: false;
+  artifact_manifest_path?: string;
+};
+
 export type MonitorRuntimeStatus = {
   schema_version: number;
   runtime_ready: boolean;
@@ -44,6 +68,7 @@ export type MonitorRuntimeStatus = {
   data_ready_sessions: number;
   sessions: MonitorSession[];
   model_runs: RuntimeModelRun[];
+  o2_1_shadow?: O21ShadowStatus | null;
   outcome_access: "LOCKED";
   forward_outcomes_accessed: false;
   generated_at_utc: string;
