@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\.codex\worktrees\idx-forward-calendar-extension-v1
 source_commit: bcbdcb06fefd8aa59f497bc3db0c22f87763b2f9
 branch: data/idx-forward-calendar-extension-v1
-head_commit: pending runtime checkpoint commit
+head_commit: 535c72962a3d0968be364485e679f06659cde07c
 scope: Evidence-only official IDX forward calendar extension anchored at historical session 1260.
 files_changed:
   - src/idx_trade/forward_calendar_extension.py
