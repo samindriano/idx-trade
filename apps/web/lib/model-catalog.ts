@@ -1,8 +1,10 @@
 export type ResearchStatus = "FINAL" | "BASELINE" | "FAIL" | "BLOCKED" | "RESEARCH";
+export type ResearchComparisonClass = "V2_BASELINE" | "OPEN_FEATURES" | "V3_VARIANTS" | "V4_VARIANTS" | "RISK";
 
 export type ResearchFoldMetric = {
   fold: string;
   deltaPr: number;
+  score?: number;
   roc?: number;
   qSpread?: number;
 };
@@ -20,6 +22,7 @@ export type ResearchEvidence = {
 
 export type ResearchExperiment = {
   generation: string;
+  comparisonClass: ResearchComparisonClass;
   name: string;
   candidate: string;
   status: ResearchStatus;
@@ -204,6 +207,7 @@ const V4_C_FOLDS = [
 export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   {
     generation: "V2",
+    comparisonClass: "V2_BASELINE",
     name: "HGB XS + Market",
     candidate: "HGB_XS_MARKET",
     status: "BASELINE",
@@ -224,6 +228,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V3-A",
+    comparisonClass: "V3_VARIANTS",
     name: "Recency weighting",
     candidate: "H252 / H504",
     status: "FAIL",
@@ -245,6 +250,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V3-B",
+    comparisonClass: "V3_VARIANTS",
     name: "Structure-Lite",
     candidate: FINAL_RANKER.id,
     status: "FINAL",
@@ -265,6 +271,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "O1",
+    comparisonClass: "OPEN_FEATURES",
     name: "Raw Open features",
     candidate: "O1A / O1B / O1C",
     status: "FAIL",
@@ -287,6 +294,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "O2",
+    comparisonClass: "OPEN_FEATURES",
     name: "Open Geometry",
     candidate: O2_CHALLENGER.id,
     status: "RESEARCH",
@@ -307,6 +315,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V3-C",
+    comparisonClass: "V3_VARIANTS",
     name: "Regime specialization",
     candidate: "TWO-EXPERT-007",
     status: "FAIL",
@@ -325,6 +334,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V3-D",
+    comparisonClass: "V3_VARIANTS",
     name: "Sector relative",
     candidate: "008 / 009",
     status: "BLOCKED",
@@ -339,6 +349,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V3-E",
+    comparisonClass: "V3_VARIANTS",
     name: "True ranking / LambdaMART",
     candidate: "LAMBDAMART-011",
     status: "FAIL",
@@ -357,6 +368,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V4-A",
+    comparisonClass: "V4_VARIANTS",
     name: "Participation quality",
     candidate: "013 / 014",
     status: "FAIL",
@@ -378,6 +390,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V4-B",
+    comparisonClass: "V4_VARIANTS",
     name: "Price-path quality",
     candidate: "016 / 017",
     status: "FAIL",
@@ -399,6 +412,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "V4-C",
+    comparisonClass: "V4_VARIANTS",
     name: "Cross-sectional dispersion",
     candidate: "019",
     status: "FAIL",
@@ -417,6 +431,7 @@ export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
   },
   {
     generation: "Risk",
+    comparisonClass: "RISK",
     name: "Path Risk V1",
     candidate: "PATH-RISK-A-Q75-HGB-001",
     status: "FAIL",

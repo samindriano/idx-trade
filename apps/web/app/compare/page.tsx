@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   RESEARCH_EXPERIMENTS,
   type ResearchExperiment,
+  type ResearchComparisonClass,
   type ResearchEvidence,
   type ResearchFoldMetric,
 } from "@/lib/model-catalog";
@@ -13,6 +14,14 @@ type ComparisonGroup = {
   key: string;
   label: string;
   experiments: ComparableExperiment[];
+};
+
+const comparisonClassLabels: Record<ResearchComparisonClass, string> = {
+  V2_BASELINE: "V2 baseline",
+  OPEN_FEATURES: "Open-feature models",
+  V3_VARIANTS: "V3 variants",
+  V4_VARIANTS: "V4 variants",
+  RISK: "Risk models",
 };
 
 type SecondaryMetric = {
@@ -51,6 +60,9 @@ const comparisonGroups: ComparisonGroup[] = (() => {
 })();
 
 const defaultGroup = comparisonGroups.find((group) => group.key === "Paired PR-AUC change vs V3-B") ?? comparisonGroups[0];
+const defaultClass = defaultGroup?.experiments[0]?.comparisonClass ?? "V3_VARIANTS";
+const baselineExperiment = comparableExperiments.find((experiment) => experiment.generation === "V3-B") ?? null;
+const challengerSlotCount = 2;
 const secondaryMetrics: readonly SecondaryMetric[] = [
   { key: "roc", label: "ROC-AUC", format: (value) => value.toFixed(4) },
   { key: "qSpread", label: "Q5-Q1 spread", format: (value) => `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%` },
@@ -62,6 +74,13 @@ function Logo() {
 
 function experimentKey(item: ResearchExperiment) {
   return `${item.generation}:${item.candidate}`;
+}
+
+function firstKeysFor(group: ComparisonGroup | undefined, comparisonClass: ResearchComparisonClass | "") {
+  return (group?.experiments ?? [])
+    .filter((experiment) => experiment.comparisonClass === comparisonClass)
+    .slice(0, challengerSlotCount)
+    .map(experimentKey);
 }
 
 function statusLabel(status: ResearchExperiment["status"]) {
@@ -115,21 +134,75 @@ function metricCells(
   });
 }
 
+function comparisonCells(experiment: ComparableExperiment | null, fold: string, baseline: boolean) {
+  if (baseline) {
+    const baselineSeries = experiment?.evidence.series ?? [];
+    if (baselineSeries.some((series) => typeof pointFor(series, fold)?.score === "number")) {
+      return baselineSeries.map((series) => {
+        const point = pointFor(series, fold);
+        return (
+          <div className="compareSeriesValue compareBaselineValue" key={`${series.label}-${fold}-baseline`}>
+            {baselineSeries.length > 1 && <span>{series.label}</span>}
+            <strong>{typeof point?.score === "number" ? point.score.toFixed(6) : "—"}</strong>
+            <small>Baseline reference</small>
+          </div>
+        );
+      });
+    }
+    return (
+      <div className="compareSeriesValue compareBaselineValue">
+        <strong>—</strong>
+        <small>Absolute score unavailable</small>
+      </div>
+    );
+  }
+  if (!experiment) return <span className="compareEmptyCell">Not selected</span>;
+  return experiment.evidence.series.map((series) => {
+    const point = pointFor(series, fold);
+    const delta = point?.deltaPr;
+    return (
+      <div className="compareSeriesValue" key={`${series.label}-${fold}-comparison`}>
+        {experiment.evidence.series.length > 1 && <span>{series.label}</span>}
+        <strong className={typeof delta === "number" && delta >= 0 ? "comparePositive" : "compareNegative"}>
+          {typeof point?.score === "number" ? point.score.toFixed(6) : "—"}
+        </strong>
+        <small>{typeof delta === "number" ? `(${signedPercent(delta)})` : "Paired delta unavailable"}</small>
+      </div>
+    );
+  });
+}
+
 export default function ComparePage() {
   const [groupKey, setGroupKey] = useState(defaultGroup?.key ?? "");
+  const [comparisonClass, setComparisonClass] = useState<ResearchComparisonClass | "">(defaultClass);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => [
-    ...(defaultGroup?.experiments.slice(0, 3).map(experimentKey) ?? []),
+    ...firstKeysFor(defaultGroup, defaultClass),
     "",
     "",
-  ].slice(0, 3));
+  ].slice(0, challengerSlotCount));
 
   const activeGroup = comparisonGroups.find((group) => group.key === groupKey) ?? comparisonGroups[0];
+  const classOptions = useMemo(() => {
+    const counts = new Map<ResearchComparisonClass, number>();
+    for (const experiment of activeGroup?.experiments ?? []) {
+      counts.set(experiment.comparisonClass, (counts.get(experiment.comparisonClass) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([key, count]) => ({ key, count }));
+  }, [activeGroup]);
+  const activeClass = classOptions.some((option) => option.key === comparisonClass)
+    ? comparisonClass
+    : classOptions[0]?.key ?? "";
+  const compatibleExperiments = useMemo(
+    () => (activeGroup?.experiments ?? []).filter((experiment) => experiment.comparisonClass === activeClass),
+    [activeClass, activeGroup],
+  );
   const availableByKey = useMemo(
-    () => new Map((activeGroup?.experiments ?? []).map((item) => [experimentKey(item), item])),
-    [activeGroup],
+    () => new Map(compatibleExperiments.map((item) => [experimentKey(item), item])),
+    [compatibleExperiments],
   );
   const selectedExperiments = selectedKeys.map((key) => availableByKey.get(key) ?? null);
-  const folds = allFolds(selectedExperiments);
+  const comparisonColumns = [baselineExperiment, ...selectedExperiments];
+  const folds = allFolds(comparisonColumns);
   const completeSelections = selectedExperiments.filter((item): item is ComparableExperiment => Boolean(item));
   const comparableSecondaryMetrics = secondaryMetrics.filter((metric) =>
     completeSelections.length > 0 && completeSelections.every((experiment) => hasMetric(experiment, metric.key)),
@@ -137,8 +210,15 @@ export default function ComparePage() {
 
   function changeGroup(nextKey: string) {
     const nextGroup = comparisonGroups.find((group) => group.key === nextKey);
+    const nextClass = nextGroup?.experiments[0]?.comparisonClass ?? "";
     setGroupKey(nextKey);
-    setSelectedKeys([...(nextGroup?.experiments.slice(0, 3).map(experimentKey) ?? []), "", ""].slice(0, 3));
+    setComparisonClass(nextClass);
+    setSelectedKeys([...firstKeysFor(nextGroup, nextClass), "", ""].slice(0, challengerSlotCount));
+  }
+
+  function changeComparisonClass(nextClass: ResearchComparisonClass) {
+    setComparisonClass(nextClass);
+    setSelectedKeys([...firstKeysFor(activeGroup, nextClass), "", ""].slice(0, challengerSlotCount));
   }
 
   function changeSlot(slot: number, value: string) {
@@ -173,19 +253,27 @@ export default function ComparePage() {
             <div><span>COMPARISON CONTRACT</span><h2>Choose one metric family</h2></div>
             <p>The benchmark and primary metric are part of the evidence contract. Models from different contracts stay in separate views.</p>
           </div>
-          <label className="compareGroupSelect">
-            <span>Metric family</span>
-            <select value={activeGroup?.key ?? ""} onChange={(event) => changeGroup(event.target.value)}>
-              {comparisonGroups.map((group) => <option value={group.key} key={group.key}>{group.label} ({group.experiments.length})</option>)}
-            </select>
-          </label>
-          <div className="compareModelSelectors" aria-label="Choose up to three comparable models">
+          <div className="compareGroupSelectors">
+            <label className="compareGroupSelect">
+              <span>Metric family</span>
+              <select value={activeGroup?.key ?? ""} onChange={(event) => changeGroup(event.target.value)}>
+                {comparisonGroups.map((group) => <option value={group.key} key={group.key}>{group.label} ({group.experiments.length})</option>)}
+              </select>
+            </label>
+            <label className="compareGroupSelect">
+              <span>Model class</span>
+              <select value={activeClass} onChange={(event) => changeComparisonClass(event.target.value as ResearchComparisonClass)}>
+                {classOptions.map(({ key, count }) => <option value={key} key={key}>{comparisonClassLabels[key]} ({count})</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="compareModelSelectors" aria-label="Choose up to two challenger models">
             {selectedKeys.map((selectedKey, slot) => (
               <label className="compareModelSelector" key={`slot-${slot}`}>
-                <span>Model {slot + 1}</span>
+                <span>Challenger {slot + 1}</span>
                 <select value={selectedKey} onChange={(event) => changeSlot(slot, event.target.value)}>
                   <option value="">Choose model</option>
-                  {(activeGroup?.experiments ?? []).map((experiment) => {
+                  {compatibleExperiments.map((experiment) => {
                     const key = experimentKey(experiment);
                     const usedElsewhere = selectedKeys.some((otherKey, otherSlot) => otherSlot !== slot && otherKey === key);
                     return <option value={key} key={key} disabled={usedElsewhere}>{experiment.generation} / {experiment.name}</option>;
@@ -194,7 +282,7 @@ export default function ComparePage() {
               </label>
             ))}
           </div>
-          <div className="compareContractNote"><i /> Showing {completeSelections.length} of 3 model slots. Every value is historical development evidence; missing folds remain blank.</div>
+          <div className="compareContractNote"><i /> V3-B is the fixed baseline. Showing {completeSelections.length} of {challengerSlotCount} challenger slots; missing folds remain blank.</div>
         </section>
 
         <section className="surface compareTablePanel">
@@ -202,15 +290,20 @@ export default function ComparePage() {
             <div><span>FOLD-BY-FOLD VIEW</span><h2>{activeGroup?.label ?? "No metric family"}</h2></div>
             <span className="compareFoldCount">{folds.length ? `${folds[0]}-${folds[folds.length - 1]}` : "No folds"}</span>
           </div>
-          <p className="comparePanelCopy">Three-column comparison, GSM Arena style. Multiple series inside one model stay labeled instead of being averaged together.</p>
-
+          <div className="compareNormalizationNote">
+            <strong>Comparison basis</strong>
+            <p>
+              V3-B stays fixed on the left as the incumbent baseline. Each challenger cell is formatted as absolute score plus paired delta when those values are certified.
+              {selectedExperiments.some((experiment) => experiment?.generation === "O2") && " O2 support-normalized absolute scores are not present in the current catalog; missing rows are not imputed or reweighted here."}
+            </p>
+          </div>
           <div className="compareTableScroll">
             <div className="compareTable">
               <div className="compareTableHeader compareFoldHeader">FOLD</div>
-              {selectedExperiments.map((experiment, index) => (
+              {comparisonColumns.map((experiment, index) => (
                 <div className="compareTableHeader compareModelHeader" key={`header-${index}`}>
                   {experiment ? (
-                    <><span>{experiment.generation} / {statusLabel(experiment.status)}</span><strong>{experiment.name}</strong><small>{experiment.candidate}</small></>
+                    <><span>{index === 0 ? "V3-B / BASELINE" : `${experiment.generation} / ${statusLabel(experiment.status)}`}</span><strong>{experiment.name}</strong><small>{experiment.candidate}</small></>
                   ) : <span>Choose model</span>}
                 </div>
               ))}
@@ -218,9 +311,9 @@ export default function ComparePage() {
               {folds.map((fold) => (
                 <div className="compareTableRow" key={fold}>
                   <div className="compareFoldCell">{fold}</div>
-                  {selectedExperiments.map((experiment, index) => (
+                  {comparisonColumns.map((experiment, index) => (
                     <div className="compareMetricCell" key={`${fold}-${index}`}>
-                      {metricCells(experiment, fold, "deltaPr", signedPercent)}
+                      {comparisonCells(experiment, fold, index === 0)}
                     </div>
                   ))}
                 </div>

@@ -954,17 +954,20 @@ body {
 .compareControlIntro h2, .comparePanelHead h2, .compareInfoCard h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.05; letter-spacing: -.045em; }
 .compareControlIntro > p { max-width: 470px; margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
 .compareGroupSelect, .compareModelSelector { display: grid; gap: 6px; }
-.compareGroupSelect { max-width: 520px; margin-top: 15px; }
+.compareGroupSelectors { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .62fr); gap: 10px; margin-top: 15px; }
+.compareGroupSelectors .compareGroupSelect { max-width: none; margin-top: 0; }
 .compareGroupSelect > span, .compareModelSelector > span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .compareGroupSelect select, .compareModelSelector select { min-height: 38px; padding: 0 30px 0 11px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.62); color: var(--editorial-ink); font: inherit; font-size: 11px; }
 .compareGroupSelect select:focus-visible, .compareModelSelector select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
-.compareModelSelectors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
+.compareModelSelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
 .compareContractNote { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--editorial-muted); font-size: 10px; line-height: 1.4; }
 .compareContractNote i { width: 7px; height: 7px; flex: 0 0 7px; background: var(--editorial-green); }
+.compareNormalizationNote { display: grid; gap: 4px; margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--editorial-green); background: rgba(226, 244, 235, .62); }
+.compareNormalizationNote strong { color: var(--editorial-ink); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.compareNormalizationNote p { margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
 .compareTablePanel { margin-top: 14px; padding: 18px 20px 20px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.48); box-shadow: 0 1px 0 rgba(17,21,18,.10), 0 10px 24px rgba(17,21,18,.035); }
 .comparePanelHead { display: flex; justify-content: space-between; gap: 16px; align-items: start; padding-bottom: 14px; border-bottom: 1px solid var(--editorial-line); }
 .compareFoldCount { color: var(--editorial-green-dark); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-.comparePanelCopy { margin: 11px 0 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
 .compareTableScroll { overflow-x: auto; margin-top: 16px; padding-bottom: 4px; }
 .compareTable { display: grid; grid-template-columns: 68px repeat(3, minmax(205px, 1fr)); min-width: 700px; }
 .compareTableHeader { min-height: 74px; padding: 11px 12px; border-top: 2px solid var(--editorial-ink); border-bottom: 1px solid var(--editorial-line); background: rgba(235,233,226,.82); }
@@ -981,6 +984,8 @@ body {
 .compareSeriesValue + .compareSeriesValue { padding-top: 4px; border-top: 1px dashed var(--editorial-line-soft); }
 .compareSeriesValue span { overflow: hidden; color: var(--editorial-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .compareSeriesValue strong { font-size: 15px; letter-spacing: -.04em; white-space: nowrap; }
+.compareSeriesValue small { color: var(--editorial-muted); font-size: 10px; }
+.compareBaselineValue strong { color: var(--editorial-muted); }
 .comparePositive { color: var(--editorial-green-dark); }
 .compareNegative { color: var(--editorial-red); }
 .compareEmptyCell { display: block; padding-top: 4px; color: var(--editorial-muted); font-size: 10px; }
@@ -1001,6 +1006,7 @@ body {
   .compareBackLink { display: inline-flex; margin-top: 16px; }
   .compareControlIntro { display: block; }
   .compareControlIntro > p { margin-top: 9px; }
+  .compareGroupSelectors { grid-template-columns: 1fr; }
   .compareSecondaryGrid { grid-template-columns: 1fr; }
 }
 
