@@ -189,6 +189,162 @@ def session_deciles(frame: pd.DataFrame) -> pd.DataFrame:
     return ordered
 
 
+def protected_runtime_flags() -> dict[str, bool]:
+    """The V0 lane must never touch protected forward/runtime state."""
+    return {
+        "fresh_forward_outcomes_accessed": False,
+        "forward_outcome_access_marker_written": False,
+        "provider_calls": False,
+        "o2_model_modified": False,
+        "payoff_model_fit": False,
+    }
+
+
+def validate_parent_historical_dates(parent: pd.DataFrame, max_date: pd.Timestamp = MAX_ALLOWED_DATE) -> None:
+    if (pd.to_datetime(parent["date"]) > max_date).any():
+        raise PayoffDataBlocked(f"parent contains a signal date after frozen cutoff {max_date.date()}")
+
+
+def evaluate_gates(
+    *,
+    parent_rows: int,
+    resolved_rows: int,
+    fold_metrics: pd.DataFrame,
+    parent_key_sha: str,
+    expected_parent_key_sha: str,
+) -> dict:
+    """Evaluate the frozen readiness and feasibility gates without side effects."""
+    global_coverage = float(resolved_rows / parent_rows) if parent_rows else 0.0
+    readiness_by_fold = fold_metrics.coverage_ratio.ge(0.85) & fold_metrics.eligible_signal_sessions.ge(80)
+    data_ready = bool(
+        global_coverage >= 0.90
+        and readiness_by_fold.all()
+        and parent_key_sha == expected_parent_key_sha
+    )
+    if data_ready:
+        median_ic = float(fold_metrics.median_session_ic_atr.median())
+        q25_ic = float(fold_metrics.median_session_ic_atr.quantile(0.25))
+        positive_ic = int((fold_metrics.median_session_ic_atr > 0).sum())
+        median_spread = float(fold_metrics.mean_d10_minus_d1_mean_payoff_atr.median())
+        positive_spread = int((fold_metrics.mean_d10_minus_d1_mean_payoff_atr > 0).sum())
+    else:
+        median_ic = q25_ic = median_spread = float("nan")
+        positive_ic = positive_spread = 0
+    if not data_ready:
+        verdict = "EXPECTED_PAYOFF_V0_DATA_BLOCKED"
+    elif median_ic > 0 and q25_ic > 0 and positive_ic >= 4 and median_spread > 0 and positive_spread >= 4:
+        verdict = "EXPECTED_PAYOFF_V0_FEASIBILITY_GO"
+    else:
+        verdict = "EXPECTED_PAYOFF_V0_NO_SIGNAL"
+    return {
+        "data_ready": data_ready,
+        "global_coverage": global_coverage,
+        "fold_coverage_min": float(fold_metrics.coverage_ratio.min()),
+        "fold_eligible_sessions_min": int(fold_metrics.eligible_signal_sessions.min()),
+        "median_ic": median_ic,
+        "q25_ic": q25_ic,
+        "positive_ic_folds": positive_ic,
+        "median_spread": median_spread,
+        "positive_spread_folds": positive_spread,
+        "verdict": verdict,
+    }
+
+
+def write_post_review_diagnostics(output_dir: Path) -> dict:
+    """Derive non-gating summaries from the already-produced V0 rows.
+
+    This is deliberately separate from ``run_diagnostic``: it does not load
+    source data, call providers, read outcomes, or alter the original V0
+    artifacts or verdict.
+    """
+    resolved_path = output_dir / "resolved_payoff_rows.parquet"
+    original_manifest_path = output_dir / "artifact_manifest.json"
+    if not resolved_path.is_file() or not original_manifest_path.is_file():
+        raise PayoffDataBlocked("existing V0 resolved artifacts are required")
+    resolved = _dates(pd.read_parquet(resolved_path), "signal_date")
+    required = {"fold", "signal_date", "ticker", "score", "payoff_atr_gross", "payoff_pct_gross"}
+    if not required.issubset(resolved.columns):
+        raise PayoffDataBlocked(f"resolved payoff artifact missing {required - set(resolved.columns)}")
+    session_groups: list[pd.DataFrame] = []
+    for (_, _), group in resolved.groupby(["fold", "signal_date"], sort=True):
+        eligible = len(group) >= 30 and group.score.nunique() > 1 and group.payoff_atr_gross.nunique() > 1
+        if eligible:
+            session_groups.append(session_deciles(group))
+    if not session_groups:
+        raise PayoffDataBlocked("no eligible sessions in preserved resolved artifact")
+    eligible_rows = pd.concat(session_groups, ignore_index=True)
+    quantile_rows: list[dict] = []
+    monotonic_rows: list[dict] = []
+    for fold in REQUIRED_FOLDS:
+        fold_rows = eligible_rows.loc[eligible_rows.fold.eq(fold)]
+        for payoff_name in ("payoff_atr_gross", "payoff_pct_gross"):
+            values_by_decile = {
+                decile: fold_rows.loc[fold_rows.decile.eq(decile), payoff_name].dropna()
+                for decile in range(1, 11)
+            }
+            for decile in (1, 10):
+                values = values_by_decile[decile]
+                quantile_rows.append(
+                    {
+                        "fold": fold,
+                        "payoff": payoff_name,
+                        "decile": decile,
+                        "eligible_signal_sessions": fold_rows.signal_date.nunique(),
+                        "rows": len(values),
+                        "mean": values.mean() if len(values) else np.nan,
+                        "median": values.median() if len(values) else np.nan,
+                        "q25": values.quantile(0.25) if len(values) else np.nan,
+                        "q75": values.quantile(0.75) if len(values) else np.nan,
+                    }
+                )
+            means = pd.Series({decile: values.mean() for decile, values in values_by_decile.items() if len(values)})
+            monotonicity = _spearman(pd.Series(means.index.to_numpy(dtype=float)), means) if len(means) >= 2 else np.nan
+            adjacent_pairs = int(sum(means.iloc[i] <= means.iloc[i + 1] for i in range(len(means) - 1))) if len(means) >= 2 else 0
+            non_decreasing = bool(len(means) == 10 and adjacent_pairs == 9)
+            for decile, mean in means.items():
+                monotonic_rows.append(
+                    {
+                        "fold": fold,
+                        "payoff": payoff_name,
+                        "decile": int(decile),
+                        "rows": len(values_by_decile[int(decile)]),
+                        "mean_payoff": mean,
+                        "decile_mean_spearman": monotonicity,
+                        "adjacent_non_decreasing_pairs": adjacent_pairs,
+                        "monotonic_non_decreasing": non_decreasing,
+                    }
+                )
+    quantile_frame = pd.DataFrame(quantile_rows)
+    monotonic_frame = pd.DataFrame(monotonic_rows)
+    quantile_path = output_dir / "post_review_fold_d1_d10_quantile_summary.csv"
+    monotonic_path = output_dir / "post_review_decile_monotonicity.csv"
+    quantile_frame.to_csv(quantile_path, index=False)
+    monotonic_frame.to_csv(monotonic_path, index=False)
+    original_manifest = _read_json(original_manifest_path)
+    post_manifest = {
+        "schema": "idx-trade/expected-payoff-v0-post-review-diagnostics-v1",
+        "source_artifact_manifest_sha256": sha256_file(original_manifest_path),
+        "source_resolved_payoff_rows_sha256": sha256_file(resolved_path),
+        "artifact_sha256": {
+            quantile_path.name: sha256_file(quantile_path),
+            monotonic_path.name: sha256_file(monotonic_path),
+        },
+        "source_verdict": original_manifest.get("status"),
+        "scientific_verdict_unchanged": True,
+        "diagnostic_only": True,
+        **protected_runtime_flags(),
+    }
+    post_manifest_path = output_dir / "post_review_diagnostic_manifest.json"
+    post_manifest_path.write_text(json.dumps(post_manifest, indent=2, allow_nan=False), encoding="utf-8")
+    return {
+        "quantile_path": str(quantile_path),
+        "monotonicity_path": str(monotonic_path),
+        "manifest_path": str(post_manifest_path),
+        "manifest_sha256": sha256_file(post_manifest_path),
+        "source_verdict": original_manifest.get("status"),
+    }
+
+
 def build_payoff_rows(
     parent: pd.DataFrame,
     features: pd.DataFrame,
@@ -461,9 +617,7 @@ def run_diagnostic(config: dict, output_dir: Path) -> dict:
         Path(config["actions_summary_path"]),
         config["actions_summary_sha256"],
     )
-    for date in parent.date:
-        if date > MAX_ALLOWED_DATE:
-            raise PayoffDataBlocked("parent contains post-cutoff signal date")
+    validate_parent_historical_dates(parent)
     if int(parent.signal_session_index.max()) + 10 > len(calendar):
         raise PayoffDataBlocked("parent horizon exceeds verified calendar")
 
@@ -476,20 +630,21 @@ def run_diagnostic(config: dict, output_dir: Path) -> dict:
     coverage_year = _coverage_table(ledger, "year")
     reasons = ledger.exclusion_reason.replace({"": np.nan}).fillna("RESOLVED").value_counts().rename_axis("exclusion_reason").reset_index(name="rows")
     fold_metrics = fold_metrics.merge(coverage, on="fold", how="left")
-    readiness_by_fold = fold_metrics.coverage_ratio.ge(0.85) & fold_metrics.eligible_signal_sessions.ge(80)
-    global_coverage = float(len(resolved) / len(parent)) if len(parent) else 0.0
-    data_ready = bool(global_coverage >= 0.90 and readiness_by_fold.all() and parent_key_sha == config["expected_parent_key_sha256"])
-    median_ic = float(fold_metrics.median_session_ic_atr.median()) if data_ready else np.nan
-    q25_ic = float(fold_metrics.median_session_ic_atr.quantile(0.25)) if data_ready else np.nan
-    positive_ic = int((fold_metrics.median_session_ic_atr > 0).sum()) if data_ready else 0
-    median_spread = float(fold_metrics.mean_d10_minus_d1_mean_payoff_atr.median()) if data_ready else np.nan
-    positive_spread = int((fold_metrics.mean_d10_minus_d1_mean_payoff_atr > 0).sum()) if data_ready else 0
-    if not data_ready:
-        verdict = "EXPECTED_PAYOFF_V0_DATA_BLOCKED"
-    elif median_ic > 0 and q25_ic > 0 and positive_ic >= 4 and median_spread > 0 and positive_spread >= 4:
-        verdict = "EXPECTED_PAYOFF_V0_FEASIBILITY_GO"
-    else:
-        verdict = "EXPECTED_PAYOFF_V0_NO_SIGNAL"
+    gates = evaluate_gates(
+        parent_rows=len(parent),
+        resolved_rows=len(resolved),
+        fold_metrics=fold_metrics,
+        parent_key_sha=parent_key_sha,
+        expected_parent_key_sha=config["expected_parent_key_sha256"],
+    )
+    data_ready = gates["data_ready"]
+    global_coverage = gates["global_coverage"]
+    median_ic = gates["median_ic"]
+    q25_ic = gates["q25_ic"]
+    positive_ic = gates["positive_ic_folds"]
+    median_spread = gates["median_spread"]
+    positive_spread = gates["positive_spread_folds"]
+    verdict = gates["verdict"]
 
     preflight = {
         "schema": "idx-trade/expected-payoff-v0-feasibility-v1",
@@ -515,11 +670,7 @@ def run_diagnostic(config: dict, output_dir: Path) -> dict:
         "corporate_actions_sha256": config["actions_sha256"],
         "corporate_actions_summary_sha256": config["actions_summary_sha256"],
         "corporate_actions_summary_path": config["actions_summary_path"],
-        "provider_calls": False,
-        "fresh_forward_outcomes_accessed": False,
-        "forward_outcome_access_marker_written": False,
-        "o2_model_modified": False,
-        "payoff_model_fit": False,
+        **protected_runtime_flags(),
         "no_price_repair_or_synthesis": True,
     }
     parent_identity = {
@@ -567,10 +718,7 @@ def run_diagnostic(config: dict, output_dir: Path) -> dict:
         "median_fold_mean_d10_minus_d1_payoff_atr": median_spread,
         "positive_fold_mean_spread_count": positive_spread,
         "fold_count": 6,
-        "fresh_forward_outcomes_accessed": False,
-        "forward_outcome_access_marker_written": False,
-        "provider_calls": False,
-        "payoff_model_fit": False,
+        **protected_runtime_flags(),
     }
     (output_dir / "aggregate_metrics.json").write_text(json.dumps(aggregate, indent=2, allow_nan=False), encoding="utf-8")
     decision = {
@@ -592,11 +740,7 @@ def run_diagnostic(config: dict, output_dir: Path) -> dict:
         "parent_o2_predictions_sha256": config["o2_predictions_sha256"],
         "parent_o2_key_sha256": parent_key_sha,
         "resolved_payoff_key_sha256": resolved_key_sha,
-        "fresh_forward_outcomes_accessed": False,
-        "forward_outcome_access_marker_written": False,
-        "provider_calls": False,
-        "o2_model_modified": False,
-        "payoff_model_fit": False,
+        **protected_runtime_flags(),
         "python": sys.version,
         "platform": platform.platform(),
     }
@@ -608,13 +752,17 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--post-review-diagnostics", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = _parse_args()
     try:
-        result = run_diagnostic(_read_json(args.config), args.output_dir)
+        if args.post_review_diagnostics:
+            result = write_post_review_diagnostics(args.output_dir)
+        else:
+            result = run_diagnostic(_read_json(args.config), args.output_dir)
     except PayoffDataBlocked as exc:
         print(f"EXPECTED_PAYOFF_V0_DATA_BLOCKED: {exc}")
         return 2
