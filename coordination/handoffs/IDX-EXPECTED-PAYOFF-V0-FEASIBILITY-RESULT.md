@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 024c91fcd9c105744b575d5584160b077c848e3e
 branch: research/idx-expected-payoff-v0-feasibility
-head_commit: pending until push
+head_commit: 7ef1ea96bef3ed0d15b04196889079171e1c8b41
 scope: one frozen historical Expected Payoff V0 feasibility diagnostic on accepted O2 historical OOF scores
 
 ## Files changed
