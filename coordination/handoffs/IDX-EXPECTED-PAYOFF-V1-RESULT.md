@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: a5f2ae154505ecc2c3a182711c0900afe38d1759
 branch: research/idx-expected-payoff-v1
-head_commit: pending until commit
+head_commit: 42b1ae21da0bba98cbb761e78379354f9d0b2a08
 scope: one frozen PAYOFF_HGB_O2_FEATURES_V1 historical experiment
 files_changed:
   - src/idx_trade/expected_payoff_v1.py
