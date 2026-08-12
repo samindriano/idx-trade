@@ -1268,3 +1268,117 @@ body {
   .alignmentMetrics > div:nth-child(3), .alignmentMetrics > div:nth-child(4) { border-top: 1px solid var(--editorial-line); }
   .alignmentMetrics > div:nth-child(3) { padding-left: 0; }
 }
+
+/* Keep the automated monitoring view quiet: one clear archive, three compact lanes. */
+.monitoringPage {
+  max-width: 1220px;
+  padding: 26px 24px 42px;
+}
+
+.monitorHero {
+  min-height: 158px;
+  padding-top: 4px;
+  padding-bottom: 22px;
+}
+
+.monitorHero h1 {
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: .9;
+}
+
+.monitorHero .heroCopy {
+  max-width: 520px;
+  margin-top: 11px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.monitorSummaryGridThree { margin-bottom: 22px; }
+
+.monitorSummaryGridThree .summaryBlock {
+  min-height: 108px;
+  padding: 15px 18px 14px;
+}
+
+.monitorSummaryGridThree .summaryBlock > strong {
+  margin-top: 10px;
+  font-size: clamp(27px, 3.7vw, 44px);
+}
+
+.monitorSummaryGridThree .summaryBlock small { font-size: 10px; }
+
+.autoArchivePanel {
+  margin-top: 0;
+  padding: 19px 20px 20px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.autoArchiveHead h2 {
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.autoArchiveHead p { display: none; }
+
+.archiveConnection {
+  padding: 7px 9px;
+  font-size: 9px;
+}
+
+.archiveFacts { margin-top: 16px; }
+.archiveFacts > div { padding-top: 12px; padding-bottom: 11px; }
+.archiveFacts strong { margin-top: 6px; font-size: 15px; }
+
+.sessionArchiveHead {
+  margin-top: 18px;
+  padding-bottom: 9px;
+}
+
+.sessionArchiveHead h3 { font-size: 16px; }
+.autoArchivePanel .sessionStrip { margin-top: 12px; }
+
+.monitoringModelsSection { margin-top: 24px; }
+.monitoringSectionHead > p { font-size: 11px; }
+.monitoredModelGrid { gap: 10px; margin-top: 12px; }
+
+.monitoredModelCard {
+  min-height: 268px;
+  padding: 18px 18px 0;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.monitoredModelCard h3 { margin-top: 10px; font-size: 19px; }
+.monitoredModelScore { margin-top: 23px; }
+.monitoredModelScore strong { font-size: 39px; }
+.monitoredModelCard p { display: none; }
+.monitoredModelMeta { margin-top: 13px; font-size: 9px; }
+.monitoredModelCard .modelCardAction { padding: 14px 0 16px; }
+
+.sharedSessionLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 15px 2px 2px;
+  border-top: 1px solid var(--editorial-line);
+  color: var(--editorial-ink);
+}
+
+.sharedSessionLine > div { display: grid; gap: 4px; }
+.sharedSessionLine strong { font-size: 17px; letter-spacing: -.03em; }
+.sharedSessionLine small,
+.sharedSessionLine p { margin: 0; color: var(--editorial-muted); font-size: 10px; line-height: 1.45; }
+.sharedSessionLine p { max-width: 250px; text-align: right; }
+
+@media (max-width: 660px) {
+  .monitoringPage { padding: 20px 16px 34px; }
+  .monitorHero { min-height: 132px; padding-bottom: 18px; }
+  .monitorHero h1 { font-size: 38px; }
+  .monitorSummaryGridThree .summaryBlock { min-height: 94px; padding-inline: 13px; }
+  .autoArchivePanel { padding-inline: 15px; }
+  .sharedSessionLine { display: block; }
+  .sharedSessionLine p { max-width: none; margin-top: 9px; text-align: left; }
+}

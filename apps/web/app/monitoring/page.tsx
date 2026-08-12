@@ -115,10 +115,6 @@ function modelArtifactDates(status: MonitorRuntimeStatus | null, modelId: string
   );
 }
 
-function modelProgressLabel(count: number, target: number) {
-  return `${count} / ${target}`;
-}
-
 export default function MonitoringPage() {
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -176,6 +172,13 @@ export default function MonitoringPage() {
     [status],
   );
 
+  const latestArtifactModelCount = useMemo(
+    () => latestReadySession
+      ? MONITORED_MODELS.filter((model) => modelDates[model.id]?.has(latestReadySession.session_date)).length
+      : 0,
+    [latestReadySession, modelDates],
+  );
+
   const runtimeLabel = statusLoading
     ? "Reading automated archive"
     : configured && connected
@@ -207,17 +210,16 @@ export default function MonitoringPage() {
         </section>
 
         <section className="monitorSummaryGrid monitorSummaryGridThree" aria-label="Monitoring summary">
-          <article className="summaryBlock prominent"><span>Monitored models</span><strong>3</strong><small>O2 · V3-B · V2</small></article>
-          <article className="summaryBlock"><span>Latest EOD archive</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>{status?.data_ready_sessions ?? 0} ready sessions</small></article>
-          <article className="summaryBlock"><span>Shared score sessions</span><strong>{statusLoading ? "—" : sharedScoredDates.size}</strong><small>all three models</small></article>
+          <article className="summaryBlock prominent"><span>Monitored lanes</span><strong>3</strong><small>O2 · V3-B · V2</small></article>
+          <article className="summaryBlock"><span>Latest session</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>{status?.data_ready_sessions ?? 0} data-ready session(s)</small></article>
+          <article className="summaryBlock"><span>Model artifacts</span><strong>{statusLoading ? "—" : latestArtifactModelCount}</strong><small>on the latest session</small></article>
         </section>
 
         <section className="surface autoArchivePanel" aria-labelledby="archive-title">
           <div className="autoArchiveHead">
             <div>
               <span className="panelKicker">AUTOMATED SESSION ARCHIVE</span>
-              <h2 id="archive-title">EOD and intraday evidence</h2>
-              <p>The runtime retrieves market evidence automatically. This page is read-only and reflects the immutable session and score artifacts it finds; there is no manual capture action here.</p>
+              <h2 id="archive-title">Automated market data</h2>
             </div>
             <div className={`archiveConnection ${configured && connected ? "isConnected" : "isUnavailable"}`}>
               <i aria-hidden="true" />
@@ -227,8 +229,8 @@ export default function MonitoringPage() {
 
           <div className="archiveFacts">
             <div><span>Latest ready session</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>official EOD archive</small></div>
+            <div><span>Data status</span><strong>{statusLoading ? "—" : configured && connected ? "Ready" : "Unavailable"}</strong><small>archive refreshes automatically</small></div>
             <div><span>Next expected session</span><strong>{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong><small>runtime queue</small></div>
-            <div><span>Archive range</span><strong>{statusLoading ? "—" : `${shortDate(status?.monitor_start_date ?? null)} → ${shortDate(status?.calendar_last_session ?? null)}`}</strong><small>configured monitoring window</small></div>
           </div>
 
           {requestError && (
@@ -260,8 +262,8 @@ export default function MonitoringPage() {
 
         <section className="monitoringModelsSection" aria-labelledby="models-title">
           <div className="monitoringSectionHead">
-            <div><span className="panelKicker">MONITORED MODELS</span><h2 id="models-title">Prospective score coverage</h2></div>
-            <p>Each model is scored independently on the same automated session archive. Select a model for its detailed history.</p>
+            <div><span className="panelKicker">MONITORED MODELS · O2 · V3-B · V2</span><h2 id="models-title">Prospective score coverage</h2></div>
+            <p>Three score lanes, one automated session record.</p>
           </div>
           <div className="monitoredModelGrid">
             {MONITORED_MODELS.map((model) => {
@@ -273,7 +275,6 @@ export default function MonitoringPage() {
                   <h3>{model.shortName}</h3>
                   <div className="monitoredModelScore"><strong>{statusLoading ? "—" : count}</strong><span>/ {model.forwardTargetSessions} sessions</span></div>
                   <div className={`progressTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${progress}%` }} /></div>
-                  <p>{model.note}</p>
                   <div className="monitoredModelMeta"><span>{modelArtifactDates(status, model.id).size ? "Score artifacts available" : "Awaiting score artifacts"}</span><span>{model.featureCount} features</span></div>
                   <div className="modelCardAction"><span>View model detail</span><b aria-hidden="true">→</b></div>
                 </a>
@@ -282,19 +283,13 @@ export default function MonitoringPage() {
           </div>
         </section>
 
-        <section className="surface alignmentPanel" aria-labelledby="alignment-title">
-          <div className="monitoringSectionHead compactHead">
-            <div><span className="panelKicker">SESSION ALIGNMENT</span><h2 id="alignment-title">One record across all three models</h2></div>
-            <span className="alignmentBadge">SAME ARCHIVE</span>
+        <section className="sharedSessionLine" aria-label="Shared session record">
+          <div>
+            <span className="panelKicker">SHARED SESSION RECORD</span>
+            <strong>{statusLoading ? "—" : sharedScoredDates.size} shared session(s)</strong>
+            <small>verified artifacts for O2, V3-B, and V2</small>
           </div>
-          <p>Shared score sessions count only when O2, V3-B, and V2 each have a verified artifact for the same official session. Missing artifacts remain visible as gaps; they are never inferred.</p>
-          <div className="alignmentMetrics">
-            {MONITORED_MODELS.map((model) => (
-              <div key={model.id}><span>{model.generation}</span><strong>{statusLoading ? "—" : modelProgressLabel(modelDates[model.id]?.size ?? 0, model.forwardTargetSessions)}</strong><small>{model.role}</small></div>
-            ))}
-            <div><span>Shared</span><strong>{statusLoading ? "—" : sharedScoredDates.size}</strong><small>same-session artifacts</small></div>
-          </div>
-          <small className="alignmentNote">Outcome metrics remain outside this read-only monitoring view until the authorized forward-validation gate opens.</small>
+          <p>Gaps stay visible and are never inferred.</p>
         </section>
       </div>
     </main>
