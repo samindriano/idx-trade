@@ -34,7 +34,7 @@ Only MAIN may edit this file.
 
 - **Status:** `REVIEW`
 - **Owner:** `ChatGPT/PIT-sector-revival`
-- **Branch / HEAD:** `data/idx-pit-sector-history-revival-v1` / `620480c`
+- **Branch / HEAD:** `data/idx-pit-sector-history-revival-v1` / `a2bf035`
 - **Result:** One bounded recovery attempt completed. Canonical inventory remains 5 ready / 3 discovery-blocked: 2022 reference unresolved; 2023 `Peng-00158` found only through a mirror and the direct IDX path is an empty ZIP; 2026 `Peng-00100` effective date unresolved.
 - **Checkpoint:** `docs/checkpoints/2026-08-13_PIT_SECTOR_HISTORY_REVIVAL_RECOVERY.md`
 - **Guardrail:** No config promotion, sector model, retraining, forward outcomes, or dependent outcome access; awaiting independent review.

@@ -8,7 +8,7 @@ reasoning_level: Luna xhigh / LIGHT bounded recovery
 source_repository: samindriano/idx-trade
 source_commit: 620480cd768ea784b82b71b14c1232d406b39143
 branch: data/idx-pit-sector-history-revival-v1
-head_commit: 620480cd768ea784b82b71b14c1232d406b39143
+head_commit: a2bf0357dd5549f104c94936d4dfc0b6b3749376
 scope: One bounded local recovery attempt for 2022 and 2023 dedicated annual IDX-IC classification evidence and 2026 event-specific effective-date provenance.
 files_changed:
   - docs/checkpoints/2026-08-13_PIT_SECTOR_HISTORY_REVIVAL_RECOVERY.md
