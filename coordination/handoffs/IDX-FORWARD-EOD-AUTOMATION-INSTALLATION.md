@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 5ee8d2d182ccd5e83b9b936e0b5eefecfa09e1b2
 branch: integration/forward-eod-automation-monitoring
-head_commit: pending documentation commit
+head_commit: ad2cceb3d16338471b6e6c4a51faedba15949a78
 scope: Complete and verify the existing local canonical IDXTrade-ForwardEOD Task Scheduler installation after the prior Access-denied blocker.
 files_changed: docs/checkpoints/2026-08-13_FORWARD_EOD_AUTOMATION_INSTALLED.md; coordination/handoffs/IDX-FORWARD-EOD-AUTOMATION-INSTALLATION.md
 findings: Canonical IDXTrade-ForwardEOD is now Ready with daily 18:00 Asia/Jakarta and interactive logon triggers, StartWhenAvailable, MultipleInstances IgnoreNew, official existing repo/runtime paths, and no credential fields. IDXTrade-ForwardOpenArchive is Disabled. Stockbit remains Ready and separate. Canonical task has not run yet; no provider capture was triggered.
