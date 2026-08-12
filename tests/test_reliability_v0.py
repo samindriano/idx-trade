@@ -123,7 +123,8 @@ def test_gate_requires_strict_positive_q25_and_four_positive_folds():
     assert evaluate_proxy_gate(passing, proxy)["qualified"] is True
     only_three_positive = _fold_metrics(proxy, [0.1, 0.1, 0.1, -0.1, -0.1, -0.1], [0.1] * 6)
     assert evaluate_proxy_gate(only_three_positive, proxy)["qualified"] is False
-    q25_not_positive = _fold_metrics(proxy, [0.0, 0.0, 0.1, 0.1, 0.1, 0.1], [0.1] * 6)
+    # Three zero folds make the default interpolated q25 exactly zero.
+    q25_not_positive = _fold_metrics(proxy, [0.0, 0.0, 0.0, 0.1, 0.1, 0.1], [0.1] * 6)
     assert evaluate_proxy_gate(q25_not_positive, proxy)["qualified"] is False
 
 
