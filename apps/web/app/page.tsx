@@ -273,7 +273,7 @@ function ModelEvidencePicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = items.find((item) => experimentKey(item) === value) ?? items[0];
-  const versionOrder = ["V1", "V2", "V3", "V4", "Risk"];
+  const versionOrder = ["V1", "V2", "V3", "V4", "O1", "O2", "Risk"];
   const versions = versionOrder.filter((version) => items.some((item) => {
     const group = item.generation.startsWith("V") ? item.generation.split("-")[0] : item.generation;
     return group === version;
