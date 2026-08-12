@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ from idx_trade.ohlcv_o2_forward import (
     _snapshot_provenance_hash,
     persist_counter_state,
     persist_session_score_artifact,
+    load_counter_state,
     resolve_first_post_freeze_session,
     score_forward_session,
 )
@@ -112,8 +114,14 @@ def test_session_artifact_is_immutable_and_counter_rejects_backdating_and_gaps(t
     )
     manifest = persist_session_score_artifact(result, tmp_path)
     assert manifest["outcomes_accessed"] is False
+    persisted_manifest = json.loads((tmp_path / "session_0002_2026-08-11.json").read_text(encoding="utf-8"))
+    assert persisted_manifest["manifest_sha256"] == manifest["manifest_sha256"]
     counter = OfficialO2Counter(first_post_freeze_session_index=2)
-    assert counter.register(manifest) == 1
+    resumed_counter = OfficialO2Counter(first_post_freeze_session_index=2)
+    reloaded_manifest = persist_session_score_artifact(result, tmp_path)
+    assert reloaded_manifest["manifest_sha256"] == persisted_manifest["manifest_sha256"]
+    assert resumed_counter.register(reloaded_manifest) == 1
+    counter = resumed_counter
     assert counter.session_count == 1
     with pytest.raises(PreFreezeSessionError):
         OfficialO2Counter(2).register({**manifest, "session_index": 1})
@@ -124,8 +132,13 @@ def test_session_artifact_is_immutable_and_counter_rejects_backdating_and_gaps(t
     state_path = tmp_path / "counter.json"
     persisted = persist_counter_state(counter, state_path)
     assert persisted["session_count"] == 1
+    reloaded_counter = load_counter_state(state_path)
+    assert reloaded_counter.first_post_freeze_session_index == 2
+    assert reloaded_counter.session_count == 1
     with pytest.raises(ForwardContractError):
         persist_counter_state(OfficialO2Counter(2), state_path)
+    with pytest.raises(ForwardContractError):
+        persist_counter_state(OfficialO2Counter(3, session_count=1, last_session_index=3), state_path)
 
 
 def test_outcome_access_and_outcome_columns_fail_closed() -> None:

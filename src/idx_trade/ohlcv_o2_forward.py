@@ -84,6 +84,14 @@ def stable_sha256_text(values: Sequence[str]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _manifest_sha256(manifest: Mapping[str, Any]) -> str:
+    """Hash persisted manifest content without the self-referential field."""
+
+    unsigned = {str(key): value for key, value in manifest.items() if key != "manifest_sha256"}
+    canonical = json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def assert_no_protected_outcome_columns(columns: Sequence[str]) -> None:
     blocked: list[str] = []
     for column in columns:
@@ -373,6 +381,11 @@ def persist_session_score_artifact(result: ForwardScoreResult, output_dir: Path)
         existing = json.loads(manifest_path.read_text(encoding="utf-8"))
         if existing.get("artifact_sha256") != sha256_file(data_path):
             raise ForwardContractError("existing session artifact hash differs; immutable overwrite refused")
+        stored_manifest_sha = existing.get("manifest_sha256")
+        if not isinstance(stored_manifest_sha, str) or len(stored_manifest_sha) != 64:
+            raise ForwardContractError("existing session manifest has no verifiable manifest_sha256")
+        if stored_manifest_sha != _manifest_sha256(existing):
+            raise ForwardContractError("existing session manifest hash is invalid; immutable overwrite refused")
         return existing
     result.rows.to_parquet(data_path, index=False)
     data_sha = sha256_file(data_path)
@@ -394,9 +407,12 @@ def persist_session_score_artifact(result: ForwardScoreResult, output_dir: Path)
         "outcomes_accessed": False,
         "manifest_path": str(manifest_path),
     }
+    manifest["manifest_sha256"] = _manifest_sha256(manifest)
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
-    manifest["manifest_sha256"] = sha256_file(manifest_path)
-    return manifest
+    persisted = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if persisted.get("manifest_sha256") != _manifest_sha256(persisted):
+        raise ForwardContractError("new session manifest failed self-verification")
+    return persisted
 
 
 @dataclass
@@ -440,20 +456,54 @@ class OfficialO2Counter:
         }
 
 
+def _validate_counter(counter: OfficialO2Counter) -> None:
+    if counter.first_post_freeze_session_index < 0:
+        raise ForwardContractError("first post-freeze session index must be non-negative")
+    if not 0 <= counter.session_count <= FORWARD_GATE_SESSION_COUNT:
+        raise ForwardContractError("counter session_count is outside the frozen range")
+    if counter.session_count == 0:
+        if counter.last_session_index is not None:
+            raise ForwardContractError("empty counter cannot have a last session")
+    else:
+        expected_last = counter.first_post_freeze_session_index + counter.session_count - 1
+        if counter.last_session_index != expected_last:
+            raise ForwardContractError("counter last session is inconsistent with its consecutive count")
+
+
+def load_counter_state(path: Path) -> OfficialO2Counter:
+    """Reload persisted counter state and validate its monotonic contract."""
+
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if state.get("schema") != COUNTER_SCHEMA:
+        raise ForwardContractError("counter state schema mismatch")
+    if state.get("required_sessions") != FORWARD_GATE_SESSION_COUNT or state.get("h10_horizon") != H10_HORIZON:
+        raise ForwardContractError("counter state frozen contract mismatch")
+    if state.get("outcomes_accessed") is not False:
+        raise ProtectedOutcomeAccessError("counter state is not outcome-clean")
+    counter = OfficialO2Counter(
+        first_post_freeze_session_index=int(state["first_post_freeze_session_index"]),
+        session_count=int(state.get("session_count", 0)),
+        last_session_index=None if state.get("last_session_index") is None else int(state["last_session_index"]),
+    )
+    _validate_counter(counter)
+    return counter
+
+
 def persist_counter_state(counter: OfficialO2Counter, path: Path) -> dict[str, Any]:
     """Persist monotonic counter state without allowing a rewind."""
 
+    _validate_counter(counter)
     state = counter.to_dict()
     if path.exists():
-        previous = json.loads(path.read_text(encoding="utf-8"))
-        if previous.get("schema") != COUNTER_SCHEMA:
-            raise ForwardContractError("existing counter state schema mismatch")
-        if int(previous.get("first_post_freeze_session_index")) != counter.first_post_freeze_session_index:
+        previous_counter = load_counter_state(path)
+        if previous_counter.first_post_freeze_session_index != counter.first_post_freeze_session_index:
             raise ForwardContractError("counter first post-freeze boundary cannot change")
-        if int(previous.get("session_count", 0)) > counter.session_count:
+        if previous_counter.session_count > counter.session_count:
             raise ForwardContractError("counter state cannot move backwards")
-        if previous.get("outcomes_accessed") is not False:
-            raise ProtectedOutcomeAccessError("existing counter state is not outcome-clean")
+        if previous_counter.session_count == counter.session_count and previous_counter.last_session_index != counter.last_session_index:
+            raise ForwardContractError("counter state cannot change at the same count")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
     return state
