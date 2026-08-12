@@ -52,7 +52,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
 | Frontend monitoring / capture system | `REVIEW` | `Codex/Frontend Editorial Tech` — owner keeps this row current | `codex/frontend-compare-v2` / `5cbe1b9` | Compare UI now has fixed V3-B baseline plus at most two challengers and explicit score+delta slots; build and `/compare` smoke pass. Absolute/support-normalized O2 evidence is not present in the catalog, so the UI remains fail-closed and displays a note instead of inventing values. |
-| Market/index prospective EOD archive extension | `ACTIVE` | `Codex/Market-Index-EOD-Extension` | `data/market-index-forward-eod-v1-monitoring` / `e327be2` | Stage 1 manifest/stale-recovery hardening in progress; real capture remains gated until 17:00 Asia/Jakarta on 2026-08-12; no new automation. |
+| Market/index prospective EOD archive extension | `WAITING` | `Codex/Market-Index-EOD-Extension` | `data/market-index-forward-eod-v1-monitoring` / `8c94f56` | Stage 1 manifest/stale-recovery tests passed (`19` focused; `247` full, `0` failed, `3` warnings) and were pushed. Real capture was not run because Jakarta time was 12:56, before the mandatory 17:00 cutoff; no new automation. |
 
 ## Cross-chat no-duplicate rules currently in force
 
