@@ -67,6 +67,8 @@ EXPECTED_V2_FINAL_MANIFEST_SHA256 = "f483450026a9550f31b7d5873825079a2e307c1b24d
 EXPECTED_V2_FINAL_MODEL_SHA256 = "5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace"
 EXPECTED_V2_PREPARED_CACHE_MANIFEST_SHA256 = "6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143"
 EXPECTED_V2_PREPARED_CACHE_SHA256 = "522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5"
+EXPECTED_O2_MINIMALITY_MANIFEST_SHA256 = "919e35bb8d2fe68588db331e3de25f6c2a490c2727aea9f68e1179c0bcbe5183"
+EXPECTED_O2_GEOMETRY_MANIFEST_SHA256 = "cc26bc689dd37bc83cc2c32d348d3201e5c4f41577f4bb8f938ab5cac2c7a97a"
 
 
 def comparator_hgb_pipeline(feature_columns: Sequence[str]) -> Pipeline:
@@ -137,10 +139,97 @@ def comparator_verdict(
 
 def _verify_json_file(path: Path, expected_sha: str, label: str) -> dict[str, object]:
     _verify_file(path, expected_sha, label)
-    value = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"{label} is not valid JSON") from exc
     if not isinstance(value, dict):
         raise RuntimeError(f"{label} must contain a JSON object")
     return value
+
+
+def _verify_o2_feature_hash() -> dict[str, object]:
+    actual = feature_order_hash(O2_FEATURE_COLUMNS)
+    if actual != EXPECTED_O2_FEATURE_ORDER_SHA256:
+        raise RuntimeError(
+            "accepted O2 feature-order hash mismatch: "
+            f"expected {EXPECTED_O2_FEATURE_ORDER_SHA256}, got {actual}"
+        )
+    return {"expected": EXPECTED_O2_FEATURE_ORDER_SHA256, "actual": actual, "verified": True}
+
+
+def _verify_manifest_artifacts(path: Path, manifest: dict[str, object], label: str) -> int:
+    artifact_hashes = manifest.get("artifact_sha256")
+    if not isinstance(artifact_hashes, dict) or not artifact_hashes:
+        raise RuntimeError(f"{label} has no artifact hashes")
+    for name, expected in sorted(artifact_hashes.items()):
+        _verify_file(path.parent / str(name), str(expected), f"{label} artifact {name}")
+    return int(len(artifact_hashes))
+
+
+def _validate_o2_parent_manifest(manifest: dict[str, object], *, parent_kind: str) -> dict[str, object]:
+    contract = manifest.get("preflight_contract", {})
+    if not isinstance(contract, dict):
+        raise RuntimeError(f"O2 {parent_kind} parent has no preflight contract")
+    if contract.get("common_support_rows") != EXPECTED_COMMON_SUPPORT_ROWS:
+        raise RuntimeError(f"O2 {parent_kind} parent common-support row count mismatch")
+    if contract.get("common_support_tickers") != 729:
+        raise RuntimeError(f"O2 {parent_kind} parent common-support ticker count mismatch")
+    if contract.get("common_support_key_sha256") != EXPECTED_COMMON_SUPPORT_KEY_SHA256:
+        raise RuntimeError(f"O2 {parent_kind} parent common-support identity mismatch")
+    if contract.get("o2_feature_order_sha256") != EXPECTED_O2_FEATURE_ORDER_SHA256:
+        raise RuntimeError(f"O2 {parent_kind} parent feature-order hash mismatch")
+    if contract.get("fresh_forward_outcomes_accessed") is not False or (
+        "provider_calls" in contract and contract.get("provider_calls") is not False
+    ):
+        raise RuntimeError(f"O2 {parent_kind} parent is not historical/provider-free")
+    if parent_kind == "minimality":
+        if manifest.get("schema") != "idx-trade/ohlcv-o2-minimality-artifacts-v1":
+            raise RuntimeError("O2 minimality parent schema mismatch")
+        if manifest.get("status") != "O2_MINIMALITY_EVIDENCE_COMPLETE":
+            raise RuntimeError("O2 minimality parent status mismatch")
+        if "O2_FULL_3" not in contract.get("minimality_models", []):
+            raise RuntimeError("O2 minimality parent does not contain O2_FULL_3")
+        feature_hashes = contract.get("feature_order_sha256", {})
+        if not isinstance(feature_hashes, dict) or feature_hashes.get("O2_FULL_3") != EXPECTED_O2_FEATURE_ORDER_SHA256:
+            raise RuntimeError("O2 minimality parent O2_FULL_3 feature identity mismatch")
+    elif parent_kind == "geometry":
+        if manifest.get("schema") != "idx-trade/ohlcv-o2-geometry-research-artifacts-v1":
+            raise RuntimeError("O2 geometry parent schema mismatch")
+        if manifest.get("status") != "O2_SURVIVOR":
+            raise RuntimeError("O2 geometry parent status mismatch")
+        if contract.get("o2_model") != "O2_OPEN_GEOMETRY":
+            raise RuntimeError("O2 geometry parent model identity mismatch")
+    else:
+        raise ValueError(f"unknown O2 parent kind: {parent_kind}")
+    return {
+        "kind": parent_kind,
+        "schema": str(manifest["schema"]),
+        "status": str(manifest["status"]),
+        "common_support_rows": int(contract["common_support_rows"]),
+        "common_support_tickers": int(contract["common_support_tickers"]),
+        "common_support_key_sha256": str(contract["common_support_key_sha256"]),
+        "o2_feature_order_sha256": str(contract["o2_feature_order_sha256"]),
+    }
+
+
+def _verify_accepted_o2_parent_artifacts(
+    *,
+    minimality_manifest_path: Path,
+    geometry_manifest_path: Path,
+) -> dict[str, object]:
+    feature_hash = _verify_o2_feature_hash()
+    parents: list[dict[str, object]] = []
+    for kind, path, expected in (
+        ("minimality", minimality_manifest_path, EXPECTED_O2_MINIMALITY_MANIFEST_SHA256),
+        ("geometry", geometry_manifest_path, EXPECTED_O2_GEOMETRY_MANIFEST_SHA256),
+    ):
+        manifest = _verify_json_file(path, expected, f"accepted O2 {kind} parent manifest")
+        artifact_count = _verify_manifest_artifacts(path, manifest, f"accepted O2 {kind} parent")
+        record = _validate_o2_parent_manifest(manifest, parent_kind=kind)
+        record.update({"path": str(path), "manifest_sha256": expected, "artifact_count": artifact_count})
+        parents.append(record)
+    return {"feature_hash": feature_hash, "parents": parents}
 
 
 def _verify_v2_frozen_artifacts(
@@ -340,6 +429,8 @@ def run_comparator(
     v2_final_model_path: Path,
     v2_prepared_cache_manifest_path: Path,
     v2_prepared_cache_path: Path,
+    o2_minimality_manifest_path: Path,
+    o2_geometry_manifest_path: Path,
     output_dir: Path,
     immutable_panel_path: Path,
     calendar_path: Path,
@@ -349,6 +440,10 @@ def run_comparator(
 ) -> dict[str, object]:
     if output_dir.exists():
         raise RuntimeError(f"refusing to overwrite existing comparator runtime: {output_dir}")
+    o2_parent_contract = _verify_accepted_o2_parent_artifacts(
+        minimality_manifest_path=o2_minimality_manifest_path,
+        geometry_manifest_path=o2_geometry_manifest_path,
+    )
     output_dir.mkdir(parents=True)
     contract: dict[str, object] = {
         "models": list(MODEL_ORDER),
@@ -359,6 +454,7 @@ def run_comparator(
         "v2_feature_order_sha256": feature_order_hash(V2_FEATURE_COLUMNS),
         "o2_feature_columns": list(O2_FEATURE_COLUMNS),
         "o2_feature_order_sha256": feature_order_hash(O2_FEATURE_COLUMNS),
+        "o2_feature_hash_preflight": o2_parent_contract["feature_hash"],
         "v3_b_feature_order_sha256": EXPECTED_V3_B_FEATURE_ORDER_SHA256,
         "hgb_parameters": HGB_PARAMS,
         "folds": verify_fold_contract(),
@@ -380,6 +476,7 @@ def run_comparator(
         prepared_cache_manifest_path=v2_prepared_cache_manifest_path,
         prepared_cache_path=v2_prepared_cache_path,
     )
+    contract["accepted_o2_parent_artifacts"] = o2_parent_contract["parents"]
     support, support_contract = load_common_support(
         coverage_path=coverage_path,
         training_table_path=training_table_path,
@@ -513,7 +610,8 @@ def _parser() -> argparse.ArgumentParser:
     names = (
         "coverage_path", "training_table_path", "training_manifest_path", "v2_candidate_summary_path",
         "v2_final_manifest_path", "v2_final_model_path", "v2_prepared_cache_manifest_path",
-        "v2_prepared_cache_path", "output_dir", "immutable_panel_path", "calendar_path",
+        "v2_prepared_cache_path", "o2_minimality_manifest_path", "o2_geometry_manifest_path",
+        "output_dir", "immutable_panel_path", "calendar_path",
         "security_master_path", "accepted_open_panel_path", "accepted_open_provenance_path",
     )
     for name in names:

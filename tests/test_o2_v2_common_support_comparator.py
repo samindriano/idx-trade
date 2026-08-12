@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import idx_trade.o2_v2_common_support_comparator as comparator
 
 from idx_trade.o2_v2_common_support_comparator import (
     O2_FEATURE_COLUMNS,
@@ -62,3 +63,43 @@ def test_frozen_verdict_can_establish_direct_o2_better():
     verdict, diagnostics = comparator_verdict(pd.DataFrame(rows), _aggregate())
     assert verdict == "O2_DIRECT_V2_COMMON_SUPPORT_BETTER"
     assert diagnostics["positive_paired_pr_auc_folds"] == 6
+
+
+def test_missing_o2_parent_manifest_fails_closed(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        comparator._verify_accepted_o2_parent_artifacts(
+            minimality_manifest_path=tmp_path / "missing-minimality.json",
+            geometry_manifest_path=tmp_path / "missing-geometry.json",
+        )
+
+
+def test_corrupted_o2_parent_manifest_fails_closed(tmp_path):
+    corrupted = tmp_path / "corrupted.json"
+    corrupted.write_text("not-json", encoding="utf-8")
+    with pytest.raises(RuntimeError):
+        comparator._verify_json_file(corrupted, comparator.sha256_file(corrupted), "accepted O2 parent")
+
+
+def test_wrong_o2_parent_identity_fails_closed():
+    manifest = {
+        "schema": "idx-trade/ohlcv-o2-minimality-artifacts-v1",
+        "status": "O2_MINIMALITY_EVIDENCE_COMPLETE",
+        "preflight_contract": {
+            "common_support_rows": 278168,
+            "common_support_tickers": 729,
+            "common_support_key_sha256": comparator.EXPECTED_COMMON_SUPPORT_KEY_SHA256,
+            "o2_feature_order_sha256": comparator.EXPECTED_O2_FEATURE_ORDER_SHA256,
+            "minimality_models": ["O2_SINGLE_POSITION"],
+            "feature_order_sha256": {"O2_SINGLE_POSITION": "wrong"},
+            "fresh_forward_outcomes_accessed": False,
+            "provider_calls": False,
+        },
+    }
+    with pytest.raises(RuntimeError, match="does not contain O2_FULL_3"):
+        comparator._validate_o2_parent_manifest(manifest, parent_kind="minimality")
+
+
+def test_wrong_o2_feature_hash_fails_closed(monkeypatch):
+    monkeypatch.setattr(comparator, "EXPECTED_O2_FEATURE_ORDER_SHA256", "0" * 64)
+    with pytest.raises(RuntimeError, match="feature-order hash mismatch"):
+        comparator._verify_o2_feature_hash()
