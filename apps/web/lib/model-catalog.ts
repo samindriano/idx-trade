@@ -7,6 +7,15 @@ export type ResearchFoldMetric = {
   score?: number;
   roc?: number;
   qSpread?: number;
+  supportRows?: number;
+};
+
+export type ResearchBaselineFold = {
+  fold: string;
+  score: number;
+  roc: number;
+  qSpread: number;
+  supportRows: number;
 };
 
 export type ResearchEvidenceSeries = {
@@ -86,6 +95,17 @@ export const V3_B_DISCOVERY_FOLDS = [
   { fold: "F4", deltaPr: 0.002973, roc: 0.001748, qSpread: 0.005156 },
 ] as const;
 
+// Certified common-support reference used by the O1/O2 comparator:
+// 278,168 rows, 729 tickers, six chronological folds.
+export const V3_B_COMMON_SUPPORT_FOLDS: readonly ResearchBaselineFold[] = [
+  { fold: "F1", score: 0.41165279091300033, roc: 0.5343002825747942, qSpread: 0.0882508795853264, supportRows: 21501 },
+  { fold: "F2", score: 0.41079850777744475, roc: 0.5283766367167901, qSpread: 0.07589875062194207, supportRows: 20057 },
+  { fold: "F3", score: 0.4196648421332274, roc: 0.5251739451875269, qSpread: 0.05360409218120221, supportRows: 20272 },
+  { fold: "F4", score: 0.4285662266379463, roc: 0.5219320824401948, qSpread: 0.048682040735453236, supportRows: 20205 },
+  { fold: "F5", score: 0.4895739884224322, roc: 0.5344351611116392, qSpread: 0.03701738761434964, supportRows: 25347 },
+  { fold: "F6", score: 0.33643067776932933, roc: 0.4858364626648122, qSpread: 0.04282583108228749, supportRows: 33297 },
+] as const;
+
 const V2_CHAMPION_FOLDS = [
   { fold: "F1", deltaPr: 0.0216774918 },
   { fold: "F2", deltaPr: 0.0289990901 },
@@ -96,39 +116,39 @@ const V2_CHAMPION_FOLDS = [
 ] as const;
 
 const O1A_OVERNIGHT_FOLDS = [
-  { fold: "F1", deltaPr: -0.001292 },
-  { fold: "F2", deltaPr: 0.002084 },
-  { fold: "F3", deltaPr: 0.001636 },
-  { fold: "F4", deltaPr: -0.014955 },
-  { fold: "F5", deltaPr: -0.001660 },
-  { fold: "F6", deltaPr: 0.012650 },
+  { fold: "F1", deltaPr: -0.0012915880624221887, score: 0.41036120285057814, roc: 0.533723585176148, qSpread: 0.07949108244378655, supportRows: 21501 },
+  { fold: "F2", deltaPr: 0.002083571722863109, score: 0.41288207950030786, roc: 0.5277487378661275, qSpread: 0.06930967564794777, supportRows: 20057 },
+  { fold: "F3", deltaPr: 0.0016357262691586438, score: 0.42130056840238606, roc: 0.5272993889170631, qSpread: 0.058740743716439725, supportRows: 20272 },
+  { fold: "F4", deltaPr: -0.014954853128374412, score: 0.4136113735095719, roc: 0.5103311046603508, qSpread: 0.03844509119444406, supportRows: 20205 },
+  { fold: "F5", deltaPr: -0.0016604485083553389, score: 0.4879135399140769, roc: 0.5320162287818554, qSpread: 0.05429201562421898, supportRows: 25347 },
+  { fold: "F6", deltaPr: 0.012650399351445463, score: 0.3490810771207748, roc: 0.49639252979029147, qSpread: 0.042924416045320546, supportRows: 33297 },
 ] as const;
 
 const O1B_INTRADAY_FOLDS = [
-  { fold: "F1", deltaPr: 0.002337 },
-  { fold: "F2", deltaPr: -0.000978 },
-  { fold: "F3", deltaPr: 0.002112 },
-  { fold: "F4", deltaPr: -0.004234 },
-  { fold: "F5", deltaPr: 0.001520 },
-  { fold: "F6", deltaPr: 0.011821 },
+  { fold: "F1", deltaPr: 0.002336519507158241, score: 0.4139893104201586, roc: 0.5332969478015114, qSpread: 0.09251286488958704, supportRows: 21501 },
+  { fold: "F2", deltaPr: -0.00097840887021039, score: 0.40982009890723436, roc: 0.5272740905730215, qSpread: 0.06701232747360186, supportRows: 20057 },
+  { fold: "F3", deltaPr: 0.0021118230849803687, score: 0.4217766652182078, roc: 0.5251545333915235, qSpread: 0.043435236144029776, supportRows: 20272 },
+  { fold: "F4", deltaPr: -0.004234156542806622, score: 0.4243320700951397, roc: 0.5123662641488016, qSpread: 0.036673835452006975, supportRows: 20205 },
+  { fold: "F5", deltaPr: 0.0015197454710102476, score: 0.49109373389344246, roc: 0.5358698863049236, qSpread: 0.046267109346135205, supportRows: 25347 },
+  { fold: "F6", deltaPr: 0.011820542729460981, score: 0.3482512204987903, roc: 0.49239031950441947, qSpread: 0.038928275019756486, supportRows: 33297 },
 ] as const;
 
 const O1C_DECOMPOSITION_FOLDS = [
-  { fold: "F1", deltaPr: 0.000809 },
-  { fold: "F2", deltaPr: 0.003499 },
-  { fold: "F3", deltaPr: -0.000971 },
-  { fold: "F4", deltaPr: -0.012118 },
-  { fold: "F5", deltaPr: 0.003842 },
-  { fold: "F6", deltaPr: 0.025485 },
+  { fold: "F1", deltaPr: 0.000809061057561844, score: 0.4124618519705622, roc: 0.5341362318817163, qSpread: 0.08621950144668428, supportRows: 21501 },
+  { fold: "F2", deltaPr: 0.0034989177281643524, score: 0.4142974255056091, roc: 0.5298332543877828, qSpread: 0.07199376833587245, supportRows: 20057 },
+  { fold: "F3", deltaPr: -0.0009708157295899023, score: 0.4186940264036375, roc: 0.5235068725831474, qSpread: 0.05966202011274924, supportRows: 20272 },
+  { fold: "F4", deltaPr: -0.012117987079336312, score: 0.41644823955861, roc: 0.5071783158688737, qSpread: 0.022899334040170194, supportRows: 20205 },
+  { fold: "F5", deltaPr: 0.0038423465194802886, score: 0.4934163349419125, roc: 0.5359567706554096, qSpread: 0.06480246590840283, supportRows: 25347 },
+  { fold: "F6", deltaPr: 0.025484700438496044, score: 0.3619153782078254, roc: 0.5060294678173356, qSpread: 0.04501659551126341, supportRows: 33297 },
 ] as const;
 
 const O2_OPEN_GEOMETRY_FOLDS = [
-  { fold: "F1", deltaPr: 0.003866 },
-  { fold: "F2", deltaPr: 0.000451 },
-  { fold: "F3", deltaPr: 0.007242 },
-  { fold: "F4", deltaPr: 0.007310 },
-  { fold: "F5", deltaPr: 0.012031 },
-  { fold: "F6", deltaPr: 0.013823 },
+  { fold: "F1", deltaPr: 0.0038655063957908076, score: 0.41551829730879114, roc: 0.5375533518191322, qSpread: 0.08903339489943374, supportRows: 21501 },
+  { fold: "F2", deltaPr: 0.00045111340321468685, score: 0.41124962118065944, roc: 0.5295545518781186, qSpread: 0.09383945758569257, supportRows: 20057 },
+  { fold: "F3", deltaPr: 0.007242060826206376, score: 0.4269069029594338, roc: 0.5356642833434203, qSpread: 0.056654481179448046, supportRows: 20272 },
+  { fold: "F4", deltaPr: 0.007310380993454935, score: 0.43587660763140124, roc: 0.5277116139372107, qSpread: 0.042159597196066934, supportRows: 20205 },
+  { fold: "F5", deltaPr: 0.01203124575284159, score: 0.5016052341752738, roc: 0.5408824464318686, qSpread: 0.08119570718760244, supportRows: 25347 },
+  { fold: "F6", deltaPr: 0.013822826689179724, score: 0.35025350445850906, roc: 0.4966297091489187, qSpread: 0.04191637803355652, supportRows: 33297 },
 ] as const;
 
 const V3_A_H252_FOLDS = [

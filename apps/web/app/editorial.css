@@ -963,8 +963,10 @@ body {
 .compareContractNote { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--editorial-muted); font-size: 10px; line-height: 1.4; }
 .compareContractNote i { width: 7px; height: 7px; flex: 0 0 7px; background: var(--editorial-green); }
 .compareNormalizationNote { display: grid; gap: 4px; margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--editorial-green); background: rgba(226, 244, 235, .62); }
-.compareNormalizationNote strong { color: var(--editorial-ink); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
-.compareNormalizationNote p { margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
+.compareNormalizationNote strong, .compareReadingGuide strong { color: var(--editorial-ink); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.compareNormalizationNote p, .compareReadingGuide p { margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.55; }
+.compareReadingGuide { display: grid; gap: 4px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.54); }
+.compareReadingGuide b { color: var(--editorial-ink); }
 .compareTablePanel { margin-top: 14px; padding: 18px 20px 20px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.48); box-shadow: 0 1px 0 rgba(17,21,18,.10), 0 10px 24px rgba(17,21,18,.035); }
 .comparePanelHead { display: flex; justify-content: space-between; gap: 16px; align-items: start; padding-bottom: 14px; border-bottom: 1px solid var(--editorial-line); }
 .compareFoldCount { color: var(--editorial-green-dark); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
@@ -980,12 +982,12 @@ body {
 .compareFoldCell, .compareMetricCell { min-height: 58px; padding: 11px 12px; border-bottom: 1px solid var(--editorial-line); }
 .compareFoldCell { position: sticky; left: 0; z-index: 1; color: var(--editorial-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; background: var(--editorial-paper); }
 .compareMetricCell { border-left: 1px solid var(--editorial-line); background: rgba(255,255,255,.3); }
-.compareSeriesValue { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-height: 25px; }
+.compareSeriesValue { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 8px; min-height: 38px; }
 .compareSeriesValue + .compareSeriesValue { padding-top: 4px; border-top: 1px dashed var(--editorial-line-soft); }
-.compareSeriesValue span { overflow: hidden; color: var(--editorial-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.compareSeriesValue strong { font-size: 15px; letter-spacing: -.04em; white-space: nowrap; }
-.compareSeriesValue small { color: var(--editorial-muted); font-size: 10px; }
-.compareBaselineValue strong { color: var(--editorial-muted); }
+.compareSeriesValue span { grid-column: 1 / -1; overflow: hidden; color: var(--editorial-muted); font-size: 9px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.compareSeriesValue strong { grid-column: 1; font-size: 16px; letter-spacing: -.04em; white-space: nowrap; }
+.compareSeriesValue small { grid-column: 2; color: var(--editorial-muted); font-size: 10px; text-align: right; white-space: nowrap; }
+.compareBaselineValue strong { color: var(--editorial-ink); }
 .comparePositive { color: var(--editorial-green-dark); }
 .compareNegative { color: var(--editorial-red); }
 .compareEmptyCell { display: block; padding-top: 4px; color: var(--editorial-muted); font-size: 10px; }

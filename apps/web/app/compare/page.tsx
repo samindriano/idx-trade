@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   RESEARCH_EXPERIMENTS,
+  V3_B_COMMON_SUPPORT_FOLDS,
   type ResearchExperiment,
   type ResearchComparisonClass,
   type ResearchEvidence,
@@ -113,19 +114,43 @@ function hasMetric(experiment: ComparableExperiment, metric: SecondaryMetric["ke
   return experiment.evidence.series.some((series) => series.points.some((point) => typeof point[metric] === "number"));
 }
 
+function baselinePointFor(groupKey: string, fold: string) {
+  if (groupKey !== "Paired PR-AUC change vs V3-B") return null;
+  return V3_B_COMMON_SUPPORT_FOLDS.find((point) => point.fold === fold) ?? null;
+}
+
+function baselineDescription(groupKey: string) {
+  return groupKey === "Paired PR-AUC change vs V3-B"
+    ? "Certified common-support V3-B reference"
+    : "V3-B reference score is not certified for this metric family";
+}
+
 function metricCells(
   experiment: ComparableExperiment | null,
   fold: string,
-  metric: "deltaPr" | SecondaryMetric["key"],
+  metric: SecondaryMetric["key"],
   format: (value: number) => string,
+  baseline: boolean,
+  groupKey: string,
 ) {
+  if (baseline) {
+    const point = baselinePointFor(groupKey, fold);
+    const value = metric === "roc" ? point?.roc : point?.qSpread;
+    return (
+      <div className="compareSeriesValue compareBaselineValue">
+        <span>V3-B reference</span>
+        <strong>{typeof value === "number" ? format(value) : "—"}</strong>
+        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")}` : baselineDescription(groupKey)}</small>
+      </div>
+    );
+  }
   if (!experiment) return <span className="compareEmptyCell">Not selected</span>;
   return experiment.evidence.series.map((series) => {
     const point = pointFor(series, fold);
     const value = point ? point[metric] : undefined;
     return (
       <div className="compareSeriesValue" key={`${series.label}-${fold}-${metric}`}>
-        {experiment.evidence.series.length > 1 && <span>{series.label}</span>}
+        <span>{series.label}</span>
         <strong className={typeof value === "number" && value >= 0 ? "comparePositive" : "compareNegative"}>
           {typeof value === "number" ? format(value) : "—"}
         </strong>
@@ -134,25 +159,19 @@ function metricCells(
   });
 }
 
-function comparisonCells(experiment: ComparableExperiment | null, fold: string, baseline: boolean) {
+function comparisonCells(
+  experiment: ComparableExperiment | null,
+  fold: string,
+  baseline: boolean,
+  groupKey: string,
+) {
   if (baseline) {
-    const baselineSeries = experiment?.evidence.series ?? [];
-    if (baselineSeries.some((series) => typeof pointFor(series, fold)?.score === "number")) {
-      return baselineSeries.map((series) => {
-        const point = pointFor(series, fold);
-        return (
-          <div className="compareSeriesValue compareBaselineValue" key={`${series.label}-${fold}-baseline`}>
-            {baselineSeries.length > 1 && <span>{series.label}</span>}
-            <strong>{typeof point?.score === "number" ? point.score.toFixed(6) : "—"}</strong>
-            <small>Baseline reference</small>
-          </div>
-        );
-      });
-    }
+    const point = baselinePointFor(groupKey, fold);
     return (
       <div className="compareSeriesValue compareBaselineValue">
-        <strong>—</strong>
-        <small>Absolute score unavailable</small>
+        <span>V3-B reference</span>
+        <strong>{typeof point?.score === "number" ? point.score.toFixed(6) : "—"}</strong>
+        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")} · PR-AUC` : baselineDescription(groupKey)}</small>
       </div>
     );
   }
@@ -162,11 +181,14 @@ function comparisonCells(experiment: ComparableExperiment | null, fold: string, 
     const delta = point?.deltaPr;
     return (
       <div className="compareSeriesValue" key={`${series.label}-${fold}-comparison`}>
-        {experiment.evidence.series.length > 1 && <span>{series.label}</span>}
+        <span>{series.label}</span>
         <strong className={typeof delta === "number" && delta >= 0 ? "comparePositive" : "compareNegative"}>
           {typeof point?.score === "number" ? point.score.toFixed(6) : "—"}
         </strong>
-        <small>{typeof delta === "number" ? `(${signedPercent(delta)})` : "Paired delta unavailable"}</small>
+        <small>
+          {typeof delta === "number" ? `${signedPercent(delta)} vs V3-B` : "Paired delta unavailable"}
+          {typeof point?.score !== "number" && " · absolute score unavailable"}
+        </small>
       </div>
     );
   });
@@ -206,6 +228,9 @@ export default function ComparePage() {
   const completeSelections = selectedExperiments.filter((item): item is ComparableExperiment => Boolean(item));
   const comparableSecondaryMetrics = secondaryMetrics.filter((metric) =>
     completeSelections.length > 0 && completeSelections.every((experiment) => hasMetric(experiment, metric.key)),
+  );
+  const hasCommonSupportScores = activeGroup?.key === "Paired PR-AUC change vs V3-B" && selectedExperiments.some(
+    (experiment) => experiment?.generation === "O1" || experiment?.generation === "O2",
   );
 
   function changeGroup(nextKey: string) {
@@ -282,7 +307,7 @@ export default function ComparePage() {
               </label>
             ))}
           </div>
-          <div className="compareContractNote"><i /> V3-B is the fixed baseline. Showing {completeSelections.length} of {challengerSlotCount} challenger slots; missing folds remain blank.</div>
+          <div className="compareContractNote"><i /> V3-B is the fixed baseline. Showing {completeSelections.length} of {challengerSlotCount} challenger slots; each O1 variant remains separate.</div>
         </section>
 
         <section className="surface compareTablePanel">
@@ -293,9 +318,13 @@ export default function ComparePage() {
           <div className="compareNormalizationNote">
             <strong>Comparison basis</strong>
             <p>
-              V3-B stays fixed on the left as the incumbent baseline. Each challenger cell is formatted as absolute score plus paired delta when those values are certified.
-              {selectedExperiments.some((experiment) => experiment?.generation === "O2") && " O2 support-normalized absolute scores are not present in the current catalog; missing rows are not imputed or reweighted here."}
+              Left column is V3-B. In every model cell, the large number is absolute PR-AUC and the value in parentheses is the paired change versus V3-B; green means above the reference and red means below it.
+              {hasCommonSupportScores && " O1 and O2 use the certified common support for this comparison; fold row counts are shown under each value."}
             </p>
+          </div>
+          <div className="compareReadingGuide">
+            <strong>How to read O1 and O2</strong>
+            <p><b>O2</b> is one Open Geometry series. <b>O1</b> contains three separate series—overnight, intraday, and decomposition—so their rows are never averaged together. A dash means the source evidence does not certify an absolute score for that selected contract.</p>
           </div>
           <div className="compareTableScroll">
             <div className="compareTable">
@@ -313,7 +342,7 @@ export default function ComparePage() {
                   <div className="compareFoldCell">{fold}</div>
                   {comparisonColumns.map((experiment, index) => (
                     <div className="compareMetricCell" key={`${fold}-${index}`}>
-                      {comparisonCells(experiment, fold, index === 0)}
+                      {comparisonCells(experiment, fold, index === 0, activeGroup?.key ?? "")}
                     </div>
                   ))}
                 </div>
@@ -351,11 +380,15 @@ export default function ComparePage() {
             <div className="compareTableScroll">
               <div className="compareTable">
                 <div className="compareTableHeader compareFoldHeader">FOLD</div>
-                {selectedExperiments.map((experiment, index) => <div className="compareTableHeader compareModelHeader" key={`secondary-header-${index}`}>{experiment?.name ?? "Choose model"}</div>)}
+                {comparisonColumns.map((experiment, index) => (
+                  <div className="compareTableHeader compareModelHeader" key={`secondary-header-${index}`}>
+                    {index === 0 ? <><span>V3-B / BASELINE</span><strong>Structure-Lite</strong><small>fold-matched reference</small></> : <><span>{experiment ? `${experiment.generation} / ${statusLabel(experiment.status)}` : "CHOOSE MODEL"}</span><strong>{experiment?.name ?? "Choose model"}</strong><small>{experiment?.candidate ?? ""}</small></>}
+                  </div>
+                ))}
                 {folds.map((fold) => (
                   <div className="compareTableRow" key={`${metric.key}-${fold}`}>
                     <div className="compareFoldCell">{fold}</div>
-                    {selectedExperiments.map((experiment, index) => <div className="compareMetricCell" key={`${metric.key}-${fold}-${index}`}>{metricCells(experiment, fold, metric.key, metric.format)}</div>)}
+                    {comparisonColumns.map((experiment, index) => <div className="compareMetricCell" key={`${metric.key}-${fold}-${index}`}>{metricCells(experiment, fold, metric.key, metric.format, index === 0, activeGroup?.key ?? "")}</div>)}
                   </div>
                 ))}
               </div>
