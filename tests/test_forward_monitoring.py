@@ -8,7 +8,8 @@ import pandas as pd
 import pytest
 
 from idx_trade import forward_monitoring as monitor
-from idx_trade.providers.idx_stock_summary import StockSummaryFetchMeta
+from idx_trade.providers.idx_index_summary import IndexSummaryFetchMeta, IndexSummaryPayloadCapture
+from idx_trade.providers.idx_stock_summary import StockSummaryFetchMeta, StockSummaryPayloadCapture
 from idx_trade.provenance import sha256_file, write_manifest_atomic
 from idx_trade.storage import write_parquet_atomic
 
@@ -102,6 +103,43 @@ def _stock_summary(*, unresolved: bool = False) -> tuple[pd.DataFrame, StockSumm
     )
 
 
+def _index_summary() -> tuple[pd.DataFrame, IndexSummaryFetchMeta, IndexSummaryPayloadCapture]:
+    frame = pd.DataFrame(
+        {
+            "session_date": [SESSION],
+            "index_code": ["COMPOSITE"],
+            "close": [100.0],
+            "source": ["IDX_OFFICIAL"],
+        }
+    )
+    raw = b'{"data":[{"IndexCode":"COMPOSITE"}]}'
+    capture = IndexSummaryPayloadCapture(
+        payload={"data": []},
+        source_ref="https://example.test/index-summary",
+        raw_bytes=raw,
+        endpoint="https://example.test/index-summary",
+        params={"date": SESSION.strftime("%Y%m%d")},
+        retrieval_started_at_utc="2026-08-03T10:00:00+00:00",
+        observed_available_at_utc="2026-08-03T10:00:01+00:00",
+        records_total=1,
+        records_filtered=1,
+        row_count=1,
+        completeness_status="COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+    )
+    meta = IndexSummaryFetchMeta(
+        requested_date=SESSION.date().isoformat(),
+        source_ref=capture.source_ref,
+        records_total=1,
+        rows=1,
+        records_filtered=1,
+        retrieval_started_at_utc=capture.retrieval_started_at_utc,
+        observed_available_at_utc=capture.observed_available_at_utc,
+        raw_sha256=capture.raw_sha256,
+        completeness_status=capture.completeness_status,
+    )
+    return frame, meta, capture
+
+
 def _prepare(monkeypatch: pytest.MonkeyPatch, root: Path, *, unresolved: bool = False) -> list[int]:
     _security_master(root)
     _raw_price(root)
@@ -117,12 +155,32 @@ def _prepare(monkeypatch: pytest.MonkeyPatch, root: Path, *, unresolved: bool = 
         )
         return pd.DatetimeIndex([SESSION])
 
-    def fake_summary(date):
+    def fake_summary(date, *, include_capture=False):
         calls.append(1)
-        return _stock_summary(unresolved=unresolved)
+        frame, meta = _stock_summary(unresolved=unresolved)
+        raw = b'{"data":[{"StockCode":"AAAA"},{"StockCode":"BBBB"}]}'
+        capture = StockSummaryPayloadCapture(
+            payload={"data": []},
+            source_ref=meta.source_ref,
+            raw_bytes=raw,
+            endpoint=meta.source_ref,
+            params={"date": SESSION.strftime("%Y%m%d")},
+            retrieval_started_at_utc="2026-08-03T10:00:00+00:00",
+            observed_available_at_utc="2026-08-03T10:00:01+00:00",
+            records_total=meta.records_total or len(frame),
+            records_filtered=meta.records_total or len(frame),
+            row_count=len(frame),
+            completeness_status="COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+        )
+        return (frame, meta, capture) if include_capture else (frame, meta)
 
     monkeypatch.setattr(monitor, "sync_forward_calendar", fake_calendar)
     monkeypatch.setattr(monitor, "fetch_stock_summary_snapshot", fake_summary)
+    monkeypatch.setattr(
+        monitor,
+        "fetch_index_summary_snapshot",
+        lambda date, *, include_capture=False: _index_summary(),
+    )
     return calls
 
 

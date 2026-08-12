@@ -218,6 +218,22 @@ The outcome-blind forward feature builder, H10 maturity diagnostics, fixed
 marker guard, deterministic artifact verification, and post-cache profiling
 are implemented and covered by tests.
 
+## Market / index prospective EOD archive extension
+
+The source audit was accepted conditionally as
+`CONDITIONAL_SOURCE_READY_PIT_BLOCKED`. The implementation branch
+`data/market-index-forward-eod-v1-monitoring` extends the existing
+`forward_monitoring` session transaction with official Index Summary and exact
+raw Stock/Index response artifacts. Stock Summary completeness is now
+fail-closed against `recordsTotal`/`recordsFiltered`, date mismatch, zero rows,
+and duplicate identities.
+
+The existing `model_input.parquet` schema and V2/V3-B model fan-out contract
+are unchanged. No real new-session capture has been executed yet; raw
+capture, manifest/hash integrity, and automation acceptance remain pending
+ChatGPT review. Existing Stockbit intraday automation is separate and was not
+modified or duplicated.
+
 ## Immediate next action
 
 Wait for separate MAIN / ChatGPT authorization to consume a complete,

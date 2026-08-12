@@ -1452,3 +1452,37 @@ holdout remains consumed; Probability V1 remains deferred. No V2, Stage 6,
 `IDX-VAL-002`, execution-PnL claim, paper/live trading, or main merge was
 started. Stop for independent ChatGPT interpretation; do not treat any
 post-mortem subgroup or feature as independently validated.
+
+## 28. Market / Index Forward EOD Capture V1 — implementation before first capture
+
+Date: 2026-08-12 (Asia/Jakarta). The accepted Market / Index / Breadth source
+audit (`CONDITIONAL_SOURCE_READY_PIT_BLOCKED`) identified prospective EOD
+capture as the safe next step. The canonical frontend/Python
+`forward_monitoring` session package was inspected and reused; no second
+capture service, scheduler, database, API route, or session hierarchy was
+created.
+
+Direct official IDX probes for 2026-08-11 showed `recordsTotal=963` and
+`recordsFiltered=963` for Stock Summary and `recordsTotal=45` and
+`recordsFiltered=45` for Index Summary. The Stock Summary response returned all
+963 rows even when `length=100,start=100` was supplied, so pagination parameters
+were not treated as a completeness proof. The implementation now requires
+positive records metadata, exact row-count equality, equal filtered count when
+present, exact requested dates, and unique ticker/index identities. Empty,
+partial, filtered, malformed, or date-mismatched responses fail closed.
+
+The same canonical session now archives exact official raw Stock and Index
+responses beside normalized artifacts. Per-source endpoint, params, target
+date, retrieval start/success timestamps, `observed_available_at_utc`, source
+identity, row counts, records metadata, completeness status, and raw/normalized
+SHA-256 values are recorded in the session manifest. Raw/context artifacts are
+create-once and revision-conflict protected. Existing `model_input.parquet`
+and frozen model contracts are unchanged; breadth remains derived-only and
+non-official.
+
+Focused tests passed (`16`). Full pytest passed `247/247` with three existing
+warnings in `17.59s` (wrapper elapsed `20.42s`). No real new-session capture, model scoring,
+outcome access, OPEN, Stockbit intraday, Path Risk, or historical PIT work was
+started. Existing Windows Task Scheduler entries were inspected read-only and
+no new automation was registered. Stop for ChatGPT review before routine EOD
+capture is accepted.
