@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-12 19:46 Asia/Jakarta
+Last coordinated update: 2026-08-12 20:20 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -48,7 +48,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Stockbit intraday forward capture | `AUTOMATED` | Existing runtime | `data/stockbit-intraday-forward-capture-v1` | Daily capture infrastructure already exists. **Do not build it again.** Accumulate evidence for possible future Path Risk research. |
 | Path Risk | `WAITING` | none | prior V1/V2 lineage | V1/V2 failed. Do not restart/retune now; wait for richer intraday accumulation and a genuinely new preregistered hypothesis family. |
 | O2 fresh-forward | `ACTIVE` | Existing forward runtime | `integration/forward-eod-automation-monitoring` / acceptance `c5b356ad1a21646c4d6b50352872c7e6718c6df9` | First official post-freeze session accepted: 2026-08-12 / index 1268, 806 scored, 30 true flat-range row exclusions, counter `1/100`; outcomes locked. Continue prospectively under identical frozen eligibility/counter/provenance rules. |
-| O2.1 flat-range challenger experiment | `ACTIVE` | `Codex/O2.1-flat-range + ChatGPT spec/review` | `research/idx-ranking-ohlcv-o2-1-flat-range-v1` / frozen spec `53c11ca7a318536a9f9ac0c5b311c0914c1f8b4d` | Implement and run exactly the frozen one-shot historical experiment, then checkpoint results and STOP for ChatGPT review. **Do not modify O2 model, its 1/100 forward counter, or any forward outcomes.** |
+| O2.1 flat-range challenger experiment | `REVIEW` | `ChatGPT review + Codex/O2.1-flat-range` | `research/idx-ranking-ohlcv-o2-1-flat-range-v1` / result `619fd96` | One frozen historical run completed: `O2_1_NO_SURVIVOR` on 280,044 rows including 1,876 genuine flat bars. q25 paired PR-AUC `-0.0004961732`; median `+0.0022770931`; 4/6 positive folds. Lane closed; no rescue/refit/robustness/forward work. Active O2 counter/runtime/outcomes unchanged. |
 | IDX forward calendar extension | `WAITING` | existing data lane | `data/idx-forward-calendar-extension-v1` | Evidence-only extension; rerun when a new official session is source-certified. Do not infer dates. |
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
