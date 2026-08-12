@@ -61,15 +61,6 @@ function shortDate(value: string | null) {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function buttonDate(value: string | null) {
-  if (!value) return "Next Session";
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-}
-
 function sessionLabel(state: SessionState) {
   if (state === "DATA_READY") return "Recorded";
   if (state === "FETCHING") return "Fetching";
@@ -79,9 +70,9 @@ function sessionLabel(state: SessionState) {
 
 const monitoringLayers = [
   {
-    title: "Data capture",
+    title: "Automatic EOD archive",
     state: "ACTIVE",
-    copy: "Official-session snapshot, PIT universe evidence, canonical EOD prices, artifact hashes, and capture failures.",
+    copy: "The headless scheduler records official-session evidence, canonical EOD prices, artifact hashes, and failures.",
   },
   {
     title: "Signal scoring",
@@ -107,8 +98,6 @@ export default function MonitoringPage() {
   const [configured, setConfigured] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestDetail, setRequestDetail] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [targetDate, setTargetDate] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -120,11 +109,6 @@ export default function MonitoringPage() {
         setStatus(payload.status);
         setRequestError(null);
         setRequestDetail(null);
-        setTargetDate((current) => {
-          const floor = payload.status?.monitor_start_date ?? "";
-          if (!current || (floor && current < floor)) return payload.status?.next_missing_session || floor;
-          return current;
-        });
       } else {
         setRequestError(payload.error ?? "Runtime unavailable");
         setRequestDetail(payload.detail ?? null);
@@ -142,47 +126,6 @@ export default function MonitoringPage() {
     const timer = window.setInterval(() => void refresh(), 3_000);
     return () => window.clearInterval(timer);
   }, [refresh]);
-
-  useEffect(() => {
-    if (!status) return;
-    if (targetDate && targetDate < status.monitor_start_date) {
-      setTargetDate(status.next_missing_session || status.monitor_start_date);
-      return;
-    }
-    if (!status.next_missing_session) return;
-    const selected = status.sessions.find((item) => item.session_date === targetDate);
-    if (!targetDate || selected?.state === "DATA_READY") setTargetDate(status.next_missing_session);
-  }, [status, targetDate]);
-
-  async function capture() {
-    setSubmitting(true);
-    setRequestError(null);
-    setRequestDetail(null);
-    try {
-      const response = await fetch("/api/monitor/capture", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: targetDate || null }),
-      });
-      const payload = (await response.json()) as {
-        accepted?: boolean;
-        target_session?: string | null;
-        reason?: string;
-        error?: string;
-        detail?: string | null;
-      };
-      if (!response.ok) {
-        throw new Error(payload.detail ? `${payload.error ?? "Capture failed"} — ${payload.detail}` : payload.error ?? "Capture failed");
-      }
-      if (payload.reason === "NO_MISSING_SESSION") setRequestError("All closed sessions are recorded.");
-      await new Promise((resolve) => window.setTimeout(resolve, 500));
-      await refresh();
-    } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Capture failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   const o2ScoredDates = useMemo(() => {
     if (!status) return new Set<string>();
@@ -210,8 +153,6 @@ export default function MonitoringPage() {
   const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
   const anyFetching = status?.sessions.some((session) => session.state === "FETCHING") ?? false;
   const calendarReady = status?.calendar_ready ?? false;
-  const captureTarget = targetDate || status?.next_missing_session || null;
-  const canCapture = !statusLoading && configured && connected && !submitting && !anyFetching;
   const scoringProgress = Math.min(100, o2ScoredDates.size);
 
   return (
@@ -232,42 +173,27 @@ export default function MonitoringPage() {
           <div>
             <p className="eyebrow">FINAL V3-B · OUTCOME-BLIND</p>
             <h1>Forward Monitoring</h1>
-            <p className="heroCopy">Capture EOD data and track O2 against V3-B on the same sessions.</p>
+            <p className="heroCopy">Monitor automatic EOD archival and track O2 against V3-B on the same verified sessions.</p>
           </div>
         </section>
 
         <section className="monitorSummaryGrid">
           <article className="summaryBlock prominent"><span>O2 scores</span><div><strong>{statusLoading ? "—" : o2ScoredDates.size}</strong>{!statusLoading && <em>/ {O2_CHALLENGER.forwardTargetSessions}</em>}</div><small>primary challenger</small></article>
-          <article className="summaryBlock"><span>EOD snapshots</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
-          <article className="summaryBlock"><span>Next session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
+          <article className="summaryBlock"><span>Verified EOD sessions</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
+          <article className="summaryBlock"><span>Next missing session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
         </section>
 
         <section className="monitorMainGrid">
           <article className="surface sessionCapturePanel">
-            <div className="sectionHead"><div><span>SESSION DATA</span><h2>Capture EOD data</h2></div></div>
+            <div className="sectionHead"><div><span>AUTOMATION HEALTH</span><h2>Automatic EOD archive</h2></div><span className="pairedForwardBadge">HEADLESS</span></div>
             <div className="captureBody">
-              <div className="captureControls">
-                <label>
-                  <span>Target session</span>
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(event) => setTargetDate(event.target.value)}
-                    min={status?.monitor_start_date ?? "2026-08-10"}
-                    max={status?.calendar_last_session ?? undefined}
-                  />
-                </label>
-                <button className="captureButton" type="button" disabled={!canCapture} onClick={() => void capture()}>
-                  {statusLoading ? "Reading runtime..." : submitting ? "Starting..." : anyFetching ? "Fetching..." : "Capture EOD"}
-                </button>
-              </div>
-
-              {!statusLoading && !configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong></div></div>}
-              {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Calendar syncs on first capture</strong></div></div>}
+              {!statusLoading && !configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong><p>Daily acquisition runs independently; this page only reads its status.</p></div></div>}
+              {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Waiting for the first automated calendar sync</strong></div></div>}
               {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
               {latestFailure && !requestError && (
-                <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "Retry available"}</p></div></div>
+                <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "Review the scheduler log."}</p></div></div>
               )}
+              {!statusLoading && connected && !latestFailure && <div className="runtimeNotice info"><i /><div><strong>{anyFetching ? "EOD archive is running" : "EOD archive is monitored automatically"}</strong><p>Verified source artifacts and model progress are read from the canonical runtime.</p></div></div>}
 
               <div className="sessionStripHeader">
                 <div><span>HISTORY</span><h3>Recent sessions</h3></div>
@@ -283,20 +209,18 @@ export default function MonitoringPage() {
               ) : status?.sessions.length ? (
                 <div className="sessionStrip">
                   {status.sessions.slice(-12).map((session) => (
-                    <button
-                      type="button"
+                    <div
                       key={session.session_date}
                       className={`sessionTile ${session.state.toLowerCase()}`}
-                      onClick={() => session.state !== "DATA_READY" && setTargetDate(session.session_date)}
                       title={session.error_message ?? undefined}
                     >
-                      <span>{buttonDate(session.session_date)}</span>
+                      <span>{shortDate(session.session_date)}</span>
                       <strong>{sessionLabel(session.state)}</strong>
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="emptySessionState"><strong>No captured sessions</strong></div>
+                <div className="emptySessionState"><strong>No recorded sessions yet</strong></div>
               )}
             </div>
           </article>

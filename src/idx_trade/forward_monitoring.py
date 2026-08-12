@@ -15,6 +15,13 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from .price_backfill import _download_in_batches
+from .forward_ohlcv import (
+    MODEL_INPUT_COLUMNS,
+    build_session_ohlcv,
+    provider_row_evidence_sha256,
+    validate_ohlcv_against_model_input,
+    write_immutable_ohlcv,
+)
 from .provenance import sha256_file, write_manifest_atomic
 from .providers.idx_index_summary import fetch_index_summary_snapshot
 from .providers.idx_stock_summary import fetch_stock_summary_snapshot
@@ -353,19 +360,44 @@ def _raw_row(path: Path, session: pd.Timestamp) -> pd.Series | None:
     return selected.iloc[-1]
 
 
-def _price_payload(ticker: str, row: pd.Series, session: pd.Timestamp, regular_value: float) -> dict[str, object]:
-    required = ("raw_high", "raw_low", "raw_close", "raw_volume")
+def _price_payload(
+    ticker: str,
+    row: pd.Series,
+    session: pd.Timestamp,
+    regular_value: float,
+    *,
+    source: str,
+    source_ref: str,
+    source_sha256: str | None = None,
+    observed_retrieved_at_utc: str | None = None,
+) -> dict[str, object]:
+    required = ("raw_open", "raw_high", "raw_low", "raw_close", "raw_volume")
     missing = [column for column in required if column not in row.index or pd.isna(row[column])]
     if missing:
         raise RuntimeError(f"price row for {ticker} missing canonical columns {missing}")
+    prices = {column: float(row[column]) for column in required[:-1]}
+    volume = float(row["raw_volume"])
+    if not all(pd.notna(value) and value > 0 for value in prices.values()):
+        raise RuntimeError(f"price row for {ticker} has invalid positive OHLC")
+    if not pd.notna(volume) or volume < 0:
+        raise RuntimeError(f"price row for {ticker} has invalid non-negative volume")
+    if prices["raw_low"] > min(prices["raw_open"], prices["raw_close"]):
+        raise RuntimeError(f"price row for {ticker} low is above open/close")
+    if prices["raw_high"] < max(prices["raw_open"], prices["raw_close"]):
+        raise RuntimeError(f"price row for {ticker} high is below open/close")
     return {
         "ticker": ticker,
         "date": session,
+        "open": prices["raw_open"],
         "high": float(row["raw_high"]),
         "low": float(row["raw_low"]),
         "close": float(row["raw_close"]),
-        "volume": float(row["raw_volume"]),
+        "volume": volume,
         "regular_market_value": float(regular_value),
+        "source": source,
+        "source_ref": source_ref,
+        "source_sha256": source_sha256 or provider_row_evidence_sha256(ticker, session, row),
+        "observed_retrieved_at_utc": observed_retrieved_at_utc,
     }
 
 
@@ -406,6 +438,7 @@ def _verify_ready_artifacts(
         ("stock_summary_path", "stock_summary_sha256"),
         ("index_summary_raw_path", "index_summary_raw_sha256"),
         ("index_summary_path", "index_summary_sha256"),
+        ("session_ohlcv_path", "session_ohlcv_sha256"),
     )
     for path_key, hash_key in artifact_pairs:
         artifact_path = manifest.get(path_key)
@@ -724,15 +757,25 @@ def capture_session(
         local_hits = 0
         missing_prices: list[str] = []
         for ticker in active:
-            row = _raw_row(paths.raw_price_root / f"{ticker}.parquet", session)
+            raw_path = paths.raw_price_root / f"{ticker}.parquet"
+            row = _raw_row(raw_path, session)
             if row is None:
                 missing_prices.append(ticker)
                 continue
-            price_rows[ticker] = _price_payload(ticker, row, session, regular_values[ticker])
+            price_rows[ticker] = _price_payload(
+                ticker,
+                row,
+                session,
+                regular_values[ticker],
+                source="YAHOO_YFINANCE_RAW_OHLCV",
+                source_ref=f"https://finance.yahoo.com/quote/{ticker}.JK/history",
+                source_sha256=sha256_file(raw_path),
+            )
             local_hits += 1
 
         downloaded_hits = 0
         download_errors: dict[str, str] = {}
+        download_observed_at = _utcnow()
         if missing_prices:
             payload, download_errors = _download_in_batches(
                 missing_prices,
@@ -754,6 +797,9 @@ def capture_session(
                     selected.iloc[-1],
                     session,
                     regular_values[ticker],
+                    source="YAHOO_YFINANCE_AUTO_ADJUST_FALSE",
+                    source_ref=f"https://finance.yahoo.com/quote/{ticker}.JK/history",
+                    observed_retrieved_at_utc=download_observed_at,
                 )
                 downloaded_hits += 1
 
@@ -766,9 +812,12 @@ def capture_session(
             )
 
         evidence = pd.DataFrame(evidence_rows).sort_values("ticker").reset_index(drop=True)
-        snapshot = pd.DataFrame(price_rows.values()).sort_values("ticker").reset_index(drop=True)
+        snapshot = pd.DataFrame(price_rows.values()).loc[:, MODEL_INPUT_COLUMNS]
+        snapshot = snapshot.sort_values("ticker").reset_index(drop=True)
         if snapshot.empty:
             raise RuntimeError("session has no model-safe ACTIVE price rows")
+        session_ohlcv = build_session_ohlcv(price_rows)
+        validate_ohlcv_against_model_input(session_ohlcv, snapshot, session)
         _heartbeat(paths, session, owner)
 
         final_dir = paths.session_root / session_key
@@ -779,6 +828,7 @@ def capture_session(
         stock_summary_raw_path = final_dir / "idx_stock_summary.raw.json"
         index_summary_path = final_dir / "idx_index_summary.csv"
         index_summary_raw_path = final_dir / "idx_index_summary.raw.json"
+        session_ohlcv_path = final_dir / "session_ohlcv.parquet"
         manifest_path = final_dir / "manifest.json"
 
         # The destination is deterministic and the registry guarantees that an existing
@@ -790,6 +840,7 @@ def capture_session(
         _promote_immutable(attempt_dir / "idx_stock_summary.raw.json", stock_summary_raw_path)
         _promote_immutable(attempt_dir / "idx_index_summary.csv", index_summary_path)
         _promote_immutable(attempt_dir / "idx_index_summary.raw.json", index_summary_raw_path)
+        session_ohlcv_sha256 = write_immutable_ohlcv(session_ohlcv, session_ohlcv_path)
 
         manifest: dict[str, Any] = {
             "schema_version": MONITOR_SCHEMA_VERSION,
@@ -804,6 +855,10 @@ def capture_session(
             "point_evidence_rows": len(evidence),
             "local_price_hits": local_hits,
             "downloaded_price_hits": downloaded_hits,
+            "session_ohlcv_path": str(session_ohlcv_path),
+            "session_ohlcv_sha256": session_ohlcv_sha256,
+            "open_coverage_status": "COMPLETE_ACTIVE_MODEL_ROWS",
+            "open_source_counts": session_ohlcv["source"].value_counts().to_dict(),
             "snapshot_path": str(snapshot_path),
             "snapshot_sha256": sha256_file(snapshot_path),
             "evidence_path": str(evidence_path),
@@ -867,6 +922,8 @@ def capture_session(
             "local_price_hits": local_hits,
             "downloaded_price_hits": downloaded_hits,
             "snapshot_sha256": sha256_file(snapshot_path),
+            "session_ohlcv_path": str(session_ohlcv_path),
+            "session_ohlcv_sha256": session_ohlcv_sha256,
         }
     except Exception as error:
         _fail_session(paths, session, owner, error)

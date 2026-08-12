@@ -193,6 +193,23 @@ def test_capture_is_idempotent_and_does_not_refetch_ready_session(tmp_path: Path
 
     assert first["status"] == "DATA_READY"
     assert first["model_input_rows"] == 1
+    snapshot = pd.read_parquet(
+        monitor.runtime_paths(tmp_path).session_root / SESSION.date().isoformat() / "model_input.parquet"
+    )
+    assert list(snapshot.columns) == [
+        "ticker",
+        "date",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "regular_market_value",
+    ]
+    ohlcv = pd.read_parquet(
+        monitor.runtime_paths(tmp_path).session_root / SESSION.date().isoformat() / "session_ohlcv.parquet"
+    )
+    assert ohlcv.loc[0, "open"] == 100.0
+    assert ohlcv.loc[0, "source"] == "YAHOO_YFINANCE_RAW_OHLCV"
     assert second == {
         "status": "DATA_READY",
         "session_date": SESSION.date().isoformat(),

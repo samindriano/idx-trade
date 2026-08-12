@@ -1486,3 +1486,46 @@ outcome access, OPEN, Stockbit intraday, Path Risk, or historical PIT work was
 started. Existing Windows Task Scheduler entries were inspected read-only and
 no new automation was registered. Stop for ChatGPT review before routine EOD
 capture is accepted.
+
+## 29. Forward EOD automation, Open sidecar, and read-only monitoring UI
+
+Date: 2026-08-12 (Asia/Jakarta). Integration branch:
+`integration/forward-eod-automation-monitoring`.
+
+The reviewed market/index capture lineage was integrated on top of the latest
+frontend lineage rather than cherry-picking the older frontend tree. The
+existing forward session engine remains the only recorder. Added:
+
+- `idx_trade.forward_eod_runner`, a headless chronological catch-up wrapper
+  that uses the existing `forward_monitoring_runtime`, stops on the first
+  failure, enforces the 17:00 Asia/Jakarta cutoff, and persists compact
+  external run logs below the existing `forward_monitoring` root;
+- a create-once `session_ohlcv.parquet` sibling containing Open/H/L/C/Volume,
+  provider identity, source reference, source/evidence SHA, and observed
+  retrieval time; the legacy `model_input.parquet` schema is explicitly
+  selected and remains unchanged;
+- local-first `enrich_session_ohlcv(...)` for legacy DATA_READY sessions,
+  with opt-in provider recovery only for missing rows and fail-closed
+  H/L/C/Volume reconciliation;
+- auditable PowerShell runner/install scripts for one Task Scheduler task with
+  17:05 and 17:30 idempotent triggers, StartWhenAvailable, and IgnoreNew.
+  Installation is intentionally not run before controlled real validation;
+- a read-only `/monitoring` UI: manual target-date, Capture EOD, and session
+  submission controls were removed. The existing local capture API remains
+  available as a guarded emergency interface.
+
+Read-only audit of external runtime
+`D:\Documents\Project\idx-trade-data-gate-20260808v` found two legacy
+DATA_READY sessions, `2026-08-03` (831 active rows) and `2026-08-10` (837).
+Neither model input contains Open. The 922 local raw Yahoo/yfinance Parquet
+files end at `2026-07-31`, yielding exact local Open recovery coverage of
+`0/831` and `0/837`; the prior manifests show `downloaded_price_hits` of 831
+and 837 but the Open values were discarded before canonical model-input write.
+The existing raw provider path is `download_daily(..., auto_adjust=False)`;
+no source bytes were changed and no historical publication-time claim is made.
+
+Validation so far: focused forward/runtime/OHLCV/runner tests pass; full repo
+pytest after integration and Next.js build pass. At checkpoint time Jakarta
+was before 17:00, so no real capture, Open network recovery, scheduler
+installation, model scoring, outcome access, or forward marker access was
+performed.
