@@ -1104,3 +1104,167 @@ body {
     transition-duration: 0ms;
   }
 }
+
+/* Automated three-model monitoring surface. The runtime is read-only here;
+   session retrieval and scoring remain owned by the research runtime. */
+.monitorSummaryGridThree { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.autoArchivePanel {
+  margin-top: 16px;
+  padding: 24px 26px 26px;
+  border: 1px solid var(--editorial-line);
+  background: rgba(255, 255, 255, .56);
+  box-shadow: 0 1px 0 rgba(17, 21, 18, .1), 0 12px 26px rgba(17, 21, 18, .04);
+}
+
+.autoArchiveHead,
+.monitoringSectionHead,
+.sessionArchiveHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.panelKicker {
+  color: var(--editorial-muted);
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: .13em;
+}
+
+.autoArchiveHead h2,
+.monitoringSectionHead h2,
+.sessionArchiveHead h3 {
+  margin: 7px 0 0;
+  color: var(--editorial-ink);
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: -.045em;
+}
+
+.sessionArchiveHead h3 { font-size: 17px; }
+
+.autoArchiveHead p,
+.monitoringSectionHead > p,
+.alignmentPanel > p {
+  max-width: 700px;
+  margin: 12px 0 0;
+  color: var(--editorial-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.archiveConnection {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid #e8d5ae;
+  background: #fff8e9;
+  color: #8b621f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.archiveConnection i { width: 7px; height: 7px; border-radius: 50%; background: var(--editorial-amber); }
+.archiveConnection.isConnected { border-color: #cfe4d8; background: #f5fbf7; color: #35634f; }
+.archiveConnection.isConnected i { background: var(--editorial-green); }
+.archiveConnection.isUnavailable i { background: var(--editorial-red); }
+
+.archiveFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+  border-top: 1px solid var(--editorial-line);
+  border-bottom: 1px solid var(--editorial-line);
+}
+
+.archiveFacts > div { min-width: 0; padding: 15px 18px 14px 0; border-right: 1px solid var(--editorial-line); }
+.archiveFacts > div + div { padding-left: 18px; }
+.archiveFacts > div:last-child { border-right: 0; }
+.archiveFacts span,
+.archiveFacts small { display: block; color: var(--editorial-muted); font-size: 10px; }
+.archiveFacts strong { display: block; overflow: hidden; margin: 7px 0 4px; color: var(--editorial-ink); font-size: 17px; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
+
+.sessionArchiveHead { align-items: end; margin-top: 24px; padding-bottom: 11px; border-bottom: 1px solid var(--editorial-line); }
+.sessionArchiveHead small { color: var(--editorial-muted); font-size: 10px; }
+.autoArchivePanel .sessionStrip { margin-top: 14px; }
+.autoArchivePanel .sessionTile { cursor: default; }
+.autoArchivePanel .sessionTile:hover { transform: none; }
+
+.monitoringModelsSection { margin-top: 30px; }
+.monitoringSectionHead { align-items: end; }
+.monitoringSectionHead > p { margin: 0; max-width: 420px; text-align: right; }
+.monitoredModelGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+
+.monitoredModelCard {
+  display: flex;
+  min-height: 322px;
+  flex-direction: column;
+  padding: 22px 22px 0;
+  border: 1px solid var(--editorial-line);
+  background: rgba(255, 255, 255, .56);
+  color: var(--editorial-ink);
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(17, 21, 18, .08), 0 10px 22px rgba(17, 21, 18, .03);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.monitoredModelCard:hover { transform: translateY(-2px); border-color: var(--editorial-green); background: #f5fbf7; box-shadow: 0 7px 18px rgba(17, 21, 18, .08); }
+.monitoredModelCard:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 3px; }
+.monitoredModelCard.challenger { border-top: 3px solid #2d7798; }
+.monitoredModelCard.incumbent { border-top: 3px solid var(--editorial-green); }
+.monitoredModelCard.baseline { border-top: 3px solid #8a927f; }
+
+.monitoredModelTopline { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.monitoredModelTopline span { color: var(--editorial-muted); font-size: 9px; font-weight: 820; letter-spacing: .11em; text-transform: uppercase; }
+.monitoredModelTopline b { color: var(--editorial-green-dark); font-size: 9px; letter-spacing: .1em; }
+.monitoredModelCard h3 { margin: 12px 0 0; font-size: 22px; line-height: 1.05; letter-spacing: -.045em; }
+.monitoredModelScore { display: flex; align-items: baseline; gap: 7px; margin-top: 30px; }
+.monitoredModelScore strong { font-size: 44px; line-height: .9; letter-spacing: -.07em; }
+.monitoredModelScore span { color: var(--editorial-muted); font-size: 11px; }
+.monitoredModelCard .progressTrack { height: 6px; margin-top: 16px; background: rgba(17, 21, 18, .15); }
+.monitoredModelCard .progressTrack > span { background: var(--editorial-green); }
+.monitoredModelCard.challenger .progressTrack > span { background: #2d7798; }
+.monitoredModelCard p { margin: 17px 0 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
+.monitoredModelMeta { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 15px; color: var(--editorial-muted); font-size: 9px; }
+.monitoredModelMeta span:first-child { color: var(--editorial-green-dark); font-weight: 720; }
+.monitoredModelCard .modelCardAction { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: auto; padding: 17px 0 19px; border-top: 1px solid var(--editorial-line); color: var(--editorial-green-dark); font-size: 9px; font-weight: 820; letter-spacing: .08em; text-transform: uppercase; }
+.monitoredModelCard .modelCardAction b { font-size: 16px; font-weight: 500; }
+
+.alignmentPanel { margin-top: 14px; padding: 24px 26px 25px; border: 1px solid var(--editorial-line); background: rgba(255, 255, 255, .56); box-shadow: 0 1px 0 rgba(17, 21, 18, .1), 0 12px 26px rgba(17, 21, 18, .04); }
+.compactHead { align-items: start; }
+.compactHead h2 { font-size: 21px; }
+.alignmentBadge { color: var(--editorial-green-dark); font-size: 9px; font-weight: 820; letter-spacing: .1em; }
+.alignmentMetrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 20px; border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.alignmentMetrics > div { padding: 14px 16px 13px 0; border-right: 1px solid var(--editorial-line); }
+.alignmentMetrics > div + div { padding-left: 16px; }
+.alignmentMetrics > div:last-child { border-right: 0; }
+.alignmentMetrics span, .alignmentMetrics small { display: block; color: var(--editorial-muted); font-size: 9px; }
+.alignmentMetrics strong { display: block; margin: 7px 0 3px; font-size: 20px; letter-spacing: -.05em; }
+.alignmentNote { display: block; margin-top: 14px; color: var(--editorial-muted); font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .monitoredModelGrid { grid-template-columns: 1fr 1fr; }
+  .monitoredModelCard:last-child { grid-column: 1 / -1; }
+  .monitoringSectionHead { display: block; }
+  .monitoringSectionHead > p { margin-top: 9px; text-align: left; }
+}
+
+@media (max-width: 660px) {
+  .autoArchivePanel, .alignmentPanel { padding-inline: 16px; }
+  .autoArchiveHead { display: block; }
+  .archiveConnection { margin-top: 16px; }
+  .archiveFacts { grid-template-columns: 1fr; }
+  .archiveFacts > div, .archiveFacts > div + div { padding: 13px 0; border-right: 0; border-bottom: 1px solid var(--editorial-line); }
+  .archiveFacts > div:last-child { border-bottom: 0; }
+  .monitoredModelGrid { grid-template-columns: 1fr; }
+  .monitoredModelCard:last-child { grid-column: auto; }
+  .alignmentMetrics { grid-template-columns: 1fr 1fr; }
+  .alignmentMetrics > div:nth-child(2) { border-right: 0; }
+  .alignmentMetrics > div:nth-child(3), .alignmentMetrics > div:nth-child(4) { border-top: 1px solid var(--editorial-line); }
+  .alignmentMetrics > div:nth-child(3) { padding-left: 0; }
+}
