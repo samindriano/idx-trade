@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   getMonitorRuntimeStatus,
+  getStockbitIntradayStatus,
   MonitorRuntimeError,
   monitorRuntimeConfigured,
 } from "@/lib/monitor-runtime";
@@ -19,7 +20,8 @@ export async function GET() {
 
   try {
     const status = await getMonitorRuntimeStatus();
-    return NextResponse.json({ connected: true, configured: true, status });
+    const intraday = await getStockbitIntradayStatus();
+    return NextResponse.json({ connected: true, configured: true, status, intraday });
   } catch (error) {
     const runtime = error as MonitorRuntimeError;
     return NextResponse.json(

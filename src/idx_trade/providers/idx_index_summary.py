@@ -42,7 +42,10 @@ INDEX_FIELDS = (
 
 def index_summary_url(date: str | pd.Timestamp) -> str:
     day = pd.Timestamp(date).normalize()
-    return f"{IDX_INDEX_SUMMARY_URL}?date={day.strftime('%Y%m%d')}"
+    # The endpoint's default page is only 10 rows.  The official source audit
+    # established that length=1000,start=0 returns the complete 45-row index
+    # snapshot and is still proven complete by recordsTotal/recordsFiltered.
+    return f"{IDX_INDEX_SUMMARY_URL}?length=1000&start=0&date={day.strftime('%Y%m%d')}"
 
 
 def _utc_now() -> str:
@@ -179,7 +182,11 @@ def fetch_index_summary_payload_capture(
         source_ref=str(getattr(response, "url", "") or url),
         raw_bytes=raw_bytes,
         endpoint=IDX_INDEX_SUMMARY_URL,
-        params={"date": pd.Timestamp(date).normalize().strftime("%Y%m%d")},
+        params={
+            "length": "1000",
+            "start": "0",
+            "date": pd.Timestamp(date).normalize().strftime("%Y%m%d"),
+        },
         retrieval_started_at_utc=retrieval_started_at_utc,
         observed_available_at_utc=observed_available_at_utc,
         records_total=records_total,

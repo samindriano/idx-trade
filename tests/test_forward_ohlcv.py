@@ -108,3 +108,30 @@ def test_ohlcv_validation_fails_closed_on_hlc_disagreement() -> None:
 
     with pytest.raises(ValueError, match="high disagrees"):
         validate_ohlcv_against_model_input(ohlcv, model, SESSION)
+
+
+def test_legacy_open_repair_allows_volume_revision_but_not_hlc_revision() -> None:
+    model = _model_input()
+    ohlcv = pd.DataFrame(
+        [
+            {
+                "ticker": "AAAA",
+                "session_date": SESSION,
+                "open": 100.0,
+                "high": 105.0,
+                "low": 99.0,
+                "close": 103.0,
+                "volume": 2000.0,
+                "source": "TEST",
+                "source_ref": "test://row",
+                "source_sha256": "a" * 64,
+                "observed_retrieved_at_utc": None,
+            }
+        ]
+    )
+
+    validate_ohlcv_against_model_input(ohlcv, model, SESSION, compare_volume=False)
+    with pytest.raises(ValueError, match="close disagrees"):
+        validate_ohlcv_against_model_input(
+            ohlcv.assign(close=104.0), model, SESSION, compare_volume=False
+        )

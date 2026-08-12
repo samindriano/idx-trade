@@ -1,8 +1,9 @@
 """Outcome-blind per-model fan-out for the local forward monitor.
 
 The session capture runtime owns immutable input snapshots.  This module owns
-the next layer: enqueueing the frozen V2 and V3-B models, scoring the same
-snapshot, and committing independently verifiable result artifacts.  It never
+the next layer: enqueueing the frozen V2, V3-B, and eligible O2 models,
+scoring the same snapshot, and committing independently verifiable result
+artifacts. It never
 loads labels, outcomes, or the one-shot outcome-access marker.
 """
 
@@ -13,7 +14,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
@@ -23,6 +24,7 @@ import numpy as np
 import pandas as pd
 
 from .provenance import sha256_file, write_manifest_atomic
+from .forward_ohlcv import SESSION_OHLCV_COLUMNS, validate_ohlcv_against_model_input
 from .ranking_v2_forward_runtime import (
     FRESH_FORWARD_CUTOFF,
     build_outcome_blind_forward_features,
@@ -42,6 +44,15 @@ MODEL_WORKER_STALE_MINUTES = 30
 CAUSAL_HISTORY_SESSIONS = 120
 V3_FEATURE_ORDER_SHA256 = "100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e"
 V3_FEATURE_COLUMNS = (*V2_FULL_FEATURE_COLUMNS, *STRUCTURE_LITE_FEATURE_COLUMNS)
+O2_MODEL_ID = "O2-GEOMETRY-FULL3-V1-CANDIDATE-001"
+O2_GENERATION = "O2"
+O2_MODEL_SHA256 = "42442e438f04ff40e0637fa3a536bbe9b4ab8f50c8556d350ca0e908d592ccfb"
+O2_MODEL_MANIFEST_SHA256 = "535875e74a1b3a6532e95addf819521758798a767bc49ee9b30d54054a0ae7c2"
+O2_FEATURE_ORDER_SHA256 = "a2f04da9100eca4c3896330c2188df0e5afa6371f9a4baec2f4fea10495b980f"
+O2_FEATURE_COLUMNS = (*V3_FEATURE_COLUMNS, "open_position", "open_to_high", "open_to_low")
+O2_FREEZE_TIMESTAMP = pd.Timestamp("2026-08-12T07:45:30+07:00")
+O2_SESSION_START_LOCAL = time(8, 45)
+O2_FORWARD_GATE_SESSIONS = 100
 
 
 @dataclass(frozen=True)
@@ -75,6 +86,16 @@ FROZEN_MODELS = (
         manifest_sha256="4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9",
         feature_columns=tuple(V3_FEATURE_COLUMNS),
         feature_order_sha256=V3_FEATURE_ORDER_SHA256,
+    ),
+    FrozenModelSpec(
+        model_id=O2_MODEL_ID,
+        generation=O2_GENERATION,
+        model_relative_path="ohlcv_o2_final_refit_v1_20260812/o2_geometry_full3_final_model.joblib",
+        manifest_relative_path="ohlcv_o2_final_refit_v1_20260812/model_manifest.json",
+        model_sha256=O2_MODEL_SHA256,
+        manifest_sha256=O2_MODEL_MANIFEST_SHA256,
+        feature_columns=tuple(O2_FEATURE_COLUMNS),
+        feature_order_sha256=O2_FEATURE_ORDER_SHA256,
     ),
 )
 
@@ -139,6 +160,8 @@ def _verify_frozen_model(paths, spec: FrozenModelSpec) -> tuple[Path, Path, dict
         raise RuntimeError(f"frozen {spec.model_id} manifest has invalid outcome-marker flag")
     if spec.feature_order_sha256 is not None and manifest.get("feature_order_sha256") != spec.feature_order_sha256:
         raise RuntimeError(f"frozen {spec.model_id} feature-order hash mismatch")
+    if spec.model_id == O2_MODEL_ID and manifest.get("candidate_id") != O2_MODEL_ID:
+        raise RuntimeError("frozen O2 candidate identity differs from the approved model")
     if spec.feature_order_sha256 is None:
         manifest_columns = tuple(manifest.get("feature_columns", ()))
         if manifest_columns != spec.feature_columns:
@@ -162,6 +185,7 @@ def _official_sessions(paths, target: pd.Timestamp) -> pd.DatetimeIndex:
     prefix_candidates = (
         paths.runtime_root / "research_feasibility_1260_20260809" / "official_exchange_sessions_1260.csv",
         paths.runtime_root / "sessions" / "exchange_sessions.csv",
+        paths.calendar_root / "exchange_sessions.csv",
     )
     prefix_path = next((path for path in prefix_candidates if path.exists()), None)
     if prefix_path is None:
@@ -254,6 +278,89 @@ def _load_model_panel(paths, session_key: str) -> tuple[pd.DataFrame, pd.Datetim
     panel = panel.drop_duplicates(["ticker", "date"], keep="last").sort_values(["date", "ticker"]).reset_index(drop=True)
     sessions = _official_sessions(paths, session)
     return panel, sessions, snapshot_path, panel_path
+
+
+def _o2_session_identity(paths, session_key: str) -> tuple[int, pd.Timestamp]:
+    """Resolve the official session index and IDX opening time for O2 gating."""
+
+    session = _normal_date(session_key)
+    sessions = _official_sessions(paths, session)
+    try:
+        session_index = int(sessions.get_loc(session)) + 1
+    except KeyError as error:
+        raise RuntimeError(f"O2 session is not in the official exchange calendar: {session_key}") from error
+    start = pd.Timestamp(
+        datetime.combine(
+            session.date(),
+            O2_SESSION_START_LOCAL,
+            tzinfo=ZoneInfo("Asia/Jakarta"),
+        )
+    )
+    return session_index, start
+
+
+def _o2_input_status(paths, session_key: str) -> tuple[str, str]:
+    """Return a fail-closed O2 eligibility state without reading outcomes."""
+
+    session_index, session_start = _o2_session_identity(paths, session_key)
+    if session_start <= O2_FREEZE_TIMESTAMP:
+        return "PRE_FREEZE", f"session_index={session_index} starts at or before the O2 freeze"
+    ohlcv_path = paths.session_root / _normal_date(session_key).date().isoformat() / "session_ohlcv.parquet"
+    if not ohlcv_path.is_file():
+        return "MISSING_OHLCV", f"required immutable OHLCV artifact is missing: {ohlcv_path}"
+    return "READY", str(ohlcv_path)
+
+
+def _build_o2_features(
+    paths,
+    session_key: str,
+    v3_features: pd.DataFrame,
+    snapshot_path: Path,
+) -> pd.DataFrame:
+    """Add the three frozen Open-geometry features to the existing V3-B rows."""
+
+    ohlcv_path = paths.session_root / _normal_date(session_key).date().isoformat() / "session_ohlcv.parquet"
+    if not ohlcv_path.is_file():
+        raise RuntimeError(f"O2 requires immutable session OHLCV: {ohlcv_path}")
+    ohlcv = pd.read_parquet(ohlcv_path)
+    missing = set(SESSION_OHLCV_COLUMNS) - set(ohlcv.columns)
+    if missing:
+        raise RuntimeError(f"O2 session OHLCV is missing columns: {sorted(missing)}")
+    model_input = pd.read_parquet(snapshot_path)
+    validate_ohlcv_against_model_input(ohlcv, model_input, session_key)
+    frame = ohlcv.copy()
+    frame["ticker"] = frame["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    frame["session_date"] = pd.to_datetime(frame["session_date"], errors="coerce").dt.normalize()
+    for name in ("open", "high", "low"):
+        frame[name] = pd.to_numeric(frame[name], errors="coerce")
+    denominator = frame["high"] - frame["low"]
+    frame["open_position"] = (frame["open"] - frame["low"]) / denominator
+    frame["open_to_high"] = frame["high"] / frame["open"] - 1.0
+    frame["open_to_low"] = frame["low"] / frame["open"] - 1.0
+    valid = (
+        frame[["open", "high", "low", "open_position", "open_to_high", "open_to_low"]].notna().all(axis=1)
+        & np.isfinite(frame[["open", "high", "low", "open_position", "open_to_high", "open_to_low"]].to_numpy(dtype=float)).all(axis=1)
+        & (frame["open"] > 0)
+        & (frame["high"] > frame["low"])
+        & (frame["open"] >= frame["low"])
+        & (frame["open"] <= frame["high"])
+    )
+    if not bool(valid.all()):
+        invalid = frame.loc[~valid, "ticker"].astype(str).tolist()[:20]
+        raise RuntimeError(f"O2 Open geometry is incomplete or invalid for {int((~valid).sum())} rows: {invalid}")
+    geometry = frame.loc[:, ["ticker", "session_date", "open_position", "open_to_high", "open_to_low"]]
+    source = v3_features.copy()
+    source["ticker"] = source["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    source["date"] = pd.to_datetime(source["date"], errors="coerce").dt.normalize()
+    source = source.merge(
+        geometry.rename(columns={"session_date": "date"}),
+        on=["ticker", "date"],
+        how="left",
+        validate="one_to_one",
+    )
+    if len(source) != len(v3_features) or source[list(O2_FEATURE_COLUMNS)].isna().any().any():
+        raise RuntimeError("O2 geometry did not align one-to-one with the V3-B feature rows")
+    return source
 
 
 def _build_features(paths, session_key: str) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
@@ -360,6 +467,16 @@ def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.Da
         "model_manifest_status": model_manifest.get("status"),
         "generated_at_utc": _utcnow(),
     }
+    if spec.model_id == O2_MODEL_ID:
+        session_ohlcv_path = paths.session_root / session_key / "session_ohlcv.parquet"
+        payload.update(
+            {
+                "session_ohlcv_path": str(session_ohlcv_path),
+                "session_ohlcv_sha256": sha256_file(session_ohlcv_path),
+                "open_geometry_verified": True,
+                "forward_gate_required_sessions": O2_FORWARD_GATE_SESSIONS,
+            }
+        )
     write_manifest_atomic(manifest_path, payload)
     return artifact_path, manifest_path, artifact_sha, sha256_file(manifest_path)
 
@@ -394,7 +511,7 @@ def _artifact_verified(row: Any) -> bool:
 
 
 def ensure_model_runs(paths, session_dates: Iterable[object] | None = None) -> int:
-    """Idempotently enqueue both frozen models for DATA_READY sessions."""
+    """Idempotently enqueue frozen models for eligible DATA_READY sessions."""
 
     requested = None if session_dates is None else {_normal_date(value).date().isoformat() for value in session_dates}
     connection = _connection(paths)
@@ -408,20 +525,42 @@ def ensure_model_runs(paths, session_dates: Iterable[object] | None = None) -> i
             if requested is not None and session_key not in requested:
                 continue
             for spec in FROZEN_MODELS:
+                o2_state = "READY"
+                o2_reason = ""
+                if spec.model_id == O2_MODEL_ID:
+                    try:
+                        o2_state, o2_reason = _o2_input_status(paths, session_key)
+                    except Exception as error:
+                        o2_state, o2_reason = "UNAVAILABLE", str(error)
+                    if o2_state == "PRE_FREEZE":
+                        continue
                 existing = connection.execute(
                     "SELECT * FROM model_runs WHERE session_date=? AND model_id=? AND model_fingerprint=?",
                     (session_key, spec.model_id, spec.model_sha256),
                 ).fetchone()
                 now = _utcnow()
                 if existing is None:
+                    initial_state = "QUEUED" if o2_state == "READY" else "FAILED"
                     connection.execute(
                         """
                         INSERT INTO model_runs(
                             session_date, model_id, model_fingerprint, generation, state,
-                            progress_fraction, updated_at, heartbeat_at
-                        ) VALUES (?, ?, ?, ?, 'QUEUED', 0, ?, ?)
+                            progress_fraction, updated_at, heartbeat_at, completed_at,
+                            error_code, error_message
+                        ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
                         """,
-                        (session_key, spec.model_id, spec.model_sha256, spec.generation, now, now),
+                        (
+                            session_key,
+                            spec.model_id,
+                            spec.model_sha256,
+                            spec.generation,
+                            initial_state,
+                            now,
+                            now,
+                            now if initial_state == "FAILED" else None,
+                            None if initial_state == "QUEUED" else f"O2_INPUT_{o2_state}",
+                            None if initial_state == "QUEUED" else o2_reason,
+                        ),
                     )
                     created += 1
                 elif existing["state"] == "DONE" and not _artifact_verified(existing):
@@ -433,6 +572,20 @@ def ensure_model_runs(paths, session_dates: Iterable[object] | None = None) -> i
                         WHERE session_date=? AND model_id=? AND model_fingerprint=?
                         """,
                         (now, now, session_key, spec.model_id, spec.model_sha256),
+                    )
+                elif (
+                    spec.model_id == O2_MODEL_ID
+                    and existing["state"] == "FAILED"
+                    and str(existing["error_code"] or "").startswith("O2_INPUT_")
+                    and o2_state == "READY"
+                ):
+                    connection.execute(
+                        """
+                        UPDATE model_runs SET state='QUEUED', progress_fraction=0,
+                            updated_at=?, completed_at=NULL, error_code=NULL, error_message=NULL
+                        WHERE session_date=? AND model_id=? AND model_fingerprint=?
+                        """,
+                        (now, session_key, spec.model_id, spec.model_sha256),
                     )
                 elif existing["state"] == "INTERRUPTED":
                     connection.execute(
@@ -534,10 +687,24 @@ def _run_session(paths, session_key: str) -> None:
             _fail_model(paths, session_key, spec, error)
         return
 
+    o2_features: pd.DataFrame | None = None
+    if any(spec.model_id == O2_MODEL_ID for spec in claimed):
+        try:
+            o2_features = _build_o2_features(paths, session_key, v3_features, Path(metadata["snapshot_path"]))
+        except Exception as error:
+            for spec in claimed:
+                if spec.model_id == O2_MODEL_ID:
+                    _fail_model(paths, session_key, spec, error)
+
     for spec in claimed:
+        if spec.model_id == O2_MODEL_ID and o2_features is None:
+            continue
         try:
             _update_run(paths, session_key, spec, state="SCORING", progress_fraction=0.55, updated_at=_utcnow(), heartbeat_at=_utcnow())
-            features = v2_features if spec.generation == "V2" else v3_features
+            if spec.model_id == O2_MODEL_ID:
+                features = o2_features
+            else:
+                features = v2_features if spec.generation == "V2" else v3_features
             artifact, manifest, artifact_sha, manifest_sha = _score_frame(paths, spec, session_key, features, metadata)
             _update_run(paths, session_key, spec, state="WRITING", progress_fraction=0.9, updated_at=_utcnow(), heartbeat_at=_utcnow())
             _finish_model(paths, session_key, spec, artifact, manifest, artifact_sha, manifest_sha)

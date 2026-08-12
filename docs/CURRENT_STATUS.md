@@ -265,6 +265,36 @@ No scheduler was installed or modified, no outcomes or
 `FORWARD_OUTCOME_ACCESS_STARTED` were accessed, and existing Stockbit
 intraday/Open automation remains separate.
 
+### 2026-08-12 controlled result
+
+The post-18:00 controlled headless cycle is now complete. It captured the
+earliest missing official session, `2026-08-11`, and reached terminal
+`NO_MISSING_SESSION`. The official IDX calendar available at capture time
+ended at `2026-08-11`; `2026-08-12` was not inferred or captured. The new
+session has 832 active/model-safe rows, complete Open/H/L/C/Volume sidecar
+evidence, Stock Summary `963/963`, Index Summary `45/45`, and V2/V3-B model
+artifacts in `DONE` state. The original model-input schema and files remain
+unchanged.
+
+Legacy Open sidecars are complete for `2026-08-03` (831 rows) and
+`2026-08-10` (837 rows). Their later retrieval timestamps are provenance only,
+not historical publication times. The initial repair exposed and fixed a
+volume-revision compatibility defect, an official five-character Stock
+Summary code (`GOTOM`), and the Index Summary default pagination (`10/45`; the
+runtime now requests `length=1000,start=0` and still requires explicit count
+parity).
+
+O2 remains at zero correctly: its freeze is
+`2026-08-12T07:45:30+07:00`, so Aug11 is pre-freeze. O2 now uses the existing
+`model_runs` fan-out and is not a separate ledger or duplicate V3-B run.
+
+The single EOD Task Scheduler registration was attempted only after the
+successful capture, but Windows returned `Access is denied` from the
+non-elevated process. No EOD task was created; the Stockbit task and legacy
+Open task were not modified. An elevated one-time installer run remains
+required. See checkpoint
+`docs/checkpoints/2026-08-12_FORWARD_EOD_AUTOMATION_OPEN_O2_INTRADAY_RESULT.md`.
+
 ## Immediate next action
 
 Wait for separate MAIN / ChatGPT authorization to consume a complete,

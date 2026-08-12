@@ -48,7 +48,6 @@ def test_runner_catches_up_after_missed_schedule_and_records_date_validation(tmp
         "capture_session",
         lambda *args, **kwargs: {"status": "DATA_READY", "session_date": "2026-08-11"},
     )
-
     result = runner.run_eod_catchup(tmp_path)
 
     assert result["status"] == "NO_MISSING_SESSION"

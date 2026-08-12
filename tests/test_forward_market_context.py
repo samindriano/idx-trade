@@ -124,6 +124,7 @@ def test_index_summary_capture_uses_records_total_gate():
     assert capture.row_count == 1
     assert capture.records_total == 1
     assert capture.endpoint.endswith("TradingSummary/GetIndexSummary")
+    assert capture.params == {"length": "1000", "start": "0", "date": "20260811"}
 
 
 def test_immutable_bytes_rejects_revision_without_overwrite(tmp_path: Path):

@@ -93,6 +93,7 @@ def run_eod_catchup(
         # before catching up new sessions; the original model_input/manifest
         # remain immutable and a failed enrichment stops the cycle.
         result["open_enrichment"] = []
+        result["legacy_open_repair_status"] = "COMPLETE"
         for row in base._session_states(paths).values():
             if row["state"] != "DATA_READY":
                 continue
@@ -103,20 +104,10 @@ def run_eod_catchup(
             enrichment = enrich_session_ohlcv(root, session_key, fetch_missing=True, batch_size=batch_size)
             result["open_enrichment"].append(enrichment)
             if enrichment.get("status") != "OPEN_COMPLETE":
-                result.update(
-                    {
-                        "status": "DATA_FAILED",
-                        "stopped_on_first_failure": True,
-                        "failure": {
-                            "stage": "OPEN_ENRICHMENT",
-                            "session_date": session_key,
-                            **enrichment,
-                        },
-                    }
-                )
-                result["finished_at_jakarta"] = _now_jakarta().isoformat()
-                persist()
-                return result
+                # Legacy sidecars are a repair lane.  They must never rewrite
+                # or invalidate the old DATA_READY snapshot, nor prevent the
+                # canonical EOD engine from catching up newer sessions.
+                result["legacy_open_repair_status"] = "INCOMPLETE"
 
         while True:
             sessions = runtime._load_forward_calendar(paths)

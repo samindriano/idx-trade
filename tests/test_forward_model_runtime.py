@@ -105,3 +105,22 @@ def test_request_model_worker_does_not_spawn_without_queued_jobs(tmp_path: Path,
     )
 
     assert model_runtime.request_model_worker(tmp_path) is False
+
+
+def test_o2_uses_existing_model_run_fanout_only_after_freeze_and_ohlcv_ready(tmp_path: Path) -> None:
+    _ready_session(tmp_path, session="2026-08-12")
+    paths = base.runtime_paths(tmp_path)
+    session_dir = paths.session_root / "2026-08-12"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    (session_dir / "session_ohlcv.parquet").write_bytes(b"fixture")
+
+    assert model_runtime.ensure_model_runs(paths) == 3
+    connection = base._connect(paths)
+    try:
+        row = connection.execute(
+            "SELECT state, error_code FROM model_runs WHERE session_date=? AND model_id=?",
+            ("2026-08-12", model_runtime.O2_MODEL_ID),
+        ).fetchone()
+    finally:
+        connection.close()
+    assert tuple(row) == ("QUEUED", None)

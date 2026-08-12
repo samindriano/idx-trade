@@ -1532,3 +1532,41 @@ pytest after integration and Next.js build pass. At checkpoint time Jakarta
 was before 18:00, so no real capture, Open network recovery, scheduler
 installation, model scoring, outcome access, or forward marker access was
 performed.
+
+## 30. Forward EOD automation / Open / O2 / intraday controlled result
+
+Date: 2026-08-12 (Asia/Jakarta). Branch:
+`integration/forward-eod-automation-monitoring`.
+
+The controlled post-18:00 headless cycle reached terminal
+`NO_MISSING_SESSION` after capturing the earliest missing official session,
+`2026-08-11`. The available official calendar ended at Aug11; Aug12 was not
+inferred. Aug11 contains 832 active/model-safe rows, complete immutable
+OHLCV/Open evidence, Stock Summary `963/963`, Index Summary `45/45`, and
+V2/V3-B fan-out artifacts in `DONE` state. The original model-input schema and
+files were not rewritten.
+
+Legacy Open sidecars are now complete for Aug03 (831 rows) and Aug10 (837
+rows). Later retrieval times are recorded as observation provenance only and
+are not historical publication times. The repair lane fixed three fail-closed
+engineering/source issues: legacy volume revision compatibility, the official
+five-character Stock Summary code `GOTOM`, and Index Summary default paging
+(`10/45`); the runtime now requests `length=1000,start=0` and still requires
+explicit count parity.
+
+O2 remains at zero by contract because Aug11 starts before the O2 freeze
+`2026-08-12T07:45:30+07:00`. O2 now uses the existing `model_runs` fan-out and
+does not create a separate ledger or duplicate V3-B run. The monitoring page
+shows read-only Stockbit task health and model progress; manual capture
+controls remain removed.
+
+The one EOD Scheduled Task registration was attempted only after the
+successful controlled capture, but Windows returned `Access is denied` from
+the non-elevated medium-integrity process. No EOD task was created; the
+existing Stockbit and legacy Open tasks were not modified. An elevated
+one-time installer run remains the only operational blocker.
+
+Full pytest passed with 257 collected tests and three existing FutureWarnings;
+the Next.js build passed with one non-blocking filesystem tracing warning.
+No outcomes, `FORWARD_OUTCOME_ACCESS_STARTED`, modelling, refit, Path Risk,
+Stockbit implementation, or historical PIT work was performed.

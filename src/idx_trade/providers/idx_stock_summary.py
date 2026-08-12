@@ -15,6 +15,7 @@ from ..states import TradabilityState
 IDX_HOME_URL = "https://www.idx.id/id"
 IDX_SESSION_VALIDATION_URL = "https://www.idx.id/primary/home/GetIndexList"
 IDX_STOCK_SUMMARY_URL = "https://www.idx.id/primary/TradingSummary/GetStockSummary"
+IDX_STOCK_CODE_PATTERN = r"[A-Z0-9]{4,5}"
 
 
 @dataclass(frozen=True)
@@ -103,7 +104,7 @@ def _validate_complete_payload(
                 f"requested={requested.date().isoformat()} row={row.get('Date')!r}"
             )
         ticker = normalise_ticker(row.get("StockCode", ""))
-        if not ticker or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}").iloc[0]:
+        if not ticker or not pd.Series([ticker]).str.fullmatch(IDX_STOCK_CODE_PATTERN).iloc[0]:
             raise ValueError(f"IDX Stock Summary row {position} has an invalid StockCode")
 
     tickers = [normalise_ticker(row.get("StockCode", "")) for row in rows]
@@ -230,7 +231,7 @@ def parse_stock_summary_payload(
         if not isinstance(row, Mapping):
             continue
         ticker = normalise_ticker(row.get("StockCode", ""))
-        if not ticker or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}").iloc[0]:
+        if not ticker or not pd.Series([ticker]).str.fullmatch(IDX_STOCK_CODE_PATTERN).iloc[0]:
             continue
 
         raw_date = pd.to_datetime(row.get("Date"), errors="coerce")

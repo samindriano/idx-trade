@@ -167,3 +167,25 @@ def test_unmapped_explicit_status_remains_unresolved_not_guessed():
     )
     assert anchors.empty
     assert diagnostics.loc[0, "diagnostic"] == "UNMAPPED_SECURITY_STATUS_VALUE"
+
+
+def test_official_five_character_stock_code_is_preserved():
+    payload = {
+        "recordsTotal": 1,
+        "data": [
+            {
+                "StockCode": "GOTOM",
+                "Date": "2026-08-11",
+                "Volume": 0,
+                "Frequency": 0,
+                "Value": 0,
+            }
+        ],
+    }
+    frame, meta = parse_stock_summary_payload(
+        payload,
+        requested_date="2026-08-11",
+        source_ref="idx://stock-summary/20260811",
+    )
+    assert meta.rows == 1
+    assert frame.loc[0, "ticker"] == "GOTOM"

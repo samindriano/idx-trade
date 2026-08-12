@@ -90,6 +90,25 @@
 
 .monitorMainGrid { grid-template-columns: minmax(0, 1fr); }
 
+.intradayStatusPanel { margin-top: 18px; }
+.intradayStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px 22px 0;
+}
+.intradayStatusGrid > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffefa;
+}
+.intradayStatusGrid span { display: block; color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.intradayStatusGrid strong { display: block; margin-top: 6px; overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.intradayStatusPanel .pairedForwardNote { display: block; padding: 14px 22px 20px; }
+.pairedForwardBadge.healthReady { color: var(--market-green-dark); background: var(--market-green-soft); }
+
 .finalModelPanel .contractFacts { display: none; }
 
 .modelMeta {
@@ -108,4 +127,5 @@
 
 @media (max-width: 660px) {
   .modelMeta { margin-right: 16px; margin-left: 16px; }
+  .intradayStatusGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-right: 16px; padding-left: 16px; }
 }

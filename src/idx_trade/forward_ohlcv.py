@@ -119,8 +119,17 @@ def validate_ohlcv_against_model_input(
     ohlcv: pd.DataFrame,
     model_input: pd.DataFrame,
     session_date: str | pd.Timestamp,
+    *,
+    compare_volume: bool = True,
 ) -> None:
-    """Require exact ticker/date identity and provider H/L/C/V agreement."""
+    """Require exact ticker/date identity and provider H/L/C agreement.
+
+    Canonical captures use ``compare_volume=True`` because the model-input and
+    sibling artifact are created from the same provider payload. Legacy Open
+    repair uses ``False``: the frozen model input must not be rewritten when a
+    later provider retrieval revises volume, while H/L/C identity remains a
+    hard safety gate for the recovered Open row.
+    """
 
     missing = set(SESSION_OHLCV_COLUMNS) - set(ohlcv.columns)
     if missing:
@@ -155,7 +164,10 @@ def validate_ohlcv_against_model_input(
         how="left",
         validate="one_to_one",
     )
-    for name in ("high", "low", "close", "volume"):
+    fields = ["high", "low", "close"]
+    if compare_volume:
+        fields.append("volume")
+    for name in fields:
         if not np.isclose(
             pd.to_numeric(merged[name], errors="coerce"),
             pd.to_numeric(merged[f"provider_{name}"], errors="coerce"),
@@ -318,7 +330,7 @@ def enrich_session_ohlcv(
     if missing_after:
         return result
 
-    validate_ohlcv_against_model_input(frame, model_input, session)
+    validate_ohlcv_against_model_input(frame, model_input, session, compare_volume=False)
     artifact_path = session_dir / "session_ohlcv.parquet"
     artifact_sha = write_immutable_ohlcv(frame, artifact_path)
     original_manifest_sha = sha256_file(manifest_path)
@@ -335,6 +347,7 @@ def enrich_session_ohlcv(
         "recovered_at_utc": _utc_now(),
         "observed_retrieved_at_utc_is_not_historical_publication_time": True,
         "source_counts": frame["source"].value_counts().to_dict(),
+        "volume_reconciliation": "NOT_REQUIRED_FOR_LEGACY_OPEN_REPAIR",
         "source_artifact_sha256": {
             str(path): sha256_file(path)
             for path in sorted(raw_root.glob("*.parquet"))

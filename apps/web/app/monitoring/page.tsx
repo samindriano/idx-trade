@@ -43,6 +43,16 @@ type StatusResponse = {
   connected: boolean;
   configured: boolean;
   status?: MonitorRuntimeStatus;
+  intraday?: {
+    task_name: string;
+    task_state: string;
+    last_run_time: string | null;
+    next_run_time: string | null;
+    last_task_result: number | null;
+    runtime_status: string;
+    latest_session_date: string | null;
+    latest_run_status: string | null;
+  };
   error?: string;
   detail?: string | null;
 };
@@ -66,6 +76,17 @@ function sessionLabel(state: SessionState) {
   if (state === "FETCHING") return "Fetching";
   if (state === "DATA_FAILED") return "Failed";
   return "Missing";
+}
+
+function shortTimestamp(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
 }
 
 const monitoringLayers = [
@@ -98,6 +119,7 @@ export default function MonitoringPage() {
   const [configured, setConfigured] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestDetail, setRequestDetail] = useState<string | null>(null);
+  const [intraday, setIntraday] = useState<StatusResponse["intraday"]>();
 
   const refresh = useCallback(async () => {
     try {
@@ -107,6 +129,7 @@ export default function MonitoringPage() {
       setConfigured(Boolean(payload.configured));
       if (payload.status) {
         setStatus(payload.status);
+        setIntraday(payload.intraday);
         setRequestError(null);
         setRequestDetail(null);
       } else {
@@ -145,15 +168,18 @@ export default function MonitoringPage() {
     );
   }, [status]);
 
+  const o2ForwardDates = o2ScoredDates;
+
   const pairedScoredDates = useMemo(
-    () => new Set([...o2ScoredDates].filter((date) => v3bScoredDates.has(date))),
-    [o2ScoredDates, v3bScoredDates],
+    () => new Set([...o2ForwardDates].filter((date) => v3bScoredDates.has(date))),
+    [o2ForwardDates, v3bScoredDates],
   );
 
   const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
   const anyFetching = status?.sessions.some((session) => session.state === "FETCHING") ?? false;
   const calendarReady = status?.calendar_ready ?? false;
-  const scoringProgress = Math.min(100, o2ScoredDates.size);
+  const scoringProgress = Math.min(100, o2ForwardDates.size);
+  const o2ForwardCount = o2ScoredDates.size;
 
   return (
     <main className="appShell monitorShell">
@@ -178,9 +204,20 @@ export default function MonitoringPage() {
         </section>
 
         <section className="monitorSummaryGrid">
-          <article className="summaryBlock prominent"><span>O2 scores</span><div><strong>{statusLoading ? "—" : o2ScoredDates.size}</strong>{!statusLoading && <em>/ {O2_CHALLENGER.forwardTargetSessions}</em>}</div><small>primary challenger</small></article>
+          <article className="summaryBlock prominent"><span>O2 scores</span><div><strong>{statusLoading ? "—" : o2ForwardCount}</strong>{!statusLoading && <em>/ {O2_CHALLENGER.forwardTargetSessions}</em>}</div><small>post-freeze score artifacts</small></article>
           <article className="summaryBlock"><span>Verified EOD sessions</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
           <article className="summaryBlock"><span>Next missing session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
+        </section>
+
+        <section className="surface intradayStatusPanel">
+          <div className="sectionHead"><div><span>INTRADAY AUTOMATION</span><h2>Stockbit capture health</h2></div><span className={`pairedForwardBadge ${intraday?.task_state === "Ready" ? "healthReady" : ""}`}>{intraday?.task_state ?? "READING"}</span></div>
+          <div className="intradayStatusGrid">
+            <div><span>Task</span><strong>{intraday?.task_name ?? "—"}</strong></div>
+            <div><span>Last run</span><strong>{shortTimestamp(intraday?.last_run_time ?? null)}</strong></div>
+            <div><span>Next run</span><strong>{shortTimestamp(intraday?.next_run_time ?? null)}</strong></div>
+            <div><span>Latest archive</span><strong>{intraday?.latest_session_date ? `${shortDate(intraday.latest_session_date)} · ${intraday.latest_run_status ?? "UNKNOWN"}` : intraday?.runtime_status ?? "—"}</strong></div>
+          </div>
+          <small className="pairedForwardNote">Read-only health from the existing Stockbit task and runtime. It does not create a second capture system.</small>
         </section>
 
         <section className="monitorMainGrid">
@@ -231,7 +268,7 @@ export default function MonitoringPage() {
               <div><span>PRIMARY CHALLENGER</span><h2>{O2_CHALLENGER.shortName}</h2></div>
             </div>
             <div className="contractProgress">
-                <div className="contractNumber"><strong>{statusLoading ? "—" : o2ScoredDates.size}</strong>{!statusLoading && <span>/ {O2_CHALLENGER.forwardTargetSessions}</span>}</div>
+                <div className="contractNumber"><strong>{statusLoading ? "—" : o2ForwardCount}</strong>{!statusLoading && <span>/ {O2_CHALLENGER.forwardTargetSessions}</span>}</div>
                 <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : scoringProgress}%` }} /></div>
             </div>
             <div className="modelMeta">
@@ -267,7 +304,7 @@ export default function MonitoringPage() {
           </div>
           <p className="pairedForwardCopy">O2 is the primary historical challenger. V3-B remains the incumbent reference. Only identical captured sessions count as paired evidence.</p>
           <div className="pairedForwardMetrics">
-            <div><span>O2</span><strong>{statusLoading ? "â€”" : o2ScoredDates.size}</strong><small>score artifacts</small></div>
+            <div><span>O2</span><strong>{statusLoading ? "â€”" : o2ForwardCount}</strong><small>score artifacts</small></div>
             <div><span>V3-B</span><strong>{statusLoading ? "â€”" : v3bScoredDates.size}</strong><small>reference artifacts</small></div>
             <div><span>Paired</span><strong>{statusLoading ? "â€”" : pairedScoredDates.size}</strong><small>same-session artifacts</small></div>
           </div>
