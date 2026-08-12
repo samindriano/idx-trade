@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 02:18 Asia/Jakarta
+Last coordinated update: 2026-08-13 02:22 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -59,8 +59,8 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `ACTIVE` | `ChatGPT/PIT-sector-revival` | `data/idx-pit-sector-history-revival-v1` (planned from `data/idx-pit-sector-history-v1`) | User explicitly authorized a targeted revival: recover dedicated annual 2022/2023 classification evidence and 2026 effective-date provenance, then implement only evidence/parsers that satisfy the existing fail-closed PIT contract. No dependent modeling or outcome access. |
 | Frontend monitoring / capture system | `REVIEW` | `Codex/Frontend Editorial Tech` | `codex/frontend-compare-v2` / `bc91a5f` | Read-only monitoring now presents the automated session archive and all three monitored lanes: O2, V3-B, and V2. UI was simplified to a compact archive, three score cards, and a slim shared-session summary; manual capture/date controls remain removed. Build and `/monitoring`, `/compare`, and `/api/monitor/status` HTTP 200 pass. Local runtime reports V2 + V3-B artifacts for 2026-08-10; O2 remains awaiting runtime score artifact. |
-| Market/index prospective EOD archive extension | `WAITING` | `Codex/Forward-EOD-Automation-UI` | `integration/forward-eod-automation-monitoring` / `cd2a834` | Single 18:00 EOD runner, logon catch-up, official-calendar/exact-date validation, and legacy Open-task disable path are implemented and tested. Awaiting one post-18:00 controlled capture before local scheduler enablement. |
-| Canonical IDXTrade-ForwardEOD automation audit | `ACTIVE` | `Codex/Forward-EOD-Automation-Audit` | `integration/forward-eod-automation-monitoring` / `c5b356a` | Read-only verification of current Task Scheduler registration, triggers/catch-up, legacy-task conflict, Stockbit isolation, artifact completeness, and failure/recovery behavior after the prior Access-denied registration gap. No scheduler/data-contract changes authorized. |
+| Market/index prospective EOD archive extension | `BLOCKED` | `Codex/Forward-EOD-Automation-UI` | `integration/forward-eod-automation-monitoring` / `5ee8d2d` | Controlled canonical captures passed for 2026-08-11 and 2026-08-12, but local `IDXTrade-ForwardEOD` is still NOT_FOUND after the prior Access-denied registration. Legacy Open task remains Ready; one authorized elevated installer run plus post-install verification is required. |
+| Canonical IDXTrade-ForwardEOD automation audit | `REVIEW` | `Codex/Forward-EOD-Automation-Audit` | `integration/forward-eod-automation-monitoring` / `5ee8d2d` | Read-only audit complete and pushed in checkpoint `2026-08-13_FORWARD_EOD_AUTOMATION_ACTUAL_AUDIT`; canonical task NOT_FOUND, legacy task Ready with last result 1, Stockbit separate/Ready, latest canonical artifacts verified. No scheduler/data-contract changes made. |
 
 ## Cross-chat no-duplicate rules currently in force
 
