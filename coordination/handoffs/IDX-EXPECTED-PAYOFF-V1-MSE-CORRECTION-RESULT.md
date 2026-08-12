@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: fb584c988cd4ac07ef077103f5a53f6ba3ef097e
 branch: research/idx-expected-payoff-v1
-head_commit: pending until commit
+head_commit: 88376b804848fa3d2d255cf8c2d58909919e6f21
 scope: authorized metric-only correction of TRAIN_MEAN_PAYOFF validation MSE
 files_changed:
   - src/idx_trade/expected_payoff_v1_correction.py
