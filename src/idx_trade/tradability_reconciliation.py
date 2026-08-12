@@ -4,11 +4,23 @@ from dataclasses import asdict, dataclass
 
 import pandas as pd
 
-from .security_master import normalise_market, normalise_ticker, tradability_state
+from .security_master import (
+    canonicalize_tradability_anchors,
+    normalise_market,
+    normalise_ticker,
+    tradability_state,
+)
 from .states import TradabilityState
 
 
-SNAPSHOT_COLUMNS = ("ticker", "market", "state", "as_of_date", "source", "source_ref")
+SNAPSHOT_COLUMNS = (
+    "ticker",
+    "market",
+    "state",
+    "as_of_date",
+    "source",
+    "source_ref",
+)
 
 
 @dataclass(frozen=True)
@@ -27,11 +39,7 @@ class SnapshotReconciliation:
 
 
 def canonicalize_tradability_snapshot(frame: pd.DataFrame) -> pd.DataFrame:
-    """Canonicalize an official point-in-time trading-status snapshot.
-
-    A snapshot is evidence/checkpoint data, not a substitute for the event log.
-    It can expose missing or wrongly compiled suspension/resumption events.
-    """
+    """Canonicalize an official point-in-time trading-status snapshot."""
 
     missing = set(SNAPSHOT_COLUMNS) - set(frame.columns)
     if missing:
@@ -51,12 +59,29 @@ def canonicalize_tradability_snapshot(frame: pd.DataFrame) -> pd.DataFrame:
     return data.sort_values(["as_of_date", "ticker", "market"]).reset_index(drop=True)
 
 
+def snapshot_to_tradability_anchors(
+    snapshot: pd.DataFrame,
+    *,
+    evidence_type: str = "OFFICIAL_STATUS_SNAPSHOT",
+) -> pd.DataFrame:
+    """Convert a caller-selected snapshot subset into anchor evidence.
+
+    The caller is responsible for reserving separate rows/dates for independent
+    reconciliation. This helper intentionally does not auto-split evidence.
+    """
+
+    evidence = canonicalize_tradability_snapshot(snapshot).copy()
+    evidence["evidence_type"] = evidence_type
+    return canonicalize_tradability_anchors(evidence)
+
+
 def reconcile_tradability_snapshot(
     snapshot: pd.DataFrame,
     tradability_intervals: pd.DataFrame,
     tradability_coverage_windows: pd.DataFrame,
+    tradability_anchors: pd.DataFrame | None = None,
 ) -> dict[str, object]:
-    """Compare event-derived state with independent official snapshot evidence."""
+    """Compare event/anchor-derived state with independent official snapshots."""
 
     evidence = canonicalize_tradability_snapshot(snapshot)
     rows: list[SnapshotReconciliation] = []
@@ -67,6 +92,7 @@ def reconcile_tradability_snapshot(
             row.ticker,
             pd.Timestamp(row.as_of_date),
             market=row.market,
+            anchors=tradability_anchors,
         )
         expected = TradabilityState(str(row.state))
         rows.append(

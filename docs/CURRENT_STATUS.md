@@ -1,0 +1,352 @@
+# IDX Trade — Current Status
+
+Date: 2026-08-10 (Asia/Jakarta)
+
+This is the short **authoritative first-read status layer**. For full chronology read `docs/PROJECT_CONTEXT_MASTER.md`, `docs/PROJECT_LEDGER.md`, and the newest checkpoint. If an older current-stage paragraph conflicts with this file, this file plus the newest dated checkpoint controls the current phase and authorization boundary.
+
+## Current phase
+
+- active research branch: `research/idx-ranking-v2-spec-v1` / draft PR #10;
+- separate runtime-performance branch: `perf/idx-research-runtime-v1` / PR #9;
+- Ranking V1: **FAILED benchmark**;
+- Stage-5 holdout: **consumed for `RANKING_V1_ONLY`; never rerun**;
+- Probability V1: **`PROBABILITY_V1_NOT_READY_DEFERRED`**;
+- performance equivalence: **PASS — `FULL_PANEL_LEGACY_FAST_EQUIVALENT`**;
+- immutable Ranking-V2 prepared cache: **FROZEN**;
+- V2 control + A/B/C/D candidate orchestra: **COMPLETE**;
+- metrics-only integration: **`RANKING_V2_HISTORICAL_CHAMPION_SELECTED`**;
+- historical-development champion: **`HGB_XS_MARKET`**;
+- independent ChatGPT champion review: **PASS**;
+- champion/final-refit/fresh-forward specification: **FROZEN AND REVIEWED**;
+- forward metric semantic clarification: **COMPLETE before outcome access**;
+- current authorization: **final refit and outcome-blind fresh-forward runtime implemented/frozen; actual fresh-forward outcome access remains blocked**;
+- Stage 6: not authorized;
+- `IDX-VAL-002`: not started;
+- execution-PnL / paper / live trading: not authorized;
+- merge to `main`: not authorized.
+
+Newest controlling checkpoint:
+
+`docs/checkpoints/2026-08-10_RANKING_V2_FORWARD_SPEC_REVIEW_PASS.md`
+
+Current implementation handoff:
+
+`coordination/handoffs/IDX-RANKING-V2-FINAL-REFIT-FORWARD-RUNTIME-IMPLEMENT-RESULT.md`
+
+Mandatory first-read before any **next model / next research-generation / optimized fresh-forward runtime implementation**:
+
+`docs/NEXT_MODEL_RUNTIME_OPTIMIZATION_NOTES.md`
+
+The implementing agent must explicitly confirm it read that note before changing or creating the next model/runtime implementation.
+
+## Data foundation
+
+Signal-research HLCV 1260 is GO:
+
+- exact window `2021-04-29 -> 2026-07-31`;
+- 979 required common stocks;
+- 981,940 ACTIVE research rows;
+- H/L/C/Volume complete on included contract rows;
+- Open nullable and never synthesized;
+- panel SHA-256: `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`;
+- manifest SHA-256: `b703f1f80aa062accfb4387e5c457458c88aec77351e7dd19342b9c45873cd1a`;
+- official-calendar SHA-256: `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`;
+- security-master SHA-256: `9d0d30215ab129f196f494e4af499fff92fe510f5a432dd2dad321f02ff7a2f9`.
+
+Strict execution-grade 1260 remains FAIL because historical Open evidence is incomplete. Do not conflate Signal-Research GO with strict execution-grade PASS.
+
+## V1 chronology
+
+- Stage 2: frozen causal research/validation contract;
+- Stage 3: HGB showed modest development ranking edge;
+- Stage 4: ranking robustness retained, calibration blocked;
+- Stage 4B: causal calibration attempt also blocked;
+- Probability V1 permanently deferred;
+- Stage 5: one-shot ranking-only holdout **FAIL**.
+
+Stage-5 H10 summary:
+
+- base/prevalence `0.4071688603`;
+- HGB PR-AUC `0.4073793720`, delta `+0.0002105118`;
+- HGB ROC-AUC `0.4948433255`;
+- HOLDOUT_A retained modest edge;
+- HOLDOUT_B reversed below base / ROC<0.5;
+- H5/H20 were near-null and cannot rescue V1.
+
+The Stage-5 holdout is permanently consumed.
+
+## Ranking V2 — frozen design
+
+Frozen substantive implementation code head:
+
+`5f2ed2f53aececfd7c338d3f9f65db1efae372b6`
+
+Frozen feature families:
+
+- 10 same-date primary-universe percentile-rank stock features;
+- 9 continuous causal market-state context features;
+- 6 stock-minus-market-median relative features;
+- no sector-relative features until a PIT-safe historical sector mapping exists.
+
+Frozen candidates:
+
+- non-eligible control: `V1_HGB_CONTROL`;
+- V2-A: `LOGISTIC_XS`;
+- V2-B: `HGB_XS`;
+- V2-C: `HGB_XS_MARKET`;
+- V2-D: `PAIRWISE_LOGISTIC_XS`.
+
+Historical-development validation used six expanding chronological folds, each with an exact 20-session gap and a 100-session validation block. Selection was H10-only under the predeclared robustness-first eligibility/tie-break rules.
+
+All history through `2026-07-31` is development/research knowledge. No historical V2 result can be upgraded to independent validation after the fact.
+
+## Performance-equivalence result
+
+Performance runtime HEAD:
+
+`4f1f3af2c71cb49df7249a11d0c684cfef4aa9ca`
+
+Repo-local pytest: **218 passed, 3 warnings**.
+
+Result:
+
+- status `FULL_PANEL_LEGACY_FAST_EQUIVALENT`;
+- `legacy_fast_equal=true`;
+- horizons `[5, 10, 20]`;
+- H5 legacy `1567.8568 s`;
+- H10 legacy `1559.6417 s`;
+- H20 legacy `1592.5304 s`;
+- fast multi-horizon `16.2132 s`;
+- approximate benchmark label-engine speedup vs parallel legacy wall estimate: `98.22x`;
+- equivalence report SHA-256: `8f8865b2f133020a94ab8d2507fbb221f4b7f59bd1775b9da51fba2f4084d554`;
+- exact fast-H10 SHA-256: `a447b3f2208cbc320f7ec7cfa16c3dbb51107286891deca130f2fb848895b677`.
+
+The speedup is specifically a label-engine benchmark result, not a guaranteed end-to-end candidate speedup.
+
+## Immutable Ranking-V2 prepared cache
+
+Manifest status:
+
+`RANKING_V2_PREPARED_CACHE_FROZEN`
+
+Prepared cache:
+
+`D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_prepared_cache_20260809\ranking_v2_prepared_model_table.parquet`
+
+SHA-256:
+
+`522f17b2aa4a15f51b503c1a0920dc68290b4b34425a12afaeb8b2bfd5cdd5e5`
+
+Facts:
+
+- rows `292633`;
+- tickers `737`;
+- signal-session index `20..1250`;
+- positive rate `0.3939849573`;
+- resolved primary H10 model rows only.
+
+Manifest SHA-256:
+
+`6b404f14a76843f1868579406c9660aaeb85cd4823e9021e13967ed0424f6143`
+
+## Ranking-V2 historical-development result
+
+All five frozen tasks completed and all 50 candidate artifacts were independently hash-verified with zero mismatches.
+
+Champion:
+
+`HGB_XS_MARKET`
+
+Key aggregate facts:
+
+- median PR-AUC delta `0.0238795`;
+- q25 PR-AUC delta `0.0194015`;
+- positive PR-delta folds `6/6`;
+- median ROC-AUC `0.524410`;
+- ROC-AUC >0.5 folds `5/6`;
+- positive Q5-Q1 folds `6/6`;
+- worst-fold PR-delta `0.008789`.
+
+Versus the non-eligible V1 control, the champion improves median PR-delta by only about `+0.0015315`, but improves q25 PR-delta by about `+0.0025528`, median ROC by `+0.005400`, median Q5-Q1 by about `+0.0201875`, and worst-fold PR-delta from `0.000785` to `0.008789`.
+
+Interpretation: evidence supports improved historical-development robustness from cross-sectional + explicit market-context features, but not a claim of overwhelming superiority. V2F6 ROC-AUC remained below 0.5 (`0.493102`) despite positive PR-delta and Q5-Q1, so fresh-forward validation is essential.
+
+Integrator summary SHA-256:
+
+`3facb4468caafab8cf19f368cf5ef04f36dac052089d2ecb810b683c851ec705`
+
+## Champion / final-refit / fresh-forward contract
+
+Controlling specification:
+
+`docs/RANKING_V2_CHAMPION_FORWARD_SPEC_V1.md`
+
+Current reviewed spec blob SHA:
+
+`77b2d74c9d5f28460037c11cd3a134c6b6cc9d3d`
+
+The forward specification freezes:
+
+- champion `HGB_XS_MARKET`;
+- exact 25-feature order and existing HGB pipeline/parameters;
+- one final development refit over all 292,633 frozen eligible rows;
+- causal post-2026-07-31 universe/features;
+- H10 maturity;
+- first independent verdict on exactly 100 consecutive mature forward signal sessions;
+- predeclared first-50 / last-50 stability check;
+- one-shot global outcome-access marker;
+- immutable/hash-pinned provenance;
+- PASS/MIXED/FAIL rules.
+
+Independent review clarified before any fresh outcome access that Q5-Q1 retains the historical V2 meaning `Q5 TP rate - Q1 TP rate`; it is not a realized-return spread. Top-decile lift is top-decile TP rate minus prevalence.
+
+## Final-refit runtime implementation result
+
+The authorized implementation/freeze phase is complete:
+
+- runtime commit: `565cffa86b05f2bd877d06b6961e3b792253cb77`;
+- pytest: **228 passed, 3 existing warnings**;
+- final model: `D:\Documents\Project\idx-trade-data-gate-20260808v\ranking_v2_final_refit_20260810\ranking_v2_hgb_xs_market_final.joblib`;
+- model SHA-256: `5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace`;
+- model manifest SHA-256: `f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9`;
+- final fit facts: 292,633 rows, 737 tickers, signal sessions `20..1250`;
+- fresh-forward outcome access: **not performed**;
+- `FORWARD_OUTCOME_ACCESS_STARTED`: **not written**.
+
+The outcome-blind forward feature builder, H10 maturity diagnostics, fixed
+100-session block selector, historical metric semantics, pre-outcome manifest,
+marker guard, deterministic artifact verification, and post-cache profiling
+are implemented and covered by tests.
+
+## Market / index prospective EOD archive extension
+
+The source audit was accepted conditionally as
+`CONDITIONAL_SOURCE_READY_PIT_BLOCKED`. The implementation branch
+`data/market-index-forward-eod-v1-monitoring` extends the existing
+`forward_monitoring` session transaction with official Index Summary and exact
+raw Stock/Index response artifacts. Stock Summary completeness is now
+fail-closed against `recordsTotal`/`recordsFiltered`, date mismatch, zero rows,
+and duplicate identities.
+
+The existing `model_input.parquet` schema and V2/V3-B model fan-out contract
+are unchanged. No real new-session capture has been executed yet; raw
+capture, manifest/hash integrity, and automation acceptance remain pending
+ChatGPT review. Existing Stockbit intraday automation is separate and was not
+modified or duplicated.
+
+## Forward EOD automation / Open sidecar / monitoring UI integration
+
+The integration branch `integration/forward-eod-automation-monitoring` is based
+on reviewed frontend HEAD `5cbe1b9602b4740269fd9f0f0bc5e1e8ecee0bb7` and
+carries the reviewed market/index capture commits without reverting newer
+frontend work. Stage 1 adds a headless, idempotent catch-up runner around
+`forward_monitoring_runtime`, an auditable Windows Task Scheduler install
+script (not installed yet), an immutable `session_ohlcv.parquet` sibling
+artifact, local-first legacy Open enrichment, and a read-only `/monitoring` UI.
+The installer is now configured as one canonical 18:00 task with an interactive
+logon catch-up trigger; the source-blocked legacy Open archive task is
+superseded and will be disabled, not deleted, after controlled capture.
+
+The external runtime `D:\Documents\Project\idx-trade-data-gate-20260808v`
+contains two `DATA_READY` sessions: `2026-08-03` with 831 active model rows
+and `2026-08-10` with 837. Both legacy `model_input.parquet` files have the
+frozen 7-column schema and no Open. Local raw Yahoo/yfinance files contain
+`raw_open`, but stop at `2026-07-31`; date-row/Open coverage is therefore
+`0/831` and `0/837`. No legacy model input or manifest was rewritten. Network
+recovery and the one controlled post-18:00 EOD cycle remain pending because
+the current run started before the mandatory Jakarta cutoff.
+
+The runner keeps the 17:00 market-close cutoff but waits until 18:00 before
+starting real capture. On a later laptop login it re-syncs the official IDX
+calendar through the current closed-session boundary, then captures the
+earliest missing official session only after exact date validation.
+
+No scheduler was installed or modified, no outcomes or
+`FORWARD_OUTCOME_ACCESS_STARTED` were accessed, and existing Stockbit
+intraday/Open automation remains separate.
+
+### 2026-08-12 controlled result
+
+The post-18:00 controlled headless cycle is now complete. It captured the
+earliest missing official session, `2026-08-11`, and reached terminal
+`NO_MISSING_SESSION`. The official IDX calendar available at capture time
+ended at `2026-08-11`; `2026-08-12` was not inferred or captured. The new
+session has 832 active/model-safe rows, complete Open/H/L/C/Volume sidecar
+evidence, Stock Summary `963/963`, Index Summary `45/45`, and V2/V3-B model
+artifacts in `DONE` state. The original model-input schema and files remain
+unchanged.
+
+Legacy Open sidecars are complete for `2026-08-03` (831 rows) and
+`2026-08-10` (837 rows). Their later retrieval timestamps are provenance only,
+not historical publication times. The initial repair exposed and fixed a
+volume-revision compatibility defect, an official five-character Stock
+Summary code (`GOTOM`), and the Index Summary default pagination (`10/45`; the
+runtime now requests `length=1000,start=0` and still requires explicit count
+parity).
+
+O2 remains at zero correctly: its freeze is
+`2026-08-12T07:45:30+07:00`, so Aug11 is pre-freeze. O2 now uses the existing
+`model_runs` fan-out and is not a separate ledger or duplicate V3-B run.
+
+The single EOD Task Scheduler registration was attempted only after the
+successful capture, but Windows returned `Access is denied` from the
+non-elevated process. No EOD task was created; the Stockbit task and legacy
+Open task were not modified. An elevated one-time installer run remains
+required. See checkpoint
+`docs/checkpoints/2026-08-12_FORWARD_EOD_AUTOMATION_OPEN_O2_INTRADAY_RESULT.md`.
+
+### 2026-08-12 O2 flat-range runtime result
+
+The integration runtime was aligned with the frozen O2 contract: positive true
+flat bars (`open == high == low`) remain in the immutable session artifact but
+are marked `o2_eligible=false` with
+`FLAT_RANGE_ZERO_DENOMINATOR`. No synthetic `open_position` is written, and
+O2 plus paired V3-B scoring runs only on the exact eligible subset.
+
+The certified 2026-08-12 EOD session was rerun without recapture or provider
+access. It has `836` input/model rows, `806` eligible rows, `30` flat-range
+exclusions, and `0` other exclusions. The O2 model run is `DONE`; its score
+artifact SHA is
+`b7fc6f22230500d65c1a24c4333b5601c0102da5bb99c3cae77a85bdb112c42d`, and its
+manifest SHA is
+`4f3d7814333b867316092758b8530270a14d2e741bc8cca2c12c1dffbc99b5e2`.
+
+The official calendar derived session index `1268` and the O2 counter advanced
+from `0` to `1` of the frozen `100` sessions. Existing V2/V3-B artifacts and
+`model_input.parquet` were not rewritten. Outcomes remain locked and no
+`FORWARD_OUTCOME_ACCESS_STARTED` marker was accessed or written. See
+`docs/checkpoints/2026-08-12_O2_FORWARD_FLAT_RANGE_RUNTIME_RESULT.md`.
+
+## Immediate next action
+
+Wait for separate MAIN / ChatGPT authorization to consume a complete,
+immutable, 100-session H10-mature forward block. Do not read outcomes,
+produce a fresh-forward verdict, or write the global access marker before that
+authorization.
+
+Not authorized yet:
+
+- writing `FORWARD_OUTCOME_ACCESS_STARTED`;
+- reading or summarizing the one-shot post-2026-07-31 outcome block;
+- producing a fresh-forward PASS/MIXED/FAIL verdict.
+
+Actual one-shot outcome access requires a separate authorization only after the first 100 consecutive forward signal sessions are available and the 100th is fully H10-mature, with immutable evidence/provenance ready.
+
+## Authorization boundary
+
+Do not:
+
+- rerun Stage 5;
+- reopen/tune/rescue Ranking-V2 candidate selection;
+- modify the selected champion based on historical outcomes now observed;
+- use H5/H20 to rescue the champion;
+- call history through `2026-07-31` independent V2 validation;
+- inspect fresh-forward outcomes before the separate one-shot authorization;
+- write the global forward-outcome access marker before that authorization;
+- start probability calibration;
+- start Stage 6;
+- run `IDX-VAL-002`;
+- make execution-PnL claims;
+- Kelly-size;
+- paper/live trade;
+- merge to `main`.

@@ -1,0 +1,334 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FINAL_RANKER, O2_CHALLENGER } from "@/lib/model-catalog";
+
+type SessionState = "AVAILABLE" | "FETCHING" | "DATA_READY" | "DATA_FAILED";
+
+type MonitorSession = {
+  session_date: string;
+  state: SessionState;
+  error_code: string | null;
+  error_message: string | null;
+  completed_at: string | null;
+};
+
+type RuntimeModelRun = {
+  session_date: string;
+  model_id: string;
+  model_fingerprint: string;
+  generation: string;
+  state: string;
+  progress_fraction: number;
+  artifact_sha256?: string | null;
+  completed_at?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+};
+
+type MonitorRuntimeStatus = {
+  runtime_ready: boolean;
+  monitor_start_date: string;
+  calendar_ready: boolean;
+  calendar_first_session: string | null;
+  calendar_last_session: string | null;
+  next_missing_session: string | null;
+  data_ready_sessions: number;
+  sessions: MonitorSession[];
+  model_runs: RuntimeModelRun[];
+  outcome_access: "LOCKED";
+};
+
+type StatusResponse = {
+  connected: boolean;
+  configured: boolean;
+  status?: MonitorRuntimeStatus;
+  intraday?: {
+    task_name: string;
+    task_state: string;
+    last_run_time: string | null;
+    next_run_time: string | null;
+    last_task_result: number | null;
+    runtime_status: string;
+    latest_session_date: string | null;
+    latest_run_status: string | null;
+  };
+  error?: string;
+  detail?: string | null;
+};
+
+function Logo() {
+  return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
+}
+
+function shortDate(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function sessionLabel(state: SessionState) {
+  if (state === "DATA_READY") return "Recorded";
+  if (state === "FETCHING") return "Fetching";
+  if (state === "DATA_FAILED") return "Failed";
+  return "Missing";
+}
+
+function shortTimestamp(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
+}
+
+const monitoringLayers = [
+  {
+    title: "Automatic EOD archive",
+    state: "ACTIVE",
+    copy: "The headless scheduler records official-session evidence, canonical EOD prices, artifact hashes, and failures.",
+  },
+  {
+    title: "Signal scoring",
+    state: "O2 + V3-B PAIRED",
+    copy: "Persist independent same-day cross-sectional score/rank artifacts for the O2 challenger and unchanged V3-B incumbent on identical sessions.",
+  },
+  {
+    title: "Forward accumulation",
+    state: "100 SESSIONS",
+    copy: "Count only verified score artifacts for the paired O2/V3-B lane. H10 maturity metadata can be tracked without opening realized outcomes.",
+  },
+  {
+    title: "Outcome vault",
+    state: "LOCKED",
+    copy: "PR-AUC, ROC-AUC, Q5−Q1, TP/SL results, realized returns, and PnL stay hidden until the frozen one-shot block opens.",
+  },
+];
+
+export default function MonitoringPage() {
+  const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const [configured, setConfigured] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestDetail, setRequestDetail] = useState<string | null>(null);
+  const [intraday, setIntraday] = useState<StatusResponse["intraday"]>();
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch("/api/monitor/status", { cache: "no-store" });
+      const payload = (await response.json()) as StatusResponse;
+      setConnected(Boolean(payload.connected));
+      setConfigured(Boolean(payload.configured));
+      if (payload.status) {
+        setStatus(payload.status);
+        setIntraday(payload.intraday);
+        setRequestError(null);
+        setRequestDetail(null);
+      } else {
+        setRequestError(payload.error ?? "Runtime unavailable");
+        setRequestDetail(payload.detail ?? null);
+      }
+    } catch (error) {
+      setConnected(false);
+      setRequestError(error instanceof Error ? error.message : "Runtime unavailable");
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3_000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  const o2ScoredDates = useMemo(() => {
+    if (!status) return new Set<string>();
+    return new Set(
+      status.model_runs
+        .filter((run) => run.model_id === O2_CHALLENGER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+        .map((run) => run.session_date),
+    );
+  }, [status]);
+
+  const v3bScoredDates = useMemo(() => {
+    if (!status) return new Set<string>();
+    return new Set(
+      status.model_runs
+        .filter((run) => run.model_id === FINAL_RANKER.id && run.state === "DONE" && Boolean(run.artifact_sha256))
+        .map((run) => run.session_date),
+    );
+  }, [status]);
+
+  const o2ForwardDates = o2ScoredDates;
+
+  const pairedScoredDates = useMemo(
+    () => new Set([...o2ForwardDates].filter((date) => v3bScoredDates.has(date))),
+    [o2ForwardDates, v3bScoredDates],
+  );
+
+  const latestFailure = [...(status?.sessions ?? [])].reverse().find((session) => session.state === "DATA_FAILED");
+  const anyFetching = status?.sessions.some((session) => session.state === "FETCHING") ?? false;
+  const calendarReady = status?.calendar_ready ?? false;
+  const scoringProgress = Math.min(100, o2ForwardDates.size);
+  const o2ForwardCount = o2ScoredDates.size;
+
+  return (
+    <main className="appShell monitorShell">
+      <header className="topNav">
+        <div className="navInner">
+          <a className="brand" href="/" aria-label="IDX Trade home"><Logo /><span>IDX Trade</span></a>
+          <nav className="primaryNav" aria-label="Primary navigation">
+            <a href="/#overview">Overview</a>
+            <a className="active" href="/monitoring">Forward Monitoring</a>
+            <a href="/compare">Compare</a>
+          </nav>
+        </div>
+      </header>
+
+      <div className="page monitoringPage">
+        <section className="monitorHero">
+          <div>
+            <p className="eyebrow">FINAL V3-B · OUTCOME-BLIND</p>
+            <h1>Forward Monitoring</h1>
+            <p className="heroCopy">Monitor automatic EOD archival and track O2 against V3-B on the same verified sessions.</p>
+          </div>
+        </section>
+
+        <section className="monitorSummaryGrid">
+          <article className="summaryBlock prominent"><span>O2 scores</span><div><strong>{statusLoading ? "—" : o2ForwardCount}</strong>{!statusLoading && <em>/ {O2_CHALLENGER.forwardTargetSessions}</em>}</div><small>post-freeze score artifacts</small></article>
+          <article className="summaryBlock"><span>Verified EOD sessions</span><strong>{statusLoading ? "—" : status?.data_ready_sessions ?? 0}</strong></article>
+          <article className="summaryBlock"><span>Next missing session</span><strong className="summaryTextValue">{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong></article>
+        </section>
+
+        <section className="surface intradayStatusPanel">
+          <div className="sectionHead"><div><span>INTRADAY AUTOMATION</span><h2>Stockbit capture health</h2></div><span className={`pairedForwardBadge ${intraday?.task_state === "Ready" ? "healthReady" : ""}`}>{intraday?.task_state ?? "READING"}</span></div>
+          <div className="intradayStatusGrid">
+            <div><span>Task</span><strong>{intraday?.task_name ?? "—"}</strong></div>
+            <div><span>Last run</span><strong>{shortTimestamp(intraday?.last_run_time ?? null)}</strong></div>
+            <div><span>Next run</span><strong>{shortTimestamp(intraday?.next_run_time ?? null)}</strong></div>
+            <div><span>Latest archive</span><strong>{intraday?.latest_session_date ? `${shortDate(intraday.latest_session_date)} · ${intraday.latest_run_status ?? "UNKNOWN"}` : intraday?.runtime_status ?? "—"}</strong></div>
+          </div>
+          <small className="pairedForwardNote">Read-only health from the existing Stockbit task and runtime. It does not create a second capture system.</small>
+        </section>
+
+        <section className="monitorMainGrid">
+          <article className="surface sessionCapturePanel">
+            <div className="sectionHead"><div><span>AUTOMATION HEALTH</span><h2>Automatic EOD archive</h2></div><span className="pairedForwardBadge">HEADLESS</span></div>
+            <div className="captureBody">
+              {!statusLoading && !configured && <div className="runtimeNotice"><i /><div><strong>Runtime not configured</strong><p>Daily acquisition runs independently; this page only reads its status.</p></div></div>}
+              {configured && !calendarReady && connected && <div className="runtimeNotice info"><i /><div><strong>Waiting for the first automated calendar sync</strong></div></div>}
+              {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
+              {latestFailure && !requestError && (
+                <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "Review the scheduler log."}</p></div></div>
+              )}
+              {!statusLoading && connected && !latestFailure && <div className="runtimeNotice info"><i /><div><strong>{anyFetching ? "EOD archive is running" : "EOD archive is monitored automatically"}</strong><p>Verified source artifacts and model progress are read from the canonical runtime.</p></div></div>}
+
+              <div className="sessionStripHeader">
+                <div><span>HISTORY</span><h3>Recent sessions</h3></div>
+                <div className="sessionLegend">
+                  <span><i className="legendDone" /> Recorded</span>
+                  <span><i className="legendMissing" /> Missing</span>
+                  <span><i className="legendFuture" /> Fetching</span>
+                </div>
+              </div>
+
+              {statusLoading ? (
+                <div className="loadingSessionState"><i />Reading forward session status...</div>
+              ) : status?.sessions.length ? (
+                <div className="sessionStrip">
+                  {status.sessions.slice(-12).map((session) => (
+                    <div
+                      key={session.session_date}
+                      className={`sessionTile ${session.state.toLowerCase()}`}
+                      title={session.error_message ?? undefined}
+                    >
+                      <span>{shortDate(session.session_date)}</span>
+                      <strong>{sessionLabel(session.state)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="emptySessionState"><strong>No recorded sessions yet</strong></div>
+              )}
+            </div>
+          </article>
+
+          <div className="modelCardsGrid" aria-label="Monitored models">
+          <a className="surface modelCardLink primaryModelPanel" href="/monitoring/models/o2" aria-label={`View forward detail for ${O2_CHALLENGER.shortName}`}>
+            <div className="sectionHead compact">
+              <div><span>PRIMARY CHALLENGER</span><h2>{O2_CHALLENGER.shortName}</h2></div>
+            </div>
+            <div className="contractProgress">
+                <div className="contractNumber"><strong>{statusLoading ? "—" : o2ForwardCount}</strong>{!statusLoading && <span>/ {O2_CHALLENGER.forwardTargetSessions}</span>}</div>
+                <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : scoringProgress}%` }} /></div>
+            </div>
+            <div className="modelMeta">
+              <span>{O2_CHALLENGER.featureCount} features</span>
+              <span>SHA {O2_CHALLENGER.modelSha256.slice(0, 10)}...</span>
+            </div>
+            <p className="modelCardNote">Historical leader; separate 100-session forward gate pending.</p>
+            <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
+          </a>
+
+          <a className="surface modelCardLink incumbentModelPanel" href="/monitoring/models/v3" aria-label={`View forward detail for ${FINAL_RANKER.shortName}`}>
+            <div className="sectionHead compact">
+              <div><span>INCUMBENT BASELINE</span><h2>{FINAL_RANKER.shortName}</h2></div>
+            </div>
+            <div className="contractProgress">
+                <div className="contractNumber"><strong>{statusLoading ? "—" : v3bScoredDates.size}</strong>{!statusLoading && <span>/ {FINAL_RANKER.forwardTargetSessions}</span>}</div>
+                <div className={`progressTrack indigoTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${statusLoading ? 0 : Math.min(100, v3bScoredDates.size)}%` }} /></div>
+            </div>
+            <div className="modelMeta">
+              <span>{FINAL_RANKER.featureCount} features</span>
+              <span>SHA {FINAL_RANKER.modelSha256.slice(0, 10)}...</span>
+            </div>
+            <p className="modelCardNote">Incumbent reference; tracked on the same captured sessions.</p>
+            <div className="modelCardAction"><span>View forward detail</span><b aria-hidden="true">→</b></div>
+          </a>
+          </div>
+        </section>
+
+        <section className="surface pairedForwardPanel">
+          <div className="sectionHead">
+            <div><span>PAIRED FORWARD COMPARISON</span><h2>O2 vs V3-B</h2></div>
+            <span className="pairedForwardBadge">SAME SESSIONS</span>
+          </div>
+          <p className="pairedForwardCopy">O2 is the primary historical challenger. V3-B remains the incumbent reference. Only identical captured sessions count as paired evidence.</p>
+          <div className="pairedForwardMetrics">
+            <div><span>O2</span><strong>{statusLoading ? "â€”" : o2ForwardCount}</strong><small>score artifacts</small></div>
+            <div><span>V3-B</span><strong>{statusLoading ? "â€”" : v3bScoredDates.size}</strong><small>reference artifacts</small></div>
+            <div><span>Paired</span><strong>{statusLoading ? "â€”" : pairedScoredDates.size}</strong><small>same-session artifacts</small></div>
+          </div>
+          <small className="pairedForwardNote">O2 remains a challenger until the separate 100-session fresh-forward gate is completed and reviewed. O2 score artifacts will appear once the runtime adapter supports O2 scoring.</small>
+        </section>
+
+        <section className="surface modelRunsPanel">
+          <div className="sectionHead"><div><span>RESEARCH LANES</span><h2>What is in the forward system</h2></div></div>
+          <div className="modelRunList">
+            <article className="modelRunRow">
+              <div className="runIdentity"><span className="generationPill o2">O2</span><div><strong>Primary challenger · {O2_CHALLENGER.shortName}</strong><small>{O2_CHALLENGER.id}</small></div></div>
+            </article>
+            <article className="modelRunRow">
+              <div className="runIdentity"><span className="generationPill v3">V3</span><div><strong>Incumbent reference · {FINAL_RANKER.shortName}</strong><small>{FINAL_RANKER.id}</small></div></div>
+            </article>
+            <article className="modelRunRow futureRun">
+              <div className="runIdentity"><span className="generationPill v4">RISK</span><div><strong>Path Risk V1</strong><small>Separate historical research lane; not a forward trade filter yet.</small></div></div>
+            </article>
+            <article className="modelRunRow futureRun">
+              <div className="runIdentity"><span className="generationPill v4">P</span><div><strong>Probability / calibration</strong><small>No validated probability layer exists yet.</small></div></div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

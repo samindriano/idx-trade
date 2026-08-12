@@ -1,0 +1,2 @@
+evidence_id,ticker,market,state,effective_from,effective_to,announced_at,source,source_ref,evidence_note
+IDX-CENTEX-20240807-CNTB-REGULAR,CNTB,REGULAR,SUSPENDED,2024-08-07,,2024-08-07,IDX_EXCHANGE_ANNOUNCEMENT,https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202408/1c38a14af6_65c8eafbaf.pdf,"Peng-SPT-00006/BEI.PP1/08-2024 explicitly suspends CNTX and CNTB in all markets from session I on 2024-08-07. A later 2025 announcement opened only the Negotiated Market for a crossing transaction, so REGULAR remained suspended."

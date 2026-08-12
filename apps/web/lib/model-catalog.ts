@@ -1,0 +1,447 @@
+export type ResearchStatus = "FINAL" | "BASELINE" | "FAIL" | "BLOCKED" | "RESEARCH";
+export type ResearchComparisonClass = "V2_BASELINE" | "OPEN_FEATURES" | "V3_VARIANTS" | "V4_VARIANTS" | "RISK";
+
+export type ResearchFoldMetric = {
+  fold: string;
+  deltaPr: number;
+  score?: number;
+  roc?: number;
+  qSpread?: number;
+};
+
+export type ResearchEvidenceSeries = {
+  label: string;
+  points: readonly ResearchFoldMetric[];
+};
+
+export type ResearchEvidence = {
+  metricLabel: string;
+  caption: string;
+  series: readonly ResearchEvidenceSeries[];
+};
+
+export type ResearchExperiment = {
+  generation: string;
+  comparisonClass: ResearchComparisonClass;
+  name: string;
+  candidate: string;
+  status: ResearchStatus;
+  trackingRole?: "PRIMARY_CHALLENGER" | "INCUMBENT" | "REFERENCE";
+  historicalRank?: number;
+  result: string;
+  note: string;
+  evidence?: ResearchEvidence;
+  dataBlocker?: boolean;
+  keyFindings: readonly string[];
+};
+
+export const FINAL_RANKER = {
+  id: "V3-B-STRUCTURE-LITE-V1-CANDIDATE-005",
+  shortName: "V3-B Structure-Lite",
+  generation: "V3",
+  featureCount: 33,
+  finalRefitRows: 292633,
+  finalRefitTickers: 737,
+  finalRefitSessions: "20..1250",
+  modelSha256: "1a702031113ff75f38158aa35d1c2bac477cd424d7f14b83d7a89e6c74fef0f6",
+  manifestSha256: "4e84ce02c6ee856c0f260dd6099b2a479723c53da82131ae669e0bf7e4d384f9",
+  featureOrderSha256: "100ff7a9bacf394b2adc1daa7eb73b0fe7b89613a6918a9e4ded60ca67a55e9e",
+  discoveryMedianPairedDeltaPr: 0.003925845,
+  lateMedianPairedDeltaPr: 0.0075911303,
+  lateWorstPairedDeltaPr: 0.0016661426,
+  forwardTargetSessions: 100,
+  forwardCutoff: "2026-07-31",
+} as const;
+
+export const V2_CHAMPION = {
+  id: "HGB_XS_MARKET",
+  shortName: "HGB XS + Market",
+  generation: "V2",
+  featureCount: 25,
+  modelSha256: "5c9e3d0207baa27310937ff97c92e7561e8e1134152ae011668ad97515cb9ace",
+  manifestSha256: "f483450026a9550f31b7d5873825079a2e307c1b24db87ce06dc500d17c3ace9",
+  forwardTargetSessions: 100,
+} as const;
+
+export const O2_CHALLENGER = {
+  id: "O2-GEOMETRY-FULL3-V1-CANDIDATE-001",
+  shortName: "O2 Open Geometry",
+  generation: "O2",
+  featureCount: 36,
+  finalRefitRows: 278168,
+  finalRefitTickers: 729,
+  modelSha256: "42442e438f04ff40e0637fa3a536bbe9b4ab8f50c8556d350ca0e908d592ccfb",
+  manifestSha256: "535875e74a1b3a6532e95addf819521758798a767bc49ee9b30d54054a0ae7c2",
+  featureOrderSha256: "a2f04da9100eca4c3896330c2188df0e5afa6371f9a4baec2f4fea10495b980f",
+  historicalMedianPairedDeltaPr: 0.007276,
+  historicalPositiveFolds: 6,
+  historicalFoldCount: 6,
+  forwardTargetSessions: 100,
+} as const;
+
+export const V3_B_DISCOVERY_FOLDS = [
+  { fold: "F1", deltaPr: 0.007948, roc: 0.002743, qSpread: 0.013084 },
+  { fold: "F2", deltaPr: 0.001841, roc: 0.009782, qSpread: 0.015608 },
+  { fold: "F3", deltaPr: 0.004879, roc: 0.001502, qSpread: 0.009564 },
+  { fold: "F4", deltaPr: 0.002973, roc: 0.001748, qSpread: 0.005156 },
+] as const;
+
+const V2_CHAMPION_FOLDS = [
+  { fold: "F1", deltaPr: 0.0216774918 },
+  { fold: "F2", deltaPr: 0.0289990901 },
+  { fold: "F3", deltaPr: 0.0087894853 },
+  { fold: "F4", deltaPr: 0.0382948851 },
+  { fold: "F5", deltaPr: 0.0260816692 },
+  { fold: "F6", deltaPr: 0.0186432663 },
+] as const;
+
+const O1A_OVERNIGHT_FOLDS = [
+  { fold: "F1", deltaPr: -0.001292 },
+  { fold: "F2", deltaPr: 0.002084 },
+  { fold: "F3", deltaPr: 0.001636 },
+  { fold: "F4", deltaPr: -0.014955 },
+  { fold: "F5", deltaPr: -0.001660 },
+  { fold: "F6", deltaPr: 0.012650 },
+] as const;
+
+const O1B_INTRADAY_FOLDS = [
+  { fold: "F1", deltaPr: 0.002337 },
+  { fold: "F2", deltaPr: -0.000978 },
+  { fold: "F3", deltaPr: 0.002112 },
+  { fold: "F4", deltaPr: -0.004234 },
+  { fold: "F5", deltaPr: 0.001520 },
+  { fold: "F6", deltaPr: 0.011821 },
+] as const;
+
+const O1C_DECOMPOSITION_FOLDS = [
+  { fold: "F1", deltaPr: 0.000809 },
+  { fold: "F2", deltaPr: 0.003499 },
+  { fold: "F3", deltaPr: -0.000971 },
+  { fold: "F4", deltaPr: -0.012118 },
+  { fold: "F5", deltaPr: 0.003842 },
+  { fold: "F6", deltaPr: 0.025485 },
+] as const;
+
+const O2_OPEN_GEOMETRY_FOLDS = [
+  { fold: "F1", deltaPr: 0.003866 },
+  { fold: "F2", deltaPr: 0.000451 },
+  { fold: "F3", deltaPr: 0.007242 },
+  { fold: "F4", deltaPr: 0.007310 },
+  { fold: "F5", deltaPr: 0.012031 },
+  { fold: "F6", deltaPr: 0.013823 },
+] as const;
+
+const V3_A_H252_FOLDS = [
+  { fold: "F1", deltaPr: 0.0075943698 },
+  { fold: "F2", deltaPr: 0.0059093010 },
+  { fold: "F3", deltaPr: -0.0062116193 },
+  { fold: "F4", deltaPr: -0.0091929210 },
+] as const;
+
+const V3_A_H504_FOLDS = [
+  { fold: "F1", deltaPr: 0.0051240318 },
+  { fold: "F2", deltaPr: 0.0019016524 },
+  { fold: "F3", deltaPr: -0.0017879420 },
+  { fold: "F4", deltaPr: -0.0345301016 },
+] as const;
+
+const V3_C_FOLDS = [
+  { fold: "F1", deltaPr: -0.0111186352 },
+  { fold: "F2", deltaPr: -0.0221428730 },
+  { fold: "F3", deltaPr: 0.0222075419 },
+  { fold: "F4", deltaPr: -0.0135157431 },
+] as const;
+
+const V3_E_FOLDS = [
+  { fold: "F1", deltaPr: 0.0061055536 },
+  { fold: "F2", deltaPr: 0.0037787365 },
+  { fold: "F3", deltaPr: 0.0191587603 },
+  { fold: "F4", deltaPr: -0.0253353754 },
+] as const;
+
+const V4_A_IMPACT_FOLDS = [
+  { fold: "F1", deltaPr: 0.0040161320 },
+  { fold: "F2", deltaPr: 0.0015336871 },
+  { fold: "F3", deltaPr: -0.0013733281 },
+  { fold: "F4", deltaPr: 0.0022205772 },
+  { fold: "F5", deltaPr: -0.0014500930 },
+  { fold: "F6", deltaPr: -0.0116775888 },
+] as const;
+
+const V4_A_PERSISTENCE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0034991328 },
+  { fold: "F2", deltaPr: 0.0021464711 },
+  { fold: "F3", deltaPr: -0.0053115173 },
+  { fold: "F4", deltaPr: -0.0072388702 },
+  { fold: "F5", deltaPr: 0.0014138400 },
+  { fold: "F6", deltaPr: 0.0006198268 },
+] as const;
+
+const V4_B_COHERENCE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0024449252 },
+  { fold: "F2", deltaPr: 0.0027391273 },
+  { fold: "F3", deltaPr: -0.0043080206 },
+  { fold: "F4", deltaPr: -0.0114229736 },
+  { fold: "F5", deltaPr: 0.0013810536 },
+  { fold: "F6", deltaPr: -0.0032163378 },
+] as const;
+
+const V4_B_RANGE_FOLDS = [
+  { fold: "F1", deltaPr: 0.0103945841 },
+  { fold: "F2", deltaPr: 0.0218949329 },
+  { fold: "F3", deltaPr: -0.0014045382 },
+  { fold: "F4", deltaPr: 0.0032085928 },
+  { fold: "F5", deltaPr: 0.0039737952 },
+  { fold: "F6", deltaPr: -0.0097175361 },
+] as const;
+
+const V4_C_FOLDS = [
+  { fold: "F1", deltaPr: 0.0102384577 },
+  { fold: "F2", deltaPr: 0.0023095349 },
+  { fold: "F3", deltaPr: -0.0072453235 },
+  { fold: "F4", deltaPr: 0.0006307876 },
+  { fold: "F5", deltaPr: 0.0085398031 },
+  { fold: "F6", deltaPr: -0.0265794272 },
+] as const;
+
+export const RESEARCH_EXPERIMENTS: ResearchExperiment[] = [
+  {
+    generation: "V2",
+    comparisonClass: "V2_BASELINE",
+    name: "HGB XS + Market",
+    candidate: "HGB_XS_MARKET",
+    status: "BASELINE",
+    trackingRole: "REFERENCE",
+    historicalRank: 3,
+    result: "Historical V2 champion",
+    note: "Median ΔPR +2.39%, median ROC 0.5244, median Q5−Q1 +5.12% across six folds.",
+    keyFindings: [
+      "PR-AUC delta stayed positive across all six development folds.",
+      "Median PR-AUC delta was +2.39% with median ROC-AUC 0.5244.",
+      "Selected as the historical V2 champion; fresh-forward validation remains separate.",
+    ],
+    evidence: {
+      metricLabel: "PR-AUC delta vs base rate",
+      caption: "Six historical development folds from the selected V2 champion.",
+      series: [{ label: "HGB XS + Market", points: V2_CHAMPION_FOLDS }],
+    },
+  },
+  {
+    generation: "V3-A",
+    comparisonClass: "V3_VARIANTS",
+    name: "Recency weighting",
+    candidate: "H252 / H504",
+    status: "FAIL",
+    result: "Killed",
+    note: "Both recency variants failed the paired promotion gate; no rescue.",
+    keyFindings: [
+      "Both recency variants showed late-fold deterioration.",
+      "The paired promotion gate was not satisfied consistently.",
+      "The candidate was stopped without rescue or further tuning.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V2",
+      caption: "The two recency variants are shown together across the four discovery folds.",
+      series: [
+        { label: "H252", points: V3_A_H252_FOLDS },
+        { label: "H504", points: V3_A_H504_FOLDS },
+      ],
+    },
+  },
+  {
+    generation: "V3-B",
+    comparisonClass: "V3_VARIANTS",
+    name: "Structure-Lite",
+    candidate: FINAL_RANKER.id,
+    status: "FINAL",
+    trackingRole: "INCUMBENT",
+    historicalRank: 2,
+    result: "Promoted + late confirmation PASS",
+    note: "Only surviving V3 component. Exact V2 information set plus eight causal price-geometry features.",
+    keyFindings: [
+      "Paired PR-AUC improved across every F1-F4 discovery fold.",
+      "The structure-lite feature family was the only surviving V3 component.",
+      "Late confirmation also passed under the frozen promotion process.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC delta vs V2",
+      caption: "Paired discovery PR-AUC improved across every F1-F4 fold.",
+      series: [{ label: "V3-B / V2", points: V3_B_DISCOVERY_FOLDS }],
+    },
+  },
+  {
+    generation: "O1",
+    comparisonClass: "OPEN_FEATURES",
+    name: "Raw Open features",
+    candidate: "O1A / O1B / O1C",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Overnight-gap, intraday-return, and decomposition variants all failed the frozen lower-quartile paired-improvement gate.",
+    keyFindings: [
+      "O1A, O1B, and O1C did not produce a robust survivor.",
+      "The strongest median uplift was only +0.215%, with a negative lower quartile.",
+      "O1 was closed without rescue or post-hoc tuning.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "All three O1 Open variants are shown across the six historical development folds.",
+      series: [
+        { label: "O1A overnight", points: O1A_OVERNIGHT_FOLDS },
+        { label: "O1B intraday", points: O1B_INTRADAY_FOLDS },
+        { label: "O1C decomposition", points: O1C_DECOMPOSITION_FOLDS },
+      ],
+    },
+  },
+  {
+    generation: "O2",
+    comparisonClass: "OPEN_FEATURES",
+    name: "Open Geometry",
+    candidate: O2_CHALLENGER.id,
+    status: "RESEARCH",
+    trackingRole: "PRIMARY_CHALLENGER",
+    historicalRank: 1,
+    result: "Primary challenger · 6/6 historical folds",
+    note: "Full three-feature Open geometry is the strongest historical challenger, but it remains unpromoted until its separate 100-session fresh-forward gate completes.",
+    keyFindings: [
+      "Paired PR-AUC uplift was positive in all six historical folds.",
+      "Median paired PR-AUC delta was +0.7276%; lower quartile was +0.4710%.",
+      "O2 is tracked against the unchanged V3-B incumbent on identical forward sessions.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "O2 Open Geometry is the primary historical challenger; fresh-forward validation remains separate.",
+      series: [{ label: "O2 Open Geometry", points: O2_OPEN_GEOMETRY_FOLDS }],
+    },
+  },
+  {
+    generation: "V3-C",
+    comparisonClass: "V3_VARIANTS",
+    name: "Regime specialization",
+    candidate: "TWO-EXPERT-007",
+    status: "FAIL",
+    result: "Killed",
+    note: "Overall median paired ΔPR −1.23%; stress regime degraded materially.",
+    keyFindings: [
+      "The candidate underperformed its control in three of four folds.",
+      "Stress-regime performance degraded materially.",
+      "Median paired PR-AUC change was −1.23%.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "The regime-specialization candidate falls below its control in three of four folds.",
+      series: [{ label: "Two-expert", points: V3_C_FOLDS }],
+    },
+  },
+  {
+    generation: "V3-D",
+    comparisonClass: "V3_VARIANTS",
+    name: "Sector relative",
+    candidate: "008 / 009",
+    status: "BLOCKED",
+    result: "PIT data blocked",
+    note: "No defensible historical ticker-by-date IDX-IC membership chain; outcomes remain unviewed.",
+    dataBlocker: true,
+    keyFindings: [
+      "Historical ticker-by-date IDX-IC membership could not be reconstructed defensibly.",
+      "The candidate was blocked before a valid performance comparison.",
+      "No performance conclusion was drawn from the incomplete PIT data.",
+    ],
+  },
+  {
+    generation: "V3-E",
+    comparisonClass: "V3_VARIANTS",
+    name: "True ranking / LambdaMART",
+    candidate: "LAMBDAMART-011",
+    status: "FAIL",
+    result: "Killed",
+    note: "Some PR uplift, but robustness and Q5−Q1 promotion gates failed.",
+    keyFindings: [
+      "Early folds showed PR-AUC uplift against the control.",
+      "The final discovery fold reversed negative.",
+      "Robustness and Q5-Q1 promotion gates failed.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "LambdaMART's PR-AUC improvement reversed in the final discovery fold.",
+      series: [{ label: "LambdaMART", points: V3_E_FOLDS }],
+    },
+  },
+  {
+    generation: "V4-A",
+    comparisonClass: "V4_VARIANTS",
+    name: "Participation quality",
+    candidate: "013 / 014",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Impact/Absorption and Persistent Directional Participation both failed.",
+    keyFindings: [
+      "Neither participation candidate survived the full gate.",
+      "Both candidates showed weakness in later development folds.",
+      "No participation variant was promoted.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "Both participation candidates are shown across the six development folds.",
+      series: [
+        { label: "Impact", points: V4_A_IMPACT_FOLDS },
+        { label: "Persistent direction", points: V4_A_PERSISTENCE_FOLDS },
+      ],
+    },
+  },
+  {
+    generation: "V4-B",
+    comparisonClass: "V4_VARIANTS",
+    name: "Price-path quality",
+    candidate: "016 / 017",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Coherence failed; Range Acceptance had positive aggregate uplift but failed late-fold protection.",
+    keyFindings: [
+      "Coherence produced mixed results and failed its robustness gate.",
+      "Range Acceptance had aggregate uplift but failed late-fold protection.",
+      "Neither price-path candidate survived promotion.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "The two price-path candidates are shown together; late-fold weakness remains visible.",
+      series: [
+        { label: "Coherence", points: V4_B_COHERENCE_FOLDS },
+        { label: "Range acceptance", points: V4_B_RANGE_FOLDS },
+      ],
+    },
+  },
+  {
+    generation: "V4-C",
+    comparisonClass: "V4_VARIANTS",
+    name: "Cross-sectional dispersion",
+    candidate: "019",
+    status: "FAIL",
+    result: "No survivor",
+    note: "Median paired ΔPR +0.147% missed the +0.150% gate and other robustness gates also failed.",
+    keyFindings: [
+      "Early folds were positive, but the final fold reversed negative.",
+      "Median paired PR-AUC delta was +0.147%, below the +0.150% gate.",
+      "Additional robustness gates also failed.",
+    ],
+    evidence: {
+      metricLabel: "Paired PR-AUC change vs V3-B",
+      caption: "Cross-sectional dispersion shows a strong early profile but reverses in the final fold.",
+      series: [{ label: "Dispersion", points: V4_C_FOLDS }],
+    },
+  },
+  {
+    generation: "Risk",
+    comparisonClass: "RISK",
+    name: "Path Risk V1",
+    candidate: "PATH-RISK-A-Q75-HGB-001",
+    status: "FAIL",
+    result: "Discovery FAIL_CLOSE",
+    note: "Ordering diagnostics were positive, but q75 pinball robustness failed the frozen gate; no F5/F6, rescue, or alpha+risk integration.",
+    dataBlocker: true,
+    keyFindings: [
+      "Ordering diagnostics were directionally positive.",
+      "q75 pinball robustness failed the frozen gate.",
+      "No F5/F6 expansion, rescue, or alpha-plus-risk integration was allowed.",
+    ],
+  },
+];
