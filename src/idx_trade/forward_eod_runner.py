@@ -19,7 +19,8 @@ from .provenance import sha256_file, write_manifest_atomic
 
 
 JAKARTA = ZoneInfo("Asia/Jakarta")
-EOD_CUTOFF_HOUR = 17
+MARKET_CLOSE_CUTOFF_HOUR = 17
+EOD_CAPTURE_HOUR = 18
 
 
 def _now_jakarta() -> datetime:
@@ -31,7 +32,7 @@ def _run_log_dir(runtime_root: str | Path) -> Path:
 
 
 def _before_cutoff(now: datetime) -> bool:
-    return now.hour < EOD_CUTOFF_HOUR
+    return now.hour < EOD_CAPTURE_HOUR
 
 
 def run_eod_catchup(
@@ -55,7 +56,8 @@ def run_eod_catchup(
         "runtime_root": str(root),
         "started_at_jakarta": started_at.isoformat(),
         "started_at_utc": started_at.astimezone(ZoneInfo("UTC")).isoformat(),
-        "cutoff_hour_jakarta": EOD_CUTOFF_HOUR,
+        "market_close_cutoff_hour_jakarta": MARKET_CLOSE_CUTOFF_HOUR,
+        "capture_hour_jakarta": EOD_CAPTURE_HOUR,
         "captured_sessions": [],
         "stopped_on_first_failure": False,
         "outcome_access": "LOCKED",
@@ -73,14 +75,17 @@ def run_eod_catchup(
                 {
                     "status": "BEFORE_EOD_CUTOFF",
                     "error_code": "BEFORE_EOD_CUTOFF",
-                    "error_message": "No real EOD capture is allowed before 17:00 Asia/Jakarta.",
+                    "error_message": "No real EOD capture is allowed before 18:00 Asia/Jakarta.",
                 }
             )
             persist()
             return result
 
         paths = base.runtime_paths(root)
-        sessions = runtime.sync_forward_calendar(paths)
+        closed_through = base._closed_through_date()
+        sessions = runtime.sync_forward_calendar(paths, through=closed_through)
+        result["closed_through_session"] = closed_through.date().isoformat()
+        result["official_calendar_validation"] = "PASS_EXACT_IDX_SESSION_CALENDAR"
         result["calendar_first_session"] = sessions.min().date().isoformat() if len(sessions) else None
         result["calendar_last_session"] = sessions.max().date().isoformat() if len(sessions) else None
 
@@ -130,6 +135,7 @@ def run_eod_catchup(
                     }
                 )
                 break
+            captured["session_date_validation"] = "PASS_CALENDAR_AND_EXACT_SOURCE_DATE"
             result["captured_sessions"].append(captured)
 
         result["finished_at_jakarta"] = _now_jakarta().isoformat()

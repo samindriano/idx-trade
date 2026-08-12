@@ -1498,7 +1498,8 @@ existing forward session engine remains the only recorder. Added:
 
 - `idx_trade.forward_eod_runner`, a headless chronological catch-up wrapper
   that uses the existing `forward_monitoring_runtime`, stops on the first
-  failure, enforces the 17:00 Asia/Jakarta cutoff, and persists compact
+  failure, preserves the 17:00 market-close cutoff but starts capture at 18:00
+  Asia/Jakarta, and persists compact
   external run logs below the existing `forward_monitoring` root;
 - a create-once `session_ohlcv.parquet` sibling containing Open/H/L/C/Volume,
   provider identity, source reference, source/evidence SHA, and observed
@@ -1508,8 +1509,10 @@ existing forward session engine remains the only recorder. Added:
   with opt-in provider recovery only for missing rows and fail-closed
   H/L/C/Volume reconciliation;
 - auditable PowerShell runner/install scripts for one Task Scheduler task with
-  17:05 and 17:30 idempotent triggers, StartWhenAvailable, and IgnoreNew.
-  Installation is intentionally not run before controlled real validation;
+  an 18:00 daily trigger plus interactive logon catch-up, StartWhenAvailable,
+  and IgnoreNew. The source-blocked legacy Open archive task is disabled rather
+  than deleted after controlled real validation. Installation is intentionally
+  not run before controlled real validation;
 - a read-only `/monitoring` UI: manual target-date, Capture EOD, and session
   submission controls were removed. The existing local capture API remains
   available as a guarded emergency interface.
@@ -1526,6 +1529,6 @@ no source bytes were changed and no historical publication-time claim is made.
 
 Validation so far: focused forward/runtime/OHLCV/runner tests pass; full repo
 pytest after integration and Next.js build pass. At checkpoint time Jakarta
-was before 17:00, so no real capture, Open network recovery, scheduler
+was before 18:00, so no real capture, Open network recovery, scheduler
 installation, model scoring, outcome access, or forward marker access was
 performed.

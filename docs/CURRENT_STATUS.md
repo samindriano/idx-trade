@@ -243,6 +243,9 @@ frontend work. Stage 1 adds a headless, idempotent catch-up runner around
 `forward_monitoring_runtime`, an auditable Windows Task Scheduler install
 script (not installed yet), an immutable `session_ohlcv.parquet` sibling
 artifact, local-first legacy Open enrichment, and a read-only `/monitoring` UI.
+The installer is now configured as one canonical 18:00 task with an interactive
+logon catch-up trigger; the source-blocked legacy Open archive task is
+superseded and will be disabled, not deleted, after controlled capture.
 
 The external runtime `D:\Documents\Project\idx-trade-data-gate-20260808v`
 contains two `DATA_READY` sessions: `2026-08-03` with 831 active model rows
@@ -250,8 +253,13 @@ and `2026-08-10` with 837. Both legacy `model_input.parquet` files have the
 frozen 7-column schema and no Open. Local raw Yahoo/yfinance files contain
 `raw_open`, but stop at `2026-07-31`; date-row/Open coverage is therefore
 `0/831` and `0/837`. No legacy model input or manifest was rewritten. Network
-recovery and the one controlled post-17:00 EOD cycle remain pending because
+recovery and the one controlled post-18:00 EOD cycle remain pending because
 the current run started before the mandatory Jakarta cutoff.
+
+The runner keeps the 17:00 market-close cutoff but waits until 18:00 before
+starting real capture. On a later laptop login it re-syncs the official IDX
+calendar through the current closed-session boundary, then captures the
+earliest missing official session only after exact date validation.
 
 No scheduler was installed or modified, no outcomes or
 `FORWARD_OUTCOME_ACCESS_STARTED` were accessed, and existing Stockbit
