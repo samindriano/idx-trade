@@ -911,19 +911,18 @@ def run_queued_model_jobs(runtime_root: str | Path, session_dates: Iterable[obje
     reliability_errors: list[dict[str, str]] = []
     for session_key in sessions:
         shadow_inputs = _run_session(paths, session_key)
-        if shadow_inputs is None:
-            continue
-        v3_features, metadata = shadow_inputs
-        try:
-            from .o2_1_sealed_shadow_runtime import score_o21_shadow_session
+        if shadow_inputs is not None:
+            v3_features, metadata = shadow_inputs
+            try:
+                from .o2_1_sealed_shadow_runtime import score_o21_shadow_session
 
-            shadow_runs.append(score_o21_shadow_session(paths, session_key, v3_features, metadata))
-        except FileNotFoundError:
-            # The sealed shadow is intentionally opt-in and is not allowed to
-            # make the primary V2/V3-B/O2 fan-out fail before it is frozen.
-            continue
-        except Exception as error:
-            shadow_errors.append({"session_date": session_key, "error": str(error)[:4000]})
+                shadow_runs.append(score_o21_shadow_session(paths, session_key, v3_features, metadata))
+            except FileNotFoundError:
+                # The sealed shadow is intentionally opt-in and is not allowed
+                # to make the primary V2/V3-B/O2 fan-out fail before it is frozen.
+                pass
+            except Exception as error:
+                shadow_errors.append({"session_date": session_key, "error": str(error)[:4000]})
         try:
             from .reliability_v1_forward_shadow import score_reliability_v1_session
 

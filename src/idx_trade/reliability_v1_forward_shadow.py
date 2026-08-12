@@ -201,6 +201,35 @@ def _existing_sidecar(paths: Any, session_key: str) -> dict[str, Any] | None:
     payload = json.loads(output["manifest"].read_text(encoding="utf-8"))
     if sha256_file(output["artifact"]) != payload.get("reliability_artifact_sha256"):
         raise RuntimeError(f"Reliability sidecar artifact hash mismatch for {session_key}")
+    if payload.get("status") != "READY":
+        raise RuntimeError(f"Reliability sidecar is not READY for {session_key}")
+    if payload.get("session_date") != session_key:
+        raise RuntimeError(f"Reliability sidecar date mismatch for {session_key}")
+    if payload.get("model_id") != RELIABILITY_MODEL_ID:
+        raise RuntimeError(f"Reliability sidecar model mismatch for {session_key}")
+    if payload.get("formula_version") != RELIABILITY_FORMULA_VERSION:
+        raise RuntimeError(f"Reliability sidecar formula mismatch for {session_key}")
+    if payload.get("runtime_flags") != PROTECTED_FLAGS:
+        raise RuntimeError(f"Reliability sidecar protected flags mismatch for {session_key}")
+    if payload.get("outcome_access") != "LOCKED":
+        raise RuntimeError(f"Reliability sidecar outcome state is not locked for {session_key}")
+
+    # A valid immutable sidecar is still valid only relative to the exact O2
+    # bundle it records. Revalidate the source hashes before returning the
+    # existing sidecar, but never rewrite or recompute that sidecar.
+    o2_artifact, o2_manifest_path, o2_manifest = _find_o2_source(paths, session_key)
+    if str(payload.get("o2_source_score_artifact_path")) != str(o2_artifact):
+        raise RuntimeError(f"Reliability sidecar O2 artifact path mismatch for {session_key}")
+    if str(payload.get("o2_source_score_artifact_sha256")) != str(o2_manifest["score_artifact_sha256"]):
+        raise RuntimeError(f"Reliability sidecar O2 artifact pin mismatch for {session_key}")
+    if str(payload.get("o2_source_session_manifest_path")) != str(o2_manifest_path):
+        raise RuntimeError(f"Reliability sidecar O2 manifest path mismatch for {session_key}")
+    if str(payload.get("o2_source_session_manifest_sha256")) != str(o2_manifest["_manifest_sha256"]):
+        raise RuntimeError(f"Reliability sidecar O2 session-manifest pin mismatch for {session_key}")
+    if payload.get("o2_model_sha256") != O2_MODEL_SHA256:
+        raise RuntimeError(f"Reliability sidecar O2 model pin mismatch for {session_key}")
+    if payload.get("o2_feature_order_sha256") != O2_FEATURE_ORDER_SHA256:
+        raise RuntimeError(f"Reliability sidecar O2 feature-order pin mismatch for {session_key}")
     return payload
 
 

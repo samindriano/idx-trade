@@ -16,6 +16,7 @@ from idx_trade.reliability_v1_forward_shadow import (
     O2_MODEL_ID,
     O2_MODEL_MANIFEST_SHA256,
     O2_MODEL_SHA256,
+    PROTECTED_FLAGS,
     RELIABILITY_FORMULA_VERSION,
     align_reliability_v1_sessions,
     score_reliability_v1_session,
@@ -100,6 +101,31 @@ def test_zero_iqr_is_unavailable_without_failing_o2(tmp_path: Path) -> None:
     assert scored["score_margin_reliability"].isna().all()
 
 
+def test_score_ties_are_deterministic_and_percentile_ties_use_average_rank(tmp_path: Path) -> None:
+    root = _runtime(tmp_path, scores=[0.1, 0.1, 0.5, 0.9, None])
+    result = score_reliability_v1_session(runtime_paths(root), "2026-08-13")
+    output = pd.read_parquet(result["reliability_artifact_path"])
+    scored = output.loc[output["o2_eligible"]].sort_values(["o2_score", "ticker"])
+
+    assert scored["score_margin_reliability"].tolist() == pytest.approx([0.0, 0.0, 0.8, 0.8])
+    assert scored["reliability_percentile"].tolist() == pytest.approx(
+        [100.0 / 6.0, 100.0 / 6.0, 500.0 / 6.0, 500.0 / 6.0]
+    )
+    assert result["runtime_flags"] == PROTECTED_FLAGS
+
+
+def test_less_than_two_scored_rows_is_unavailable_geometry(tmp_path: Path) -> None:
+    root = _runtime(tmp_path, scores=[0.2, None, None, None, None])
+    result = score_reliability_v1_session(runtime_paths(root), "2026-08-13")
+    output = pd.read_parquet(result["reliability_artifact_path"])
+    scored = output.loc[output["o2_eligible"]]
+
+    assert result["o2_scored_rows"] == 1
+    assert result["reliability_finite_rows"] == 0
+    assert scored["reliability_status"].eq("UNAVAILABLE_SESSION_GEOMETRY").all()
+    assert scored["score_margin_reliability"].isna().all()
+
+
 def test_alignment_reads_only_existing_data_ready_session_and_is_idempotent(tmp_path: Path) -> None:
     root = _runtime(tmp_path, scores=[0.1, 0.2, 0.5, 0.9, None])
     paths = runtime_paths(root)
@@ -133,3 +159,80 @@ def test_source_artifact_revision_fails_closed(tmp_path: Path) -> None:
     source_manifest.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(RuntimeError, match="hash mismatch"):
         score_reliability_v1_session(paths, "2026-08-13")
+
+
+def test_existing_sidecar_revalidates_source_artifact_revision_without_rewrite(tmp_path: Path) -> None:
+    root = _runtime(tmp_path, scores=[0.1, 0.2, 0.5, 0.9, None])
+    paths = runtime_paths(root)
+    first = score_reliability_v1_session(paths, "2026-08-13")
+    sidecar = Path(first["reliability_artifact_path"])
+    sidecar_sha = _sha(sidecar)
+    source = paths.monitor_root / "model_runs" / "2026-08-13" / "o2-geometry-full3-v1-candidate-001" / "score_artifact.parquet"
+    source.write_bytes(source.read_bytes() + b"revision")
+
+    with pytest.raises(RuntimeError, match="O2 score artifact hash mismatch"):
+        score_reliability_v1_session(paths, "2026-08-13")
+    assert _sha(sidecar) == sidecar_sha
+
+
+def test_existing_sidecar_revalidates_source_manifest_revision_without_rewrite(tmp_path: Path) -> None:
+    root = _runtime(tmp_path, scores=[0.1, 0.2, 0.5, 0.9, None])
+    paths = runtime_paths(root)
+    first = score_reliability_v1_session(paths, "2026-08-13")
+    sidecar = Path(first["reliability_artifact_path"])
+    sidecar_sha = _sha(sidecar)
+    source_manifest = paths.monitor_root / "model_runs" / "2026-08-13" / "o2-geometry-full3-v1-candidate-001" / "manifest.json"
+    payload = json.loads(source_manifest.read_text(encoding="utf-8"))
+    payload["official_session_index"] = 1269
+    source_manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="session-manifest pin mismatch"):
+        score_reliability_v1_session(paths, "2026-08-13")
+    assert _sha(sidecar) == sidecar_sha
+
+
+def test_existing_sidecar_rejects_protected_flag_revision(tmp_path: Path) -> None:
+    root = _runtime(tmp_path, scores=[0.1, 0.2, 0.5, 0.9, None])
+    paths = runtime_paths(root)
+    first = score_reliability_v1_session(paths, "2026-08-13")
+    sidecar_manifest = paths.monitor_root / "reliability_v1_shadow" / "score_margin" / "2026-08-13" / "manifest.json"
+    payload = json.loads(sidecar_manifest.read_text(encoding="utf-8"))
+    payload["runtime_flags"]["trade_filtering"] = True
+    sidecar_manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="protected flags mismatch"):
+        score_reliability_v1_session(paths, "2026-08-13")
+
+
+def test_reliability_is_independent_of_unavailable_o21_shadow(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from idx_trade import forward_model_runtime, o2_1_sealed_shadow_runtime, reliability_v1_forward_shadow
+
+    class _Result:
+        def fetchall(self):
+            return [{"session_date": "2026-08-13"}]
+
+    class _Connection:
+        def execute(self, _query):
+            return _Result()
+
+        def close(self):
+            return None
+
+    def _o21_unavailable(*_args, **_kwargs):
+        raise FileNotFoundError("O2.1 shadow unavailable")
+
+    monkeypatch.setattr(forward_model_runtime, "ensure_model_runs", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(forward_model_runtime, "_connection", lambda _paths: _Connection())
+    monkeypatch.setattr(forward_model_runtime, "_run_session", lambda *_args: (object(), {}))
+    monkeypatch.setattr(o2_1_sealed_shadow_runtime, "score_o21_shadow_session", _o21_unavailable)
+    monkeypatch.setattr(
+        reliability_v1_forward_shadow,
+        "score_reliability_v1_session",
+        lambda _paths, session: {"session_date": session, "status": "READY"},
+    )
+
+    result = forward_model_runtime.run_queued_model_jobs(tmp_path, ["2026-08-13"])
+
+    assert result["shadow_runs"] == []
+    assert result["reliability_runs"] == [{"session_date": "2026-08-13", "status": "READY"}]
+    assert result["outcome_access"] == "LOCKED"
