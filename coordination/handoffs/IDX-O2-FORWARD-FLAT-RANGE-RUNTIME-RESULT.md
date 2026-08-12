@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `6b1d1bcb78140a646b5853b673a20b3fb44dd7ab`
 branch: `integration/forward-eod-automation-monitoring`
-head_commit: pending commit
+head_commit: `66d632326eef4bb7dd09c275300e5fc0092c55dc`
 scope: bounded O2 row-level flat-range runtime fix and one certified 2026-08-12 scoring run
 files_changed:
   - `src/idx_trade/forward_model_runtime.py`
