@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from datetime import datetime, timezone
+import hashlib
 
 import pandas as pd
 import requests
@@ -23,6 +25,11 @@ class StockSummaryFetchMeta:
     rows: int
     explicit_security_status_rows: int
     regular_trade_evidence_rows: int
+    records_filtered: int | None = None
+    retrieval_started_at_utc: str | None = None
+    observed_available_at_utc: str | None = None
+    raw_sha256: str | None = None
+    completeness_status: str = "UNVERIFIED"
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -43,15 +50,118 @@ def _browser_headers() -> dict[str, str]:
     }
 
 
+def _utc_now() -> str:
+    return datetime.now(tz=timezone.utc).isoformat()
+
+
+def _integer_metadata(payload: Mapping[str, object], name: str) -> int | None:
+    value = payload.get(name)
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"IDX Stock Summary {name} is not an integer") from error
+    if parsed < 0:
+        raise ValueError(f"IDX Stock Summary {name} cannot be negative")
+    return parsed
+
+
+def _validate_complete_payload(
+    payload: Mapping[str, object],
+    *,
+    requested_date: str | pd.Timestamp,
+) -> tuple[int, int | None]:
+    rows = payload.get("data")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("IDX Stock Summary is empty; capture is not complete")
+    records_total = _integer_metadata(payload, "recordsTotal")
+    if records_total is None:
+        raise ValueError("IDX Stock Summary recordsTotal is missing; completeness is unverified")
+    records_filtered = _integer_metadata(payload, "recordsFiltered")
+    if records_total == 0:
+        raise ValueError("IDX Stock Summary recordsTotal is zero; capture is not complete")
+    if len(rows) != records_total:
+        raise ValueError(
+            "IDX Stock Summary response is partial: "
+            f"rows={len(rows)} recordsTotal={records_total}"
+        )
+    if records_filtered is not None and records_filtered != records_total:
+        raise ValueError(
+            "IDX Stock Summary response is filtered/partial: "
+            f"recordsFiltered={records_filtered} recordsTotal={records_total}"
+        )
+
+    requested = pd.Timestamp(requested_date).normalize()
+    for position, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"IDX Stock Summary row {position} is not an object")
+        parsed = pd.to_datetime(row.get("Date"), errors="coerce")
+        if pd.isna(parsed) or pd.Timestamp(parsed).normalize() != requested:
+            raise ValueError(
+                "IDX Stock Summary row date mismatch: "
+                f"requested={requested.date().isoformat()} row={row.get('Date')!r}"
+            )
+        ticker = normalise_ticker(row.get("StockCode", ""))
+        if not ticker or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}").iloc[0]:
+            raise ValueError(f"IDX Stock Summary row {position} has an invalid StockCode")
+
+    tickers = [normalise_ticker(row.get("StockCode", "")) for row in rows]
+    if len(set(tickers)) != len(tickers):
+        raise ValueError("IDX Stock Summary contains duplicate StockCode rows")
+    return records_total, records_filtered
+
+
+@dataclass(frozen=True)
+class StockSummaryPayloadCapture:
+    payload: dict[str, object]
+    source_ref: str
+    raw_bytes: bytes
+    endpoint: str
+    params: dict[str, str]
+    retrieval_started_at_utc: str
+    observed_available_at_utc: str
+    records_total: int
+    records_filtered: int | None
+    row_count: int
+    completeness_status: str
+
+    @property
+    def raw_sha256(self) -> str:
+        return hashlib.sha256(self.raw_bytes).hexdigest()
+
+
 def fetch_stock_summary_payload(
     date: str | pd.Timestamp,
     *,
     session: requests.Session | None = None,
     timeout: int = 30,
 ) -> tuple[dict[str, object], str]:
-    """Fetch the official public IDX Stock Summary endpoint."""
+    """Fetch the official public IDX Stock Summary endpoint.
+
+    The response is accepted only when its explicit row-count metadata proves
+    that the returned date snapshot is complete.  Callers needing immutable
+    raw bytes should use ``fetch_stock_summary_payload_capture``.
+    """
+
+    capture = fetch_stock_summary_payload_capture(
+        date,
+        session=session,
+        timeout=timeout,
+    )
+    return capture.payload, capture.source_ref
+
+
+def fetch_stock_summary_payload_capture(
+    date: str | pd.Timestamp,
+    *,
+    session: requests.Session | None = None,
+    timeout: int = 30,
+) -> StockSummaryPayloadCapture:
+    """Fetch one complete official Stock Summary response with raw bytes."""
 
     client = session or requests.Session()
+    retrieval_started_at_utc = _utc_now()
     headers = _browser_headers()
     home = client.get(IDX_HOME_URL, headers=headers, timeout=timeout)
     home.raise_for_status()
@@ -68,9 +178,25 @@ def fetch_stock_summary_payload(
     payload = response.json()
     if not isinstance(payload, dict):
         raise ValueError("IDX stock-summary response is not an object")
-    if not isinstance(payload.get("data"), list):
-        raise ValueError("IDX stock-summary response has no list-valued data field")
-    return payload, url
+    records_total, records_filtered = _validate_complete_payload(
+        payload,
+        requested_date=date,
+    )
+    raw_bytes = bytes(response.content)
+    observed_available_at_utc = _utc_now()
+    return StockSummaryPayloadCapture(
+        payload=payload,
+        source_ref=str(getattr(response, "url", "") or url),
+        raw_bytes=raw_bytes,
+        endpoint=IDX_STOCK_SUMMARY_URL,
+        params={"date": pd.Timestamp(date).normalize().strftime("%Y%m%d")},
+        retrieval_started_at_utc=retrieval_started_at_utc,
+        observed_available_at_utc=observed_available_at_utc,
+        records_total=records_total,
+        records_filtered=records_filtered,
+        row_count=len(payload["data"]),
+        completeness_status="COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+    )
 
 
 def _number(value: object) -> float | None:
@@ -193,17 +319,32 @@ def fetch_stock_summary_snapshot(
     *,
     session: requests.Session | None = None,
     timeout: int = 30,
-) -> tuple[pd.DataFrame, StockSummaryFetchMeta]:
-    payload, source_ref = fetch_stock_summary_payload(
+    include_capture: bool = False,
+) -> tuple[pd.DataFrame, StockSummaryFetchMeta] | tuple[
+    pd.DataFrame, StockSummaryFetchMeta, StockSummaryPayloadCapture
+]:
+    capture = fetch_stock_summary_payload_capture(
         date,
         session=session,
         timeout=timeout,
     )
-    return parse_stock_summary_payload(
-        payload,
+    frame, meta = parse_stock_summary_payload(
+        capture.payload,
         requested_date=date,
-        source_ref=source_ref,
+        source_ref=capture.source_ref,
     )
+    meta = replace(
+        meta,
+        records_total=capture.records_total,
+        records_filtered=capture.records_filtered,
+        retrieval_started_at_utc=capture.retrieval_started_at_utc,
+        observed_available_at_utc=capture.observed_available_at_utc,
+        raw_sha256=capture.raw_sha256,
+        completeness_status=capture.completeness_status,
+    )
+    if include_capture:
+        return frame, meta, capture
+    return frame, meta
 
 
 def stock_summary_regular_trade_anchors(

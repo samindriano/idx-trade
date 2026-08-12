@@ -16,6 +16,7 @@ import pandas as pd
 
 from .price_backfill import _download_in_batches
 from .provenance import sha256_file, write_manifest_atomic
+from .providers.idx_index_summary import fetch_index_summary_snapshot
 from .providers.idx_stock_summary import fetch_stock_summary_snapshot
 from .providers.yahoo import download_daily
 from .ranking_v2_forward_runtime import FRESH_FORWARD_CUTOFF
@@ -71,6 +72,38 @@ def runtime_paths(runtime_root: str | Path) -> RuntimePaths:
 
 def _utcnow() -> str:
     return datetime.now(tz=ZoneInfo("UTC")).isoformat()
+
+
+def _immutable_bytes(path: Path, payload: bytes) -> bool:
+    """Create an artifact once, accepting only an identical existing copy."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise RuntimeError(f"immutable artifact revision conflict: {path}")
+        return False
+
+    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    temporary.write_bytes(payload)
+    try:
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if path.read_bytes() != payload:
+                raise RuntimeError(f"immutable artifact revision conflict: {path}")
+        except OSError:
+            # A same-volume hard link is available on normal local Windows
+            # filesystems.  The exclusive create fallback retains the
+            # no-overwrite invariant on filesystems where it is not.
+            with path.open("xb") as destination:
+                destination.write(payload)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return True
+
+
+def _promote_immutable(source: Path, target: Path) -> bool:
+    return _immutable_bytes(target, source.read_bytes())
 
 
 def _parse_utc(value: str | None) -> datetime | None:
@@ -347,19 +380,58 @@ def _existing_session(paths: RuntimePaths, session: pd.Timestamp) -> sqlite3.Row
         connection.close()
 
 
-def _verify_ready_row(row: sqlite3.Row) -> bool:
+def _verify_ready_artifacts(
+    snapshot_path: Path,
+    evidence_path: Path,
+    manifest_path: Path,
+    *,
+    snapshot_sha256: str | None = None,
+    evidence_sha256: str | None = None,
+    manifest_sha256: str | None = None,
+) -> bool:
     checks = (
-        (row["snapshot_path"], row["snapshot_sha256"]),
-        (row["evidence_path"], row["evidence_sha256"]),
-        (row["manifest_path"], row["manifest_sha256"]),
+        (snapshot_path, snapshot_sha256),
+        (evidence_path, evidence_sha256),
+        (manifest_path, manifest_sha256),
     )
-    for raw_path, expected in checks:
-        if not raw_path or not expected:
+    for path, expected in checks:
+        if not path.exists() or (expected and sha256_file(path) != expected):
             return False
-        path = Path(raw_path)
-        if not path.exists() or sha256_file(path) != expected:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return False
+    artifact_pairs = (
+        ("stock_summary_raw_path", "stock_summary_raw_sha256"),
+        ("stock_summary_path", "stock_summary_sha256"),
+        ("index_summary_raw_path", "index_summary_raw_sha256"),
+        ("index_summary_path", "index_summary_sha256"),
+    )
+    for path_key, hash_key in artifact_pairs:
+        artifact_path = manifest.get(path_key)
+        expected_hash = manifest.get(hash_key)
+        if artifact_path is None and expected_hash is None:
+            continue  # backward-compatible verification of older sessions
+        if not artifact_path or not expected_hash:
+            return False
+        path = Path(str(artifact_path))
+        if not path.exists() or sha256_file(path) != str(expected_hash):
             return False
     return True
+
+
+def _verify_ready_row(row: sqlite3.Row) -> bool:
+    paths = tuple(Path(str(row[key])) if row[key] else None for key in (
+        "snapshot_path", "evidence_path", "manifest_path"
+    ))
+    if any(path is None for path in paths):
+        return False
+    return _verify_ready_artifacts(
+        paths[0], paths[1], paths[2],
+        snapshot_sha256=row["snapshot_sha256"],
+        evidence_sha256=row["evidence_sha256"],
+        manifest_sha256=row["manifest_sha256"],
+    )
 
 
 def _claim_session(paths: RuntimePaths, session: pd.Timestamp) -> tuple[str, str | None]:
@@ -564,10 +636,23 @@ def capture_session(
             raise RuntimeError(f"security master has no listed common shares on {session_key}")
         _heartbeat(paths, session, owner)
 
-        stock_summary, stock_meta = fetch_stock_summary_snapshot(session)
+        stock_result = fetch_stock_summary_snapshot(session, include_capture=True)
+        if len(stock_result) != 3:
+            raise RuntimeError("official Stock Summary raw capture metadata is missing")
+        stock_summary, stock_meta, stock_capture = stock_result
         if stock_summary.empty:
             raise RuntimeError(f"official IDX Stock Summary is empty for {session_key}")
         write_csv_atomic(stock_summary, attempt_dir / "idx_stock_summary.csv")
+        (attempt_dir / "idx_stock_summary.raw.json").write_bytes(stock_capture.raw_bytes)
+
+        index_result = fetch_index_summary_snapshot(session, include_capture=True)
+        if len(index_result) != 3:
+            raise RuntimeError("official Index Summary raw capture metadata is missing")
+        index_summary, index_meta, index_capture = index_result
+        if index_summary.empty:
+            raise RuntimeError(f"official IDX Index Summary is empty for {session_key}")
+        write_csv_atomic(index_summary, attempt_dir / "idx_index_summary.csv")
+        (attempt_dir / "idx_index_summary.raw.json").write_bytes(index_capture.raw_bytes)
         summary_by_ticker = {
             str(row.ticker): row
             for row in stock_summary.drop_duplicates("ticker", keep="last").itertuples(index=False)
@@ -691,6 +776,9 @@ def capture_session(
         snapshot_path = final_dir / "model_input.parquet"
         evidence_path = final_dir / "session_evidence.parquet"
         stock_summary_path = final_dir / "idx_stock_summary.csv"
+        stock_summary_raw_path = final_dir / "idx_stock_summary.raw.json"
+        index_summary_path = final_dir / "idx_index_summary.csv"
+        index_summary_raw_path = final_dir / "idx_index_summary.raw.json"
         manifest_path = final_dir / "manifest.json"
 
         # The destination is deterministic and the registry guarantees that an existing
@@ -698,7 +786,10 @@ def capture_session(
         # may safely promote a newly complete canonical artifact.
         write_parquet_atomic(snapshot, snapshot_path)
         write_parquet_atomic(evidence, evidence_path)
-        write_csv_atomic(stock_summary, stock_summary_path)
+        _promote_immutable(attempt_dir / "idx_stock_summary.csv", stock_summary_path)
+        _promote_immutable(attempt_dir / "idx_stock_summary.raw.json", stock_summary_raw_path)
+        _promote_immutable(attempt_dir / "idx_index_summary.csv", index_summary_path)
+        _promote_immutable(attempt_dir / "idx_index_summary.raw.json", index_summary_raw_path)
 
         manifest: dict[str, Any] = {
             "schema_version": MONITOR_SCHEMA_VERSION,
@@ -720,6 +811,40 @@ def capture_session(
             "stock_summary_path": str(stock_summary_path),
             "stock_summary_sha256": sha256_file(stock_summary_path),
             "stock_summary_meta": stock_meta.to_dict(),
+            "stock_summary_raw_path": str(stock_summary_raw_path),
+            "stock_summary_raw_sha256": sha256_file(stock_summary_raw_path),
+            "stock_summary_source": {
+                "source": "IDX_OFFICIAL",
+                "endpoint": stock_capture.endpoint,
+                "params": stock_capture.params,
+                "source_ref": stock_capture.source_ref,
+                "session_date": session_key,
+                "retrieval_started_at_utc": stock_capture.retrieval_started_at_utc,
+                "observed_available_at_utc": stock_capture.observed_available_at_utc,
+                "row_count": stock_capture.row_count,
+                "records_total": stock_capture.records_total,
+                "records_filtered": stock_capture.records_filtered,
+                "completeness_status": stock_capture.completeness_status,
+            },
+            "index_summary_path": str(index_summary_path),
+            "index_summary_sha256": sha256_file(index_summary_path),
+            "index_summary_meta": index_meta.to_dict(),
+            "index_summary_raw_path": str(index_summary_raw_path),
+            "index_summary_raw_sha256": sha256_file(index_summary_raw_path),
+            "index_summary_source": {
+                "source": "IDX_OFFICIAL",
+                "endpoint": index_capture.endpoint,
+                "params": index_capture.params,
+                "source_ref": index_capture.source_ref,
+                "session_date": session_key,
+                "retrieval_started_at_utc": index_capture.retrieval_started_at_utc,
+                "observed_available_at_utc": index_capture.observed_available_at_utc,
+                "row_count": index_capture.row_count,
+                "records_total": index_capture.records_total,
+                "records_filtered": index_capture.records_filtered,
+                "completeness_status": index_capture.completeness_status,
+            },
+            "market_context_status": "INDEX_SUMMARY_OFFICIAL_BREADTH_DERIVED_ONLY",
             "calendar_path": str(paths.calendar_root / "exchange_sessions.csv"),
             "calendar_sha256": sha256_file(paths.calendar_root / "exchange_sessions.csv"),
             "captured_at_utc": _utcnow(),
@@ -772,19 +897,35 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
             manifest = final_dir / "manifest.json"
             if snapshot.exists() and evidence.exists() and manifest.exists():
                 now = _utcnow()
-                connection.execute(
-                    """
-                    UPDATE session_snapshots SET
-                        state='DATA_READY', snapshot_path=?, snapshot_sha256=?,
-                        evidence_path=?, evidence_sha256=?, manifest_path=?, manifest_sha256=?,
-                        updated_at=?, completed_at=?, heartbeat_at=?, error_code=NULL, error_message=NULL
-                    WHERE session_date=? AND state='FETCHING'
-                    """,
-                    (
-                        str(snapshot), sha256_file(snapshot), str(evidence), sha256_file(evidence),
-                        str(manifest), sha256_file(manifest), now, now, now, key,
-                    ),
-                )
+                candidate = connection.execute(
+                    "SELECT * FROM session_snapshots WHERE session_date=? AND state='FETCHING'",
+                    (key,),
+                ).fetchone()
+                if candidate is not None and _verify_ready_artifacts(
+                    snapshot, evidence, manifest
+                ):
+                    connection.execute(
+                        """
+                        UPDATE session_snapshots SET
+                            state='DATA_READY', snapshot_path=?, snapshot_sha256=?,
+                            evidence_path=?, evidence_sha256=?, manifest_path=?, manifest_sha256=?,
+                            updated_at=?, completed_at=?, heartbeat_at=?, error_code=NULL, error_message=NULL
+                        WHERE session_date=? AND state='FETCHING'
+                        """,
+                        (
+                            str(snapshot), sha256_file(snapshot), str(evidence), sha256_file(evidence),
+                            str(manifest), sha256_file(manifest), now, now, now, key,
+                        ),
+                    )
+                else:
+                    connection.execute(
+                        """
+                        UPDATE session_snapshots SET state='DATA_FAILED', updated_at=?, completed_at=?,
+                            error_code='INCOMPLETE_ARTIFACTS', error_message='stale capture artifacts failed manifest verification'
+                        WHERE session_date=? AND state='FETCHING'
+                        """,
+                        (now, now, key),
+                    )
             else:
                 now = _utcnow()
                 connection.execute(
