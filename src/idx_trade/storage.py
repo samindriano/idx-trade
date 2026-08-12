@@ -43,18 +43,7 @@ def revision_conflicts(existing: pd.DataFrame, incoming: pd.DataFrame, ticker: s
     overlap = old.index.intersection(new.index)
     conflicts: list[RevisionConflict] = []
     for session in overlap:
-        raw_close_changed = (
-            "raw_close" in old.columns
-            and "raw_close" in new.columns
-            and not _equal(old.at[session, "raw_close"], new.at[session, "raw_close"])
-        )
         for column in COMPARE_COLUMNS:
-            # vendor_adj_close is a derived view of the raw close in the
-            # provider rows covered by this contract. Report the canonical
-            # raw-price revision once rather than duplicating it as a second
-            # conflict when both values move together.
-            if column == "vendor_adj_close" and raw_close_changed:
-                continue
             if column not in old.columns or column not in new.columns:
                 continue
             left, right = old.at[session, column], new.at[session, column]
