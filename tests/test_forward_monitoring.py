@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import json
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -203,6 +204,77 @@ def test_capture_is_idempotent_and_does_not_refetch_ready_session(tmp_path: Path
     assert status["data_ready_sessions"] == 1
     assert status["next_missing_session"] is None
     assert status["sessions"][0]["state"] == "DATA_READY"
+
+
+def test_successful_capture_manifest_declares_complete_stock_and_index_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+
+    result = monitor.capture_session(tmp_path, target_date=SESSION)
+
+    assert result["status"] == "DATA_READY"
+    paths = monitor.runtime_paths(tmp_path)
+    manifest_path = paths.session_root / SESSION.date().isoformat() / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    for prefix in ("stock_summary", "index_summary"):
+        source = manifest[f"{prefix}_source"]
+        assert source["endpoint"]
+        assert source["params"] == {"date": SESSION.strftime("%Y%m%d")}
+        assert source["session_date"] == SESSION.date().isoformat()
+        assert source["retrieval_started_at_utc"].endswith("+00:00")
+        assert source["observed_available_at_utc"].endswith("+00:00")
+        assert source["row_count"] > 0
+        assert source["records_total"] == source["row_count"]
+        assert source["records_filtered"] == source["records_total"]
+        assert source["completeness_status"] == "COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE"
+
+        raw_path = Path(manifest[f"{prefix}_raw_path"])
+        normalized_path = Path(manifest[f"{prefix}_path"])
+        assert raw_path.read_bytes()
+        assert normalized_path.exists()
+        assert manifest[f"{prefix}_raw_sha256"] == sha256_file(raw_path)
+        assert manifest[f"{prefix}_sha256"] == sha256_file(normalized_path)
+
+
+@pytest.mark.parametrize("tamper", ["missing", "hash_mismatch"])
+def test_stale_recovery_rejects_declared_context_artifact_tampering(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tamper: str,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    monitor.capture_session(tmp_path, target_date=SESSION)
+
+    paths = monitor.runtime_paths(tmp_path)
+    final_dir = paths.session_root / SESSION.date().isoformat()
+    index_raw = final_dir / "idx_index_summary.raw.json"
+    if tamper == "missing":
+        index_raw.unlink()
+    else:
+        index_raw.write_bytes(b"tampered")
+
+    stale = (datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=2)).isoformat()
+    connection = monitor._connect(paths)
+    try:
+        connection.execute(
+            """
+            UPDATE session_snapshots
+            SET state='FETCHING', heartbeat_at=?, updated_at=?
+            WHERE session_date=?
+            """,
+            (stale, stale, SESSION.date().isoformat()),
+        )
+    finally:
+        connection.close()
+
+    monitor._reconcile_stale(paths)
+    row = monitor._existing_session(paths, SESSION)
+    assert row is not None
+    assert row["state"] == "DATA_FAILED"
+    assert row["error_code"] == "INCOMPLETE_ARTIFACTS"
 
 
 def test_unresolved_point_evidence_fails_closed_and_is_retryable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
