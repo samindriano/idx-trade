@@ -11,6 +11,30 @@ The purpose is to reduce useful wall-clock time with safe concurrency. Orchestra
 - Never use orchestration as justification to open sealed evidence, change a frozen experiment, bypass a gate, or start a downstream scientific decision early.
 - Preserve unrelated user changes and verify repository root, branch, HEAD, and worktree state before material edits.
 
+## Mandatory repository-wide coordination preflight
+
+The canonical cross-chat/cross-agent coordination ledger is:
+
+`origin/main:coordination/TEAM_STATUS.md`
+
+Before **starting, continuing, or proposing any material IDX-Trade task**, every agent must explicitly fetch/read the newest canonical `TEAM_STATUS.md` from `origin/main` and check for overlapping ownership or already-completed work.
+
+A branch-local copy of `coordination/TEAM_STATUS.md` is never authoritative. Read the `main` copy even when implementation happens on another branch/worktree.
+
+For every material task:
+
+1. claim or update the relevant `TEAM_STATUS.md` row before implementation;
+2. do not duplicate another `ACTIVE` scope unless the user explicitly requested independent/adversarial review;
+3. update the row after every material checkpoint, blocker, verdict, ownership change, or branch change;
+4. update it again when the task becomes `REVIEW`, `DONE`, `PARKED`, `WAITING`, or `BLOCKED`;
+5. before suggesting a next task, check the ledger first so the suggestion itself does not create duplicate work.
+
+Coordination-only commits directly to `main` are authorized **only for `coordination/TEAM_STATUS.md`**. Implementation/research changes stay on their own branch unless separately authorized. Shared-ledger writes must refetch the latest version, preserve other agents' changes, and never force-push; conflicts are resolved by refetching and reapplying the small status edit.
+
+If an agent cannot safely read/update the canonical ledger, it must say so and must not silently start an overlapping material task.
+
+This coordination ledger does not grant scientific authorization. Branch-local frozen specs/checkpoints still control what research/data/model actions are allowed.
+
 ## Parallel-first objective
 
 For every non-trivial task, MAIN must perform a short **parallelism preflight** before implementation:
