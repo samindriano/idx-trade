@@ -295,6 +295,28 @@ Open task were not modified. An elevated one-time installer run remains
 required. See checkpoint
 `docs/checkpoints/2026-08-12_FORWARD_EOD_AUTOMATION_OPEN_O2_INTRADAY_RESULT.md`.
 
+### 2026-08-12 O2 flat-range runtime result
+
+The integration runtime was aligned with the frozen O2 contract: positive true
+flat bars (`open == high == low`) remain in the immutable session artifact but
+are marked `o2_eligible=false` with
+`FLAT_RANGE_ZERO_DENOMINATOR`. No synthetic `open_position` is written, and
+O2 plus paired V3-B scoring runs only on the exact eligible subset.
+
+The certified 2026-08-12 EOD session was rerun without recapture or provider
+access. It has `836` input/model rows, `806` eligible rows, `30` flat-range
+exclusions, and `0` other exclusions. The O2 model run is `DONE`; its score
+artifact SHA is
+`b7fc6f22230500d65c1a24c4333b5601c0102da5bb99c3cae77a85bdb112c42d`, and its
+manifest SHA is
+`4f3d7814333b867316092758b8530270a14d2e741bc8cca2c12c1dffbc99b5e2`.
+
+The official calendar derived session index `1268` and the O2 counter advanced
+from `0` to `1` of the frozen `100` sessions. Existing V2/V3-B artifacts and
+`model_input.parquet` were not rewritten. Outcomes remain locked and no
+`FORWARD_OUTCOME_ACCESS_STARTED` marker was accessed or written. See
+`docs/checkpoints/2026-08-12_O2_FORWARD_FLAT_RANGE_RUNTIME_RESULT.md`.
+
 ## Immediate next action
 
 Wait for separate MAIN / ChatGPT authorization to consume a complete,

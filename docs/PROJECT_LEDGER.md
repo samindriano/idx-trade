@@ -1570,3 +1570,28 @@ Full pytest passed with 257 collected tests and three existing FutureWarnings;
 the Next.js build passed with one non-blocking filesystem tracing warning.
 No outcomes, `FORWARD_OUTCOME_ACCESS_STARTED`, modelling, refit, Path Risk,
 Stockbit implementation, or historical PIT work was performed.
+
+## 31. O2 forward flat-range runtime result
+
+Date: 2026-08-12 (Asia/Jakarta). Branch:
+`integration/forward-eod-automation-monitoring`.
+
+The frozen O2 runtime now handles true positive flat-range bars at row level:
+they remain in the certified session artifact, receive
+`o2_eligible=false` / `FLAT_RANGE_ZERO_DENOMINATOR`, and never receive a
+synthetic `open_position`. O2 and paired V3-B scores are emitted only for
+eligible rows.
+
+The certified 2026-08-12 EOD artifact produced `836` total/model rows, `806`
+eligible rows, `30` flat exclusions, and no other exclusions. O2 reached
+`DONE`; the official calendar derived session index `1268`, and the frozen
+counter advanced `0 -> 1` of `100`. O2 score artifact SHA:
+`b7fc6f22230500d65c1a24c4333b5601c0102da5bb99c3cae77a85bdb112c42d`;
+manifest SHA:
+`4f3d7814333b867316092758b8530270a14d2e741bc8cca2c12c1dffbc99b5e2`.
+
+Focused tests passed (`20`); full pytest passed (`319 passed, 0 failed, 3
+warnings, 14.88s`); Next.js build passed with one existing non-blocking
+Turbopack trace warning. Existing V2/V3-B artifacts and model input were not
+rewritten. Outcomes remain locked; no forward outcome marker was accessed or
+written.

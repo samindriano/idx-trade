@@ -53,6 +53,8 @@ O2_FEATURE_COLUMNS = (*V3_FEATURE_COLUMNS, "open_position", "open_to_high", "ope
 O2_FREEZE_TIMESTAMP = pd.Timestamp("2026-08-12T07:45:30+07:00")
 O2_SESSION_START_LOCAL = time(8, 45)
 O2_FORWARD_GATE_SESSIONS = 100
+O2_COUNTER_SCHEMA = "idx-trade/o2-forward-counter-v1"
+O2_COUNTER_FILENAME = "o2_forward_counter.json"
 
 
 @dataclass(frozen=True)
@@ -311,6 +313,59 @@ def _o2_input_status(paths, session_key: str) -> tuple[str, str]:
     return "READY", str(ohlcv_path)
 
 
+def _derive_o2_geometry(frame: pd.DataFrame) -> pd.DataFrame:
+    """Derive frozen Open-geometry features without inventing flat-bar values."""
+
+    frame = frame.copy()
+    frame["ticker"] = frame["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    frame["session_date"] = pd.to_datetime(frame["session_date"], errors="coerce").dt.normalize()
+    for name in ("open", "high", "low"):
+        frame[name] = pd.to_numeric(frame[name], errors="coerce")
+    denominator = frame["high"] - frame["low"]
+    frame["open_position"] = np.divide(
+        frame["open"] - frame["low"],
+        denominator,
+        out=np.full(len(frame), np.nan),
+        where=denominator.to_numpy(dtype=float) != 0,
+    )
+    frame["open_to_high"] = np.divide(
+        frame["high"],
+        frame["open"],
+        out=np.full(len(frame), np.nan),
+        where=frame["open"].to_numpy(dtype=float) != 0,
+    ) - 1.0
+    frame["open_to_low"] = np.divide(
+        frame["low"],
+        frame["open"],
+        out=np.full(len(frame), np.nan),
+        where=frame["open"].to_numpy(dtype=float) != 0,
+    ) - 1.0
+    geometry_values = frame[["open", "high", "low", "open_position", "open_to_high", "open_to_low"]]
+    finite = np.isfinite(geometry_values.to_numpy(dtype=float)).all(axis=1)
+    valid = (
+        finite
+        & (frame["open"] > 0)
+        & (frame["high"] > 0)
+        & (frame["low"] > 0)
+        & (frame["high"] > frame["low"])
+        & (frame["open"] >= frame["low"])
+        & (frame["open"] <= frame["high"])
+    )
+    flat = (
+        np.isfinite(frame[["open", "high", "low"]].to_numpy(dtype=float)).all(axis=1)
+        & (frame["open"] > 0)
+        & (frame["high"] == frame["low"])
+        & (frame["open"] == frame["high"])
+    )
+    geometry_reason = pd.Series("ELIGIBLE", index=frame.index, dtype="object")
+    geometry_reason.loc[flat] = "FLAT_RANGE_ZERO_DENOMINATOR"
+    geometry_reason.loc[~valid & ~flat] = "MISSING_OR_INVALID_OPEN_GEOMETRY"
+    geometry = frame.loc[:, ["ticker", "session_date", "open_position", "open_to_high", "open_to_low"]].copy()
+    geometry["o2_geometry_valid"] = valid
+    geometry["o2_geometry_reason"] = geometry_reason
+    return geometry
+
+
 def _build_o2_features(
     paths,
     session_key: str,
@@ -328,27 +383,7 @@ def _build_o2_features(
         raise RuntimeError(f"O2 session OHLCV is missing columns: {sorted(missing)}")
     model_input = pd.read_parquet(snapshot_path)
     validate_ohlcv_against_model_input(ohlcv, model_input, session_key)
-    frame = ohlcv.copy()
-    frame["ticker"] = frame["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    frame["session_date"] = pd.to_datetime(frame["session_date"], errors="coerce").dt.normalize()
-    for name in ("open", "high", "low"):
-        frame[name] = pd.to_numeric(frame[name], errors="coerce")
-    denominator = frame["high"] - frame["low"]
-    frame["open_position"] = (frame["open"] - frame["low"]) / denominator
-    frame["open_to_high"] = frame["high"] / frame["open"] - 1.0
-    frame["open_to_low"] = frame["low"] / frame["open"] - 1.0
-    valid = (
-        frame[["open", "high", "low", "open_position", "open_to_high", "open_to_low"]].notna().all(axis=1)
-        & np.isfinite(frame[["open", "high", "low", "open_position", "open_to_high", "open_to_low"]].to_numpy(dtype=float)).all(axis=1)
-        & (frame["open"] > 0)
-        & (frame["high"] > frame["low"])
-        & (frame["open"] >= frame["low"])
-        & (frame["open"] <= frame["high"])
-    )
-    if not bool(valid.all()):
-        invalid = frame.loc[~valid, "ticker"].astype(str).tolist()[:20]
-        raise RuntimeError(f"O2 Open geometry is incomplete or invalid for {int((~valid).sum())} rows: {invalid}")
-    geometry = frame.loc[:, ["ticker", "session_date", "open_position", "open_to_high", "open_to_low"]]
+    geometry = _derive_o2_geometry(ohlcv)
     source = v3_features.copy()
     source["ticker"] = source["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
     source["date"] = pd.to_datetime(source["date"], errors="coerce").dt.normalize()
@@ -358,9 +393,89 @@ def _build_o2_features(
         how="left",
         validate="one_to_one",
     )
-    if len(source) != len(v3_features) or source[list(O2_FEATURE_COLUMNS)].isna().any().any():
+    if len(source) != len(v3_features) or source["o2_geometry_valid"].isna().any():
         raise RuntimeError("O2 geometry did not align one-to-one with the V3-B feature rows")
+    # The integration fan-out already materializes only the rows that V3-B
+    # scores; unlike the research runner it has no separate eligibility
+    # column. Preserve that existing contract explicitly rather than treating
+    # a missing helper column as a geometry failure.
+    if "v3b_eligible" not in source.columns:
+        source["v3b_eligible"] = True
+    source["o2_eligible"] = source["v3b_eligible"].astype(bool) & source["o2_geometry_valid"].astype(bool)
+    source["o2_exclusion_reason"] = "ELIGIBLE"
+    if "v3b_exclusion_reason" in source.columns:
+        source.loc[~source["v3b_eligible"].astype(bool), "o2_exclusion_reason"] = source.loc[
+            ~source["v3b_eligible"].astype(bool), "v3b_exclusion_reason"
+        ].astype(str)
+    source.loc[
+        source["v3b_eligible"].astype(bool) & ~source["o2_geometry_valid"].astype(bool),
+        "o2_exclusion_reason",
+    ] = source.loc[
+        source["v3b_eligible"].astype(bool) & ~source["o2_geometry_valid"].astype(bool),
+        "o2_geometry_reason",
+    ].astype(str)
     return source
+
+
+def _o2_counter_path(paths) -> Path:
+    return paths.monitor_root / O2_COUNTER_FILENAME
+
+
+def _first_o2_session_index(sessions: pd.DatetimeIndex) -> int:
+    for index, session in enumerate(sessions, start=1):
+        start = pd.Timestamp(datetime.combine(session.date(), O2_SESSION_START_LOCAL, tzinfo=ZoneInfo("Asia/Jakarta")))
+        if start > O2_FREEZE_TIMESTAMP:
+            return index
+    raise RuntimeError("official calendar has no session after the frozen O2 boundary")
+
+
+def _read_o2_counter(paths, sessions: pd.DatetimeIndex) -> dict[str, Any]:
+    path = _o2_counter_path(paths)
+    if not path.exists():
+        return {
+            "schema": O2_COUNTER_SCHEMA,
+            "first_post_freeze_session_index": _first_o2_session_index(sessions),
+            "session_count": 0,
+            "last_session_index": None,
+            "required_sessions": O2_FORWARD_GATE_SESSIONS,
+            "outcomes_accessed": False,
+        }
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if state.get("schema") != O2_COUNTER_SCHEMA or state.get("outcomes_accessed") is not False:
+        raise RuntimeError("O2 counter schema or outcome-clean state is invalid")
+    if int(state.get("required_sessions")) != O2_FORWARD_GATE_SESSIONS:
+        raise RuntimeError("O2 counter frozen gate length mismatch")
+    expected_first = _first_o2_session_index(sessions)
+    if int(state["first_post_freeze_session_index"]) != expected_first:
+        raise RuntimeError("O2 counter first post-freeze boundary differs from official calendar")
+    count = int(state.get("session_count", 0))
+    last = state.get("last_session_index")
+    if not 0 <= count <= O2_FORWARD_GATE_SESSIONS:
+        raise RuntimeError("O2 counter count is outside the frozen range")
+    if count == 0 and last is not None:
+        raise RuntimeError("empty O2 counter has a last session")
+    if count and int(last) != expected_first + count - 1:
+        raise RuntimeError("O2 counter sessions are not consecutive")
+    state["session_count"] = count
+    state["last_session_index"] = None if last is None else int(last)
+    return state
+
+
+def _register_o2_counter(paths, sessions: pd.DatetimeIndex, session_index: int) -> tuple[int, int]:
+    path = _o2_counter_path(paths)
+    before = _read_o2_counter(paths, sessions)
+    expected = int(before["first_post_freeze_session_index"]) + int(before["session_count"])
+    if int(session_index) != expected:
+        raise RuntimeError(f"O2 counter expected official session {expected}, received {session_index}")
+    after_count = int(before["session_count"]) + 1
+    after = {
+        **before,
+        "session_count": after_count,
+        "last_session_index": int(session_index),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(after, indent=2, sort_keys=True), encoding="utf-8")
+    return int(before["session_count"]), after_count
 
 
 def _build_features(paths, session_key: str) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
@@ -415,29 +530,60 @@ def _build_features(paths, session_key: str) -> tuple[pd.DataFrame, pd.DataFrame
 
 def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.DataFrame, metadata: dict[str, Any]) -> tuple[Path, Path, str, str]:
     model_path, model_manifest_path, model_manifest = _verify_frozen_model(paths, spec)
+    is_o2 = spec.model_id == O2_MODEL_ID
     source = features.loc[:, ["ticker", "date", *spec.feature_columns]].copy()
     if source.duplicated(["ticker", "date"]).any():
         raise RuntimeError(f"{spec.model_id} feature rows contain duplicate ticker/date keys")
     model = joblib.load(model_path)
-    score = pointwise_raw_score(model, source.loc[:, list(spec.feature_columns)])
-    if not np.isfinite(score).all():
-        raise RuntimeError(f"{spec.model_id} produced non-finite outcome-blind scores")
-    output = source[["ticker", "date"]].copy()
-    output["score"] = np.asarray(score, dtype=float)
-    output = output.sort_values(["score", "ticker"], ascending=[False, True], kind="mergesort").reset_index(drop=True)
-    output["rank"] = np.arange(1, len(output) + 1, dtype=int)
-    output["score_percentile"] = 1.0 - ((output["rank"] - 1.0) / max(len(output), 1))
+    if is_o2:
+        if "o2_eligible" not in features.columns or "o2_exclusion_reason" not in features.columns:
+            raise RuntimeError("O2 feature frame has no row-level eligibility contract")
+        score_mask = features["o2_eligible"].astype(bool).to_numpy()
+        eligible_source = source.loc[score_mask].copy()
+        score = pointwise_raw_score(model, eligible_source.loc[:, list(spec.feature_columns)]) if len(eligible_source) else np.array([], dtype=float)
+        if not np.isfinite(score).all():
+            raise RuntimeError(f"{spec.model_id} produced non-finite outcome-blind scores")
+        paired_spec = next(item for item in FROZEN_MODELS if item.model_id == "V3-B-STRUCTURE-LITE-V1-CANDIDATE-005")
+        paired_model_path, _, _ = _verify_frozen_model(paths, paired_spec)
+        paired_model = joblib.load(paired_model_path)
+        paired_score = pointwise_raw_score(paired_model, eligible_source.loc[:, list(paired_spec.feature_columns)]) if len(eligible_source) else np.array([], dtype=float)
+        if not np.isfinite(paired_score).all():
+            raise RuntimeError("paired V3-B produced non-finite outcome-blind scores")
+        output = features[["ticker", "date", "o2_eligible", "o2_exclusion_reason"]].copy()
+        output["score"] = np.nan
+        output.loc[score_mask, "score"] = score
+        output["paired_v3b_score"] = np.nan
+        output.loc[score_mask, "paired_v3b_score"] = paired_score
+        output["rank"] = np.nan
+        output.loc[score_mask, "rank"] = np.arange(1, int(score_mask.sum()) + 1, dtype=int)
+        output["score_percentile"] = np.nan
+        if score_mask.any():
+            ranked = output.loc[score_mask].sort_values(["score", "ticker"], ascending=[False, True], kind="mergesort")
+            output.loc[ranked.index, "rank"] = np.arange(1, len(ranked) + 1, dtype=int)
+            output.loc[ranked.index, "score_percentile"] = 1.0 - ((output.loc[ranked.index, "rank"] - 1.0) / max(len(ranked), 1))
+        output = output.sort_values(["o2_eligible", "score", "ticker"], ascending=[False, False, True], kind="mergesort").reset_index(drop=True)
+    else:
+        score = pointwise_raw_score(model, source.loc[:, list(spec.feature_columns)])
+        if not np.isfinite(score).all():
+            raise RuntimeError(f"{spec.model_id} produced non-finite outcome-blind scores")
+        output = source[["ticker", "date"]].copy()
+        output["score"] = np.asarray(score, dtype=float)
+        output = output.sort_values(["score", "ticker"], ascending=[False, True], kind="mergesort").reset_index(drop=True)
+        output["rank"] = np.arange(1, len(output) + 1, dtype=int)
+        output["score_percentile"] = 1.0 - ((output["rank"] - 1.0) / max(len(output), 1))
     output["session_date"] = session_key
     output["model_id"] = spec.model_id
     output["generation"] = spec.generation
     output["model_sha256"] = spec.model_sha256
     output["feature_order_sha256"] = spec.feature_order_sha256 or _feature_order_hash(spec.feature_columns)
-    output = output[
-        [
-            "ticker", "session_date", "score", "rank", "score_percentile",
-            "model_id", "generation", "model_sha256", "feature_order_sha256",
-        ]
-    ]
+    output_columns = ["ticker", "session_date"]
+    if is_o2:
+        output_columns.extend(["o2_eligible", "o2_exclusion_reason"])
+    output_columns.extend(["score", "rank", "score_percentile"])
+    if is_o2:
+        output_columns.append("paired_v3b_score")
+    output_columns.extend(["model_id", "generation", "model_sha256", "feature_order_sha256"])
+    output = output[output_columns]
 
     output_dir = _model_output_root(paths, session_key, spec.model_id)
     artifact_path = output_dir / "score_artifact.parquet"
@@ -458,6 +604,7 @@ def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.Da
         "score_artifact_path": str(artifact_path),
         "score_artifact_sha256": artifact_sha,
         "score_rows": int(len(output)),
+        "scored_rows": int(output["score"].notna().sum()),
         "eligible_universe_size": int(metadata["eligible_universe_size"]),
         "data_snapshot_path": metadata["snapshot_path"],
         "data_snapshot_sha256": metadata["snapshot_sha256"],
@@ -474,10 +621,42 @@ def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.Da
                 "session_ohlcv_path": str(session_ohlcv_path),
                 "session_ohlcv_sha256": sha256_file(session_ohlcv_path),
                 "open_geometry_verified": True,
+                "o2_eligible_rows": int(output["o2_eligible"].sum()),
+                "o2_excluded_rows": int((~output["o2_eligible"]).sum()),
+                "o2_exclusion_counts": {
+                    str(key): int(value)
+                    for key, value in output.loc[~output["o2_eligible"], "o2_exclusion_reason"].value_counts().to_dict().items()
+                },
+                "paired_v3b_model_sha256": paired_spec.model_sha256,
+                "paired_v3b_scored_rows": int(output["paired_v3b_score"].notna().sum()),
                 "forward_gate_required_sessions": O2_FORWARD_GATE_SESSIONS,
             }
         )
+        sessions = _official_sessions(paths, _normal_date(session_key))
+        official_session_index = int(_o2_session_identity(paths, session_key)[0])
+        counter_state = _read_o2_counter(paths, sessions)
+        expected_index = int(counter_state["first_post_freeze_session_index"]) + int(counter_state["session_count"])
+        if official_session_index != expected_index:
+            raise RuntimeError(
+                f"O2 counter expected official session {expected_index}, received {official_session_index}"
+            )
+        counter_before = int(counter_state["session_count"])
+        counter_after = counter_before + 1
+        payload.update(
+            {
+                "official_session_index": official_session_index,
+                "o2_counter_schema": O2_COUNTER_SCHEMA,
+                "o2_counter_before": counter_before,
+                "o2_counter_after": counter_after,
+                "o2_counter_path": str(_o2_counter_path(paths)),
+                "o2_counter_registered": False,
+            }
+        )
     write_manifest_atomic(manifest_path, payload)
+    if spec.model_id == O2_MODEL_ID:
+        _register_o2_counter(paths, sessions, official_session_index)
+        payload["o2_counter_registered"] = True
+        write_manifest_atomic(manifest_path, payload)
     return artifact_path, manifest_path, artifact_sha, sha256_file(manifest_path)
 
 
