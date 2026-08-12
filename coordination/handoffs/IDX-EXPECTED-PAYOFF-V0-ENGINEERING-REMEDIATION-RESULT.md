@@ -8,6 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 7345e9790dd4b339a8f495e05c7804b6fde2ab38
 branch: research/idx-expected-payoff-v0-feasibility
+head_commit: 7d66fa2d65024ebcb97a8890d40019abd7446077
 scope: engineering remediation only after accepted V0 scientific review
 
 ## Result
