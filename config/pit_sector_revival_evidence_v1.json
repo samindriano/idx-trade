@@ -41,7 +41,8 @@
       "url": "https://www.indopremier.com/ipotnews/newsDetail.php?group_news=RESEARCHNEWS&halaman=1&jdl=Ada_Info_Baru_nih_terkait_Emiten_Jagoan_Lo_Kheng_Hong_%28BMTR%29&name=&news_date=&news_id=425243&q=Global+Mediacom&search=y_general&taging_subtype=BMTR",
       "claims": {
         "announcement_date": "2023-06-22",
-        "affected_count": 14,
+        "reported_total_affected": 14,
+        "affected_count": 1,
         "affected_tickers": ["BMTR"]
       },
       "note": "Reports that BEI's 22 June 2023 annual evaluation changed 14 listed-company classifications and identifies BMTR's move from Industrials to Consumer Cyclicals/Media & Entertainment. The article does not provide the dedicated canonical announcement reference or an explicit effective date."
