@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "status": "REVIVAL_DISCOVERY_EVIDENCE_ONLY_CANONICAL_GATE_UNCHANGED",
+  "notes": "This sidecar records reproducible non-canonical leads for blocked annual IDX-IC sources. It cannot promote a source to READY_FOR_ACQUISITION and must never be materialized as PIT sector history without the canonical official IDX attachment/effective-date provenance required by config/pit_sector_sources_v1.json.",
+  "evidence": [
+    {
+      "evidence_id": "IDXCHANNEL_2022_ANNUAL_CLASSIFICATION_REPORT",
+      "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2022",
+      "role": "SECONDARY_DISCOVERY_NOT_CANONICAL",
+      "publisher": "IDXChannel",
+      "published_at": "2022-06-30",
+      "url": "https://www.idxchannel.com/market-news/bersama-lima-emiten-iata-dan-tele-ubah-klasifikasi-industri/all",
+      "claims": {
+        "announcement_date": "2022-06-24",
+        "effective_date": "2022-07-01",
+        "affected_count": 7,
+        "affected_tickers": ["BIPI", "TELE", "MITI", "YELO", "IATA", "RISE", "WIFI"]
+      },
+      "note": "Reports the BEI annual classification announcement and quotes its 1 July 2022 effective date; useful for exact-event recovery, but it is a news reproduction rather than the canonical IDX attachment."
+    },
+    {
+      "evidence_id": "WARTAEKONOMI_WIFI_2022_CLASSIFICATION",
+      "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2022",
+      "role": "SECONDARY_DISCOVERY_NOT_CANONICAL",
+      "publisher": "Warta Ekonomi",
+      "published_at": "2022-07-01",
+      "url": "https://wartaekonomi.co.id/read426085/masuk-dalam-daftar-sektor-teknologi-bareng-goto-dan-bukalapak-bagaimana-potensi-pengembangan-wifi",
+      "claims": {
+        "effective_date": "2022-07-01",
+        "affected_count": 1,
+        "affected_tickers": ["WIFI"]
+      },
+      "note": "Corroborates WIFI's effective 1 July 2022 move into IDXTECHNO and explicitly attributes it to BEI's listed-company industry-classification announcement; not sufficient as canonical provenance."
+    },
+    {
+      "evidence_id": "INVESTOR_IPOT_2023_ANNUAL_CLASSIFICATION_REPORT",
+      "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2023",
+      "role": "BROKER_MIRROR_NOT_CANONICAL",
+      "publisher": "Investor.id mirrored by IndoPremier/IPOTNews",
+      "published_at": "2023-07-06",
+      "url": "https://www.indopremier.com/ipotnews/newsDetail.php?group_news=RESEARCHNEWS&halaman=1&jdl=Ada_Info_Baru_nih_terkait_Emiten_Jagoan_Lo_Kheng_Hong_%28BMTR%29&name=&news_date=&news_id=425243&q=Global+Mediacom&search=y_general&taging_subtype=BMTR",
+      "claims": {
+        "announcement_date": "2023-06-22",
+        "affected_count": 14,
+        "affected_tickers": ["BMTR"]
+      },
+      "note": "Reports that BEI's 22 June 2023 annual evaluation changed 14 listed-company classifications and identifies BMTR's move from Industrials to Consumer Cyclicals/Media & Entertainment. The article does not provide the dedicated canonical announcement reference or an explicit effective date."
+    },
+    {
+      "evidence_id": "SMSM_2023_IDXCYCLIC_PERIOD_CORROBORATION",
+      "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2023",
+      "role": "ISSUER_CORROBORATION_NOT_CANONICAL",
+      "publisher": "PT Selamat Sempurna Tbk",
+      "published_at": "2023-06-30",
+      "url": "https://smsm.co.id/pressreleasedet.php?id=News189-1",
+      "claims": {
+        "announcement_date": "2023-06-22",
+        "affected_count": 1,
+        "affected_tickers": ["SMSM"]
+      },
+      "note": "Issuer IR page cites BEI Peng-00156/BEI.POP/06-2023 and states IDXCYCLIC coverage for July 2023-June 2024 while restating the annual first-exchange-day-of-July rule. Peng-00156 is retained only as sector-index reconciliation evidence, not the missing dedicated classification-change event."
+    },
+    {
+      "evidence_id": "UTRADE_2026_CLASSIFICATION_NOTICE_MIRROR",
+      "canonical_source_id": "IDX_IC_ANNUAL_CLASSIFICATION_2026",
+      "role": "BROKER_MIRROR_NOT_CANONICAL",
+      "publisher": "UOB Kay Hian Indonesia / UTRADE",
+      "published_at": "2026-06-25",
+      "url": "https://www.utrade.co.id/",
+      "claims": {
+        "announcement_date": "2026-06-25"
+      },
+      "note": "Public broker important-notice archive independently lists 'Perubahan Klasifikasi Industri Perusahaan Tercatat' on 25 June 2026. It supports archive discovery only and does not resolve the canonical Peng-00100 effective date."
+    }
+  ]
+}
