@@ -30,4 +30,13 @@ Only MAIN may edit this file.
 - **Current blocker:** `local full-suite/preflight result for current checkout not yet returned`
 - **Next integration action:** after preflight PASS, execute exactly one frozen Path Risk V2 F1-F4 discovery run from `coordination/handoffs/IDX-PATH-RISK-V2-DISCOVERY-F1-F4-RUN.md`, then return evidence without touching F5/F6.
 
+## PIT sector history revival lane update (branch-local)
+
+- **Status:** `REVIEW`
+- **Owner:** `ChatGPT/PIT-sector-revival`
+- **Branch / HEAD:** `data/idx-pit-sector-history-revival-v1` / `620480c`
+- **Result:** One bounded recovery attempt completed. Canonical inventory remains 5 ready / 3 discovery-blocked: 2022 reference unresolved; 2023 `Peng-00158` found only through a mirror and the direct IDX path is an empty ZIP; 2026 `Peng-00100` effective date unresolved.
+- **Checkpoint:** `docs/checkpoints/2026-08-13_PIT_SECTOR_HISTORY_REVIVAL_RECOVERY.md`
+- **Guardrail:** No config promotion, sector model, retraining, forward outcomes, or dependent outcome access; awaiting independent review.
+
 For future meaningful engineering work, MAIN must run the parallelism preflight and should not keep independent critical-path scopes sequential merely because one Luna can perform them all.
