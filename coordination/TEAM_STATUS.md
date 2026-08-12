@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-12 20:49 Asia/Jakarta
+Last coordinated update: 2026-08-12 21:15 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -47,6 +47,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Market / Index / Breadth History V1 | `PARKED` | ChatGPT review + Codex | `data/market-index-breadth-history-v1` / review `d3827f1506736ec64c957e10f50f5447196d9983` | `CONDITIONAL_SOURCE_READY_PIT_BLOCKED`; no historical PIT bulk acquisition/model use. |
 | Stockbit intraday forward capture | `AUTOMATED` | Existing runtime | `data/stockbit-intraday-forward-capture-v1` | Daily capture infrastructure already exists. **Do not build it again.** Accumulate evidence for possible future Path Risk research. |
 | Path Risk | `WAITING` | none | prior V1/V2 lineage | V1/V2 failed. Do not restart/retune now; wait for richer intraday accumulation and a genuinely new preregistered hypothesis family. |
+| Probability V1 legacy calibration | `DONE` | prior research lineage | `research/idx-stage4-v1` + `research/idx-stage4b-calibration-v1` + `research/idx-stage5-ranking-holdout-v1` | Final status `PROBABILITY_V1_NOT_READY_DEFERRED`: Stage-4 and Stage-4B calibration readiness failed, and the Stage-5 ranking holdout was consumed for Ranking V1. Do not restart Probability V1 or reuse that holdout. Any future current-alpha/Probability V2 validation requires a new preregistered lane and fresh-forward data strictly after 2026-07-31. |
 | O2 fresh-forward | `ACTIVE` | Existing forward runtime | `integration/forward-eod-automation-monitoring` / acceptance `c5b356ad1a21646c4d6b50352872c7e6718c6df9` | First official post-freeze session accepted: 2026-08-12 / index 1268, 806 scored, 30 true flat-range row exclusions, counter `1/100`; outcomes locked. Continue prospectively under identical frozen eligibility/counter/provenance rules. |
 | O2.1 flat-range challenger experiment | `DONE` | ChatGPT review + Codex/O2.1-flat-range | `research/idx-ranking-ohlcv-o2-1-flat-range-v1` / acceptance `32ee9ee1e5696b2262b4defc936846dff5af557e` | Historical verdict remains `O2_1_NO_SURVIVOR` on 280,044 rows including 1,876 genuine flat bars. No rescue, tuning, robustness, promotion, or reinterpretation of this historical verdict. |
 | O2.1 sealed shadow diagnostic | `ACTIVE` | `Codex/O2.1-sealed-shadow + ChatGPT review` | `integration/o2-1-sealed-shadow-v1` / `c5b356a` / authorization `051c6da2e0170c84de4c53e515a41887f4be9e35` | Implementing the explicitly authorized sealed score-only shadow lane from the accepted 37-feature/HGB/support contract. Preserve historical `O2_1_NO_SURVIVOR`; persist outcome-blind model/artifacts/coverage alongside certified sessions. Subordinate UI only inside O2 detail; no fourth primary card, no outcome/performance access, no promotion eligibility. |
@@ -61,6 +62,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
 - Do not recreate Stockbit intraday automation.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
+- Do not restart legacy Probability V1 or reuse its consumed Stage-5 ranking holdout; any future Probability V2/current-alpha calibration must use a new preregistered contract and fresh-forward validation.
 - Do not rerun the completed O2-vs-V2 comparator unless a specific audit/reproduction request requires it.
 - O2.1 historical `NO_SURVIVOR` remains final. The only authorized continuation is the separately frozen **sealed shadow diagnostic** in its dedicated lane: no tuning/rescue, no performance peeking, no promotion, and no change to active O2.
 - Do not treat Market/Index/Breadth historical session-date data as PIT-complete or bulk-model-ready.
