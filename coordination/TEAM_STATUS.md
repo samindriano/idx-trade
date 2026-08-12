@@ -52,7 +52,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
 | Frontend monitoring / capture system | `ACTIVE` | `Codex/Frontend Editorial Tech` — owner keeps this row current | `frontend/editorial-tech-v1` / `09cccdc` | Fair historical model comparison UI: class-aware model choices and compact compare copy; no research/runtime changes. |
-| Market/index prospective EOD archive extension | `ACTIVE` | `Codex/Market-Index-EOD-Extension` | `data/market-index-forward-eod-v1-monitoring` / `72446ec` | Extend the existing `forward_monitoring` session package with official Index Summary plus immutable raw Stock/Index payloads and recordsTotal completeness gates; no second recorder, scheduler, database, API route, model input, or routine capture yet. |
+| Market/index prospective EOD archive extension | `REVIEW` | `Codex/Market-Index-EOD-Extension` | `data/market-index-forward-eod-v1-monitoring` / `e327be2` | Existing `forward_monitoring` session extended with official Index Summary, immutable raw Stock/Index payloads, and recordsTotal completeness gates; `247 passed`; no real capture or new automation registered. Await ChatGPT review. |
 
 ## Cross-chat no-duplicate rules currently in force
 
