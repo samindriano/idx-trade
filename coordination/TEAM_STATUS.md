@@ -52,7 +52,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
 | Frontend monitoring / capture system | `ACTIVE` | existing frontend chat(s) — owner must keep this row current | `frontend/model-monitoring-v1/v2` + later frontend branches | Existing Data Capture/forward-monitoring architecture exists. **Audit/reuse before proposing any second EOD recorder.** |
-| Market/index prospective EOD archive extension | `PLANNED` | unclaimed | none yet | Before implementing, inspect existing frontend/backend Data Capture and `ops/idx-forward-open-archive-v1`; extend/reuse if possible rather than create duplicate infrastructure. |
+| Market/index prospective EOD archive extension | `ACTIVE` | `Codex/Market-Index-EOD-Extension` | `data/market-index-forward-eod-v1` / `d3827f1` | Extend the existing `forward_monitoring` session package with official Index Summary plus immutable raw Stock/Index payloads and recordsTotal completeness gates; no second recorder, scheduler, database, API route, model input, or routine capture yet. |
 
 ## Cross-chat no-duplicate rules currently in force
 
