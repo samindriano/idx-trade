@@ -106,6 +106,17 @@ export const V3_B_COMMON_SUPPORT_FOLDS: readonly ResearchBaselineFold[] = [
   { fold: "F6", score: 0.33643067776932933, roc: 0.4858364626648122, qSpread: 0.04282583108228749, supportRows: 33297 },
 ] as const;
 
+// Legacy V3-B development reference used by the older, non-common-support
+// evidence contracts. The UI labels this provenance separately from O1/O2.
+export const V3_B_LEGACY_DEVELOPMENT_FOLDS: readonly ResearchBaselineFold[] = [
+  { fold: "F1", score: 0.40978878333518826, roc: 0.5283014753753854, qSpread: 0.09710114347710669, supportRows: 22564 },
+  { fold: "F2", score: 0.4197399827453041, roc: 0.5330438619438613, qSpread: 0.08591890119106599, supportRows: 20756 },
+  { fold: "F3", score: 0.42759128084161857, roc: 0.528880383244543, qSpread: 0.04821544270862527, supportRows: 21016 },
+  { fold: "F4", score: 0.4259017472304839, roc: 0.5145753674276003, qSpread: 0.06269029514444135, supportRows: 20396 },
+  { fold: "F5", score: 0.48994611956109113, roc: 0.5331806224627332, qSpread: 0.05375917172260486, supportRows: 25647 },
+  { fold: "F6", score: 0.36905809603124967, roc: 0.5049823243126357, qSpread: 0.04870451292169098, supportRows: 33844 },
+] as const;
+
 const V2_CHAMPION_FOLDS = [
   { fold: "F1", deltaPr: 0.0216774918 },
   { fold: "F2", deltaPr: 0.0289990901 },

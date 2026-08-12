@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   RESEARCH_EXPERIMENTS,
   V3_B_COMMON_SUPPORT_FOLDS,
+  V3_B_LEGACY_DEVELOPMENT_FOLDS,
   type ResearchExperiment,
   type ResearchComparisonClass,
   type ResearchEvidence,
@@ -115,14 +116,16 @@ function hasMetric(experiment: ComparableExperiment, metric: SecondaryMetric["ke
 }
 
 function baselinePointFor(groupKey: string, fold: string) {
-  if (groupKey !== "Paired PR-AUC change vs V3-B") return null;
-  return V3_B_COMMON_SUPPORT_FOLDS.find((point) => point.fold === fold) ?? null;
+  const points = groupKey === "Paired PR-AUC change vs V3-B"
+    ? V3_B_COMMON_SUPPORT_FOLDS
+    : V3_B_LEGACY_DEVELOPMENT_FOLDS;
+  return points.find((point) => point.fold === fold) ?? null;
 }
 
 function baselineDescription(groupKey: string) {
   return groupKey === "Paired PR-AUC change vs V3-B"
     ? "Certified common-support V3-B reference"
-    : "V3-B reference score is not certified for this metric family";
+    : "Historical V3-B reference; support may differ by contract";
 }
 
 function metricCells(
@@ -140,7 +143,7 @@ function metricCells(
       <div className="compareSeriesValue compareBaselineValue">
         <span>V3-B reference</span>
         <strong>{typeof value === "number" ? format(value) : "—"}</strong>
-        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")}` : baselineDescription(groupKey)}</small>
+        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")} · ${groupKey === "Paired PR-AUC change vs V3-B" ? "common support" : "historical reference"}` : baselineDescription(groupKey)}</small>
       </div>
     );
   }
@@ -171,7 +174,7 @@ function comparisonCells(
       <div className="compareSeriesValue compareBaselineValue">
         <span>V3-B reference</span>
         <strong>{typeof point?.score === "number" ? point.score.toFixed(6) : "—"}</strong>
-        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")} · PR-AUC` : baselineDescription(groupKey)}</small>
+        <small>{point ? `n=${point.supportRows.toLocaleString("en-US")} · ${groupKey === "Paired PR-AUC change vs V3-B" ? "common support" : "historical reference"}` : baselineDescription(groupKey)}</small>
       </div>
     );
   }
