@@ -117,4 +117,5 @@ outcome, O2, OPEN, Path Risk, or main merge was started.
 - focused PIT-sector tests: **23 passed**;
 - full pytest: **494 collected, exit 0**.
 
-Committed documentation HEAD: `a2bf0357dd5549f104c94936d4dfc0b6b3749376`.
+Committed documentation baseline: `a2bf0357dd5549f104c94936d4dfc0b6b3749376`.
+Current documentation HEAD: `c4282667a6a8807c542f2a112512082cdb96359c`.
