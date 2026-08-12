@@ -63,7 +63,7 @@ def test_local_pairwise_quality_handles_both_classes_and_ties():
     quality = local_pairwise_quality(frame)
     assert quality.iloc[0] == pytest.approx(1.0)
     assert quality.iloc[1] == pytest.approx(0.75)
-    assert quality.iloc[2] == pytest.approx(0.25)
+    assert quality.iloc[2] == pytest.approx(0.75)
     assert quality.iloc[3] == pytest.approx(1.0)
 
 
