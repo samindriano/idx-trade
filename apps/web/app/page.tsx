@@ -393,6 +393,7 @@ export default function Home() {
           <nav className="primaryNav" aria-label="Primary navigation">
             <a className="active" href="/#overview">Overview</a>
             <a href="/monitoring">Forward Monitoring</a>
+            <a href="/compare">Compare</a>
           </nav>
         </div>
       </header>
@@ -467,6 +468,7 @@ export default function Home() {
           <div className="overviewCardHead">
             <div><span>RESEARCH ARCHIVE</span><h2>What we tested</h2></div>
             <p>Browse tested candidates by result, model, or ranking.</p>
+            <a className="overviewCompareLink" href="/compare">Compare historical folds -&gt;</a>
           </div>
           <div className="overviewArchiveToolbar" aria-label="Research archive filters">
             <label>

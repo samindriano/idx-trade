@@ -107,6 +107,7 @@ export default function ModelDetailPage() {
           <nav className="primaryNav" aria-label="Primary navigation">
             <a href="/#overview">Overview</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
+            <a href="/compare">Compare</a>
           </nav>
         </div>
       </header>

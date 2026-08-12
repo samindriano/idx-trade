@@ -942,6 +942,77 @@ body {
 .pairedForwardNote { display: block; margin-top: 13px; color: var(--editorial-muted); font-size: 10px; line-height: 1.4; }
 .generationPill.o2 { background: #e3f1f6; color: #216b8c; }
 
+/* Historical comparison: a deliberate three-column, horizontally scrollable mobile table. */
+.comparePage { max-width: 1180px; padding: 28px 30px 44px; }
+.compareHero { display: flex; justify-content: space-between; gap: 28px; align-items: end; padding: 20px 0 24px; border-bottom: 1px solid var(--editorial-line); }
+.compareHero h1 { margin: 8px 0 0; font-size: clamp(34px, 4.5vw, 58px); line-height: .98; letter-spacing: -.065em; }
+.compareLead { max-width: 650px; margin: 12px 0 0; color: var(--editorial-muted); font-size: 13px; line-height: 1.5; }
+.compareBackLink { align-self: start; color: var(--editorial-green-dark); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; white-space: nowrap; }
+.compareBackLink:hover { text-decoration: underline; }
+.compareControls { margin-top: 14px; padding: 18px 20px 16px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.48); box-shadow: 0 1px 0 rgba(17,21,18,.10), 0 10px 24px rgba(17,21,18,.035); }
+.compareControlIntro { display: flex; justify-content: space-between; gap: 22px; align-items: end; padding-bottom: 15px; border-bottom: 1px solid var(--editorial-line); }
+.compareControlIntro h2, .comparePanelHead h2, .compareInfoCard h2 { margin: 7px 0 0; font-size: 20px; line-height: 1.05; letter-spacing: -.045em; }
+.compareControlIntro > p { max-width: 470px; margin: 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
+.compareGroupSelect, .compareModelSelector { display: grid; gap: 6px; }
+.compareGroupSelect { max-width: 520px; margin-top: 15px; }
+.compareGroupSelect > span, .compareModelSelector > span { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.compareGroupSelect select, .compareModelSelector select { min-height: 38px; padding: 0 30px 0 11px; border: 1px solid var(--editorial-line); border-radius: 0; background: rgba(255,255,255,.62); color: var(--editorial-ink); font: inherit; font-size: 11px; }
+.compareGroupSelect select:focus-visible, .compareModelSelector select:focus-visible { outline: 2px solid var(--editorial-green); outline-offset: 2px; }
+.compareModelSelectors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
+.compareContractNote { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--editorial-muted); font-size: 10px; line-height: 1.4; }
+.compareContractNote i { width: 7px; height: 7px; flex: 0 0 7px; background: var(--editorial-green); }
+.compareTablePanel { margin-top: 14px; padding: 18px 20px 20px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.48); box-shadow: 0 1px 0 rgba(17,21,18,.10), 0 10px 24px rgba(17,21,18,.035); }
+.comparePanelHead { display: flex; justify-content: space-between; gap: 16px; align-items: start; padding-bottom: 14px; border-bottom: 1px solid var(--editorial-line); }
+.compareFoldCount { color: var(--editorial-green-dark); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.comparePanelCopy { margin: 11px 0 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
+.compareTableScroll { overflow-x: auto; margin-top: 16px; padding-bottom: 4px; }
+.compareTable { display: grid; grid-template-columns: 68px repeat(3, minmax(205px, 1fr)); min-width: 700px; }
+.compareTableHeader { min-height: 74px; padding: 11px 12px; border-top: 2px solid var(--editorial-ink); border-bottom: 1px solid var(--editorial-line); background: rgba(235,233,226,.82); }
+.compareFoldHeader { color: var(--editorial-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+.compareModelHeader { display: grid; align-content: center; gap: 4px; border-left: 1px solid var(--editorial-line); }
+.compareModelHeader > span { color: var(--editorial-green-dark); font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+.compareModelHeader strong { overflow: hidden; font-size: 12px; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.compareModelHeader small { overflow: hidden; color: var(--editorial-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.compareTableRow { display: contents; }
+.compareFoldCell, .compareMetricCell { min-height: 58px; padding: 11px 12px; border-bottom: 1px solid var(--editorial-line); }
+.compareFoldCell { position: sticky; left: 0; z-index: 1; color: var(--editorial-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; background: var(--editorial-paper); }
+.compareMetricCell { border-left: 1px solid var(--editorial-line); background: rgba(255,255,255,.3); }
+.compareSeriesValue { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-height: 25px; }
+.compareSeriesValue + .compareSeriesValue { padding-top: 4px; border-top: 1px dashed var(--editorial-line-soft); }
+.compareSeriesValue span { overflow: hidden; color: var(--editorial-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.compareSeriesValue strong { font-size: 15px; letter-spacing: -.04em; white-space: nowrap; }
+.comparePositive { color: var(--editorial-green-dark); }
+.compareNegative { color: var(--editorial-red); }
+.compareEmptyCell { display: block; padding-top: 4px; color: var(--editorial-muted); font-size: 10px; }
+.compareSecondaryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.compareInfoCard { min-width: 0; padding: 18px 20px; border: 1px solid var(--editorial-line); background: rgba(255,255,255,.48); }
+.compareInfoCard ul { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.compareInfoCard li { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 9px; color: var(--editorial-muted); font-size: 11px; line-height: 1.45; }
+.compareInfoCard li::before { content: ""; width: 5px; height: 5px; margin-top: 5px; background: var(--editorial-ink); }
+.compareInfoCard p { margin: 15px 0 0; color: var(--editorial-muted); font-size: 11px; line-height: 1.5; }
+.compareSecondaryList { display: grid; gap: 8px; margin-top: 15px; color: var(--editorial-green-dark); font-size: 11px; line-height: 1.45; }
+.compareSecondaryPanel { margin-top: 14px; }
+.overviewCompareLink { display: inline-flex; margin-top: 13px; color: var(--editorial-green-dark); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
+.overviewCompareLink:hover { text-decoration: underline; }
+
+@media (max-width: 900px) {
+  .comparePage { padding-inline: 20px; }
+  .compareHero { display: block; }
+  .compareBackLink { display: inline-flex; margin-top: 16px; }
+  .compareControlIntro { display: block; }
+  .compareControlIntro > p { margin-top: 9px; }
+  .compareSecondaryGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 660px) {
+  .comparePage { padding-inline: 16px; }
+  .compareHero h1 { font-size: 34px; }
+  .compareLead { font-size: 12px; }
+  .compareControls, .compareTablePanel, .compareInfoCard { padding-inline: 16px; }
+  .compareModelSelectors { grid-template-columns: 1fr; }
+  .compareTableScroll { margin-inline: -4px; }
+}
+
 @media (max-width: 900px) {
   .pairedForwardMetrics { grid-template-columns: 1fr; }
   .pairedForwardMetrics > div { border-right: 0; border-bottom: 1px solid var(--editorial-line); }
