@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 666ec113745877f70183b4b985708f7c9559cbf2
 branch: integration/forward-eod-automation-monitoring
-head_commit: pending documentation commit
+head_commit: 9cfb8abefe30e7a8b4c7300cae351beea4f61c36
 scope: Read-only verification that the existing Stockbit intraday automation swept 2026-08-12, with exact per-ticker coverage and artifact checks.
 files_changed: docs/checkpoints/2026-08-13_STOCKBIT_INTRADAY_2026-08-12_READ_ONLY_VERIFICATION.md; coordination/handoffs/IDX-STOCKBIT-INTRADAY-2026-08-12-READ-ONLY-VERIFICATION.md
 findings: 2026-08-12 Stockbit intraday run is complete with 111,695 rows for 835 current-session tickers. SMBR is NON_CURRENT_SESSION with provider date 2026-08-11. 126 no-activity tickers have HTTP_404 statuses. Total attempted tickers 962, unfinished 0, retries 0, HTTP 429 events 0, synthetic fill false. This is intraday, not canonical EOD.
