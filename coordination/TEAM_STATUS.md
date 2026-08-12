@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-12 20:35 Asia/Jakarta
+Last coordinated update: 2026-08-12 20:49 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -48,7 +48,8 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Stockbit intraday forward capture | `AUTOMATED` | Existing runtime | `data/stockbit-intraday-forward-capture-v1` | Daily capture infrastructure already exists. **Do not build it again.** Accumulate evidence for possible future Path Risk research. |
 | Path Risk | `WAITING` | none | prior V1/V2 lineage | V1/V2 failed. Do not restart/retune now; wait for richer intraday accumulation and a genuinely new preregistered hypothesis family. |
 | O2 fresh-forward | `ACTIVE` | Existing forward runtime | `integration/forward-eod-automation-monitoring` / acceptance `c5b356ad1a21646c4d6b50352872c7e6718c6df9` | First official post-freeze session accepted: 2026-08-12 / index 1268, 806 scored, 30 true flat-range row exclusions, counter `1/100`; outcomes locked. Continue prospectively under identical frozen eligibility/counter/provenance rules. |
-| O2.1 flat-range challenger experiment | `DONE` | ChatGPT review + Codex/O2.1-flat-range | `research/idx-ranking-ohlcv-o2-1-flat-range-v1` / acceptance `32ee9ee1e5696b2262b4defc936846dff5af557e` | `O2_1_NO_SURVIVOR` accepted on 280,044 rows including 1,876 genuine flat bars; q25 paired PR-AUC `-0.0004961732` failed despite positive median and 4/6 positive folds. Lane closed: no refit, rescue, robustness, shadow-forward, promotion, or counter. Flat-range prevalence may remain descriptive telemetry only. |
+| O2.1 flat-range challenger experiment | `DONE` | ChatGPT review + Codex/O2.1-flat-range | `research/idx-ranking-ohlcv-o2-1-flat-range-v1` / acceptance `32ee9ee1e5696b2262b4defc936846dff5af557e` | Historical verdict remains `O2_1_NO_SURVIVOR` on 280,044 rows including 1,876 genuine flat bars. No rescue, tuning, robustness, promotion, or reinterpretation of this historical verdict. |
+| O2.1 sealed shadow diagnostic | `ACTIVE` | `Codex/O2.1-sealed-shadow + ChatGPT review` | planned `integration/o2-1-sealed-shadow-v1` / authorization `051c6da2e0170c84de4c53e515a41887f4be9e35` | User explicitly authorized a separate sealed score-only shadow lane. Freeze exactly one full-history O2.1 model from the accepted 37-feature/HGB/support contract, then persist outcome-blind shadow scores/coverage alongside certified sessions. Hidden/subordinate UI only inside O2 detail; no fourth primary card. No outcome/performance access until the protected O2 vault legitimately opens; shadow is never promotion-eligible. |
 | IDX forward calendar extension | `WAITING` | existing data lane | `data/idx-forward-calendar-extension-v1` | Evidence-only extension; rerun when a new official session is source-certified. Do not infer dates. |
 | Historical OPEN recovery | `PARKED` | none | OPEN/Yahoo/TV accepted lineage | Research coverage gate passed conditionally; substantial residual remains. Do not restart broad provider search/backfill without a new explicit reason. |
 | PIT sector history | `PARKED` | none | `data/idx-pit-sector-history-v1` | Research direction recorded; blocked/not authorized for dependent modeling until PIT evidence improves. |
@@ -61,7 +62,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 - Do not recreate Stockbit intraday automation.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
 - Do not rerun the completed O2-vs-V2 comparator unless a specific audit/reproduction request requires it.
-- O2.1 `O2_1_FLAT_RANGE_FLAGGED_V1` is closed after `NO_SURVIVOR`; do not restart, shadow-forward, tune, or rescue it without a genuinely new explicitly preregistered hypothesis and authorization.
+- O2.1 historical `NO_SURVIVOR` remains final. The only authorized continuation is the separately frozen **sealed shadow diagnostic** in its dedicated lane: no tuning/rescue, no performance peeking, no promotion, and no change to active O2.
 - Do not treat Market/Index/Breadth historical session-date data as PIT-complete or bulk-model-ready.
 - Before suggesting a “next task,” check this file first; a suggestion counts as coordination and can itself cause duplicate work.
 
