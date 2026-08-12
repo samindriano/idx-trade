@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: c5b356ad1a21646c4d6b50352872c7e6718c6df9
 branch: integration/forward-eod-automation-monitoring
-head_commit: pending documentation commit
+head_commit: 02ec840584216c5c25a5d612eac4baa487ef8ba6
 scope: Read-only verification of canonical EOD Task Scheduler registration, triggers, catch-up semantics, legacy conflict, Stockbit isolation, latest canonical artifacts, foreign-flow raw retention, and failure/recovery behavior.
 files_changed: docs/checkpoints/2026-08-13_FORWARD_EOD_AUTOMATION_ACTUAL_AUDIT.md; coordination/handoffs/IDX-FORWARD-EOD-AUTOMATION-ACTUAL-AUDIT.md
 findings: IDXTrade-ForwardEOD is NOT_FOUND locally. IDXTrade-ForwardOpenArchive remains Ready with daily 22:00 plus logon triggers and last result 1. The prior Access-denied registration was not resolved by any later local evidence. Latest canonical session 2026-08-12 is DATA_READY with complete Stock Summary/Index Summary raw and normalized artifacts, OHLCV, evidence, model input, and V2/V3-B/O2 score artifacts. Raw ForeignBuy/ForeignSell are present for all 963 Stock Summary rows; normalized CSV omits them.
