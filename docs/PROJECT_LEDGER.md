@@ -1687,3 +1687,24 @@ The cache manifest/audit flags are all fail-closed pre-outcome values:
 ranking historical denominator remains `17`. No risk-veto/integration,
 ranking change, fresh-forward access, or main merge was started. See the dated
 Path Risk checkpoint and result handoff for the complete per-feature audit.
+
+## 35. Market / Index / Breadth V1 source audit — 2026-08-12
+
+The isolated `data/market-index-breadth-history-v1` lane completed a bounded
+official IDX/Zapi source audit without modeling or bulk acquisition. The
+official `TradingSummary/GetIndexSummary` and `GetStockSummary` endpoints
+returned reproducible session-date rows for sampled dates in 2020–2026, and
+Zapi parity was exact on all accepted fields for the 2021, 2024, and 2026
+samples. The official Digital Statistic market-by-type path also exposed
+regular/non-regular/total Value, Volume, and Frequency with million-scaled
+Value/Volume semantics.
+
+The lane remains `CONDITIONAL_SOURCE_READY_PIT_BLOCKED`: historical payloads
+have no first-publication timestamp, revision ID, or immutable PIT snapshot;
+no official advancing/declining/unchanged aggregate or denominator was found;
+and the 2021 stock-summary-to-rich-index aggregate reconciliation was not
+exact. Derived change buckets are audit-only. No PIT window, model feature,
+OPEN data, outcome, Path Risk, or PnL work was started. See
+`docs/checkpoints/2026-08-12_MARKET_INDEX_BREADTH_SOURCE_AUDIT.md` for the
+full evidence and `docs/MARKET_INDEX_BREADTH_HISTORY_V1_SPEC.md` for the
+contract.
