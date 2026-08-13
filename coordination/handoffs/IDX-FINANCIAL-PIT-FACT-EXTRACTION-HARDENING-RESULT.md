@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `4013f90a56edc6d8409e6a7514a9170d5f301aff`
 branch: `data/financial-pit-fact-extraction-hardening-v1`
-head_commit: to be filled after final commit
+result_commit: `c609e688c424f0d16be69edca6772f0b050e8077`
 
 ## Scope
 
