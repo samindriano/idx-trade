@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: 0aaeb1777b613a9d3c9ed6c8e15c04353d116657
 branch: codex/pit-safe-v2-v3b-o2-reproduction-v1
-head_commit: pending protocol commit
+head_commit: 35509291b289d47b726f3797b8542694cd1e7e02
 scope: Preregistered generic PIT/listing-safe historical remediation and, only if authorized by the frozen boundary decision, clean V2/V3-B/O2 historical reproduction.
 files_changed:
 - docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REMEDIATION_PROTOCOL.md
