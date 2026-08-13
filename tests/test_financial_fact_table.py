@@ -51,6 +51,13 @@ def test_parse_decimal_rejects_malformed_exponents_and_nonnumeric_text(raw: str)
     assert _parse_decimal(raw) is None
 
 
+def test_parse_decimal_explicitly_treats_comma_as_grouping_before_exponent() -> None:
+    # The accepted extractor strips commas before Decimal parsing.  Therefore
+    # this is a grouped integer under the frozen grammar, not locale decimal
+    # notation; future locale parsing must not be introduced implicitly.
+    assert _parse_decimal("1,2E3") == Decimal("12000")
+
+
 def _xlsx_fixture(
     *,
     hidden_scope: str | None = None,
