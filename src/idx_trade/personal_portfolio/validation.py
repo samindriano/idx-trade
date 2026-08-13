@@ -11,10 +11,10 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
-from .schema import GOKSEI_PIN, KSEI_MCP_PIN
-
 SCHEMA_VERSION = "personal-portfolio-snapshot-v1"
 SOURCE_ID = "AKSES_KSEI_PERSONAL"
+KSEI_MCP_PIN = "a3dfd3260889d704b75001387b646c25b4b69aa3"
+GOKSEI_PIN = "5e51319feb3d373e463c21dfca5c31f971335653"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 SCOPE_REF_RE = re.compile(r"^ps_[0-9a-f]{32}$")
