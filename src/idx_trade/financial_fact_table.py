@@ -464,6 +464,7 @@ def _xlsx_extract(
 ) -> tuple[list[FinancialFactRecord], FilingFactDiagnostics]:
     sha = _sha256_bytes(payload)
     cells, industry = _visible_xlsx_cells(payload)
+    cell_index = {(cell.sheet, cell.row, cell.column): cell for cell in cells}
     currency, unit, scale, units, unit_detail = _unit_evidence(cells)
     base = _base_record_kwargs(ticker=ticker, year=year, period=period, scope=scope, publication=publication, sha=sha, source_ref=source_ref, fmt="XLSX")
     records: list[FinancialFactRecord] = []
@@ -483,7 +484,8 @@ def _xlsx_extract(
             if fact is None:
                 continue
             for column, (context_ref, context_coord) in current.items():
-                value_cell = next((x for x in cells if x.sheet == sheet and x.row == label.row and x.column == column and x.numeric is not None), None)
+                candidate = cell_index.get((sheet, label.row, column))
+                value_cell = candidate if candidate is not None and candidate.numeric is not None else None
                 if value_cell is not None:
                     by_fact[fact].append((label, value_cell, context_ref, context_coord))
         for fact, matches in by_fact.items():
@@ -840,6 +842,295 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, default=_json_default) + "\n", encoding="utf-8")
 
 
+CORE_FACT_IDENTITIES = (
+    "revenue",
+    "net_income",
+    "net_income_attributable",
+    "total_assets",
+    "total_liabilities",
+    "total_equity",
+    "cash",
+    "cash_and_cash_equivalents",
+    "operating_cash_flow",
+)
+EXPECTED_RECLASSIFICATION_ROW_COUNT = 6108
+EXPECTED_RECLASSIFICATION_ROWS_SHA256 = "656807e74f84aa7bde74f30ffe7f2b11fed921e343c485dcc81cdcc617ac3cd9"
+
+
+def _census_dimension(row: Mapping[str, Any], diagnostic: FilingFactDiagnostics) -> tuple[str, str, str, str, str]:
+    return (
+        str(row.get("year")),
+        str(row.get("period")),
+        str(row.get("scope")),
+        diagnostic.industry_class,
+        str(row.get("representation_format")),
+    )
+
+
+def _coverage_bucket() -> dict[str, Any]:
+    return {
+        "eligible_filings": 0,
+        "missing": 0,
+        "status_counts": Counter(),
+    }
+
+
+def _coverage_add(
+    coverage: dict[str, dict[str, Any]],
+    key: str,
+    *,
+    status: str | None = None,
+    missing: bool = False,
+) -> None:
+    bucket = coverage.setdefault(key, _coverage_bucket())
+    if missing:
+        bucket["missing"] += 1
+    elif status is not None:
+        bucket["status_counts"][status] += 1
+
+
+def _coverage_finalize(coverage: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, bucket in sorted(coverage.items()):
+        statuses = dict(sorted(bucket["status_counts"].items()))
+        extracted = statuses.get(FactExtractionStatus.EXTRACTED.value, 0)
+        result[key] = {
+            "eligible_filings": bucket["eligible_filings"],
+            "extracted": extracted,
+            "extracted_fraction": round(extracted / bucket["eligible_filings"], 6) if bucket["eligible_filings"] else 0.0,
+            "missing": bucket["missing"],
+            "status_counts": statuses,
+        }
+    return result
+
+
+def run_marketwide_census(
+    reclassification_root: Path,
+    attachments_root: Path,
+    output_root: Path,
+    *,
+    expected_pit_ready_count: int = 5965,
+    expected_source_row_count: int = EXPECTED_RECLASSIFICATION_ROW_COUNT,
+    expected_source_rows_sha256: str = EXPECTED_RECLASSIFICATION_ROWS_SHA256,
+) -> dict[str, Any]:
+    """Extract all accepted PIT-ready XLSX/XBRL joins without network access.
+
+    This deliberately streams records and diagnostics to external files.  The
+    143 non-PIT-ready exact joins and every unsupported representation remain
+    in an explicit exclusion ledger; no missing fact is converted to zero.
+    """
+
+    if output_root.exists() and any(output_root.iterdir()):
+        raise ValueError(f"output root must be new and empty: {output_root}")
+    rows_path = reclassification_root / "scope_reclassification_rows.jsonl"
+    rows = _load_jsonl(rows_path)
+    rows_sha256 = _sha256_file(rows_path)
+    if len(rows) != expected_source_row_count or rows_sha256 != expected_source_rows_sha256:
+        raise ValueError(
+            "source reclassification rows do not match accepted immutable input: "
+            f"count={len(rows)} sha256={rows_sha256}"
+        )
+    eligible = [
+        row for row in rows
+        if (
+            row.get("pit_ready")
+            and row.get("prior_chain_gates_pass")
+            and row.get("file_hash_matches_chain")
+            and row.get("representation_format") in {"XLSX", "XBRL"}
+        )
+    ]
+    if len(eligible) != expected_pit_ready_count:
+        raise ValueError(f"expected {expected_pit_ready_count} PIT-ready XLSX/XBRL rows, found {len(eligible)}")
+
+    exclusion_counts: Counter[str] = Counter()
+    exclusion_examples: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        if (
+            row.get("pit_ready")
+            and row.get("prior_chain_gates_pass")
+            and row.get("file_hash_matches_chain")
+            and row.get("representation_format") in {"XLSX", "XBRL"}
+        ):
+            continue
+        if not row.get("pit_ready") and str(row.get("scope")) == "UNRESOLVED":
+            reason = "SCOPE_UNRESOLVED"
+        elif str(row.get("representation_format")) not in {"XLSX", "XBRL"}:
+            reason = "UNSUPPORTED_REPRESENTATION"
+        elif not row.get("file_hash_matches_chain"):
+            reason = "HASH_CONFLICT_OR_CHAIN_FAILURE"
+        elif not row.get("prior_chain_gates_pass"):
+            reason = "PRIOR_CHAIN_GATE_FAILURE"
+        else:
+            reason = "OTHER_NON_PIT_READY"
+        exclusion_counts[reason] += 1
+        if len(exclusion_examples[reason]) < 5:
+            exclusion_examples[reason].append({
+                "ticker": row.get("ticker"),
+                "year": row.get("year"),
+                "period": row.get("period"),
+                "representation_format": row.get("representation_format"),
+                "scope": row.get("scope"),
+                "resolver_detail": row.get("resolver_detail"),
+            })
+
+    output_root.mkdir(parents=True, exist_ok=True)
+    fact_path = output_root / "fact_records.jsonl"
+    diagnostic_path = output_root / "filing_diagnostics.jsonl"
+    coverage_path = output_root / "coverage.json"
+    exclusion_path = output_root / "exclusions.json"
+    summary_path = output_root / "summary.json"
+    manifest_path = output_root / "MANIFEST.json"
+
+    counts: Counter[str] = Counter()
+    status_by_identity: dict[str, Counter[str]] = defaultdict(Counter)
+    coverage_by_fact: dict[str, dict[str, Any]] = {}
+    coverage_by_dimension: dict[str, dict[str, Any]] = {}
+    diagnostics_count = 0
+    facts_count = 0
+    preflight_failures: list[str] = []
+
+    # Validate all immutable inputs before creating output files. A partial
+    # corpus must never be mistaken for a completed census.
+    for row in eligible:
+        attachment = attachments_root / str(row["source_attachment_path"])
+        if not attachment.exists():
+            preflight_failures.append(f"missing attachment: {attachment}")
+            continue
+        if _sha256_file(attachment) != row["source_attachment_sha256"]:
+            preflight_failures.append(f"attachment hash mismatch: {attachment}")
+    if preflight_failures:
+        raise ValueError("offline census preflight failed: " + "; ".join(preflight_failures[:10]))
+
+    with fact_path.open("w", encoding="utf-8", newline="\n") as fact_handle, diagnostic_path.open("w", encoding="utf-8", newline="\n") as diagnostic_handle:
+        for ordinal, row in enumerate(eligible, start=1):
+            attachment = attachments_root / str(row["source_attachment_path"])
+            if not attachment.exists():
+                preflight_failures.append(f"missing attachment: {attachment}")
+                continue
+            payload = attachment.read_bytes()
+            actual_sha = _sha256_bytes(payload)
+            if actual_sha != row["source_attachment_sha256"]:
+                preflight_failures.append(f"attachment hash mismatch: {attachment}")
+                continue
+            records, diagnostic = extract_filing_facts(
+                payload,
+                ticker=str(row["ticker"]),
+                fiscal_year=int(row["year"]),
+                fiscal_period=str(row["period"]),
+                statement_scope=str(row["scope"]),
+                publication_at_utc=str(row["publication_at_utc"]),
+                source_ref=str((row.get("source_refs") or [""])[0]),
+                representation_format=str(row["representation_format"]),
+            )
+            facts_count += len(records)
+            diagnostics_count += 1
+            for record in records:
+                counts[record.extraction_status.value] += 1
+                status_by_identity[record.fact_identity][record.extraction_status.value] += 1
+                fact_handle.write(json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True, default=_json_default) + "\n")
+            diagnostic_payload = diagnostic.to_dict() | {
+                "source_attachment_path": row["source_attachment_path"],
+                "source_attachment_sha256": row["source_attachment_sha256"],
+                "source_refs": row.get("source_refs", []),
+                "evidence": row.get("evidence", []),
+                "source_chain_hashes": row.get("source_chain_hashes", []),
+                "file_hash_matches_chain": row.get("file_hash_matches_chain"),
+                "prior_chain_gates_pass": row.get("prior_chain_gates_pass"),
+                "publication_at_utc": row["publication_at_utc"],
+                "scope": row["scope"],
+                "template_or_industry_family": diagnostic.industry_class,
+                "pit_ready": row["pit_ready"],
+                "ordinal": ordinal,
+            }
+            diagnostic_handle.write(json.dumps(diagnostic_payload, ensure_ascii=False, sort_keys=True, default=_json_default) + "\n")
+
+            dimension = _census_dimension(row, diagnostic)
+            dimension_key = "|".join(dimension)
+            dimension_bucket = coverage_by_dimension.setdefault(dimension_key, {"eligible_filings": 0, "fact_status_counts": Counter(), "missing_fact_counts": Counter()})
+            dimension_bucket["eligible_filings"] += 1
+            by_fact = defaultdict(list)
+            for record in records:
+                by_fact[record.fact_identity].append(record)
+            for fact in CORE_FACT_IDENTITIES:
+                fact_bucket = coverage_by_fact.setdefault(fact, {"eligible_filings": 0, "missing": 0, "status_counts": Counter()})
+                fact_bucket["eligible_filings"] += 1
+                if not by_fact[fact]:
+                    fact_bucket["missing"] += 1
+                    dimension_bucket["missing_fact_counts"][fact] += 1
+                    continue
+                for record in by_fact[fact]:
+                    fact_bucket["status_counts"][record.extraction_status.value] += 1
+                    dimension_bucket["fact_status_counts"][f"{fact}:{record.extraction_status.value}"] += 1
+
+    if preflight_failures:
+        raise ValueError("offline census preflight failed: " + "; ".join(preflight_failures[:10]))
+    if diagnostics_count != len(eligible):
+        raise ValueError(f"offline census processed {diagnostics_count} rows, expected {len(eligible)}")
+
+    coverage = {
+        "by_fact": _coverage_finalize(coverage_by_fact),
+        "by_year_period_scope_template_or_industry_format": {
+            key: {
+                "eligible_filings": value["eligible_filings"],
+                "fact_status_counts": dict(sorted(value["fact_status_counts"].items())),
+                "missing_fact_counts": dict(sorted(value["missing_fact_counts"].items())),
+            }
+            for key, value in sorted(coverage_by_dimension.items())
+        },
+    }
+    _write_json(coverage_path, coverage)
+    _write_json(exclusion_path, {
+        "total_exact_join_rows": len(rows),
+        "included_pit_ready_xlsx_xbrl": len(eligible),
+        "excluded_rows": sum(exclusion_counts.values()),
+        "counts": dict(sorted(exclusion_counts.items())),
+        "examples": {key: value for key, value in sorted(exclusion_examples.items())},
+    })
+
+    summary = {
+        "status": "MARKETWIDE_OFFLINE_FACT_EXTRACTION_CENSUS",
+        "total_exact_join_rows": len(rows),
+        "pit_ready_filings_processed": diagnostics_count,
+        "fact_candidates": facts_count,
+        "fact_status_counts": dict(sorted(counts.items())),
+        "fact_status_by_identity": {key: dict(sorted(value.items())) for key, value in sorted(status_by_identity.items())},
+        "filings_by_format": dict(sorted(Counter(str(row["representation_format"]) for row in eligible).items())),
+        "filings_by_scope": dict(sorted(Counter(str(row["scope"]) for row in eligible).items())),
+        "filings_by_year_period": dict(sorted(Counter(f"{row['year']}:{row['period']}" for row in eligible).items())),
+        "exclusions": dict(sorted(exclusion_counts.items())),
+        "coverage_file": coverage_path.name,
+        "exclusion_file": exclusion_path.name,
+        "source_artifact_sha256": {
+            "reclassification_rows": rows_sha256,
+        },
+        "revision_policy": "observed filing versions are usable only from their proven publication timestamp; unavailable earlier versions remain missing",
+        "model_feature_work": False,
+        "protected_outcomes_accessed": False,
+        "network_calls": 0,
+        "market_wide_feature_readiness": "SEPARATE_FEATURE_DESIGN_REVIEW_REQUIRED",
+    }
+    _write_json(summary_path, summary)
+    manifest_files = [fact_path, diagnostic_path, coverage_path, exclusion_path, summary_path]
+    manifest = {
+        "manifest_version": "financial_fact_census_v1",
+        "files": {path.name: {"sha256": _sha256_file(path), "bytes": path.stat().st_size} for path in manifest_files},
+        "source": {
+            "reclassification_root": str(reclassification_root),
+            "reclassification_rows_sha256": rows_sha256,
+            "accepted_extractor_commit": "baf0334a1dd6a31e9d88ae978630ec864bfb3410",
+        },
+        "scope": {
+            "included": "pit_ready=true and representation_format in {XLSX,XBRL}",
+            "excluded": "all non-PIT-ready joins, unsupported representations, ambiguous attachments, hash conflicts, provider failures, and publication/linkage gaps",
+        },
+    }
+    _write_json(manifest_path, manifest)
+    return {
+        **summary,
+        "artifact_hashes": {path.name: _sha256_file(path) for path in [fact_path, diagnostic_path, coverage_path, exclusion_path, summary_path, manifest_path]},
+    }
+
+
 def run_sample_audit(reclassification_root: Path, attachments_root: Path, output_root: Path, target: int = 36) -> dict[str, Any]:
     """Run the bounded offline sample and persist hashes/manifests externally."""
 
@@ -954,13 +1245,17 @@ def _sha256_file(path: Path) -> str:
 
 def _main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("sample", choices=["sample"])
+    parser.add_argument("command", choices=["sample", "census"])
     parser.add_argument("--reclassification-root", type=Path, required=True)
     parser.add_argument("--attachments-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--target", type=int, default=36)
     args = parser.parse_args()
-    print(json.dumps(run_sample_audit(args.reclassification_root, args.attachments_root, args.output_root, args.target), indent=2, sort_keys=True))
+    if args.command == "sample":
+        result = run_sample_audit(args.reclassification_root, args.attachments_root, args.output_root, args.target)
+    else:
+        result = run_marketwide_census(args.reclassification_root, args.attachments_root, args.output_root)
+    print(json.dumps(result, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
