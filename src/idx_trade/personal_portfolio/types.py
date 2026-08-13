@@ -6,6 +6,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
+from .semantics import validate_endpoint_evidence_values
 from .validation import (
     ADAPTER_VERSION_RE,
     REQUIRED_SOURCE_COMMIT_PINS,
@@ -124,22 +125,13 @@ class EndpointEvidence:
     failure_code: EndpointFailureCode | None = None
 
     def __post_init__(self) -> None:
-        for field_name in ("observed_rows", "accepted_rows", "rejected_rows"):
-            value = getattr(self, field_name)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                raise ValueError(f"{field_name} must be a non-negative integer")
-        if self.succeeded:
-            if self.observed_rows != self.accepted_rows + self.rejected_rows:
-                raise ValueError("successful endpoint row accounting must satisfy observed=accepted+rejected")
-            if self.rejected_rows == 0 and self.failure_code is not None:
-                raise ValueError("successful fully validated endpoint must not have failure_code")
-            if self.rejected_rows > 0 and self.failure_code is None:
-                raise ValueError("rejected endpoint rows require a sanitized failure_code")
-        else:
-            if self.failure_code is None:
-                raise ValueError("failed endpoint requires a sanitized failure_code")
-            if self.accepted_rows != 0 or self.rejected_rows != 0:
-                raise ValueError("failed endpoint must not claim accepted or rejected rows")
+        validate_endpoint_evidence_values(
+            succeeded=self.succeeded,
+            observed_rows=self.observed_rows,
+            accepted_rows=self.accepted_rows,
+            rejected_rows=self.rejected_rows,
+            failure_code=self.failure_code.value if self.failure_code is not None else None,
+        )
 
 
 @dataclass(frozen=True, slots=True)
