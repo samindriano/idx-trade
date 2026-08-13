@@ -159,3 +159,13 @@ V2.2 above, on this exact common-support population, with the frozen folds,
 labels, HGB settings, evaluator, and paired rule. No additional feature,
 interaction, rolling variant, market-relative gap, hyperparameter search,
 V2.3, or post-outcome subset selection is authorized.
+
+### Later authorization and superseding result
+
+This preregistration checkpoint records the pre-run state. It was later
+superseded for execution purposes by the independent acceptance checkpoint
+`review/idx-v2-open-alpha-prereg-remediation-acceptance-v1@cede829`, which
+authorized exactly one atomic historical CONTROL/V2.1/V2.2 comparison. The
+result is recorded in
+`docs/checkpoints/2026-08-13_CLEAN_V2_OPEN_ALPHA_HISTORICAL_RUN.md`; no further
+run is authorized automatically.
