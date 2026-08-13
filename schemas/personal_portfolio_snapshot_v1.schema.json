@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "idx-trade://schemas/personal-portfolio-snapshot-v1",
+  "title": "Personal Portfolio Snapshot V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_at",
+    "fetched_at",
+    "scope_ref",
+    "completeness",
+    "endpoint_evidence",
+    "positions",
+    "cash_balances",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "personal-portfolio-snapshot-v1"},
+    "snapshot_at": {"type": "string", "format": "date-time"},
+    "fetched_at": {"type": "string", "format": "date-time"},
+    "scope_ref": {"type": "string", "pattern": "^ps_[0-9a-f]{32}$"},
+    "completeness": {"enum": ["COMPLETE", "PARTIAL"]},
+    "endpoint_evidence": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "PORTFOLIO_SUMMARY"}}}]},
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "CASH"}}}]},
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "EQUITY"}}}]},
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "MUTUAL_FUND"}}}]},
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "BOND"}}}]},
+        {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "OTHER"}}}]}
+      ],
+      "items": false
+    },
+    "positions": {"type": "array", "items": {"$ref": "#/$defs/position"}},
+    "cash_balances": {"type": "array", "items": {"$ref": "#/$defs/cash"}},
+    "provenance": {"$ref": "#/$defs/provenance"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"completeness": {"const": "COMPLETE"}}},
+      "then": {
+        "properties": {
+          "endpoint_evidence": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "allOf": [
+                {"$ref": "#/$defs/endpoint_evidence"},
+                {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}, "failure_code": {"type": "null"}}}
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"completeness": {"const": "PARTIAL"}}},
+      "then": {
+        "properties": {
+          "endpoint_evidence": {
+            "contains": {
+              "anyOf": [
+                {"properties": {"succeeded": {"const": false}}},
+                {"properties": {"rejected_rows": {"minimum": 1}}}
+              ]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "security_name", "security_code"],
+      "properties": {
+        "symbol": {"type": "string", "minLength": 1, "maxLength": 24, "pattern": "^[A-Za-z0-9._-]+$"},
+        "security_name": {"type": ["string", "null"], "maxLength": 160},
+        "security_code": {"type": ["string", "null"], "maxLength": 64}
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["security", "asset_class", "quantity", "currency", "broker_or_custodian", "subaccount_ref"],
+      "properties": {
+        "security": {"$ref": "#/$defs/security"},
+        "asset_class": {"enum": ["EQUITY", "MUTUAL_FUND", "BOND", "OTHER"]},
+        "quantity": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]*[1-9])?$"},
+        "currency": {"type": ["string", "null"], "pattern": "^[A-Z]{3}$"},
+        "broker_or_custodian": {"type": ["string", "null"], "maxLength": 120},
+        "subaccount_ref": {"type": ["string", "null"], "pattern": "^ksa_[0-9a-f]{64}$"}
+      }
+    },
+    "cash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "amount", "bank_or_custodian", "subaccount_ref"],
+      "properties": {
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "amount": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]*[1-9])?$"},
+        "bank_or_custodian": {"type": ["string", "null"], "maxLength": 120},
+        "subaccount_ref": {"type": ["string", "null"], "pattern": "^ksa_[0-9a-f]{64}$"}
+      }
+    },
+    "endpoint_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint_class", "succeeded", "observed_rows", "accepted_rows", "rejected_rows", "failure_code"],
+      "properties": {
+        "endpoint_class": {"enum": ["PORTFOLIO_SUMMARY", "CASH", "EQUITY", "MUTUAL_FUND", "BOND", "OTHER"]},
+        "succeeded": {"type": "boolean"},
+        "observed_rows": {"type": "integer", "minimum": 0},
+        "accepted_rows": {"type": "integer", "minimum": 0},
+        "rejected_rows": {"type": "integer", "minimum": 0},
+        "failure_code": {"type": ["string", "null"], "enum": [null, "HTTP_ERROR", "AUTH_REQUIRED", "TIMEOUT", "PROVIDER_UNAVAILABLE", "SCHEMA_MISMATCH", "ROW_VALIDATION_FAILED", "UNKNOWN"]}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "adapter_version", "raw_response_sha256", "endpoint_set", "source_commit_pins"],
+      "properties": {
+        "source": {"const": "AKSES_KSEI_PERSONAL"},
+        "adapter_version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"},
+        "raw_response_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "endpoint_set": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "prefixItems": [
+            {"const": "PORTFOLIO_SUMMARY"},
+            {"const": "CASH"},
+            {"const": "EQUITY"},
+            {"const": "MUTUAL_FUND"},
+            {"const": "BOND"},
+            {"const": "OTHER"}
+          ],
+          "items": false
+        },
+        "source_commit_pins": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nichsedge/ksei-mcp", "chickenzord/goksei"],
+          "properties": {
+            "nichsedge/ksei-mcp": {"const": "a3dfd3260889d704b75001387b646c25b4b69aa3"},
+            "chickenzord/goksei": {"const": "5e51319feb3d373e463c21dfca5c31f971335653"}
+          }
+        }
+      }
+    }
+  }
+}
