@@ -9,8 +9,11 @@ from idx_trade.pit_safe_replay import (
     O2_FEATURE_COLUMNS,
     REPLAY_BOUNDARY,
     V3_B_FEATURE_COLUMNS,
+    _strict_boolean_series,
+    apply_conditional_ladder,
     _read_table,
     _stable_key_hash,
+    verify_v2_v3_control_equivalence,
 )
 from idx_trade.research_v2_models import ALL_RANKING_V2_MODELS
 
@@ -49,6 +52,41 @@ def test_read_table_rejects_historical_boundary_crossing(tmp_path) -> None:
     frame.to_parquet(path, index=False)
     with pytest.raises(RuntimeError, match="historical boundary"):
         _read_table(path, {"feature"})
+
+
+def test_strict_boolean_parser_rejects_truthy_string() -> None:
+    with pytest.raises(RuntimeError, match="strict boolean"):
+        _strict_boolean_series(pd.Series(["False", "True"]), "flag")
+
+
+def test_conditional_ladder_orphans_o2_without_propagating_v3_failure() -> None:
+    v2 = {"champion_status": "RANKING_V2_HISTORICAL_CHAMPION_SELECTED", "champion": "HGB_XS_MARKET"}
+    v3 = {"decision": "V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2"}
+    o2 = {"decision": "O2_SURVIVOR"}
+    ladder = apply_conditional_ladder(v2, v3, o2)
+    assert ladder["o2"]["diagnostic_decision"] == "O2_SURVIVOR"
+    assert ladder["o2"]["clean_lineage_decision"] == "O2_DIAGNOSTIC_ORPHANED_PARENT"
+    assert o2["decision"] == "O2_DIAGNOSTIC_ORPHANED_PARENT"
+    assert o2["decision"] != "O2_NO_SURVIVOR"
+
+
+def test_v2_v3_control_equivalence_requires_exact_scores(tmp_path) -> None:
+    keys = {
+        "fold": ["V2F1", "V2F1"],
+        "ticker": ["BBCA", "BBRI"],
+        "date": ["2024-01-02", "2024-01-02"],
+        "signal_session_index": [100, 100],
+        "binary_target": [1, 0],
+        "score": [0.25, -0.10],
+    }
+    v2_path = tmp_path / "v2.parquet"
+    v3_path = tmp_path / "v3.parquet"
+    pd.DataFrame({"candidate": ["HGB_XS_MARKET"] * 2, **keys}).to_parquet(v2_path, index=False)
+    pd.DataFrame({"model": ["V3B_COMMON_SUPPORT_BASELINE"] * 2, **keys}).to_parquet(v3_path, index=False)
+    result = verify_v2_v3_control_equivalence(v2_path, v3_path)
+    assert result["status"] == "V2_V3_CONTROL_EXACT_EQUIVALENCE_PASS"
+    assert result["rows"] == 2
+    assert result["max_score_abs_diff"] == 0.0
 
 
 def test_replay_model_and_geometry_contract_is_frozen() -> None:

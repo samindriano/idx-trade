@@ -113,13 +113,25 @@ def _read_table(path: Path, feature_columns: Iterable[str]) -> pd.DataFrame:
     mapping = table.groupby("label_status")["binary_target"].unique().to_dict()
     if set(mapping.get("TP_FIRST", ())) != {1} or set(mapping.get("SL_FIRST", ())) != {0}:
         raise RuntimeError(f"replay table {path.name} has invalid H10 mapping: {mapping}")
-    if not table["universe_primary_liquid"].astype(bool).all():
+    if not _strict_boolean_series(table["universe_primary_liquid"], "universe_primary_liquid").all():
         raise RuntimeError(f"replay table {path.name} is not primary-liquid only")
     if table.duplicated(["ticker", "date"]).any():
         raise RuntimeError(f"replay table {path.name} contains duplicate ticker/date rows")
     if table["date"].max() > pd.Timestamp(REPLAY_BOUNDARY):
         raise RuntimeError(f"replay table {path.name} crosses the historical boundary")
     return table.sort_values(["signal_session_index", "ticker"], kind="mergesort").reset_index(drop=True)
+
+
+def _strict_boolean_series(values: pd.Series, label: str) -> pd.Series:
+    """Parse only actual booleans; never coerce strings/numbers truthily."""
+
+    if values.isna().any():
+        raise RuntimeError(f"{label} contains null boolean values")
+    if pd.api.types.is_bool_dtype(values.dtype):
+        return values.astype(bool)
+    if not values.map(lambda value: isinstance(value, (bool, np.bool_))).all():
+        raise RuntimeError(f"{label} must contain strict boolean values")
+    return values.map(bool).astype(bool)
 
 
 def validate_replay_tables(v2: pd.DataFrame, v3: pd.DataFrame, o2: pd.DataFrame) -> dict[str, Any]:
@@ -157,6 +169,138 @@ def validate_replay_tables(v2: pd.DataFrame, v3: pd.DataFrame, o2: pd.DataFrame)
         "o2_rows": int(len(o2)),
         "o2_tickers": int(o2["ticker"].nunique()),
         "o2_key_sha256": o2_key,
+    }
+
+
+def verify_v2_v3_control_equivalence(
+    v2_predictions_path: Path,
+    v3_predictions_path: Path,
+) -> dict[str, Any]:
+    """Verify exact V2 HGB_XS_MARKET ↔ V3-B control replay equivalence."""
+
+    v2 = pd.read_parquet(v2_predictions_path)
+    v3 = pd.read_parquet(v3_predictions_path)
+    left = v2[v2["candidate"].eq(HGB_XS_MARKET)].copy()
+    right = v3[v3["model"].eq(V3_B_BASELINE)].copy()
+    keys = ["fold", "ticker", "date", "signal_session_index", "binary_target"]
+    required_left = set(keys) | {"score"}
+    required_right = set(keys) | {"score"}
+    if not required_left.issubset(left.columns) or not required_right.issubset(right.columns):
+        raise RuntimeError("V2/V3 control predictions are missing equivalence columns")
+    left = left.sort_values(keys, kind="mergesort").reset_index(drop=True)
+    right = right.sort_values(keys, kind="mergesort").reset_index(drop=True)
+    if not left[keys].equals(right[keys]):
+        raise RuntimeError("V2 HGB_XS_MARKET and V3-B control identities differ")
+    left_score = pd.to_numeric(left["score"], errors="raise").to_numpy(dtype=float)
+    right_score = pd.to_numeric(right["score"], errors="raise").to_numpy(dtype=float)
+    if len(left_score) != len(right_score):
+        raise RuntimeError("V2/V3 control prediction row counts differ")
+    max_abs_diff = float(np.max(np.abs(left_score - right_score))) if len(left_score) else 0.0
+    if max_abs_diff != 0.0:
+        raise RuntimeError(f"V2/V3 control scores differ: max_abs_diff={max_abs_diff}")
+    return {
+        "status": "V2_V3_CONTROL_EXACT_EQUIVALENCE_PASS",
+        "v2_model": HGB_XS_MARKET,
+        "v3_model": V3_B_BASELINE,
+        "rows": int(len(left)),
+        "identity_exact": True,
+        "score_exact": True,
+        "max_score_abs_diff": max_abs_diff,
+        "folds": [str(value) for value in left["fold"].drop_duplicates().tolist()],
+        "v2_predictions_sha256": sha256_file(v2_predictions_path),
+        "v3_predictions_sha256": sha256_file(v3_predictions_path),
+    }
+
+
+def apply_conditional_ladder(
+    v2_summary: dict[str, Any],
+    v3_summary: dict[str, Any],
+    o2_summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep downstream evidence diagnostic when its parent does not pass."""
+
+    v3_parent_pass = v3_summary.get("decision") == "V3_FINAL_STRUCTURE_LITE_LATE_DEV_PASS"
+    diagnostic_decision = str(o2_summary.get("diagnostic_decision", o2_summary.get("decision", "UNKNOWN")))
+    clean_lineage_decision = (
+        "O2_CLEAN_LINEAGE_SURVIVOR" if v3_parent_pass and diagnostic_decision == "O2_SURVIVOR" else
+        "O2_CLEAN_LINEAGE_NO_SURVIVOR" if v3_parent_pass else
+        "O2_DIAGNOSTIC_ORPHANED_PARENT"
+    )
+    o2_summary["diagnostic_decision"] = diagnostic_decision
+    o2_summary["clean_lineage_decision"] = clean_lineage_decision
+    o2_summary["parent_v3_b_decision"] = v3_summary.get("decision")
+    o2_summary["conditional_ladder_policy"] = "downstream_verdict_does_not_automatically_propagate"
+    o2_summary["decision"] = clean_lineage_decision
+    return {
+        "v2": {"status": v2_summary.get("champion_status"), "champion": v2_summary.get("champion")},
+        "v3_b": {"status": v3_summary.get("decision"), "parent_pass": v3_parent_pass},
+        "o2": {
+            "diagnostic_decision": diagnostic_decision,
+            "clean_lineage_decision": clean_lineage_decision,
+            "parent_v3_b_decision": v3_summary.get("decision"),
+        },
+        "policy": "downstream_verdict_does_not_automatically_propagate",
+    }
+
+
+def review_existing_replay_artifacts(replay_root: Path, output_dir: Path) -> dict[str, Any]:
+    """Audit an already-completed replay without refitting or rewriting it."""
+
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise RuntimeError(f"review output must be new or empty: {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = replay_root / "artifact_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_mismatches: list[dict[str, str]] = []
+    for relative, expected in manifest.get("artifact_sha256", {}).items():
+        path = replay_root / relative
+        actual = sha256_file(path) if path.is_file() else "MISSING"
+        if actual != expected:
+            manifest_mismatches.append({"path": relative, "expected": expected, "actual": actual})
+    if manifest_mismatches:
+        raise RuntimeError(f"existing replay manifest mismatch: {manifest_mismatches[:3]}")
+    v2_summary = json.loads((replay_root / "v2" / "summary.json").read_text(encoding="utf-8"))
+    v3_summary = json.loads((replay_root / "v3b" / "summary.json").read_text(encoding="utf-8"))
+    o2_summary = json.loads((replay_root / "o2" / "summary.json").read_text(encoding="utf-8"))
+    equivalence = verify_v2_v3_control_equivalence(
+        replay_root / "v2" / "predictions.parquet",
+        replay_root / "v3b" / "predictions.parquet",
+    )
+    ladder = apply_conditional_ladder(v2_summary, v3_summary, o2_summary)
+    sources = {
+        "replay_manifest": sha256_file(manifest_path),
+        "v2_predictions": sha256_file(replay_root / "v2" / "predictions.parquet"),
+        "v3_b_predictions": sha256_file(replay_root / "v3b" / "predictions.parquet"),
+        "v3_b_summary": sha256_file(replay_root / "v3b" / "summary.json"),
+        "o2_summary": sha256_file(replay_root / "o2" / "summary.json"),
+    }
+    review = {
+        "status": "PIT_SAFE_REPLAY_REVIEW_COMPLETE",
+        "replay_root": str(replay_root),
+        "existing_manifest_artifacts_valid": True,
+        "source_sha256": sources,
+        "v2_v3_control_equivalence": equivalence,
+        "conditional_ladder": ladder,
+        "refit_performed": False,
+        "provider_calls": False,
+        "fresh_forward_outcomes_accessed": False,
+        "canonical_models_overwritten": False,
+    }
+    review_path = output_dir / "review_summary.json"
+    review_path.write_text(json.dumps(review, indent=2, sort_keys=True, default=str), encoding="utf-8")
+    artifact_manifest = {
+        "schema": "idx-trade/pit-safe-replay-review-v1",
+        "review_summary_sha256": sha256_file(review_path),
+        "source_sha256": sources,
+    }
+    artifact_manifest_path = output_dir / "artifact_manifest.json"
+    artifact_manifest_path.write_text(json.dumps(artifact_manifest, indent=2, sort_keys=True), encoding="utf-8")
+    return {
+        **review,
+        "review_summary_path": str(review_path),
+        "review_summary_sha256": sha256_file(review_path),
+        "artifact_manifest_path": str(artifact_manifest_path),
+        "artifact_manifest_sha256": sha256_file(artifact_manifest_path),
     }
 
 
@@ -413,6 +557,7 @@ def _run_o2(table: pd.DataFrame, output_dir: Path) -> dict[str, Any]:
     summary = {
         "status": "O2_REPLAY_COMPLETE",
         "decision": decision,
+        "diagnostic_decision": decision,
         "models": list(models),
         "fold_count": len(RANKING_V2_FOLDS),
         "row_count": int(len(table)),
@@ -498,6 +643,11 @@ def run_replay(
     v2_summary = _run_v2(v2, output_dir / "v2")
     v3_summary = _run_v3b(v3, output_dir / "v3b")
     o2_summary = _run_o2(o2, output_dir / "o2")
+    control_equivalence = verify_v2_v3_control_equivalence(
+        output_dir / "v2" / "predictions.parquet",
+        output_dir / "v3b" / "predictions.parquet",
+    )
+    ladder = apply_conditional_ladder(v2_summary, v3_summary, o2_summary)
     summary = {
         "status": "PIT_SAFE_HISTORICAL_REPLAY_COMPLETE",
         "lineage": "PIT-SAFE-RECONSTRUCTION-V1",
@@ -506,6 +656,8 @@ def run_replay(
         "v2": v2_summary,
         "v3_b": v3_summary,
         "o2": o2_summary,
+        "v2_v3_control_equivalence": control_equivalence,
+        "conditional_ladder": ladder,
         "fresh_forward_outcomes_accessed": False,
         "provider_calls": False,
         "execution_grade_promoted": False,

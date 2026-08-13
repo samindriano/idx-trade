@@ -1711,3 +1711,23 @@ warnings. The external artifact manifest is verified `72/72` with SHA-256
 See `docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REPLAY_RUNTIME.md` and the
 updated handoff for the complete metric and hash record. Await independent
 ChatGPT review before any new model identity or forward counter decision.
+
+## 36. PIT-safe replay review 2 — 2026-08-13
+
+The existing corrected-lineage replay artifacts were independently checked
+without refitting. V2 `HGB_XS_MARKET` and the V3-B common-support control are
+exactly equivalent on `144,221` rows across V2F1-V2F6: identities match,
+scores match exactly, and maximum absolute score difference is `0.0`.
+
+The O2 result is now explicitly split into two statuses. Its raw historical
+diagnostic remains `O2_SURVIVOR`, but because the V3-B parent failed its exact
+late paired gate, the clean-lineage status is
+`O2_DIAGNOSTIC_ORPHANED_PARENT`. This is not an automatic O2 failure; the
+downstream diagnostic is preserved and cannot establish a clean O2 model
+identity or forward counter while its parent is invalid.
+
+Replay validation now parses `universe_primary_liquid` strictly as boolean and
+rejects truthy strings/numbers. Review-2 focused tests passed `6/6`, full
+pytest passed `494/494` with four existing warnings. See
+`docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REPLAY_REVIEW2.md` and the
+updated handoff for derivative review hashes and the conditional ladder.

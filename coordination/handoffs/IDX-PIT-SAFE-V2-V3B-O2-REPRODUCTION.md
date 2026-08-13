@@ -8,7 +8,8 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `cb198437940d1846c311482353cab7579f1511b4`
 branch: `codex/pit-safe-v2-v3b-o2-reproduction-research-v1`
-head_commit: `ab56f46569b398c529658b6b63d443cca89d0434`
+reviewed_head: `944d72966ad28b21eef23872762007b69294ee3d`
+head_commit: pending review-2 documentation commit
 
 ## Scope
 
@@ -47,8 +48,14 @@ Results:
 
 - V2 selected historical champion: `HGB_XS_MARKET`;
 - V3-B: `V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2`;
-- O2: `O2_SURVIVOR` on corrected historical development rows only;
+- O2 raw diagnostic: `O2_SURVIVOR`;
+- O2 clean-lineage conditional status: `O2_DIAGNOSTIC_ORPHANED_PARENT`;
 - no new canonical model lineage or prospective counter was created.
+
+The existing V2 `HGB_XS_MARKET` and V3-B control prediction artifacts were
+verified exactly equivalent: 144,221 identical row identities, exact scores,
+and maximum absolute score difference `0.0` across V2F1-V2F6. The downstream
+policy is `downstream_verdict_does_not_automatically_propagate`.
 
 The full metric tables and exact paired fold evidence are in
 `docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REPLAY_RUNTIME.md` and the
@@ -58,13 +65,21 @@ external artifact manifest. Manifest SHA:
 
 ## Validation
 
-- focused replay tests: `4 passed`;
+- focused review-2 tests: `6 passed`;
 - full pytest: `494 passed, 0 failed`, four existing warnings only;
 - `git diff --check`: PASS before documentation commit;
 - fresh-forward outcomes accessed: `false`;
 - provider calls: `false`;
 - execution-grade promoted: `false`;
 - canonical models overwritten: `false`.
+
+Review-2 derivative root:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\pit_safe_historical_replay_review2_20260813_001`
+
+- review summary SHA-256:
+  `9c0d23d1420327794e8d6603f4cad8ee78839fc0b33d8ef17984db7296bf5a3e`;
+- review manifest SHA-256:
+  `5029e2c58b89e5f962729dcc0703dcb9e50899de97f7674fe1bb0e57d058631a`.
 
 ## Decisions and blockers
 
