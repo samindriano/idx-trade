@@ -228,7 +228,18 @@ def main() -> int:
                 unresolved.append({"ticker": ticker, "window": window.label, "reason": "IDENTITY_UNRESOLVED"})
             else:
                 tasks.append((ticker, pair_id, window, {date.fromisoformat(value) for value in expected}))
-    (root / "sample_identity_resolution.json").write_bytes(json_bytes({"resolved_tickers": sorted({task[0] for task in tasks}), "unresolved": unresolved, "sample_manifest_sha256": sample_sha}))
+    resolved_identity_records = []
+    for ticker in PILOT_TICKERS:
+        identity_rows = identity[identity["ticker"] == ticker]
+        resolved_rows = identity_rows[identity_rows["identity_final_category"] == "RESOLVED"] if not identity_rows.empty else identity_rows
+        if len(resolved_rows) == 1:
+            row = resolved_rows.iloc[0]
+            resolved_identity_records.append({"ticker": ticker, "pair_id": str(row["pair_id"]),
+                                              "identity_status": str(row["identity_status"]),
+                                              "identity_final_category": str(row["identity_final_category"]),
+                                              "source_csv_sha256": sha256_file(args.identity_census)})
+    (root / "sample_identity_resolution.json").write_bytes(json_bytes({"resolved_identities": resolved_identity_records,
+        "unresolved": unresolved, "sample_manifest_sha256": sample_sha, "identity_source_sha256": sha256_file(args.identity_census)}))
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = {pool.submit(fetch_one, ticker, pair_id, window, session_dates): (ticker, window) for ticker, pair_id, window, session_dates in tasks}
         for future in as_completed(futures):
