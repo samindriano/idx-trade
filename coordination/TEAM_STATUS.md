@@ -111,7 +111,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 The `Foreign Flow feature contract V1` row above is superseded by this
 checkpoint: status `REVIEW`, branch
 `research/idx-foreign-flow-feature-contract-v1` at HEAD
-`09ef03ce64a9e3fa3c03a2370450827ccc89eb29`. The offline feature contract and
+`c000824f253fef41065edbe696811016d20392fe`. The offline feature contract and
 coverage audit are complete for review; external audit manifest SHA is
 `55a983fa0f9463429b10e493cef7da95b96f589ab6a6d9de7a52ad7d4bb6a714`.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
