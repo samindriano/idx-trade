@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: ec7261b3ddae9c2fb2cfd98fb9ea59b01ce57586
 branch: data/corporate-action-pit-deterministic-linkage-v1
-head_commit: pending final commit
+head_commit: `87e0304709b9b3cdc3e413f74c2dcf7630cb539e`
 
 ## Scope
 
@@ -64,8 +64,8 @@ is the pre-existing unrelated storage revision-conflict expectation in
 `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`;
 this lane did not touch `storage.py`.
 
-`git diff --check`: clean before documentation-only updates; rerun after final
-staging. Final HEAD and clean/synced status are filled after commit/push.
+`git diff --check`: clean after final staging. Working tree is expected clean
+after this handoff metadata commit and push.
 
 ## Recommended next action
 
