@@ -39,7 +39,9 @@ def run_adversarial_data_gate(
     tradability_intervals: pd.DataFrame,
     tradability_coverage_windows: pd.DataFrame,
     *,
-    corporate_action_verified: Mapping[str, bool],
+    tradability_anchors: pd.DataFrame | None = None,
+    split_history_verified: Mapping[str, bool],
+    dividend_history_verified: Mapping[str, bool] | None = None,
     price_semantics_verified: Mapping[str, bool] | None = None,
 ) -> dict[str, object]:
     """Run the hard data gate on deliberately difficult IDX names.
@@ -56,7 +58,9 @@ def run_adversarial_data_gate(
         security_master,
         tradability_intervals,
         tradability_coverage_windows,
-        corporate_action_verified=corporate_action_verified,
+        tradability_anchors=tradability_anchors,
+        split_history_verified=split_history_verified,
+        dividend_history_verified=dividend_history_verified,
         price_semantics_verified=price_semantics_verified,
     )
 

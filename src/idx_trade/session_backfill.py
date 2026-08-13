@@ -7,7 +7,16 @@ from uuid import uuid4
 
 import pandas as pd
 
-from .providers.idx_sessions import fetch_exchange_sessions_month, monthly_session_page_url
+from .providers.idx_sessions import (
+    IDX_DAILY_STATISTICS_SOURCE_ID,
+    IDX_DIGITAL_STATISTICS_SOURCE_ID,
+    ExchangeSessionSourceResult,
+    _fetch_json,
+    daily_statistics_url,
+    fetch_exchange_sessions_month,
+    fetch_exchange_sessions_month_with_source,
+    monthly_session_data_url,
+)
 from .storage import write_csv_atomic
 
 
@@ -29,6 +38,8 @@ def run_exchange_session_backfill(
     report_dir: str | Path,
     *,
     fetch_month=fetch_exchange_sessions_month,
+    fetch_json=None,
+    fetch_daily_statistics_json=None,
 ) -> dict[str, object]:
     """Persist official IDX Exchange-Day evidence for a candidate research range."""
 
@@ -43,9 +54,41 @@ def run_exchange_session_backfill(
     source_rows: list[dict[str, object]] = []
 
     for period in months:
-        url = monthly_session_page_url(period.year, period.month)
+        monthly_url = monthly_session_data_url(period.year, period.month)
+        daily_url = daily_statistics_url(
+            pd.Timestamp(period.start_time), pd.Timestamp(period.end_time)
+        )
         try:
-            month_sessions = pd.DatetimeIndex(fetch_month(period.year, period.month))
+            if fetch_month is fetch_exchange_sessions_month:
+                result = fetch_exchange_sessions_month_with_source(
+                    period.year,
+                    period.month,
+                    fetch_json=fetch_json or _fetch_json,
+                    fetch_daily_statistics_json=fetch_daily_statistics_json,
+                )
+                month_sessions = result.sessions
+                source_identity = result.source_identity
+                source_ref = result.source_ref
+                fallback_reason = result.fallback_reason
+                attempted_identities = result.attempted_source_identities
+                attempted_refs = result.attempted_source_refs
+            else:
+                raw_result = fetch_month(period.year, period.month)
+                if isinstance(raw_result, ExchangeSessionSourceResult):
+                    result = raw_result
+                    month_sessions = result.sessions
+                    source_identity = result.source_identity
+                    source_ref = result.source_ref
+                    fallback_reason = result.fallback_reason
+                    attempted_identities = result.attempted_source_identities
+                    attempted_refs = result.attempted_source_refs
+                else:
+                    month_sessions = pd.DatetimeIndex(raw_result)
+                    source_identity = "INJECTED_FETCH_MONTH"
+                    source_ref = monthly_url
+                    fallback_reason = ""
+                    attempted_identities = (source_identity,)
+                    attempted_refs = (source_ref,)
             clipped = [
                 pd.Timestamp(value).normalize()
                 for value in month_sessions
@@ -56,7 +99,16 @@ def run_exchange_session_backfill(
                 {
                     "year": period.year,
                     "month": period.month,
-                    "source_ref": url,
+                    "source_identity": source_identity,
+                    "source_ref": source_ref,
+                    "source_name": source_identity,
+                    "fallback_reason": fallback_reason,
+                    "attempted_source_identities": json.dumps(
+                        list(attempted_identities), ensure_ascii=False
+                    ),
+                    "attempted_source_refs": json.dumps(
+                        list(attempted_refs), ensure_ascii=False
+                    ),
                     "status": "PARSED",
                     "sessions_in_requested_range": len(clipped),
                     "error": "",
@@ -67,7 +119,20 @@ def run_exchange_session_backfill(
                 {
                     "year": period.year,
                     "month": period.month,
-                    "source_ref": url,
+                    "source_identity": "IDX_SESSION_SOURCE_UNRESOLVED",
+                    "source_ref": "|".join((monthly_url, daily_url)),
+                    "source_name": "IDX_OFFICIAL_SESSION_SOURCES",
+                    "fallback_reason": "",
+                    "attempted_source_identities": json.dumps(
+                        [
+                            IDX_DIGITAL_STATISTICS_SOURCE_ID,
+                            IDX_DAILY_STATISTICS_SOURCE_ID,
+                        ],
+                        ensure_ascii=False,
+                    ),
+                    "attempted_source_refs": json.dumps(
+                        [monthly_url, daily_url], ensure_ascii=False
+                    ),
                     "status": "ERROR",
                     "sessions_in_requested_range": 0,
                     "error": str(error),
@@ -93,7 +158,28 @@ def run_exchange_session_backfill(
         "last_session": ordered.max().date().isoformat() if len(ordered) else None,
         "sessions_sha256": _sessions_sha256(ordered),
         "complete": bool(len(ordered)) and errors == 0,
-        "source": "IDX_DIGITAL_STATISTICS_DAILY_TRADING_TABLE",
+        "source": "IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES",
+        "source_identity": (
+            source_report["source_identity"].dropna().astype(str).drop_duplicates().iloc[0]
+            if not source_report.empty
+            and source_report["source_identity"].dropna().astype(str).drop_duplicates().size == 1
+            else "MULTI_SOURCE_OR_UNRESOLVED"
+        ),
+        "source_identities": (
+            sorted(source_report["source_identity"].dropna().astype(str).unique().tolist())
+            if not source_report.empty
+            else []
+        ),
+        "source_references": (
+            sorted(source_report["source_ref"].dropna().astype(str).unique().tolist())
+            if not source_report.empty
+            else []
+        ),
+        "fallback_months": (
+            int(source_report["fallback_reason"].fillna("").astype(str).ne("").sum())
+            if not source_report.empty
+            else 0
+        ),
     }
     _atomic_json(summary, report_dir / "exchange_session_summary.json")
     return summary
