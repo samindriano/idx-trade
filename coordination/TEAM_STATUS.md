@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 10:24 Asia/Jakarta
+Last coordinated update: 2026-08-13 10:51 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -64,7 +64,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Market/index prospective EOD archive extension | `AUTOMATED` | `Codex/Forward-EOD-Automation-UI` | `integration/forward-eod-automation-monitoring` / `666ec11` | Canonical `IDXTrade-ForwardEOD` is installed and `Ready`: daily 18:00 Asia/Jakarta plus logon catch-up, StartWhenAvailable, IgnoreNew, network guard, and existing repo/runtime paths. Legacy Open task is Disabled; first scheduled run remains pending. |
 | Canonical IDXTrade-ForwardEOD automation audit | `DONE` | `Codex/Forward-EOD-Automation-Audit` | `integration/forward-eod-automation-monitoring` / `666ec11` | Installation and read-only verification complete; checkpoint `2026-08-13_FORWARD_EOD_AUTOMATION_INSTALLED` pushed. Stockbit remains separate/Ready, task/runtime credential scans are clean, and no provider capture was triggered. |
 | Canonical EOD adversarial test-gap audit | `ACTIVE` | `Codex/EOD-Test-Gap-Audit` | `codex/idx-eod-adversarial-tests-v0` / base `79eb694` | Repo-wide engineering-only adversarial audit of canonical EOD runtime, source validation, artifact/hash/session integrity, catch-up/idempotency, partial/corrupt/provider/stale-date failures, outcome locks, fingerprints, duplicates, and ambiguous session resolution. No scientific/model behavior changes and no outcome access. |
-| Repository-wide scientific integrity and reproducibility audit | `ACTIVE` | `Codex/Scientific-Integrity-Audit` | `codex/scientific-integrity-audit-v1` / planned from `origin/main` `79eb694` | Comprehensive outcome-blind audit of code, manifests/hashes, provenance/PIT, model and feature identities, branch/checkpoint/handoff verdict lineage, mutable-artifact risk, and fail-open behavior. No experiment reruns or protected-outcome access; only bounded safe engineering remediation is authorized. |
+| Repository-wide scientific integrity and reproducibility audit | `REVIEW` | `Codex/Scientific-Integrity-Audit` | `codex/scientific-integrity-audit-v1` @ `1a3d785b10e33af1f6f723fb4a23cf8a61980b0a` | `NO-GO_FOR_REPRODUCIBLE_RESEARCH_RELEASE`: comprehensive outcome-blind audit complete. Confirmed fail-open data/provenance paths and canonical O2.1/Reliability sidecar integration gap are documented; no model, data, provider, scheduler, or outcome changes. Await independent ChatGPT review. |
 | Canonical data-source / provenance registry | `ACTIVE` | `Codex/Provenance-Registry` | `codex/data-source-provenance-registry-v1` / planned from current `origin/main` | Build a machine-readable registry and contradiction/staleness validator from accepted repository evidence/checkpoints only. Documentation/schema/tests scope; no provider calls, data acquisition, outcome access, experiment reruns, scientific remediation, or reinterpretation of unresolved conclusions. Coordinate boundaries with the active scientific-integrity audit. |
 
 ## Cross-chat no-duplicate rules currently in force
