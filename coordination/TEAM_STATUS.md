@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 09:28 Asia/Jakarta
+Last coordinated update: 2026-08-13 09:31 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -63,6 +63,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Frontend monitoring / capture system | `REVIEW` | `Codex/Frontend Editorial Tech` | `codex/frontend-compare-v2` / `bc91a5f` | Read-only monitoring now presents the automated session archive and all three monitored lanes: O2, V3-B, and V2. UI was simplified to a compact archive, three score cards, and a slim shared-session summary; manual capture/date controls remain removed. Build and `/monitoring`, `/compare`, and `/api/monitor/status` HTTP 200 pass. Local runtime reports V2 + V3-B artifacts for 2026-08-10; O2 remains awaiting runtime score artifact. |
 | Market/index prospective EOD archive extension | `AUTOMATED` | `Codex/Forward-EOD-Automation-UI` | `integration/forward-eod-automation-monitoring` / `666ec11` | Canonical `IDXTrade-ForwardEOD` is installed and `Ready`: daily 18:00 Asia/Jakarta plus logon catch-up, StartWhenAvailable, IgnoreNew, network guard, and existing repo/runtime paths. Legacy Open task is Disabled; first scheduled run remains pending. |
 | Canonical IDXTrade-ForwardEOD automation audit | `DONE` | `Codex/Forward-EOD-Automation-Audit` | `integration/forward-eod-automation-monitoring` / `666ec11` | Installation and read-only verification complete; checkpoint `2026-08-13_FORWARD_EOD_AUTOMATION_INSTALLED` pushed. Stockbit remains separate/Ready, task/runtime credential scans are clean, and no provider capture was triggered. |
+| Repository-wide scientific integrity and reproducibility audit | `ACTIVE` | `Codex/Scientific-Integrity-Audit` | `codex/scientific-integrity-audit-v1` / planned from `origin/main` `79eb694` | Comprehensive outcome-blind audit of code, manifests/hashes, provenance/PIT, model and feature identities, branch/checkpoint/handoff verdict lineage, mutable-artifact risk, and fail-open behavior. No experiment reruns or protected-outcome access; only bounded safe engineering remediation is authorized. |
 
 ## Cross-chat no-duplicate rules currently in force
 
