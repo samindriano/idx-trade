@@ -38,7 +38,50 @@ def test_features_start_on_next_session_and_do_not_use_same_session_flow() -> No
     changed.loc[changed["session_date"].eq(sessions[1]), "foreign_net"] = 999999
     changed.loc[changed["session_date"].eq(sessions[1]), "foreign_buy"] = 999999
     changed_output, _ = materialize_foreign_flow_features(changed, volume, sessions, master)
-    assert changed_output.loc[changed_output["feature_session"].eq(sessions[1]), "foreign_net_to_volume_1"].iloc[0] == pytest.approx(0.1)
+    baseline_row = output.loc[output["feature_session"].eq(sessions[1])].iloc[0]
+    changed_row = changed_output.loc[changed_output["feature_session"].eq(sessions[1])].iloc[0]
+    pd.testing.assert_series_equal(
+        baseline_row.loc[list(FEATURE_COLUMNS)],
+        changed_row.loc[list(FEATURE_COLUMNS)],
+        check_names=False,
+    )
+
+
+def test_gross_one_day_is_lagged_and_responds_to_prior_flow() -> None:
+    flow, volume, sessions, master = _inputs()
+    baseline, _ = materialize_foreign_flow_features(flow, volume, sessions, master)
+    target = sessions[5]
+    target_row = baseline.loc[baseline["feature_session"].eq(target)].iloc[0]
+    prior = sessions[4]
+    changed = flow.copy()
+    changed.loc[changed["session_date"].eq(prior), "foreign_buy"] += 50
+    changed.loc[changed["session_date"].eq(prior), "foreign_net"] += 50
+    changed_output, _ = materialize_foreign_flow_features(changed, volume, sessions, master)
+    changed_row = changed_output.loc[changed_output["feature_session"].eq(target)].iloc[0]
+    assert changed_row["foreign_gross_to_volume_1"] == pytest.approx(100 / 100)
+    assert changed_row["foreign_gross_to_volume_1"] != target_row["foreign_gross_to_volume_1"]
+
+
+def test_no_future_or_same_session_flow_or_volume_leaks_into_any_feature() -> None:
+    flow, volume, sessions, master = _inputs()
+    baseline, _ = materialize_foreign_flow_features(flow, volume, sessions, master)
+    target = sessions[10]
+    changed_flow = flow.copy()
+    changed_flow.loc[changed_flow["session_date"].eq(target), "foreign_buy"] += 100000
+    changed_flow.loc[changed_flow["session_date"].eq(target), "foreign_sell"] += 200000
+    changed_flow.loc[changed_flow["session_date"].eq(target), "foreign_net"] += 100000 - 200000
+    changed_volume = volume.copy()
+    changed_volume.loc[changed_volume["date"].eq(target), "raw_volume"] = 999999999
+    changed, _ = materialize_foreign_flow_features(
+        changed_flow, changed_volume, sessions, master
+    )
+    baseline_row = baseline.loc[baseline["feature_session"].eq(target)].iloc[0]
+    changed_row = changed.loc[changed["feature_session"].eq(target)].iloc[0]
+    pd.testing.assert_series_equal(
+        baseline_row.loc[list(FEATURE_COLUMNS)],
+        changed_row.loc[list(FEATURE_COLUMNS)],
+        check_names=False,
+    )
 
 
 def test_zero_volume_is_missing_not_a_zero_or_infinite_feature() -> None:

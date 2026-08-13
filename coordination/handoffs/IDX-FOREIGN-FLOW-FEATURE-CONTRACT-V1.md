@@ -8,7 +8,7 @@ reasoning_level: LIGHT
 source_repository: samindriano/idx-trade
 source_commit: f4d997c55f90c86a72dbad2719c6ad30a08919d4
 branch: research/idx-foreign-flow-feature-contract-v1
-head_commit: 09ef03ce64a9e3fa3c03a2370450827ccc89eb29
+head_commit: pending remediation commit
 scope: feature contract and offline materialization/coverage audit only
 
 ## Files changed
@@ -26,10 +26,13 @@ scope: feature contract and offline materialization/coverage audit only
   manifest SHA `fe9b8f64b6915f252502d114a06b107f3f9ea9b50205b0bacb47422f70834334`.
 - Official IDX Stock Summary regular `volume` was used as the denominator;
   Yahoo/raw OHLCV and NonRegularVolume were not used.
-- Materialized: 1,102,650 rows, 979 tickers, 1,259 feature sessions,
-  951,315 fully available, 150,355 partial, 980 missing.
-- 28 accepted archive sessions lack an existing canonical volume artifact and
-  are explicitly not materialized.
+- Remediated materialization: 1,102,650 rows, 979 tickers, 1,259 feature
+  sessions, 964,078 fully available, 137,592 partial, 980 missing.
+- The exact 28 accepted archive sessions lacking an existing canonical volume
+  artifact are recorded programmatically in the external audit manifest; no
+  weekday/calendar inference was used.
+- Exact dates are also listed in
+  `docs/checkpoints/2026-08-14_FOREIGN_FLOW_FEATURE_CONTRACT_CAUSAL_REMEDIATION.md`.
 
 ## Decisions
 
@@ -38,19 +41,23 @@ scope: feature contract and offline materialization/coverage audit only
   missing, never zero-filled or forward-filled.
 - No clipping, performance selection, outcome access, provider calls, model
   fitting, or protected-artifact access occurred.
+- `foreign_gross_to_volume_1` now uses ForeignBuy/ForeignSell/regular volume
+  from the prior official session, matching the causal one-session net path.
 
 ## Artifact hashes
 
-- feature parquet: `fbfe79290270d3f9955a81366352e9b3615dd4bd61e73848bdb345154ac056f9`
-- materialization manifest:
-  `09102f0cd41a59dbd4392b6e15356ccb9bcc3e23ccd8ada3977b3a0fa0050957`
-- offline audit manifest:
-  `55a983fa0f9463429b10e493cef7da95b96f589ab6a6d9de7a52ad7d4bb6a714`
+- remediated feature parquet: `059471948ad9efb5b2343d9aed729d04c5e3f2c01881153679db579b3a1d1733`
+- remediated materialization manifest:
+  `8c45bb42cc9bda4002967f8bc5fd5509842947dbaa3e1f764e925cbe0f8ccd1a`
+- remediated offline audit manifest:
+  `2341df7d7ff646dc8a13da2a45e9220e0c4c569017b373ca72daed18dcb377e4`
 
 ## Validation
 
-- focused feature tests: 7 passed;
-- full IDX-Trade pytest: 47 passed;
+- focused feature tests: 9 passed;
+- full IDX-Trade pytest: 49 collected, 48 passed, 1 failed (unrelated
+  `tests/test_storage.py` expectation; the unrelated prior test change was
+  reverted as requested);
 - `git diff --check`: passed.
 
 ## Blocking risks / review points
@@ -62,6 +69,6 @@ scope: feature contract and offline materialization/coverage audit only
 
 ## Recommended next action
 
-Independent ChatGPT review of the formulas, denominator semantics, explicit
-28-session coverage gap, missingness policy, and artifact provenance. Keep the
-branch in REVIEW until accepted.
+Independent ChatGPT re-review of the causal remediation, exact 28-session
+coverage gap, missingness policy, and artifact provenance. Keep the branch in
+REVIEW until accepted.

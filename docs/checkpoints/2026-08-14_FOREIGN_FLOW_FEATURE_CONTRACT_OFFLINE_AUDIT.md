@@ -4,7 +4,9 @@ Status: `REVIEW`
 
 Branch: `research/idx-foreign-flow-feature-contract-v1`
 
-Base: `f4d997c55f90c86a72dbad2719c6ad30a08919d4`
+Initial audit base: `f4d997c55f90c86a72dbad2719c6ad30a08919d4`
+
+Remediated from reviewed HEAD `c000824f253fef41065edbe696811016d20392fe`.
 
 ## Scope and boundaries
 
@@ -56,20 +58,20 @@ own-history normalization is applied in this stage.
 The output is 1,102,650 candidate rows over 1,259 feature sessions
 (2021-04-30 through 2026-07-31) and 979 tickers:
 
-- fully available: 951,315 rows (86.28%);
-- partial: 150,355 rows (13.64%);
+- fully available: 964,078 rows (87.44%);
+- partial: 137,592 rows (12.48%);
 - missing: 980 rows (0.09%).
 
 Year-level availability:
 
 | Year | Candidate rows | Available | Partial | Missing | Available rate |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 2021 | 123,886 | 96,394 | 26,971 | 521 | 77.81% |
-| 2022 | 195,828 | 170,737 | 24,787 | 304 | 87.19% |
-| 2023 | 208,328 | 180,105 | 28,144 | 79 | 86.45% |
-| 2024 | 220,212 | 192,393 | 27,777 | 42 | 87.37% |
-| 2025 | 225,155 | 197,191 | 27,938 | 26 | 87.58% |
-| 2026 through 2026-07-31 | 129,241 | 114,495 | 14,738 | 8 | 88.59% |
+| 2021 | 123,886 | 97,918 | 25,447 | 521 | 79.04% |
+| 2022 | 195,828 | 173,706 | 21,818 | 304 | 88.70% |
+| 2023 | 208,328 | 183,555 | 24,694 | 79 | 88.11% |
+| 2024 | 220,212 | 195,256 | 24,914 | 42 | 88.67% |
+| 2025 | 225,155 | 198,682 | 26,447 | 26 | 88.24% |
+| 2026 through 2026-07-31 | 129,241 | 114,961 | 14,272 | 8 | 88.95% |
 
 The dominant structural missingness is zero regular-market volume for the
 one-day ratio features (120,723 rows), plus missing-window input affecting the
@@ -78,10 +80,18 @@ diagnostics, not converted to zero or filled. Sign-consistency features remain
 available when exact flow history exists even if a volume denominator is not
 usable.
 
-The 28 archive sessions outside the materialized common-input window are:
+The exact 28 archive sessions outside the materialized common-input window,
+derived from the accepted flow-session set minus the official volume-session
+set, are:
 
-- 2021-04-01 through 2021-04-28: 20 sessions;
-- 2026-08-03 through 2026-08-13: 9 sessions.
+`2021-04-01`, `2021-04-05`, `2021-04-06`, `2021-04-07`, `2021-04-08`,
+`2021-04-09`, `2021-04-12`, `2021-04-13`, `2021-04-14`, `2021-04-15`,
+`2021-04-16`, `2021-04-19`, `2021-04-20`, `2021-04-21`, `2021-04-22`,
+`2021-04-23`, `2021-04-26`, `2021-04-27`, `2021-04-28`, `2026-08-03`,
+`2026-08-04`, `2026-08-05`, `2026-08-06`, `2026-08-07`, `2026-08-10`,
+`2026-08-11`, `2026-08-12`, `2026-08-13`.
+
+No weekday or calendar-day inference was used.
 
 They were not materialized because the accepted local official Stock Summary
 volume cache stops at 2021-04-29 and 2026-07-31. No network call or substitute
@@ -94,24 +104,39 @@ External artifacts are under
 
 | Artifact | SHA-256 |
 | --- | --- |
-| `foreign_flow_features.parquet` | `fbfe79290270d3f9955a81366352e9b3615dd4bd61e73848bdb345154ac056f9` |
-| `materialization_manifest.json` | `09102f0cd41a59dbd4392b6e15356ccb9bcc3e23ccd8ada3977b3a0fa0050957` |
-| `offline_feature_audit_manifest.json` | `55a983fa0f9463429b10e493cef7da95b96f589ab6a6d9de7a52ad7d4bb6a714` |
-| `coverage_by_session.csv` | `bc3056a70be0e4811611eb10c703d3a32db7cdf39170bf3e03ae1242ca2dab9d` |
-| `coverage_by_ticker.csv` | `f799942dd56f29711cf306d4053d3b5304e3e6b788074e33f2c6853ba77bc24c` |
-| `coverage_by_year.csv` | `ee0edda2f8abb5fbdd6ff962460d68141f9d503f26f67e9c48ac889c65f4b2d3` |
-| `feature_distribution.csv` | `3c291098db2d207a77f69f67cbb294f9945e61c1794304faf3c87cfa1ba35c6a` |
+| `foreign_flow_features.parquet` | `059471948ad9efb5b2343d9aed729d04c5e3f2c01881153679db579b3a1d1733` |
+| `materialization_manifest.json` | `8c45bb42cc9bda4002967f8bc5fd5509842947dbaa3e1f764e925cbe0f8ccd1a` |
+| `offline_feature_audit_manifest.json` | `2341df7d7ff646dc8a13da2a45e9220e0c4c569017b373ca72daed18dcb377e4` |
+| `coverage_by_session.csv` | `b99bf46af5ac6a09a72c0bc22832ab6ec4d3b70ea53fb1f499c3ee3d8a9ac07e` |
+| `coverage_by_ticker.csv` | `6cc28ae4b9e3b4fdb0f4f07c53dab90aa26f894ad43f82391861fdc5985090bc` |
+| `coverage_by_year.csv` | `a1fbef586dfc85d96265225f111fe3bea73f8d063ad956148736d006c8c71309` |
+| `feature_distribution.csv` | `748b76104a518409d719b8b4a80e4b2474ceb2570870e418bd4e29a2c7a25a83` |
 | `missing_reason_counts.csv` | `3eb7a2d321bc961f0bd2613af977f0cbd60d8f2986932f5726e6142b45bb9e36` |
 
 ## Validation
 
-- focused feature tests: `7 passed`;
-- full IDX-Trade pytest from this worktree: `47 passed`;
+- focused feature tests: `9 passed`;
+- full IDX-Trade pytest from this worktree: `49 collected, 48 passed, 1 failed`;
+- the single failure is the unrelated storage expectation documented in the
+  causal-remediation checkpoint; the prior audit's `47 passed` result predates
+  this remediation run;
 - `git diff --check`: passed;
 - causality regression: changing flow on session `t+1` does not change the
   feature row for `t+1`; the feature row uses flow only through `t`;
 - source audit: official Stock Summary regular `volume` is the only volume
   denominator; Yahoo/raw OHLCV was not used.
+
+## Causal remediation
+
+`foreign_gross_to_volume_1` now uses the exact prior-session arrays, so for
+feature session `t+1` it is `(ForeignBuy[t] + ForeignSell[t]) /
+RegularVolume[t]`. Regression tests cover all feature columns against changes
+to same-session flow/volume, prior-session gross-flow response, rolling
+windows, sign consistency, acceleration, and one-day net causality.
+
+The prior feature parquet SHA
+`fbfe79290270d3f9955a81366352e9b3615dd4bd61e73848bdb345154ac056f9` is no
+longer authoritative. The rematerialized artifact is the SHA listed above.
 
 ## Decision
 

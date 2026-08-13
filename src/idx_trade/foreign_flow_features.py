@@ -313,7 +313,14 @@ def _rolling_ticker_frame(
     gross = buy + sell
     gross_ratio = np.full(count, np.nan, dtype=float)
     one_day_valid = ratio_reason_1 == None  # noqa: E711
-    gross_ratio[one_day_valid] = gross[one_day_valid] / one_day_volume[one_day_valid]
+    # ``feature_session[i]`` is the next official session after
+    # ``flow_through_session[i]``.  Align gross flow and denominator exactly as
+    # the one-session rolling net feature does: source values come from i - 1.
+    gross_through = np.full(count, np.nan, dtype=float)
+    volume_through = np.full(count, np.nan, dtype=float)
+    gross_through[1:] = gross[:-1]
+    volume_through[1:] = one_day_volume[:-1]
+    gross_ratio[one_day_valid] = gross_through[one_day_valid] / volume_through[one_day_valid]
 
     rows: list[dict[str, object]] = []
     for index in indices:
