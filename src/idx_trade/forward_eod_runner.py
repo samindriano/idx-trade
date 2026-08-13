@@ -109,6 +109,7 @@ def run_eod_catchup(
                 # canonical EOD engine from catching up newer sessions.
                 result["legacy_open_repair_status"] = "INCOMPLETE"
 
+        attempted_sessions: set[str] = set()
         while True:
             sessions = runtime._load_forward_calendar(paths)
             earliest = base._earliest_missing(paths, sessions) if len(sessions) else None
@@ -116,6 +117,13 @@ def run_eod_catchup(
             if earliest is None:
                 result["status"] = "NO_MISSING_SESSION"
                 break
+            expected_session = earliest.date().isoformat()
+            if expected_session in attempted_sessions:
+                raise RuntimeError(
+                    "EOD catch-up made no chronological progress after a DATA_READY capture: "
+                    f"session={expected_session}"
+                )
+            attempted_sessions.add(expected_session)
             captured = runtime.capture_session(root, target_date=earliest, batch_size=batch_size)
             if captured.get("status") != "DATA_READY":
                 result.update(
@@ -126,6 +134,17 @@ def run_eod_catchup(
                     }
                 )
                 break
+            try:
+                captured_session = base._normal_date(captured.get("session_date"))
+            except (TypeError, ValueError) as error:
+                raise RuntimeError("DATA_READY capture did not return a valid session_date") from error
+            if captured_session != earliest:
+                raise RuntimeError(
+                    "DATA_READY capture returned a different session than requested: "
+                    f"requested={expected_session} "
+                    f"returned={captured_session.date().isoformat()}"
+                )
+            captured = dict(captured)
             captured["session_date_validation"] = "PASS_CALENDAR_AND_EXACT_SOURCE_DATE"
             result["captured_sessions"].append(captured)
 

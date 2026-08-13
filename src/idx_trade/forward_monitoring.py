@@ -223,8 +223,15 @@ def _read_sessions(path: Path) -> pd.DatetimeIndex:
     frame = pd.read_csv(path)
     if "date" not in frame.columns:
         raise RuntimeError(f"official session artifact has no date column: {path}")
-    dates = pd.to_datetime(frame["date"], errors="coerce").dropna()
-    return pd.DatetimeIndex(dates).tz_localize(None).normalize().unique().sort_values()
+    dates = pd.to_datetime(frame["date"], errors="coerce")
+    if dates.isna().any():
+        raise RuntimeError(f"official session artifact contains an invalid date: {path}")
+    normalized = pd.DatetimeIndex(dates).tz_localize(None).normalize()
+    if normalized.duplicated().any():
+        duplicates = normalized[normalized.duplicated(keep=False)]
+        sample = sorted({value.date().isoformat() for value in duplicates})[:10]
+        raise RuntimeError(f"official session artifact contains duplicate dates: {sample}")
+    return normalized.sort_values()
 
 
 def sync_forward_calendar(paths: RuntimePaths, *, through: pd.Timestamp | None = None) -> pd.DatetimeIndex:
@@ -417,6 +424,7 @@ def _verify_ready_artifacts(
     evidence_path: Path,
     manifest_path: Path,
     *,
+    expected_session: str | None = None,
     snapshot_sha256: str | None = None,
     evidence_sha256: str | None = None,
     manifest_sha256: str | None = None,
@@ -433,6 +441,38 @@ def _verify_ready_artifacts(
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return False
+    if not isinstance(manifest, dict):
+        return False
+    if manifest.get("status") != "DATA_READY":
+        return False
+    if manifest.get("outcome_blind") is not True:
+        return False
+    if manifest.get("forward_outcomes_accessed") is not False:
+        return False
+    try:
+        manifest_session = _normal_date(manifest.get("session_date")).date().isoformat()
+    except (TypeError, ValueError):
+        return False
+    if expected_session is not None and manifest_session != expected_session:
+        return False
+
+    core_pairs = (
+        ("snapshot_path", "snapshot_sha256", snapshot_path),
+        ("evidence_path", "evidence_sha256", evidence_path),
+    )
+    declared_paths: set[Path] = {manifest_path.resolve()}
+    for path_key, hash_key, actual_path in core_pairs:
+        declared_path = manifest.get(path_key)
+        declared_hash = manifest.get(hash_key)
+        if not declared_path or not declared_hash:
+            return False
+        resolved = Path(str(declared_path)).resolve()
+        if resolved != actual_path.resolve() or str(declared_hash) != sha256_file(actual_path):
+            return False
+        if resolved in declared_paths:
+            return False
+        declared_paths.add(resolved)
+
     artifact_pairs = (
         ("stock_summary_raw_path", "stock_summary_raw_sha256"),
         ("stock_summary_path", "stock_summary_sha256"),
@@ -448,8 +488,38 @@ def _verify_ready_artifacts(
         if not artifact_path or not expected_hash:
             return False
         path = Path(str(artifact_path))
+        resolved = path.resolve()
+        if resolved in declared_paths:
+            return False
+        declared_paths.add(resolved)
         if not path.exists() or sha256_file(path) != str(expected_hash):
             return False
+    try:
+        snapshot = pd.read_parquet(snapshot_path)
+        evidence = pd.read_parquet(evidence_path)
+        if snapshot.empty or evidence.empty:
+            return False
+        if set(MODEL_INPUT_COLUMNS) - set(snapshot.columns):
+            return False
+        if {"ticker", "session_date"} - set(evidence.columns):
+            return False
+        snapshot_dates = pd.to_datetime(snapshot["date"], errors="coerce").dt.normalize()
+        evidence_dates = pd.to_datetime(evidence["session_date"], errors="coerce").dt.normalize()
+        expected = pd.Timestamp(manifest_session)
+        if snapshot_dates.isna().any() or not snapshot_dates.eq(expected).all():
+            return False
+        if evidence_dates.isna().any() or not evidence_dates.eq(expected).all():
+            return False
+        if snapshot.assign(date=snapshot_dates).duplicated(["ticker", "date"]).any():
+            return False
+        if evidence.assign(session_date=evidence_dates).duplicated(["ticker", "session_date"]).any():
+            return False
+        if "model_input_rows" in manifest and int(manifest["model_input_rows"]) != len(snapshot):
+            return False
+        if "point_evidence_rows" in manifest and int(manifest["point_evidence_rows"]) != len(evidence):
+            return False
+    except Exception:
+        return False
     return True
 
 
@@ -461,10 +531,69 @@ def _verify_ready_row(row: sqlite3.Row) -> bool:
         return False
     return _verify_ready_artifacts(
         paths[0], paths[1], paths[2],
+        expected_session=str(row["session_date"]),
         snapshot_sha256=row["snapshot_sha256"],
         evidence_sha256=row["evidence_sha256"],
         manifest_sha256=row["manifest_sha256"],
     )
+
+
+def _verify_model_run_artifacts(row: Any) -> bool:
+    """Verify a model result semantically before it can be treated as DONE."""
+
+    try:
+        artifact = Path(str(row["artifact_path"]))
+        manifest_path = Path(str(row["manifest_path"]))
+        if not artifact.exists() or not manifest_path.exists():
+            return False
+        artifact_sha = sha256_file(artifact)
+        manifest_sha = sha256_file(manifest_path)
+        if row["artifact_sha256"] and artifact_sha != str(row["artifact_sha256"]):
+            return False
+        if row["manifest_sha256"] and manifest_sha != str(row["manifest_sha256"]):
+            return False
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or manifest.get("status") != "DONE":
+            return False
+        session_key = str(row["session_date"])
+        model_id = str(row["model_id"])
+        fingerprint = str(row["model_fingerprint"])
+        if manifest.get("session_date") != session_key:
+            return False
+        if manifest.get("model_id") != model_id or manifest.get("model_sha256") != fingerprint:
+            return False
+        if manifest.get("outcome_blind") is not True:
+            return False
+        if manifest.get("fresh_forward_outcomes_accessed") is not False:
+            return False
+        if manifest.get("forward_outcome_access_marker_written") is not False:
+            return False
+        if "o2_counter_registered" in manifest and manifest.get("o2_counter_registered") is not True:
+            return False
+        if Path(str(manifest.get("score_artifact_path", ""))).resolve() != artifact.resolve():
+            return False
+        if manifest.get("score_artifact_sha256") != artifact_sha:
+            return False
+
+        frame = pd.read_parquet(artifact)
+        required = {"ticker", "session_date", "score", "model_id", "model_sha256"}
+        if frame.empty or required - set(frame.columns):
+            return False
+        if not frame["session_date"].astype(str).eq(session_key).all():
+            return False
+        if not frame["model_id"].astype(str).eq(model_id).all():
+            return False
+        if not frame["model_sha256"].astype(str).eq(fingerprint).all():
+            return False
+        if frame.duplicated(["ticker", "session_date"]).any():
+            return False
+        if int(manifest.get("score_rows", -1)) != len(frame):
+            return False
+        if int(manifest.get("scored_rows", -1)) != int(frame["score"].notna().sum()):
+            return False
+    except Exception:
+        return False
+    return True
 
 
 def _claim_session(paths: RuntimePaths, session: pd.Timestamp) -> tuple[str, str | None]:
@@ -959,7 +1088,7 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                     (key,),
                 ).fetchone()
                 if candidate is not None and _verify_ready_artifacts(
-                    snapshot, evidence, manifest
+                    snapshot, evidence, manifest, expected_session=key
                 ):
                     connection.execute(
                         """
@@ -1002,7 +1131,7 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                 continue
             artifact = Path(row["artifact_path"]) if row["artifact_path"] else None
             manifest = Path(row["manifest_path"]) if row["manifest_path"] else None
-            if artifact and manifest and artifact.exists() and manifest.exists():
+            if artifact and manifest and _verify_model_run_artifacts(row):
                 now = _utcnow()
                 connection.execute(
                     """
@@ -1019,7 +1148,8 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                 connection.execute(
                     """
                     UPDATE model_runs SET state='INTERRUPTED', updated_at=?,
-                        error_code='INTERRUPTED', error_message='worker disappeared before canonical completion'
+                        error_code='INCOMPLETE_ARTIFACTS',
+                        error_message='stale model artifacts failed semantic manifest verification'
                     WHERE session_date=? AND model_id=? AND model_fingerprint=?
                     """,
                     (_utcnow(), row["session_date"], row["model_id"], row["model_fingerprint"]),

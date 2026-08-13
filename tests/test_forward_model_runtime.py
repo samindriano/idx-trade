@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 
 import pandas as pd
+import pytest
 
 from idx_trade import forward_model_runtime as model_runtime
 from idx_trade import forward_monitoring as base
@@ -222,3 +223,22 @@ def test_o2_mixed_session_scores_valid_row_and_keeps_flat_row_unscored(tmp_path:
     assert manifest["fresh_forward_outcomes_accessed"] is False
     assert manifest["forward_outcome_access_marker_written"] is False
     assert registrations == [(2, 2)]
+
+
+@pytest.mark.parametrize(
+    "dates, message",
+    [
+        (["2026-08-11", "2026-08-11"], "duplicate dates"),
+        (["2026-08-11", "not-a-date"], "invalid date"),
+    ],
+)
+def test_model_calendar_rejects_ambiguous_or_invalid_sessions(
+    tmp_path: Path,
+    dates: list[str],
+    message: str,
+) -> None:
+    path = tmp_path / "exchange_sessions.csv"
+    pd.DataFrame({"date": dates}).to_csv(path, index=False)
+
+    with pytest.raises(RuntimeError, match=message):
+        model_runtime._read_dates(path)

@@ -177,8 +177,15 @@ def _read_dates(path: Path) -> pd.DatetimeIndex:
     frame = pd.read_csv(path)
     if "date" not in frame.columns:
         raise RuntimeError(f"official session artifact has no date column: {path}")
-    dates = pd.to_datetime(frame["date"], errors="coerce").dropna()
-    return pd.DatetimeIndex(dates).tz_localize(None).normalize().unique().sort_values()
+    dates = pd.to_datetime(frame["date"], errors="coerce")
+    if dates.isna().any():
+        raise RuntimeError(f"official session artifact contains an invalid date: {path}")
+    normalized = pd.DatetimeIndex(dates).tz_localize(None).normalize()
+    if normalized.duplicated().any():
+        duplicates = normalized[normalized.duplicated(keep=False)]
+        sample = sorted({value.date().isoformat() for value in duplicates})[:10]
+        raise RuntimeError(f"official session artifact contains duplicate dates: {sample}")
+    return normalized.sort_values()
 
 
 def _official_sessions(paths, target: pd.Timestamp) -> pd.DatetimeIndex:
@@ -676,17 +683,7 @@ def _update_run(paths, session_key: str, spec: FrozenModelSpec, **fields: object
 
 
 def _artifact_verified(row: Any) -> bool:
-    try:
-        artifact = Path(row["artifact_path"])
-        manifest = Path(row["manifest_path"])
-        return (
-            artifact.exists()
-            and manifest.exists()
-            and sha256_file(artifact) == row["artifact_sha256"]
-            and sha256_file(manifest) == row["manifest_sha256"]
-        )
-    except (OSError, TypeError):
-        return False
+    return base._verify_model_run_artifacts(row)
 
 
 def ensure_model_runs(paths, session_dates: Iterable[object] | None = None) -> int:

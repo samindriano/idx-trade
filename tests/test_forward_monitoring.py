@@ -379,3 +379,22 @@ def test_later_session_cannot_skip_earlier_missing_date(tmp_path: Path, monkeypa
 
     with pytest.raises(ValueError, match="cannot skip an earlier missing session"):
         monitor.capture_session(tmp_path, target_date=later)
+
+
+@pytest.mark.parametrize(
+    "dates, message",
+    [
+        (["2026-08-11", "2026-08-11"], "duplicate dates"),
+        (["2026-08-11", "not-a-date"], "invalid date"),
+    ],
+)
+def test_forward_calendar_rejects_ambiguous_or_invalid_sessions(
+    tmp_path: Path,
+    dates: list[str],
+    message: str,
+) -> None:
+    path = tmp_path / "exchange_sessions.csv"
+    pd.DataFrame({"date": dates}).to_csv(path, index=False)
+
+    with pytest.raises(RuntimeError, match=message):
+        monitor._read_sessions(path)
