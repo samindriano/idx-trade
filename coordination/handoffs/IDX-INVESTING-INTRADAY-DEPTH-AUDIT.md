@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 3704955e17a471b7a63b4da9f75fe1223fd79bbd
 branch: data/investing-intraday-depth-audit-v1
-head_commit: pending final documentation commit
+head_commit: 1d27f317722f3df8926ac7f9fffd0655082574a1
 scope: Bounded Investing.com 1-hour historical depth census across 737 V2/V3-B training-universe tickers for sparse July probes in 2018, 2020, 2022, 2024, and 2026, plus a deterministic 20-ticker daily fidelity check.
 files_changed:
   - docs/checkpoints/2026-08-13_INVESTING_INTRADAY_DEPTH_AUDIT.md

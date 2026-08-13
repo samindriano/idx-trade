@@ -148,6 +148,7 @@ Artifact root:
 - fidelity sample manifest: `affe3b25f5672e36d5a65eee71d2c57dda0ab16014961eb467bd983ab962875a`
 - fidelity mismatch details: `7f6073054fac76c32630099f4b7377a23df0b64931d472ca6666c5803419970d`
 - fidelity summary: `4c09137e527c06a614b20b94d9f07e08491eba50afcf2a644b5973bc50ad5b47`
-- final artifact manifest: `1d9c2107fd9cab44bd6b79df45f7e3d75ec299f4f6f6911e7817c090634be709`
+- final artifact manifest: `58b77c7d4d875d0e6e296f2f036162cf0e6f147419639aaa2a4dd8d14d0beca2`
+- failure-reason summary: `feb6535d92d7b971621c902fa336fbc87d33cb956194e353346305c0fd2513c4`
 
 No canonical panel, model, outcome, O2, or Path Risk artifact was changed.
