@@ -202,8 +202,14 @@ def classify_live_probe(rows: pd.DataFrame, config: dict[str, Any]) -> str:
     qualifying = paired[(paired.get("extended", 0) > 0) & (paired.get("regular", 0) == 0)]
     contradictions = paired[paired.get("regular", 0) > 0]
     minimum = int(config["decision_rules"]["minimum_consistent_pairs_for_confirmed_exclusion"])
+    # The probe can establish that regular excludes pre-open bars while the
+    # public extended session includes them.  It cannot establish that those
+    # bars are auction executions: the pinned raw response has no auction
+    # flag, trade classification, or auction-boundary field.  Therefore even
+    # a perfectly consistent regular/extended pair is not a confirmed auction
+    # conclusion.
     if len(qualifying) >= minimum and contradictions.empty:
-        return "TV60_OPEN_AUCTION_EXCLUSION_CONFIRMED"
+        return "TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN"
     if len(qualifying) > 0:
         return "TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN"
     if len(contradictions) > 0 and len(qualifying) == 0:
@@ -240,4 +246,3 @@ def summarize_live_response(request: dict[str, Any], response: dict[str, Any]) -
         "preopen_timestamps_wib": [item[0].isoformat() for item in preopen],
         "opening_window_timestamps_wib": [item[0].isoformat() for item in opening_window],
     }
-

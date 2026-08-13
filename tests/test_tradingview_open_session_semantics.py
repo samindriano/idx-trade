@@ -81,7 +81,7 @@ def test_classifier_requires_consistent_regular_vs_extended_pairs():
     for index in range(3):
         for session, count in (("regular", 0), ("extended", 1)):
             rows.append({"ticker": f"T{index}", "date": "2021-07-01", "timeframe": "1", "session": session, "status": "AVAILABLE", "preopen_bar_count": count})
-    assert classify_live_probe(pd.DataFrame(rows), {"decision_rules": {"minimum_consistent_pairs_for_confirmed_exclusion": 3}}) == "TV60_OPEN_AUCTION_EXCLUSION_CONFIRMED"
+    assert classify_live_probe(pd.DataFrame(rows), {"decision_rules": {"minimum_consistent_pairs_for_confirmed_exclusion": 3}}) == "TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN"
 
 
 def test_classifier_does_not_confirm_with_regular_preopen_contradiction():
