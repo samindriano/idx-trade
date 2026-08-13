@@ -9,7 +9,7 @@ source_repository: samindriano/idx-trade
 source_commit: `504c51bad25517bf496ee14856be704935d0f5d4`
 branch: `research/idx-v2-open-alpha-prereg-v1`
 scope: Narrow remediation of the reviewed clean-V2 Open-alpha preregistration; outcome-blind only.
-head_commit: to be set after remediation commit and normal fast-forward push
+head_commit: `58628d6c719a708b5e8d2049c579181095be68a6`
 
 ## Files changed
 
