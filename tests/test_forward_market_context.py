@@ -11,7 +11,10 @@ from idx_trade.providers.idx_index_summary import (
     fetch_index_summary_payload_capture,
     parse_index_summary_payload,
 )
-from idx_trade.providers.idx_stock_summary import fetch_stock_summary_payload_capture
+from idx_trade.providers.idx_stock_summary import (
+    fetch_stock_summary_payload_capture,
+    parse_stock_summary_payload,
+)
 
 
 DATE = "2026-08-11"
@@ -94,6 +97,29 @@ def test_stock_summary_capture_preserves_exact_raw_bytes_and_metadata():
     assert capture.params == {"date": "20260811"}
 
 
+@pytest.mark.parametrize("metadata", [1.5, True, float("inf")])
+def test_stock_summary_rejects_non_integral_or_non_finite_counts(metadata):
+    payload = _stock_payload()
+    payload["recordsTotal"] = metadata
+    with pytest.raises(ValueError, match="not an integer"):
+        fetch_stock_summary_payload_capture(DATE, session=_Session(_Response(payload)))
+
+
+def test_stock_summary_rejects_null_identity_and_non_finite_metrics():
+    payload = _stock_payload(records_total=1, rows=[{
+        "StockCode": None, "Date": DATE, "Volume": float("inf"), "Frequency": 1, "Value": 1,
+    }])
+    with pytest.raises(ValueError, match="StockCode"):
+        fetch_stock_summary_payload_capture(DATE, session=_Session(_Response(payload)))
+
+    parsed, _ = parse_stock_summary_payload(
+        {"data": [{"StockCode": "AAAA", "Date": DATE, "Volume": float("inf"), "Frequency": 1}]},
+        requested_date=DATE,
+        source_ref="idx://stock",
+    )
+    assert pd.isna(parsed.loc[0, "volume"])
+
+
 def test_index_summary_rejects_date_mismatch_and_normalizes_official_fields():
     with pytest.raises(ValueError, match="date mismatch"):
         parse_index_summary_payload(
@@ -125,6 +151,31 @@ def test_index_summary_capture_uses_records_total_gate():
     assert capture.records_total == 1
     assert capture.endpoint.endswith("TradingSummary/GetIndexSummary")
     assert capture.params == {"length": "1000", "start": "0", "date": "20260811"}
+
+
+@pytest.mark.parametrize("metadata", [1.5, True, float("inf")])
+def test_index_summary_rejects_non_integral_or_non_finite_counts(metadata):
+    payload = _index_payload()
+    payload["recordsTotal"] = metadata
+    with pytest.raises(ValueError, match="not an integer"):
+        fetch_index_summary_payload_capture(DATE, session=_Session(_Response(payload)))
+
+
+def test_index_summary_rejects_null_identity_and_infinite_numeric_fields():
+    payload = _index_payload()
+    payload["data"][0]["IndexCode"] = None
+    with pytest.raises(ValueError, match="IndexCode"):
+        fetch_index_summary_payload_capture(DATE, session=_Session(_Response(payload)))
+
+    payload = _index_payload()
+    payload["data"][0]["Close"] = float("inf")
+    with pytest.raises(ValueError, match="Close"):
+        parse_index_summary_payload(
+            payload,
+            requested_date=DATE,
+            source_ref="idx://index",
+            source_sha256="a" * 64,
+        )
 
 
 def test_immutable_bytes_rejects_revision_without_overwrite(tmp_path: Path):

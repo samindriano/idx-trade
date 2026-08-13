@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from math import isfinite
 import os
 import sqlite3
 import sys
@@ -17,6 +18,7 @@ import pandas as pd
 from .price_backfill import _download_in_batches
 from .forward_ohlcv import (
     MODEL_INPUT_COLUMNS,
+    SESSION_OHLCV_COLUMNS,
     build_session_ohlcv,
     provider_row_evidence_sha256,
     validate_ohlcv_against_model_input,
@@ -203,7 +205,7 @@ def _connect(paths: RuntimePaths) -> sqlite3.Connection:
 def _normal_date(value: object) -> pd.Timestamp:
     date = pd.Timestamp(value)
     if date.tzinfo is not None:
-        date = date.tz_localize(None)
+        date = date.tz_convert(JAKARTA).tz_localize(None)
     return date.normalize()
 
 
@@ -286,13 +288,20 @@ def _discover_table(root: Path, required: Iterable[str], *, label: str, optional
         "tradability coverage": ("coverage_window", "coverage"),
         "tradability anchors": ("tradability_anchor", "anchor"),
     }.get(label, ())
-    matches.sort(
-        key=lambda path: (
+    def ranking(path: Path) -> tuple[int, int, str, str]:
+        return (
             0 if any(token in path.name.lower() for token in keywords) else 1,
             len(path.parts),
             path.name.lower(),
+            str(path).lower(),
         )
-    )
+
+    matches.sort(key=ranking)
+    if len(matches) > 1 and ranking(matches[0])[:2] == ranking(matches[1])[:2]:
+        raise RuntimeError(
+            f"ambiguous {label} artifacts below {root}: "
+            f"{matches[0]} and {matches[1]}"
+        )
     selected = matches[0]
     return pd.read_csv(selected) if selected.suffix.lower() == ".csv" else pd.read_parquet(selected)
 
@@ -360,11 +369,47 @@ def _raw_row(path: Path, session: pd.Timestamp) -> pd.Series | None:
         return None
     if "date" not in frame.columns:
         return None
+    if "ticker" in frame.columns:
+        identities = frame["ticker"].map(normalise_ticker)
+        nonempty = identities.ne("")
+        if nonempty.any() and identities.loc[nonempty].ne(path.stem.upper()).any():
+            raise RuntimeError(f"raw provider ticker disagrees with file identity: {path}")
     dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
     selected = frame.loc[dates.eq(session)]
     if selected.empty:
         return None
-    return selected.iloc[-1]
+    if len(selected) != 1:
+        raise RuntimeError(
+            f"raw provider has duplicate rows for {path.stem.upper()} on "
+            f"{session.date().isoformat()}"
+        )
+    return selected.iloc[0]
+
+
+def _downloaded_provider_row(
+    frame: pd.DataFrame,
+    ticker: str,
+    session: pd.Timestamp,
+) -> pd.Series | None:
+    if frame.empty or "date" not in frame.columns:
+        return None
+    if "ticker" in frame.columns:
+        identities = frame["ticker"].map(normalise_ticker)
+        nonempty = identities.ne("")
+        if nonempty.any():
+            if identities.loc[nonempty].ne(ticker).any():
+                raise RuntimeError(f"downloaded provider ticker disagrees with requested identity: {ticker}")
+            frame = frame.loc[identities.eq(ticker)].copy()
+    dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
+    selected = frame.loc[dates.eq(session)]
+    if selected.empty:
+        return None
+    if len(selected) != 1:
+        raise RuntimeError(
+            f"downloaded provider has duplicate rows for {ticker} on "
+            f"{session.date().isoformat()}"
+        )
+    return selected.iloc[0]
 
 
 def _price_payload(
@@ -384,9 +429,9 @@ def _price_payload(
         raise RuntimeError(f"price row for {ticker} missing canonical columns {missing}")
     prices = {column: float(row[column]) for column in required[:-1]}
     volume = float(row["raw_volume"])
-    if not all(pd.notna(value) and value > 0 for value in prices.values()):
+    if not all(pd.notna(value) and isfinite(value) and value > 0 for value in prices.values()):
         raise RuntimeError(f"price row for {ticker} has invalid positive OHLC")
-    if not pd.notna(volume) or volume < 0:
+    if not pd.notna(volume) or not isfinite(volume) or volume < 0:
         raise RuntimeError(f"price row for {ticker} has invalid non-negative volume")
     if prices["raw_low"] > min(prices["raw_open"], prices["raw_close"]):
         raise RuntimeError(f"price row for {ticker} low is above open/close")
@@ -479,12 +524,11 @@ def _verify_ready_artifacts(
         ("index_summary_raw_path", "index_summary_raw_sha256"),
         ("index_summary_path", "index_summary_sha256"),
         ("session_ohlcv_path", "session_ohlcv_sha256"),
+        ("calendar_path", "calendar_sha256"),
     )
     for path_key, hash_key in artifact_pairs:
         artifact_path = manifest.get(path_key)
         expected_hash = manifest.get(hash_key)
-        if artifact_path is None and expected_hash is None:
-            continue  # backward-compatible verification of older sessions
         if not artifact_path or not expected_hash:
             return False
         path = Path(str(artifact_path))
@@ -495,11 +539,34 @@ def _verify_ready_artifacts(
         if not path.exists() or sha256_file(path) != str(expected_hash):
             return False
     try:
+        for key in ("stock_summary_raw_path", "index_summary_raw_path"):
+            raw = json.loads(Path(str(manifest[key])).read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                return False
+        source_specs = (("stock_summary", "as_of_date", "ticker"), ("index_summary", "session_date", "index_code"))
+        for prefix, date_column, identity_column in source_specs:
+            frame = pd.read_csv(Path(str(manifest[f"{prefix}_path"])))
+            if frame.empty or date_column not in frame.columns or identity_column not in frame.columns:
+                return False
+            dates = pd.to_datetime(frame[date_column], errors="coerce").dt.normalize()
+            if dates.isna().any() or not dates.eq(pd.Timestamp(manifest_session)).all():
+                return False
+            if frame[identity_column].astype(str).str.strip().eq("").any():
+                return False
+            if frame.duplicated([identity_column, date_column]).any():
+                return False
+            source = manifest.get(f"{prefix}_source")
+            if not isinstance(source, dict) or source.get("session_date") != manifest_session:
+                return False
+
         snapshot = pd.read_parquet(snapshot_path)
         evidence = pd.read_parquet(evidence_path)
+        session_ohlcv = pd.read_parquet(Path(str(manifest["session_ohlcv_path"])))
         if snapshot.empty or evidence.empty:
             return False
         if set(MODEL_INPUT_COLUMNS) - set(snapshot.columns):
+            return False
+        if set(SESSION_OHLCV_COLUMNS) - set(session_ohlcv.columns):
             return False
         if {"ticker", "session_date"} - set(evidence.columns):
             return False
@@ -514,6 +581,7 @@ def _verify_ready_artifacts(
             return False
         if evidence.assign(session_date=evidence_dates).duplicated(["ticker", "session_date"]).any():
             return False
+        validate_ohlcv_against_model_input(session_ohlcv, snapshot, expected)
         if "model_input_rows" in manifest and int(manifest["model_input_rows"]) != len(snapshot):
             return False
         if "point_evidence_rows" in manifest and int(manifest["point_evidence_rows"]) != len(evidence):
@@ -560,7 +628,11 @@ def _verify_model_run_artifacts(row: Any) -> bool:
         fingerprint = str(row["model_fingerprint"])
         if manifest.get("session_date") != session_key:
             return False
-        if manifest.get("model_id") != model_id or manifest.get("model_sha256") != fingerprint:
+        if (
+            manifest.get("model_id") != model_id
+            or manifest.get("generation") != str(row["generation"])
+            or manifest.get("model_sha256") != fingerprint
+        ):
             return False
         if manifest.get("outcome_blind") is not True:
             return False
@@ -691,6 +763,16 @@ def _complete_session(
     snapshot_sha = sha256_file(snapshot_path)
     evidence_sha = sha256_file(evidence_path)
     manifest_sha = sha256_file(manifest_path)
+    if not _verify_ready_artifacts(
+        snapshot_path,
+        evidence_path,
+        manifest_path,
+        expected_session=session.date().isoformat(),
+        snapshot_sha256=snapshot_sha,
+        evidence_sha256=evidence_sha,
+        manifest_sha256=manifest_sha,
+    ):
+        raise RuntimeError("canonical session artifacts failed semantic verification before commit")
     now = _utcnow()
     connection = _connect(paths)
     try:
@@ -735,7 +817,7 @@ def _earliest_missing(paths: RuntimePaths, sessions: pd.DatetimeIndex) -> pd.Tim
     for date in sessions:
         key = pd.Timestamp(date).date().isoformat()
         row = states.get(key)
-        if row is None or row["state"] != "DATA_READY":
+        if row is None or row["state"] != "DATA_READY" or not _verify_ready_row(row):
             return pd.Timestamp(date).normalize()
     return None
 
@@ -804,6 +886,16 @@ def capture_session(
         stock_summary, stock_meta, stock_capture = stock_result
         if stock_summary.empty:
             raise RuntimeError(f"official IDX Stock Summary is empty for {session_key}")
+        if stock_meta.requested_date != session_key:
+            raise RuntimeError(
+                f"official IDX Stock Summary metadata date mismatch: "
+                f"requested={session_key} returned={stock_meta.requested_date}"
+            )
+        stock_dates = pd.to_datetime(stock_summary["as_of_date"], errors="coerce").dt.normalize()
+        if stock_dates.isna().any() or not stock_dates.eq(session).all():
+            raise RuntimeError(f"official IDX Stock Summary rows are stale or date-mismatched for {session_key}")
+        if stock_summary.duplicated(["ticker", "as_of_date"]).any():
+            raise RuntimeError(f"official IDX Stock Summary contains duplicate ticker rows for {session_key}")
         write_csv_atomic(stock_summary, attempt_dir / "idx_stock_summary.csv")
         (attempt_dir / "idx_stock_summary.raw.json").write_bytes(stock_capture.raw_bytes)
 
@@ -813,6 +905,16 @@ def capture_session(
         index_summary, index_meta, index_capture = index_result
         if index_summary.empty:
             raise RuntimeError(f"official IDX Index Summary is empty for {session_key}")
+        if index_meta.requested_date != session_key:
+            raise RuntimeError(
+                f"official IDX Index Summary metadata date mismatch: "
+                f"requested={session_key} returned={index_meta.requested_date}"
+            )
+        index_dates = pd.to_datetime(index_summary["session_date"], errors="coerce").dt.normalize()
+        if index_dates.isna().any() or not index_dates.eq(session).all():
+            raise RuntimeError(f"official IDX Index Summary rows are stale or date-mismatched for {session_key}")
+        if index_summary.duplicated(["index_code", "session_date"]).any():
+            raise RuntimeError(f"official IDX Index Summary contains duplicate index rows for {session_key}")
         write_csv_atomic(index_summary, attempt_dir / "idx_index_summary.csv")
         (attempt_dir / "idx_index_summary.raw.json").write_bytes(index_capture.raw_bytes)
         summary_by_ticker = {
@@ -915,15 +1017,12 @@ def capture_session(
             )
             for ticker in missing_prices:
                 frame = payload.get(ticker, pd.DataFrame())
-                if frame.empty or "date" not in frame.columns:
-                    continue
-                dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
-                selected = frame.loc[dates.eq(session)]
-                if selected.empty:
+                selected = _downloaded_provider_row(frame, ticker, session)
+                if selected is None:
                     continue
                 price_rows[ticker] = _price_payload(
                     ticker,
-                    selected.iloc[-1],
+                    selected,
                     session,
                     regular_values[ticker],
                     source="YAHOO_YFINANCE_AUTO_ADJUST_FALSE",
@@ -1070,6 +1169,22 @@ def capture_session(
 def _reconcile_stale(paths: RuntimePaths) -> None:
     connection = _connect(paths)
     try:
+        ready_rows = connection.execute(
+            "SELECT * FROM session_snapshots WHERE state='DATA_READY'"
+        ).fetchall()
+        for row in ready_rows:
+            if _verify_ready_row(row):
+                continue
+            now = _utcnow()
+            connection.execute(
+                """UPDATE session_snapshots
+                   SET state='DATA_FAILED', updated_at=?, completed_at=?,
+                       error_code='INCOMPLETE_ARTIFACTS',
+                       error_message='DATA_READY session failed semantic artifact verification'
+                 WHERE session_date=? AND state='DATA_READY'""",
+                (now, now, row["session_date"]),
+            )
+
         rows = connection.execute(
             "SELECT * FROM session_snapshots WHERE state='FETCHING'"
         ).fetchall()
@@ -1077,6 +1192,8 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
             if not _stale(row["heartbeat_at"], minutes=CAPTURE_STALE_MINUTES):
                 continue
             key = str(row["session_date"])
+            lease_owner = row["lease_owner"]
+            heartbeat_at = row["heartbeat_at"]
             final_dir = paths.session_root / key
             snapshot = final_dir / "model_input.parquet"
             evidence = final_dir / "session_evidence.parquet"
@@ -1084,8 +1201,10 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
             if snapshot.exists() and evidence.exists() and manifest.exists():
                 now = _utcnow()
                 candidate = connection.execute(
-                    "SELECT * FROM session_snapshots WHERE session_date=? AND state='FETCHING'",
-                    (key,),
+                    """SELECT * FROM session_snapshots
+                       WHERE session_date=? AND state='FETCHING'
+                         AND lease_owner=? AND heartbeat_at=?""",
+                    (key, lease_owner, heartbeat_at),
                 ).fetchone()
                 if candidate is not None and _verify_ready_artifacts(
                     snapshot, evidence, manifest, expected_session=key
@@ -1097,10 +1216,12 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                             evidence_path=?, evidence_sha256=?, manifest_path=?, manifest_sha256=?,
                             updated_at=?, completed_at=?, heartbeat_at=?, error_code=NULL, error_message=NULL
                         WHERE session_date=? AND state='FETCHING'
+                          AND lease_owner=? AND heartbeat_at=?
                         """,
                         (
                             str(snapshot), sha256_file(snapshot), str(evidence), sha256_file(evidence),
-                            str(manifest), sha256_file(manifest), now, now, now, key,
+                            str(manifest), sha256_file(manifest), now, now, now,
+                            key, lease_owner, heartbeat_at,
                         ),
                     )
                 else:
@@ -1109,8 +1230,9 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                         UPDATE session_snapshots SET state='DATA_FAILED', updated_at=?, completed_at=?,
                             error_code='INCOMPLETE_ARTIFACTS', error_message='stale capture artifacts failed manifest verification'
                         WHERE session_date=? AND state='FETCHING'
+                          AND lease_owner=? AND heartbeat_at=?
                         """,
-                        (now, now, key),
+                        (now, now, key, lease_owner, heartbeat_at),
                     )
             else:
                 now = _utcnow()
@@ -1118,9 +1240,10 @@ def _reconcile_stale(paths: RuntimePaths) -> None:
                     """
                     UPDATE session_snapshots SET state='DATA_FAILED', updated_at=?, completed_at=?,
                         error_code='INTERRUPTED', error_message='capture process disappeared before canonical completion'
-                    WHERE session_date=? AND state='FETCHING'
-                    """,
-                    (now, now, key),
+                        WHERE session_date=? AND state='FETCHING'
+                          AND lease_owner=? AND heartbeat_at=?
+                        """,
+                        (now, now, key, lease_owner, heartbeat_at),
                 )
 
         model_rows = connection.execute(

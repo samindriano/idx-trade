@@ -59,6 +59,21 @@ def test_parses_official_session_api_dates_and_ignores_out_of_month_rows():
     assert sessions.tolist() == [pd.Timestamp("2025-09-01"), pd.Timestamp("2025-09-02")]
 
 
+def test_session_api_rejects_malformed_or_invalid_rows_instead_of_silently_dropping_them():
+    with pytest.raises(ValueError, match="malformed row"):
+        parse_exchange_sessions_from_json(
+            {"data": [{"date": "2025-09-01"}, {"unexpected": "row"}]},
+            year=2025,
+            month=9,
+        )
+    with pytest.raises(ValueError, match="invalid date"):
+        parse_exchange_sessions_from_json(
+            {"data": [{"date": "not-a-date"}]},
+            year=2025,
+            month=9,
+        )
+
+
 def test_session_parser_fails_closed_when_no_month_dates_exist():
     html = _table_html([("01 Oct 2025", "1")])
     with pytest.raises(ValueError, match="No IDX exchange sessions"):

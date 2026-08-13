@@ -195,10 +195,10 @@ def parse_exchange_sessions_from_json(
     found: set[pd.Timestamp] = set()
     for row in rows:
         if not isinstance(row, dict) or "date" not in row:
-            continue
+            raise ValueError("IDX session API response has a malformed row")
         value = pd.to_datetime(row["date"], errors="coerce")
         if pd.isna(value):
-            continue
+            raise ValueError("IDX session API response has an invalid date")
         session = pd.Timestamp(value).tz_localize(None).normalize()
         if session.year == year and session.month == month:
             found.add(session)

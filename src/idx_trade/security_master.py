@@ -71,6 +71,13 @@ def _scoped_cache(
 
 
 def normalise_ticker(value: object) -> str:
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
     return str(value).upper().replace(".JK", "").strip()
 
 
