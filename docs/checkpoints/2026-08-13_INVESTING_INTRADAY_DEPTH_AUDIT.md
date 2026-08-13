@@ -88,11 +88,14 @@ Identity-unresolved tickers were:
 `AUTO`, `BANK`, `CENT`, `DUCK`, `EURO`, `FREN`, `HEAL`, `MFIN`, `REAL`,
 `TECH`, `WSKT`.
 
-Observed available-bar timestamps were within UTC 02:00–09:00. Converted to
-Asia/Jakarta, the provider uses an observed 08:00–16:00 bar boundary around the
-IDX session. This is a provider bar-boundary convention, not evidence of a
-different market timezone, but any future adapter must normalize it explicitly.
-No available-row timestamp fell outside the observed boundary.
+Observed available-bar timestamps in the summarized band were UTC 02:00–09:00.
+Because Asia/Jakarta is UTC+7, that band is 09:00–16:00 WIB, not 08:00–16:00
+WIB. The preserved raw responses also contain a small number of UTC 01:00
+opening-boundary rows, which convert to 08:00 WIB; this explains why the
+artifact metadata records an observed 08:00–16:00 boundary. These are provider
+bar-boundary conventions, not evidence of a different market timezone, and any
+future adapter must normalize them explicitly. No available-row timestamp was
+outside the observed raw boundary after timezone-aware conversion.
 
 ## Bounded daily fidelity check
 
@@ -101,9 +104,17 @@ was run locally against the existing canonical daily panel. The sample had 14
 HIGH, 3 MID, and 3 LOW history-stratum names, including liquid controls such as
 BBCA, BBRI, BMRI, TLKM, ASII, AMRT, ICBP, INDF, UNTR, ANTM, and MDKA.
 
-Investing 1-hour bars were aggregated in Asia/Jakarta to daily Open/High/Low/
-Close/Volume. The canonical panel's Open was compared only where it was
-present.
+Investing 1-hour epochs were converted timezone-aware to Asia/Jakarta before
+daily aggregation to Open/High/Low/Close/Volume. The preserved
+`fidelity_summary_v2.json` records 54 `WIB_PROVIDER_BOUNDARY_08_TO_16`
+available probes, 6 `NO_ROWS`, and no rows outside the boundary; the comparison
+artifact carries the same alignment label for every available probe. No fixed
+08:00 local offset was used in place of the UTC→Asia/Jakarta conversion. The
+canonical panel's Open was compared only where it was present. Rechecking the
+preserved raw epochs confirms UTC 02:00→09:00 WIB and UTC 09:00→16:00 WIB; the
+few UTC 01:00 rows map to the documented 08:00 opening boundary. Therefore the
+review finding was documentation-only and does not affect daily date keys or
+any fidelity metric.
 
 - 60 ticker-year probes; 54 had provider rows.
 - 256 matching daily dates; no date-set gap appeared in the matched ranges.
@@ -117,6 +128,31 @@ present.
 - Ten CA-like scale discrepancies were retained as anomalies, not repaired:
   BMRI in 2022 had close/volume ratios near 0.5, and DSSA in 2024 had ratios
   near 0.1. No split factor was inferred or applied.
+
+### Conditional coverage among securities listed by the probe year
+
+This descriptive diagnostic excludes the 11 identity-unresolved tickers and
+conditions only on `AVAILABLE + NO_DATA within listed interval`. It is not
+proof that an in-listed `NO_DATA` row is a provider failure or evidence of no
+trading.
+
+| Probe year | Available | Within-listed NO_DATA | Conditional availability |
+|---:|---:|---:|---:|
+| 2018 | 326 | 45 | 326 / 371 = 87.87% |
+| 2020 | 369 | 92 | 369 / 461 = 80.04% |
+| 2022 | 519 | 26 | 519 / 545 = 95.23% |
+| 2024 | 650 | 35 | 650 / 685 = 94.89% |
+| 2026 | 671 | 55 | 671 / 726 = 92.42% |
+
+The 2020 conditional dip remains a provider/data-quality question for any
+future pilot.
+
+## Remediation disposition
+
+`TIMEZONE_DOCUMENTATION_ONLY_METRICS_UNCHANGED`. No network request was
+rerun, no fidelity artifact was regenerated, and no canonical/model artifact
+was modified. The final external artifact manifest remains
+`58b77c7d4d875d0e6e296f2f036162cf0e6f147419639aaa2a4dd8d14d0beca2`.
 
 The parity result is useful as a secondary-source diagnostic but is not clean
 enough for direct canonical replacement. Corporate-action evidence and exact

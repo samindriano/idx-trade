@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 3704955e17a471b7a63b4da9f75fe1223fd79bbd
 branch: data/investing-intraday-depth-audit-v1
-head_commit: 74e4587bcc4fef60db88221e492acc49fbaa900d
+head_commit: remediation commit pending final push
 scope: Bounded Investing.com 1-hour historical depth census across 737 V2/V3-B training-universe tickers for sparse July probes in 2018, 2020, 2022, 2024, and 2026, plus a deterministic 20-ticker daily fidelity check.
 files_changed:
   - docs/checkpoints/2026-08-13_INVESTING_INTRADAY_DEPTH_AUDIT.md
@@ -32,10 +32,11 @@ decisions_needed:
   - If authorized, freeze exact identity/date/timezone, corporate-action, parity, and admission rules before any wider retrieval.
 blocking_risks:
   - Fidelity is not source-parity clean enough for replacement: HLC exact 74.22%, OHLC exact 60.71% on comparable Opens.
-  - Provider bar boundaries appear as 08:00–16:00 Asia/Jakarta and require explicit normalization.
+  - The summarized UTC 02:00–09:00 band converts to 09:00–16:00 WIB; a few preserved UTC 01:00 opening-boundary rows map to 08:00 WIB. Exact boundary normalization remains required.
+  - Independent review finding was documentation-only: fidelity aggregation used timezone-aware UTC→Asia/Jakarta conversion and metrics are unchanged.
   - Corporate-action discrepancies require authoritative evidence; no ratio-based repair is allowed.
 validation_run:
   - Full 1-hour depth census completed at the external artifact root.
   - Local fidelity aggregation completed without network calls after the depth census.
-  - Repository diff validation pending final docs commit; no executable code changed.
+  - Remediation is documentation-only; no executable code or external artifact changed. `git diff --check` is required before push.
 recommended_next_action: Stop for independent ChatGPT review. Do not start bulk historical intraday acquisition, panel writes, model work, or Path Risk.
