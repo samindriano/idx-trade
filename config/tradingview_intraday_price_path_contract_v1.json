@@ -1,0 +1,161 @@
+{
+  "contract_id": "IDX_TV_INTRADAY_PRICE_PATH_V1",
+  "status": "FROZEN_SEMANTICS_DESIGN_ONLY",
+  "market": "IDX",
+  "candidate_window": {
+    "start": "2021-01-01",
+    "end": "2026-07-31",
+    "basis": "official IDX exchange sessions only",
+    "date_policy": "never invent sessions; resolve exact session dates from official calendar",
+    "acquisition_authorized": false,
+    "modeling_authorized": false
+  },
+  "provider_lineage": {
+    "provider": "TradingView",
+    "adapter": "Mathieu2301/TradingView-API",
+    "adapter_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c",
+    "server": "prodata",
+    "access": "anonymous",
+    "symbol_format": "IDX:<ticker>",
+    "session": "regular",
+    "timeframe_primary": "60",
+    "adjustment": "none",
+    "price_semantics": "raw OHLCV",
+    "timezone": "Asia/Jakarta-compatible UTC+7; preserve provider epoch and convert explicitly"
+  },
+  "semantic_fields": {
+    "official_open": {
+      "source": "canonical official IDX daily source",
+      "meaning": "official daily opening price for the exact exchange session",
+      "role": "canonical_open_reference",
+      "usable_for": ["official_open_anchor", "canonical_return_anchor", "MAE", "MFE", "drawdown"],
+      "overwrite_allowed": false
+    },
+    "tv_regular_open": {
+      "source": "raw first chronological TradingView regular-session bar Open",
+      "meaning": "provider observation at the first returned regular-session bar; not proven to be the opening auction",
+      "role": "provider_path_observation",
+      "usable_for": ["tv_regular_first_bar_move", "provider_anchor_sensitivity"],
+      "overwrite_official_open": false
+    },
+    "tv_intraday_hlc": {
+      "source": "raw TradingView regular-session intraday High/Low/Close path",
+      "meaning": "raw bar-level path for the exact session and timeframe",
+      "role": "provider_path_observation",
+      "repair_allowed": false
+    },
+    "tv_intraday_volume": {
+      "source": "raw TradingView regular-session Volume",
+      "meaning": "provider-native volume units, preserved without scaling or substitution",
+      "role": "provider_path_observation",
+      "repair_allowed": false,
+      "canonical_volume_replacement_allowed": false
+    }
+  },
+  "permitted_feature_families": {
+    "official_open_to_first_hour_close_return": {
+      "formula": "first_hour_close / official_open - 1",
+      "anchor": "official_open",
+      "requires": ["official_open > 0", "exact_session", "regular_path_valid"]
+    },
+    "tv_regular_open_to_first_hour_close_return": {
+      "formula": "first_hour_close / tv_regular_open - 1",
+      "anchor": "tv_regular_open",
+      "meaning": "provider-regular-session return; never an official-auction return",
+      "requires": ["tv_regular_open > 0", "exact_session", "regular_path_valid"]
+    },
+    "intraday_range": {
+      "formula": "(max(tv_intraday_high) - min(tv_intraday_low)) / official_open",
+      "anchor": "official_open",
+      "requires": ["official_open > 0", "regular_path_valid"]
+    },
+    "path_volatility": {
+      "formula": "sum(abs(log(close_t / close_(t-1)))) over chronological raw bars",
+      "anchor": "none",
+      "requires": ["at least two valid raw closes", "exact_session"]
+    },
+    "mae_mfe": {
+      "formula": "min/max path excursion relative to official_open, kept as separate MAE and MFE fields",
+      "anchor": "official_open",
+      "requires": ["official_open > 0", "regular_path_valid"]
+    },
+    "drawdown": {
+      "formula": "maximum peak-to-subsequent-trough decline over chronological raw closes",
+      "anchor": "none",
+      "requires": ["at least two valid raw closes", "exact_session"]
+    },
+    "hlc_path": {
+      "formula": "raw chronological High/Low/Close vectors and deterministic aggregates only",
+      "anchor": "none",
+      "requires": ["exact_session", "regular_path_valid"]
+    },
+    "volume_path": {
+      "formula": "raw cumulative volume, bar-count, and within-session volume timing in provider units",
+      "anchor": "none",
+      "requires": ["exact_session", "regular_path_valid"],
+      "canonical_volume_comparison": "diagnostic only unless separately admitted"
+    },
+    "regular_first_bar_movement": {
+      "formula": "first_regular_bar_close / first_regular_bar_open - 1",
+      "anchor": "tv_regular_open",
+      "meaning": "regular first-bar movement, not opening-auction movement",
+      "requires": ["first regular bar has positive Open", "exact_session"]
+    }
+  },
+  "session_admission_contract": {
+    "ACTIVE": "regular-session path is required; missing provider path is a true provider miss",
+    "NO_TRADE": "no price-path feature is created; absence of provider bars is not a provider miss",
+    "SUSPENDED_OR_NON_ACTIVE": "exclude from model-safe path view and quarantine any provider bars",
+    "UNKNOWN": "fail closed; do not count as covered or no-trade until independently resolved",
+    "exactness": "ticker/security identity, official session date, timezone conversion, and regular-session boundary must all match exactly",
+    "corporate_actions": "official split/reverse-split evidence remains a separate quarantine/key; no ratio-based adjustment"
+  },
+  "prohibited_semantics": [
+    "treat tv_regular_open as the official opening auction",
+    "overwrite official_open with tv_regular_open",
+    "arbitrary repaired or synthesized Open",
+    "nearest-OHLC correction or nearest-timestamp alignment",
+    "previous-close-as-Open, interpolation, forward-fill, averaging, or voting",
+    "opening-auction microstructure feature without an actual auction source/flag",
+    "silently mixing extended/pre-market bars into the regular path",
+    "using dividends, Adj Close, or inferred split ratios to repair raw OHLC",
+    "rescaling provider volume to force canonical parity",
+    "converting missing or ambiguous activity evidence into NO_TRADE",
+    "using unresolved sessions as covered evidence"
+  ],
+  "stage1_evidence": {
+    "supported_by_checkpoint": {
+      "canonical_active_sessions": 1282,
+      "tv_covered_active_sessions": 1282,
+      "true_tv_misses": 0,
+      "tv60_hlc_exact_percent": 96.18,
+      "tv60_volume_within_5_percent": 95.01,
+      "tv1d_open_exact_on_canonical_open_rows_percent": 98.91,
+      "open_semantics_verdict": "TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN",
+      "regular_preopen_bars_in_2026_probe": 0,
+      "extended_preopen_bars_in_2026_probe": 10
+    },
+    "canonical_checkpoint_activity_status": {
+      "uncertain_sessions": 195,
+      "uncertainty_reason": "UNCERTAIN_CANONICAL_ROW_MISSING",
+      "explained_no_trade_sessions": 0,
+      "conservative_lower_bound_percent": 86.8
+    },
+    "unverified_task_claim_not_promoted": {
+      "claim": "195/195 TV-missing sessions have official IDX Volume/Value/Frequency zero",
+      "status": "NOT_PRESENT_IN_CURRENT_CANONICAL_CHECKPOINT",
+      "required_before_admission": "dated official evidence artifact and hash reconciled into the Stage-1 checkpoint"
+    }
+  },
+  "readiness": {
+    "semantic_contract_ready": true,
+    "historical_price_path_preregistration_ready": false,
+    "admission_v2_ready": false,
+    "blockers": [
+      "canonical Stage-1 checkpoint still leaves 195 sessions uncertain",
+      "TV60 first Open is not proven to represent official auction/opening price",
+      "2021/2024 live session probe remained unresolved after symbol load",
+      "full historical acquisition and admission gates are not frozen by this design lane"
+    ]
+  }
+}
