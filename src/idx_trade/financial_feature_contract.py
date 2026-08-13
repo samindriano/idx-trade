@@ -609,6 +609,8 @@ def _availability(
     feature: FeatureDefinition,
     current: _Version,
     versions: Mapping[tuple[str, int, str, str], list[_Version]],
+    *,
+    as_of: datetime | None = None,
 ) -> FeatureAvailability:
     base = dict(
         feature_id=feature.feature_id,
@@ -656,7 +658,7 @@ def _availability(
 
     if feature.comparable_prior_period:
         prior_key = (current.ticker, current.fiscal_year - 1, current.fiscal_period, current.scope)
-        prior, version_status = _select_version(versions, prior_key, current.knowledge_at)
+        prior, version_status = _select_version(versions, prior_key, as_of or current.knowledge_at)
         if version_status is not None or prior is None:
             return FeatureAvailability(**base, status=version_status or AvailabilityStatus.MISSING_INPUT, reason="comparable prior fiscal-period filing is not knowable")
         if prior.industry_class != current.industry_class:
