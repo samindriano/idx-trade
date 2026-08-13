@@ -917,6 +917,7 @@ def run_marketwide_census(
     expected_pit_ready_count: int = 5965,
     expected_source_row_count: int = EXPECTED_RECLASSIFICATION_ROW_COUNT,
     expected_source_rows_sha256: str = EXPECTED_RECLASSIFICATION_ROWS_SHA256,
+    runtime_code_commit: str | None = None,
 ) -> dict[str, Any]:
     """Extract all accepted PIT-ready XLSX/XBRL joins without network access.
 
@@ -1123,6 +1124,7 @@ def run_marketwide_census(
             "reclassification_root": str(reclassification_root),
             "reclassification_rows_sha256": rows_sha256,
             "accepted_extractor_commit": "baf0334a1dd6a31e9d88ae978630ec864bfb3410",
+            "runtime_code_commit": runtime_code_commit or "UNPINNED",
         },
         "scope": {
             "included": "pit_ready=true and representation_format in {XLSX,XBRL}",
@@ -1255,11 +1257,17 @@ def _main() -> None:
     parser.add_argument("--attachments-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--target", type=int, default=36)
+    parser.add_argument("--code-commit", default=None)
     args = parser.parse_args()
     if args.command == "sample":
         result = run_sample_audit(args.reclassification_root, args.attachments_root, args.output_root, args.target)
     else:
-        result = run_marketwide_census(args.reclassification_root, args.attachments_root, args.output_root)
+        result = run_marketwide_census(
+            args.reclassification_root,
+            args.attachments_root,
+            args.output_root,
+            runtime_code_commit=args.code_commit,
+        )
     print(json.dumps(result, indent=2, sort_keys=True))
 
 
