@@ -53,6 +53,13 @@ Artifacts:
 The source pins and complete per-feature status table are in
 `docs/FINANCIAL_PIT_FEATURE_CONTRACT_V1.md` and the external manifest.
 
+Validation completed:
+
+- focused Financial PIT/feature tests: `42 passed`;
+- full repository pytest: `540 passed, 0 failed, 3 existing FutureWarnings`
+  in `23.60s`;
+- `git diff --check`: PASS.
+
 ## Remaining blockers
 
 1. The accepted fact records must preserve explicit period boundaries (or a

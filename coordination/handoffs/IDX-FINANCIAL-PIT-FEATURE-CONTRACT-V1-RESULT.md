@@ -63,8 +63,10 @@ External output root:
 ## Validation
 
 - focused Financial PIT/feature tests: `42 passed`
-- full repository pytest and final branch SHA: to be filled in after final validation
-- `git diff --check`: to be filled in after final validation
+- full repository pytest: `540 passed, 0 failed, 3 existing FutureWarnings`
+- full pytest duration: `23.60s`
+- `git diff --check`: PASS
+- final branch tip after the documentation pin is reported with the push result
 
 ## Blocking risks
 
