@@ -58,7 +58,7 @@ historical cancellation evidence.
 
 ## Validation
 
-Focused linkage/parser tests: 20 passed.  
+Focused linkage/parser tests: 20 passed.
 Full pytest: 64 passed, 1 failed, 0 warnings (65 collected). The only failure
 is the pre-existing unrelated storage revision-conflict expectation in
 `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`;

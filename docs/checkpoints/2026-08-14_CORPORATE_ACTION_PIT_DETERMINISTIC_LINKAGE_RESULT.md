@@ -1,8 +1,8 @@
 # Corporate Action PIT Deterministic Linkage V1 — Bounded Result
 
-Date: 2026-08-14 (Asia/Jakarta)  
-Branch: `data/corporate-action-pit-deterministic-linkage-v1`  
-Base: `ec7261b3ddae9c2fb2cfd98fb9ea59b01ce57586`  
+Date: 2026-08-14 (Asia/Jakarta)
+Branch: `data/corporate-action-pit-deterministic-linkage-v1`
+Base: `ec7261b3ddae9c2fb2cfd98fb9ea59b01ce57586`
 Status: `REVIEW`
 
 ## Scope and safety boundary
@@ -120,7 +120,7 @@ returns `UNRESOLVED`.
 
 ## Tests and decision
 
-Focused linkage/parser tests: `20 passed`.  
+Focused linkage/parser tests: `20 passed`.
 Full pytest: `64 passed, 1 failed, 0 warnings` out of 65 collected. The sole
 failure is the pre-existing unrelated `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` expectation: the current
 storage contract reports both `raw_close` and `vendor_adj_close` revision
