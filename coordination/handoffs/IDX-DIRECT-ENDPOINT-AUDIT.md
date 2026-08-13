@@ -8,7 +8,7 @@ reasoning_level: xhigh orchestration profile
 source_repository: `samindriano/idx-trade`
 source_commit: `afa68e57e8aa770ca3e3ba26ed07edcbba7907c6`
 branch: `data/idx-direct-endpoint-audit-v1`
-head_commit: `PENDING_FINAL_COMMIT`
+head_commit: `34d7db6e8462dadf85ace6421dc498f9a42af66a` (audit artifacts and blocker checkpoint)
 
 ## Scope
 
