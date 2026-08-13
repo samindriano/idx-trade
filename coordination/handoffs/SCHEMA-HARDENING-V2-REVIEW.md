@@ -1,60 +1,84 @@
 # Schema Hardening V2 — Review Handoff
 
-Status: `REVIEW_ROUND_2`
+Status: `REVIEW_ROUND_3`
 
 Branch: `integration/schema-hardening-v2`
 
-Independently verify closure of the seven findings from review round 1 before the next integration phase.
+Review round 2 returned `REWORK` with three P1 findings. This handoff asks for an independent round-3 review of the remediation only. Scope remains offline contract/schema/storage preparation. Do not perform network/account access and do not modify the existing public Ownership/KSEI lane.
 
-Scope remains offline contract/schema/storage preparation only. Do not perform network/account access or modify the existing public Ownership/KSEI lane.
+## Round-2 findings to re-check
 
-## Findings to re-check
+1. **Timezone parity**
+   - Runtime Draft 2020-12 schema now requires an explicit `Z` or numeric UTC offset in addition to `format: date-time`.
+   - The shared semantic validator independently parses timestamps and rejects naive values.
+   - `fetched_at >= snapshot_at` is also enforced on direct canonical payloads.
+   - Adversarial test directly instantiates `Draft202012Validator(..., FormatChecker())` and verifies a naive timestamp fails.
 
-1. `COMPLETE` requires explicit success and row-accounting evidence for every required endpoint class.
-2. History has concrete atomic uniqueness plus immutable append-only behavior; newer partial observations do not replace last-good complete state.
-3. Reviewed source commit pins cannot be mutated after construction.
-4. Canonical minimization rejects unnecessary identity/session material and requires backend-derived opaque subaccount references.
-5. Runtime Python validation and checked-in Draft 2020-12 schema are kept in parity, including timezone-aware timestamp format checks and exact source pins.
-6. Decimal representation-only scale does not alter canonical hashes/dedup keys, and large monetary values must not be misclassified as account identifiers.
-7. Duplicate holdings and duplicate cash identities are rejected.
+2. **One authoritative semantic gate for canonical payloads**
+   - `validate_snapshot_payload()` now runs structural schema validation, minimization checks, then `validate_snapshot_semantics()`.
+   - The Python `PortfolioSnapshot` object path delegates its cross-field checks to the same semantic validator.
+   - Shared semantics enforce successful endpoint arithmetic `observed = accepted + rejected`, failed-endpoint zero-row constraints, duplicate positions/cash rejection, detail endpoint accepted-row reconciliation, completeness evidence, and timestamp ordering.
+   - New direct malformed-payload tests exercise these conditions rather than relying only on dataclass constructors.
 
-## Files
+3. **`PORTFOLIO_SUMMARY` accounting**
+   - V1 now freezes summary semantics as one aggregate row per represented non-empty canonical asset class (cash plus distinct non-cash classes present in the snapshot).
+   - `PORTFOLIO_SUMMARY.accepted_rows` is reconciled against that count; an arbitrary value such as `999` is rejected.
+   - This is intentionally fail-closed and provisional. The reviewed unofficial clients expose category aggregates, but no real account response has been inspected. If one bounded sanitized real response later proves that zero-value categories are always returned, revise this contract through review rather than silently broadening it.
 
-- `src/idx_trade/personal_portfolio/surface.py`
+## Additional hardening
+
+The round-2 note about `ksa_...` shape-only validation was also addressed at the Python ingestion boundary:
+
+- `derive_subaccount_ref()` now returns a dedicated `SubaccountRef` string subtype that can only be constructed with a private module factory token.
+- `PortfolioPosition` and `CashBalance` reject ordinary strings even when they syntactically match `ksa_<64hex>`.
+- Canonical deserialization first validates the persisted payload, then uses an internal rehydration path for the already-validated opaque reference.
+- A focused regression test rejects a manually supplied shape-valid string and accepts a value created by `derive_subaccount_ref()`.
+
+The wire schema still validates the opaque reference by shape because persisted JSON has no way to carry cryptographic object provenance. Factory origin is enforced where untrusted raw account identifiers enter the Python object model.
+
+## Key files
+
+- `src/idx_trade/personal_portfolio/schema.py`
+- `src/idx_trade/personal_portfolio/semantics.py`
 - `src/idx_trade/personal_portfolio/snapshot.py`
 - `src/idx_trade/personal_portfolio/types.py`
 - `src/idx_trade/personal_portfolio/validation.py`
-- `src/idx_trade/personal_portfolio/schema.py`
 - `src/idx_trade/personal_portfolio/store.py`
-- `src/idx_trade/personal_portfolio/__init__.py`
+- `src/idx_trade/personal_portfolio/surface.py`
 - `schemas/personal_portfolio_snapshot_v1.schema.json`
 - `tests/test_snapshot_hardening.py`
+- `tests/test_snapshot_semantic_gate.py`
+- `tests/test_subaccount_ref_factory.py`
 - `tests/test_snapshot_enrichment_boundary.py`
-- `docs/checkpoints/2026-08-14_AKSES_ADAPTER_SCHEMA_HARDENING_V2.md`
-- `pyproject.toml`
 
-The earlier monolithic `contracts.py` and `storage.py` were superseded and removed; runtime imports now flow only through the modules above.
+## Required round-3 validation
 
-## Review checks
+Run exact-branch focused tests and full pytest if the environment allows. Also run compile/import checks, Draft 2020-12 schema parsing/runtime parity, and `git diff --check`.
 
-Run the focused tests, compile/import validation, JSON-schema parsing, schema/runtime parity and round-trip checks. Adversarially test completeness evidence, concurrent duplicate append, mutation/deletion rejection, source-pin immutability, opaque subaccount enforcement, sensitive-value minimization, decimal canonicalization including a large IDR amount, and duplicate positions/cash.
+Adversarially verify:
 
-Confirm Investment Health remains separate from short-horizon Trading Opportunity and no automatic action field is introduced.
+- bare JSON Schema rejects naive timestamps;
+- `validate_snapshot_payload()` rejects naive timestamps and backwards timestamp ordering;
+- successful endpoint arithmetic mismatch is rejected;
+- failed endpoints cannot report observed/accepted/rejected rows;
+- duplicate positions and cash are rejected through the direct canonical payload path;
+- detail endpoint `accepted_rows` must equal canonical detail row counts;
+- `PORTFOLIO_SUMMARY.accepted_rows` must equal the number of represented non-empty asset classes;
+- `PortfolioSnapshot.from_canonical_json()` round-trips a factory-origin subaccount reference after canonical validation;
+- ordinary shape-valid `ksa_<64hex>` strings are rejected by `CashBalance`/`PortfolioPosition` constructors;
+- round-1 append-only, source-pin, minimization, Decimal, enrichment-boundary and provider-neutral constraints remain intact.
 
-Compare the branch to latest main and confirm no public Ownership/KSEI, Corporate Action PIT, Financial PIT, Foreign Flow, model, protected-outcome, or UI scope changed.
+## Validation disclosure from remediation agent
 
-Behavioral source pins remain:
+This ChatGPT runtime could not execute an exact checkout because outbound Git access is unavailable. Remote GitHub consistency/diff inspection and targeted logic checks were performed, but **no new exact pytest pass count is claimed here**. Round 3 must rerun the tests on the exact branch HEAD.
 
-- `nichsedge/ksei-mcp@a3dfd3260889d704b75001387b646c25b4b69aa3`
-- `chickenzord/goksei@5e51319feb3d373e463c21dfca5c31f971335653`
-
-No upstream implementation code was copied.
+No KSEI login, credential access, provider call, real portfolio data, backend endpoint, UI, public Ownership/KSEI modification, Financial PIT modification, Corporate Action modification, Foreign Flow modification, model change, or protected-outcome access occurred.
 
 ## Verdict gate
 
-Return either:
+Return one of:
 
-- `ACCEPTED_FOR_BOUNDED_REAL_AUTH_TEST_DESIGN`, or
-- `REWORK`, with severity, exact failure path, and recommended fix.
+- `ACCEPTED_FOR_BOUNDED_REAL_AUTH_TEST_DESIGN`
+- `REWORK`, with severity, exact path/line/failure mode, and the minimal recommended fix.
 
-Acceptance is only a gate to design one bounded private/no-persist integration check. It does not authorize public endpoints/UI, automated provider collection, historical scheduling, or automatic investment/trading actions.
+Acceptance authorizes only design of one bounded private/no-persist real-auth check. It does not itself authorize credential use, provider execution, public APIs/UI, scheduled collection, or automatic investment/trading actions.
