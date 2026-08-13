@@ -4,7 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
-from .forward_foreign_flow import enrich_session_foreign_flow, verify_session_foreign_flow
+from .forward_foreign_flow import (
+    enrich_session_foreign_flow,
+    inspect_session_foreign_flow,
+    verify_session_foreign_flow,
+)
 
 
 def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
@@ -24,6 +28,7 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
         "forward_outcomes_accessed": False,
         "created": [],
         "already_valid": [],
+        "verified": [],
         "skipped_no_stock_summary": [],
         "failed": [],
     }
@@ -38,7 +43,19 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
             result["skipped_no_stock_summary"].append(session)
             continue
         if verify_session_foreign_flow(root, session):
-            result["already_valid"].append(session)
+            try:
+                result["already_valid"].append(session)
+                result["verified"].append(inspect_session_foreign_flow(root, session))
+            except Exception as error:
+                result["status"] = "INCOMPLETE"
+                result["already_valid"].pop()
+                result["failed"].append(
+                    {
+                        "session_date": session,
+                        "error_code": type(error).__name__.upper(),
+                        "error_message": str(error),
+                    }
+                )
             continue
         try:
             artifact = enrich_session_foreign_flow(root, session)
@@ -53,6 +70,7 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
             )
             continue
         result["created"].append(artifact)
+        result["verified"].append(artifact)
     return result
 
 
