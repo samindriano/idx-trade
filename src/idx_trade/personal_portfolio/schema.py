@@ -4,6 +4,9 @@ from typing import Any, Mapping
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from .semantics import validate_snapshot_semantics
+from .validation import assert_minimized_canonical_payload
+
 KSEI_MCP_PIN = "a3dfd3260889d704b75001387b646c25b4b69aa3"
 GOKSEI_PIN = "5e51319feb3d373e463c21dfca5c31f971335653"
 
@@ -15,6 +18,7 @@ _ENDPOINT_CLASSES = (
     "BOND",
     "OTHER",
 )
+_TZ_DATETIME_PATTERN = r".*(?:Z|[+-](?:0[0-9]|1[0-4]):[0-5][0-9])$"
 
 
 def _endpoint_schema(endpoint_class: str) -> dict[str, Any]:
@@ -30,6 +34,11 @@ PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "idx-trade://schemas/personal-portfolio-snapshot-v1",
     "title": "Personal Portfolio Snapshot V1",
+    "$comment": (
+        "This schema enforces portable structural constraints. Cross-field row accounting, "
+        "duplicate identities, completeness semantics, timestamp ordering, minimization, and "
+        "summary/category reconciliation are authoritatively enforced by validate_snapshot_payload()."
+    ),
     "type": "object",
     "additionalProperties": False,
     "required": [
@@ -45,8 +54,16 @@ PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1: dict[str, Any] = {
     ],
     "properties": {
         "schema_version": {"const": "personal-portfolio-snapshot-v1"},
-        "snapshot_at": {"type": "string", "format": "date-time"},
-        "fetched_at": {"type": "string", "format": "date-time"},
+        "snapshot_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": _TZ_DATETIME_PATTERN,
+        },
+        "fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": _TZ_DATETIME_PATTERN,
+        },
         "scope_ref": {
             "type": "string",
             "pattern": "^ps_[0-9a-f]{32}$",
@@ -193,6 +210,11 @@ PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1: dict[str, Any] = {
             },
         },
         "endpoint_evidence": {
+            "$comment": (
+                "Arithmetic and canonical-row reconciliation are enforced by the shared "
+                "semantic validator because standard Draft 2020-12 cannot express these "
+                "cross-array invariants portably."
+            ),
             "type": "object",
             "additionalProperties": False,
             "required": [
@@ -223,6 +245,29 @@ PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1: dict[str, Any] = {
                     ],
                 },
             },
+            "allOf": [
+                {
+                    "if": {"properties": {"succeeded": {"const": False}}},
+                    "then": {
+                        "properties": {
+                            "observed_rows": {"const": 0},
+                            "accepted_rows": {"const": 0},
+                            "rejected_rows": {"const": 0},
+                            "failure_code": {"type": "string"},
+                        }
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "succeeded": {"const": True},
+                            "rejected_rows": {"const": 0},
+                        },
+                        "required": ["succeeded", "rejected_rows"],
+                    },
+                    "then": {"properties": {"failure_code": {"type": "null"}}},
+                },
+            ],
         },
         "provenance": {
             "type": "object",
@@ -276,9 +321,12 @@ _VALIDATOR = Draft202012Validator(
 
 
 def validate_snapshot_payload(payload: Mapping[str, Any]) -> None:
-    """Validate canonical snapshot JSON against Draft 2020-12 with formats enabled."""
+    """Run structural, minimization, then shared semantic validation."""
+
     errors = sorted(_VALIDATOR.iter_errors(payload), key=lambda item: list(item.absolute_path))
     if errors:
         first = errors[0]
         path = ".".join(str(item) for item in first.absolute_path) or "<root>"
         raise ValueError(f"personal portfolio schema validation failed at {path}: {first.message}")
+    assert_minimized_canonical_payload(payload)
+    validate_snapshot_semantics(payload)
