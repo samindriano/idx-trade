@@ -266,8 +266,13 @@ def _canonical_evidence(root: Path, key: str) -> dict[str, Any]:
         ("records_filtered", payload_filtered, source.get("records_filtered")),
     )
     for name, actual, declared in checks:
-        if declared is not None and (actual is None or int(declared) != int(actual)):
-            raise RuntimeError(f"Stock Summary source {name} metadata mismatch")
+        if declared is not None:
+            try:
+                declared_integer = _metadata_integer(declared, field=f"Stock Summary source {name}")
+            except ValueError as error:
+                raise RuntimeError(str(error)) from error
+            if actual is None or declared_integer != int(actual):
+                raise RuntimeError(f"Stock Summary source {name} metadata mismatch")
 
     return {
         "key": key,
@@ -345,7 +350,7 @@ def _verified_context(root: Path, key: str) -> tuple[dict[str, Any], Path, Path]
         raise RuntimeError("foreign-flow manifest does not match canonical evidence")
     try:
         stored = pd.read_parquet(sidecar)
-    except (OSError, ValueError, ImportError) as error:
+    except Exception as error:
         raise RuntimeError("foreign-flow sidecar is unreadable") from error
     if not _same(stored, context["frame"]):
         raise RuntimeError("foreign-flow sidecar does not match canonical raw evidence")

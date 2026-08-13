@@ -116,6 +116,12 @@ def test_parent_source_requires_https_and_canonical_completeness(tmp_path: Path)
     with pytest.raises(RuntimeError, match="completeness"):
         enrich_session_foreign_flow(tmp_path, "2026-08-12")
 
+    parent["stock_summary_source"]["completeness_status"] = "COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE"
+    parent["stock_summary_source"]["records_total"] = 2.5
+    parent_path.write_text(json.dumps(parent, sort_keys=True))
+    with pytest.raises(RuntimeError, match="non-negative integer"):
+        enrich_session_foreign_flow(tmp_path, "2026-08-12")
+
 
 def test_valid_sidecar_can_complete_interrupted_manifest_without_rewrite(tmp_path: Path) -> None:
     directory = _session(tmp_path)
