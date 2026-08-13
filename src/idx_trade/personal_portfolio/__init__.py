@@ -1,9 +1,11 @@
 """Provider-neutral contracts for private personal portfolio integration.
 
-This package intentionally contains no AKSes/KSEI network client and no MCP dependency.
+This package intentionally contains no provider network client and no MCP dependency.
 """
 
-from .contracts import (
+from .schema import PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1, validate_snapshot_payload
+from .storage import SqlitePortfolioSnapshotStore
+from .surface import (
     AppendResult,
     AssetClass,
     CashBalance,
@@ -30,8 +32,6 @@ from .contracts import (
     derive_subaccount_ref,
     new_scope_ref,
 )
-from .schema import PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1, validate_snapshot_payload
-from .storage import SqlitePortfolioSnapshotStore
 
 __all__ = [
     "AppendResult",
