@@ -1,0 +1,69 @@
+{
+  "schema": "idx-trade/tradingview-open-price-path-remediation-v1",
+  "upstream": {
+    "mathieu_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c",
+    "server": "prodata",
+    "access": "anonymous",
+    "symbol_format": "IDX:<ticker>",
+    "adjustment": "none"
+  },
+  "offline_reconciliation": {
+    "date": "2026-07-01",
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "source": "preserved Stage-1 extended/regular raw probe artifacts",
+    "timeframes": ["1", "5"],
+    "preopen_window": "08:45-09:00 Asia/Jakarta",
+    "regular_window": "09:00-16:30 Asia/Jakarta"
+  },
+  "independent_activity": {
+    "branch": "data/tradingview-intraday-independent-activity-resolution-v1",
+    "branch_head": "c943a76fd56872d981a87519c2eb7072c413322c",
+    "runtime_head": "3977c51ed00cd798a8e45dc8d8170c82bec4bf67",
+    "runtime_manifest_sha256": "f8076b83e170eb6180fbe3c3896000f33894c13e679c31e426816d471b6c0864",
+    "resolution_csv_sha256": "c067e089193b281d69d816df282569e6a8080285ea53766892df9dd336659540",
+    "resolved_rows": 195,
+    "independent_no_trade_rows": 195,
+    "unresolved_rows": 0,
+    "metric_contract": "exact official IDX Stock Summary row with Volume=0, Value=0, Frequency=0",
+    "scope_boundary": "regular-market activity only; NonRegular/all-board activity is not inferred"
+  },
+  "live_probe": {
+    "authorization": "single bounded 60m regular-vs-extended remediation probe",
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "dates": ["2021-07-01", "2024-07-01", "2026-07-01"],
+    "timeframes": ["60"],
+    "sessions": ["regular", "extended"],
+    "server": "prodata",
+    "adjustment": "none",
+    "initial_range": 500,
+    "timeout_ms": 25000,
+    "fetch_more_steps": 0,
+    "fetch_more_batch": 1,
+    "fetch_more_wait_ms": 8000,
+    "expected_requests": 30
+  },
+  "decision_rules": {
+    "preserve_stage1_verdict": "TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN",
+    "frozen_admission_verdict": "TRADINGVIEW_INTRADAY_ADMISSION_REJECTED",
+    "auction_identity_requires": ["explicit auction flag or trade classification", "not equality alone"],
+    "unavailable_history_class": "UNRESOLVED",
+    "no_ohlc_repair": true
+  },
+  "readiness": {
+    "semantic_contract_ready": true,
+    "historical_price_path_preregistration_ready": true,
+    "admission_v2_ready": false,
+    "modeling_authorized": false,
+    "acquisition_authorized": false
+  },
+  "boundaries": {
+    "network_calls_before_freeze": 0,
+    "bulk_acquisition": false,
+    "canonical_panel_write": false,
+    "model_fit": false,
+    "path_risk": false,
+    "o2_or_protected_outcomes": false,
+    "historical_open_recovery": false,
+    "new_provider_search": false
+  }
+}

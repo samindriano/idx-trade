@@ -15,11 +15,11 @@ It permits raw regular-session H/L/C/V path features with explicit anchor
 semantics and prohibits auction claims, arbitrary Open repair, adjusted-price
 substitution, volume rescaling, and silent extended-session mixing.
 
-The contract is **not an acquisition/admission authorization**. The current
-canonical Stage-1 activity checkpoint still leaves 195 sessions as
-`UNCERTAIN_CANONICAL_ROW_MISSING`; the prompt's later statement that all 195
-have official zero Volume/Value/Frequency is not present in that checkpoint or
-its preserved artifact hashes and is therefore recorded as an unverified claim.
+The contract remains design-only and is **not an acquisition/admission
+authorization**. Independent official IDX evidence now resolves all 195
+previously uncertain keys: exact Stock Summary rows show regular-market
+`Volume = 0`, `Value = 0`, and `Frequency = 0`, with `UNRESOLVED = 0`. This
+does not generalize to all boards or NonRegular activity.
 
 ## Read evidence first
 
@@ -34,9 +34,9 @@ Supported activity-aware evidence:
 - 1,282 TV-covered active sessions;
 - zero true TV misses on those canonical-active rows;
 - point activity-aware coverage 100.00%;
-- 195 uncertain sessions, all `UNCERTAIN_CANONICAL_ROW_MISSING`;
-- conservative lower bound 86.80%;
-- no explained no-trade sessions in the current checkpoint.
+- 195 independently resolved regular-market no-trade sessions;
+- unresolved sessions after independent resolution: 0;
+- conservative lower bound after resolution: 100.00%.
 
 Supported fidelity evidence:
 
@@ -45,6 +45,14 @@ Supported fidelity evidence:
 - TV1D Open exact on canonical-open rows: 98.91%;
 - frozen Stage-1 Open verdict:
   `TV60_OPEN_BOUNDARY_PATTERN_FOUND_MEANING_UNPROVEN`.
+
+Independent activity resolution provenance:
+
+- branch `data/tradingview-intraday-independent-activity-resolution-v1@c943a76`;
+- runtime head `3977c51ed00cd798a8e45dc8d8170c82bec4bf67`;
+- runtime manifest SHA `f8076b83e170eb6180fbe3c3896000f33894c13e679c31e426816d471b6c0864`;
+- exact resolution CSV SHA `c067e089193b281d69d816df282569e6a8080285ea53766892df9dd336659540`;
+- 195/195 exact keys; 195 independent no-trade; 0 unresolved.
 
 Stage-1 Open/session evidence:
 
@@ -62,8 +70,9 @@ Stage-1 Open/session evidence:
 - `tests/test_tradingview_intraday_price_path_contract.py`
 
 The contract's candidate window is 2021-01-01 through 2026-07-31, using only
-official IDX sessions. This is a design target, not a request to acquire that
-history now.
+official IDX sessions. This is a preregistration-ready design target, not a
+request to acquire that history now. TradingView 60m outputs are called
+provider-session bars, not 60 minutes of continuous IDX trading.
 
 ## Immutable Stage-1 provenance
 
@@ -100,9 +109,16 @@ Activity-aware outputs:
 - no runtime data or panel artifacts created;
 - `git diff --check`: run after final edits.
 
-## Next decision required
+## Remediation interpretation
 
-Before a future admission V2, reconcile the 195-session activity evidence into
-a dated, hash-pinned checkpoint. If it remains uncertain, the correct result
-is fail-closed and no historical price-path dataset may be admitted as fully
-covered. Independent ChatGPT review is required after this checkpoint.
+The independent activity resolution removes the prior activity-evidence
+blocker for preregistration: all 195 missing-session keys are now supported as
+regular-market no-trade rows. The semantic contract is therefore
+preregistration-ready, while admission V2, acquisition, and modelling remain
+closed. This remediation does not retroactively change the original admission
+rejection.
+
+TradingView 60m values remain provider-session bars. Auction identity, exact
+clock-time microstructure, and provider volume-timing semantics remain
+limitations. No model or acquisition starts in this lane. Independent ChatGPT
+review is required after remediation.

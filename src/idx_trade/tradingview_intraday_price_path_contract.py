@@ -69,8 +69,14 @@ def validate_contract(contract: Mapping[str, Any]) -> list[str]:
         errors.append("provider price semantics must be raw OHLCV")
     if readiness.get("semantic_contract_ready") is not True:
         errors.append("semantic contract must be marked ready")
+    if readiness.get("historical_price_path_preregistration_ready") is not True:
+        errors.append("historical price-path preregistration must be marked ready")
     if readiness.get("admission_v2_ready") is not False:
         errors.append("admission V2 must remain closed in this design lane")
+    if readiness.get("modeling_authorized") is not False:
+        errors.append("modeling must remain unauthorized in this design lane")
+    if readiness.get("acquisition_authorized") is not False:
+        errors.append("acquisition must remain unauthorized in this design lane")
 
     prohibited = contract.get("prohibited_semantics", [])
     required_prohibited = {

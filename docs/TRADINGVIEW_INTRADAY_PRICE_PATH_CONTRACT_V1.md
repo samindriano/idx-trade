@@ -23,6 +23,11 @@ The provider exposed no auction flag, trade classification, or auction
 boundary. Therefore extended bars are not admitted into the regular path and
 cannot be described as auction executions.
 
+Each TradingView 60m result is a **TradingView provider-session bar**, not a
+claim of 60 minutes of continuous IDX trading. IDX lunch breaks,
+pre-closing, and closing-auction structure require explicit session
+segmentation before using clock-time or volume-timing features.
+
 ## Frozen semantic fields
 
 | Field | Meaning | Permitted role |
@@ -85,15 +90,23 @@ features require an actual auction source or explicit auction classification.
 
 ## Readiness decision
 
-The semantic schema is ready for a future preregistration document. The current
-repository evidence is **not yet sufficient to authorize** a 2021-2026
-historical acquisition/admission V2 because the canonical Stage-1 activity
-checkpoint still records 195 `UNCERTAIN_CANONICAL_ROW_MISSING` sessions and a
-conservative lower bound of 86.80%. The task prompt's statement that all 195
-are official zero Volume/Value/Frequency is recorded as an unverified claim in
-the machine-readable contract, not silently promoted into evidence.
+The independent official IDX resolution checkpoint now resolves all 195
+previously uncertain keys: every exact Stock Summary row has regular-market
+`Volume = 0`, `Value = 0`, and `Frequency = 0`; `UNRESOLVED = 0`. This is a
+regular-market activity statement only and does not generalize to all boards or
+NonRegular activity.
 
-Before admission, checkpoint a dated official evidence artifact resolving those
-195 sessions, freeze the full acquisition/admission gates, and rerun the
-admission audit under that new contract. No work in this lane changes the
-frozen TradingView admission rejection.
+The readiness distinction is therefore:
+
+- `semantic_contract_ready = true`;
+- `historical_price_path_preregistration_ready = true`;
+- `admission_v2_ready = false`;
+- `modeling_authorized = false`;
+- `acquisition_authorized = false`.
+
+The contract is now sufficient to preregister a separate 2021-2026 historical
+price-path acquisition/admission V2. V2 itself has not run. The unresolved
+auction identity of `tv_regular_open` and the 2021/2024 1m/5m probe timeouts are
+non-blocking limitations for a regular-session price-path contract, but remain
+blocking for any claim that the first bar is auction microstructure. The
+original `TRADINGVIEW_INTRADAY_ADMISSION_REJECTED` verdict remains unchanged.

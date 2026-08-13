@@ -1,0 +1,50 @@
+{
+  "schema": "idx-trade/tradingview-open-session-semantics-v1",
+  "upstream": {
+    "mathieu_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c",
+    "server": "prodata",
+    "symbol_prefix": "IDX:"
+  },
+  "offline": {
+    "admission_root": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\tradingview_historical_intraday_admission_pilot_v1_20260814",
+    "canonical_panel": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\research_feasibility_1260_20260809\\unknown_state_diagnostic_1260_20260809\\model_safe_signal_research_panel_1260.parquet",
+    "required_panel_sha256": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76"
+  },
+  "live_probe": {
+    "authorization": "bounded_metadata_justified_probe_only",
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "dates": ["2021-07-01", "2024-07-01", "2026-07-01"],
+    "timeframes": ["1", "5"],
+    "sessions": ["regular", "extended"],
+    "initial_range": 500,
+    "timeout_ms": 25000,
+    "fetch_more_steps": 0,
+    "fetch_more_batch": 1,
+    "fetch_more_wait_ms": 8000,
+    "adjustment": "none",
+    "request_contract": {
+      "market": "indonesia",
+      "symbol_contract": "IDX:<ticker>",
+      "regular_session": "0900-1630",
+      "extended_probe_window": "0845-1630",
+      "opening_window": "0845-0905",
+      "timezone": "Asia/Jakarta"
+    }
+  },
+  "decision_rules": {
+    "preopen_start": "08:45",
+    "regular_start": "09:00",
+    "minimum_consistent_pairs_for_confirmed_exclusion": 3,
+    "contradiction_policy": "any_regular_preopen_or_mixed_same_key_is_not_confirmed"
+  },
+  "boundaries": [
+    "no_bulk_requests",
+    "no_panel_write",
+    "no_model_or_feature_work",
+    "no_path_risk_or_o2_work",
+    "no_protected_outcome_access",
+    "no_timestamp_shift_or_ohlc_repair",
+    "no_authenticated_access",
+    "no_stockbit_provenance_substitution"
+  ]
+}

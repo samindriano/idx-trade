@@ -12,7 +12,10 @@ def test_frozen_contract_is_structurally_valid() -> None:
     assert validate_contract(contract) == []
     assert contract["status"] == "FROZEN_SEMANTICS_DESIGN_ONLY"
     assert contract["readiness"]["semantic_contract_ready"] is True
+    assert contract["readiness"]["historical_price_path_preregistration_ready"] is True
     assert contract["readiness"]["admission_v2_ready"] is False
+    assert contract["readiness"]["modeling_authorized"] is False
+    assert contract["readiness"]["acquisition_authorized"] is False
 
 
 def test_official_and_provider_opens_are_distinct_non_overwriting_fields() -> None:
@@ -53,10 +56,27 @@ def test_auction_and_repair_shortcuts_are_prohibited() -> None:
     assert "converting missing or ambiguous activity evidence into NO_TRADE" in prohibited
 
 
-def test_stage1_activity_conflict_remains_fail_closed() -> None:
+def test_independent_activity_resolution_removes_stale_195_blocker() -> None:
     activity = load_contract()["stage1_evidence"]
     readiness = load_contract()["readiness"]
 
-    assert activity["canonical_checkpoint_activity_status"]["uncertain_sessions"] == 195
-    assert activity["unverified_task_claim_not_promoted"]["status"] == "NOT_PRESENT_IN_CURRENT_CANONICAL_CHECKPOINT"
+    resolution = activity["independent_activity_resolution"]
+    assert resolution["resolved_rows"] == 195
+    assert resolution["independent_no_trade_rows"] == 195
+    assert resolution["unresolved_rows"] == 0
+    assert "NonRegular" in resolution["scope"]
+    assert readiness["historical_price_path_preregistration_ready"] is True
     assert readiness["admission_v2_ready"] is False
+
+
+def test_readiness_validator_keeps_preregistration_and_execution_boundaries_distinct() -> None:
+    contract = load_contract()
+    contract["readiness"]["historical_price_path_preregistration_ready"] = False
+    contract["readiness"]["modeling_authorized"] = True
+    contract["readiness"]["acquisition_authorized"] = True
+
+    errors = validate_contract(contract)
+
+    assert "historical price-path preregistration must be marked ready" in errors
+    assert "modeling must remain unauthorized in this design lane" in errors
+    assert "acquisition must remain unauthorized in this design lane" in errors
