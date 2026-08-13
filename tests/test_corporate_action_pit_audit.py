@@ -143,4 +143,3 @@ def test_announcement_join_requires_event_family_text_and_keeps_publication_time
     assert matches[0]["announcement_ref"] == "1/IDPR/VI/2026"
     assert matches[0]["published_at_utc"] == "2026-06-20T03:00:00Z"
     assert matches[0]["attachment_url"] == "https://idx.test/div.pdf"
-
