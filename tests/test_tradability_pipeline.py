@@ -35,6 +35,8 @@ def test_clean_suspend_resume_pipeline_passes_integrity_but_not_coverage(tmp_pat
 
     assert report["passed"] is True
     assert report["coverage_complete"] is False
+    assert report["coverage_window"] is None
+    assert report["coverage_diagnostic"] == "PUBLIC_WINDOW_NOT_PROVEN_DISCOVERY_OR_BOUNDARY"
     assert report["event_rows"] == 4
     assert report["interval_rows"] == 2
 
@@ -92,3 +94,80 @@ def test_unmatched_resume_is_an_integrity_failure(tmp_path):
     report = run_tradability_ingestion(manifest_path, tmp_path / "out", fetcher=fetcher)
     assert report["passed"] is False
     assert report["compile_issue_rows"] == 1
+    assert report["compile_status_counts"] == {"UNMATCHED_RESUME": 1}
+    assert report["coverage_diagnostic"] == "INGESTION_INTEGRITY_FAILED"
+
+
+def test_public_window_is_discovery_evidence_not_market_wide_active_state(tmp_path):
+    manifest_path = tmp_path / "manifest.csv"
+    _write_manifest(manifest_path, ["idx://suspend", "idx://resume"])
+    documents = {
+        "idx://suspend": (
+            "Peng-SPT-00001/BEI.WAS/01-2025 Bursa melakukan penghentian sementara perdagangan "
+            "saham PT Example Tbk (TEST) di Pasar Reguler mulai sesi I tanggal 2 Januari 2025."
+        ),
+        "idx://resume": (
+            "Peng-UPT-00001/BEI.WAS/01-2025 Suspensi saham PT Example Tbk (TEST) di Pasar "
+            "Reguler dibuka kembali mulai sesi I tanggal 6 Januari 2025."
+        ),
+    }
+
+    def fetcher(url: str):
+        return documents[url], f"hash-{url.rsplit('/', 1)[-1]}"
+
+    evidence = {
+        "market": "REGULAR",
+        "effective_from": "2025-01-01",
+        "effective_to": "2025-01-31",
+        "source": "IDX_PUBLIC_ANNOUNCEMENT_ARCHIVE",
+        "discovery_complete": True,
+        "discovery_basis": "IDX_PUBLIC_ARCHIVE_INDEX_AUDIT",
+        "left_boundary_basis": "IDX_ARCHIVE_START_AUDIT",
+    }
+    report = run_tradability_ingestion(
+        manifest_path,
+        tmp_path / "out",
+        fetcher=fetcher,
+        coverage_evidence=evidence,
+    )
+    assert report["passed"] is True
+    assert report["coverage_complete"] is True
+    assert report["coverage_window"] == {
+        "market": "REGULAR",
+        "effective_from": "2025-01-01",
+        "effective_to": "2025-01-31",
+        "source": "IDX_PUBLIC_ANNOUNCEMENT_ARCHIVE",
+        "is_complete": True,
+        "discovery_basis": "IDX_PUBLIC_ARCHIVE_INDEX_AUDIT",
+        "left_boundary_basis": "IDX_ARCHIVE_START_AUDIT",
+    }
+    assert "per-security" in report["coverage_note"]
+
+
+def test_public_window_without_explicit_left_boundary_stays_blocked(tmp_path):
+    manifest_path = tmp_path / "manifest.csv"
+    _write_manifest(manifest_path, ["idx://suspend"])
+
+    def fetcher(url: str):
+        return (
+            "Peng-SPT-00001/BEI.WAS/01-2025 Bursa melakukan penghentian sementara perdagangan "
+            "saham PT Example Tbk (TEST) di Pasar Reguler mulai sesi I tanggal 2 Januari 2025.",
+            "hash-suspend",
+        )
+
+    report = run_tradability_ingestion(
+        manifest_path,
+        tmp_path / "out",
+        fetcher=fetcher,
+        coverage_evidence={
+            "effective_from": "2025-01-01",
+            "effective_to": "2025-01-31",
+            "source": "IDX_PUBLIC_ANNOUNCEMENT_ARCHIVE",
+            "discovery_complete": True,
+            "discovery_basis": "IDX_PUBLIC_ARCHIVE_INDEX_AUDIT",
+        },
+    )
+    assert report["passed"] is True
+    assert report["coverage_complete"] is False
+    assert report["coverage_window"] is None
+    assert report["coverage_diagnostic"] == "PUBLIC_WINDOW_MISSING_DISCOVERY_OR_BOUNDARY_BASIS"

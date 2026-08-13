@@ -4,6 +4,7 @@ from idx_trade.data import canonicalize_ohlcv
 from idx_trade.security_master import (
     build_security_master,
     canonicalize_coverage_windows,
+    canonicalize_tradability_anchors,
     canonicalize_tradability_intervals,
 )
 from idx_trade.universe import build_dynamic_liquidity_universe
@@ -34,7 +35,28 @@ def _coverage():
                 "effective_to": ["2026-12-31"],
                 "source": ["TEST_COMPLETE"],
                 "is_complete": [True],
+                "discovery_basis": ["TEST_PUBLIC_DISCOVERY_AUDIT"],
+                "left_boundary_basis": ["TEST_ARCHIVE_START_AUDIT"],
             }
+        )
+    )
+
+
+def _anchors(tickers: list[str], date: str):
+    return canonicalize_tradability_anchors(
+        pd.DataFrame(
+            [
+                {
+                    "ticker": ticker,
+                    "market": "REGULAR",
+                    "as_of_date": date,
+                    "state": "ACTIVE",
+                    "source": "IDX_TEST_STATUS",
+                    "source_ref": f"idx://{ticker.lower()}-active",
+                    "evidence_type": "OFFICIAL_ACTIVE_STATUS",
+                }
+                for ticker in tickers
+            ]
         )
     )
 
@@ -65,16 +87,33 @@ def test_historical_delisted_name_can_be_selected_before_delisting_but_not_after
         "LIVE": _prices("2024-01-01", len(sessions), 100.0, 1_000_000),
         "OLDX": _prices("2024-01-01", 390, 50.0, 4_000_000),
     }
+    anchors = _anchors(["LIVE", "OLDX"], "2024-01-02")
 
     before = build_dynamic_liquidity_universe(
-        pd.Timestamp("2025-06-20"), sessions, frames, master, intervals, _coverage(),
-        top_n=2, lookback_sessions=60, minimum_warmup_sessions=60,
+        pd.Timestamp("2025-06-20"),
+        sessions,
+        frames,
+        master,
+        intervals,
+        _coverage(),
+        tradability_anchors=anchors,
+        top_n=2,
+        lookback_sessions=60,
+        minimum_warmup_sessions=60,
     )
     assert set(before.loc[before["selected"], "ticker"]) == {"LIVE", "OLDX"}
 
     after = build_dynamic_liquidity_universe(
-        pd.Timestamp("2025-08-01"), sessions, frames, master, intervals, _coverage(),
-        top_n=2, lookback_sessions=60, minimum_warmup_sessions=60,
+        pd.Timestamp("2025-08-01"),
+        sessions,
+        frames,
+        master,
+        intervals,
+        _coverage(),
+        tradability_anchors=anchors,
+        top_n=2,
+        lookback_sessions=60,
+        minimum_warmup_sessions=60,
     )
     old = after.loc[after["ticker"].eq("OLDX")].iloc[0]
     assert not bool(old["eligible"])
@@ -95,16 +134,31 @@ def test_recent_ipo_is_not_selected_until_warmup_passes():
     intervals = canonicalize_tradability_intervals(pd.DataFrame())
     sessions = pd.bdate_range("2025-01-02", periods=100)
     frames = {"IPO1": _prices("2025-01-02", 100, 100.0, 10_000_000)}
+    anchors = _anchors(["IPO1"], "2025-01-02")
 
     early = build_dynamic_liquidity_universe(
-        sessions[39], sessions, frames, master, intervals, _coverage(), top_n=10,
+        sessions[39],
+        sessions,
+        frames,
+        master,
+        intervals,
+        _coverage(),
+        tradability_anchors=anchors,
+        top_n=10,
         minimum_warmup_sessions=60,
     )
     assert early.loc[0, "eligibility_reason"] == "IPO_WARMUP"
     assert not bool(early.loc[0, "selected"])
 
     mature = build_dynamic_liquidity_universe(
-        sessions[79], sessions, frames, master, intervals, _coverage(), top_n=10,
+        sessions[79],
+        sessions,
+        frames,
+        master,
+        intervals,
+        _coverage(),
+        tradability_anchors=anchors,
+        top_n=10,
         minimum_warmup_sessions=60,
     )
     assert mature.loc[0, "eligibility_reason"] == "ELIGIBLE"

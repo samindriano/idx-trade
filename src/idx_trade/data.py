@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
 
 
 RAW_COLUMNS = ("open", "high", "low", "close", "volume")
+CANONICAL_RAW_COLUMNS = (
+    "raw_open",
+    "raw_high",
+    "raw_low",
+    "raw_close",
+    "raw_volume",
+)
 OPTIONAL_VENDOR_COLUMNS = ("adj_close", "dividends", "stock_splits")
 
 
@@ -102,14 +109,65 @@ def canonicalize_ohlcv(frame: pd.DataFrame, ticker: str | None = None) -> pd.Dat
 def raw_execution_prices(frame: pd.DataFrame) -> pd.DataFrame:
     """Return only execution-safe raw price columns."""
 
-    required = {"date", "raw_open", "raw_high", "raw_low", "raw_close", "raw_volume"}
+    required = {"date", *CANONICAL_RAW_COLUMNS}
     missing = required - set(frame.columns)
     if missing:
         raise ValueError(f"Canonical raw execution columns missing: {sorted(missing)}")
-    columns = ["date"] + (["ticker"] if "ticker" in frame.columns else []) + [
-        "raw_open", "raw_high", "raw_low", "raw_close", "raw_volume"
-    ]
+    columns = ["date"] + (["ticker"] if "ticker" in frame.columns else []) + list(
+        CANONICAL_RAW_COLUMNS
+    )
     return frame[columns].copy()
+
+
+def raw_price_semantics_verified(frame: pd.DataFrame) -> bool:
+    """Verify that a stored provider frame has execution-safe raw semantics.
+
+    This is deliberately structural and conservative. It verifies the immutable
+    raw execution aliases produced by ``canonicalize_ohlcv`` and their OHLCV
+    invariants; it never infers semantics from adjusted-close fields alone.
+    Empty frames are not verified because no price evidence exists to inspect.
+    """
+
+    required = {"date", *CANONICAL_RAW_COLUMNS}
+    if frame.empty or not required.issubset(frame.columns):
+        return False
+
+    data = frame.copy()
+    dates = pd.to_datetime(data["date"], errors="coerce")
+    if dates.isna().any() or dates.dt.normalize().duplicated().any():
+        return False
+
+    numeric = data[list(CANONICAL_RAW_COLUMNS)].apply(pd.to_numeric, errors="coerce")
+    if numeric.isna().any().any():
+        return False
+    valid = (
+        (numeric[["raw_open", "raw_high", "raw_low", "raw_close"]] > 0).all(axis=1)
+        & (
+            numeric["raw_high"]
+            >= numeric[["raw_open", "raw_close", "raw_low"]].max(axis=1)
+        )
+        & (
+            numeric["raw_low"]
+            <= numeric[["raw_open", "raw_close", "raw_high"]].min(axis=1)
+        )
+        & numeric["raw_volume"].ge(0)
+    )
+    return bool(valid.all())
+
+
+def price_semantics_flags(
+    price_frames: Mapping[str, pd.DataFrame],
+    tickers: list[str] | tuple[str, ...] | None = None,
+) -> dict[str, bool]:
+    """Build deterministic per-ticker raw-price semantics verification flags."""
+
+    selected = list(tickers) if tickers is not None else list(price_frames)
+    return {
+        str(ticker).upper().replace(".JK", "").strip(): raw_price_semantics_verified(
+            price_frames.get(str(ticker).upper().replace(".JK", "").strip(), pd.DataFrame())
+        )
+        for ticker in selected
+    }
 
 
 def data_fingerprint_payload(frame: pd.DataFrame) -> list[dict[str, Any]]:
