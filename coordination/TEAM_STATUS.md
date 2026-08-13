@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 18:35 Asia/Jakarta
+Last coordinated update: 2026-08-13 19:05 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -78,7 +78,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Financial PIT statement-scope granularity feasibility | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Statement-Scope` | `data/financial-pit-statement-scope-v1` / final `e4537c1` / remediation `68fe984` / acceptance `review/idx-financial-pit-adapter-census-acceptance-v1@8675b0bc05327779a3f39d4b1a3f90b2bfcda551` | `FINANCIAL_PIT_STATEMENT_SCOPE_RESOLVER_ACCEPTED_OFFLINE_RECLASSIFICATION_NEXT`: XLSX visibility and exact IDX-DEI+`CurrentYearInstant` XBRL authority gates accepted; immutable 11/11 sample remains 7 consolidated / 4 separate. PDF empirical coverage remains unproven and fail-closed. Next authorized milestone is offline scope reclassification/PIT-ready coverage recomputation over the existing 6,108 exact joins only; no network/redownload/facts/features/models/outcomes. |
 
-| Financial PIT offline scope reclassification and PIT-ready coverage | `REVIEW` | `ChatGPT independent review + Codex/Financial-PIT-Offline-Reclassification` | `data/financial-pit-offline-scope-reclassification-v1` / final `45d36ed` | Offline reclassified all 6,108 exact joins from the accepted census: 4,410 `CONSOLIDATED`, 1,555 `SEPARATE`, 143 `UNRESOLVED`, 0 mixed/conflicting authoritative scope; 5,965 PIT-ready (97.658808% of exact joins; 80.936228% of 7,370 expected issuer-periods). Canonical external artifacts are under `D:\Documents\Project\idx-trade-financial-pit-scope-reclassification-20260813-v2`; no network/redownload/facts/features/models/outcomes. Awaiting ChatGPT review. |
+| Financial PIT offline scope reclassification and PIT-ready coverage | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Offline-Reclassification` | `data/financial-pit-offline-scope-reclassification-v1` / final `45d36ed` / acceptance `review/idx-financial-pit-offline-reclassification-acceptance-v1@7c94bc8a87374a75fc73687c04c4f8b5b7146595` | `FINANCIAL_PIT_OFFLINE_RECLASSIFICATION_ACCEPTED_FACT_TABLE_DESIGN_NEXT`: 5,965 PIT-ready rows accepted (4,410 consolidated / 1,555 separate), equal to 97.658808% of 6,108 exact joins and 80.936228% of 7,370 expected issuer-periods; 143 unresolved and all prior publication/linkage/hash/provider failures remain fail-closed. Canonical v2 artifact hashes pinned; no network/redownload/facts/features/models/outcomes. Next authorized milestone is bounded version-aware fact-table schema/extraction feasibility; no market-wide fact extraction or modeling yet. |
 
 ## Cross-chat no-duplicate rules currently in force
 
