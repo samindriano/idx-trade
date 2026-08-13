@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade  
 source_commit: 4013f90a56edc6d8409e6a7514a9170d5f301aff  
 branch: data/financial-pit-revision-lineage-v1  
-head_commit: pending  
+head_commit: 77737403d3bed19e509d417d97c841d35afa06c8  
 
 ## Scope
 
@@ -74,8 +74,10 @@ timestamps, SHA-256 values and current-pointer comparisons for every case.
 
 ## Validation
 
-- Focused Financial PIT tests: pending final run.
-- Full pytest: pending final run.
+- Focused Financial PIT tests: `17 passed`.
+- Full pytest: `509 passed, 0 failed, 3 existing FutureWarnings`.
+- Collection check: `509 tests collected`.
+- `git diff --check`: passed.
 
 ## Recommended next action
 
