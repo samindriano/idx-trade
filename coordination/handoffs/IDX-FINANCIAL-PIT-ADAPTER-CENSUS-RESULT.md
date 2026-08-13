@@ -9,7 +9,7 @@ source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: accepted `data/financial-pit-v1@25eaa67a7f5446234db470756fe8b5c12cbb7696`
 branch: `data/financial-pit-adapter-census-v1`
 scope: bounded direct-IDX Financial PIT adapter and 2024-2026 source-readiness census
-head_commit: pending commit
+head_commit: `5f600f9c2a275b88aaf43ffb9b4abdc7f77be34c` (implementation/result commit)
 
 ## Files changed
 
