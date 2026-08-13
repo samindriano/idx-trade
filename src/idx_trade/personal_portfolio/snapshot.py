@@ -8,12 +8,27 @@ from decimal import Decimal
 from typing import Any, Mapping, Protocol, runtime_checkable
 
 from .schema import validate_snapshot_payload
+from .semantics import validate_snapshot_semantics
 from .types import (
-    AssetClass, CashBalance, EndpointClass, EndpointEvidence, EndpointFailureCode,
-    PortfolioPosition, PortfolioProvenance, REQUIRED_ENDPOINT_CLASSES,
-    SecurityIdentity, SnapshotCompleteness, reject_duplicate_rows,
+    AssetClass,
+    CashBalance,
+    EndpointClass,
+    EndpointEvidence,
+    EndpointFailureCode,
+    PortfolioPosition,
+    PortfolioProvenance,
+    REQUIRED_ENDPOINT_CLASSES,
+    SecurityIdentity,
+    SnapshotCompleteness,
+    reject_duplicate_rows,
 )
-from .validation import SCHEMA_VERSION, SCOPE_REF_RE, assert_minimized_canonical_payload, jsonable, require_aware
+from .validation import (
+    SCHEMA_VERSION,
+    SCOPE_REF_RE,
+    assert_minimized_canonical_payload,
+    jsonable,
+    require_aware,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,41 +52,25 @@ class PortfolioSnapshot:
             raise ValueError("scope_ref must be a backend-generated opaque reference")
         if self.schema_version != SCHEMA_VERSION:
             raise ValueError(f"schema_version must be {SCHEMA_VERSION}")
-        positions, cash, evidence = tuple(self.positions), tuple(self.cash_balances), tuple(self.endpoint_evidence)
+
+        positions = tuple(self.positions)
+        cash = tuple(self.cash_balances)
+        evidence = tuple(self.endpoint_evidence)
         object.__setattr__(self, "positions", positions)
         object.__setattr__(self, "cash_balances", cash)
         object.__setattr__(self, "endpoint_evidence", evidence)
+
         if tuple(item.endpoint_class for item in evidence) != REQUIRED_ENDPOINT_CLASSES:
             raise ValueError("endpoint_evidence must contain every required endpoint exactly once in canonical order")
         reject_duplicate_rows(positions, "portfolio position")
         reject_duplicate_rows(cash, "cash balance")
-        self._validate_row_accounting()
-        self._validate_completeness()
 
-    def _validate_row_accounting(self) -> None:
-        expected = {
-            EndpointClass.CASH: len(self.cash_balances),
-            EndpointClass.EQUITY: sum(x.asset_class == AssetClass.EQUITY for x in self.positions),
-            EndpointClass.MUTUAL_FUND: sum(x.asset_class == AssetClass.MUTUAL_FUND for x in self.positions),
-            EndpointClass.BOND: sum(x.asset_class == AssetClass.BOND for x in self.positions),
-            EndpointClass.OTHER: sum(x.asset_class == AssetClass.OTHER for x in self.positions),
-        }
-        by_class = {item.endpoint_class: item for item in self.endpoint_evidence}
-        for endpoint_class, expected_count in expected.items():
-            accepted = by_class[endpoint_class].accepted_rows
-            if accepted != expected_count:
-                raise ValueError(f"{endpoint_class.value} accepted_rows={accepted} does not match canonical rows={expected_count}")
-
-    def _validate_completeness(self) -> None:
-        incomplete = [x for x in self.endpoint_evidence if (not x.succeeded) or x.rejected_rows > 0]
-        if self.completeness == SnapshotCompleteness.COMPLETE and incomplete:
-            raise ValueError("COMPLETE requires every required endpoint to succeed with zero rejected rows")
-        if self.completeness == SnapshotCompleteness.PARTIAL and not incomplete:
-            raise ValueError("PARTIAL requires explicit endpoint failure or rejected rows")
+        semantic_payload = jsonable(self)
+        assert_minimized_canonical_payload(semantic_payload)
+        validate_snapshot_semantics(semantic_payload)
 
     def canonical_dict(self) -> dict[str, Any]:
         value = jsonable(self)
-        assert_minimized_canonical_payload(value)
         validate_snapshot_payload(value)
         return value
 
@@ -90,16 +89,56 @@ class PortfolioSnapshot:
     @classmethod
     def from_canonical_dict(cls, payload: Mapping[str, Any]) -> "PortfolioSnapshot":
         validate_snapshot_payload(payload)
-        positions = tuple(PortfolioPosition(SecurityIdentity(**item["security"]), AssetClass(item["asset_class"]), Decimal(item["quantity"]), item["currency"], item["broker_or_custodian"], item["subaccount_ref"]) for item in payload["positions"])
-        cash = tuple(CashBalance(item["currency"], Decimal(item["amount"]), item["bank_or_custodian"], item["subaccount_ref"]) for item in payload["cash_balances"])
-        evidence = tuple(EndpointEvidence(EndpointClass(item["endpoint_class"]), item["succeeded"], item["observed_rows"], item["accepted_rows"], item["rejected_rows"], EndpointFailureCode(item["failure_code"]) if item["failure_code"] is not None else None) for item in payload["endpoint_evidence"])
-        p = payload["provenance"]
+        positions = tuple(
+            PortfolioPosition(
+                SecurityIdentity(**item["security"]),
+                AssetClass(item["asset_class"]),
+                Decimal(item["quantity"]),
+                item["currency"],
+                item["broker_or_custodian"],
+                item["subaccount_ref"],
+            )
+            for item in payload["positions"]
+        )
+        cash = tuple(
+            CashBalance(
+                item["currency"],
+                Decimal(item["amount"]),
+                item["bank_or_custodian"],
+                item["subaccount_ref"],
+            )
+            for item in payload["cash_balances"]
+        )
+        evidence = tuple(
+            EndpointEvidence(
+                EndpointClass(item["endpoint_class"]),
+                item["succeeded"],
+                item["observed_rows"],
+                item["accepted_rows"],
+                item["rejected_rows"],
+                EndpointFailureCode(item["failure_code"])
+                if item["failure_code"] is not None
+                else None,
+            )
+            for item in payload["endpoint_evidence"]
+        )
+        provenance = payload["provenance"]
         result = cls(
             datetime.fromisoformat(payload["snapshot_at"].replace("Z", "+00:00")),
             datetime.fromisoformat(payload["fetched_at"].replace("Z", "+00:00")),
-            payload["scope_ref"], positions, cash,
-            PortfolioProvenance(p["source"], p["adapter_version"], p["raw_response_sha256"], tuple(EndpointClass(item) for item in p["endpoint_set"]), p["source_commit_pins"]),
-            SnapshotCompleteness(payload["completeness"]), evidence, payload["schema_version"],
+            payload["scope_ref"],
+            positions,
+            cash,
+            PortfolioProvenance(
+                provenance["source"],
+                provenance["adapter_version"],
+                provenance["raw_response_sha256"],
+                tuple(EndpointClass(item) for item in provenance["endpoint_set"]),
+                provenance["source_commit_pins"],
+            ),
+            SnapshotCompleteness(payload["completeness"]),
+            evidence,
+            payload["schema_version"],
         )
         result.canonical_dict()
         return result
