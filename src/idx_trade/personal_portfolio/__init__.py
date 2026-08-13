@@ -1,0 +1,65 @@
+"""Provider-neutral contracts for private personal portfolio integration.
+
+This package intentionally contains no AKSes/KSEI network client and no MCP dependency.
+"""
+
+from .contracts import (
+    AppendResult,
+    AssetClass,
+    CashBalance,
+    CorporateActionContext,
+    EndpointClass,
+    EndpointEvidence,
+    EndpointFailureCode,
+    FinancialPITContext,
+    HoldingEnrichment,
+    InvestmentHealthContext,
+    PersonalPortfolioAdapter,
+    PortfolioPosition,
+    PortfolioProvenance,
+    PortfolioSnapshot,
+    PortfolioSnapshotStore,
+    PricePerformanceContext,
+    REQUIRED_ENDPOINT_CLASSES,
+    REQUIRED_SOURCE_COMMIT_PINS,
+    SecurityIdentity,
+    ShortHorizonModelContext,
+    SnapshotCompleteness,
+    TradingOpportunityContext,
+    assert_minimized_canonical_payload,
+    derive_subaccount_ref,
+    new_scope_ref,
+)
+from .schema import PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1, validate_snapshot_payload
+from .storage import SqlitePortfolioSnapshotStore
+
+__all__ = [
+    "AppendResult",
+    "AssetClass",
+    "CashBalance",
+    "CorporateActionContext",
+    "EndpointClass",
+    "EndpointEvidence",
+    "EndpointFailureCode",
+    "FinancialPITContext",
+    "HoldingEnrichment",
+    "InvestmentHealthContext",
+    "PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1",
+    "PersonalPortfolioAdapter",
+    "PortfolioPosition",
+    "PortfolioProvenance",
+    "PortfolioSnapshot",
+    "PortfolioSnapshotStore",
+    "PricePerformanceContext",
+    "REQUIRED_ENDPOINT_CLASSES",
+    "REQUIRED_SOURCE_COMMIT_PINS",
+    "SecurityIdentity",
+    "ShortHorizonModelContext",
+    "SnapshotCompleteness",
+    "SqlitePortfolioSnapshotStore",
+    "TradingOpportunityContext",
+    "assert_minimized_canonical_payload",
+    "derive_subaccount_ref",
+    "new_scope_ref",
+    "validate_snapshot_payload",
+]
