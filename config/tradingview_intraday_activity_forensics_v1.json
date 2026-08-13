@@ -1,0 +1,40 @@
+{
+  "contract_version": "tradingview-intraday-activity-forensics-v1",
+  "lineage": {
+    "admission_branch": "data/tradingview-historical-intraday-admission-pilot-v1",
+    "admission_head": "c26c4e429e162fd6240f6b6918b3f27e86494229",
+    "frozen_admission_verdict": "TRADINGVIEW_INTRADAY_ADMISSION_REJECTED",
+    "admission_artifact_manifest_sha256": "de7246e447a83b15c083d19a00808f13670d97f720bd1e28ce8756e02186e8ee",
+    "sample_manifest_sha256": "3de36746942bbf6e7dc201ce14d1aa94c75ab1dc6ebd59989e828f41114971bd",
+    "mathieu_intraday_bars_sha256": "332c26cb2a7951b2664d99349e4cfffeb516d5c416b0c37a5e6fe4bcdfff4f95",
+    "mathieu_request_manifest_sha256": "ca1271ab7551c2f4cdd3029b179a11748cb2a1892726477fa9b2e6b40603d4d8",
+    "canonical_panel_sha256": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76"
+  },
+  "scope": {
+    "years": [2021, 2022, 2023, 2024, 2025, 2026],
+    "offline_only": true,
+    "provider_calls": false,
+    "admission_verdict_mutation": false
+  },
+  "activity_contract": {
+    "active": "canonical daily row exists and volume > 0",
+    "inactive": "canonical daily row exists, volume == 0, and available H/L/C values are flat",
+    "uncertain_zero_volume": "canonical daily row exists, volume == 0, but available H/L/C values are not flat",
+    "uncertain_missing_volume": "canonical daily row exists but volume is missing/non-finite",
+    "uncertain_missing_row": "canonical daily row is absent",
+    "no_rescaling_or_imputation": true
+  },
+  "diagnostic_reference": {
+    "coverage_threshold": 0.90,
+    "use": "contextual comparison to the frozen pilot coverage gate only; never retroactively changes the frozen admission verdict",
+    "strong_support_rule": "activity-aware coverage >= 90% overall and in every year, with conservative lower bound >= 90% overall and every year",
+    "inconclusive_rule": "point activity-aware coverage passes but conservative lower bound fails because uncertain missing sessions could be active",
+    "does_not_explain_rule": "point activity-aware coverage remains below 90% overall or in any year"
+  },
+  "output": {
+    "canonical_panel_write": false,
+    "bulk_backfill": false,
+    "model_or_outcome_access": false,
+    "path_risk_restart": false
+  }
+}
