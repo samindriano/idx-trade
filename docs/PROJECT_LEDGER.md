@@ -1687,3 +1687,27 @@ The cache manifest/audit flags are all fail-closed pre-outcome values:
 ranking historical denominator remains `17`. No risk-veto/integration,
 ranking change, fresh-forward access, or main merge was started. See the dated
 Path Risk checkpoint and result handoff for the complete per-feature audit.
+
+## 35. PIT-safe V2/V3-B/O2 historical replay — 2026-08-13
+
+The corrected H10 label audit established an exact full-panel/fast-H10
+equivalence through 2026-07-31. Under the separately frozen replay contract,
+the fresh corrected-lineage historical ladder ran in the external root
+`D:\Documents\Project\idx-trade-data-gate-20260808v\pit_safe_historical_replay_v1_20260813_001`.
+
+The run fit the exact five-model V2 set, the V3-B control plus the exact
+Structure-Lite candidate, and the V3-B baseline plus O2 full-three geometry on
+the same fixed six-fold H10 development contract. V2 selected
+`HGB_XS_MARKET`; the corrected-lineage V3-B late paired gate failed and the
+frozen result is `V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2`; O2 passed
+its historical survivor rule as `O2_SURVIVOR`.
+
+This does not promote a model, create a new executable model identity, replace
+the legacy models, or authorize forward scoring. Old V2/V3-B/O2 remain
+`LEGACY_CONTAMINATED_REFERENCE`; corrected inputs remain
+`PIT-SAFE-RECONSTRUCTION-V1`. Full pytest passed `494/494` with four existing
+warnings. The external artifact manifest is verified `72/72` with SHA-256
+`9ed7079a510e2e5e070211e69ab9f811fb9ced51e72230e53e28de20d63b874f`.
+See `docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REPLAY_RUNTIME.md` and the
+updated handoff for the complete metric and hash record. Await independent
+ChatGPT review before any new model identity or forward counter decision.

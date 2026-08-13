@@ -1,40 +1,87 @@
 # Handoff
 
-from: Codex/PIT-Safe-Lineage-Reproduction
-to: MAIN / ChatGPT independent review
-task_id: IDX-PIT-SAFE-V2-V3B-O2-REPRODUCTION
-model_used: Codex Luna xhigh root with bounded Luna xhigh workers
-reasoning_level: xhigh
-source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
-source_commit: 0aaeb1777b613a9d3c9ed6c8e15c04353d116657
-branch: codex/pit-safe-v2-v3b-o2-reproduction-research-v1
-head_commit: 9eedff931fc682a26b8c4f7c408d6afd606d0e62
-scope: Preregistered generic PIT/listing-safe historical remediation and, only if authorized by the frozen boundary decision, clean V2/V3-B/O2 historical reproduction.
-files_changed:
-- docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REMEDIATION_PROTOCOL.md
-- docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_RECONSTRUCTION_RUNTIME.md
-- coordination/handoffs/IDX-PIT-SAFE-V2-V3B-O2-REPRODUCTION.md
-- src/idx_trade/research_features.py
-- src/idx_trade/ranking_v2_prepare_cache.py
-- src/idx_trade/pit_safe_reproduction.py
-- tests/test_research_features.py
-- tests/test_pit_safe_reproduction.py
-decisions_made:
-- Frozen old lineage remains immutable.
-- Listing-domain filtering must precede all causal feature construction.
-- Malformed non-null listing dates, conflicting duplicates, and invalid boolean verification values fail closed.
-- No model fitting occurs before corrected inputs and the explicit reproduction-boundary decision.
-- The corrected panel removes exactly KOCI 2023-10-06 and preserves the generic interval contract.
-- Corrected V2/V3-B/O2 inputs changed the historical identity/feature population; boundary is HISTORICAL_LADDER_REPLAY_REQUIRED.
-- Current executable status is REPRODUCTION_BLOCKED because the available H10 labels end on 2025-03-20 while old development artifacts extend to 2026-07-17, and the corrected comparison population is not the old one.
-decisions_needed:
-- Determine `EXACT_REPRODUCTION_ALLOWED`, `HISTORICAL_LADDER_REPLAY_REQUIRED`, or `REPRODUCTION_BLOCKED` after corrected input reconstruction.
-blocking_risks:
-- Existing source authority, raw fingerprint completeness, and immutable publication-history gaps may block a defensible reproduction even if local transformations are deterministic.
-- Replaying the ladder would be a new historical evaluation on a materially changed population and must not be represented as exact reproduction.
-- Full pytest: passed, exit code 0; existing non-blocking warnings only.
-- External reconstruction root: D:\Documents\Project\idx-trade-data-gate-20260808v\pit_safe_v2_v3b_o2_reproduction_v1_20260813_001.
-- Corrected panel: 981,939 rows / 945 tickers; V2: 208,373 / 668; V3-B: 208,373 / 668; O2: 194,989 / 658.
-- KOCI 2023-10-06 removed; 826 shared V2 identity rows changed across 281 tickers and 9 sessions; 632 market-context rows changed.
-- Manifest SHA-256: 34049ae3e74019219dd323a2993ab273e1fb4abb64f12e6560faf8769628107f.
-recommended_next_action: Stop for independent ChatGPT review. Do not fit models or start ladder replay until the changed-population boundary and label/provenance availability are explicitly authorized.
+from: Codex/PIT-Safe-Lineage-Reproduction  
+to: MAIN / ChatGPT independent review  
+task_id: IDX-PIT-SAFE-V2-V3B-O2-REPRODUCTION  
+model_used: Codex Luna xhigh root with bounded Luna xhigh workers  
+reasoning_level: xhigh  
+source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`  
+source_commit: `cb198437940d1846c311482353cab7579f1511b4`  
+branch: `codex/pit-safe-v2-v3b-o2-reproduction-research-v1`  
+head_commit: pending final documentation commit  
+
+## Scope
+
+Fresh historical replay only, after the corrected H10 boundary audit. No
+provider calls, protected fresh-forward outcome access, canonical model
+overwrite, forward counter, calibration, execution-grade promotion, or model
+deployment work.
+
+## Inputs
+
+External corrected input root:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\pit_safe_v2_v3b_o2_reproduction_v1_20260813_002_fast_h10`
+
+- fast-H10 SHA: `a447b3f2208cbc320f7ec7cfa16c3dbb51107286891deca130f2fb848895b677`;
+- corrected V2 table SHA: `b27a603cea39298f18996629a16f25990d3d04422b12ccb5d9bd1e45dbb34af8`;
+- corrected V3-B table SHA: `7faf7f68b78dff336a908a69e8b02f6b0f741434b4ada6e17c6b1ef8d9385753`;
+- corrected O2 table SHA: `8b1f6c917c013a6fb9cb5733d8096b45e0b5712dfa318ad49ca7f9ca43321585`;
+- corrected V2 key SHA: `79d33b233f65b282189917c7226e979956da7f0599a5ba484d82a154ed1ea826`;
+- corrected O2 key SHA: `77dbe5aaa32fa7e35779f273bc09501140e1a1363861aa262567f59354dd0644`;
+- immutable panel SHA: `67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76`.
+
+## Runtime
+
+Replay root:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\pit_safe_historical_replay_v1_20260813_001`
+
+Exactly these models were fit using the same frozen six folds and H10 labels:
+
+- V2: `V1_HGB_CONTROL`, `LOGISTIC_XS`, `HGB_XS`, `HGB_XS_MARKET`,
+  `PAIRWISE_LOGISTIC_XS`;
+- V3-B: common-support baseline and
+  `V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`;
+- O2: common-support baseline and `O2_OPEN_GEOMETRY`.
+
+Results:
+
+- V2 selected historical champion: `HGB_XS_MARKET`;
+- V3-B: `V3_FINAL_STRUCTURE_LITE_LATE_DEV_FAIL_RETAIN_V2`;
+- O2: `O2_SURVIVOR` on corrected historical development rows only;
+- no new canonical model lineage or prospective counter was created.
+
+The full metric tables and exact paired fold evidence are in
+`docs/checkpoints/2026-08-13_PIT_SAFE_V2_V3B_O2_REPLAY_RUNTIME.md` and the
+external artifact manifest. Manifest SHA:
+`9ed7079a510e2e5e070211e69ab9f811fb9ced51e72230e53e28de20d63b874f`;
+72/72 artifact hashes verified.
+
+## Validation
+
+- focused replay tests: `4 passed`;
+- full pytest: `494 passed, 0 failed`, four existing warnings only;
+- `git diff --check`: PASS before documentation commit;
+- fresh-forward outcomes accessed: `false`;
+- provider calls: `false`;
+- execution-grade promoted: `false`;
+- canonical models overwritten: `false`.
+
+## Decisions and blockers
+
+- Old V2/V3-B/O2 remain immutable `LEGACY_CONTAMINATED_REFERENCE`: useful
+  historical evidence of the contaminated lineage, not canonical PIT-safe
+  release artifacts.
+- Corrected inputs remain `PIT-SAFE-RECONSTRUCTION-V1`.
+- V3-B is not accepted on the corrected lineage because the exact late paired
+  gate fails at V2F5/V2F6; do not rescue or tune it.
+- O2 historical survival does not authorize forward scoring or a new counter.
+- A new PIT-safe model identity should only be created after independent review
+  decides whether this replay is accepted as the preregistered clean historical
+  development lineage.
+
+## Recommended next action
+
+Independent ChatGPT review of the checkpoint and external metrics. If accepted,
+freeze the clean historical decision separately from the legacy models; do not
+start forward scoring or overwrite the existing O2 prospective diagnostic in
+this handoff.
