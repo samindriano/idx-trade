@@ -159,6 +159,8 @@ def listing_status(record: dict[str, Any], start: date, end: date) -> bool:
 
 def fixed_coverage_metrics(bars: pd.DataFrame, requests: pd.DataFrame, sample: list[dict[str, Any]], windows: list[dict[str, Any]]) -> dict[str, Any]:
     fixed_requests = requests[requests["phase"].eq("fixed_60m")].copy()
+    if not fixed_requests.empty:
+        fixed_requests["symbol_resolved"] = fixed_requests["symbol_loaded"] | fixed_requests["status"].ne("SYMBOL_ERROR")
     observed = bars[(bars["phase"] == "fixed_60m") & bars["in_requested_window"] & bars["session_admissible"]].copy() if not bars.empty else pd.DataFrame()
     observed_keys = set(zip(observed["ticker"], observed["year"], observed["session_date"])) if not observed.empty else set()
     sample_by_ticker = {row["ticker"]: row for row in sample}
