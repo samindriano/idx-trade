@@ -6,9 +6,9 @@ task_id: IDX-DIRECT-ENDPOINT-AUDIT-V1
 model_used: Codex root; no worker delegated
 reasoning_level: xhigh orchestration profile
 source_repository: `samindriano/idx-trade`
-source_commit: `afa68e57e8aa770ca3e3ba26ed07edcbba7907c6`
+source_commit: `6cf00bc6444dc9cfafcb691bd599dad3db20c5be`
 branch: `data/idx-direct-endpoint-audit-v1`
-head_commit: `67b922bcac18d4395505bbd645cfb0c2c30dd381` (follow-up PIT semantics checkpoint)
+head_commit: `6cf00bc6444dc9cfafcb691bd599dad3db20c5be` (bounded issued-history/financial-report probe pending commit)
 
 ## Scope
 
@@ -21,6 +21,7 @@ access, retraining, or rescore.
 ## Files changed
 
 - `docs/checkpoints/2026-08-13_IDX_DIRECT_ENDPOINT_AUDIT_BLOCKED.md`
+- `docs/checkpoints/2026-08-13_IDX_ISSUED_HISTORY_FINANCIAL_REPORT_PROBE.md`
 - `coordination/handoffs/IDX-DIRECT-ENDPOINT-AUDIT.md`
 - `coordination/TEAM_STATUS.md` (lane claim/status row only)
 
@@ -96,3 +97,34 @@ fields into PIT history.
 
 Stop for independent ChatGPT review. Do not bulk acquire, modify the IDX-Trade
 dataset/model, open protected outcomes, or retry with browser impersonation.
+
+## Final bounded discovery pass (2026-08-13)
+
+The final pass used the working documented `IDXClient` with one request per
+probe, `max_retries=0`, and the repository default Chrome impersonation.
+Fourteen requests returned HTTP 200: eight `ListingActivity/GetIssuedHistory`
+categories and six annual audit `ListedCompany/GetFinancialReport` requests
+for BBCA, BMTR, and PALM in 2022 and 2024.
+
+`GetIssuedHistory` returned the exact action-specific rows with
+`TanggalPencatatan`, `JumlahSaham`, and `JumlahSahamSetelahTindakan`, plus
+`recordsTotal`/`recordsFiltered`. It is useful as an official event-candidate
+and share-count ledger. It is not sufficient as a complete shares-outstanding
+timeline because larger categories were intentionally sampled at 25 rows and
+the payload contains no separate publication/effective/knowledge timestamp.
+
+`GetFinancialReport` returned report period/year, a `File_Modified` timestamp,
+and attachment metadata including official IDX portal paths, file IDs, types,
+and sizes. It is useful for filing discovery and provenance, but the returned
+`File_Modified` value is not independently identified as a publication or
+knowledge timestamp; an announcement/publication cross-check remains required
+for PIT-safe use.
+
+External runtime root:
+`D:\Documents\Project\idx-direct-endpoint-audit-20260813\final_discovery_20260813`
+
+External manifest SHA-256:
+`9c1c73d95fc5951b0afc18493351577e9e35d321421ff8d675b0c6414428bf69`.
+
+Decision: `PARTIAL_SOURCE_USEFUL_NOT_PIT_READY`. No dataset, model, protected
+outcome, retraining, scoring, or bulk acquisition was performed.
