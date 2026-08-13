@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `baf0334a1dd6a31e9d88ae978630ec864bfb3410`
 branch: `data/financial-pit-marketwide-fact-extraction-census-v1`
-result_commit: to be filled after final commit
+result_commit: `b1a23a79663456981671615b1e566dead3832bd8`
 
 ## Scope
 
