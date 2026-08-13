@@ -11,6 +11,8 @@ Checkpoint: `docs/checkpoints/2026-08-13_CORPORATE_ACTION_PIT_SOURCE_AUDIT_PREP.
 - Provider origin commits: `c8c43ac66bd3215465978ac5f39d0b72feec8a3e`, then ratio fix `14dd51796d60131ef25b318bf2258ad3dd873175`.
 - Current `main` does not contain that provider.
 - Existing Financial PIT direct-IDX announcement transport is reusable as a provenance/timestamp design pattern only.
+- `nichsedge/ksei-mcp` was inspected: it targets authenticated AKSes personal portfolio/account endpoints and requires KSEI credentials; it is not a public Corporate Action scraper and should not be required for this lane.
+- Public `web.ksei.co.id` registered-security and corporate-action schedule pages remain the intended KSEI evidence layer.
 
 ## Source plan
 
@@ -20,6 +22,7 @@ Checkpoint: `docs/checkpoints/2026-08-13_CORPORATE_ACTION_PIT_SOURCE_AUDIT_PREP.
 
 ## Required bounded audit before implementation
 
+- use the same `curl_cffi` Chrome-impersonating transport already accepted in the latest Financial PIT lineage for direct IDX requests;
 - sample multiple years and event families;
 - prove retrieval completeness/truncation behavior;
 - validate KSEI ratio/date/status parsing;
@@ -27,6 +30,12 @@ Checkpoint: `docs/checkpoints/2026-08-13_CORPORATE_ACTION_PIT_SOURCE_AUDIT_PREP.
 - test revision/cancellation lineage append-only;
 - test deterministic KSEI↔IDX event/publication joins;
 - keep unavailable fields null; do not invent a generic effective date.
+
+## Runtime handoff
+
+ChatGPT's execution container does not have `curl_cffi`, and package installation is network-blocked. Do not substitute plain `requests` for the accepted direct-IDX transport. Run the first bounded live audit in the existing local IDX-Trade/Codex environment where the Financial PIT scraper stack already works.
+
+This authorizes only a small adversarial source/semantics audit, not bulk acquisition.
 
 ## Hard boundaries
 
