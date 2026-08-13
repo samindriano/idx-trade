@@ -1,16 +1,78 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
-from idx_trade.personal_portfolio import PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1, validate_snapshot_payload
-from test_snapshot_hardening import snap
+from idx_trade.personal_portfolio import (
+    AssetClass,
+    CashBalance,
+    EndpointClass,
+    EndpointEvidence,
+    PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1,
+    PortfolioPosition,
+    PortfolioProvenance,
+    PortfolioSnapshot,
+    REQUIRED_ENDPOINT_CLASSES,
+    REQUIRED_SOURCE_COMMIT_PINS,
+    SecurityIdentity,
+    SnapshotCompleteness,
+    derive_subaccount_ref,
+    validate_snapshot_payload,
+)
+
+TZ = timezone(timedelta(hours=7))
+SCOPE = "ps_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+KEY = b"semantic-gate-synthetic-key-material-32-bytes!!"
+SUB = derive_subaccount_ref("SYNTHETIC-SEMANTIC-REFERENCE", KEY)
+
+
+def _evidence() -> tuple[EndpointEvidence, ...]:
+    counts = {
+        EndpointClass.PORTFOLIO_SUMMARY: 2,
+        EndpointClass.CASH: 1,
+        EndpointClass.EQUITY: 1,
+        EndpointClass.MUTUAL_FUND: 0,
+        EndpointClass.BOND: 0,
+        EndpointClass.OTHER: 0,
+    }
+    return tuple(
+        EndpointEvidence(endpoint, True, counts[endpoint], counts[endpoint], 0)
+        for endpoint in REQUIRED_ENDPOINT_CLASSES
+    )
 
 
 def payload():
-    return snap().canonical_dict()
+    observed = datetime(2026, 8, 13, 12, 0, tzinfo=TZ)
+    snapshot = PortfolioSnapshot(
+        observed,
+        observed + timedelta(seconds=2),
+        SCOPE,
+        (
+            PortfolioPosition(
+                SecurityIdentity("TESTA", "Synthetic Equity A", "IDTESTA"),
+                AssetClass.EQUITY,
+                Decimal("1200"),
+                "IDR",
+                "BROKER_SYNTHETIC",
+                SUB,
+            ),
+        ),
+        (CashBalance("IDR", Decimal("2500000"), "BANK_SYNTHETIC", SUB),),
+        PortfolioProvenance(
+            "AKSES_KSEI_PERSONAL",
+            "skeleton-v1",
+            "a" * 64,
+            REQUIRED_ENDPOINT_CLASSES,
+            dict(REQUIRED_SOURCE_COMMIT_PINS),
+        ),
+        SnapshotCompleteness.COMPLETE,
+        _evidence(),
+    )
+    return snapshot.canonical_dict()
 
 
 def test_checked_schema_itself_rejects_naive_timestamps():
@@ -27,7 +89,7 @@ def test_checked_schema_itself_rejects_naive_timestamps():
 def test_direct_payload_rejects_endpoint_arithmetic_mismatch():
     candidate = payload()
     candidate["endpoint_evidence"][2]["observed_rows"] = 3
-    with pytest.raises(ValueError, match="observed=accepted\+rejected"):
+    with pytest.raises(ValueError, match=r"observed=accepted\+rejected"):
         validate_snapshot_payload(candidate)
 
 
