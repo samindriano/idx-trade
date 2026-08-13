@@ -8,7 +8,8 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 32bb1390303b9103ac53c6faa4d521c1352ee940
 branch: data/idx-foreign-flow-historical-acquisition-v1
-head_commit: e232ee6fc4165817740950554708dc36dcd9f7c0
+head_commit: 3297d060413849cd4934b9c475c1166ba7d76412
+metadata_status: POST_ACCEPTANCE_HANDOFF_METADATA_REPAIRED
 
 ## Scope
 
@@ -55,16 +56,19 @@ calendar was not established, so the bounded archive starts in 2021.
 
 ## Validation
 
-Focused tests passed after implementation. Full pytest is required before this
-handoff is considered complete; record the exact result in the final commit
-and TEAM_STATUS update.
+Focused tests: `24 passed`.
+Full pytest: `283 passed, 0 failed, 3 existing warnings, 22.78s`.
+`git diff --check`: PASS.
 
-## Decision needed
+The acquisition result was accepted as
+`FOREIGN_FLOW_HISTORICAL_ACQUISITION_V1_ACCEPTED`. The handoff metadata now
+points to the accepted result commit and records the completed test result.
 
-Review whether `CONDITIONAL_PASS_BOUNDED_OFFICIAL_IDX_HISTORICAL_EOD` is
-acceptable for the bounded 2021-04-01..2026-08-13 archive, and whether a
-separate official-session acquisition task should be authorized before any
-attempt to extend the archive into 2020.
+## Decision
+
+Accepted as `FOREIGN_FLOW_HISTORICAL_ACQUISITION_V1_ACCEPTED` for the bounded
+2021-04-01..2026-08-13 archive. The 2018-2020 completeness boundary remains
+explicit and is not extended by this handoff repair.
 
 ## Prohibitions respected
 
