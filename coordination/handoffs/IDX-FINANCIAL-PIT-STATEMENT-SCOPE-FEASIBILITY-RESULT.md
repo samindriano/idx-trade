@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: d1cb537e844fb8da83551ba462c80c8debb623d4
 branch: data/financial-pit-statement-scope-v1
-head_commit: pending push
+head_commit: 1821fc9f254fd43771e3640c3bf6822a5a011bcc
 scope: Bounded scope-granularity audit and content-level resolver using only immutable external Financial PIT adapter-census attachments.
 files_changed:
   - src/idx_trade/financial_scope_resolver.py
