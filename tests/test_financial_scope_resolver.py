@@ -51,11 +51,41 @@ def _xlsx(*, visible_values: list[str], hidden_values: list[str] = ()) -> bytes:
 
 def _xbrl(value: str) -> bytes:
     html = f"""<html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
-    <ix:nonNumeric name="idx-cor:AreOfAnIndividualEntityOrAGroupOfEntities"
+    <ix:nonNumeric name="idx-dei:WhetherTheFinancialStatementsAreOfAnIndividualEntityOrAGroupOfEntities"
       contextRef="CurrentYearInstant">{value}</ix:nonNumeric></html>"""
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
         archive.writestr("1000000.html", html)
+    return output.getvalue()
+
+
+def _xbrl_with_context(value: str, context: str | None) -> bytes:
+    context_attr = f' contextRef="{context}"' if context is not None else ""
+    html = f"""<html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+    <ix:nonNumeric name="idx-dei:WhetherTheFinancialStatementsAreOfAnIndividualEntityOrAGroupOfEntities"
+      {context_attr}>{value}</ix:nonNumeric></html>"""
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("1000000.html", html)
+    return output.getvalue()
+
+
+def _xbrl_facts(values: list[tuple[str, str]]) -> bytes:
+    facts = "".join(
+        f'''<ix:nonNumeric name="idx-dei:WhetherTheFinancialStatementsAreOfAnIndividualEntityOrAGroupOfEntities"
+        contextRef="{context}">{value}</ix:nonNumeric>'''
+        for value, context in values
+    )
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("1000000.html", f"<html>{facts}</html>")
+    return output.getvalue()
+
+
+def _xbrl_plain(text: str) -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("1000000.html", f"<html><p>{text}</p></html>")
     return output.getvalue()
 
 
@@ -91,6 +121,29 @@ def test_xlsx_mixed_visible_scope_fails_closed():
     }
 
 
+def test_hidden_xlsx_title_without_visible_scope_is_unresolved():
+    result = resolve_statement_scope(
+        _xlsx(visible_values=[], hidden_values=["Laporan keuangan tersendiri"]),
+        file_name="statement.xlsx",
+    )
+
+    assert result.scope is ScopeResolution.UNRESOLVED
+    assert result.evidence == ()
+
+
+def test_visible_xlsx_selector_wins_over_hidden_conflicting_title():
+    result = resolve_statement_scope(
+        _xlsx(
+            visible_values=["Entitas grup / Group entity"],
+            hidden_values=["Laporan keuangan tersendiri"],
+        ),
+        file_name="statement.xlsx",
+    )
+
+    assert result.scope is ScopeResolution.CONSOLIDATED
+    assert all("hidden" not in item.location for item in result.evidence)
+
+
 def test_xbrl_scope_preserves_concept_context_evidence():
     result = resolve_statement_scope(_xbrl("Entitas grup / Group entity"), file_name="filing_inlineXBRL.zip")
 
@@ -101,12 +154,36 @@ def test_xbrl_scope_preserves_concept_context_evidence():
 
 def test_xbrl_conflicting_scope_values_fail_closed():
     result = resolve_statement_scope(
-        _xbrl("Entitas grup / Group entity")
-        .replace(b"Entitas grup / Group entity", b"Entitas grup / Group entity Entitas tunggal / Single entity"),
+        _xbrl_facts(
+            [
+                ("Entitas grup / Group entity", "CurrentYearInstant"),
+                ("Entitas tunggal / Single entity", "CurrentYearInstant"),
+            ]
+        ),
         file_name="filing_inlineXBRL.zip",
     )
 
     assert result.scope is ScopeResolution.UNRESOLVED
+
+
+def test_xbrl_plain_scope_label_without_idx_dei_concept_is_unresolved():
+    result = resolve_statement_scope(
+        _xbrl_plain("Entitas grup / Group entity"),
+        file_name="filing_inlineXBRL.zip",
+    )
+
+    assert result.scope is ScopeResolution.UNRESOLVED
+
+
+def test_xbrl_wrong_or_missing_context_is_unresolved():
+    for context in ("PriorYearInstant", None):
+        result = resolve_statement_scope(
+            _xbrl_with_context("Entitas grup / Group entity", context),
+            file_name="filing_inlineXBRL.zip",
+        )
+        assert result.scope is ScopeResolution.UNRESOLVED
+        assert result.evidence
+        assert result.evidence[0].evidence_kind == "ixbrl_scope_concept_wrong_context"
 
 
 def test_pdf_scope_is_content_based_and_conflict_is_unresolved(monkeypatch):

@@ -8,7 +8,9 @@ issuer class, report period, or endpoint metadata.
 from __future__ import annotations
 
 import hashlib
+import html
 import io
+import posixpath
 import re
 import zipfile
 from dataclasses import dataclass
@@ -49,14 +51,15 @@ _GROUP_LABEL = re.compile(r"^entitas\s+grup\s*/\s*group\s+entity$", re.IGNORECAS
 _SEPARATE_LABEL = re.compile(r"^entitas\s+tunggal\s*/\s*single\s+entity$", re.IGNORECASE)
 _CONSOLIDATED_TITLE = re.compile(r"\blaporan\s+keuangan\s+konsolidasian\b", re.IGNORECASE)
 _SEPARATE_TITLE = re.compile(r"\blaporan\s+keuangan\s+tersendiri\b", re.IGNORECASE)
-_XBRL_SCOPE_CONCEPT = re.compile(
-    r"(?:IndividualEntityOrAGroupOfEntities|AreOfAnIndividualEntityOrAGroupOfEntities)",
-    re.IGNORECASE,
+_XBRL_SCOPE_CONCEPT_NAME = (
+    "idx-dei:WhetherTheFinancialStatementsAreOfAnIndividualEntityOrAGroupOfEntities"
 )
-_XBRL_VALUE = re.compile(
-    r"entitas\s+(?:grup|tunggal)\s*/\s*(?:group|single)\s+entity",
-    re.IGNORECASE,
+_XBRL_NON_NUMERIC_OPEN = re.compile(r"<ix:nonNumeric\b(?P<attrs>[^>]*)>", re.IGNORECASE)
+_XBRL_ATTRIBUTE = re.compile(
+    r"(?P<key>[A-Za-z_:][\w:.-]*)\s*=\s*(?P<quote>[\"'])(?P<value>.*?)(?P=quote)",
+    re.DOTALL,
 )
+_XBRL_ALLOWED_CONTEXT = "CurrentYearInstant"
 
 
 def _normalise_text(value: str) -> str:
@@ -90,7 +93,9 @@ def _finish(
 ) -> ScopeResolutionResult:
     items = tuple(evidence)
     scopes = {item.scope for item in items if item.scope is not ScopeResolution.UNRESOLVED}
-    if len(scopes) == 1:
+    if any(item.scope is ScopeResolution.UNRESOLVED for item in items):
+        scope = ScopeResolution.UNRESOLVED
+    elif len(scopes) == 1:
         scope = next(iter(scopes))
     elif len(scopes) > 1:
         scope = ScopeResolution.UNRESOLVED
@@ -110,60 +115,66 @@ def _xml_text(element: ElementTree.Element) -> str:
     return _normalise_text("".join(element.itertext()))
 
 
+def _xlsx_visible_cells(payload: bytes) -> list[tuple[str, str, str]]:
+    """Decode cells only from visible sheets using the workbook relationships."""
+
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        names = set(archive.namelist())
+        workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
+        rels = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+        rel_map = {item.attrib["Id"]: item.attrib["Target"] for item in rels}
+        shared: list[str] = []
+        if "xl/sharedStrings.xml" in names:
+            shared_root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
+            shared = [_xml_text(item) for item in shared_root]
+        ns = {
+            "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+            "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+        }
+        cells: list[tuple[str, str, str]] = []
+        for sheet in workbook.findall("main:sheets/main:sheet", ns):
+            if sheet.attrib.get("state", "visible") != "visible":
+                continue
+            rel_id = sheet.attrib.get("{%s}id" % ns["rel"])
+            target = rel_map.get(rel_id or "")
+            if not target:
+                continue
+            sheet_path = posixpath.normpath(posixpath.join("xl", target))
+            if sheet_path not in names:
+                continue
+            root = ElementTree.fromstring(archive.read(sheet_path))
+            sheet_name = sheet.attrib.get("name", "")
+            for cell in root.findall(".//main:c", ns):
+                value_node = cell.find("main:v", ns)
+                inline_node = cell.find("main:is", ns)
+                if value_node is None and inline_node is None:
+                    continue
+                if cell.attrib.get("t") == "s" and value_node is not None:
+                    index = int(value_node.text or "-1")
+                    value = shared[index] if 0 <= index < len(shared) else ""
+                elif inline_node is not None:
+                    value = _xml_text(inline_node)
+                else:
+                    value = value_node.text or ""
+                cells.append((sheet_name, cell.attrib.get("r", ""), _normalise_text(value)))
+        return cells
+
+
 def _xlsx_scope(payload: bytes) -> ScopeResolutionResult:
     evidence: list[ScopeEvidence] = []
     try:
-        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-            names = set(archive.namelist())
-            workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
-            rels = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
-            rel_map = {
-                item.attrib["Id"]: item.attrib["Target"] for item in rels
-            }
-            shared: list[str] = []
-            if "xl/sharedStrings.xml" in names:
-                shared_root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
-                shared = [_xml_text(item) for item in shared_root]
-            ns = {
-                "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
-                "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-            }
-            for sheet in workbook.findall("main:sheets/main:sheet", ns):
-                # Hidden sheets in the official files contain template choices
-                # for both scopes.  They are not evidence that both scopes are
-                # present in the submitted statement.
-                if sheet.attrib.get("state", "visible") != "visible":
-                    continue
-                rel_id = sheet.attrib.get("{%s}id" % ns["rel"])
-                target = rel_map.get(rel_id or "")
-                if not target:
-                    continue
-                sheet_path = "xl/" + target.lstrip("/")
-                if sheet_path not in names:
-                    continue
-                root = ElementTree.fromstring(archive.read(sheet_path))
-                for cell in root.findall(".//main:c", ns):
-                    value_node = cell.find("main:v", ns)
-                    inline_node = cell.find("main:is", ns)
-                    if value_node is None and inline_node is None:
-                        continue
-                    if cell.attrib.get("t") == "s" and value_node is not None:
-                        index = int(value_node.text or "-1")
-                        value = shared[index] if 0 <= index < len(shared) else ""
-                    elif inline_node is not None:
-                        value = _xml_text(inline_node)
-                    else:
-                        value = value_node.text or ""
-                    scope = _scope_from_text(value)
-                    if scope is not None:
-                        evidence.append(
-                            ScopeEvidence(
-                                location=f"sheet={sheet.attrib.get('name', '')};cell={cell.attrib.get('r', '')}",
-                                evidence_kind="xlsx_visible_scope_label",
-                                text=_normalise_text(value),
-                                scope=scope,
-                            )
-                        )
+        visible_cells = _xlsx_visible_cells(payload)
+        for sheet_name, coordinate, value in visible_cells:
+            scope = _scope_from_text(value)
+            if scope is not None:
+                evidence.append(
+                    ScopeEvidence(
+                        location=f"sheet={sheet_name};cell={coordinate}",
+                        evidence_kind="xlsx_visible_scope_label",
+                        text=value,
+                        scope=scope,
+                    )
+                )
     except (KeyError, ValueError, zipfile.BadZipFile, ElementTree.ParseError, UnicodeDecodeError) as exc:
         return _finish(
             file_format="XLSX",
@@ -172,35 +183,28 @@ def _xlsx_scope(payload: bytes) -> ScopeResolutionResult:
             detail=f"malformed XLSX scope evidence: {exc}",
         )
 
-    # If the exact scope selector is absent, a visible title is still usable
-    # content evidence, but only when it is unambiguous.
+    # The fallback title path uses the exact same visible-sheet map.  Hidden
+    # template worksheets therefore cannot become authoritative evidence.
     if not evidence:
-        try:
-            with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-                for name in archive.namelist():
-                    if not name.startswith("xl/worksheets/") or not name.endswith(".xml"):
-                        continue
-                    text = _normalise_text(archive.read(name).decode("utf-8", "ignore"))
-                    for match in _CONSOLIDATED_TITLE.finditer(text):
-                        evidence.append(
-                            ScopeEvidence(
-                                location=name,
-                                evidence_kind="xlsx_visible_statement_title",
-                                text=match.group(0),
-                                scope=ScopeResolution.CONSOLIDATED,
-                            )
-                        )
-                    for match in _SEPARATE_TITLE.finditer(text):
-                        evidence.append(
-                            ScopeEvidence(
-                                location=name,
-                                evidence_kind="xlsx_visible_statement_title",
-                                text=match.group(0),
-                                scope=ScopeResolution.SEPARATE,
-                            )
-                        )
-        except (zipfile.BadZipFile, UnicodeDecodeError):
-            pass
+        for sheet_name, coordinate, value in visible_cells:
+            if _CONSOLIDATED_TITLE.search(value):
+                evidence.append(
+                    ScopeEvidence(
+                        location=f"sheet={sheet_name};cell={coordinate}",
+                        evidence_kind="xlsx_visible_statement_title",
+                        text=value,
+                        scope=ScopeResolution.CONSOLIDATED,
+                    )
+                )
+            if _SEPARATE_TITLE.search(value):
+                evidence.append(
+                    ScopeEvidence(
+                        location=f"sheet={sheet_name};cell={coordinate}",
+                        evidence_kind="xlsx_visible_statement_title",
+                        text=value,
+                        scope=ScopeResolution.SEPARATE,
+                    )
+                )
     return _finish(
         file_format="XLSX",
         payload=payload,
@@ -217,25 +221,47 @@ def _xbrl_scope(payload: bytes) -> ScopeResolutionResult:
                 if not name.lower().endswith((".xml", ".xhtml", ".html")):
                     continue
                 text = archive.read(name).decode("utf-8", "ignore")
-                for match in _XBRL_VALUE.finditer(text):
-                    value = _normalise_text(match.group(0))
-                    scope = (
-                        ScopeResolution.CONSOLIDATED
-                        if re.search(r"entitas\s+grup", value, re.IGNORECASE)
-                        else ScopeResolution.SEPARATE
-                    )
-                    start = max(0, match.start() - 260)
-                    end = min(len(text), match.end() + 260)
-                    snippet = _normalise_text(text[start:end])
-                    kind = "ixbrl_scope_concept_context" if _XBRL_SCOPE_CONCEPT.search(snippet) else "ixbrl_scope_label"
-                    evidence.append(
-                        ScopeEvidence(
-                            location=f"{name};context={_context_ref(snippet)}",
-                            evidence_kind=kind,
-                            text=snippet,
-                            scope=scope,
+                for match in _XBRL_NON_NUMERIC_OPEN.finditer(text):
+                    attributes = {
+                        item.group("key"): html.unescape(item.group("value"))
+                        for item in _XBRL_ATTRIBUTE.finditer(match.group("attrs"))
+                    }
+                    if attributes.get("name", "").casefold() != _XBRL_SCOPE_CONCEPT_NAME.casefold():
+                        continue
+                    context = _normalise_text(attributes.get("contextRef", ""))
+                    close = re.search(r"</ix:nonNumeric\s*>", text[match.end() :], re.IGNORECASE)
+                    value_end = match.end() + close.start() if close else len(text)
+                    raw_value = text[match.end() : value_end]
+                    value = _normalise_text(html.unescape(re.sub(r"<[^>]+>", " ", raw_value)))
+                    scope = _scope_from_text(value)
+                    location = f"{name};context={context or 'UNSPECIFIED'}"
+                    if context != _XBRL_ALLOWED_CONTEXT:
+                        evidence.append(
+                            ScopeEvidence(
+                                location=location,
+                                evidence_kind="ixbrl_scope_concept_wrong_context",
+                                text=value or "missing scope value",
+                                scope=ScopeResolution.UNRESOLVED,
+                            )
                         )
-                    )
+                    elif scope is None:
+                        evidence.append(
+                            ScopeEvidence(
+                                location=location,
+                                evidence_kind="ixbrl_scope_concept_invalid_value",
+                                text=value or "missing scope value",
+                                scope=ScopeResolution.UNRESOLVED,
+                            )
+                        )
+                    else:
+                        evidence.append(
+                            ScopeEvidence(
+                                location=location,
+                                evidence_kind="ixbrl_scope_concept_context",
+                                text=value,
+                                scope=scope,
+                            )
+                        )
     except (KeyError, zipfile.BadZipFile, UnicodeDecodeError) as exc:
         return _finish(
             file_format="XBRL_ZIP",
