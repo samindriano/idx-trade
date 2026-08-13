@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: a22c87cf7cef8708d4b0de77923460a26715c253
 branch: codex/frozen-lineage-impact-audit-v1
-head_commit: 20e9bf5
+head_commit: ffa35af97ff488213ee02fa82fe8057430a0d7bd
 scope: Forensic read-only impact audit of the exact frozen historical V2, V3-B, and O2 training lineage against accepted repository P1 fail-open risks.
 files_changed:
 - docs/checkpoints/2026-08-13_FROZEN_V2_V3B_O2_TRAINING_LINEAGE_IMPACT_AUDIT.md
