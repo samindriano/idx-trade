@@ -2,29 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "idx-trade://schemas/personal-portfolio-snapshot-v1",
   "title": "Personal Portfolio Snapshot V1",
+  "$comment": "This schema enforces portable structural constraints. Cross-field row accounting, duplicate identities, completeness semantics, timestamp ordering, minimization, and summary/category reconciliation are authoritatively enforced by validate_snapshot_payload().",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "snapshot_at",
-    "fetched_at",
-    "scope_ref",
-    "completeness",
-    "endpoint_evidence",
-    "positions",
-    "cash_balances",
-    "provenance"
-  ],
+  "required": ["schema_version", "snapshot_at", "fetched_at", "scope_ref", "completeness", "endpoint_evidence", "positions", "cash_balances", "provenance"],
   "properties": {
     "schema_version": {"const": "personal-portfolio-snapshot-v1"},
-    "snapshot_at": {"type": "string", "format": "date-time"},
-    "fetched_at": {"type": "string", "format": "date-time"},
+    "snapshot_at": {"type": "string", "format": "date-time", "pattern": ".*(?:Z|[+-](?:0[0-9]|1[0-4]):[0-5][0-9])$"},
+    "fetched_at": {"type": "string", "format": "date-time", "pattern": ".*(?:Z|[+-](?:0[0-9]|1[0-4]):[0-5][0-9])$"},
     "scope_ref": {"type": "string", "pattern": "^ps_[0-9a-f]{32}$"},
     "completeness": {"enum": ["COMPLETE", "PARTIAL"]},
     "endpoint_evidence": {
-      "type": "array",
-      "minItems": 6,
-      "maxItems": 6,
+      "type": "array", "minItems": 6, "maxItems": 6,
       "prefixItems": [
         {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "PORTFOLIO_SUMMARY"}}}]},
         {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"endpoint_class": {"const": "CASH"}}}]},
@@ -42,43 +31,16 @@
   "allOf": [
     {
       "if": {"properties": {"completeness": {"const": "COMPLETE"}}},
-      "then": {
-        "properties": {
-          "endpoint_evidence": {
-            "type": "array",
-            "minItems": 6,
-            "maxItems": 6,
-            "items": {
-              "allOf": [
-                {"$ref": "#/$defs/endpoint_evidence"},
-                {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}, "failure_code": {"type": "null"}}}
-              ]
-            }
-          }
-        }
-      }
+      "then": {"properties": {"endpoint_evidence": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"allOf": [{"$ref": "#/$defs/endpoint_evidence"}, {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}, "failure_code": {"type": "null"}}}]}}}}
     },
     {
       "if": {"properties": {"completeness": {"const": "PARTIAL"}}},
-      "then": {
-        "properties": {
-          "endpoint_evidence": {
-            "contains": {
-              "anyOf": [
-                {"properties": {"succeeded": {"const": false}}},
-                {"properties": {"rejected_rows": {"minimum": 1}}}
-              ]
-            },
-            "minContains": 1
-          }
-        }
-      }
+      "then": {"properties": {"endpoint_evidence": {"contains": {"anyOf": [{"properties": {"succeeded": {"const": false}}}, {"properties": {"rejected_rows": {"minimum": 1}}}]}, "minContains": 1}}}
     }
   ],
   "$defs": {
     "security": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["symbol", "security_name", "security_code"],
       "properties": {
         "symbol": {"type": "string", "minLength": 1, "maxLength": 24, "pattern": "^[A-Za-z0-9._-]+$"},
@@ -87,8 +49,7 @@
       }
     },
     "position": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["security", "asset_class", "quantity", "currency", "broker_or_custodian", "subaccount_ref"],
       "properties": {
         "security": {"$ref": "#/$defs/security"},
@@ -100,8 +61,7 @@
       }
     },
     "cash": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["currency", "amount", "bank_or_custodian", "subaccount_ref"],
       "properties": {
         "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
@@ -111,8 +71,8 @@
       }
     },
     "endpoint_evidence": {
-      "type": "object",
-      "additionalProperties": false,
+      "$comment": "Arithmetic and canonical-row reconciliation are enforced by the shared semantic validator because standard Draft 2020-12 cannot express these cross-array invariants portably.",
+      "type": "object", "additionalProperties": false,
       "required": ["endpoint_class", "succeeded", "observed_rows", "accepted_rows", "rejected_rows", "failure_code"],
       "properties": {
         "endpoint_class": {"enum": ["PORTFOLIO_SUMMARY", "CASH", "EQUITY", "MUTUAL_FUND", "BOND", "OTHER"]},
@@ -121,33 +81,22 @@
         "accepted_rows": {"type": "integer", "minimum": 0},
         "rejected_rows": {"type": "integer", "minimum": 0},
         "failure_code": {"type": ["string", "null"], "enum": [null, "HTTP_ERROR", "AUTH_REQUIRED", "TIMEOUT", "PROVIDER_UNAVAILABLE", "SCHEMA_MISMATCH", "ROW_VALIDATION_FAILED", "UNKNOWN"]}
-      }
+      },
+      "allOf": [
+        {"if": {"properties": {"succeeded": {"const": false}}}, "then": {"properties": {"observed_rows": {"const": 0}, "accepted_rows": {"const": 0}, "rejected_rows": {"const": 0}, "failure_code": {"type": "string"}}}},
+        {"if": {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}}, "required": ["succeeded", "rejected_rows"]}, "then": {"properties": {"failure_code": {"type": "null"}}}
+      ]
     },
     "provenance": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["source", "adapter_version", "raw_response_sha256", "endpoint_set", "source_commit_pins"],
       "properties": {
         "source": {"const": "AKSES_KSEI_PERSONAL"},
         "adapter_version": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"},
         "raw_response_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "endpoint_set": {
-          "type": "array",
-          "minItems": 6,
-          "maxItems": 6,
-          "prefixItems": [
-            {"const": "PORTFOLIO_SUMMARY"},
-            {"const": "CASH"},
-            {"const": "EQUITY"},
-            {"const": "MUTUAL_FUND"},
-            {"const": "BOND"},
-            {"const": "OTHER"}
-          ],
-          "items": false
-        },
+        "endpoint_set": {"type": "array", "minItems": 6, "maxItems": 6, "prefixItems": [{"const": "PORTFOLIO_SUMMARY"}, {"const": "CASH"}, {"const": "EQUITY"}, {"const": "MUTUAL_FUND"}, {"const": "BOND"}, {"const": "OTHER"}], "items": false},
         "source_commit_pins": {
-          "type": "object",
-          "additionalProperties": false,
+          "type": "object", "additionalProperties": false,
           "required": ["nichsedge/ksei-mcp", "chickenzord/goksei"],
           "properties": {
             "nichsedge/ksei-mcp": {"const": "a3dfd3260889d704b75001387b646c25b4b69aa3"},
