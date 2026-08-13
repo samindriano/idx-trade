@@ -8,11 +8,15 @@ from datetime import date
 import hashlib
 import json
 from pathlib import Path
+import sys
 import time as time_module
 from typing import Any
 from uuid import uuid4
 
 import pandas as pd
+
+# Support the documented direct `python scripts/...` invocation from a clean checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from idx_trade.investing_admission import (
     PILOT_TICKERS,
