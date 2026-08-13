@@ -48,14 +48,14 @@ def evidence(*, equity: int = 1, cash: int = 1):
     return tuple(EndpointEvidence(x, True, counts[x], counts[x], 0) for x in REQUIRED_ENDPOINT_CLASSES)
 
 
-def snap(*, quantity=Decimal("1200"), fetched=2, offset=0, completeness=SnapshotCompleteness.COMPLETE, rows=None, raw="a" * 64):
+def snap(*, quantity=Decimal("1200"), fetched=2, offset=0, completeness=SnapshotCompleteness.COMPLETE, rows=None, raw="a" * 64, cash_amount=Decimal("2500000")):
     observed = datetime(2026, 8, 13, 12, 0, tzinfo=TZ) + timedelta(seconds=offset)
     return PortfolioSnapshot(
         observed,
         observed + timedelta(seconds=fetched),
         SCOPE,
         (PortfolioPosition(SecurityIdentity("TESTA", "Synthetic Equity A", "IDTESTA"), AssetClass.EQUITY, quantity, "IDR", "BROKER_SYNTHETIC", SUB),),
-        (CashBalance("IDR", Decimal("2500000"), "BANK_SYNTHETIC", SUB),),
+        (CashBalance("IDR", cash_amount, "BANK_SYNTHETIC", SUB),),
         PortfolioProvenance("AKSES_KSEI_PERSONAL", "skeleton-v1", raw, REQUIRED_ENDPOINT_CLASSES, PINS),
         completeness,
         rows or evidence(),
@@ -75,7 +75,7 @@ def test_required_endpoint_set_and_canonical_row_accounting():
         snap(rows=evidence()[:-1])
     rows = list(evidence())
     rows[2] = EndpointEvidence(EndpointClass.EQUITY, True, 2, 2, 0)
-    with pytest.raises(ValueError, match="row accounting mismatch"):
+    with pytest.raises(ValueError, match="canonical rows"):
         snap(rows=tuple(rows))
 
 
@@ -112,10 +112,12 @@ def test_duplicate_rows_are_rejected():
         PortfolioSnapshot(base.snapshot_at, base.fetched_at, base.scope_ref, base.positions, base.cash_balances * 2, base.provenance, base.completeness, evidence(cash=2))
 
 
-def test_decimal_scale_is_canonical_for_hashing():
-    a = snap(quantity=Decimal("1200.0"))
-    b = snap(quantity=Decimal("1200.00"))
-    assert a.canonical_dict()["positions"][0]["quantity"] == "1200"
+def test_decimal_scale_and_large_monetary_values_are_canonical():
+    a = snap(quantity=Decimal("1200.0"), cash_amount=Decimal("25000000.00"))
+    b = snap(quantity=Decimal("1200.00"), cash_amount=Decimal("25000000"))
+    payload = a.canonical_dict()
+    assert payload["positions"][0]["quantity"] == "1200"
+    assert payload["cash_balances"][0]["amount"] == "25000000"
     assert a.history_dedup_key() == b.history_dedup_key()
     assert a.snapshot_id() == b.snapshot_id()
     assert snap(quantity=Decimal("-0.00")).canonical_dict()["positions"][0]["quantity"] == "0"
