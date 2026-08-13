@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 15:40 Asia/Jakarta
+Last coordinated update: 2026-08-13 15:56 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -69,7 +69,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | PIT-safe V2/V3-B/O2 historical reproduction | `DONE` | `ChatGPT independent review + Codex/PIT-Safe-Lineage-Reproduction` | `codex/pit-safe-v2-v3b-o2-reproduction-research-v1` / HEAD `765bdba` / acceptance `review/idx-pit-safe-replay-acceptance-v1@2a70031` | `PIT_SAFE_HISTORICAL_REPLAY_ACCEPTED_CLEAN_DEVELOPMENT_DECISION`: clean historical parent is V2 `HGB_XS_MARKET`; V3-B fails its frozen late paired gate and is not rescued; O2 raw diagnostic stays `O2_SURVIVOR` but clean-lineage status is `O2_DIAGNOSTIC_ORPHANED_PARENT`. No canonical fitted model identity, forward counter, provider call, or fresh-forward outcome access. |
 | Clean V2 Open-alpha research pass (V2.1/V2.2) | `REVIEW` | `ChatGPT/Open-Alpha-Prereg-Review + Codex remediation` | `research/idx-v2-open-alpha-prereg-v1` / reviewed HEAD `24311e9d` / review `review/idx-v2-open-alpha-prereg-v1@1352833` | `REMEDIATION_REQUIRED_BEFORE_OUTCOME_RUN`: blind cache is substantively accepted, but pin separate CONTROL/V2.1/V2.2 feature hashes and prohibit 31-feature combined model; freeze exact survivor + both-survive head-to-head winner rule; harden previous-ancestor/session and strict-boolean invariants. No fitting/scoring/outcome access until final review. |
 | Canonical data-source / provenance registry | `REVIEW` | `Codex/Provenance-Registry` | `codex/data-source-provenance-registry-v1` / `639fcb8` | Registry, JSON Schema, fail-closed validator, documentation, and tests complete; focused registry suite `9 passed`; full pytest has one pre-existing untouched storage assertion failure (2 revision conflicts vs expected 1). No providers, data, outcomes, experiments, or scientific remediation. Await ChatGPT review. |
-| Direct IDX endpoint discovery audit | `REVIEW` | `Codex/IDX-Direct-Endpoint-Audit` | `data/idx-direct-endpoint-audit-v1` / `6cf00bc` | Repository-documented `curl_cffi` Chrome impersonation yielded 200 for stock summary and bounded financial-ratio queries, but ratio sector fields fail PIT semantics (PALM already Financials at fsDate 2023-06-30 vs official effective 2023-10-02); announcement query returned 503. No integration or bulk acquisition. |
+| Direct IDX endpoint discovery audit | `DONE` | `ChatGPT independent review + Codex/IDX-Direct-Endpoint-Audit` | `data/idx-direct-endpoint-audit-v1` / reviewed HEAD `52c369ae` / acceptance `87e6947c0121aba52111d3dc633e05448f6da644` | `DIRECT_IDX_ENDPOINT_DISCOVERY_ACCEPTED_PARTIAL_SOURCE_USEFUL_NOT_PIT_READY`: direct transport validated for bounded discovery; `GetIssuedHistory` retained only as candidate event/share-count ledger, `GetFinancialReport` only as filing/provenance metadata, ratio sector fields rejected for PIT history. No bulk acquisition or canonical source promotion. |
 
 ## Cross-chat no-duplicate rules currently in force
 
