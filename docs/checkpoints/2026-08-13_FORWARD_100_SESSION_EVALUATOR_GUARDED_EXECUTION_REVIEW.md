@@ -1,8 +1,8 @@
 # Forward 100-Session Evaluator — Guarded Execution Review
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Branch: `codex/idx-forward-100-evaluator-v1`  
-Reviewed implementation: `ca0b3c109cab46de2c15869a0018511e2fd366e3`  
+Date: 2026-08-13 (Asia/Jakarta)
+Branch: `codex/idx-forward-100-evaluator-v1`
+Reviewed implementation: `ca0b3c109cab46de2c15869a0018511e2fd366e3`
 Decision: `FORWARD_100_SESSION_EVALUATOR_GUARDED_TESTS_PASS_REVIEW`
 
 ## Required validation
