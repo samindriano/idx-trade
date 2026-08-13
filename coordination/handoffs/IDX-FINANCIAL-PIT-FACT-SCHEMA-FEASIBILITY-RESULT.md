@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 45d36eda095ea975182565804baaf899a9706c58
 branch: data/financial-pit-fact-schema-v1
-head_commit: 117680a
+head_commit: 7ee70dc
 
 ## Scope
 
