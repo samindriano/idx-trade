@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: `e4537c16c5011d8cafc55bc72e8f04017b874baf`
 branch: `data/financial-pit-offline-scope-reclassification-v1`
-head_commit: recorded by the final pushed branch HEAD
+head_commit: final pushed branch HEAD is reported with this handoff and in the ChatGPT return report
 
 ## Scope
 
@@ -64,8 +64,9 @@ Input hashes:
 
 ## Validation
 
-- Focused tests were run before the final percentage/mixed-count hardening;
-  full pytest and final focused tests are required after the final patch.
+- Focused resolver + reclassification tests: **14 passed, 0 failed**.
+- Full repository pytest: **502 passed, 0 failed, 3 warnings**.
+- `git diff --check`: clean.
 - No network/provider calls were made during this lane.
 
 ## Recommended next action

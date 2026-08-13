@@ -108,9 +108,8 @@ converted into a valid-looking scope or publication timestamp.
 ## Validation and next boundary
 
 - Focused resolver + reclassification tests: **14 passed, 0 failed**.
-- Full repository pytest: pending final run after this checkpoint's code/test
-  changes.
-- `git diff --check`: pending final run.
+- Full repository pytest: **502 passed, 0 failed, 3 warnings**.
+- `git diff --check`: clean.
 
 The next step requires independent ChatGPT review of this offline coverage
 result. No financial facts/features or model input may consume the PIT-ready
