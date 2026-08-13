@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 639fcb8
 branch: codex/data-source-provenance-registry-v1
-head_commit: pending final checkpoint documentation commit
+head_commit: c6839f4
 scope: canonical machine-readable source registry, JSON Schema, fail-closed validator, focused tests, and maintenance docs only
 files_changed:
   - config/data_source_provenance_registry.v1.json
