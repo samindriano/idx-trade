@@ -51,3 +51,19 @@ def test_partial_payload_fails_closed() -> None:
     payload["recordsTotal"] = 3
     with pytest.raises(ValueError, match="completeness mismatch"):
         _parse(payload)
+
+
+@pytest.mark.parametrize("field", ["recordsTotal", "recordsFiltered"])
+def test_fractional_record_metadata_fails_closed(field: str) -> None:
+    payload = _payload()
+    payload[field] = 2.5
+    with pytest.raises(ValueError, match="non-negative integer"):
+        _parse(payload)
+
+
+@pytest.mark.parametrize("value", [12.5, "12.5", float("inf"), -1])
+def test_fractional_infinite_or_negative_shares_fail_closed(value: object) -> None:
+    payload = _payload()
+    payload["data"][0]["ForeignBuy"] = value  # type: ignore[index]
+    with pytest.raises(ValueError, match="non-negative integer|missing/invalid"):
+        _parse(payload)

@@ -18,16 +18,31 @@ Semantics:
 - raw Stock Summary SHA and parent session manifest SHA are pinned.
 - zero provider calls; no historical bulk acquisition.
 
-Validation so far:
-- GitHub Actions full pytest: `268 passed`, 23 existing warnings.
-- CI was run via a temporary draft PR to the unchanged EOD integration base; the PR was closed without merge.
+Hardening and local validation completed:
+- strict integer SHARES, exact net identity, zero preservation, and fail-closed
+  missing/partial/fractional inputs;
+- strict `DATA_READY`/outcome/source/completeness/date/HTTPS parent contract;
+- canonical rebuild verification from deterministic session-local parent files;
+- exclusive create-once sidecar/manifest publication with interrupted-manifest
+  recovery and no-overwrite conflict handling;
+- coherent sidecar + sidecar-manifest tampering rejected;
+- focused tests `18 passed`; full pytest `280 passed, 0 failed, 3 warnings`.
 
-Required local runtime verification:
-1. fetch this branch and run the focused foreign-flow tests plus full pytest;
-2. run `python -m idx_trade.forward_foreign_flow_runtime --runtime-root <canonical runtime root>`;
-3. verify the preserved 2026-08-12 Stock Summary produces a complete sidecar, expected source raw row count around the existing 963-row capture;
-4. verify `ForeignBuy`/`ForeignSell` remain non-null, net equals buy-sell, unit is SHARES, provider_calls=0, hashes verify, and the parent canonical artifacts remain unchanged;
-5. rerun the runtime once to prove idempotency/no refetch;
-6. write a factual runtime checkpoint and stop for independent integration review.
+Runtime root:
+`D:\Documents\Project\idx-trade-data-gate-20260808v`.
 
-Do not deploy or modify the installed scheduler in the local-runtime step. Do not touch Corporate Action, Financial PIT, PIT-sector, historical bulk acquisition, models, or protected outcomes.
+The offline catch-up ran twice with `provider_calls=0`. First run created and
+verified sessions 2026-08-11 and 2026-08-12; second run created none and
+verified both as already valid. Each has 963 rows, 962 four-character codes,
+one five-character code, and respectively 299/286 zero-flow rows. Full raw,
+sidecar, manifest, knowledge-time, and parent-hash details are pinned in the
+checkpoint. Parent canonical manifest hashes were unchanged. Legacy 2026-08-03
+and 2026-08-10 lacked raw Stock Summary and were skipped; no 2026-08-13 session
+was locally available.
+
+Verdict: `FOREIGN_FLOW_PROSPECTIVE_SIDECAR_SAFE_LOCAL_RUNTIME_ONLY`.
+Scheduler integration is not included or authorized by this handoff.
+
+Do not deploy or modify the installed scheduler. Do not touch Corporate Action,
+Financial PIT, PIT-sector, historical bulk acquisition, models, or protected
+outcomes.
