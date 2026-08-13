@@ -1,7 +1,7 @@
 # Financial PIT Offline Scope Reclassification
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Branch: `data/financial-pit-offline-scope-reclassification-v1`  
+Date: 2026-08-13 (Asia/Jakarta)
+Branch: `data/financial-pit-offline-scope-reclassification-v1`
 Parent resolver: `data/financial-pit-statement-scope-v1@e4537c16c5011d8cafc55bc72e8f04017b874baf`
 
 ## Decision
@@ -116,4 +116,3 @@ The next step requires independent ChatGPT review of this offline coverage
 result. No financial facts/features or model input may consume the PIT-ready
 rows until the unresolved/unsupported and prior publication-chain blockers are
 separately accepted.
-
