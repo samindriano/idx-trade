@@ -1,8 +1,8 @@
 # Frozen V2 / V3-B / O2 Training-Lineage Impact Audit
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Branch: `codex/frozen-lineage-impact-audit-v1`  
-Audit HEAD: `a22c87cf7cef8708d4b0de77923460a26715c253`  
+Date: 2026-08-13 (Asia/Jakarta)
+Branch: `codex/frozen-lineage-impact-audit-v1`
+Audit HEAD: `a22c87cf7cef8708d4b0de77923460a26715c253`
 Scope: forensic, read-only impact audit of the exact frozen historical training lineage.
 
 ## Decision
