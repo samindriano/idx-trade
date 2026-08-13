@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 11:12 Asia/Jakarta
+Last coordinated update: 2026-08-13 11:14 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -66,7 +66,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Canonical EOD adversarial test-gap audit | `REVIEW` | `Codex/EOD-Test-Gap-Audit` | `codex/idx-eod-adversarial-tests-v1` / `7b21c50` | Engineering hardening complete: exact returned-session checks, semantic session/model artifact verification, hashes/manifests, protected flags, duplicate/ambiguous input rejection, stale-lease CAS, provider finite/null/date validation, O2 counter idempotency, and owner-checked worker lock. Focused 69 passed; full 286 passed; no provider calls, outcome access, or scientific/model behavior changes. `COORDINATE_WITH_ACTIVE_LANE`: scientific-integrity, provenance-registry, and forward-evaluator owners retain their boundaries. |
 | Repository-wide scientific integrity and reproducibility audit | `DONE` | `ChatGPT independent review + Codex/Scientific-Integrity-Audit` | `codex/scientific-integrity-audit-v1` @ `1a3d785b10e33af1f6f723fb4a23cf8a61980b0a` / acceptance `31b88496bcbf91bb7772351ab6c3e1df206b2375` | `REPOSITORY_SCIENTIFIC_INTEGRITY_AUDIT_ACCEPTED_NO_GO_FOR_REPRODUCIBLE_RESEARCH_RELEASE`: concrete current-main fail-open boolean/date/OHLCV/provenance paths independently verified. Historical model verdicts are not reversed. Remediation remains owned by active EOD/provenance lanes; reconsider release readiness only after P1 fixes and re-audit. |
 | Frozen V2/V3-B/O2 training-lineage impact audit | `ACTIVE` | `Codex/Frozen-Lineage-Impact-Audit` | `codex/frozen-lineage-impact-audit-v1` / planned from `origin/main` `5fb98a3` | Forensic read-only audit of exact frozen V2, V3-B, and O2 historical training lineage against accepted P1 fail-open risks. No provider calls, experiments, model/outcome access, retraining, or remediation of active-owner code. |
-| Canonical data-source / provenance registry | `ACTIVE` | `Codex/Provenance-Registry` | `codex/data-source-provenance-registry-v1` / planned from current `origin/main` | Build a machine-readable registry and contradiction/staleness validator from accepted repository evidence/checkpoints only. Documentation/schema/tests scope; no provider calls, data acquisition, outcome access, experiment reruns, scientific remediation, or reinterpretation of unresolved conclusions. Coordinate boundaries with the active scientific-integrity audit. |
+| Canonical data-source / provenance registry | `REVIEW` | `Codex/Provenance-Registry` | `codex/data-source-provenance-registry-v1` / `639fcb8` | Registry, JSON Schema, fail-closed validator, documentation, and tests complete; focused registry suite `9 passed`; full pytest has one pre-existing untouched storage assertion failure (2 revision conflicts vs expected 1). No providers, data, outcomes, experiments, or scientific remediation. Await ChatGPT review. |
 
 ## Cross-chat no-duplicate rules currently in force
 
