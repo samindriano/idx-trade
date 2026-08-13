@@ -6,9 +6,9 @@ task_id: IDX-DIRECT-ENDPOINT-AUDIT-V1
 model_used: Codex root; no worker delegated  
 reasoning_level: xhigh orchestration profile  
 source_repository: `samindriano/idx-trade`  
-source_commit: `097a7938cad5d0d53601479200f8a364a66a9c27`  
+source_commit: `afa68e57e8aa770ca3e3ba26ed07edcbba7907c6`  
 branch: `data/idx-direct-endpoint-audit-v1`  
-head_commit: `PENDING_COMMIT`  
+head_commit: `PENDING_FINAL_COMMIT`  
 
 ## Scope
 
