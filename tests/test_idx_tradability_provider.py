@@ -23,6 +23,60 @@ def test_parses_regular_cash_suspension():
     assert set(result.events["ticker"]) == {"TEST"}
 
 
+def test_effective_session_date_wins_over_earlier_announcement_date():
+    text = """
+    Peng-SPT-00110/BEI.WAS/06-2025 diumumkan pada tanggal 30 Juni 2025.
+    Bursa melakukan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    mulai sesi I tanggal 1 Juli 2025 di Pasar Reguler.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://effective-date")
+    assert result.status == "PARSED"
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-07-01")]
+
+
+def test_suspend_date_parses_session_one_trade_wording():
+    text = """
+    Bursa melakukan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    mulai sesi I perdagangan tanggal 1 Juli 2025 di Pasar Reguler.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://session-one")
+    assert result.status == "PARSED"
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-07-01")]
+
+
+def test_suspend_date_parses_weekday_and_trade_wording():
+    text = """
+    Bursa memutuskan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    mulai sesi I perdagangan hari Kamis, 11 Juli 2024 di Seluruh Pasar.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://weekday")
+    assert result.status == "PARSED"
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2024-07-11")]
+
+
+def test_resume_date_parses_pencabutan_penghentian_sejak_preopening():
+    text = """
+    Bursa mencabut Penghentian Sementara Perdagangan Efek PT Example Tbk (TEST)
+    di Seluruh Pasar terhitung sejak Sesi Pra-Pembukaan Perdagangan Efek pada hari
+    Selasa, 14 Januari 2025.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://preopening")
+    assert result.status == "PARSED"
+    assert set(result.events["action"]) == {"RESUME"}
+    assert result.events["effective_date"].unique().tolist() == [pd.Timestamp("2025-01-14")]
+
+
+def test_ambiguous_effective_date_wording_requires_manual_review():
+    text = """
+    Bursa melakukan penghentian sementara perdagangan saham PT Example Tbk (TEST)
+    di Pasar Reguler mulai sesi I tanggal 1 Juli 2025 atau tanggal 2 Juli 2025.
+    """
+    result = parse_idx_tradability_announcement(text, source_ref="idx://ambiguous-date")
+    assert result.status == "MANUAL_REVIEW"
+    assert result.diagnostic == "AMBIGUOUS_EFFECTIVE_DATE"
+    assert result.events.empty
+
+
 def test_stock_market_scope_wins_over_warrant_all_market_phrase():
     text = """
     Peng-UPT-00050/BEI.WAS/03-2025
@@ -92,6 +146,30 @@ def test_all_market_suspension_can_be_closed_only_for_resumed_markets():
     assert cash["effective_to"] == pd.Timestamp("2025-01-05")
     assert pd.isna(negotiated["effective_to"])
     assert diagnostics.empty
+
+
+def test_unmatched_resume_and_duplicate_suspend_are_explicit_and_fail_closed():
+    events = pd.DataFrame(
+        [
+            {
+                "ticker": "TEST", "market": "REGULAR", "action": "RESUME",
+                "effective_date": "2025-01-02", "source": "IDX", "source_ref": "resume-only",
+            },
+            {
+                "ticker": "TEST", "market": "REGULAR", "action": "SUSPEND",
+                "effective_date": "2025-01-03", "source": "IDX", "source_ref": "suspend-1",
+            },
+            {
+                "ticker": "TEST", "market": "REGULAR", "action": "SUSPEND",
+                "effective_date": "2025-01-03", "source": "IDX", "source_ref": "suspend-duplicate",
+            },
+        ]
+    )
+    intervals, diagnostics = compile_suspension_intervals(events)
+    assert set(diagnostics["status"]) == {"UNMATCHED_RESUME", "DUPLICATE_SUSPEND"}
+    assert set(diagnostics["inferred_state"]) == {"UNKNOWN"}
+    assert not intervals.empty
+    assert not (intervals["state"] == "ACTIVE").any()
 
 
 def test_manifest_ingestion_preserves_source_hash_and_parse_diagnostics():

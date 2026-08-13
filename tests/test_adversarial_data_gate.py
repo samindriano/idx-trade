@@ -75,7 +75,7 @@ def test_adversarial_runner_fails_closed_without_tradability_coverage():
         master,
         canonicalize_tradability_intervals(pd.DataFrame()),
         canonicalize_coverage_windows(pd.DataFrame()),
-        corporate_action_verified={"TEST": True},
+        split_history_verified={"TEST": True},
         price_semantics_verified={"TEST": True},
     )
     assert report["passed"] is False
