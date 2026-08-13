@@ -109,13 +109,19 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 ## Current status correction — 2026-08-14
 
 The `Foreign Flow feature contract V1` row above is superseded by this
-checkpoint: status `ACTIVE remediation`, branch
+checkpoint: status `REVIEW`, branch
 `research/idx-foreign-flow-feature-contract-v1` at HEAD
-`c000824f253fef41065edbe696811016d20392fe`. The offline feature contract and
-coverage audit are complete for review; external audit manifest SHA is
-`55a983fa0f9463429b10e493cef7da95b96f589ab6a6d9de7a52ad7d4bb6a714`.
-Current remediation: repair `foreign_gross_to_volume_1` to use the prior
-official session and add generic all-feature future/same-session leakage tests.
+`ff15f335f43db645db18769c082ea5ee8773a72e`. Causal remediation is complete:
+`foreign_gross_to_volume_1` uses the prior official session; 1,102,650 rows
+were rematerialized with 964,078 fully available, 137,592 partial, and 980
+missing. Remediated feature SHA is
+`059471948ad9efb5b2343d9aed729d04c5e3f2c01881153679db579b3a1d1733`; audit
+manifest SHA is
+`2341df7d7ff646dc8a13da2a45e9220e0c4c569017b373ca72daed18dcb377e4`.
+Focused tests pass `9`; full suite is `49 collected, 48 passed, 1 failed`
+on the unrelated storage expectation documented in the checkpoint. No
+provider calls, outcomes, performance testing, models, O2, or other lanes
+were touched.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
 - Do not restart legacy Probability V1 or reuse its consumed Stage-5 ranking holdout; any future Probability V2/current-alpha calibration must use a new preregistered contract and fresh-forward validation.
 - Expected Payoff V0 is closed with accepted `FEASIBILITY_GO`. Expected Payoff V1 is closed with independently accepted `EXPECTED_PAYOFF_V1_NO_SURVIVOR` at review `73b75af2...`; do not rescue it with another estimator/loss/target transform/quantile variant/horizon/feature subset, and do not create a forward shadow from this V1.
