@@ -12,8 +12,8 @@ from .validation import (
     REQUIRED_SOURCE_COMMIT_PINS,
     SHA256_RE,
     SOURCE_ID,
-    SUBACCOUNT_REF_RE,
     SYMBOL_RE,
+    SubaccountRef,
     require_currency,
     require_non_negative,
     require_safe_text,
@@ -79,7 +79,7 @@ class PortfolioPosition:
     quantity: Decimal
     currency: str | None = None
     broker_or_custodian: str | None = None
-    subaccount_ref: str | None = None
+    subaccount_ref: SubaccountRef | None = None
 
     def __post_init__(self) -> None:
         if self.asset_class == AssetClass.CASH:
@@ -89,8 +89,8 @@ class PortfolioPosition:
             require_currency(self.currency)
         if self.broker_or_custodian is not None:
             object.__setattr__(self, "broker_or_custodian", require_safe_text(self.broker_or_custodian, "broker_or_custodian", 120))
-        if self.subaccount_ref is not None and not SUBACCOUNT_REF_RE.fullmatch(self.subaccount_ref):
-            raise ValueError("subaccount_ref must be a server-derived keyed-HMAC reference")
+        if self.subaccount_ref is not None and not isinstance(self.subaccount_ref, SubaccountRef):
+            raise ValueError("subaccount_ref must come from derive_subaccount_ref")
 
     def identity_key(self) -> tuple[Any, ...]:
         return (self.security.symbol, self.security.security_code, self.asset_class.value, self.currency, self.broker_or_custodian, self.subaccount_ref)
@@ -101,15 +101,15 @@ class CashBalance:
     currency: str
     amount: Decimal
     bank_or_custodian: str | None = None
-    subaccount_ref: str | None = None
+    subaccount_ref: SubaccountRef | None = None
 
     def __post_init__(self) -> None:
         require_currency(self.currency)
         require_non_negative(self.amount, "amount")
         if self.bank_or_custodian is not None:
             object.__setattr__(self, "bank_or_custodian", require_safe_text(self.bank_or_custodian, "bank_or_custodian", 120))
-        if self.subaccount_ref is not None and not SUBACCOUNT_REF_RE.fullmatch(self.subaccount_ref):
-            raise ValueError("subaccount_ref must be a server-derived keyed-HMAC reference")
+        if self.subaccount_ref is not None and not isinstance(self.subaccount_ref, SubaccountRef):
+            raise ValueError("subaccount_ref must come from derive_subaccount_ref")
 
     def identity_key(self) -> tuple[Any, ...]:
         return (self.currency, self.bank_or_custodian, self.subaccount_ref)
