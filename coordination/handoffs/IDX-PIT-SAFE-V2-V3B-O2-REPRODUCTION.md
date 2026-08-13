@@ -9,7 +9,7 @@ source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `cb198437940d1846c311482353cab7579f1511b4`
 branch: `codex/pit-safe-v2-v3b-o2-reproduction-research-v1`
 reviewed_head: `944d72966ad28b21eef23872762007b69294ee3d`
-head_commit: pending review-2 documentation commit
+head_commit: `806749b6d7abc10e0b446276895806ac29ed4fb6`
 
 ## Scope
 
