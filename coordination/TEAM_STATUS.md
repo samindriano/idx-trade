@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 16:10 Asia/Jakarta
+Last coordinated update: 2026-08-13 16:39 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -70,7 +70,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Clean V2 Open-alpha research pass (V2.1/V2.2) | `REVIEW` | `Codex/Clean-V2-Open-Alpha-Prereg` | `research/idx-v2-open-alpha-prereg-v1` / HEAD `d9e0cd8` / acceptance `review/idx-v2-open-alpha-prereg-remediation-acceptance-v1@cede829` / result `docs/checkpoints/2026-08-13_CLEAN_V2_OPEN_ALPHA_HISTORICAL_RUN.md` | `HISTORICAL_RUN_COMPLETE_RETAIN_CLEAN_V2_PENDING_CHATGPT_REVIEW`: exactly 277,244 / 729 common-support rows; CONTROL, V2.1, and V2.2 evaluated on six frozen folds. Both challengers fail q25 paired PR-AUC gate (V2.1 median `+0.00007359`, q25 `-0.00250461`; V2.2 median `+0.00029955`, q25 `-0.00240718`); verdict `RETAIN_CLEAN_V2`. No tuning/rescue, 31-feature fit, provider/fresh-forward access, canonical model/refit/counter change, or promotion. Stop for independent ChatGPT review. |
 | Canonical data-source / provenance registry | `REVIEW` | `Codex/Provenance-Registry` | `codex/data-source-provenance-registry-v1` / `639fcb8` | Registry, JSON Schema, fail-closed validator, documentation, and tests complete; focused registry suite `9 passed`; full pytest has one pre-existing untouched storage assertion failure (2 revision conflicts vs expected 1). No providers, data, outcomes, experiments, or scientific remediation. Await ChatGPT review. |
 | Direct IDX endpoint discovery audit | `DONE` | `ChatGPT independent review + Codex/IDX-Direct-Endpoint-Audit` | `data/idx-direct-endpoint-audit-v1` / reviewed HEAD `52c369ae` / acceptance `87e6947c0121aba52111d3dc633e05448f6da644` | `DIRECT_IDX_ENDPOINT_DISCOVERY_ACCEPTED_PARTIAL_SOURCE_USEFUL_NOT_PIT_READY`: direct transport validated for bounded discovery; `GetIssuedHistory` retained only as candidate event/share-count ledger, `GetFinancialReport` only as filing/provenance metadata, ratio sector fields rejected for PIT history. No bulk acquisition or canonical source promotion. |
-| Financial PIT direct IDX publication-chain audit | `REVIEW` | `Codex/Financial-PIT-Direct-Audit` | `data/financial-pit-v1` / HEAD `64d52dbfbe0972cd6ab555c6a9520723634689c6` | Direct chain works for bounded BBCA/AADI/TLKM samples with 4/4 deterministic joins and matching attachment bytes; 2022/early-2023 publication linkage is retention-blocked and immutable revision completeness is unproven. Verdict `PARTIAL_SOURCE_USEFUL_PIT_COVERAGE_INCOMPLETE`; awaiting ChatGPT review. |
+| Financial PIT direct IDX publication-chain audit | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Direct-Audit` | `data/financial-pit-v1` / reviewed HEAD `64d52dbf` / acceptance `25eaa67a7f5446234db470756fe8b5c12cbb7696` | `FINANCIAL_PIT_DIRECT_IDX_SOURCE_AUDIT_ACCEPTED_PARTIAL_SOURCE_USEFUL_PIT_COVERAGE_INCOMPLETE`: direct report→announcement publication linkage and attachment-byte identity accepted for bounded samples; FY2022/Q1-2023 publication linkage remains retention-blocked, pagination must fail closed, and immutable restatement/version completeness is unproven. No bulk acquisition, feature derivation, or modeling. |
 
 ## Cross-chat no-duplicate rules currently in force
 
