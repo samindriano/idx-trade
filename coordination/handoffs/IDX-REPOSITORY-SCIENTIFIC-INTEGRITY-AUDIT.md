@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\.codex\worktrees\idx-scientific-integrity-audit-v1
 source_commit: 612c11cdde5a942428fe74e3059811480fc0ceb2
 branch: codex/scientific-integrity-audit-v1
-head_commit: pending documentation commit
+head_commit: 21ac0d1
 scope: Repository-wide outcome-blind scientific-integrity and reproducibility audit; no experiment rerun or protected-outcome access.
 files_changed:
   - docs/checkpoints/2026-08-13_REPOSITORY_SCIENTIFIC_INTEGRITY_AUDIT_RECOVERY.md
