@@ -7,7 +7,7 @@ model_used: GPT-5 Codex Luna xhigh
 reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 branch: `data/financial-pit-scientific-notation-remediation-v1`
-head_commit: `daee6c98a6ce9e47e6be82102217341705a72fed`
+head_commit: final branch tip reported with this handoff push
 
 ## Scope
 
