@@ -105,11 +105,17 @@ def build_ranking_v2_cache(
     _assert_clean_output_dir(output_dir)
 
     calendar = _calendar(calendar_path, "date")
+    security_master = _read_table(security_master_path)
     listing_map = _listing_map(security_master_path, "ticker", "listed_from")
     panel = _read_table(panel_path)
     labels = _validate_h10_labels(_read_table(h10_labels_path))
 
-    baseline_features = build_baseline_features(panel, calendar, listed_from=listing_map)
+    baseline_features = build_baseline_features(
+        panel,
+        calendar,
+        listed_from=listing_map,
+        security_master=security_master,
+    )
     v2_features = build_v2_feature_table(baseline_features)
     model_table = prepare_primary_model_table(v2_features, labels)
     if "session_index_zero" not in model_table.columns:

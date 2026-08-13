@@ -47,6 +47,114 @@ def _safe_divide(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     return result.where(np.isfinite(result) & denominator.ne(0))
 
 
+def strict_boolean_series(values: pd.Series, *, field_name: str) -> pd.Series:
+    """Parse only canonical booleans; reject truthy textual or numeric values."""
+
+    result: list[bool] = []
+    for value in pd.Series(values).tolist():
+        if isinstance(value, (bool, np.bool_)):
+            result.append(bool(value))
+            continue
+        if isinstance(value, str) and value.strip().lower() in {"true", "false"}:
+            result.append(value.strip().lower() == "true")
+            continue
+        raise ValueError(f"{field_name} contains a non-canonical boolean value")
+    return pd.Series(result, index=pd.Series(values).index, dtype=bool)
+
+
+def _strict_dates(values: pd.Series, *, field_name: str, allow_missing: bool) -> pd.Series:
+    raw = pd.Series(values)
+    parsed = pd.to_datetime(raw, errors="coerce", utc=True)
+    invalid = raw.notna() & parsed.isna()
+    if invalid.any():
+        raise ValueError(f"{field_name} contains malformed non-null dates")
+    if not allow_missing and parsed.isna().any():
+        raise ValueError(f"{field_name} contains missing dates")
+    return parsed.dt.tz_localize(None).dt.normalize()
+
+
+def filter_panel_to_listing_domain(
+    panel: pd.DataFrame,
+    security_master: pd.DataFrame,
+    official_sessions: Iterable[object] | None = None,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    """Apply the generic PIT listing domain before any causal construction.
+
+    Rows outside every valid listing interval are removed before ATR, rolling,
+    liquidity, cross-sectional, or label construction. Invalid dates,
+    duplicate identity keys, unknown tickers, and malformed listing intervals
+    fail closed instead of being coerced into open-ended history.
+    """
+
+    required_panel = {"ticker", "date"}
+    required_master = {"ticker", "listed_from", "listed_to"}
+    if not required_panel.issubset(panel.columns):
+        raise ValueError(f"panel missing PIT columns: {sorted(required_panel - set(panel.columns))}")
+    if not required_master.issubset(security_master.columns):
+        raise ValueError(
+            f"security master missing PIT columns: {sorted(required_master - set(security_master.columns))}"
+        )
+
+    master = security_master.loc[:, ["ticker", "listed_from", "listed_to"]].copy()
+    master["ticker"] = master["ticker"].map(lambda value: str(value).upper().replace(".JK", "").strip())
+    master["listed_from"] = _strict_dates(master["listed_from"], field_name="listed_from", allow_missing=False)
+    master["listed_to"] = _strict_dates(master["listed_to"], field_name="listed_to", allow_missing=True)
+    if master["ticker"].eq("").any() or ~master["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False).all():
+        raise ValueError("security master contains invalid ticker identities")
+    if master.duplicated(["ticker", "listed_from"], keep=False).any():
+        raise ValueError("conflicting duplicate security-master listing identities")
+    invalid_intervals = master[master["listed_to"].notna() & master["listed_to"].lt(master["listed_from"])]
+    if not invalid_intervals.empty:
+        raise ValueError("security master contains invalid listing intervals")
+
+    data = panel.copy()
+    data["ticker"] = data["ticker"].map(lambda value: str(value).upper().replace(".JK", "").strip())
+    data["date"] = _strict_dates(data["date"], field_name="panel date", allow_missing=False)
+    if data["ticker"].eq("").any() or ~data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False).all():
+        raise ValueError("panel contains invalid ticker identities")
+    if data.duplicated(["ticker", "date"]).any():
+        raise ValueError("conflicting duplicate panel ticker/date identities")
+    unknown = sorted(set(data["ticker"]) - set(master["ticker"]))
+    if unknown:
+        raise ValueError(f"panel contains tickers absent from security master: {unknown[:10]}")
+
+    if official_sessions is not None:
+        sessions = _strict_dates(pd.Series(list(official_sessions)), field_name="official session", allow_missing=False)
+        if sessions.duplicated().any():
+            raise ValueError("official session calendar contains duplicate dates")
+        session_set = set(sessions.tolist())
+        if not data["date"].isin(session_set).all():
+            raise ValueError("panel contains dates outside the official session calendar")
+
+    intervals_by_ticker = {
+        ticker: group for ticker, group in master.groupby("ticker", sort=False)
+    }
+    keep = pd.Series(False, index=data.index, dtype=bool)
+    for ticker, indices in data.groupby("ticker", sort=False).groups.items():
+        intervals = intervals_by_ticker[ticker]
+        dates = data.loc[indices, "date"]
+        in_any_interval = pd.Series(False, index=indices, dtype=bool)
+        for interval in intervals.itertuples(index=False):
+            in_any_interval |= dates.ge(interval.listed_from) & (
+                pd.isna(interval.listed_to) | dates.le(interval.listed_to)
+            )
+        keep.loc[indices] = in_any_interval.to_numpy(dtype=bool)
+
+    removed = data.loc[~keep]
+    filtered = data.loc[keep].sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
+    diagnostics = {
+        "input_rows": int(len(data)),
+        "output_rows": int(len(filtered)),
+        "rows_removed": int(len(removed)),
+        "tickers_affected": int(removed["ticker"].nunique()),
+        "sessions_affected": int(removed["date"].nunique()),
+        "earliest_affected_observation": None if removed.empty else removed["date"].min().date().isoformat(),
+        "latest_affected_observation": None if removed.empty else removed["date"].max().date().isoformat(),
+        "removed_tickers": sorted(removed["ticker"].unique().tolist()),
+    }
+    return filtered, diagnostics
+
+
 def _age_features(
     ticker: str,
     session_indices: pd.Series,
@@ -87,6 +195,7 @@ def build_baseline_features(
     official_sessions: Iterable[object],
     *,
     listed_from: Mapping[str, object] | None = None,
+    security_master: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build the frozen compact causal feature table.
 
@@ -103,6 +212,8 @@ def build_baseline_features(
     """
 
     sessions = _sessions(official_sessions)
+    if security_master is not None:
+        panel, _ = filter_panel_to_listing_domain(panel, security_master, sessions)
     index_by_date = {pd.Timestamp(day): idx for idx, day in enumerate(sessions)}
     data = add_causal_atr(panel, window=14)
     if "regular_market_value" not in data.columns:
