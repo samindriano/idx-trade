@@ -1,0 +1,1 @@
+Runner integration target: after DATA_READY capture, derive foreign-flow sidecar from the already-captured Stock Summary raw JSON; supplemental failure is recorded but must not block canonical EOD/O2. Existing DATA_READY sessions with raw Stock Summary and no valid sidecar are eligible for offline catch-up. No provider calls are added.
