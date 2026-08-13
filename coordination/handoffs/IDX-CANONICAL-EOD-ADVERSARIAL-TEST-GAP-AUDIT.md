@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
 source_commit: b94b272eddede0432e2fbe4acb2915e57a716bcb
 branch: codex/idx-eod-adversarial-tests-v1
-head_commit: pending final implementation commit
+head_commit: 0aac752bc1cb46ca3203e76751a9bd17eee8672a
 scope: canonical EOD runtime/source/artifact adversarial engineering hardening only
 files_changed: |
   src/idx_trade/forward_eod_runner.py
