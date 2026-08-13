@@ -8,7 +8,7 @@ reasoning_level: xhigh orchestration profile
 source_repository: `samindriano/idx-trade`
 source_commit: `afa68e57e8aa770ca3e3ba26ed07edcbba7907c6`
 branch: `data/idx-direct-endpoint-audit-v1`
-head_commit: `7c3e19a5e02e2d1a04a9656f6db9ca1183c1b28a` (prior transport-blocker checkpoint; follow-up pending)
+head_commit: `04085603dd00fc8ea24735c2d5c09db10b7b45ed` (follow-up PIT semantics checkpoint)
 
 ## Scope
 
