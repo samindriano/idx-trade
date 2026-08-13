@@ -8,7 +8,7 @@ reasoning_level: xhigh orchestration profile
 source_repository: `samindriano/idx-trade`
 source_commit: `6cf00bc6444dc9cfafcb691bd599dad3db20c5be`
 branch: `data/idx-direct-endpoint-audit-v1`
-head_commit: `6cf00bc6444dc9cfafcb691bd599dad3db20c5be` (bounded issued-history/financial-report probe pending commit)
+head_commit: `28f8fcd95e1f5c31b868b46d09abd45bfb60bd01`
 
 ## Scope
 
