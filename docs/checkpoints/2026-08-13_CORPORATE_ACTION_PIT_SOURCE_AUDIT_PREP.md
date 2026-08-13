@@ -118,6 +118,19 @@ KSEI also exposes dedicated schedule families including:
 
 The schedule pages expose official KSEI reference numbers, subjects, and document dates, and visibly include revision/change notices. This is important for a version-aware PIT event ledger.
 
+### `nichsedge/ksei-mcp` assessment
+
+The user supplied `nichsedge/ksei-mcp` because it is maintained by the same author as the successful IDX-BEI client. The repository was inspected before use.
+
+It is **not** a scraper for the public KSEI registered-security or corporate-action schedule pages. Its `KSEIClient` targets the credentialed AKSes service at `https://akses.ksei.co.id/service`, authenticates with `KSEI_USERNAME` and `KSEI_PASSWORD`, and exposes private portfolio/account methods such as portfolio summary, cash, equity, mutual fund, bond and global identity.
+
+Therefore:
+
+- do not request or store the user's AKSes credentials for this corporate-action lane;
+- do not add `ksei-mcp` as a dependency merely because it shares an author with `idx-bei`;
+- public Corporate Action data should be retrieved from `web.ksei.co.id` without private-account authentication;
+- implementation ideas from the repository may be inspected, but it is not evidence for Corporate Action completeness/PIT semantics.
+
 ## Proposed source hierarchy
 
 The first audit should test a three-layer official-source chain rather than treating one endpoint as canonical by itself.
@@ -220,6 +233,12 @@ Proxy voting and unrelated KSEI events should not enter the price/share adjustme
 Do **not** migrate the old `idx_corporate_actions.py` into `main` yet.
 
 The next bounded step is source/semantics discovery plus a small adversarial sample across event families and years. Only after date semantics, ratio semantics, pagination, revision handling, and source joins survive review should a new provider contract be implemented on this branch.
+
+### Runtime boundary reached in ChatGPT environment
+
+The accepted/latest Financial PIT transport uses `curl_cffi` with Chrome impersonation for direct IDX requests. The current ChatGPT execution container has no `curl_cffi`, and package installation cannot reach PyPI from that container. Substituting plain `requests` would change the tested transport contract and could recreate the known direct-IDX 403/Cloudflare behavior.
+
+Therefore the first **live bounded Corporate Action scrape** should be run in the user's existing local IDX-Trade/Codex environment where the Financial PIT transport already works. This is a runtime/environment handoff only; it does not authorize bulk acquisition.
 
 ## Non-goals
 
