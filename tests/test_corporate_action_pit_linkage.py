@@ -62,6 +62,11 @@ def test_mandatory_conversion_requires_schedule_document_to_classify_split_direc
         source_family="Mandatory Conversion",
         schedule_subject="Jadwal Reverse Stock Split ABCD",
     ) == EventFamily.REVERSE_SPLIT
+    assert normalize_event_family(
+        source_family="Mandatory Conversion",
+        schedule_subject="Jadwal Pelaksanaan Pemecahan Saham (Stock Split) atas MLPT",
+    ) == EventFamily.STOCK_SPLIT
+    assert normalize_event_family(source_family="Tanpa HMETD") == EventFamily.NON_PREEMPTIVE_ISSUANCE
 
 
 def test_ksei_schedule_index_reference_mismatch_is_not_silently_repaired():
@@ -70,6 +75,26 @@ def test_ksei_schedule_index_reference_mismatch_is_not_silently_repaired():
     decision = validate_schedule_locator(locator, document)
     assert decision.status == LinkageStatus.CONFLICT
     assert decision.conflicts == ("KSEI_REFERENCE_MISMATCH",)
+    assert dict(decision.evidence)["locator_reference"] == "KSEI-17016/JKU/0726"
+    assert dict(decision.evidence)["document_reference"] == "KSEI-17977/JKU/0726"
+
+
+def test_locator_conflict_dominates_incomplete_second_identity():
+    decision = validate_schedule_locator(
+        {"reference": "KSEI-17016/JKU/0726", "ticker": "COCO"},
+        {"ksei_reference": "KSEI-17977/JKU/0726", "ticker": ""},
+    )
+    assert decision.status == LinkageStatus.CONFLICT
+    assert decision.conflicts == ("KSEI_REFERENCE_MISMATCH",)
+
+
+def test_ksei_schedule_index_missing_identity_fails_closed():
+    decision = validate_schedule_locator(
+        {"reference": "KSEI-17016/JKU/0726", "ticker": "COCO"},
+        {"ksei_reference": "", "ticker": "COCO"},
+    )
+    assert decision.status == LinkageStatus.UNRESOLVED
+    assert decision.reasons == ("KSEI_REFERENCE_INCOMPLETE",)
 
 
 def test_distribution_event_requires_exact_ratio_record_and_distribution_dates():
@@ -99,10 +124,15 @@ def test_availability_precision_never_fabricates_ksei_intraday_timestamp():
         "knowledge_date": "2026-07-03",
         "precision": "DATE_ONLY",
     }
-    assert safe_availability_date(idx_published_at_utc="2026-07-03T03:00:00Z") == {
+    assert safe_availability_date(
+        idx_published_at_utc="2026-07-03T03:00:00Z",
+        linkage_status=LinkageStatus.EXACT,
+    ) == {
         "knowledge_at_utc": "2026-07-03T03:00:00Z",
         "knowledge_date": "2026-07-03",
-        "precision": "TIMESTAMP",
+        "precision": "IDX_TIMESTAMP_CONFIRMED",
     }
+    with pytest.raises(ValueError, match="EXACT linkage"):
+        safe_availability_date(idx_published_at_utc="2026-07-03T03:00:00Z")
     with pytest.raises(ValueError, match="timezone"):
         safe_availability_date(idx_published_at_utc="2026-07-03T10:00:00")

@@ -35,6 +35,7 @@ class LinkageDecision:
     candidate_index: int | None = None
     reasons: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
+    evidence: tuple[tuple[str, str], ...] = ()
 
 
 def _norm_text(value: Any) -> str:
@@ -72,34 +73,52 @@ def canonical_ratio(row: Mapping[str, Any]) -> tuple[str, str, str, str] | None:
     return left_value, left_security, right_value, right_security
 
 
+def _family_from_text(text: str) -> EventFamily | None:
+    """Classify explicit economic-family language in one source field."""
+
+    # Check the negative/pre-emptive distinction before the generic HMETD
+    # token.  "Tanpa HMETD" contains HMETD but is not a rights issue.
+    if any(token in text for token in ("tanpa hmetd", "pmthmetd", "private placement", "non-preemptive")):
+        return EventFamily.NON_PREEMPTIVE_ISSUANCE
+    if any(token in text for token in ("hmetd", "right distribution", "rights issue", "hak memesan efek")):
+        return EventFamily.RIGHTS_ISSUE
+    if "reverse stock" in text or "reverse split" in text:
+        return EventFamily.REVERSE_SPLIT
+    if "stock split" in text or "pemecahan saham" in text:
+        return EventFamily.STOCK_SPLIT
+    if any(token in text for token in ("saham bonus", "bonus share", "share bonus")):
+        return EventFamily.BONUS_SHARES
+    if "stock dividend" in text or "dividen saham" in text:
+        return EventFamily.STOCK_DIVIDEND
+    if "mixed dividend" in text or "dividen tunai & saham" in text:
+        return EventFamily.MIXED_DIVIDEND
+    if "cash dividend" in text or "dividen tunai" in text or "deviden tunai" in text:
+        return EventFamily.CASH_DIVIDEND
+    if "partial delisting" in text:
+        return EventFamily.PARTIAL_DELISTING
+    if "pengurangan modal" in text or "capital reduction" in text:
+        return EventFamily.CAPITAL_REDUCTION
+    if "ipo" in text or "penawaran umum perdana" in text:
+        return EventFamily.IPO
+    return None
+
+
 def normalize_event_family(*, source_family: Any = None, schedule_subject: Any = None) -> EventFamily:
+    """Normalize economic family with authoritative document-subject precedence."""
+
     source = _norm_text(source_family).casefold()
     subject = _norm_text(schedule_subject).casefold()
-    combined = f"{source} {subject}"
 
-    if any(token in combined for token in ("hmetd", "right distribution", "rights issue", "hak memesan efek")):
-        return EventFamily.RIGHTS_ISSUE
-    if "reverse stock" in combined or "reverse split" in combined:
-        return EventFamily.REVERSE_SPLIT
-    if "stock split" in combined or "pemecahan saham" in combined:
-        return EventFamily.STOCK_SPLIT
-    if any(token in combined for token in ("saham bonus", "bonus share", "share bonus")):
-        return EventFamily.BONUS_SHARES
-    if "stock dividend" in combined or "dividen saham" in combined:
-        return EventFamily.STOCK_DIVIDEND
-    if "mixed dividend" in combined or "dividen tunai & saham" in combined:
-        return EventFamily.MIXED_DIVIDEND
-    if "cash dividend" in combined or "dividen tunai" in combined or "deviden tunai" in combined:
-        return EventFamily.CASH_DIVIDEND
-    if any(token in combined for token in ("tanpa hmetd", "pmthmetd", "private placement", "non-preemptive")):
-        return EventFamily.NON_PREEMPTIVE_ISSUANCE
-    if "partial delisting" in combined:
-        return EventFamily.PARTIAL_DELISTING
-    if "pengurangan modal" in combined or "capital reduction" in combined:
-        return EventFamily.CAPITAL_REDUCTION
-    if "ipo" in combined or "penawaran umum perdana" in combined:
-        return EventFamily.IPO
-    if "mandatory conversion" in source:
+    # The linked schedule document is the economic identity authority. This
+    # must be checked before the operational/C-BEST label: e.g. a bonus-share
+    # schedule can be exposed as Right Distribution or Mixed Dividend.
+    subject_family = _family_from_text(subject)
+    if subject_family is not None:
+        return subject_family
+    source_family_value = _family_from_text(source)
+    if source_family_value is not None:
+        return source_family_value
+    if "mandatory conversion" in source or "mandatory conversion" in subject:
         return EventFamily.MANDATORY_CONVERSION_UNCLASSIFIED
     return EventFamily.OTHER
 
@@ -113,18 +132,40 @@ def validate_schedule_locator(locator: Mapping[str, Any], document: Mapping[str,
     document_reference = _norm_upper(document.get("ksei_reference"))
     locator_ticker = _norm_upper(locator.get("ticker"))
     document_ticker = _norm_upper(document.get("ticker"))
+    evidence = (
+        ("locator_reference", locator_reference),
+        ("document_reference", document_reference),
+        ("locator_ticker", locator_ticker),
+        ("document_ticker", document_ticker),
+    )
     if locator_reference and document_reference:
         if locator_reference != document_reference:
             conflicts.append("KSEI_REFERENCE_MISMATCH")
         else:
             reasons.append("KSEI_REFERENCE_EXACT")
+    elif locator_reference or document_reference:
+        reasons.append("KSEI_REFERENCE_INCOMPLETE")
     if locator_ticker and document_ticker:
         if locator_ticker != document_ticker:
             conflicts.append("TICKER_MISMATCH")
         else:
             reasons.append("TICKER_EXACT")
+    elif locator_ticker or document_ticker:
+        reasons.append("TICKER_INCOMPLETE")
+    if not locator_reference and not document_reference and not locator_ticker and not document_ticker:
+        return LinkageDecision(LinkageStatus.UNRESOLVED, reasons=("DOCUMENT_IDENTITY_INCOMPLETE",))
+    if conflicts:
+        return LinkageDecision(
+            LinkageStatus.CONFLICT,
+            reasons=tuple(reasons),
+            conflicts=tuple(conflicts),
+            evidence=evidence,
+        )
+    if any(reason.endswith("_INCOMPLETE") for reason in reasons):
+        incomplete = tuple(reason for reason in reasons if reason.endswith("_INCOMPLETE"))
+        return LinkageDecision(LinkageStatus.UNRESOLVED, reasons=incomplete, evidence=evidence)
     status = LinkageStatus.CONFLICT if conflicts else LinkageStatus.EXACT
-    return LinkageDecision(status=status, reasons=tuple(reasons), conflicts=tuple(conflicts))
+    return LinkageDecision(status=status, reasons=tuple(reasons), conflicts=tuple(conflicts), evidence=evidence)
 
 
 def _date_equal(left: Any, right: Any) -> bool:
@@ -151,6 +192,12 @@ def _ratio_equal(event: Mapping[str, Any], candidate: Mapping[str, Any]) -> bool
 
 def _family(candidate: Mapping[str, Any]) -> EventFamily:
     explicit = _norm_upper(candidate.get("event_family"))
+    subject = candidate.get("schedule_subject") or candidate.get("subject")
+    if _norm_text(subject):
+        return normalize_event_family(
+            source_family=candidate.get("event_family_source") or candidate.get("source_action") or explicit,
+            schedule_subject=subject,
+        )
     if explicit in {item.value for item in EventFamily}:
         return EventFamily(explicit)
     return normalize_event_family(
@@ -161,6 +208,12 @@ def _family(candidate: Mapping[str, Any]) -> EventFamily:
 
 def _event_family(event: Mapping[str, Any]) -> EventFamily:
     explicit = _norm_upper(event.get("event_family"))
+    subject = event.get("schedule_subject") or event.get("subject")
+    if _norm_text(subject):
+        return normalize_event_family(
+            source_family=event.get("event_family_source") or event.get("source_action") or explicit,
+            schedule_subject=subject,
+        )
     if explicit in {item.value for item in EventFamily}:
         return EventFamily(explicit)
     return normalize_event_family(
@@ -177,14 +230,18 @@ def _exact_rights(event: Mapping[str, Any], candidate: Mapping[str, Any]) -> tup
 
     event_code = _norm_upper(event.get("rights_code"))
     candidate_code = _norm_upper(candidate.get("rights_code"))
+    event_isin = _norm_upper(event.get("rights_isin"))
+    candidate_isin = _norm_upper(candidate.get("rights_isin"))
+    if bool(event_code) != bool(candidate_code):
+        return False, [], ["rights_code_incomplete"]
+    if bool(event_isin) != bool(candidate_isin):
+        return False, [], ["rights_isin_incomplete"]
     if event_code and candidate_code:
         if event_code != candidate_code:
             return False, [], ["rights_code"]
         reasons.append("RIGHTS_CODE_EXACT")
         strong_identity = True
 
-    event_isin = _norm_upper(event.get("rights_isin"))
-    candidate_isin = _norm_upper(candidate.get("rights_isin"))
     if event_isin and candidate_isin:
         if event_isin != candidate_isin:
             return False, [], ["rights_isin"]
@@ -201,24 +258,31 @@ def _exact_rights(event: Mapping[str, Any], candidate: Mapping[str, Any]) -> tup
                 reasons.append(f"{field.upper()}_VERSION_DIFF")
         if _ratio_equal(event, candidate):
             reasons.append("RATIO_EXACT")
+        elif canonical_ratio(event) is not None and canonical_ratio(candidate) is not None:
+            return False, [], ["ratio"]
         return True, reasons, []
 
     ratio_exact = _ratio_equal(event, candidate)
     record_exact = _date_equal(event.get("record_date"), candidate.get("record_date"))
     listing_exact = _date_equal(event.get("listing_date"), candidate.get("listing_date"))
+    exercise_start_exact = _date_equal(event.get("exercise_start_date"), candidate.get("exercise_start_date"))
     if ratio_exact:
         reasons.append("RATIO_EXACT")
     if record_exact:
         reasons.append("RECORD_DATE_EXACT")
     if listing_exact:
         reasons.append("LISTING_DATE_EXACT")
-    return bool(ratio_exact and (record_exact or listing_exact)), reasons, []
+    if exercise_start_exact:
+        reasons.append("EXERCISE_START_DATE_EXACT")
+    return bool(ratio_exact and (record_exact or listing_exact or exercise_start_exact)), reasons, []
 
 
 def _exact_split(event: Mapping[str, Any], candidate: Mapping[str, Any]) -> tuple[bool, list[str], list[str]]:
     conflicts = _field_conflicts(event, candidate, ("ticker", "record_date", "distribution_date", "listing_date"))
     if conflicts:
         return False, [], conflicts
+    if canonical_ratio(event) is not None and canonical_ratio(candidate) is not None and not _ratio_equal(event, candidate):
+        return False, [], ["ratio"]
     ratio_exact = _ratio_equal(event, candidate)
     date_matches = [
         name
@@ -233,6 +297,8 @@ def _exact_distribution(event: Mapping[str, Any], candidate: Mapping[str, Any]) 
     conflicts = _field_conflicts(event, candidate, ("ticker", "record_date", "distribution_date"))
     if conflicts:
         return False, [], conflicts
+    if canonical_ratio(event) is not None and canonical_ratio(candidate) is not None and not _ratio_equal(event, candidate):
+        return False, [], ["ratio"]
     ratio_exact = _ratio_equal(event, candidate)
     record_exact = _date_equal(event.get("record_date"), candidate.get("record_date"))
     distribution_exact = _date_equal(event.get("distribution_date"), candidate.get("distribution_date"))
@@ -263,34 +329,54 @@ def _exact_share_state(event: Mapping[str, Any], candidate: Mapping[str, Any]) -
     return bool(after and candidate_after and after == candidate_after and listing_exact), reasons, []
 
 
-_REVISION_TOKENS = (
-    "koreksi",
-    "perubahan",
-    "informasi tambahan",
-    "penjadwalan ulang",
-    "revision",
-    "revised",
-    "change",
-    "changes",
-    "additional information",
-    "rescheduling",
+_REVISION_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"\bkoreksi\b",
+        r"\bperubahan\b",
+        r"\binformasi tambahan\b",
+        r"\bpenjadwalan ulang\b",
+        r"\brevision\b",
+        r"\brevised\b",
+        r"\bchange(?:s|d)?\b",
+        r"\badditional information\b",
+        r"\brescheduling\b",
+    )
 )
 
 
 def is_explicit_revision_subject(value: Any) -> bool:
     text = _norm_text(value).casefold()
-    return any(token in text for token in _REVISION_TOKENS)
+    return any(pattern.search(text) for pattern in _REVISION_PATTERNS)
 
 
 def revision_relation(base: Mapping[str, Any], later: Mapping[str, Any]) -> LinkageDecision:
     """Recognize append-only revision lineage only with explicit revision language."""
 
-    if not is_explicit_revision_subject(later.get("subject") or later.get("title")):
+    revision_text = " ".join(
+        _norm_text(later.get(field)) for field in ("subject", "title") if _norm_text(later.get(field))
+    )
+    if not is_explicit_revision_subject(revision_text):
         return LinkageDecision(LinkageStatus.UNRESOLVED, reasons=("NO_EXPLICIT_REVISION_LANGUAGE",))
     if _norm_upper(base.get("ticker")) != _norm_upper(later.get("ticker")):
         return LinkageDecision(LinkageStatus.CONFLICT, conflicts=("ticker",))
     if _family(base) != _family(later):
         return LinkageDecision(LinkageStatus.CONFLICT, conflicts=("event_family",))
+
+    # An explicit prior-reference citation is the strongest append-only
+    # relation. It is allowed to carry changed schedule dates/economics; those
+    # differences are version content, not a reason to lose the lineage.
+    prior_reference = _norm_upper(later.get("prior_ksei_reference"))
+    base_reference = _norm_upper(base.get("ksei_reference"))
+    if prior_reference:
+        if not base_reference or prior_reference != base_reference:
+            return LinkageDecision(LinkageStatus.CONFLICT, conflicts=("prior_ksei_reference",))
+        return LinkageDecision(
+            LinkageStatus.EXACT,
+            candidate_index=0,
+            reasons=("EXPLICIT_REVISION", "PRIOR_KSEI_REFERENCE_EXACT"),
+        )
+
     decision = link_event(base, [later])
     if decision.status == LinkageStatus.EXACT:
         return LinkageDecision(
@@ -342,6 +428,10 @@ def link_event(event: Mapping[str, Any], candidates: Sequence[Mapping[str, Any]]
         if exact:
             exact_candidates.append((index, reasons))
 
+    # A contradictory explicit candidate must not be hidden by another exact
+    # candidate.  Keep the result fail-closed rather than choosing by order.
+    if conflict_notes:
+        return LinkageDecision(LinkageStatus.CONFLICT, conflicts=tuple(conflict_notes))
     if len(exact_candidates) == 1:
         index, reasons = exact_candidates[0]
         return LinkageDecision(LinkageStatus.EXACT, candidate_index=index, reasons=tuple(reasons))
@@ -355,7 +445,12 @@ def link_event(event: Mapping[str, Any], candidates: Sequence[Mapping[str, Any]]
     return LinkageDecision(LinkageStatus.UNRESOLVED, reasons=("NO_EVENT_SPECIFIC_EXACT_ANCHOR",))
 
 
-def safe_availability_date(*, idx_published_at_utc: Any = None, ksei_document_date: Any = None) -> dict[str, Any]:
+def safe_availability_date(
+    *,
+    idx_published_at_utc: Any = None,
+    ksei_document_date: Any = None,
+    linkage_status: LinkageStatus | str | None = None,
+) -> dict[str, Any]:
     """Preserve timestamp/date precision without fabricating KSEI intraday time."""
 
     from datetime import date, datetime, timezone
@@ -368,8 +463,14 @@ def safe_availability_date(*, idx_published_at_utc: Any = None, ksei_document_da
             raise ValueError("malformed idx_published_at_utc") from exc
         if parsed.tzinfo is None:
             raise ValueError("idx_published_at_utc must include timezone")
+        if linkage_status != LinkageStatus.EXACT and str(linkage_status) != LinkageStatus.EXACT.value:
+            raise ValueError("IDX timestamp requires EXACT linkage")
         utc = parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-        return {"knowledge_at_utc": utc, "knowledge_date": utc[:10], "precision": "TIMESTAMP"}
+        return {
+            "knowledge_at_utc": utc,
+            "knowledge_date": utc[:10],
+            "precision": "IDX_TIMESTAMP_CONFIRMED",
+        }
 
     document_date = _norm_text(ksei_document_date)
     if document_date:
