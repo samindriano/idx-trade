@@ -109,10 +109,16 @@ session range 20–1250, key SHA-256:
 
 `e058e5ce4ce650eeab5acd57a7d697c155548e40bbbb8ffe0eab120987d857df`.
 
-The candidate feature-order SHA for the 25 control features followed by the
-six Open features is:
+The three executable feature identities are separate and pinned:
 
-`df725b33ef7fefc72cb7eb1056d8a8603211af47f82be47c492be4c1e6170273`.
+| identity | feature count | feature-order SHA-256 |
+|---|---:|---|
+| CONTROL clean V2 | 25 | `1107bf6a65d0b2c86128de7c1123c876ffc9c5e19471b6f32852727f8c5b9a72` |
+| V2.1 same-day geometry | 28 | `9bf62fd9fec1edeaebd7b3024512f942fcef9c7d12dd01797f2c2020bf636c34` |
+| V2.2 previous-range displacement | 28 | `228c3afad2d4f786923c480e9b91be0467a646b08e770097552c8905dd30ff74` |
+
+The 31-feature V2 + all-six-Open concatenation is a diagnostics-only column
+order and is explicitly **PROHIBITED** as a fitted candidate.
 
 Clean-V2 exclusions: **15,387** rows:
 
@@ -126,6 +132,25 @@ The 1,876 flat-range rows are also a provenance finding: the upstream
 coverage CSV stores `open_position` as missing but stores `open_to_high` and
 `open_to_low` as zero. The new contract treats the entire family as missing;
 the external source was not modified.
+
+## Frozen survivor and winner rule
+
+For each challenger versus its comparator, the exact paired gate is:
+
+- median paired PR-AUC delta > 0;
+- q25 paired PR-AUC delta > 0;
+- positive paired folds >= 2;
+- fail the guardrail only when the candidate median ROC-AUC **and** median
+  Q5-Q1 are both below the comparator.
+
+Apply this gate separately to V2.1-vs-CONTROL and V2.2-vs-CONTROL. If neither
+survives, the verdict is `RETAIN_CLEAN_V2`; if exactly one survives, that
+challenger is the unique historical-development winner. If both survive, run
+the same gate head-to-head in both directions on the already-produced
+same-fold predictions. Exactly one directional pass selects that challenger;
+otherwise the verdict is
+`MULTIPLE_SURVIVORS_NO_UNIQUE_CHAMPION`. No post-hoc aggregate metric, era,
+feature importance, or subjective preference may select a winner.
 
 ## Required no-rescue selection discipline
 

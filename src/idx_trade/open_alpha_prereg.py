@@ -71,7 +71,14 @@ PREVIOUS_RANGE_OPEN_FEATURES = (
 )
 
 ALL_OPEN_FEATURES = (*SAME_DAY_OPEN_FEATURES, *PREVIOUS_RANGE_OPEN_FEATURES)
-CANDIDATE_FEATURE_COLUMNS = (*V2_FULL_FEATURE_COLUMNS, *ALL_OPEN_FEATURES)
+
+# These are three distinct model identities.  The six-feature concatenation is
+# retained only for blind distribution/correlation diagnostics; it is not a
+# candidate and must never be fitted as a 31-feature combined model.
+CONTROL_FEATURE_COLUMNS = tuple(V2_FULL_FEATURE_COLUMNS)
+V21_FEATURE_COLUMNS = (*CONTROL_FEATURE_COLUMNS, *SAME_DAY_OPEN_FEATURES)
+V22_FEATURE_COLUMNS = (*CONTROL_FEATURE_COLUMNS, *PREVIOUS_RANGE_OPEN_FEATURES)
+AUDIT_FEATURE_COLUMNS = (*CONTROL_FEATURE_COLUMNS, *ALL_OPEN_FEATURES)
 
 # This is the exact clean V2 model contract from the accepted historical
 # lineage.  It is recorded for traceability only; this module never instantiates
@@ -110,6 +117,21 @@ FROZEN_V2_FOLDS = (
     FrozenFold("V2F5", 1, 984, 985, 1004, 1005, 1104),
     FrozenFold("V2F6", 1, 1104, 1105, 1124, 1125, 1224),
 )
+
+SURVIVOR_GATE_RULE = {
+    "median_paired_pr_auc_delta": "> 0",
+    "q25_paired_pr_auc_delta": "> 0",
+    "positive_paired_folds": ">= 2",
+    "guardrail_reversal": "fail only when candidate median ROC-AUC and median Q5-Q1 are both below comparator",
+}
+WINNER_SELECTION_RULE = {
+    "neither_survives": "RETAIN_CLEAN_V2",
+    "exactly_one_survives": "that challenger is the unique historical-development winner",
+    "both_survive": "apply the same paired gate head-to-head in both directions",
+    "head_to_head_unique": "the sole challenger clearing the head-to-head gate wins",
+    "head_to_head_non_unique": "MULTIPLE_SURVIVORS_NO_UNIQUE_CHAMPION",
+    "forbidden": "post-hoc aggregate metric, era, feature importance, or subjective preference",
+}
 
 OUTCOME_COLUMNS = frozenset(
     {
@@ -180,6 +202,32 @@ def _normalise_dates(values: pd.Series) -> pd.Series:
     return dates.dt.normalize()
 
 
+def parse_strict_bool(values: object, *, name: str) -> pd.Series:
+    """Parse external boolean fields without Python truthiness surprises."""
+
+    series = pd.Series(values).copy()
+    if pd.api.types.is_bool_dtype(series.dtype):
+        return series.fillna(False).astype(bool)
+    normalized = series.astype("string").str.strip().str.lower()
+    mapping = {
+        "true": True,
+        "1": True,
+        "yes": True,
+        "y": True,
+        "t": True,
+        "false": False,
+        "0": False,
+        "no": False,
+        "n": False,
+        "f": False,
+    }
+    invalid = normalized.notna() & ~normalized.isin(mapping)
+    if invalid.any():
+        bad = sorted(normalized.loc[invalid].unique().tolist())
+        raise ValueError(f"invalid external boolean values for {name}: {bad}")
+    return normalized.map(mapping).fillna(False).astype(bool)
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -206,6 +254,84 @@ def stable_key_sha256(frame: pd.DataFrame) -> str:
 
 def feature_order_sha256(columns: Sequence[str]) -> str:
     return hashlib.sha256(json.dumps(list(columns), separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def evaluate_survivor_gate(
+    paired_pr_auc_deltas: Sequence[float],
+    candidate_roc_auc: Sequence[float],
+    comparator_roc_auc: Sequence[float],
+    candidate_q5_q1: Sequence[float],
+    comparator_q5_q1: Sequence[float],
+) -> dict[str, object]:
+    """Evaluate the frozen O2-style paired survivor gate.
+
+    This pure function is part of the preregistration contract only.  It does
+    not load outcomes or run during the blind cache audit.
+    """
+
+    pr_delta = np.asarray(paired_pr_auc_deltas, dtype=float)
+    candidate_roc = np.asarray(candidate_roc_auc, dtype=float)
+    comparator_roc = np.asarray(comparator_roc_auc, dtype=float)
+    candidate_q = np.asarray(candidate_q5_q1, dtype=float)
+    comparator_q = np.asarray(comparator_q5_q1, dtype=float)
+    lengths = {len(pr_delta), len(candidate_roc), len(comparator_roc), len(candidate_q), len(comparator_q)}
+    if len(lengths) != 1 or not lengths or next(iter(lengths)) == 0:
+        raise ValueError("survivor gate metrics must be non-empty and aligned")
+    if not all(np.isfinite(values).all() for values in (pr_delta, candidate_roc, comparator_roc, candidate_q, comparator_q)):
+        raise ValueError("survivor gate metrics must be finite")
+    median_pr = float(np.median(pr_delta))
+    q25_pr = float(np.quantile(pr_delta, 0.25))
+    positive_folds = int((pr_delta > 0.0).sum())
+    candidate_median_roc = float(np.median(candidate_roc))
+    comparator_median_roc = float(np.median(comparator_roc))
+    candidate_median_q = float(np.median(candidate_q))
+    comparator_median_q = float(np.median(comparator_q))
+    reversal = bool(
+        candidate_median_roc < comparator_median_roc
+        and candidate_median_q < comparator_median_q
+    )
+    survives = bool(
+        median_pr > 0.0
+        and q25_pr > 0.0
+        and positive_folds >= 2
+        and not reversal
+    )
+    return {
+        "survives": survives,
+        "median_paired_pr_auc_delta": median_pr,
+        "q25_paired_pr_auc_delta": q25_pr,
+        "positive_paired_folds": positive_folds,
+        "candidate_median_roc_auc": candidate_median_roc,
+        "comparator_median_roc_auc": comparator_median_roc,
+        "candidate_median_q5_q1": candidate_median_q,
+        "comparator_median_q5_q1": comparator_median_q,
+        "guardrail_reversal": reversal,
+        "rule": SURVIVOR_GATE_RULE,
+    }
+
+
+def select_historical_winner(
+    v21_vs_control_survives: bool,
+    v22_vs_control_survives: bool,
+    *,
+    v21_vs_v22_survives: bool | None = None,
+    v22_vs_v21_survives: bool | None = None,
+) -> str:
+    """Apply the frozen no-rescue winner rule to preregistered gate results."""
+
+    if not v21_vs_control_survives and not v22_vs_control_survives:
+        return "RETAIN_CLEAN_V2"
+    if v21_vs_control_survives and not v22_vs_control_survives:
+        return "V2.1-CLEAN-V2-OPEN-GEOMETRY"
+    if v22_vs_control_survives and not v21_vs_control_survives:
+        return "V2.2-CLEAN-V2-PREV-RANGE-OPEN-DISPLACEMENT"
+    if v21_vs_v22_survives is None or v22_vs_v21_survives is None:
+        raise ValueError("both survivors require both directional head-to-head gate results")
+    if v21_vs_v22_survives and not v22_vs_v21_survives:
+        return "V2.1-CLEAN-V2-OPEN-GEOMETRY"
+    if v22_vs_v21_survives and not v21_vs_v22_survives:
+        return "V2.2-CLEAN-V2-PREV-RANGE-OPEN-DISPLACEMENT"
+    return "MULTIPLE_SURVIVORS_NO_UNIQUE_CHAMPION"
 
 
 def same_day_open_geometry(frame: pd.DataFrame) -> pd.DataFrame:
@@ -269,6 +395,11 @@ def load_clean_v2_outcome_blind(path: Path) -> pd.DataFrame:
     frame = pd.read_parquet(path, columns=list(V2_OUTCOME_BLIND_COLUMNS))
     frame["ticker"] = frame["ticker"].astype(str).str.upper().str.strip()
     frame["date"] = _normalise_dates(frame["date"])
+    frame["universe_primary_liquid"] = parse_strict_bool(
+        frame["universe_primary_liquid"], name="universe_primary_liquid"
+    ).to_numpy()
+    if not frame["universe_primary_liquid"].all():
+        raise ValueError("clean V2 outcome-blind source contains non-primary rows")
     if frame["date"].isna().any():
         raise ValueError("clean V2 contains invalid dates")
     if frame.duplicated(["ticker", "date", "signal_session_index"]).any():
@@ -281,6 +412,10 @@ def _load_open_coverage(path: Path) -> pd.DataFrame:
     frame = pd.read_csv(path, usecols=list(OPEN_COVERAGE_COLUMNS))
     frame["ticker"] = frame["ticker"].astype(str).str.upper().str.strip()
     frame["date"] = _normalise_dates(frame["date"])
+    frame["open_feature_ready"] = parse_strict_bool(
+        frame["open_feature_ready"], name="open_feature_ready"
+    ).to_numpy()
+    frame["open_known"] = parse_strict_bool(frame["open_known"], name="open_known").to_numpy()
     if frame.duplicated(["ticker", "date", "signal_session_index"]).any():
         raise ValueError("Open coverage contains duplicate identity keys")
     return frame
@@ -291,6 +426,9 @@ def _load_panel(path: Path) -> pd.DataFrame:
     frame = pd.read_parquet(path, columns=list(PANEL_COLUMNS))
     frame["ticker"] = frame["ticker"].astype(str).str.upper().str.strip()
     frame["date"] = _normalise_dates(frame["date"])
+    frame["open_available"] = parse_strict_bool(
+        frame["open_available"], name="panel.open_available"
+    ).to_numpy()
     if frame.duplicated(["ticker", "date"]).any():
         raise ValueError("PIT-safe panel contains duplicate ticker/date keys")
     return frame
@@ -353,9 +491,67 @@ def compute_previous_active_features(
     active["previous_active_session_index"] = grouped["session_index"].shift(1)
     active["previous_high"] = grouped["high"].shift(1)
     active["previous_low"] = grouped["low"].shift(1)
+    active["previous_active_state"] = grouped["state"].shift(1)
     active["previous_active_session_gap"] = active["session_index"] - active["previous_active_session_index"]
     active["current_state"] = active["state"]
     return active.reset_index(drop=True)
+
+
+def validate_previous_active_ancestors(
+    frame: pd.DataFrame,
+    calendar: pd.DataFrame,
+    intervals: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return explicit PIT/session/tradability checks for each prior ancestor."""
+
+    required = {
+        "ticker",
+        "listed_from",
+        "listed_to",
+        "panel_session_index",
+        "previous_active_date",
+        "previous_active_session_index",
+        "previous_active_state",
+    }
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"previous ancestor validation missing columns: {sorted(missing)}")
+    sessions = calendar.loc[:, ["date"]].copy()
+    sessions["date"] = _normalise_dates(sessions["date"])
+    sessions = sessions.drop_duplicates("date").sort_values("date", kind="mergesort")
+    sessions["session_index"] = np.arange(1, len(sessions) + 1, dtype=int)
+    date_by_index = sessions.set_index("session_index")["date"]
+    previous_date = _normalise_dates(frame["previous_active_date"])
+    previous_index = pd.to_numeric(frame["previous_active_session_index"], errors="coerce").astype("Int64")
+    current_index = pd.to_numeric(frame["panel_session_index"], errors="coerce").astype("Int64")
+    previous_session_valid = (
+        previous_date.notna()
+        & previous_index.notna()
+        & current_index.notna()
+        & (previous_index < current_index)
+        & previous_date.eq(previous_index.map(date_by_index))
+    )
+    previous_listing_valid = (
+        previous_date.notna()
+        & frame["listed_from"].notna()
+        & (previous_date >= frame["listed_from"])
+        & (frame["listed_to"].isna() | (previous_date <= frame["listed_to"]))
+    )
+    previous_probe = pd.DataFrame({"ticker": frame["ticker"], "date": previous_date}, index=frame.index)
+    previous_suspension_conflict = _suspension_mask(previous_probe, intervals)
+    previous_state_valid = frame["previous_active_state"].eq("ACTIVE")
+    result = pd.DataFrame(index=frame.index)
+    result["previous_ancestor_listing_valid"] = previous_listing_valid
+    result["previous_ancestor_session_valid"] = previous_session_valid
+    result["previous_ancestor_active_state_valid"] = previous_state_valid
+    result["previous_ancestor_suspension_free"] = ~previous_suspension_conflict
+    result["previous_ancestor_valid"] = (
+        previous_listing_valid
+        & previous_session_valid
+        & previous_state_valid
+        & ~previous_suspension_conflict
+    )
+    return result
 
 
 def _close_match(left: pd.Series, right: pd.Series, *, atol: float = 1e-12) -> pd.Series:
@@ -467,6 +663,7 @@ def run_open_alpha_blind_audit(
         "previous_active_session_index",
         "previous_high",
         "previous_low",
+        "previous_active_state",
         "previous_active_session_gap",
         "high",
         "low",
@@ -502,6 +699,15 @@ def run_open_alpha_blind_audit(
     if provenance is not None:
         work = work.merge(provenance, on=["ticker", "date"], how="left", validate="one_to_one")
 
+    work["signal_session_index_alignment_valid"] = (
+        pd.to_numeric(work["signal_session_index"], errors="coerce")
+        == pd.to_numeric(work["panel_session_index"], errors="coerce")
+    )
+    if not work["signal_session_index_alignment_valid"].all():
+        bad = int((~work["signal_session_index_alignment_valid"]).sum())
+        raise ValueError(f"signal_session_index != panel_session_index for {bad} joined rows")
+    ancestor_checks = validate_previous_active_ancestors(work, session_calendar, intervals)
+    work = pd.concat([work, ancestor_checks], axis=1)
     work["listed_valid"] = (
         work["listed_from"].notna()
         & (work["date"] >= work["listed_from"])
@@ -511,7 +717,7 @@ def run_open_alpha_blind_audit(
     work["regular_suspension_conflict"] = _suspension_mask(work, intervals)
     work["current_open_valid_recomputed"] = same_day_open_geometry(work).notna().all(axis=1)
     work["current_open_ready_matches_recompute"] = _close_match(
-        work["open_feature_ready"].astype(bool), work["current_open_valid_recomputed"].astype(bool), atol=0.0
+        work["open_feature_ready"], work["current_open_valid_recomputed"], atol=0.0
     )
     work["previous_range_valid_recomputed"] = (
         np.isfinite(pd.to_numeric(work["previous_high"], errors="coerce"))
@@ -520,17 +726,13 @@ def run_open_alpha_blind_audit(
         & (pd.to_numeric(work["previous_low"], errors="coerce") > 0.0)
         & (pd.to_numeric(work["previous_high"], errors="coerce") > pd.to_numeric(work["previous_low"], errors="coerce"))
     )
-    work["previous_active_link_valid"] = (
-        work["previous_active_session_index"].notna()
-        & (work["previous_active_session_index"] < work["panel_session_index"])
-        & work["previous_high"].notna()
-        & work["previous_low"].notna()
-    )
+    work["previous_active_link_valid"] = work["previous_ancestor_valid"]
     work["common_support"] = (
         work["coverage_present"]
         & work["listed_valid"]
         & work["current_active_valid"]
         & ~work["regular_suspension_conflict"]
+        & work["signal_session_index_alignment_valid"]
         & work["current_open_valid_recomputed"]
         & work["previous_range_valid_recomputed"]
         & work["previous_active_link_valid"]
@@ -562,6 +764,8 @@ def run_open_alpha_blind_audit(
             current_reasons.append("CURRENT_SESSION_NOT_ACTIVE")
         if row.regular_suspension_conflict:
             current_reasons.append("CURRENT_REGULAR_SUSPENSION_CONFLICT")
+        if not row.signal_session_index_alignment_valid:
+            current_reasons.append("SIGNAL_PANEL_SESSION_INDEX_MISMATCH")
         if not row.current_open_valid_recomputed:
             if not row.open_known or not np.isfinite(row.open):
                 current_reasons.append("CURRENT_OPEN_UNAVAILABLE_OR_INVALID")
@@ -574,7 +778,7 @@ def run_open_alpha_blind_audit(
             else:
                 current_reasons.append("CURRENT_GEOMETRY_INVALID")
         if not row.previous_active_link_valid:
-            current_reasons.append("PREVIOUS_ACTIVE_BAR_UNAVAILABLE_OR_INVALID_LINK")
+            current_reasons.append("PREVIOUS_ANCESTOR_PIT_SESSION_OR_TRADABILITY_INVALID")
         elif row.current_open_valid_recomputed and not row.previous_range_valid_recomputed:
             current_reasons.append("PREVIOUS_ACTIVE_FLAT_OR_INVALID_RANGE")
         reasons.append(";".join(current_reasons) if current_reasons else "")
@@ -613,9 +817,9 @@ def run_open_alpha_blind_audit(
             if reason:
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
 
-    stats = _feature_stats(common, CANDIDATE_FEATURE_COLUMNS)
+    stats = _feature_stats(common, AUDIT_FEATURE_COLUMNS)
     correlation = (
-        common.loc[:, CANDIDATE_FEATURE_COLUMNS]
+        common.loc[:, AUDIT_FEATURE_COLUMNS]
         .corr(method="pearson")
         .rename_axis(index="feature_a", columns="feature_b")
         .reset_index()
@@ -692,16 +896,26 @@ def run_open_alpha_blind_audit(
         "experiment_contract": {
             "control": CONTROL_MODEL,
             "control_semantics_source_commit": CONTROL_SEMANTICS_SOURCE_COMMIT,
-            "control_feature_order": list(V2_FULL_FEATURE_COLUMNS),
-            "control_feature_order_sha256": feature_order_sha256(V2_FULL_FEATURE_COLUMNS),
+            "control_feature_order": list(CONTROL_FEATURE_COLUMNS),
+            "control_feature_order_sha256": feature_order_sha256(CONTROL_FEATURE_COLUMNS),
             "control_preprocessing": CONTROL_PREPROCESSING,
             "control_hgb_parameters": CONTROL_HGB_PARAMETERS,
             "folds": [asdict(fold) for fold in FROZEN_V2_FOLDS],
             "challengers": {
-                "V2.1": {"identity": "V2.1-CLEAN-V2-OPEN-GEOMETRY", "features": list(SAME_DAY_OPEN_FEATURES)},
-                "V2.2": {"identity": "V2.2-CLEAN-V2-PREV-RANGE-OPEN-DISPLACEMENT", "features": list(PREVIOUS_RANGE_OPEN_FEATURES)},
+                "V2.1": {
+                    "identity": "V2.1-CLEAN-V2-OPEN-GEOMETRY",
+                    "features": list(V21_FEATURE_COLUMNS),
+                    "feature_order_sha256": feature_order_sha256(V21_FEATURE_COLUMNS),
+                },
+                "V2.2": {
+                    "identity": "V2.2-CLEAN-V2-PREV-RANGE-OPEN-DISPLACEMENT",
+                    "features": list(V22_FEATURE_COLUMNS),
+                    "feature_order_sha256": feature_order_sha256(V22_FEATURE_COLUMNS),
+                },
             },
-            "eventual_rule": "same six folds, H10 semantics, HGB settings, evaluator and preregistered paired rule; no post-outcome rescue",
+            "combined_31_feature_model": {"authorized": False, "status": "PROHIBITED"},
+            "survivor_gate": SURVIVOR_GATE_RULE,
+            "winner_selection": WINNER_SELECTION_RULE,
         },
         "input_hashes": source_hashes,
         "immutable_panel_sha256_before": panel_sha_before,
@@ -725,14 +939,19 @@ def run_open_alpha_blind_audit(
             "session_min": int(common["signal_session_index"].min()) if len(common) else None,
             "session_max": int(common["signal_session_index"].max()) if len(common) else None,
             "key_sha256": stable_key_sha256(common),
-            "feature_order_sha256": feature_order_sha256(CANDIDATE_FEATURE_COLUMNS),
+            "feature_order_hashes": {
+                "control_25": feature_order_sha256(CONTROL_FEATURE_COLUMNS),
+                "v2_1_28": feature_order_sha256(V21_FEATURE_COLUMNS),
+                "v2_2_28": feature_order_sha256(V22_FEATURE_COLUMNS),
+            },
+            "combined_31_feature_model_authorized": False,
             "clean_v2_rows_excluded": int(len(exclusions)),
             "exclusion_reason_counts": reason_counts,
         },
         "coverage": {
             "coverage_rows": int(len(coverage)),
             "coverage_missing_from_clean_v2": int((~work["coverage_present"]).sum()),
-            "open_known_rows": int(work["open_known"].astype(bool).sum()),
+            "open_known_rows": int(work["open_known"].sum()),
             "same_day_geometry_rows": int(work["current_open_valid_recomputed"].sum()),
             "published_formula_mismatch_rows": int((~work["same_day_formula_match"]).sum()),
             "panel_source_counts": work.get("panel_open_evidence_status", pd.Series(dtype="string")).value_counts(dropna=False).to_dict(),
@@ -743,6 +962,10 @@ def run_open_alpha_blind_audit(
             "rows_with_previous_active_bar": int(work["previous_active_link_valid"].sum()),
             "rows_without_previous_active_bar": int((~work["previous_active_link_valid"]).sum()),
             "previous_flat_or_invalid_range_rows": int((~work["previous_range_valid_recomputed"]).sum()),
+            "ancestor_listing_invalid_rows": int((~work["previous_ancestor_listing_valid"]).sum()),
+            "ancestor_session_invalid_rows": int((~work["previous_ancestor_session_valid"]).sum()),
+            "ancestor_non_active_rows": int((~work["previous_ancestor_active_state_valid"]).sum()),
+            "ancestor_suspension_conflict_rows": int((~work["previous_ancestor_suspension_free"]).sum()),
             "previous_session_gap_min": float(work["previous_active_session_gap"].dropna().min()) if work["previous_active_session_gap"].notna().any() else None,
             "previous_session_gap_max": float(work["previous_active_session_gap"].dropna().max()) if work["previous_active_session_gap"].notna().any() else None,
             "previous_session_gap_median": float(work["previous_active_session_gap"].dropna().median()) if work["previous_active_session_gap"].notna().any() else None,
@@ -753,6 +976,7 @@ def run_open_alpha_blind_audit(
             "current_non_active_rows": int((~work["current_active_valid"]).sum()),
             "regular_suspension_conflict_rows": int(work["regular_suspension_conflict"].sum()),
             "calendar_unresolved_rows": int(work["panel_session_index"].isna().sum()),
+            "signal_panel_session_index_mismatch_rows": int((~work["signal_session_index_alignment_valid"]).sum()),
             "prelist_postdelist_adversarial_checks": {
                 "ticker": str(boundary["ticker"]),
                 "prelist_date": prelist_date,
@@ -802,6 +1026,10 @@ def run_open_alpha_blind_audit(
         "artifact_hashes": artifact_hashes,
         "source_hashes": source_hashes,
         "common_support_key_sha256": summary["common_support"]["key_sha256"],
+        "feature_order_hashes": summary["common_support"]["feature_order_hashes"],
+        "combined_31_feature_model_authorized": False,
+        "survivor_gate": SURVIVOR_GATE_RULE,
+        "winner_selection": WINNER_SELECTION_RULE,
         "immutable_panel_sha256_before": panel_sha_before,
         "immutable_panel_sha256_after": panel_sha_after,
         "immutable_panel_unchanged": panel_sha_before == panel_sha_after,

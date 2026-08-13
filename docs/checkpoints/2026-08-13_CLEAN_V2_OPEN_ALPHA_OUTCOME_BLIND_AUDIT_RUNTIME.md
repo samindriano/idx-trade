@@ -130,3 +130,40 @@ Output artifacts:
 
 The branch is ready for independent ChatGPT review. No historical outcome run
 is authorized by this checkpoint.
+
+## Remediation rerun
+
+Independent review required three outcome-blind changes before any outcome
+run. They are now implemented and rerun without rebuilding the population:
+
+1. separate feature-order identities/hashes: CONTROL 25,
+   V2.1 28, V2.2 28; the 31-feature all-six-Open combination is explicitly
+   prohibited;
+2. executable survivor gate and deterministic winner rule are frozen in code;
+3. previous ancestors now require explicit listing-valid, official-session-valid,
+   ACTIVE-state, suspension-free checks plus
+   `signal_session_index == panel_session_index`; external booleans are parsed
+   strictly, so string `"False"` is false.
+
+Remediation runtime root:
+`D:\Documents\Project\idx-trade-data-gate-20260808v\open_alpha_prereg_v1_20260813_remediation1_retry1`.
+
+The rerun remains identical at **277,244 rows / 729 tickers**, with common
+support key SHA `e058e5ce4ce650eeab5acd57a7d697c155548e40bbbb8ffe0eab120987d857df`.
+All explicit ancestor/session checks are zero-violation, including
+session-index mismatch `0`, ancestor listing invalid `0`, ancestor session
+invalid `0`, ancestor non-ACTIVE `0`, and ancestor suspension conflict `0`.
+
+Remediation hashes:
+
+- CONTROL 25: `1107bf6a65d0b2c86128de7c1123c876ffc9c5e19471b6f32852727f8c5b9a72`;
+- V2.1 28: `9bf62fd9fec1edeaebd7b3024512f942fcef9c7d12dd01797f2c2020bf636c34`;
+- V2.2 28: `228c3afad2d4f786923c480e9b91be0467a646b08e770097552c8905dd30ff74`;
+- common-support parquet: `6590686c6790b81abf204b2fc4228e2bb8b3039a7d18c573ec116aee7c117ab6`;
+- remediation audit summary: `82a7814d1ef52776eef0766005468e9297230e89ba13338776cd6324737cc0fb`;
+- remediation artifact manifest: `a9ecc02744e815a6581e053422bfc219affd036205e780ad82e9caf36083c247`.
+
+Validation after remediation: focused `9 passed`; full pytest `48 passed, 1
+pre-existing failure` in `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`.
+No model fit/score, target/outcome load, provider call, protected outcome
+access, canonical artifact change, or counter change occurred.
