@@ -35,6 +35,8 @@ def validate_endpoint_evidence_values(
     rejected_rows: int,
     failure_code: str | None,
 ) -> None:
+    if not isinstance(succeeded, bool):
+        raise ValueError("succeeded must be boolean")
     for field_name, value in (
         ("observed_rows", observed_rows),
         ("accepted_rows", accepted_rows),
