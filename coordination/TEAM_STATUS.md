@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 23:52 Asia/Jakarta
+Last coordinated update: 2026-08-14 00:01 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -18,10 +18,10 @@ Before **starting, continuing, or proposing any material IDX-Trade work**, every
 1. fetch/read the latest `origin/main:coordination/TEAM_STATUS.md`;
 2. check whether another active task already owns the same scope;
 3. if starting new material work, claim/update a task row before implementation;
-4. update the row whenever a material checkpoint, blocker, verdict, branch, or ownership state changes;
-5. update the row again when work becomes `REVIEW`, `DONE`, `PARKED`, `WAITING`, or `BLOCKED`.
+4. update the row whenever a material checkpoint, blocker, verdict, ownership change, or branch change;
+5. update it again when the task becomes `REVIEW`, `DONE`, `PARKED`, `WAITING`, or `BLOCKED`.
 
-No agent may duplicate an `ACTIVE` scope unless the user explicitly asks for independent/adversarial review.
+No agent may duplicate another `ACTIVE` scope unless the user explicitly asks for independent/adversarial review.
 
 ### Safe shared-file update rule
 
@@ -49,7 +49,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Investing historical intraday depth audit | `DONE` | `ChatGPT independent review + Codex/Investing-Intraday-Depth-Audit` | `data/investing-intraday-depth-audit-v1` / remediation `d083581c561c5777cc221b4a16bc48d4b98b4685` / acceptance `b80bd94daf26436092bd5e070c5b4bc70b2a2037` | `DEPTH_AUDIT_ACCEPTED_PREREGISTER_SECONDARY_INTRADAY_PILOT`: 3,685/3,685 sparse 1h probes completed with zero final provider errors; listing-aware conditional availability is 87.87%/80.04%/95.23%/94.89%/92.42% for 2018/2020/2022/2024/2026. Timezone remediation was documentation-only and fidelity metrics are unchanged. Next authorization is only a separately frozen acquisition/admission pilot; no bulk backfill, canonical panel integration, model work, protected outcomes, O2 changes, or automatic Path Risk restart. |
 | Investing secondary intraday admission pilot | `DONE` | `ChatGPT independent review + Codex/Investing-Intraday-Admission-Pilot` | `data/investing-intraday-admission-pilot-v1` / reviewed HEAD `27e0b7a1b3f5bb4688efeb585215eb0b6e435ccd` / acceptance `6e3740e60e0196212ecbe4ea737703e2cf18ba01` | `PILOT_REJECTED_ACCEPTED_DECISION_VALID`: 58/138 final provider errors, all three coverage eras fail, and returned-data fidelity independently misses frozen gates. Two non-decision-changing evaluator gaps were found (frozen provenance hashes are recorded but not enforced; generated verdict does not enforce all admission gates). Lane remains rejected/closed; no rerun, bulk acquisition, canonical integration, Path Risk/O2 work, or outcome access. Fix both gaps before any separately preregistered future reuse. |
 | TradingView historical intraday admission pilot | `REVIEW` | `Codex/TradingView-Historical-Intraday-Admission` | `data/tradingview-historical-intraday-admission-pilot-v1` / HEAD `c26c4e429e162fd6240f6b6918b3f27e86494229` | Frozen verdict `TRADINGVIEW_INTRADAY_ADMISSION_REJECTED`: certified-session coverage 86.62% fails despite HLC 96.18%, volume ±5% 95.01%, and 8/8 deep controls reaching 2020-01-02. No rerun/bulk/model/O2/Path Risk. |
-| TradingView activity-aware coverage forensic audit | `ACTIVE` | `ChatGPT/TradingView-Activity-Forensics` | `data/tradingview-intraday-activity-forensics-v1` / base admission HEAD `c26c4e4` | Offline-only forensic classification of missing ticker-sessions against immutable canonical daily activity. Preserve frozen pilot rejection; no provider calls, denominator rescue, bulk acquisition, model/O2/Path Risk/outcome access. |
+| TradingView activity-aware coverage forensic audit | `BLOCKED` | `ChatGPT/TradingView-Activity-Forensics` | `data/tradingview-intraday-activity-forensics-v1` / prepared HEAD `97b1f01c4ec4171e438cff6e4ad9118afde7e3b8` | Offline classifier/runner/checkpoint prepared and hash-pinned. Exact runtime is blocked only because the authoritative admission artifact root and canonical panel are local external bytes on the user's Windows machine, inaccessible to this ChatGPT runtime. Zero provider calls; frozen pilot rejection unchanged. |
 | Path Risk | `WAITING` | none | prior V1/V2 lineage | V1/V2 failed. Do not restart/retune now; wait for richer intraday accumulation and a genuinely new preregistered hypothesis family. |
 | Probability V1 legacy calibration | `DONE` | prior research lineage | `research/idx-stage4-v1` + `research/idx-stage4b-calibration-v1` + `research/idx-stage5-ranking-holdout-v1` | Final status `PROBABILITY_V1_NOT_READY_DEFERRED`: Stage-4 and Stage-4B calibration readiness failed, and the Stage-5 ranking holdout was consumed for Ranking V1. Do not restart Probability V1 or reuse that holdout. Any future Probability V2/current-alpha calibration must use a new preregistered contract and fresh-forward validation strictly after 2026-07-31. |
 | Expected Payoff V0 feasibility | `DONE` | `ChatGPT independent review + Codex remediation` | `research/idx-expected-payoff-v0-feasibility` / `ecec6835eaee70f47a8a1c1b43fc2d14a4c34709` | `EXPECTED_PAYOFF_V0_FEASIBILITY_GO` accepted. Engineering/spec-compliance remediation reviewed complete; original one-shot verdict unchanged. Do not rerun/retune V0. |
