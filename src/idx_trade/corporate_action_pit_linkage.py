@@ -445,17 +445,57 @@ def link_event(event: Mapping[str, Any], candidates: Sequence[Mapping[str, Any]]
     return LinkageDecision(LinkageStatus.UNRESOLVED, reasons=("NO_EVENT_SPECIFIC_EXACT_ANCHOR",))
 
 
-def safe_availability_date(
+def resolve_availability_provenance(
     *,
     idx_published_at_utc: Any = None,
     ksei_document_date: Any = None,
+    ksei_publication_table_date: Any = None,
+    asset_timestamp_candidate_raw: Any = None,
+    asset_url: Any = None,
+    asset_filename: Any = None,
+    observed_at_utc: Any = None,
     linkage_status: LinkageStatus | str | None = None,
 ) -> dict[str, Any]:
-    """Preserve timestamp/date precision without fabricating KSEI intraday time."""
+    """Resolve only defensible knowledge time; preserve weaker source dates.
+
+    KSEI PDF dates, publication-table dates, and asset-name timestamp
+    candidates are source-native evidence only.  They do not establish first
+    public availability until an independent timing contract is proven.  An
+    exact linked IDX timestamp remains the only timestamp-level result here.
+    """
 
     from datetime import date, datetime, timezone
 
     published = _norm_text(idx_published_at_utc)
+    source_dates = {
+        "ksei_document_date": _norm_text(ksei_document_date) or None,
+        "ksei_publication_table_date": _norm_text(ksei_publication_table_date) or None,
+    }
+    for field, value in source_dates.items():
+        if value:
+            try:
+                date.fromisoformat(value)
+            except ValueError as exc:
+                raise ValueError(f"malformed {field}") from exc
+
+    observed = _norm_text(observed_at_utc)
+    observed_normalized = None
+    if observed:
+        try:
+            observed_parsed = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("malformed observed_at_utc") from exc
+        if observed_parsed.tzinfo is None:
+            raise ValueError("observed_at_utc must include timezone")
+        observed_normalized = observed_parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    from urllib.parse import unquote, urlsplit
+    asset_url_text = _norm_text(asset_url) or None
+    asset_filename_text = _norm_text(asset_filename) or None
+    if asset_url_text and asset_filename_text:
+        url_filename = unquote(urlsplit(asset_url_text).path.rsplit("/", 1)[-1])
+        if url_filename and url_filename != asset_filename_text:
+            raise ValueError("asset_url and asset_filename disagree")
     if published:
         try:
             parsed = datetime.fromisoformat(published.replace("Z", "+00:00"))
@@ -463,24 +503,53 @@ def safe_availability_date(
             raise ValueError("malformed idx_published_at_utc") from exc
         if parsed.tzinfo is None:
             raise ValueError("idx_published_at_utc must include timezone")
-        if linkage_status != LinkageStatus.EXACT and str(linkage_status) != LinkageStatus.EXACT.value:
-            raise ValueError("IDX timestamp requires EXACT linkage")
         utc = parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        exact = linkage_status == LinkageStatus.EXACT or str(linkage_status) == LinkageStatus.EXACT.value
         return {
-            "knowledge_at_utc": utc,
-            "knowledge_date": utc[:10],
-            "precision": "IDX_TIMESTAMP_CONFIRMED",
+            "knowledge_at_utc": utc if exact else None,
+            "knowledge_date": utc[:10] if exact else None,
+            "precision": "IDX_TIMESTAMP_CONFIRMED" if exact else ("DATE_ONLY" if any(source_dates.values()) else "UNKNOWN"),
+            "availability_status": "IDX_TIMESTAMP_CONFIRMED" if exact else "IDX_TIMESTAMP_LINKAGE_NOT_EXACT",
+            "idx_published_at_utc": utc,
+            "linkage_status": str(linkage_status) if linkage_status is not None else None,
+            "source_dates": source_dates,
+            "asset_timestamp_candidate_raw": _norm_text(asset_timestamp_candidate_raw) or None,
+            "asset_url": asset_url_text,
+            "asset_filename": asset_filename_text,
+            "observed_at_utc": observed_normalized,
         }
 
-    document_date = _norm_text(ksei_document_date)
-    if document_date:
-        try:
-            parsed_date = date.fromisoformat(document_date)
-        except ValueError as exc:
-            raise ValueError("malformed ksei_document_date") from exc
+    candidate = _norm_text(asset_timestamp_candidate_raw) or None
+    if any(source_dates.values()) or candidate:
         return {
             "knowledge_at_utc": None,
-            "knowledge_date": parsed_date.isoformat(),
-            "precision": "DATE_ONLY",
+            "knowledge_date": None,
+            "precision": "DATE_ONLY" if any(source_dates.values()) else "UNKNOWN",
+            "availability_status": "SOURCE_DATE_ONLY_NOT_AVAILABILITY_VERIFIED",
+            "idx_published_at_utc": None,
+            "linkage_status": str(linkage_status) if linkage_status is not None else None,
+            "source_dates": source_dates,
+            "asset_timestamp_candidate_raw": candidate,
+            "asset_url": asset_url_text,
+            "asset_filename": asset_filename_text,
+            "observed_at_utc": observed_normalized,
         }
-    return {"knowledge_at_utc": None, "knowledge_date": None, "precision": "UNKNOWN"}
+    return {
+        "knowledge_at_utc": None,
+        "knowledge_date": None,
+        "precision": "UNKNOWN",
+        "availability_status": "UNKNOWN",
+        "idx_published_at_utc": None,
+        "linkage_status": str(linkage_status) if linkage_status is not None else None,
+        "source_dates": source_dates,
+        "asset_timestamp_candidate_raw": candidate,
+        "asset_url": asset_url_text,
+        "asset_filename": asset_filename_text,
+        "observed_at_utc": observed_normalized,
+    }
+
+
+def safe_availability_date(**kwargs: Any) -> dict[str, Any]:
+    """Backward-compatible narrow entry point for availability resolution."""
+
+    return resolve_availability_provenance(**kwargs)

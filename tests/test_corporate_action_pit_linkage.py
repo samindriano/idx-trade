@@ -8,6 +8,7 @@ from idx_trade.corporate_action_pit_linkage import (
     link_event,
     normalize_event_family,
     revision_relation,
+    resolve_availability_provenance,
     safe_availability_date,
     validate_schedule_locator,
 )
@@ -121,9 +122,25 @@ def test_multiple_exact_candidates_fail_closed_as_ambiguous():
 def test_availability_precision_never_fabricates_ksei_intraday_timestamp():
     assert safe_availability_date(ksei_document_date="2026-07-03") == {
         "knowledge_at_utc": None,
-        "knowledge_date": "2026-07-03",
+        "knowledge_date": None,
         "precision": "DATE_ONLY",
+        "availability_status": "SOURCE_DATE_ONLY_NOT_AVAILABILITY_VERIFIED",
+        "idx_published_at_utc": None,
+        "linkage_status": None,
+        "source_dates": {"ksei_document_date": "2026-07-03", "ksei_publication_table_date": None},
+        "asset_timestamp_candidate_raw": None,
+        "asset_url": None,
+        "asset_filename": None,
+        "observed_at_utc": None,
     }
+    table_only = safe_availability_date(ksei_publication_table_date="2026-06-26")
+    assert table_only["knowledge_at_utc"] is None
+    assert table_only["knowledge_date"] is None
+    assert table_only["availability_status"] == "SOURCE_DATE_ONLY_NOT_AVAILABILITY_VERIFIED"
+    candidate_only = safe_availability_date(asset_timestamp_candidate_raw="202607011721")
+    assert candidate_only["knowledge_at_utc"] is None
+    assert candidate_only["knowledge_date"] is None
+    assert candidate_only["availability_status"] == "SOURCE_DATE_ONLY_NOT_AVAILABILITY_VERIFIED"
     assert safe_availability_date(
         idx_published_at_utc="2026-07-03T03:00:00Z",
         linkage_status=LinkageStatus.EXACT,
@@ -131,8 +148,49 @@ def test_availability_precision_never_fabricates_ksei_intraday_timestamp():
         "knowledge_at_utc": "2026-07-03T03:00:00Z",
         "knowledge_date": "2026-07-03",
         "precision": "IDX_TIMESTAMP_CONFIRMED",
+        "availability_status": "IDX_TIMESTAMP_CONFIRMED",
+        "idx_published_at_utc": "2026-07-03T03:00:00Z",
+        "linkage_status": "EXACT",
+        "source_dates": {"ksei_document_date": None, "ksei_publication_table_date": None},
+        "asset_timestamp_candidate_raw": None,
+        "asset_url": None,
+        "asset_filename": None,
+        "observed_at_utc": None,
     }
-    with pytest.raises(ValueError, match="EXACT linkage"):
-        safe_availability_date(idx_published_at_utc="2026-07-03T03:00:00Z")
     with pytest.raises(ValueError, match="timezone"):
         safe_availability_date(idx_published_at_utc="2026-07-03T10:00:00")
+
+
+def test_exact_idx_timestamp_preserves_weaker_sources_and_observed_time():
+    result = resolve_availability_provenance(
+        idx_published_at_utc="2026-07-03T03:00:00Z",
+        linkage_status=LinkageStatus.EXACT,
+        ksei_document_date="2026-07-03",
+        ksei_publication_table_date="2026-06-26",
+        asset_timestamp_candidate_raw="202607011721",
+        asset_url="https://web.ksei.co.id/Announcement/Files/a.pdf",
+        asset_filename="a.pdf",
+        observed_at_utc="2026-08-14T01:00:00+07:00",
+    )
+    assert result["precision"] == "IDX_TIMESTAMP_CONFIRMED"
+    assert result["availability_status"] == "IDX_TIMESTAMP_CONFIRMED"
+    assert result["source_dates"]["ksei_publication_table_date"] == "2026-06-26"
+    assert result["observed_at_utc"] == "2026-08-13T18:00:00Z"
+
+
+def test_non_exact_idx_linkage_is_unresolved_but_preserves_evidence():
+    result = resolve_availability_provenance(
+        idx_published_at_utc="2026-07-03T03:00:00Z",
+        linkage_status=LinkageStatus.AMBIGUOUS,
+        ksei_document_date="2026-07-03",
+    )
+    assert result["knowledge_at_utc"] is None
+    assert result["availability_status"] == "IDX_TIMESTAMP_LINKAGE_NOT_EXACT"
+    assert result["idx_published_at_utc"] == "2026-07-03T03:00:00Z"
+
+
+def test_availability_metadata_rejects_malformed_or_naive_observed_time():
+    with pytest.raises(ValueError, match="malformed ksei_publication_table_date"):
+        resolve_availability_provenance(ksei_publication_table_date="26-06-2026")
+    with pytest.raises(ValueError, match="timezone"):
+        resolve_availability_provenance(observed_at_utc="2026-08-14T08:00:00")

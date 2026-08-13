@@ -1,6 +1,34 @@
 from __future__ import annotations
 
-from idx_trade.corporate_action_pit_documents import parse_ksei_schedule_text
+import pytest
+
+from idx_trade.corporate_action_pit_documents import parse_asset_timestamp_candidate, parse_ksei_schedule_text
+
+
+def test_asset_timestamp_is_strict_candidate_without_timezone_claim():
+    parsed = parse_asset_timestamp_candidate(
+        "https://web.ksei.co.id/Announcement/Files/196544_ksei_16506_jku_0626_202607011721.pdf"
+    )
+    assert parsed == {
+        "candidate_raw": "202607011721",
+        "candidate_local_naive": "2026-07-01 17:21:00",
+        "parse_status": "PARSED_CANDIDATE_ONLY",
+    }
+    assert parse_asset_timestamp_candidate("YOII_RIGHT_20260626_ID.pdf")["parse_status"] == "NO_TERMINAL_TIMESTAMP"
+
+
+def test_parser_preserves_source_date_and_asset_provenance_separately():
+    row = parse_ksei_schedule_text(
+        "No : KSEI-16506/JKU/0626 Jakarta, 26 Juni 2026\n"
+        "Perihal : Jadwal Kegiatan Penawaran Umum Terbatas (YOII)\n"
+        "Kode dan Nama Saham : YOII - Yeo Hup Indonesia Tbk",
+        asset_url="https://web.ksei.co.id/Announcement/Files/196544_ksei_16506_jku_0626_202607011721.pdf",
+        publication_table_date="2026-06-26",
+    )
+    assert row["document_date"] == "2026-06-26"
+    assert row["publication_table_date"] == "2026-06-26"
+    assert row["asset_timestamp_candidate_raw"] == "202607011721"
+    assert row["asset_timestamp_candidate_parse_status"] == "PARSED_CANDIDATE_ONLY"
 
 
 def test_parse_sini_rights_document_preserves_explicit_identity_and_evidence():
@@ -64,3 +92,36 @@ def test_parse_missing_identity_is_explicitly_unresolved():
     row = parse_ksei_schedule_text("Perihal : Stock Split MLPT\nRasio pemecahan unit saham 1:25")
     assert row["parse_status"] == "UNRESOLVED"
     assert set(row["diagnostics"]) == {"MISSING_KSEI_REFERENCE", "MISSING_TICKER", "MISSING_DOCUMENT_DATE"}
+
+
+def test_schedule_date_is_not_misclassified_as_pdf_document_date():
+    row = parse_ksei_schedule_text(
+        "No : KSEI-1000/JKU/0726\n"
+        "Perihal : Stock Split MLPT\n"
+        "Kode dan Nama Saham : MLPT - MULTIPOLAR TECHNOLOGY Tbk\n"
+        "Tanggal Pencatatan (Recording Date) 22 Juli 2026"
+    )
+    assert row["pdf_document_date"] is None
+    assert row["document_date"] is None
+
+
+def test_source_url_is_not_silently_treated_as_asset_filename():
+    row = parse_ksei_schedule_text(
+        "No : KSEI-1000/JKU/0726 Jakarta, 22 Juli 2026\n"
+        "Perihal : Stock Split MLPT\n"
+        "Kode dan Nama Saham : MLPT - MULTIPOLAR TECHNOLOGY Tbk",
+        source_url="https://example.test/source-record",
+    )
+    assert row["asset_filename"] is None
+    assert row["asset_timestamp_candidate_parse_status"] == "NO_ASSET_FILENAME"
+
+
+def test_asset_url_and_filename_conflict_fails_closed():
+    with pytest.raises(ValueError, match="asset_url and asset_filename disagree"):
+        parse_ksei_schedule_text(
+            "No : KSEI-1000/JKU/0726 Jakarta, 22 Juli 2026\n"
+            "Perihal : Stock Split MLPT\n"
+            "Kode dan Nama Saham : MLPT - MULTIPOLAR TECHNOLOGY Tbk",
+            asset_url="https://web.ksei.co.id/Announcement/Files/a.pdf",
+            asset_filename="b.pdf",
+        )

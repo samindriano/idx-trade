@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import unquote, urlsplit
+from datetime import datetime
 
 from .corporate_action_pit_linkage import EventFamily, normalize_event_family
 
@@ -73,11 +75,59 @@ def _date_value(pattern: str, text: str, kind: str, evidence: list[dict[str, Any
     return value
 
 
+def parse_asset_timestamp_candidate(
+    asset_url_or_filename: str | None,
+) -> dict[str, str | None]:
+    """Parse a terminal ``YYYYMMDDHHMM`` asset-name candidate only.
+
+    The result is deliberately naive/local and is never a publication or UTC
+    timestamp.  Generic names and non-terminal numeric fragments remain
+    unresolved.
+    """
+
+    raw = _clean(asset_url_or_filename)
+    if not raw:
+        return {
+            "candidate_raw": None,
+            "candidate_local_naive": None,
+            "parse_status": "NO_ASSET_FILENAME",
+        }
+    filename = unquote(urlsplit(raw).path.rsplit("/", 1)[-1])
+    match = re.search(r"(?<!\d)(?P<stamp>20\d{10})(?:\.pdf)?$", filename, flags=re.IGNORECASE)
+    if match is None:
+        return {
+            "candidate_raw": None,
+            "candidate_local_naive": None,
+            "parse_status": "NO_TERMINAL_TIMESTAMP",
+        }
+    candidate = match.group("stamp")
+    try:
+        parsed = datetime.strptime(candidate, "%Y%m%d%H%M")
+    except ValueError:
+        return {
+            "candidate_raw": candidate,
+            "candidate_local_naive": None,
+            "parse_status": "INVALID_TERMINAL_TIMESTAMP",
+        }
+    return {
+        "candidate_raw": candidate,
+        "candidate_local_naive": parsed.isoformat(sep=" "),
+        "parse_status": "PARSED_CANDIDATE_ONLY",
+    }
+
+
 def parse_ksei_schedule_text(
     text: str,
     *,
     source_url: str | None = None,
     source_sha256: str | None = None,
+    asset_url: str | None = None,
+    asset_filename: str | None = None,
+    publication_table_date: str | None = None,
+    observed_at_utc: str | None = None,
+    http_date: str | None = None,
+    http_last_modified: str | None = None,
+    http_etag: str | None = None,
 ) -> dict[str, Any]:
     """Parse only explicit KSEI schedule-document evidence.
 
@@ -87,6 +137,25 @@ def parse_ksei_schedule_text(
     """
 
     normalized = text.replace("\r", "")
+    if asset_url and asset_filename:
+        url_filename = unquote(urlsplit(asset_url).path.rsplit("/", 1)[-1])
+        if url_filename and url_filename != asset_filename:
+            raise ValueError("asset_url and asset_filename disagree")
+    asset_identity = asset_filename or asset_url
+    asset_timestamp = parse_asset_timestamp_candidate(asset_identity)
+    if publication_table_date:
+        try:
+            from datetime import date
+            date.fromisoformat(publication_table_date)
+        except ValueError as exc:
+            raise ValueError("malformed publication_table_date") from exc
+    if observed_at_utc:
+        try:
+            observed = datetime.fromisoformat(observed_at_utc.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("malformed observed_at_utc") from exc
+        if observed.tzinfo is None:
+            raise ValueError("observed_at_utc must include timezone")
     evidence: list[dict[str, Any]] = []
     ref_match = _match(r"(?:Nomor|No\.?)\s*:\s*(KSEI-[0-9]+/[A-Z]+/[0-9]+)", normalized, flags=re.IGNORECASE)
     reference = ref_match.group(1).upper() if ref_match else None
@@ -102,11 +171,19 @@ def parse_ksei_schedule_text(
         if evidence_item:
             evidence.append(evidence_item)
 
-    document_date_match = _match(
-        rf"(?:{re.escape(reference or 'KSEI-[0-9]+/[A-Z]+/[0-9]+')}).{{0,180}}?({_DATE})|Jakarta,\s*({_DATE})",
+    # Only the document-header date is the PDF's internal document date.
+    # Schedule/recording dates elsewhere in the document are not publication
+    # metadata and must remain separate evidence.
+    document_date_match = re.search(
+        rf"^\s*(?:Nomor|No\.?)\s*:\s*KSEI-[0-9]+/[A-Z]+/[0-9]+\s+(?:Jakarta,\s*)?({_DATE})",
         normalized,
+        flags=re.IGNORECASE | re.MULTILINE,
     )
-    document_date = _date_iso(next((group for group in document_date_match.groups() if group), None)) if document_date_match else None
+    if document_date_match is None:
+        document_date_match = re.search(
+            rf"^\s*Jakarta,\s*({_DATE})", normalized, flags=re.IGNORECASE | re.MULTILINE
+        )
+    document_date = _date_iso(document_date_match.group(1)) if document_date_match else None
     if document_date_match:
         evidence_item = _evidence(normalized, document_date_match, "DOCUMENT_DATE")
         if evidence_item:
@@ -218,6 +295,7 @@ def parse_ksei_schedule_text(
         "ksei_reference": reference,
         "document_subject": subject,
         "document_date": document_date,
+        "pdf_document_date": document_date,
         "ticker": ticker,
         "stock_isin": isin,
         "rights_code": rights_code,
@@ -235,5 +313,15 @@ def parse_ksei_schedule_text(
         "prior_ksei_reference": prior_reference,
         "source_url": source_url,
         "source_sha256": source_sha256,
+        "asset_url": asset_url,
+        "asset_filename": asset_identity.rsplit("/", 1)[-1] if asset_identity else None,
+        "publication_table_date": publication_table_date,
+        "asset_timestamp_candidate_raw": asset_timestamp["candidate_raw"],
+        "asset_timestamp_candidate_local_naive": asset_timestamp["candidate_local_naive"],
+        "asset_timestamp_candidate_parse_status": asset_timestamp["parse_status"],
+        "observed_at_utc": observed_at_utc,
+        "http_date": http_date,
+        "http_last_modified": http_last_modified,
+        "http_etag": http_etag,
         "evidence": evidence,
     }
