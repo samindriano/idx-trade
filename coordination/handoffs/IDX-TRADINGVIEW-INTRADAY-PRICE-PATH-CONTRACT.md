@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: C:\\Users\\Sam\\OneDrive\\Documents\\Project\\idx-trade
 source_commit: 7328c4905a85fb0bf7486adc3adc96f2ffa2bc27
 branch: data/tradingview-intraday-price-path-contract-v1
-head_commit: TO_BE_FILLED_AFTER_FINAL_COMMIT
+head_commit: 15a39dda2b1c5d9d0af2e277f86956faa84049e8
 scope: Freeze TradingView IDX historical intraday semantic fields, permitted path feature families, session-state handling, and prohibited Open/session interpretations. Design-only.
 files_changed: config/tradingview_intraday_price_path_contract_v1.json; src/idx_trade/tradingview_intraday_price_path_contract.py; tests/test_tradingview_intraday_price_path_contract.py; docs/TRADINGVIEW_INTRADAY_PRICE_PATH_CONTRACT_V1.md; docs/checkpoints/2026-08-14_TRADINGVIEW_INTRADAY_PRICE_PATH_CONTRACT_RUNTIME.md; coordination/handoffs/IDX-TRADINGVIEW-INTRADAY-PRICE-PATH-CONTRACT.md; coordination/TEAM_STATUS.md
 findings: Official daily Open and raw first regular-session TradingView Open must remain separate. Raw regular-session H/L/C/V path features are semantically usable only with exact session/state validation. Stage-1 supports strong matched-row fidelity and zero known active-session TV misses, but the canonical activity checkpoint still has 195 UNCERTAIN_CANONICAL_ROW_MISSING sessions and 86.80% conservative lower bound.
