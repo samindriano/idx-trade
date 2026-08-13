@@ -42,6 +42,23 @@ REQUIRED_SOURCE_COMMIT_PINS: Mapping[str, str] = MappingProxyType({
     "nichsedge/ksei-mcp": KSEI_MCP_PIN,
     "chickenzord/goksei": GOKSEI_PIN,
 })
+_SUBACCOUNT_FACTORY_TOKEN = object()
+
+
+class SubaccountRef(str):
+    """Opaque keyed-HMAC reference created only by trusted adapter/factory paths."""
+
+    def __new__(cls, value: str, *, _factory_token: object) -> "SubaccountRef":
+        if _factory_token is not _SUBACCOUNT_FACTORY_TOKEN:
+            raise TypeError("SubaccountRef must be created by derive_subaccount_ref")
+        if not SUBACCOUNT_REF_RE.fullmatch(value):
+            raise ValueError("invalid opaque subaccount reference")
+        return str.__new__(cls, value)
+
+    @classmethod
+    def _from_validated_canonical(cls, value: str) -> "SubaccountRef":
+        """Rehydrate only after validate_snapshot_payload() has accepted the payload."""
+        return cls(value, _factory_token=_SUBACCOUNT_FACTORY_TOKEN)
 
 
 def require_aware(value: datetime, field_name: str) -> None:
@@ -93,14 +110,14 @@ def new_scope_ref() -> str:
     return f"ps_{secrets.token_hex(16)}"
 
 
-def derive_subaccount_ref(raw_account_identifier: str, hmac_key: bytes) -> str:
+def derive_subaccount_ref(raw_account_identifier: str, hmac_key: bytes) -> SubaccountRef:
     raw = raw_account_identifier.strip()
     if not raw:
         raise ValueError("raw_account_identifier is required")
     if len(hmac_key) < 32:
         raise ValueError("hmac_key must contain at least 32 bytes of secret material")
     digest = hmac.new(hmac_key, raw.encode("utf-8"), hashlib.sha256).hexdigest()
-    return f"ksa_{digest}"
+    return SubaccountRef(f"ksa_{digest}", _factory_token=_SUBACCOUNT_FACTORY_TOKEN)
 
 
 def assert_minimized_canonical_payload(value: Any, _path: tuple[str, ...] = ()) -> None:
