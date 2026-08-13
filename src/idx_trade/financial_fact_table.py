@@ -31,6 +31,7 @@ class FactExtractionStatus(StrEnum):
     UNRESOLVED_LABEL = "UNRESOLVED_LABEL"
     UNRESOLVED_PERIOD = "UNRESOLVED_PERIOD"
     UNRESOLVED_UNIT = "UNRESOLVED_UNIT"
+    UNRESOLVED_TAXONOMY = "UNRESOLVED_TAXONOMY"
     CONFLICTING_FACTS = "CONFLICTING_FACTS"
     UNSUPPORTED_FORMAT = "UNSUPPORTED_FORMAT"
     NOT_APPLICABLE = "NOT_APPLICABLE"
@@ -328,32 +329,61 @@ def _statement_identity(sheet: str) -> str | None:
 
 
 def _unit_evidence(cells: Sequence[_Cell]) -> tuple[str | None, str | None, int | None, tuple[Mapping[str, Any], ...], str]:
+    """Read only the presentation metadata block on the visible template sheet.
+
+    Statement-body labels such as ``IDR`` or ``AS$`` are not presentation
+    semantics.  In particular, a breakdown row may legitimately use a
+    different currency from the filing's reporting unit.  The IDX templates
+    expose the authoritative pair in the rows labelled ``Mata uang
+    pelaporan`` and ``Pembulatan yang digunakan``.
+    """
+
+    metadata = [cell for cell in cells if cell.sheet == "1000000"]
+    currency_labels = {"mata uang pelaporan", "reporting currency"}
+    scale_labels = {"pembulatan yang digunakan", "rounding used"}
+    currency_label = next((cell for cell in metadata if any(token in _norm(cell.value) for token in currency_labels)), None)
+    scale_label = next((cell for cell in metadata if any(token in _norm(cell.value) for token in scale_labels)), None)
+
     evidence: list[dict[str, Any]] = []
-    for cell in cells:
-        text = _norm(cell.value)
-        currency: str | None = None
-        if "rupiah / idr" in text or text in {"idr", "rupiah"}:
-            currency = "IDR"
-        elif "dolar amerika serikat" in text or "us dollar" in text or text in {"usd", "as$"}:
-            currency = "USD"
-        if currency is None:
-            continue
-        if cell.sheet != "1000000" and cell.row > 12:
-            continue
+
+    def value_after(label: _Cell | None) -> _Cell | None:
+        if label is None:
+            return None
+        candidates = [cell for cell in metadata if cell.row == label.row and cell.column > label.column and cell.value.strip()]
+        return min(candidates, key=lambda cell: cell.column, default=None)
+
+    currency_cell = value_after(currency_label)
+    scale_cell = value_after(scale_label)
+    currency_text = _norm(currency_cell.value) if currency_cell is not None else ""
+    scale_text = _norm(scale_cell.value) if scale_cell is not None else ""
+
+    currency: str | None = None
+    if currency_text in {
+        "rupiah / idr", "rupiah/idr", "idr", "rupiah",
+        "dollar amerika / usd", "dolar amerika / usd",
+        "dollar amerika serikat / usd", "dolar amerika serikat / usd",
+        "usd", "us dollar",
+    }:
+        currency = "USD" if "usd" in currency_text or "dollar" in currency_text or "dolar" in currency_text else "IDR"
+    scale: int | None = None
+    if scale_text in {"satuan penuh / full amount", "satuan penuh", "full amount", "full amounts"}:
         scale = 1
-        if "jutaan" in text or "millions" in text or "million" in text:
-            scale = 1_000_000
-        elif "ribuan" in text or "thousands" in text:
-            scale = 1_000
-        evidence.append({"location": f"sheet={cell.sheet};cell={cell.coordinate}", "text": cell.value, "currency": currency, "scale": scale})
-    currencies = {item["currency"] for item in evidence}
-    scales = {item["scale"] for item in evidence}
+    elif "jutaan" in scale_text or "million" in scale_text:
+        scale = 1_000_000
+    elif "ribuan" in scale_text or "thousand" in scale_text:
+        scale = 1_000
+
+    if currency_cell is not None:
+        evidence.append({"location": f"sheet=1000000;cell={currency_cell.coordinate}", "label_location": f"sheet=1000000;cell={currency_label.coordinate if currency_label else 'UNRESOLVED'}", "text": currency_cell.value, "currency": currency})
+    if scale_cell is not None:
+        evidence.append({"location": f"sheet=1000000;cell={scale_cell.coordinate}", "label_location": f"sheet=1000000;cell={scale_label.coordinate if scale_label else 'UNRESOLVED'}", "text": scale_cell.value, "scale": scale})
+
+    if currency is None or scale is None:
+        return None, None, None, tuple(evidence), "missing or unrecognized explicit presentation currency/unit or scale metadata"
+    currencies = {currency}
+    scales = {scale}
     if len(currencies) > 1 or len(scales) > 1:
         return None, None, None, tuple(evidence), "conflicting explicit presentation currency or scale"
-    if not evidence:
-        return None, None, None, (), "no explicit presentation currency/unit evidence"
-    currency = next(iter(currencies))
-    scale = next(iter(scales))
     return currency, currency, scale, tuple(evidence), ""
 
 
@@ -373,6 +403,22 @@ def _fact_from_label(value: str) -> str | None:
         if text in {_norm(label) for label in labels}:
             return fact
     return None
+
+
+_FACT_LABEL_PRIORITY: dict[str, dict[str, int]] = {
+    "operating_cash_flow": {
+        _norm("jumlah arus kas bersih yang diperoleh dari (digunakan untuk) aktivitas operasi"): 100,
+        _norm("arus kas neto diperoleh dari aktivitas operasi"): 100,
+        _norm("net cash flows received from (used in) operating activities"): 100,
+        # This is an intermediate subtotal in the IDX cash-flow template,
+        # not the canonical total operating cash-flow fact.
+        _norm("kas diperoleh dari (digunakan untuk) operasi"): 10,
+    },
+}
+
+
+def _label_priority(fact: str, label: _Cell) -> int:
+    return _FACT_LABEL_PRIORITY.get(fact, {}).get(_norm(label.value), 100)
 
 
 def _period_covered(year: int, period: str, context_ref: str) -> dict[str, Any]:
@@ -431,7 +477,7 @@ def _xlsx_extract(
         contexts = _context_columns(cells, sheet)
         current = {column: context for column, context in contexts.items() if context[0].startswith("CurrentYear")}
         labels = [cell for cell in cells if cell.sheet == sheet and cell.column == 1 and _fact_from_label(cell.value)]
-        by_fact: dict[str, list[tuple[_Cell, _Cell, str]]] = defaultdict(list)
+        by_fact: dict[str, list[tuple[_Cell, _Cell, str, str]]] = defaultdict(list)
         for label in labels:
             fact = _fact_from_label(label.value)
             if fact is None:
@@ -439,19 +485,44 @@ def _xlsx_extract(
             for column, (context_ref, context_coord) in current.items():
                 value_cell = next((x for x in cells if x.sheet == sheet and x.row == label.row and x.column == column and x.numeric is not None), None)
                 if value_cell is not None:
-                    by_fact[fact].append((label, value_cell, context_ref))
+                    by_fact[fact].append((label, value_cell, context_ref, context_coord))
         for fact, matches in by_fact.items():
             found.add(fact)
-            values = {str(item[1].numeric) for item in matches}
+            top_priority = max(_label_priority(fact, item[0]) for item in matches)
+            top_matches = [item for item in matches if _label_priority(fact, item[0]) == top_priority]
+            semantic_keys = {
+                (str(item[1].numeric), item[2], statement)
+                for item in top_matches
+            }
             status = FactExtractionStatus.EXTRACTED
             detail = ""
-            if len(values) > 1:
+            if len(semantic_keys) > 1:
                 status = FactExtractionStatus.CONFLICTING_FACTS
-                detail = "multiple explicit current-period values for one canonical fact"
+                detail = "multiple authoritative current-period values or contexts for one canonical fact"
             elif unit_detail:
                 status = FactExtractionStatus.UNRESOLVED_UNIT
                 detail = unit_detail
-            label, value_cell, context_ref = matches[0]
+            # Deterministic only after semantic filtering.  If equivalent
+            # duplicate cells remain, their values/context agree; choosing the
+            # earliest location preserves reproducibility without treating file
+            # order as semantic authority.
+            label, value_cell, context_ref, context_coord = sorted(
+                top_matches,
+                key=lambda item: (item[0].row, item[0].column, item[1].column),
+            )[0]
+            discarded = [
+                f"{item[0].coordinate}:{item[1].coordinate}:priority={_label_priority(fact, item[0])}"
+                for item in matches
+                if item not in top_matches
+            ]
+            selection_detail = (
+                f"selected label priority={top_priority}; candidates={len(matches)}; "
+                f"discarded_lower_priority={','.join(discarded) if discarded else 'none'}"
+            )
+            if detail:
+                detail = f"{detail}; {selection_detail}"
+            else:
+                detail = selection_detail
             record = FinancialFactRecord(
                 **base,
                 statement_identity=statement,
@@ -461,7 +532,7 @@ def _xlsx_extract(
                 unit=unit,
                 scale=scale,
                 fiscal_period_covered=_period_covered(year, period, context_ref),
-                source_location=f"sheet={sheet};label_cell={label.coordinate};value_cell={value_cell.coordinate};context_cell={next((c[1] for c in contexts.values() if c[0] == context_ref), 'UNRESOLVED')}",
+                source_location=f"sheet={sheet};label_cell={label.coordinate};value_cell={value_cell.coordinate};context_cell={context_coord}",
                 evidence_kind="xlsx_visible_label_current_period",
                 raw_label=label.value,
                 taxonomy=industry,
@@ -496,10 +567,67 @@ def _xlsx_extract(
 _XBRL_OPEN = re.compile(r"<ix:nonFraction\b(?P<attrs>[^>]*)>(?P<body>.*?)</ix:nonFraction\s*>", re.I | re.S)
 _ATTR = re.compile(r"(?P<key>[A-Za-z_:][\w:.-]*)\s*=\s*(?P<q>[\"'])(?P<value>.*?)(?P=q)", re.S)
 _ALLOWED_CONTEXTS = {"CurrentYearInstant", "CurrentYearDuration"}
+_IDX_TAXONOMY_URI = re.compile(
+    r"^https?://www\.idx\.co\.id/xbrl/taxonomy/(?P<version>\d{4}-\d{2}-\d{2})/(?P<family>cor|dei)(?:/.*)?$",
+    re.I,
+)
+_SCHEMA_REF = re.compile(r"<(?:[A-Za-z_][\w.-]*:)?schemaRef\b(?P<attrs>[^>]*)/?>", re.I | re.S)
+_NS_DECL = re.compile(r"\bxmlns:(?P<prefix>idx-cor|idx-dei)\s*=\s*(?P<q>[\"'])(?P<uri>.*?)(?P=q)", re.I | re.S)
+_ISO_CURRENCY = {"IDR", "USD", "EUR", "JPY", "GBP", "AUD", "SGD", "CNY", "HKD", "CAD"}
 
 
 def _attrs(text: str) -> dict[str, str]:
     return {match.group("key"): match.group("value") for match in _ATTR.finditer(text)}
+
+
+def _xbrl_taxonomy_metadata(text: str) -> tuple[str | None, str, bool]:
+    """Resolve IDX taxonomy identity from namespace and optional schemaRef."""
+
+    namespace_versions: dict[str, set[str]] = {"cor": set(), "dei": set()}
+    namespace_evidence: list[str] = []
+    for match in _NS_DECL.finditer(text):
+        uri = match.group("uri").strip()
+        parsed = _IDX_TAXONOMY_URI.fullmatch(uri)
+        if parsed is None:
+            continue
+        family = parsed.group("family").casefold()
+        namespace_versions[family].add(parsed.group("version"))
+        namespace_evidence.append(f"xmlns:{match.group('prefix')}={uri}")
+
+    schema_versions: set[str] = set()
+    schema_families: set[str] = set()
+    schema_evidence: list[str] = []
+    for match in _SCHEMA_REF.finditer(text):
+        attrs = _attrs(match.group("attrs"))
+        href = attrs.get("xlink:href") or attrs.get("href") or ""
+        parsed = _IDX_TAXONOMY_URI.search(href)
+        if parsed is None:
+            schema_evidence.append(f"unresolved_schemaRef={href or 'EMPTY'}")
+            continue
+        schema_versions.add(parsed.group("version"))
+        schema_families.add(parsed.group("family").casefold())
+        schema_evidence.append(f"schemaRef={href}")
+
+    cor_versions = namespace_versions["cor"]
+    dei_versions = namespace_versions["dei"]
+    all_versions = cor_versions | dei_versions | schema_versions
+    valid = bool(cor_versions) and len(all_versions) == 1 and schema_families.issubset({"cor", "dei"})
+    if schema_evidence and any(item.startswith("unresolved_schemaRef=") for item in schema_evidence):
+        valid = False
+    if len(cor_versions) > 1 or len(dei_versions) > 1 or len(schema_versions) > 1:
+        valid = False
+    if schema_families and "cor" not in schema_families:
+        valid = False
+    version = next(iter(all_versions), None) if valid else None
+    detail = "; ".join(namespace_evidence + schema_evidence) or "missing official IDX taxonomy namespace/schemaRef"
+    return version, detail, valid
+
+
+def _valid_xbrl_unit(unit: str | None) -> bool:
+    if unit is None:
+        return False
+    normalized = unit.strip().upper()
+    return normalized in _ISO_CURRENCY or bool(re.fullmatch(r"ISO4217:[A-Z]{3}", normalized))
 
 
 def _xbrl_extract(
@@ -518,16 +646,23 @@ def _xbrl_extract(
     statuses: Counter[str] = Counter()
     found: set[str] = set()
     evidence_units: list[Mapping[str, Any]] = []
-    taxonomy_version: str | None = None
-    values_by_fact: dict[str, list[tuple[Decimal, str, dict[str, str], str, str]]] = defaultdict(list)
+    taxonomy_versions: set[str] = set()
+    taxonomy_details: list[str] = []
+    taxonomy_valid = True
+    taxonomy_seen = False
+    values_by_fact: dict[str, list[tuple[Decimal, str, dict[str, str], str, str, int]]] = defaultdict(list)
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         for member in archive.namelist():
             if not member.lower().endswith((".html", ".xhtml", ".xml")):
                 continue
             text = archive.read(member).decode("utf-8", "ignore")
-            if taxonomy_version is None:
-                schema = re.search(r"schemaRef[^>]+href\s*=\s*['\"]([^'\"]+)", text, re.I)
-                taxonomy_version = schema.group(1) if schema else "UNRESOLVED_SCHEMA_REF"
+            if "idx-cor" in text.lower() or "schemaRef" in text or "idx-dei" in text.lower():
+                taxonomy_seen = True
+                member_version, member_detail, member_valid = _xbrl_taxonomy_metadata(text)
+                if member_version is not None:
+                    taxonomy_versions.add(member_version)
+                taxonomy_details.append(f"member={member};{member_detail}")
+                taxonomy_valid = taxonomy_valid and member_valid
             for ordinal, match in enumerate(_XBRL_OPEN.finditer(text)):
                 attr = _attrs(match.group("attrs"))
                 name = attr.get("name", "")
@@ -546,7 +681,7 @@ def _xbrl_extract(
                 except ValueError:
                     parsed_scale = None
                 location = f"member={member};element_index={ordinal};name={name};context={context}"
-                if context not in _ALLOWED_CONTEXTS or number is None or not unit or parsed_scale is None:
+                if context not in _ALLOWED_CONTEXTS or number is None or not _valid_xbrl_unit(unit) or parsed_scale is None:
                     status = FactExtractionStatus.UNRESOLVED_PERIOD if context not in _ALLOWED_CONTEXTS else FactExtractionStatus.UNRESOLVED_UNIT
                     records.append(FinancialFactRecord(
                         **base,
@@ -561,21 +696,30 @@ def _xbrl_extract(
                         evidence_kind="ixbrl_numeric_concept",
                         raw_label=name,
                         taxonomy="IDX_COR",
-                        taxonomy_version=taxonomy_version,
+                        taxonomy_version=next(iter(taxonomy_versions), None),
                         extraction_status=status,
-                        detail="explicit concept lacks valid context, numeric value, unitRef or scale",
+                        detail="explicit concept lacks valid context, numeric value, ISO currency unitRef or integer scale",
                     ))
                     statuses[status.value] += 1
                     continue
-                values_by_fact[fact].append((number, location, attr, unit, context))
+                values_by_fact[fact].append((number, location, attr, unit.upper(), context, parsed_scale))
                 evidence_units.append({"location": location, "unit": unit, "scale": parsed_scale, "context": context})
     for fact, matches in values_by_fact.items():
         found.add(fact)
         value_set = {str(item[0]) for item in matches}
-        status = FactExtractionStatus.EXTRACTED if len(value_set) == 1 else FactExtractionStatus.CONFLICTING_FACTS
-        detail = "" if status is FactExtractionStatus.EXTRACTED else "conflicting authoritative numeric facts"
-        number, location, attr, unit, context = matches[0]
-        scale = int(attr["scale"])
+        context_set = {item[4] for item in matches}
+        unit_set = {item[3] for item in matches}
+        scale_set = {item[5] for item in matches}
+        if not taxonomy_seen or not taxonomy_valid or len(taxonomy_versions) != 1:
+            status = FactExtractionStatus.UNRESOLVED_TAXONOMY
+            detail = "missing, conflicting, or non-official IDX taxonomy/schemaRef; " + "; ".join(taxonomy_details)
+        elif len(value_set) > 1 or len(context_set) > 1 or len(unit_set) > 1 or len(scale_set) > 1:
+            status = FactExtractionStatus.CONFLICTING_FACTS
+            detail = "conflicting authoritative numeric facts, contexts, units, or scales"
+        else:
+            status = FactExtractionStatus.EXTRACTED
+            detail = ""
+        number, location, attr, unit, context, scale = matches[0]
         records.append(FinancialFactRecord(
             **base,
             statement_identity="cash_flow_statement" if fact == "operating_cash_flow" else ("statement_of_financial_position" if context.endswith("Instant") else "income_statement"),
@@ -589,7 +733,7 @@ def _xbrl_extract(
             evidence_kind="ixbrl_numeric_concept",
             raw_label=attr.get("name"),
             taxonomy="IDX_COR",
-            taxonomy_version=taxonomy_version,
+            taxonomy_version=next(iter(taxonomy_versions), None),
             extraction_status=status,
             detail=detail,
         ))
@@ -608,9 +752,9 @@ def _xbrl_extract(
         missing_facts=tuple(sorted(set(FACT_LABELS) - found)),
         unit_evidence=tuple(evidence_units),
         taxonomy="IDX_COR",
-        taxonomy_version=taxonomy_version,
+        taxonomy_version=next(iter(taxonomy_versions), None),
         version_id=base["version_id"],
-        detail="",
+        detail="; ".join(taxonomy_details),
     )
     return records, diagnostics
 
