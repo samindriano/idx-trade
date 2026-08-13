@@ -110,17 +110,22 @@ def normalize_mathieu(results: list[dict[str, Any]], calendar: Path) -> tuple[pd
         epochs = [period.get("time") for period in periods if isinstance(period, dict) and isinstance(period.get("time"), (int, float))]
         event_observation = response.get("event_observation") or {}
         fetch_more = response.get("fetch_more") or {}
+        fetch_more_steps = fetch_more.get("steps") or []
+        extended_steps = fetch_more.get("extended_steps")
+        if extended_steps is None:
+            extended_steps = sum(bool(step.get("extended")) for step in fetch_more_steps)
         rows.append({
             "request_index": request["request_index"], "phase": request["phase"], "server": request["server"],
             "ticker": request["ticker"], "era": request["era"], "year": request["year"], "timeframe": request["timeframe"],
             "adjustment": request["adjustment"], "status": response.get("status"), "errors": json.dumps(response.get("errors") or response.get("error")),
             "period_count": len(periods), "first_epoch": min(epochs) if epochs else None, "last_epoch": max(epochs) if epochs else None,
+            "elapsed_ms": response.get("elapsed_ms"),
             "requested_from_epoch": request["requested_from_epoch"], "requested_to_epoch": request["requested_to_epoch"],
-            "market_timezone": (response.get("market_info") or {}).get("timezone"), "has_intraday": (response.get("market_info") or {}).get("has_intraday"),
+            "market_info_present": bool(response.get("market_info")), "market_timezone": (response.get("market_info") or {}).get("timezone"), "has_intraday": (response.get("market_info") or {}).get("has_intraday"),
             "event_trace": json.dumps(response.get("event_trace", [])), "websocket_connected": event_observation.get("websocket_connected"),
             "symbol_loaded": event_observation.get("symbol_loaded"), "update_seen": event_observation.get("update_seen"),
             "series_completed_observable": event_observation.get("series_completed_observable"),
-            "fetch_more_steps_requested": fetch_more.get("requested_steps"), "fetch_more_steps_extended": fetch_more.get("extended_steps"),
+            "fetch_more_steps_requested": fetch_more.get("requested_steps"), "fetch_more_steps_extended": extended_steps,
             "fetch_more_completion_reason": fetch_more.get("completion_reason"),
             **{key: value for key, value in diag.items() if key not in {"session_dates", "timezone_hours"}},
             "session_dates": json.dumps(diag.get("session_dates", [])), "timezone_hours": json.dumps(diag.get("timezone_hours", [])),
@@ -246,6 +251,66 @@ def main() -> int:
 
     phase1_requests = request_frame[request_frame["phase"] == "phase1_paired_servers"].copy()
     listing = pd.read_csv(args.security_master, dtype={"ticker": str})
+    listing["ticker"] = listing["ticker"].astype(str).str.upper()
+    listing["listed_from"] = pd.to_datetime(listing["listed_from"], errors="coerce")
+    listing["listed_to"] = pd.to_datetime(listing["listed_to"], errors="coerce")
+    phase1_plan = pd.DataFrame(manifest["mathieu_plan"])
+    phase1_plan = phase1_plan[phase1_plan["phase"] == "phase1_paired_servers"].copy()
+    phase1_plan["start_date"] = pd.to_datetime(phase1_plan["start"])
+    phase1_plan["end_date"] = pd.to_datetime(phase1_plan["end"])
+    phase1_analysis = phase1_plan.merge(
+        phase1_requests[["request_index", "status", "session_dates", "event_trace", "elapsed_ms", "market_info_present"]],
+        on="request_index", how="left",
+    )
+    def listed_during(row: pd.Series) -> bool:
+        candidates = listing[listing["ticker"] == str(row["ticker"]).upper()]
+        if candidates.empty:
+            return False
+        return bool((
+            ((candidates["listed_from"].isna()) | (candidates["listed_from"] <= row["end_date"]))
+            & ((candidates["listed_to"].isna()) | (candidates["listed_to"] >= row["start_date"]))
+        ).any())
+    phase1_analysis["known_listed"] = phase1_analysis.apply(listed_during, axis=1)
+    phase1_analysis["exact_window_rows"] = phase1_analysis["session_dates"].fillna("[]").map(
+        lambda value: len(json.loads(value)) if isinstance(value, str) and value.startswith("[") else 0
+    )
+    phase1_analysis["event_trace_text"] = phase1_analysis["event_trace"].fillna("")
+    phase1_analysis["adapter_timeout"] = phase1_analysis["event_trace_text"].str.contains("adapter_timeout")
+    phase1_analysis["update_seen_observed"] = phase1_analysis["event_trace_text"].str.contains("update")
+    phase1_pair_pivot = phase1_analysis.pivot(index=["ticker", "era"], columns="server", values=["status", "exact_window_rows"])
+    phase1_pair_summary = []
+    for era, group in phase1_analysis.groupby("era", sort=True):
+        data = group[group["server"] == "data"].set_index("ticker")
+        prodata = group[group["server"] == "prodata"].set_index("ticker")
+        phase1_pair_summary.append({
+            "era": era, "pairs": int(len(group) / 2),
+            "data_available": int((data["status"] == "AVAILABLE").sum()),
+            "prodata_available": int((prodata["status"] == "AVAILABLE").sum()),
+            "both_available": int(((data["status"] == "AVAILABLE") & (prodata["status"] == "AVAILABLE")).sum()),
+            "prodata_only": int(((prodata["status"] == "AVAILABLE") & (data["status"] != "AVAILABLE")).sum()),
+            "data_only": int(((data["status"] == "AVAILABLE") & (prodata["status"] != "AVAILABLE")).sum()),
+            "data_exact_window": int((data["exact_window_rows"] > 0).sum()),
+            "prodata_exact_window": int((prodata["exact_window_rows"] > 0).sum()),
+        })
+    listing_aware_availability = phase1_analysis.groupby(["server", "era"], sort=True).apply(
+        lambda group: pd.Series({
+            "requested": int(len(group)),
+            "known_listed": int(group["known_listed"].sum()),
+            "raw_available": int((group["status"] == "AVAILABLE").sum()),
+            "raw_available_listed": int(((group["status"] == "AVAILABLE") & group["known_listed"]).sum()),
+            "exact_window_listed": int(((group["exact_window_rows"] > 0) & group["known_listed"]).sum()),
+        }), include_groups=False,
+    ).reset_index().to_dict(orient="records")
+    transport_observation = phase1_analysis.groupby(["server", "era"], sort=True).apply(
+        lambda group: pd.Series({
+            "requests": int(len(group)),
+            "websocket_connected": int(group["event_trace_text"].str.contains("connected").sum()),
+            "market_info_present": int(group["market_info_present"].sum()),
+            "partial_update_observed": int(group["update_seen_observed"].sum()),
+            "adapter_timeout_observed": int(group["adapter_timeout"].sum()),
+            "elapsed_ms_median": float(pd.to_numeric(group["elapsed_ms"], errors="coerce").median()),
+        }), include_groups=False,
+    ).reset_index().to_dict(orient="records")
     all_official = {pd.Timestamp(value).date().isoformat() for value in pd.read_csv(args.calendar)["date"]}
     denominators = listing_aware_denominators(
         pd.DataFrame(manifest["mathieu_plan"])[lambda frame: frame["phase"] == "phase1_paired_servers"],
@@ -254,6 +319,17 @@ def main() -> int:
     )
     non_ca = comparison[~comparison["corporate_action_quarantined"]] if not comparison.empty else comparison
     ratios = pd.to_numeric(non_ca["volume_ratio"], errors="coerce") if not non_ca.empty else pd.Series(dtype=float)
+    daily_by_server = []
+    for server, group in comparison.groupby("server", sort=True):
+        clean = group[~group["corporate_action_quarantined"]]
+        daily_by_server.append({
+            "server": server, "matched_rows": int(len(group)), "non_ca_rows": int(len(clean)),
+            "hlc_exact_rate": float(clean["hlc_exact"].mean()) if not clean.empty else None,
+            "open_exact_rate_when_present": float(clean.loc[clean["open_canonical_present"], "open_exact"].mean()) if clean["open_canonical_present"].any() else None,
+            "open_rows": int(clean["open_canonical_present"].sum()),
+            "volume_near_5pct_rate": float(clean["volume_near"].mean()) if not clean.empty else None,
+            "volume_ratio": volume_ratio_diagnostics(pd.to_numeric(clean["volume_ratio"], errors="coerce")),
+        })
     summary = {
         "schema": "idx-trade/tradingview-historical-intraday-remediation-result-v1",
         "sample_manifest_sha256": sha256_file(args.sample_manifest),
@@ -262,6 +338,9 @@ def main() -> int:
         "mathieu_status_counts": request_frame["status"].value_counts().to_dict(),
         "mathieu_status_by_server_era": request_frame.groupby(["server", "era"])["status"].value_counts().unstack(fill_value=0).reset_index().to_dict(orient="records"),
         "phase1_raw_availability": request_frame[request_frame["phase"] == "phase1_paired_servers"].groupby(["server", "era"]).agg(requests=("status", "size"), available=("status", lambda value: int((value == "AVAILABLE").sum())), periods=("period_count", "sum")).reset_index().to_dict(orient="records"),
+        "phase1_pair_summary": phase1_pair_summary,
+        "phase1_listing_aware_availability": listing_aware_availability,
+        "phase1_transport_observation": transport_observation,
         "listing_aware_denominators_phase1": denominators,
         "certified_calendar_note": "2018/2020 have no preserved official session rows; timestamp depth is diagnostic only for those eras.",
         "pagination": {
@@ -277,6 +356,7 @@ def main() -> int:
             "volume_ratio": volume_ratio_diagnostics(ratios),
             "volume_near_5pct_rate": float(((ratios >= 0.95) & (ratios <= 1.05)).mean()) if len(ratios) else None,
             "corporate_action_quarantined_rows": int(comparison["corporate_action_quarantined"].sum()) if not comparison.empty else 0,
+            "by_server": daily_by_server,
         },
         "three_way_class_counts": three_way["three_way_class"].value_counts().to_dict() if not three_way.empty else {},
         "endenwer": {

@@ -126,15 +126,28 @@ def three_way_reconciliation(
     key = ["ticker", "session_date"]
     def prepare(frame: pd.DataFrame, suffix: str) -> pd.DataFrame:
         data = frame.copy()
+        if data.empty:
+            return pd.DataFrame(columns=key + [f"{field}_{suffix}" for field in ("open", "high", "low", "close", "volume")])
         if "date" in data.columns and "session_date" not in data.columns:
             data["session_date"] = pd.to_datetime(data["date"]).dt.strftime("%Y-%m-%d")
         data["session_date"] = data["session_date"].astype(str)
-        return data[key + ["open", "high", "low", "close", "volume"]].rename(
+        # A source can contain overlapping request slices.  Collapse those
+        # exact reconciliation keys before merging; otherwise an outer merge
+        # multiplies rows and fabricates three-way disagreements.
+        return data[key + ["open", "high", "low", "close", "volume"]].drop_duplicates(
+            key, keep="last"
+        ).rename(
             columns={field: f"{field}_{suffix}" for field in ("open", "high", "low", "close", "volume")}
         )
 
-    merged = prepare(tv60, "tv60").merge(prepare(tv1d, "tv1d"), on=key, how="outer")
-    canonical_prepared = prepare(canonical, "canonical")
+    prepared_tv60 = prepare(tv60, "tv60")
+    prepared_tv1d = prepare(tv1d, "tv1d")
+    merged = prepared_tv60.merge(prepared_tv1d, on=key, how="outer")
+    # Reconciliation is bounded to dates actually present in either provider
+    # slice.  Do not outer-join the complete historical panel into every
+    # ticker/era probe.
+    relevant_keys = pd.concat([prepared_tv60[key], prepared_tv1d[key]], ignore_index=True).drop_duplicates()
+    canonical_prepared = prepare(canonical, "canonical").merge(relevant_keys, on=key, how="inner")
     merged = merged.merge(canonical_prepared, on=key, how="outer")
     fields = ("open", "high", "low", "close", "volume")
     for field in fields:
@@ -147,14 +160,27 @@ def three_way_reconciliation(
         merged[f"tv1d_canonical_{field}_near"] = [
             _near(left, right, tolerance) for left, right in zip(merged[f"{field}_tv1d"], merged[f"{field}_canonical"])
         ]
+    merged["tv60_present"] = merged["open_tv60"].notna()
+    merged["tv1d_present"] = merged["open_tv1d"].notna()
+    merged["canonical_present"] = merged["open_canonical"].notna()
     tv60_tv1d = merged[[f"tv60_tv1d_{field}_near" for field in fields]].all(axis=1)
     tv60_canonical = merged[[f"tv60_canonical_{field}_near" for field in fields]].all(axis=1)
     tv1d_canonical = merged[[f"tv1d_canonical_{field}_near" for field in fields]].all(axis=1)
     merged["three_way_class"] = "UNRESOLVED"
-    merged.loc[tv60_tv1d & tv60_canonical & tv1d_canonical, "three_way_class"] = "TV60_APPROX_TV1D_APPROX_CANONICAL"
-    merged.loc[~tv60_tv1d & tv1d_canonical, "three_way_class"] = "TV60_DIFF_TV1D_APPROX_CANONICAL"
-    merged.loc[tv60_tv1d & ~tv1d_canonical, "three_way_class"] = "TV60_APPROX_TV1D_DIFF_CANONICAL"
-    merged.loc[tv60_canonical & ~tv1d_canonical & ~tv60_tv1d, "three_way_class"] = "TV60_APPROX_CANONICAL_TV1D_DIFF"
+    all_present = merged["tv60_present"] & merged["tv1d_present"] & merged["canonical_present"]
+    merged.loc[~merged["tv60_present"] & merged["tv1d_present"] & merged["canonical_present"], "three_way_class"] = "TV60_NO_ROW"
+    merged.loc[merged["tv60_present"] & ~merged["tv1d_present"] & merged["canonical_present"], "three_way_class"] = "TV1D_NO_ROW"
+    merged.loc[merged["tv60_present"] & merged["tv1d_present"] & ~merged["canonical_present"], "three_way_class"] = "CANONICAL_NO_ROW"
+    merged.loc[~merged["tv60_present"] & ~merged["tv1d_present"] & merged["canonical_present"], "three_way_class"] = "TV60_AND_TV1D_NO_ROW"
+    merged.loc[~merged["tv60_present"] & merged["tv1d_present"] & ~merged["canonical_present"], "three_way_class"] = "TV60_AND_CANONICAL_NO_ROW"
+    merged.loc[merged["tv60_present"] & ~merged["tv1d_present"] & ~merged["canonical_present"], "three_way_class"] = "TV1D_AND_CANONICAL_NO_ROW"
+    merged.loc[~merged["tv60_present"] & ~merged["tv1d_present"] & ~merged["canonical_present"], "three_way_class"] = "NO_SOURCE_ROW"
+    merged.loc[all_present & tv60_tv1d & tv60_canonical & tv1d_canonical, "three_way_class"] = "TV60_APPROX_TV1D_APPROX_CANONICAL"
+    merged.loc[all_present & ~tv60_tv1d & tv1d_canonical, "three_way_class"] = "TV60_DIFF_TV1D_APPROX_CANONICAL"
+    merged.loc[all_present & tv60_tv1d & ~tv1d_canonical, "three_way_class"] = "TV60_APPROX_TV1D_DIFF_CANONICAL"
+    merged.loc[all_present & tv60_canonical & ~tv1d_canonical & ~tv60_tv1d, "three_way_class"] = "TV60_APPROX_CANONICAL_TV1D_DIFF"
+    merged.loc[all_present & ~tv60_tv1d & ~tv60_canonical & ~tv1d_canonical, "three_way_class"] = "THREE_WAY_DISAGREEMENT"
+    merged.loc[all_present & merged["three_way_class"].eq("UNRESOLVED"), "three_way_class"] = "THREE_WAY_DISAGREEMENT"
     return merged
 
 
