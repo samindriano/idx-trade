@@ -1,8 +1,8 @@
 # Direct IDX Endpoint Audit — Security-Challenge Blocked
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Branch: `data/idx-direct-endpoint-audit-v1`  
-IDX-BEI source: `nichsedge/idx-bei` at `75d6c0f`  
+Date: 2026-08-13 (Asia/Jakarta)
+Branch: `data/idx-direct-endpoint-audit-v1`
+IDX-BEI source: `nichsedge/idx-bei` at `75d6c0f`
 Status: `BLOCKED_DIRECT_IDX_SECURITY_CHALLENGE`
 
 ## Scope
