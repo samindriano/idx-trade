@@ -25,10 +25,17 @@ from .types import (
 from .validation import (
     SCHEMA_VERSION,
     SCOPE_REF_RE,
+    SubaccountRef,
     assert_minimized_canonical_payload,
     jsonable,
     require_aware,
 )
+
+
+def _rehydrate_subaccount_ref(value: str | None) -> SubaccountRef | None:
+    if value is None:
+        return None
+    return SubaccountRef._from_validated_canonical(value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +103,7 @@ class PortfolioSnapshot:
                 Decimal(item["quantity"]),
                 item["currency"],
                 item["broker_or_custodian"],
-                item["subaccount_ref"],
+                _rehydrate_subaccount_ref(item["subaccount_ref"]),
             )
             for item in payload["positions"]
         )
@@ -105,7 +112,7 @@ class PortfolioSnapshot:
                 item["currency"],
                 Decimal(item["amount"]),
                 item["bank_or_custodian"],
-                item["subaccount_ref"],
+                _rehydrate_subaccount_ref(item["subaccount_ref"]),
             )
             for item in payload["cash_balances"]
         )
