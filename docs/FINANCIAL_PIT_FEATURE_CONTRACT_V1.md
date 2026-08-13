@@ -1,8 +1,8 @@
 # Financial PIT Feature Contract V1
 
-**Status:** `REVIEW`
+**Status:** `DONE`
 
-**Decision:** `FINANCIAL_PIT_FEATURE_CONTRACT_DESIGN_REVIEW_PERIOD_METADATA_BLOCKED`
+**Decision:** `FINANCIAL_PIT_FEATURE_CONTRACT_V1_ACCEPTED_PERIOD_BOUNDARY_REMEDIATION_NEXT`
 
 This document defines a conservative, point-in-time-safe feature contract. It
 does not authorize feature materialization, feature selection, model fitting,
@@ -61,12 +61,10 @@ The accepted aliases are normalized without combining periods:
 
 Income-statement and cash-flow values are cumulative YTD. The contract never
 sums `Q1 + H1 + 9M + FY`. A future standalone-quarter or TTM transformation
-must prove exact boundaries and use a mathematically correct formula; it is
-not part of this dry-run. If TTM is later authorized, the duration formula is
-`FY(y-1) + YTD(y,p) - YTD(y-1,p)` for the same issuer, scope, concept,
-currency/unit/scale, and comparable period `p`. Every component must be
-knowable at the decision timestamp. TTM is never constructed from instant
-facts.
+must first receive a separate frozen normalization contract. No annualization
+or TTM formula is authorized here; exact boundaries alone do not justify
+mixing cumulative periods of different lengths. TTM is never constructed from
+instant facts.
 
 YoY candidates match the same normalized period (`Q1` to prior-year `Q1`,
 `H1` to prior-year `H1`, `9M` to prior-year `9M`, or `FY` to prior-year `FY`),
@@ -156,7 +154,7 @@ input as locale decimal notation (`1.2 × 10^3`), and this contract adds no
 locale-number guessing. Malformed exponents and nonnumeric text remain
 rejected by the accepted parser.
 
-## Offline availability dry-run
+## Offline availability dry-run (pre-sidecar baseline; superseded)
 
 The reusable implementation is
 `src/idx_trade/financial_feature_contract.py`. It builds filing versions from
@@ -202,3 +200,128 @@ This result supports contract review and identifies the next data repair
 precisely: retain and validate explicit instant/duration boundaries in the
 canonical fact artifact, then rerun a separate offline availability audit.
 It does not authorize model work or protected-forward access.
+
+## Period-boundary remediation V1
+
+This section supersedes the pre-sidecar dry-run above. The feature contract
+was accepted with decision
+`FINANCIAL_PIT_FEATURE_CONTRACT_V1_ACCEPTED_PERIOD_BOUNDARY_REMEDIATION_NEXT`.
+The remediation uses a separate, exact provenance-bound sidecar and does not
+rewrite the accepted fact corpus.
+
+### Evidence contract
+
+The sidecar accepts only evidence from the actual immutable filing bytes:
+
+* visible XLSX sheet `1000000`, with the bilingual current-period date label
+  and its same-row value cell recorded as `sheet=...;label_cell=...;value_cell=...`;
+* explicit `idx-dei:CurrentPeriodStartDate` and
+  `idx-dei:CurrentPeriodEndDate` inline-XBRL facts in the official IDX-DEI
+  namespace and `contextRef=CurrentYearInstant`.
+
+Period labels, filenames, fiscal year, publication time, and Q1/H1/9M/FY
+aliases are never used to invent a boundary. Conflicting or chronologically
+impossible source dates remain unresolved. Instant end dates may remain usable
+for instant facts when the duration start is invalid; duration facts require
+both exact dates.
+
+### Pinned offline artifacts
+
+The source diagnostics and facts are the accepted immutable artifacts listed
+above. The attachment root was read locally; `network_calls=0` and
+`redownloads=0`.
+
+| Artifact | SHA-256 |
+|---|---|
+| `period_boundaries.jsonl` | `f29f50b86100c23c5407325f02d6f42e8d7d03dc9d5779c5da1d2763c20a4168` |
+| sidecar `summary.json` | `46da80d1564220babf90a9165dc6dcdf2bc8b5c918eded903d82112e1680a6d9` |
+| sidecar `MANIFEST.json` | `798bba02b8b37c06e2a6e7bd133103df00fbfcccebb2612b9d47facf11e97b49` |
+| feature availability `availability.json` | `0f29944bc3bcd657e38d371848bdfc799ef85edf04dbf7ec59dad89cd1b98d30` |
+| feature availability `MANIFEST.json` | `902919263ff7009afe3a64bc39601f259a6972d97840a21ab780894bf59cd68d` |
+
+External roots:
+
+* `D:\Documents\Project\idx-financial-pit-period-boundary-20260814-v3`
+* `D:\Documents\Project\idx-financial-pit-feature-contract-20260814-period-sidecar-v3`
+
+### Boundary recovery census
+
+| Measure | Result |
+|---|---:|
+| filing versions | `5,965` |
+| instant boundaries recovered | `5,965 / 5,965` |
+| duration boundaries recovered | `5,962 / 5,965` |
+| fully recovered filing versions | `5,962 / 5,965` |
+| XLSX / XBRL representations | `5,963 / 2` |
+| canonical fact rows | `37,246` |
+| fact rows with explicit verified boundaries | `37,239` |
+| fact rows unresolved for period metadata | `7` |
+| protected outcomes / feature values / model work | `false / false / false` |
+
+The sidecar summary contains the complete recovery matrix by year, normalized
+period (`Q1/H1/9M/FY`), statement scope, representation, and template/industry
+family. The aggregate filing view is:
+
+| Year | Period | Versions | Fully recovered | Consolidated | Separate | XLSX | XBRL |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 2024 | Q1 | 306 | 306 | 230 | 76 | 306 | 0 |
+| 2024 | H1 | 588 | 587 | 425 | 163 | 587 | 1 |
+| 2024 | 9M | 620 | 620 | 456 | 164 | 620 | 0 |
+| 2024 | FY | 661 | 661 | 485 | 176 | 661 | 0 |
+| 2025 | Q1 | 602 | 602 | 451 | 151 | 602 | 0 |
+| 2025 | H1 | 693 | 693 | 511 | 182 | 693 | 0 |
+| 2025 | 9M | 572 | 572 | 430 | 142 | 572 | 0 |
+| 2025 | FY | 674 | 674 | 496 | 178 | 674 | 0 |
+| 2026 | Q1 | 662 | 661 | 494 | 168 | 662 | 0 |
+| 2026 | H1 | 587 | 586 | 432 | 155 | 586 | 1 |
+
+The three fail-closed filing boundaries are:
+
+* `LEAD` H1 2024 XLSX: the visible source cells report start
+  `2024-09-27` and end `2024-06-30`; chronology is impossible. The filing has
+  no canonical fact rows in the accepted fact corpus.
+* `UNVR` Q1 2026 XLSX: visible source cells report start `2026-04-30` and
+  end `2026-03-31`; the three duration facts are unresolved. Exact instant
+  facts retain the independently recovered `2026-03-31` instant boundary.
+* `VTNY` H1 2026 XBRL: the exact IDX-DEI end fact is present for `2026-06-30`
+  in `1000000.html`, but no authoritative current-period start fact is
+  present. Duration facts remain unresolved; no start date is inferred.
+
+### Post-sidecar availability dry-run
+
+The rerun validates the manifest-pinned sidecar before building in-memory
+availability statuses. It does not materialize feature values. The
+model-safe contract is enforced as `GENERAL + CONSOLIDATED`; Financial,
+Financial/Sharia, Separate, and unknown applicability remain audit-only or
+fail-closed.
+
+| Candidate | Available | Main fail-closed diagnostics |
+|---|---:|---|
+| `size_log_total_assets` | 3,258 | missing 960; unresolved input 8; not applicable 1,737 |
+| `size_log_revenue` | 3,246 | missing 965; non-positive denominator 7; unresolved input 8 |
+| `leverage_liabilities_to_assets` | 3,258 | missing 960; unresolved input 8; not applicable 1,737 |
+| `capital_equity_to_assets` | 3,258 | missing 960; unresolved input 8; not applicable 1,737 |
+| `liquidity_cash_to_assets` | 3,258 | missing 960; unresolved input 8; not applicable 1,737 |
+| `profitability_net_income_to_assets` | 3,258 | missing 960; unresolved input 8; not applicable 1,737 |
+| `profitability_attributable_income_to_equity` | 3,133 | missing 960; non-positive denominator 125; unresolved input 8 |
+| `cash_flow_ocf_to_net_income` | 1,502 | missing 963; unresolved input 1,160; not applicable 1,737 |
+| `cash_flow_ocf_to_revenue` | 2,093 | missing 968; non-positive denominator 5; unresolved input 1,160 |
+| `margin_net_income_to_revenue` | 3,246 | missing 965; non-positive denominator 7; unresolved input 8 |
+| `yoy_revenue` | 1,609 | missing 2,574; unit mismatch 31; unresolved input 8 |
+| `yoy_net_income` | 1,219 | missing 2,569; denominator non-positive 399; unit mismatch 31 |
+| `yoy_total_assets` | 1,618 | missing 2,569; unit mismatch 31; not applicable 1,737 |
+
+### Safe period policy
+
+Exact boundaries make temporal shape auditable, but they do not authorize
+annualization. The three cumulative-duration-sensitive candidates
+(`size_log_revenue`, `profitability_net_income_to_assets`, and
+`profitability_attributable_income_to_equity`) remain **period-stratified** by
+the exact normalized period and boundary pair. Q1, H1, 9M, and FY are never
+pooled or summed. A future normalization or TTM formula requires a separate
+frozen contract and evidence that every component was knowable at the
+decision timestamp. The safest current policy is therefore same-period
+stratification, not an invented annualization adjustment.
+
+No feature-performance testing, model fitting, protected-outcome access, O2
+change, provider call, or network/redownload operation occurred in this lane.

@@ -9,6 +9,7 @@ from idx_trade.financial_feature_contract import (
     PeriodShape,
     _availability,
     _build_versions,
+    _fact_from_version,
     applicability_matrix,
     normalize_period,
 )
@@ -179,6 +180,16 @@ def test_missing_period_boundaries_fail_closed_even_when_shape_is_present() -> N
     feature = next(item for item in FEATURE_DEFINITIONS if item.feature_id == "size_log_total_assets")
     selected = versions[("TEST", 2025, "tw1", "CONSOLIDATED")][0]
     assert _availability(feature, selected, versions).status is AvailabilityStatus.UNRESOLVED_PERIOD
+
+
+def test_duplicate_fact_boundaries_are_not_collapsed_by_value_only() -> None:
+    first = _fact(identity="revenue", shape="duration", value="100")
+    second = _fact(identity="revenue", shape="duration", value="100")
+    second["fiscal_period_covered"]["period_start"] = "2025-02-01"
+    versions = _build_versions([first, second], [_diagnostic("v1")])
+    selected = versions[("TEST", 2025, "tw1", "CONSOLIDATED")][0]
+    _, status = _fact_from_version(selected, "revenue", PeriodShape.DURATION)
+    assert status is AvailabilityStatus.UNRESOLVED_INPUT
 
 
 def test_applicability_matrix_has_fail_closed_unknown_column() -> None:

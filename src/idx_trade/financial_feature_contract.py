@@ -24,9 +24,13 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from .financial_period_boundaries import validate_period_sidecar
+
 
 CONTRACT_VERSION = "financial_feature_contract_v1"
 SUPPORTED_PERIODS = frozenset({"Q1", "H1", "9M", "FY"})
+MODEL_SAFE_INDUSTRIES = ("GENERAL",)
+MODEL_SAFE_SCOPES = ("CONSOLIDATED",)
 PERIOD_ALIASES = {
     "q1": "Q1",
     "tw1": "Q1",
@@ -87,6 +91,7 @@ class FeatureDefinition:
     denominator_rule: DenominatorRule = DenominatorRule.NONE
     comparable_prior_period: bool = False
     description: str = ""
+    duration_period_policy: str = "NONE"
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -123,6 +128,7 @@ FEATURE_DEFINITIONS: tuple[FeatureDefinition, ...] = (
         denominator_facts=("revenue",),
         denominator_rule=DenominatorRule.POSITIVE,
         description="General-issuer operating scale only; financial-issuer revenue semantics are not assumed.",
+        duration_period_policy="PERIOD_STRATIFIED_CUMULATIVE_NO_ANNUALIZATION",
     ),
     FeatureDefinition(
         "leverage_liabilities_to_assets",
@@ -163,6 +169,7 @@ FEATURE_DEFINITIONS: tuple[FeatureDefinition, ...] = (
         denominator_facts=("total_assets",),
         denominator_rule=DenominatorRule.POSITIVE,
         description="A clearly named period-end-assets denominator, not silently relabeled as average-assets ROA.",
+        duration_period_policy="PERIOD_STRATIFIED_CUMULATIVE_NO_ANNUALIZATION",
     ),
     FeatureDefinition(
         "profitability_attributable_income_to_equity",
@@ -173,6 +180,7 @@ FEATURE_DEFINITIONS: tuple[FeatureDefinition, ...] = (
         denominator_facts=("total_equity",),
         denominator_rule=DenominatorRule.POSITIVE,
         description="Fails closed on zero or non-positive equity rather than producing an unstable ratio.",
+        duration_period_policy="PERIOD_STRATIFIED_CUMULATIVE_NO_ANNUALIZATION",
     ),
     FeatureDefinition(
         "cash_flow_ocf_to_net_income",
@@ -262,6 +270,8 @@ class _Fact:
     scale: int | None
     source_ref: str
     source_location: str
+    period_evidence_kind: str = ""
+    period_evidence_location: str = ""
 
 
 @dataclass
@@ -288,6 +298,7 @@ class FeatureAvailability:
     industry_class: str
     status: AvailabilityStatus
     reason: str
+    period_stratification_key: str | None = None
     input_version_ids: tuple[str, ...] = ()
     attachment_sha256s: tuple[str, ...] = ()
     source_refs: tuple[str, ...] = ()
@@ -361,19 +372,49 @@ def _period_shape(row: Mapping[str, Any]) -> PeriodShape | None:
     return None
 
 
-def _period_metadata(row: Mapping[str, Any]) -> tuple[str | None, str | None, str | None, bool]:
+def _period_metadata(
+    row: Mapping[str, Any],
+    boundary: Mapping[str, Any] | None = None,
+) -> tuple[str | None, str | None, str | None, bool, str, str]:
     covered = row.get("fiscal_period_covered") or {}
     shape = _period_shape(row)
     start = str(covered.get("period_start") or "").strip() or None
     end = str(covered.get("period_end") or "").strip() or None
     instant = str(covered.get("instant_date") or "").strip() or None
+    evidence_kind = ""
+    evidence_location = ""
+    if boundary:
+        if shape is PeriodShape.INSTANT:
+            instant = (
+                str(boundary.get("instant_date") or "").strip() or None
+                if boundary.get("instant_status") == "RECOVERED"
+                else None
+            )
+            start = None
+            end = None
+            evidence_kind = str(boundary.get("evidence_kind") or "")
+            evidence_location = ";".join(
+                str(item.get("source_location") or "") for item in boundary.get("instant_evidence", ()) if item.get("source_location")
+            )
+        elif shape is PeriodShape.DURATION:
+            if boundary.get("duration_status") == "RECOVERED":
+                start = str(boundary.get("period_start") or "").strip() or None
+                end = str(boundary.get("period_end") or "").strip() or None
+            else:
+                start = None
+                end = None
+            instant = None
+            evidence_kind = str(boundary.get("evidence_kind") or "")
+            evidence_location = ";".join(
+                str(item.get("source_location") or "") for item in boundary.get("duration_evidence", ()) if item.get("source_location")
+            )
     if shape is PeriodShape.INSTANT:
         verified = bool(instant or end) and not bool(start)
     elif shape is PeriodShape.DURATION:
         verified = bool(start and end and not instant)
     else:
         verified = False
-    return start, end, instant, verified
+    return start, end, instant, verified, evidence_kind, evidence_location
 
 
 def _sha256_file(path: Path) -> str:
@@ -400,6 +441,7 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
 def _build_versions(
     fact_rows: Iterable[Mapping[str, Any]],
     diagnostic_rows: Iterable[Mapping[str, Any]],
+    period_boundaries: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[tuple[str, int, str, str], list[_Version]]:
     diagnostics: dict[str, Mapping[str, Any]] = {}
     for row in diagnostic_rows:
@@ -459,7 +501,12 @@ def _build_versions(
         industry = normalize_industry_class(diagnostic.get("industry_class") or diagnostic.get("template_or_industry_family"))
         if (current.attachment_sha256, current.knowledge_at, current.representation_format) != (attachment_sha, knowledge_at, fmt):
             raise ValueError(f"conflicting metadata within version {version_id}")
-        start, end, instant, bounds_verified = _period_metadata(row)
+        boundary = period_boundaries.get(version_id) if period_boundaries else None
+        if boundary is not None:
+            boundary_sha = str(boundary.get("attachment_sha256") or "").lower()
+            if boundary_sha != attachment_sha:
+                raise ValueError(f"period boundary sidecar hash mismatch for version {version_id}")
+        start, end, instant, bounds_verified, evidence_kind, evidence_location = _period_metadata(row, boundary)
         current.facts.setdefault(str(row["fact_identity"]), []).append(
             _Fact(
                 ticker=ticker,
@@ -482,6 +529,8 @@ def _build_versions(
                 scale=int(row["scale"]) if row.get("scale") is not None else None,
                 source_ref=str(row.get("source_ref") or ""),
                 source_location=str(row.get("source_location") or ""),
+                period_evidence_kind=evidence_kind,
+                period_evidence_location=evidence_location,
             )
         )
 
@@ -518,7 +567,22 @@ def _fact_from_version(version: _Version, fact_identity: str, shape: PeriodShape
         return None, AvailabilityStatus.MISSING_INPUT
     if any(row.value is None for row in extracted):
         return None, AvailabilityStatus.NONFINITE_INPUT
-    fingerprints = {(row.value, row.currency, row.unit, row.scale, row.source_location) for row in extracted}
+    fingerprints = {
+        (
+            row.value,
+            row.currency,
+            row.unit,
+            row.scale,
+            row.source_location,
+            row.period_shape,
+            row.period_start,
+            row.period_end,
+            row.instant_date,
+            row.period_evidence_kind,
+            row.period_evidence_location,
+        )
+        for row in extracted
+    }
     if len(fingerprints) > 1:
         return None, AvailabilityStatus.UNRESOLVED_INPUT
     return sorted(extracted, key=lambda row: row.source_location)[0], None
@@ -555,10 +619,13 @@ def _availability(
         industry_class=current.industry_class,
     )
     normalized_period = normalize_period(current.fiscal_period)
+    base["period_stratification_key"] = normalized_period
     if normalized_period not in SUPPORTED_PERIODS:
         return FeatureAvailability(**base, status=AvailabilityStatus.UNRESOLVED_PERIOD, reason="period is not Q1/H1/9M/FY")
     if current.industry_class == "UNKNOWN":
         return FeatureAvailability(**base, status=AvailabilityStatus.UNRESOLVED_APPLICABILITY, reason="industry/taxonomy applicability is not explicit")
+    if current.industry_class not in MODEL_SAFE_INDUSTRIES or current.scope not in MODEL_SAFE_SCOPES:
+        return FeatureAvailability(**base, status=AvailabilityStatus.NOT_APPLICABLE, reason="outside conservative GENERAL + CONSOLIDATED model-safe scope")
     if current.industry_class not in feature.applicable_industries:
         return FeatureAvailability(**base, status=AvailabilityStatus.NOT_APPLICABLE, reason="feature is outside its frozen industry applicability matrix")
 
@@ -574,6 +641,18 @@ def _availability(
         if not fact.period_bounds_verified:
             return FeatureAvailability(**base, status=AvailabilityStatus.UNRESOLVED_PERIOD, reason=f"current filing input {identity} lacks explicit instant/duration boundaries")
         values[identity] = fact
+
+    duration_facts = [fact for fact in values.values() if fact.period_shape is PeriodShape.DURATION]
+    instant_facts = [fact for fact in values.values() if fact.period_shape is PeriodShape.INSTANT]
+    if duration_facts and len({(fact.period_start, fact.period_end) for fact in duration_facts}) != 1:
+        return FeatureAvailability(**base, status=AvailabilityStatus.NONCOMPARABLE_PERIOD, reason="duration inputs do not share exact period boundaries")
+    if instant_facts and len({fact.instant_date for fact in instant_facts}) != 1:
+        return FeatureAvailability(**base, status=AvailabilityStatus.NONCOMPARABLE_PERIOD, reason="instant inputs do not share exact instant date")
+    if feature.feature_id in {"profitability_net_income_to_assets", "profitability_attributable_income_to_equity"}:
+        duration_end = duration_facts[0].period_end if duration_facts else None
+        instant_date = instant_facts[0].instant_date if instant_facts else None
+        if not duration_end or not instant_date or duration_end != instant_date:
+            return FeatureAvailability(**base, status=AvailabilityStatus.NONCOMPARABLE_PERIOD, reason="duration period_end must equal instant denominator date")
 
     if feature.comparable_prior_period:
         prior_key = (current.ticker, current.fiscal_year - 1, current.fiscal_period, current.scope)
@@ -618,12 +697,30 @@ def run_feature_availability_dry_run(
     filing_diagnostics_path: Path,
     *,
     output_root: Path | None = None,
+    period_boundaries_path: Path | None = None,
+    period_boundaries_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     """Audit feature input availability without materializing feature values."""
 
     fact_rows = _load_jsonl(fact_records_path)
     diagnostic_rows = _load_jsonl(filing_diagnostics_path)
-    versions = _build_versions(fact_rows, diagnostic_rows)
+    period_boundaries: dict[str, Mapping[str, Any]] | None = None
+    if period_boundaries_path is not None:
+        if period_boundaries_manifest_path is None:
+            raise ValueError("period boundary sidecar requires a manifest")
+        sidecar_validation = validate_period_sidecar(
+            period_boundaries_path,
+            period_boundaries_manifest_path,
+            filing_diagnostics_path,
+            fact_records_path,
+        )
+        period_boundaries = {}
+        for row in _load_jsonl(period_boundaries_path):
+            version_id = str(row.get("version_id") or "")
+            if not version_id or version_id in period_boundaries:
+                raise ValueError(f"duplicate or missing period boundary version: {version_id}")
+            period_boundaries[version_id] = row
+    versions = _build_versions(fact_rows, diagnostic_rows, period_boundaries)
     all_versions = [version for rows in versions.values() for version in rows]
     results: list[FeatureAvailability] = []
     for version in sorted(all_versions, key=lambda item: (item.ticker, item.fiscal_year, item.fiscal_period, item.scope, item.version_id)):
@@ -678,6 +775,18 @@ def run_feature_availability_dry_run(
         "source_artifacts": {
             "fact_records": {"path": str(fact_records_path), "sha256": _sha256_file(fact_records_path)},
             "filing_diagnostics": {"path": str(filing_diagnostics_path), "sha256": _sha256_file(filing_diagnostics_path)},
+            "period_boundaries": {"path": str(period_boundaries_path), "sha256": _sha256_file(period_boundaries_path)}
+            if period_boundaries_path is not None
+            else None,
+            "period_boundaries_manifest": {"path": str(period_boundaries_manifest_path), "sha256": _sha256_file(period_boundaries_manifest_path)}
+            if period_boundaries_manifest_path is not None
+            else None,
+        },
+        "period_boundary_sidecar_validation": sidecar_validation if period_boundaries_path is not None else None,
+        "model_safe_scope_contract": {
+            "industries": list(MODEL_SAFE_INDUSTRIES),
+            "statement_scopes": list(MODEL_SAFE_SCOPES),
+            "broader_scope_rows_are_audit_only": True,
         },
         "values_materialized": False,
         "alpha_metrics_computed": False,
@@ -687,6 +796,7 @@ def run_feature_availability_dry_run(
         "period_policy": "Q1/H1/9M/FY are cumulative source periods; never sum periods; YoY uses same normalized period and knowable prior filing",
         "revision_policy": "select latest complete filing version with knowledge_at <= decision time; never mix versions; same-time hash conflict fails closed",
         "missing_policy": "missing and unresolved facts remain missing; no zero-fill or synthetic imputation",
+        "duration_period_policy": "cumulative duration facts are period-stratified by Q1/H1/9M/FY; no annualization or cross-period pooling",
     }
     if output_root is not None:
         if output_root.exists() and any(output_root.iterdir()):
