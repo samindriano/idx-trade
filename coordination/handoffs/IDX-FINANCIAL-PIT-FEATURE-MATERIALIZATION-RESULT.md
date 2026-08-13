@@ -10,7 +10,7 @@ source_commit: `09e8e8eba738e4dcea3c871f0eda83b53cc07c42`
 branch: `data/financial-pit-feature-materialization-v1`
 scope: Offline materialization of the accepted 13 Financial PIT features from the immutable fact corpus and period-boundary sidecar, GENERAL + CONSOLIDATED only.
 
-head_commit: `c1a28363cef5720122c7f1c0b4f964fefd950df4`
+head_commit: `0fd2c34bb0b8cd9bbe31bbf69fdb6051f5227f33`
 
 files_changed:
 
