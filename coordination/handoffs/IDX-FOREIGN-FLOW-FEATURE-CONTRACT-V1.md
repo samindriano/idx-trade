@@ -8,7 +8,7 @@ reasoning_level: LIGHT
 source_repository: samindriano/idx-trade
 source_commit: f4d997c55f90c86a72dbad2719c6ad30a08919d4
 branch: research/idx-foreign-flow-feature-contract-v1
-head_commit: pending remediation commit
+head_commit: 21fa56a073e065790df3a62e6b743626eff96451
 scope: feature contract and offline materialization/coverage audit only
 
 ## Files changed
