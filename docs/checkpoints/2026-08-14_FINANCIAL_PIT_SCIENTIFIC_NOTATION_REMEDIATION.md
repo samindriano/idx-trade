@@ -1,6 +1,6 @@
 # Financial PIT Strict Scientific-Notation Remediation
 
-Date: 2026-08-14 (Asia/Jakarta)
+Date: 2026-08-13 (Asia/Jakarta)
 Branch: `data/financial-pit-scientific-notation-remediation-v1`
 Status: `FINANCIAL_PIT_STRICT_SCIENTIFIC_NOTATION_REMEDIATION_CENSUS_RECONCILED_REVIEW`
 
