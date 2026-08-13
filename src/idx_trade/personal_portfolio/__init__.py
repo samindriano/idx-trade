@@ -4,7 +4,7 @@ This package intentionally contains no provider network client and no MCP depend
 """
 
 from .schema import PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1, validate_snapshot_payload
-from .storage import SqlitePortfolioSnapshotStore
+from .store import SqlitePortfolioSnapshotStore
 from .surface import (
     AppendResult,
     AssetClass,
@@ -34,32 +34,13 @@ from .surface import (
 )
 
 __all__ = [
-    "AppendResult",
-    "AssetClass",
-    "CashBalance",
-    "CorporateActionContext",
-    "EndpointClass",
-    "EndpointEvidence",
-    "EndpointFailureCode",
-    "FinancialPITContext",
-    "HoldingEnrichment",
-    "InvestmentHealthContext",
-    "PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1",
-    "PersonalPortfolioAdapter",
-    "PortfolioPosition",
-    "PortfolioProvenance",
-    "PortfolioSnapshot",
-    "PortfolioSnapshotStore",
-    "PricePerformanceContext",
-    "REQUIRED_ENDPOINT_CLASSES",
-    "REQUIRED_SOURCE_COMMIT_PINS",
-    "SecurityIdentity",
-    "ShortHorizonModelContext",
-    "SnapshotCompleteness",
-    "SqlitePortfolioSnapshotStore",
-    "TradingOpportunityContext",
-    "assert_minimized_canonical_payload",
-    "derive_subaccount_ref",
-    "new_scope_ref",
+    "AppendResult", "AssetClass", "CashBalance", "CorporateActionContext", "EndpointClass",
+    "EndpointEvidence", "EndpointFailureCode", "FinancialPITContext", "HoldingEnrichment",
+    "InvestmentHealthContext", "PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1", "PersonalPortfolioAdapter",
+    "PortfolioPosition", "PortfolioProvenance", "PortfolioSnapshot", "PortfolioSnapshotStore",
+    "PricePerformanceContext", "REQUIRED_ENDPOINT_CLASSES", "REQUIRED_SOURCE_COMMIT_PINS",
+    "SecurityIdentity", "ShortHorizonModelContext", "SnapshotCompleteness",
+    "SqlitePortfolioSnapshotStore", "TradingOpportunityContext",
+    "assert_minimized_canonical_payload", "derive_subaccount_ref", "new_scope_ref",
     "validate_snapshot_payload",
 ]
