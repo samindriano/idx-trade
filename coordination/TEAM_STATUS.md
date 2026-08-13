@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-13 17:52 Asia/Jakarta
+Last coordinated update: 2026-08-13 18:30 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -75,7 +75,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Financial PIT direct-IDX adapter and coverage census | `DONE` | `ChatGPT acceptance review/idx-financial-pit-adapter-census-acceptance-v1` | `data/financial-pit-adapter-census-v1` / final `d1cb537e` (result `5f600f9c`) / acceptance `723200c32e06d99831b8ea43700fe695c397e4a0` | Adapter + bounded 2024–2026 census accepted as `PARTIAL_SOURCE_USEFUL_PIT_COVERAGE_INCOMPLETE`. 7,370 expected issuer-periods / 6,580 reports / 6,212 relevant announcement filename matches / 6,108 exact dual-byte hash joins / 0 PIT-ready because statement scope remains unresolved. Blockers and raw external evidence remain preserved; no facts/features/models/outcomes. Next authorized milestone is bounded statement-scope granularity feasibility. |
 
-| Financial PIT statement-scope granularity feasibility | `REVIEW` | `Codex/Financial-PIT-Statement-Scope` | `data/financial-pit-statement-scope-v1` / final `e4537c1` (remediation `68fe984`) | Engineering remediation complete: XLSX fallback now respects visible/hidden/veryHidden sheet relationships; XBRL now requires exact IDX-DEI scope concept plus `CurrentYearInstant`; wrong/missing contexts and conflicting authoritative facts fail closed. Existing 11/11 sample classifications unchanged. No census reclassification, network, facts/features/models/outcomes. Await ChatGPT review. |
+| Financial PIT statement-scope granularity feasibility | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Statement-Scope` | `data/financial-pit-statement-scope-v1` / final `e4537c1` / remediation `68fe984` / acceptance `review/idx-financial-pit-adapter-census-acceptance-v1@8675b0bc05327779a3f39d4b1a3f90b2bfcda551` | `FINANCIAL_PIT_STATEMENT_SCOPE_RESOLVER_ACCEPTED_OFFLINE_RECLASSIFICATION_NEXT`: XLSX visibility and exact IDX-DEI+`CurrentYearInstant` XBRL authority gates accepted; immutable 11/11 sample remains 7 consolidated / 4 separate. PDF empirical coverage remains unproven and fail-closed. Next authorized milestone is offline scope reclassification/PIT-ready coverage recomputation over the existing 6,108 exact joins only; no network/redownload/facts/features/models/outcomes. |
 
 ## Cross-chat no-duplicate rules currently in force
 
