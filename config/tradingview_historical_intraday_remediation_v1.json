@@ -1,0 +1,103 @@
+{
+  "contract_version": "tradingview-historical-intraday-remediation-v1",
+  "lineage": {
+    "prior_branch": "data/tradingview-historical-intraday-audit-v1",
+    "prior_reviewed_head": "fb5a6384a49ce2a3c80c07ae2b79134de2f584bb",
+    "prior_artifact_root": "D:/Documents/Project/idx-trade-data-gate-20260808v/tradingview_historical_intraday_audit_v1_20260814",
+    "prior_artifact_manifest_sha256": "ebd5d86dfb673e5a86aef51b11cc4724f5c9a5831b99782e272c683cdd1d4602",
+    "prior_sample_manifest_sha256": "768c1f1db4d999c97f6cbfbbd1babd490c7bb21a2c180cea01efa8263a79d9c4"
+  },
+  "upstream": {
+    "mathieu_repository": "https://github.com/Mathieu2301/TradingView-API",
+    "mathieu_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c",
+    "mathieu_version": "3.5.2",
+    "endenwer_repository": "https://github.com/endenwer/tradingview-ws",
+    "endenwer_commit": "97c743c8230f732e5a49646dd8f0f44c5981a458",
+    "fork_policy": "thin adapter first; no fork"
+  },
+  "access": {
+    "anonymous_only": true,
+    "credentials": "never infer, print, persist, or request",
+    "servers": ["data", "prodata"],
+    "symbol_template": "IDX:<ticker>"
+  },
+  "sample_seed": 20260814,
+  "sample_tickers": [
+    "BBCA", "BBRI", "BMRI", "TLKM", "ASII", "ANTM", "MDKA", "DSSA", "PTBA", "INDF",
+    "UNTR", "GOTO", "BUKA", "AMMN", "AADI", "WSKT", "GTBO", "ZINC", "BOAT", "MFIN"
+  ],
+  "eras": [
+    {"label": "old", "year": 2018, "start": "2018-07-02", "end": "2018-07-06"},
+    {"label": "early_mid", "year": 2020, "start": "2020-07-01", "end": "2020-07-07"},
+    {"label": "mid", "year": 2022, "start": "2022-07-01", "end": "2022-07-07"},
+    {"label": "late_mid", "year": 2024, "start": "2024-07-01", "end": "2024-07-07"},
+    {"label": "recent", "year": 2026, "start": "2026-07-01", "end": "2026-07-07"}
+  ],
+  "phase1_paired_servers": {
+    "purpose": "same 100 ticker-era pairs on data and prodata",
+    "timeframe": "60",
+    "session": "regular",
+    "adjustment": "none",
+    "initial_range": 500,
+    "fetch_more_steps": 1,
+    "fetch_more_batch": 5,
+    "fetch_more_wait_ms": 8000,
+    "timeout_ms": 25000
+  },
+  "phase2_pagination": {
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "eras": ["old", "early_mid", "mid", "late_mid", "recent"],
+    "servers": ["data", "prodata"],
+    "timeframe": "60",
+    "session": "regular",
+    "adjustment": "none",
+    "initial_range": 500,
+    "fetch_more_steps": 10,
+    "fetch_more_batch": 5,
+    "fetch_more_wait_ms": 8000,
+    "timeout_ms": 25000
+  },
+  "phase3_tv1d_reconciliation": {
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "eras": ["old", "mid", "late_mid", "recent"],
+    "server": "prodata",
+    "timeframe": "1D",
+    "session": "regular",
+    "adjustment": "none",
+    "initial_range": 500,
+    "fetch_more_steps": 0,
+    "timeout_ms": 25000
+  },
+  "phase4_endenwer_crosscheck": {
+    "tickers": ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"],
+    "eras": ["old", "mid", "late_mid", "recent"],
+    "timeframe": 60,
+    "amount": 13000,
+    "max_pages": 3,
+    "adjustment": "splits_hardcoded_upstream",
+    "session": "provider_default",
+    "max_sessions": 20
+  },
+  "time_contract": {
+    "provider_epoch": "preserve raw epoch; normalize explicitly to Asia/Jakarta",
+    "allowed_local_session": "08:00:00 through 16:00:00 WIB",
+    "official_calendar": "use only preserved official sessions; no invention for 2018/2020",
+    "timestamp_shift": "prohibited"
+  },
+  "status_taxonomy": [
+    "AVAILABLE",
+    "SERIES_COMPLETED_EMPTY",
+    "SYMBOL_ERROR",
+    "TRANSPORT_TIMEOUT",
+    "TRANSPORT_ERROR",
+    "ENTITLEMENT_OR_PERMISSION_ERROR",
+    "PROVIDER_ERROR",
+    "UNCLASSIFIED_NO_DATA"
+  ],
+  "output": {
+    "external_artifact_root": "D:/Documents/Project/idx-trade-data-gate-20260808v/tradingview_historical_intraday_remediation_v1_20260814_retry1",
+    "canonical_panel_write": false,
+    "model_or_outcome_access": false,
+    "bulk_backfill": false
+  }
+}

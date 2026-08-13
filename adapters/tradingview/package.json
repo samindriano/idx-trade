@@ -1,0 +1,8 @@
+{
+  "name": "idx-trade-tradingview-remediation-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "@mathieuc/tradingview": "github:Mathieu2301/TradingView-API#5baea86c8c7e576f13464919c86c3b4c4b0ecf4c"
+  }
+}
