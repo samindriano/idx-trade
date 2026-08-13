@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: be2c38eb2d93ad7ea95202b52cbe92626c5a8c3b
 branch: data/investing-intraday-admission-pilot-v1
-head_commit: pending runtime checkpoint commit
+head_commit: 8888e85a95f3a60a48a235d48188fbafbc936d74
 scope: Frozen Investing.com 1-hour Jakarta common-stock secondary-source admission pilot; 50 deterministic tickers over old/mid/recent bounded official-calendar windows.
 files_changed: config/investing_intraday_admission_pilot_v1.json; docs/INVESTING_INTRADAY_ADMISSION_PILOT_V1.md; src/idx_trade/investing_admission.py; scripts/run_investing_intraday_admission_pilot.py; tests/test_investing_admission.py; pyproject.toml; coordination/TEAM_STATUS.md
 findings: Runtime reached Investing with validated curl-cffi headers but failed the frozen admission contract: 67 AVAILABLE, 13 NO_DATA, 58 PROVIDER_ERROR; 229 attempts, 91 retries, 33 recovered, 0 HTTP 429; all three coverage eras failed and overall HLC exact was 79.2219%.
