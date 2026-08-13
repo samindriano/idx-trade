@@ -79,7 +79,10 @@ XBRL_FACTS: dict[str, str] = {
     "idx-cor:NetCashFlowsReceivedFromUsedInOperatingActivities": "operating_cash_flow",
 }
 
-_NUMERIC = re.compile(r"^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$")
+# Keep the pre-existing ASCII decimal grammar and add only the exponent form
+# observed in accepted IDX XLSX attachments.  Locale guessing and non-ASCII
+# numeric formats remain rejected by design.
+_NUMERIC = re.compile(r"^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)(?:[eE][+-]?\d+)?$")
 _SHEET_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _PKG_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"

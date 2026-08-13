@@ -5,15 +5,50 @@ import json
 import zipfile
 from decimal import Decimal
 
+import pytest
+
 from idx_trade.financial_fact_table import (
     FactExtractionStatus,
     VersionedFactStore,
+    _parse_decimal,
     extract_filing_facts,
 )
 
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("1.25E+3", Decimal("1250")),
+        ("-4.5e-2", Decimal("-0.045")),
+        ("+7E2", Decimal("700")),
+        ("(1.2E+4)", Decimal("-12000")),
+        ("(7.5e-3)", Decimal("-0.0075")),
+    ],
+)
+def test_parse_decimal_accepts_strict_scientific_notation_and_signed_parentheses(
+    raw: str, expected: Decimal
+) -> None:
+    assert _parse_decimal(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "1.2E",
+        "1.2E+",
+        "1.2E--3",
+        "1.2E3.4",
+        "1.2.3E4",
+        "N/A",
+        "",
+    ],
+)
+def test_parse_decimal_rejects_malformed_exponents_and_nonnumeric_text(raw: str) -> None:
+    assert _parse_decimal(raw) is None
 
 
 def _xlsx_fixture(
