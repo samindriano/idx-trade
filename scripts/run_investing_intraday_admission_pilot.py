@@ -41,6 +41,11 @@ SAMPLE_CATEGORIES = {
 KNOWN_CA_CONTROLS = {("BMRI", "old"): "accepted prior audit corporate-action anomaly control",
                      ("DSSA", "mid"): "accepted prior audit corporate-action anomaly control"}
 RETRY_STATUSES = {403, 429, 500, 502, 503, 504}
+INVESTING_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.102 Safari/537.36",
+    "Referer": "https://tvc-invdn-com.investing.com/",
+    "Content-Type": "application/json",
+}
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -85,7 +90,7 @@ def fetch_one(ticker: str, pair_id: str, window, session_dates: set[date]) -> di
         attempts += 1
         token = uuid4().hex
         url = f"https://tvc6.investing.com/{token}/0/0/0/0/history"
-        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.investing.com/", "Accept": "application/json"}
+        headers = INVESTING_HEADERS.copy()
         try:
             response = curl_requests.get(url, params={"symbol": pair_id, "from": start_epoch, "to": end_epoch, "resolution": "60"}, headers=headers, impersonate="chrome", timeout=30)
             statuses.append(int(response.status_code))

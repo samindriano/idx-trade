@@ -10,6 +10,7 @@ from idx_trade.investing_admission import (
     epoch_bounds_for_local_window,
     normalize_history_payload,
 )
+from scripts.run_investing_intraday_admission_pilot import INVESTING_HEADERS
 
 
 def _payload(*, epoch=1782871200, open_value=100.0):
@@ -71,3 +72,9 @@ def test_non_object_provider_payload_is_quarantined_not_crashing():
     assert frame.empty
     assert diag["provider_status"] == "invalid_payload"
     assert diag["malformed_rows"] == 1
+
+
+def test_investing_transport_headers_match_validated_client_contract():
+    assert INVESTING_HEADERS["Referer"] == "https://tvc-invdn-com.investing.com/"
+    assert INVESTING_HEADERS["Content-Type"] == "application/json"
+    assert "Chrome/104.0.5112.102" in INVESTING_HEADERS["User-Agent"]
