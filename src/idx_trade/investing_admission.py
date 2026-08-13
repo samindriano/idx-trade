@@ -141,7 +141,9 @@ def compare_daily(provider_daily: pd.DataFrame, canonical: pd.DataFrame, *, tole
 
 
 def deterministic_sample_manifest() -> dict[str, Any]:
-    return {"seed": 20260813, "tickers": list(PILOT_TICKERS), "windows": [window.__dict__ for window in PILOT_WINDOWS]}
+    return {"seed": 20260813, "tickers": list(PILOT_TICKERS),
+            "windows": [{"label": window.label, "start": window.start.isoformat(), "end": window.end.isoformat()}
+                        for window in PILOT_WINDOWS]}
 
 
 def expected_sessions_for_listing(calendar_dates: Iterable[date], *, listed_from: date | None, listed_to: date | None, window: PilotWindow) -> list[str]:
