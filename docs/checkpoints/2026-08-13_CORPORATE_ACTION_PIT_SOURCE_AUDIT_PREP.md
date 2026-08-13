@@ -53,6 +53,13 @@ and tests at:
 
 `data/financial-pit-adapter-census-v1:tests/test_idx_corporate_actions_provider.py`
 
+Git history pins the implementation lineage to:
+
+- `c8c43ac66bd3215465978ac5f39d0b72feec8a3e` — `feat(data): add official IDX fallback and gate semantics`;
+- `14dd51796d60131ef25b318bf2258ad3dd873175` — `fix(data): derive IDX split ratios from official share totals`.
+
+So this is not a newly discovered idea; it is an older data-gate component that later branches inherited but current `main` no longer contains.
+
 The prototype already implements:
 
 - official `GetIssuedHistory` URL construction;
