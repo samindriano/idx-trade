@@ -1,14 +1,14 @@
 # Handoff
 
-from: Codex/PIT-Safe-Lineage-Reproduction  
-to: MAIN / ChatGPT independent review  
-task_id: IDX-PIT-SAFE-V2-V3B-O2-REPRODUCTION  
-model_used: Codex Luna xhigh root with bounded Luna xhigh workers  
-reasoning_level: xhigh  
-source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`  
-source_commit: `cb198437940d1846c311482353cab7579f1511b4`  
-branch: `codex/pit-safe-v2-v3b-o2-reproduction-research-v1`  
-head_commit: pending final documentation commit  
+from: Codex/PIT-Safe-Lineage-Reproduction
+to: MAIN / ChatGPT independent review
+task_id: IDX-PIT-SAFE-V2-V3B-O2-REPRODUCTION
+model_used: Codex Luna xhigh root with bounded Luna xhigh workers
+reasoning_level: xhigh
+source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
+source_commit: `cb198437940d1846c311482353cab7579f1511b4`
+branch: `codex/pit-safe-v2-v3b-o2-reproduction-research-v1`
+head_commit: `ab56f46569b398c529658b6b63d443cca89d0434`
 
 ## Scope
 
