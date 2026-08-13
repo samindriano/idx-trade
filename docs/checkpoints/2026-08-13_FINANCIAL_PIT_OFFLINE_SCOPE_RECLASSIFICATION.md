@@ -41,7 +41,7 @@ The canonical derived artifacts are external and are not committed:
 | Artifact | SHA-256 |
 |---|---|
 | `scope_reclassification_rows.jsonl` (6,108 rows) | `656807e74f84aa7bde74f30ffe7f2b11fed921e343c485dcc81cdcc617ac3cd9` |
-| `scope_reclassification_summary.json` | `d1cb01448361b2f95236eba49440d78dbd9cc89dda1280b2fea0a379ccc6a974` |
+| `scope_reclassification_summary.json` | `6a724cc1dd4cef6fc7a9af5a4c4de1164f5e8b14d4ec38ee2887f2e75bf8ec66` |
 | `MANIFEST.json` | `a38fdb52225da8e1c5306e1d7bb658e34e069e6920e074c59ad1f607ff01249f` |
 
 The earlier `...-v1` output contains the same per-join rows but its aggregate
