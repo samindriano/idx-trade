@@ -1,0 +1,1 @@
+Foreign-flow forward-capture lane. Reuses official IDX Stock Summary raw evidence; no extra provider calls.
