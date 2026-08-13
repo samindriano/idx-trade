@@ -10,7 +10,7 @@ source_commit: `09e8e8eba738e4dcea3c871f0eda83b53cc07c42`
 branch: `data/financial-pit-feature-materialization-v1`
 scope: Offline materialization of the accepted 13 Financial PIT features from the immutable fact corpus and period-boundary sidecar, GENERAL + CONSOLIDATED only.
 
-head_commit: `0fd2c34bb0b8cd9bbe31bbf69fdb6051f5227f33`
+head_commit: final branch tip is recorded in `origin/main:coordination/TEAM_STATUS.md`; the handoff does not embed its own self-referential commit hash
 
 files_changed:
 
