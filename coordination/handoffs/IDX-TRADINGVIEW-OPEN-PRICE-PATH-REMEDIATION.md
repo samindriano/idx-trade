@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: Stage-2 `1906f8a9e3c582384d3b414ee3b763120398df95`
 branch: `data/tradingview-open-price-path-remediation-v1`
-head_commit: populated after final commit
+head_commit: `b9d035cff2d30df3d06e7c453c581dab06362456`
 
 ## Scope
 
