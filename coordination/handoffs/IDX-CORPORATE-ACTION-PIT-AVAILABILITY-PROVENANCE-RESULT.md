@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `5222af3b68bf86765c43017912e990edf02148ad`
 branch: `data/corporate-action-pit-availability-provenance-v1`
-head_commit: `4c7df4d27b7fffc07be9e1c5b6a2ad6ded3b64e2`
+head_commit: `314b99a3a91e2297fa0061a52849ee3c64d60222`
 
 ## Scope
 
