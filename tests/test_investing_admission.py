@@ -64,3 +64,10 @@ def test_non_ok_provider_status_is_explicit():
     frame, diag = normalize_history_payload({"s": "no_data"}, ticker="X", pair_id="1", window=PilotWindow("x", date(2026, 7, 1), date(2026, 7, 1)), session_dates={date(2026, 7, 1)})
     assert frame.empty
     assert diag["provider_status"] == "no_data"
+
+
+def test_non_object_provider_payload_is_quarantined_not_crashing():
+    frame, diag = normalize_history_payload(403, ticker="X", pair_id="1", window=PilotWindow("x", date(2026, 7, 1), date(2026, 7, 1)), session_dates={date(2026, 7, 1)})
+    assert frame.empty
+    assert diag["provider_status"] == "invalid_payload"
+    assert diag["malformed_rows"] == 1

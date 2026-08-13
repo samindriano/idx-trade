@@ -46,7 +46,7 @@ def epoch_bounds_for_local_window(window: PilotWindow) -> tuple[int, int]:
 
 
 def normalize_history_payload(
-    payload: Mapping[str, Any],
+    payload: Any,
     *,
     ticker: str,
     pair_id: str,
@@ -54,6 +54,19 @@ def normalize_history_payload(
     session_dates: set[date],
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Normalize a raw Investing history response without altering raw values."""
+    if not isinstance(payload, Mapping):
+        return pd.DataFrame(columns=["ticker", "pair_id", "raw_epoch", "raw_timestamp_utc", "timestamp_wib",
+                                     "session_date", "open", "high", "low", "close", "volume"]), {
+            "provider_status": "invalid_payload",
+            "raw_rows": 0,
+            "admitted_rows": 0,
+            "malformed_rows": 1,
+            "duplicate_rows": 0,
+            "off_session_rows": 0,
+            "invalid_ohlcv_rows": 0,
+            "session_dates": [],
+            "bar_counts": {},
+        }
     status = str(payload.get("s", ""))
     result = {"provider_status": status, "raw_rows": 0, "admitted_rows": 0,
               "malformed_rows": 0, "duplicate_rows": 0, "off_session_rows": 0,

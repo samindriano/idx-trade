@@ -104,7 +104,7 @@ def fetch_one(ticker: str, pair_id: str, window, session_dates: set[date]) -> di
             continue
         break
     if statuses and statuses[-1] == 200:
-        provider_status = str(last_payload.get("s", "provider_error"))
+        provider_status = str(last_payload.get("s", "provider_error")) if isinstance(last_payload, dict) else "invalid_payload"
         final_status = "NO_DATA" if provider_status == "no_data" else ("AVAILABLE" if provider_status == "ok" else "PROVIDER_ERROR")
     else:
         final_status = "PROVIDER_ERROR"
