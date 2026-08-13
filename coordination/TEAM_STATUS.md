@@ -80,6 +80,8 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Financial PIT offline scope reclassification and PIT-ready coverage | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Offline-Reclassification` | `data/financial-pit-offline-scope-reclassification-v1` / final `45d36ed` / acceptance `review/idx-financial-pit-offline-reclassification-acceptance-v1@7c94bc8a87374a75fc73687c04c4f8b5b7146595` | `FINANCIAL_PIT_OFFLINE_RECLASSIFICATION_ACCEPTED_FACT_TABLE_DESIGN_NEXT`: 5,965 PIT-ready rows accepted (4,410 consolidated / 1,555 separate), equal to 97.658808% of 6,108 exact joins and 80.936228% of 7,370 expected issuer-periods; 143 unresolved and all prior publication/linkage/hash/provider failures remain fail-closed. Canonical v2 artifact hashes pinned; no network/redownload/facts/features/models/outcomes. Next authorized milestone is bounded version-aware fact-table schema/extraction feasibility; no market-wide fact extraction or modeling yet. |
 
+| Financial PIT fact-table schema and extraction feasibility | `ACTIVE` | `Codex/Financial-PIT-Fact-Schema` | `data/financial-pit-fact-schema-v1` / from `origin/main@d178841` | Design and test a version-aware immutable fact schema on a representative stratified sample of the accepted 5,965 PIT-ready filings. Preserve filing versions, publication/knowledge time, scope, units/scales, fiscal coverage, and exact evidence locations. No market-wide extraction, ratios/features, models, or protected outcomes. |
+
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
