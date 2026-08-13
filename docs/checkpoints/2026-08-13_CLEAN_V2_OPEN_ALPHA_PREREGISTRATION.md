@@ -1,8 +1,8 @@
 # Clean V2 Open Alpha — Frozen Preregistration
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Status: **PREREGISTERED_OUTCOME_BLIND_AUDIT_COMPLETE_REVIEW**  
-Branch: `research/idx-v2-open-alpha-prereg-v1`  
+Date: 2026-08-13 (Asia/Jakarta)
+Status: **PREREGISTERED_OUTCOME_BLIND_AUDIT_COMPLETE_REVIEW**
+Branch: `research/idx-v2-open-alpha-prereg-v1`
 Parent research pass: `research/idx-v2-open-alpha-research-pass-v1@504c51bad25517bf496ee14856be704935d0f5d4`
 
 ## Scientific boundary
@@ -134,4 +134,3 @@ V2.2 above, on this exact common-support population, with the frozen folds,
 labels, HGB settings, evaluator, and paired rule. No additional feature,
 interaction, rolling variant, market-relative gap, hyperparameter search,
 V2.3, or post-outcome subset selection is authorized.
-

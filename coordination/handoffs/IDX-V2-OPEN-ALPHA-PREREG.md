@@ -1,15 +1,15 @@
 # Handoff
 
-from: Codex/Clean-V2-Open-Alpha-Prereg  
-to: ChatGPT/Open-Alpha-Research  
-task_id: IDX-V2-OPEN-ALPHA-PREREG  
-model_used: Luna xhigh  
-reasoning_level: xhigh  
-source_repository: samindriano/idx-trade  
-source_commit: `504c51bad25517bf496ee14856be704935d0f5d4`  
-branch: `research/idx-v2-open-alpha-prereg-v1`  
-scope: Freeze CONTROL + V2.1 exact same-day Open geometry + V2.2 previous-active-range Open displacement; build one outcome-blind common-support cache and audit only.  
-head_commit: final pushed branch HEAD is reported with this handoff  
+from: Codex/Clean-V2-Open-Alpha-Prereg
+to: ChatGPT/Open-Alpha-Research
+task_id: IDX-V2-OPEN-ALPHA-PREREG
+model_used: Luna xhigh
+reasoning_level: xhigh
+source_repository: samindriano/idx-trade
+source_commit: `504c51bad25517bf496ee14856be704935d0f5d4`
+branch: `research/idx-v2-open-alpha-prereg-v1`
+scope: Freeze CONTROL + V2.1 exact same-day Open geometry + V2.2 previous-active-range Open displacement; build one outcome-blind common-support cache and audit only.
+head_commit: final pushed branch HEAD is reported with this handoff
 
 ## Files changed
 

@@ -1,8 +1,8 @@
 # Clean V2 Open Alpha — Outcome-Blind Audit Runtime
 
-Date: 2026-08-13 (Asia/Jakarta)  
-Status: **OUTCOME_BLIND_AUDIT_COMPLETE_REVIEW**  
-Branch: `research/idx-v2-open-alpha-prereg-v1`  
+Date: 2026-08-13 (Asia/Jakarta)
+Status: **OUTCOME_BLIND_AUDIT_COMPLETE_REVIEW**
+Branch: `research/idx-v2-open-alpha-prereg-v1`
 Runtime root: `D:\Documents\Project\idx-trade-data-gate-20260808v\open_alpha_prereg_v1_20260813_001_retry2`
 
 ## Guard results
@@ -130,4 +130,3 @@ Output artifacts:
 
 The branch is ready for independent ChatGPT review. No historical outcome run
 is authorized by this checkpoint.
-
