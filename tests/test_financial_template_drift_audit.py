@@ -55,10 +55,13 @@ def test_audit_detects_exact_label_with_inline_scientific_numeric() -> None:
     evidence = audit["facts"]["total_assets"]
     assert evidence["status"] == "PRESENT_CANONICAL_INLINE_NUMERIC"
     assert evidence["recoverable_with_strict_numeric_decoder"] is True
-    # The accepted canonical parser remains unchanged and therefore does not
-    # silently gain this mapping from the audit.
+    # The canonical parser now consumes the same strict numeric grammar through
+    # the visible inline-text cell path; no label or context mapping is added.
     records, _ = extract_filing_facts(payload, **_kwargs())
-    assert not any(record.fact_identity == "total_assets" and record.extraction_status is FactExtractionStatus.EXTRACTED for record in records)
+    assets = [record for record in records if record.fact_identity == "total_assets"]
+    assert len(assets) == 1
+    assert assets[0].extraction_status is FactExtractionStatus.EXTRACTED
+    assert assets[0].value == "14002934741"
 
 
 def test_audit_rejects_non_numeric_inline_text_without_guessing() -> None:

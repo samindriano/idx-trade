@@ -254,9 +254,11 @@ def _cell_value(cell: ElementTree.Element, shared: Sequence[str]) -> tuple[str, 
             value = shared[int(value_node.text or "-1")]
         except (ValueError, IndexError):
             value = ""
-        return " ".join(value.split()), None
+        value = " ".join(value.split())
+        return value, _parse_decimal(value)
     if inline_node is not None:
-        return " ".join(_xml_text(inline_node).split()), None
+        value = " ".join(_xml_text(inline_node).split())
+        return value, _parse_decimal(value)
     value = (value_node.text or "").strip()
     return value, _parse_decimal(value)
 
