@@ -12,6 +12,7 @@ from idx_trade.personal_portfolio import (
     CashBalance,
     EndpointClass,
     EndpointEvidence,
+    EndpointFailureCode,
     PERSONAL_PORTFOLIO_SNAPSHOT_SCHEMA_V1,
     PortfolioPosition,
     PortfolioProvenance,
@@ -93,7 +94,7 @@ def test_direct_payload_rejects_endpoint_arithmetic_mismatch():
         validate_snapshot_payload(candidate)
 
 
-def test_direct_payload_rejects_failed_endpoint_with_nonzero_rows():
+def test_failed_endpoint_rows_rejected_in_schema_and_object_contract():
     candidate = payload()
     row = candidate["endpoint_evidence"][4]
     row.update(
@@ -104,8 +105,18 @@ def test_direct_payload_rejects_failed_endpoint_with_nonzero_rows():
         failure_code="PROVIDER_UNAVAILABLE",
     )
     candidate["completeness"] = "PARTIAL"
-    with pytest.raises(ValueError, match="zero observed, accepted, and rejected"):
+    with pytest.raises(ValueError, match="schema validation failed"):
         validate_snapshot_payload(candidate)
+
+    with pytest.raises(ValueError, match="zero observed, accepted, and rejected"):
+        EndpointEvidence(
+            EndpointClass.BOND,
+            False,
+            1,
+            0,
+            0,
+            EndpointFailureCode.PROVIDER_UNAVAILABLE,
+        )
 
 
 def test_direct_payload_rejects_duplicate_positions_and_cash():
