@@ -158,20 +158,22 @@ def fetch_stock_summary_payload_capture(
     *,
     session: requests.Session | None = None,
     timeout: int = 30,
+    prepare_session: bool = True,
 ) -> StockSummaryPayloadCapture:
     """Fetch one complete official Stock Summary response with raw bytes."""
 
     client = session or requests.Session()
     retrieval_started_at_utc = _utc_now()
     headers = _browser_headers()
-    home = client.get(IDX_HOME_URL, headers=headers, timeout=timeout)
-    home.raise_for_status()
-    validation = client.get(
-        IDX_SESSION_VALIDATION_URL,
-        headers=headers,
-        timeout=timeout,
-    )
-    validation.raise_for_status()
+    if prepare_session:
+        home = client.get(IDX_HOME_URL, headers=headers, timeout=timeout)
+        home.raise_for_status()
+        validation = client.get(
+            IDX_SESSION_VALIDATION_URL,
+            headers=headers,
+            timeout=timeout,
+        )
+        validation.raise_for_status()
 
     url = stock_summary_url(date)
     response = client.get(url, headers=headers, timeout=timeout)
