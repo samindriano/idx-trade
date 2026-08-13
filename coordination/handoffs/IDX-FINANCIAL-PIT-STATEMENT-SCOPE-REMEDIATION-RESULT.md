@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 2fbfef0836106d819c892c6f820f5606896b4575
 branch: data/financial-pit-statement-scope-v1
-head_commit: pending push
+head_commit: 68fe984f5d45391fff084873aad2a194a48649e5
 scope: Engineering-only fail-closed remediation of XLSX visibility and XBRL authority/context semantics.
 files_changed:
   - src/idx_trade/financial_scope_resolver.py
