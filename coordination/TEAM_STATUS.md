@@ -104,7 +104,16 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
-- Do not recreate Stockbit intraday automation.
+  - Do not recreate Stockbit intraday automation.
+
+## Current status correction — 2026-08-14
+
+The `Foreign Flow feature contract V1` row above is superseded by this
+checkpoint: status `REVIEW`, branch
+`research/idx-foreign-flow-feature-contract-v1` at HEAD
+`09ef03ce64a9e3fa3c03a2370450827ccc89eb29`. The offline feature contract and
+coverage audit are complete for review; external audit manifest SHA is
+`55a983fa0f9463429b10e493cef7da95b96f589ab6a6d9de7a52ad7d4bb6a714`.
 - Do not reopen Path Risk V1/V2 or silently create a V3 rescue before the new-data prerequisite and preregistration are satisfied.
 - Do not restart legacy Probability V1 or reuse its consumed Stage-5 ranking holdout; any future Probability V2/current-alpha calibration must use a new preregistered contract and fresh-forward validation.
 - Expected Payoff V0 is closed with accepted `FEASIBILITY_GO`. Expected Payoff V1 is closed with independently accepted `EXPECTED_PAYOFF_V1_NO_SURVIVOR` at review `73b75af2...`; do not rescue it with another estimator/loss/target transform/quantile variant/horizon/feature subset, and do not create a forward shadow from this V1.
