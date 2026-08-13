@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 32bb1390303b9103ac53c6faa4d521c1352ee940
 branch: data/idx-foreign-flow-historical-acquisition-v1
-head_commit: pending until push
+head_commit: 0133209 (plus handoff metadata follow-up commit)
 
 ## Scope
 
