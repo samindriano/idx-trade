@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `419f0be54a7b08ee958c52b8a727be9423286d96` accepted census lineage
 branch: `data/financial-pit-template-drift-audit-v1`
-head_commit: pending final push
+head_commit: `5a1367b74f7d2d3ef188fed9f2b86b668f0ff247`
 
 ## Scope
 
