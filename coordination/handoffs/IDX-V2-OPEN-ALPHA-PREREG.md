@@ -9,7 +9,7 @@ source_repository: samindriano/idx-trade
 source_commit: `504c51bad25517bf496ee14856be704935d0f5d4`
 branch: `research/idx-v2-open-alpha-prereg-v1`
 scope: One authorized atomic historical comparison of CONTROL, V2.1, and V2.2 on the frozen common-support population; stop after result artifacts for independent review.
-head_commit: `89449dc9a25f87935dff07bcb6bdbc8cb51c1a49`
+head_commit: `c05b990420aa2f826786bb8972c31f760a75a6a4`
 
 ## Files changed
 
