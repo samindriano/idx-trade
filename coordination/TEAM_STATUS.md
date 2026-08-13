@@ -77,6 +77,8 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Financial PIT statement-scope granularity feasibility | `DONE` | `ChatGPT independent review + Codex/Financial-PIT-Statement-Scope` | `data/financial-pit-statement-scope-v1` / final `e4537c1` / remediation `68fe984` / acceptance `review/idx-financial-pit-adapter-census-acceptance-v1@8675b0bc05327779a3f39d4b1a3f90b2bfcda551` | `FINANCIAL_PIT_STATEMENT_SCOPE_RESOLVER_ACCEPTED_OFFLINE_RECLASSIFICATION_NEXT`: XLSX visibility and exact IDX-DEI+`CurrentYearInstant` XBRL authority gates accepted; immutable 11/11 sample remains 7 consolidated / 4 separate. PDF empirical coverage remains unproven and fail-closed. Next authorized milestone is offline scope reclassification/PIT-ready coverage recomputation over the existing 6,108 exact joins only; no network/redownload/facts/features/models/outcomes. |
 
+| Financial PIT offline scope reclassification and PIT-ready coverage | `ACTIVE` | `Codex/Financial-PIT-Offline-Reclassification` | `data/financial-pit-offline-scope-reclassification-v1` / from accepted resolver `e4537c1` | Apply the accepted resolver offline to the existing 6,108 exact report-announcement byte joins. Persist per-join scope/evidence and recompute PIT-ready coverage by year/period. Preserve unresolved publication gaps, ambiguous attachments, hash conflicts, and provider failures outside PIT-ready. No network/redownload/facts/features/models/outcomes. |
+
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
