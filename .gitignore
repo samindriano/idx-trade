@@ -12,6 +12,7 @@ data/raw/*
 data/processed/*
 data/results/*
 models/*
+adapters/tradingview/node_modules/
 
 # Keep directory contracts/docs if added later.
 !data/raw/.gitkeep
