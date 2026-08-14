@@ -461,7 +461,7 @@ def run_financial_era_experiment(
     ).reset_index(drop=True)
     for fold_name in EXPECTED_FOLD_NAMES:
         blocks = [
-            predictions[(predictions["fold"] == fold_name) & (predictions["model"] == model)][KEY_COLUMNS].reset_index(drop=True)
+            predictions[(predictions["fold"] == fold_name) & (predictions["model"] == model)][list(KEY_COLUMNS)].reset_index(drop=True)
             for model in MODEL_ORDER
         ]
         if not (blocks[0].equals(blocks[1]) and blocks[0].equals(blocks[2])):
