@@ -49,13 +49,15 @@ def artifact_manifest(root: Path) -> str:
     return sha256_file(target)
 
 
-def load_and_verify_prereg(root: Path, config: Path, canonical_root: Path) -> dict[str, Any]:
+def load_and_verify_prereg(root: Path, config: Path, canonical_root: Path, allow_contract_repair: bool) -> dict[str, Any]:
     prereg_path = root / "preregistration.json"
     if not prereg_path.exists():
         raise SystemExit("missing preregistration.json")
     prereg = json.loads(prereg_path.read_text(encoding="utf-8"))
-    if not prereg.get("created_before_network") or prereg.get("network_started"):
+    if not prereg.get("created_before_network"):
         raise SystemExit("preregistration is not an untouched pre-network manifest")
+    if prereg.get("network_started") and not allow_contract_repair:
+        raise SystemExit("runtime already started; use the explicit bounded contract-repair resume only for the documented invalid-parameter attempt")
     if prereg["input_hashes"]["config"] != sha256_file(config):
         raise SystemExit("config hash changed after preregistration")
     canonical_panel = Path(prereg.get("input_paths", {}).get("canonical_panel", ""))
@@ -77,11 +79,17 @@ def main() -> int:
     parser.add_argument("--adapter", type=Path, required=True)
     parser.add_argument("--artifact-root", type=Path, required=True)
     parser.add_argument("--canonical-root", type=Path, required=True)
+    parser.add_argument("--repair-contract-failure", action="store_true")
     args = parser.parse_args()
-    prereg = load_and_verify_prereg(args.artifact_root, args.config, args.canonical_root)
+    prereg = load_and_verify_prereg(args.artifact_root, args.config, args.canonical_root, args.repair_contract_failure)
     config = prereg["config"]
     root = args.artifact_root
     requests = pd.read_csv(root / "request_manifest.csv").fillna("").to_dict(orient="records")
+    for request in requests:
+        request["timeframe"] = str(request["timeframe"])
+        request["session"] = str(request["session"])
+        request["adjustment"] = str(request["adjustment"])
+        request["to"] = int(request["to"])
     raw_root = root / "raw" / "mathieu"
     raw_root.mkdir(parents=True, exist_ok=True)
     mark_network_started(root, prereg)
@@ -89,13 +97,22 @@ def main() -> int:
     def one(request: dict[str, Any]) -> tuple[int, dict[str, Any], bool]:
         index = int(request["request_index"])
         path = raw_root / f"{index:04d}_{request['ticker']}.json"
+        repair_path = raw_root / "repair_timeframe_contract" / f"{index:04d}_{request['ticker']}.json"
         if path.exists():
-            return index, json.loads(path.read_text(encoding="utf-8")), True
+            existing = json.loads(path.read_text(encoding="utf-8"))
+            existing_response = existing.get("response", existing)
+            invalid_parameters = any("invalid parameters" in str(error).lower() for error in existing_response.get("errors", []))
+            if not args.repair_contract_failure or not invalid_parameters:
+                return index, existing, True
+            if repair_path.exists():
+                return index, json.loads(repair_path.read_text(encoding="utf-8")), True
         response = run_node(args.adapter, request)
         payload = {"adapter_commit": config["provider"]["adapter_commit"], "request": request, "response": response}
-        temp = path.with_suffix(".tmp")
+        target = repair_path if args.repair_contract_failure and path.exists() else path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temp = target.with_suffix(".tmp")
         temp.write_bytes(json_bytes(payload))
-        temp.replace(path)
+        temp.replace(target)
         return index, payload, False
     with ThreadPoolExecutor(max_workers=int(config["acquisition"]["max_workers"])) as executor:
         futures = [executor.submit(one, request) for request in requests]
