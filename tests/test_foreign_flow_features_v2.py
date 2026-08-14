@@ -31,6 +31,8 @@ def _frames(days: int = 150) -> tuple[pd.DatetimeIndex, pd.DataFrame, pd.DataFra
                     "ticker": ticker,
                     "date": day,
                     "universe_primary_liquid": True,
+                    "close": 100.0,
+                    "regular_market_value": 100_000.0,
                     "close_return_5": 0.01 * (ticker_index + 1),
                     "close_return_20": 0.02 * (ticker_index + 1),
                 }
@@ -61,12 +63,37 @@ def test_current_volume_changes_participation_but_not_historical_flow_shock() ->
     assert np.isclose(after["foreign_flow_shock_1"], before["foreign_flow_shock_1"])
 
 
+def test_flow_shock_is_invariant_to_pure_stock_split_rescaling() -> None:
+    sessions, flow, volume, context = _frames()
+    base = build_foreign_flow_representation_v2(flow, volume, context, sessions)
+    before = _row(base, "AAA", sessions[30])
+
+    revised_flow = flow.copy()
+    revised_volume = volume.copy()
+    revised_context = context.copy()
+    flow_mask = revised_flow["ticker"].eq("AAA") & revised_flow["session_date"].eq(sessions[30])
+    revised_flow.loc[flow_mask, "foreign_buy"] *= 10
+    revised_flow.loc[flow_mask, "foreign_sell"] *= 10
+    revised_flow.loc[flow_mask, "foreign_net"] = (
+        revised_flow.loc[flow_mask, "foreign_buy"] - revised_flow.loc[flow_mask, "foreign_sell"]
+    )
+    volume_mask = revised_volume["ticker"].eq("AAA") & revised_volume["date"].eq(sessions[30])
+    revised_volume.loc[volume_mask, "raw_volume"] *= 10
+    context_mask = revised_context["ticker"].eq("AAA") & revised_context["date"].eq(sessions[30])
+    revised_context.loc[context_mask, "close"] /= 10
+
+    result = build_foreign_flow_representation_v2(
+        revised_flow, revised_volume, revised_context, sessions
+    )
+    after = _row(result, "AAA", sessions[30])
+    assert np.isclose(after["foreign_participation_1"], before["foreign_participation_1"])
+    assert np.isclose(after["foreign_flow_shock_1"], before["foreign_flow_shock_1"])
+
+
 def test_historical_percentile_excludes_current_observation() -> None:
     sessions, flow, volume, context = _frames()
     result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
     row = _row(result, "AAA", sessions[140])
-    # AAA shock is monotonically increasing, so the current observation exceeds
-    # every prior value in the frozen 120-session reference history.
     assert np.isclose(row["foreign_flow_shock_percentile_120"], 1.0)
 
 
@@ -104,8 +131,6 @@ def test_flow_price_divergence_uses_source_session_cross_section() -> None:
     sessions, flow, volume, context = _frames()
     result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
     aaa = _row(result, "AAA", sessions[100])
-    # AAA has the stronger positive flow but the weaker return rank, so the
-    # source-session divergence must be positive.
     assert aaa["foreign_flow_price_divergence_5"] > 0.0
     assert aaa["foreign_flow_price_divergence_20"] > 0.0
 
