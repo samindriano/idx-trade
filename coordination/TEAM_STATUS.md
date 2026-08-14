@@ -196,3 +196,15 @@ known unrelated storage revision-conflict expectation mismatch. No provider,
 protected/fresh-forward outcome, O2/forward-counter, rescue, or model-line
 integration work occurred. Do not launch a rescue experiment from this lane
 without a new frozen specification and authorization.
+
+## Current status correction — 2026-08-15 — Foreign Flow Representation V2
+
+Foreign Flow Representation V2 is claimed as `ACTIVE` by
+`Codex/Foreign-Flow-Representation-V2` on branch
+`research/idx-foreign-flow-representation-v2` at reviewed starting HEAD
+`ad19babb7794ddf2fcbfa82bf2ae695c246cbda0`. Scope is limited to offline
+historical materialization and availability/behavior census using the accepted
+Foreign Flow archive and clean-V2 causal full-cross-section market context.
+No provider calls, outcome/label access, model fitting/scoring, Foreign Flow V1
+alpha reuse, effective-supply/free-float work, Financial PIT, Corporate Action,
+O2, or TradingView work is authorized in this lane.
