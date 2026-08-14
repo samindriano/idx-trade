@@ -111,6 +111,12 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Corporate Action PIT availability provenance V1 | `DONE` | ChatGPT acceptance `review/idx-corporate-action-pit-availability-acceptance-v1@4f776a8f34eda012d4368287fe37699d4c8dc0dc` | `data/corporate-action-pit-availability-provenance-v1` / `50718c3f23352444630160dc54934eaa2201289d` | Accepted bounded result; availability timestamps remain unverified. |
 | Corporate Action KSEI→IDX publication linkage V1 | `ACTIVE` | `Codex/Corporate-Action-PIT-IDX-Publication-Linkage` | `data/corporate-action-pit-idx-publication-linkage-v1` | Bounded 8–15 event linkage audit only; no market-wide acquisition or modeling. |
 
+## Current result overrides (2026-08-14)
+
+| Lane | Status | Owner / acceptance | Branch / HEAD | Scope note |
+|---|---|---|---|---|
+| Corporate Action KSEI→IDX publication linkage V1 | `REVIEW` | ChatGPT independent review pending | `data/corporate-action-pit-idx-publication-linkage-v1` / `b7ced9d` | Bounded 11-row audit: 6 exact, 4 unresolved, 1 conflict. Exact attachment-level economic anchors yield `IDX_TIMESTAMP_CONFIRMED`; ambiguity/conflict remains null. External manifest `D:\Documents\Project\idx-corporate-action-pit-idx-publication-linkage-20260814-v1\MANIFEST.json` SHA `25714d922a1bbd3410babd60e041dca64eb9e4fdbb517ec5e02928d3910eb306`. Focused 37 passed; full suite retains 1 unrelated storage failure. No market-wide acquisition, canonical table, OHLC adjustment, models, outcomes, or other lane changes. |
+
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
