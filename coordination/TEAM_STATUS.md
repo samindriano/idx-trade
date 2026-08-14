@@ -226,7 +226,7 @@ O2, or TradingView work is authorized in this lane.
 Foreign Flow Representation V2 offline materialization is complete and is now
 `REVIEW` for ChatGPT independent review. Branch
 `research/idx-foreign-flow-representation-v2` is synchronized at HEAD
-`8204fd2224f526b23b1fdc89ec9de4d62b64dc4b`. The external output root is
+`5c0bba250d9aac3b4789416080e4c242e9a2bb44`. The external output root is
 `D:\Documents\Project\idx-trade-foreign-flow-representation-v2-20260815-001`;
 manifest SHA-256 is
 `4e8e7278b6505a356c2f95c4ac69a47cb4dc91803cc819cf6b0aaafbe34c98dc`.
