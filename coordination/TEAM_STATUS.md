@@ -247,6 +247,23 @@ model, V1-alpha, free-float, Financial PIT, Corporate Action, O2, or
 TradingView work occurred. Do not start the Foreign Flow alpha experiment
 until ChatGPT reviews the census.
 
+## Current status correction — 2026-08-15 — Foreign Flow Representation V2 distribution review
+
+The final outcome-blind distribution/behavior audit is documented and the lane
+remains `REVIEW`. Branch
+`research/idx-foreign-flow-representation-v2` is synchronized at HEAD
+`10a72f25b840d3689e39352c779d95ca33c40f77`.
+
+The audit finds healthy non-collapsed percentile/rank/persistence behavior and
+retains the complete feature distributions, shock outlier counts/top-20
+diagnostics, and full missingness table in
+`docs/checkpoints/2026-08-15_FOREIGN_FLOW_REPRESENTATION_V2_FINAL_DISTRIBUTION_REVIEW.md`.
+Repeated extreme-shock clusters remain an explicit data-quality review item.
+No authoritative full-universe primary-liquid flag artifact was found; the
+292,631-row clean-V2 prepared table is model-support-only, so full-universe
+parity remains unprovable rather than marked PASS. No formula, artifact,
+provider, model, label, or outcome was changed/accessed.
+
 ## Current status correction — 2026-08-15 — Free Float / Effective Supply source lane
 
 Free-float / ownership-concentration source work is claimed as `ACTIVE` by
