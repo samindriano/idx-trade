@@ -8,18 +8,21 @@ Status: `REPRESENTATION_REMEDIATION_IMPLEMENTED_MATERIALIZATION_PENDING`
 
 Foreign Flow V1 was causally valid but tested a narrower representation: rolling foreign net shares divided by the same current/window regular-market volume, plus sign consistency, 3-vs-20 acceleration, and one-day gross activity. Its one-shot historical alpha verdict remains `FOREIGN_FLOW_V1_NO_SURVIVOR` and is not reversed or rescued here.
 
-This lane is outcome-blind representation work only. It does not read the V1 alpha predictions, fold results, protected outcomes, fresh-forward outcomes, or any model artifact. The branch is based from the accepted V1 feature-contract lineage rather than the V1 alpha-result branch.
+This lane is outcome-blind representation work only. It does not read V1 alpha predictions, fold results, protected outcomes, fresh-forward outcomes, or any model artifact. The branch is based from the accepted V1 feature-contract lineage rather than the V1 alpha-result branch.
 
-The audit identified a mechanical ambiguity in the V1 normalization. `foreign_net / current_volume` is a useful participation-pressure measure, but it can fall when an unusually large foreign inflow occurs on a much larger-than-normal volume day, and it can become large when a small flow occurs in a thin-volume session. Therefore V2 separates current-turnover participation from historical flow magnitude.
+The audit identified a mechanical ambiguity in V1 normalization. `foreign_net / current_volume` is a useful participation-pressure measure, but it can fall when an unusually large foreign inflow occurs on a much larger-than-normal volume day, and it can become large when a small flow occurs in a thin-volume session. Therefore V2 separates current-turnover participation from historical economic flow magnitude.
+
+A second audit issue was found before materialization: a raw-share shock such as `foreign_net_shares / prior_share_volume` can jump mechanically across a stock-split share/price rescaling. V2 therefore uses a close-valued foreign-net notional proxy against a strictly prior regular-market-value baseline for the historical shock axis. This is not claimed to be actual foreign execution value; it is a causal EOD economic-magnitude proxy.
 
 ## Frozen design principles
 
-1. **Participation and abnormal magnitude are separate axes.** Current-session volume remains useful for participation, but it is not used as the denominator for historical flow shock.
-2. **Historical baselines exclude the current source session.** No current observation may enter its own liquidity baseline or history percentile reference set.
-3. **Cross-sectional preference follows Clean V2 semantics.** Average percentile ranks are computed within each source session's causal `universe_primary_liquid` population, matching Ranking V2's `rank(method="average", pct=True)` convention.
-4. **Accumulation dynamics remain outcome-neutral.** Persistence, streak, and acceleration describe flow state; they do not hard-code foreign buying as bullish.
-5. **Flow-price divergence is source-session aligned.** Flow and price-return ranks are both measured through source session `t` and become usable only at feature session `t+1`.
-6. **No clipping, winsorization, threshold search, feature selection, model fit, or outcome-dependent tuning is permitted in this lane.**
+1. **Participation and abnormal magnitude are separate axes.** Current-session share volume remains useful for participation, but it is not used as the denominator for historical flow shock.
+2. **Historical baselines exclude the current source session.** No current observation may enter its own liquidity/value baseline or history-percentile reference set.
+3. **Flow shock is split-scale stable by construction.** A pure share-count ×k / price ÷k stock-split rescaling does not change the close-valued foreign-net notional proxy; same-day share volume is also excluded from the shock baseline.
+4. **Cross-sectional preference follows Clean V2 semantics.** Average percentile ranks are computed within each source session's causal `universe_primary_liquid` population, matching Ranking V2's `rank(method="average", pct=True)` convention.
+5. **Accumulation dynamics remain outcome-neutral.** Persistence, streak, and acceleration describe flow state; they do not hard-code foreign buying as bullish.
+6. **Flow-price divergence is source-session aligned.** Flow and price-return ranks are both measured through source session `t` and become usable only at feature session `t+1`.
+7. **No clipping, winsorization, threshold search, feature selection, model fit, or outcome-dependent tuning is permitted in this lane.**
 
 ## Frozen V2 feature family
 
@@ -27,23 +30,24 @@ The audit identified a mechanical ambiguity in the V1 normalization. `foreign_ne
 
 `foreign_participation_1`
 
-`foreign_net[t] / regular_volume[t]`
+`foreign_net_shares[t] / regular_share_volume[t]`
 
 This intentionally preserves the information measured by V1: directional foreign imbalance relative to the trading activity of the same session.
 
-### Historical flow shock
+### Historical economic flow shock
 
 `foreign_flow_shock_1`
 
-`foreign_net[t] / median(regular_volume[t-20:t-1])`
+`(foreign_net_shares[t] * close[t]) / median(regular_market_value[t-20:t-1])`
 
 Requirements:
+- `close[t]` must be finite and positive;
 - prior 20 official sessions only;
-- minimum 10 finite non-negative prior volume observations;
-- prior-volume median must be strictly positive;
-- the source-session volume at `t` is excluded from this denominator.
+- minimum 10 finite non-negative prior regular-market-value observations;
+- prior-value median must be strictly positive;
+- source-session regular-market value at `t` is excluded from the denominator.
 
-The representation is designed so a same-day volume explosion cannot mechanically dilute an abnormal foreign-flow magnitude measure.
+This representation is designed so a same-day volume/value explosion cannot mechanically dilute abnormal foreign-flow magnitude. Multiplying shares by source-session close is an EOD notional proxy only; it does not assert that foreign investors executed at the close.
 
 `foreign_flow_shock_mean_5` and `foreign_flow_shock_mean_20` are exact-session means of the daily historical flow-shock series. All constituent daily shocks must be finite; no forward-fill or synthetic replacement is allowed.
 
@@ -96,7 +100,7 @@ Every output row must satisfy:
 
 `feature_session = immediately next official session after t`
 
-All flow, volume history, own-history distributions, primary-liquid membership, and price-return context used in the row must be known through `t` only. No same/future `feature_session` data may enter the feature.
+All flow, volume/value history, own-history distributions, primary-liquid membership, and price-return context used in the row must be known through `t` only. No same/future `feature_session` data may enter the feature.
 
 Market context is explicitly rejected if label/outcome columns are present.
 
@@ -119,8 +123,9 @@ Important semantic guardrail: reported/statutory free float must not automatical
 
 Local isolated synthetic validation performed during implementation:
 
-- `7 passed`
+- `8 passed`
 - verifies current-volume dilution separation;
+- verifies invariance to a pure stock-split share/price rescaling;
 - own-history percentile excludes current observation;
 - Clean-V2-style cross-sectional ranking;
 - non-primary exclusion from cross-sectional ranks;
