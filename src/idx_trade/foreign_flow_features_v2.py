@@ -104,7 +104,7 @@ def _normalise_volume(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def _normalise_context(frame: pd.DataFrame) -> pd.DataFrame:
-    required = {"ticker", "date", "universe_primary_liquid", "close_return_5", "close_return_20"}
+    required = {"ticker", "date", "universe_primary_liquid", "close", "regular_market_value", "close_return_5", "close_return_20"}
     missing = required - set(frame.columns)
     if missing:
         raise ValueError(f"market context missing columns: {sorted(missing)}")
@@ -114,14 +114,18 @@ def _normalise_context(frame: pd.DataFrame) -> pd.DataFrame:
     ]
     if forbidden:
         raise ValueError(f"market context must be outcome-blind: {sorted(forbidden)}")
-    out = frame[["ticker", "date", "universe_primary_liquid", "close_return_5", "close_return_20"]].copy()
+    out = frame[["ticker", "date", "universe_primary_liquid", "close", "regular_market_value", "close_return_5", "close_return_20"]].copy()
     out["ticker"] = out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
     out["date"] = [_date(v) for v in out["date"]]
     if out.duplicated(["ticker", "date"]).any():
         raise ValueError("market context has duplicate ticker/date rows")
-    for c in ("close_return_5", "close_return_20"):
+    for c in ("close", "regular_market_value", "close_return_5", "close_return_20"):
         v = pd.to_numeric(out[c], errors="coerce").astype(float)
         out[c] = v.where(np.isfinite(v))
+    if (out["close"].dropna() <= 0.0).any():
+        raise ValueError("market context has non-positive close")
+    if (out["regular_market_value"].dropna() < 0.0).any():
+        raise ValueError("market context has negative regular_market_value")
     out["universe_primary_liquid"] = out["universe_primary_liquid"].astype(bool)
     return out.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
 
@@ -165,6 +169,8 @@ def _ticker_source_features(
     sessions: pd.DatetimeIndex,
     flow: pd.DataFrame,
     volume: pd.Series,
+    close: pd.Series,
+    regular_value: pd.Series,
 ) -> pd.DataFrame:
     by_date_flow = flow.set_index("session_date")
     net = np.full(len(sessions), np.nan, dtype=float)
@@ -182,17 +188,31 @@ def _ticker_source_features(
     valid_current = np.isfinite(net) & np.isfinite(vol) & (vol > 0.0)
     participation[valid_current] = net[valid_current] / vol[valid_current]
 
+    close_values = np.full(len(sessions), np.nan, dtype=float)
+    regular_values = np.full(len(sessions), np.nan, dtype=float)
+    for i, day in enumerate(sessions):
+        if day in close.index:
+            close_values[i] = float(close.loc[day])
+        if day in regular_value.index:
+            regular_values[i] = float(regular_value.loc[day])
+
+    # Economic flow-shock magnitude uses a close-valued foreign-net proxy and
+    # a strictly prior regular-market-value baseline. This deliberately keeps
+    # same-day turnover out of the shock denominator and is scale-stable across
+    # pure stock-split share/price rescalings. Close is a notional proxy, not an
+    # assertion about actual foreign execution price.
+    foreign_net_notional = net * close_values
     shock = np.full(len(sessions), np.nan, dtype=float)
     for i in range(len(sessions)):
         start = max(0, i - PRIOR_LIQUIDITY_LOOKBACK)
-        prior = vol[start:i]
+        prior = regular_values[start:i]
         valid = prior[np.isfinite(prior) & (prior >= 0.0)]
-        if len(valid) < MIN_PRIOR_LIQUIDITY_OBSERVATIONS or not np.isfinite(net[i]):
+        if len(valid) < MIN_PRIOR_LIQUIDITY_OBSERVATIONS or not np.isfinite(foreign_net_notional[i]):
             continue
         baseline = float(np.median(valid))
         if baseline <= 0.0:
             continue
-        shock[i] = net[i] / baseline
+        shock[i] = foreign_net_notional[i] / baseline
 
     mean5 = np.full(len(sessions), np.nan, dtype=float)
     mean20 = np.full(len(sessions), np.nan, dtype=float)
@@ -264,7 +284,17 @@ def build_foreign_flow_representation_v2(
     for ticker in tickers:
         tf = flow[flow["ticker"].eq(ticker)].copy()
         tv = volume[volume["ticker"].eq(ticker)].set_index("date")["raw_volume"]
-        pieces.append(_ticker_source_features(ticker, sessions, tf, tv))
+        tc = context[context["ticker"].eq(ticker)].set_index("date")
+        pieces.append(
+            _ticker_source_features(
+                ticker,
+                sessions,
+                tf,
+                tv,
+                tc["close"],
+                tc["regular_market_value"],
+            )
+        )
     source = pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
     if source.empty:
         return pd.DataFrame(columns=OUTPUT_COLUMNS_V2)
