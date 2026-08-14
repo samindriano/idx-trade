@@ -1,7 +1,7 @@
 # Foreign Flow Representation V2 — Offline Materialization/Census Result
 
-Date: 2026-08-15 (Asia/Jakarta)  
-Branch: `research/idx-foreign-flow-representation-v2`  
+Date: 2026-08-15 (Asia/Jakarta)
+Branch: `research/idx-foreign-flow-representation-v2`
 Status: `REVIEW`
 
 ## Scope and boundaries
