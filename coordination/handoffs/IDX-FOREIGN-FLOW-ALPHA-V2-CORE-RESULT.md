@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 4adc9484bc33febf240752c3e904a93aca9bae82
 branch: research/idx-foreign-flow-alpha-v2-core
-head_commit: pending result documentation commit
+head_commit: 5867fd8377eb717659abef4caa01ae01a15df3e5
 scope: One preregistered Clean V2 versus Clean V2 plus all eight Foreign Flow V2 core features historical-development experiment.
 files_changed: |
   src/idx_trade/foreign_flow_alpha_v2.py
