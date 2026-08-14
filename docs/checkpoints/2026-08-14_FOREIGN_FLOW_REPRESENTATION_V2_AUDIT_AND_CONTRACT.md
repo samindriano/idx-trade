@@ -124,6 +124,20 @@ The future target concept is therefore recorded but blocked:
 
 Important semantic guardrail: reported/statutory free float must not automatically be treated as economically effective tradable float. Concentrated ownership can make effective supply materially thinner, but the system must not infer issuer-level manipulation or an undocumented effective-float number. A future lane needs independently sourced, versioned, PIT-safe share-count/free-float evidence and a separate HSC/effective-float methodology.
 
+### Sequencing decision — do the data foundation now, integrate later
+
+This blocker is important enough that it should not be deferred until after another Foreign Flow performance experiment. The project's price/volume/flow models depend heavily on liquidity and supply proxies, so a PIT-safe free-float / ownership-concentration layer can materially change the interpretation of both volume and foreign-flow pressure.
+
+The approved sequencing is therefore:
+
+1. **Start a separate free-float / effective-supply data-foundation lane now.** Audit and preserve observable ownership facts, reported free-float evidence, named/large-holder disclosures, KSEI ownership composition, and any existing disclosure-scraper output with explicit as-of/publication provenance.
+2. **Do not fabricate an exact "true free float" number.** A disclosure threshold or a set of large-holder records may support concentration, residual-supply, HHI, top-holder, and supply-tightness proxies, but it does not justify subtracting every disclosed holder from reported free float or labelling the remainder as exact effective float.
+3. **Keep the current Foreign Flow V2 feature contract separate.** Its outcome-blind materialization/coverage census may proceed because it does not depend on free-float inference.
+4. **Do not authorize the next Foreign Flow alpha/model experiment until the free-float/effective-supply audit reaches a reviewable verdict.** If the new ownership layer is defensible, freeze it as an independent feature family or interaction before opening outcomes; if not, preserve the blocker and proceed with V2 without inventing supply data.
+5. **Treat effective supply as broader than statutory free float.** Reported free float, holder concentration, large disclosed holders, ownership type/residency, liquidity, and potential HSC-like tight-supply conditions should remain separate observables unless a later methodology explicitly combines them.
+
+This sequencing avoids two bad outcomes: delaying a potentially high-value supply dimension until after another consumed experiment, or contaminating the current V2 contract with speculative free-float arithmetic.
+
 ## Files implemented
 
 - `src/idx_trade/foreign_flow_features_v2.py`
