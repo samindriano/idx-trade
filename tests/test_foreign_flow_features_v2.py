@@ -7,7 +7,7 @@ import pytest
 from idx_trade.foreign_flow_features_v2 import build_foreign_flow_representation_v2
 
 
-def _frames(days: int = 150) -> tuple[pd.DatetimeIndex, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _frames(days: int = 150):
     sessions = pd.date_range("2025-01-02", periods=days, freq="B")
     flow_rows: list[dict[str, object]] = []
     volume_rows: list[dict[str, object]] = []
@@ -37,7 +37,19 @@ def _frames(days: int = 150) -> tuple[pd.DatetimeIndex, pd.DataFrame, pd.DataFra
                     "close_return_20": 0.02 * (ticker_index + 1),
                 }
             )
-    return sessions, pd.DataFrame(flow_rows), pd.DataFrame(volume_rows), pd.DataFrame(context_rows)
+    master = pd.DataFrame(
+        [
+            {"ticker": "AAA", "listed_from": sessions[0], "listed_to": pd.NaT},
+            {"ticker": "BBB", "listed_from": sessions[0], "listed_to": pd.NaT},
+        ]
+    )
+    return (
+        sessions,
+        pd.DataFrame(flow_rows),
+        pd.DataFrame(volume_rows),
+        pd.DataFrame(context_rows),
+        master,
+    )
 
 
 def _row(frame: pd.DataFrame, ticker: str, through: pd.Timestamp) -> pd.Series:
@@ -46,9 +58,15 @@ def _row(frame: pd.DataFrame, ticker: str, through: pd.Timestamp) -> pd.Series:
     ].iloc[0]
 
 
+def _build(flow, volume, context, master, sessions):
+    return build_foreign_flow_representation_v2(
+        flow, volume, context, master, sessions
+    )
+
+
 def test_current_volume_changes_participation_but_not_historical_flow_shock() -> None:
-    sessions, flow, volume, context = _frames()
-    base = build_foreign_flow_representation_v2(flow, volume, context, sessions)
+    sessions, flow, volume, context, master = _frames()
+    base = _build(flow, volume, context, master, sessions)
     before = _row(base, "AAA", sessions[30])
     assert before["feature_session"] == sessions[31]
 
@@ -56,17 +74,15 @@ def test_current_volume_changes_participation_but_not_historical_flow_shock() ->
     changed.loc[
         changed["ticker"].eq("AAA") & changed["date"].eq(sessions[30]), "raw_volume"
     ] = 100_000.0
-    revised = build_foreign_flow_representation_v2(flow, changed, context, sessions)
-    after = _row(revised, "AAA", sessions[30])
+    after = _row(_build(flow, changed, context, master, sessions), "AAA", sessions[30])
 
     assert after["foreign_participation_1"] < before["foreign_participation_1"]
     assert np.isclose(after["foreign_flow_shock_1"], before["foreign_flow_shock_1"])
 
 
 def test_flow_shock_is_invariant_to_pure_stock_split_rescaling() -> None:
-    sessions, flow, volume, context = _frames()
-    base = build_foreign_flow_representation_v2(flow, volume, context, sessions)
-    before = _row(base, "AAA", sessions[30])
+    sessions, flow, volume, context, master = _frames()
+    before = _row(_build(flow, volume, context, master, sessions), "AAA", sessions[30])
 
     revised_flow = flow.copy()
     revised_volume = volume.copy()
@@ -82,61 +98,77 @@ def test_flow_shock_is_invariant_to_pure_stock_split_rescaling() -> None:
     context_mask = revised_context["ticker"].eq("AAA") & revised_context["date"].eq(sessions[30])
     revised_context.loc[context_mask, "close"] /= 10
 
-    result = build_foreign_flow_representation_v2(
-        revised_flow, revised_volume, revised_context, sessions
+    after = _row(
+        _build(revised_flow, revised_volume, revised_context, master, sessions),
+        "AAA",
+        sessions[30],
     )
-    after = _row(result, "AAA", sessions[30])
     assert np.isclose(after["foreign_participation_1"], before["foreign_participation_1"])
     assert np.isclose(after["foreign_flow_shock_1"], before["foreign_flow_shock_1"])
 
 
 def test_historical_percentile_excludes_current_observation() -> None:
-    sessions, flow, volume, context = _frames()
-    result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
-    row = _row(result, "AAA", sessions[140])
-    assert np.isclose(row["foreign_flow_shock_percentile_120"], 1.0)
+    sessions, flow, volume, context, master = _frames()
+    result = _build(flow, volume, context, master, sessions)
+    assert np.isclose(
+        _row(result, "AAA", sessions[140])["foreign_flow_shock_percentile_120"],
+        1.0,
+    )
 
 
 def test_cross_sectional_rank_uses_average_percentile_semantics() -> None:
-    sessions, flow, volume, context = _frames()
-    result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
-    aaa = _row(result, "AAA", sessions[100])
-    bbb = _row(result, "BBB", sessions[100])
-    assert aaa["xs_rank_foreign_flow_shock_1"] == 1.0
-    assert bbb["xs_rank_foreign_flow_shock_1"] == 0.5
+    sessions, flow, volume, context, master = _frames()
+    result = _build(flow, volume, context, master, sessions)
+    assert _row(result, "AAA", sessions[100])["xs_rank_foreign_flow_shock_mean_20"] == 1.0
+    assert _row(result, "BBB", sessions[100])["xs_rank_foreign_flow_shock_mean_20"] == 0.5
 
 
 def test_non_primary_row_is_not_used_in_cross_sectional_preference_rank() -> None:
-    sessions, flow, volume, context = _frames()
+    sessions, flow, volume, context, master = _frames()
     context.loc[context["ticker"].eq("BBB"), "universe_primary_liquid"] = False
-    result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
-    aaa = _row(result, "AAA", sessions[100])
-    bbb = _row(result, "BBB", sessions[100])
-    assert aaa["xs_rank_foreign_flow_shock_1"] == 1.0
-    assert np.isnan(bbb["xs_rank_foreign_flow_shock_1"])
+    result = _build(flow, volume, context, master, sessions)
+    assert np.isnan(_row(result, "BBB", sessions[100])["xs_rank_foreign_flow_shock_1"])
 
 
 def test_accumulation_dynamics_preserve_direction_and_magnitude_weighting() -> None:
-    sessions, flow, volume, context = _frames()
-    result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
+    sessions, flow, volume, context, master = _frames()
+    result = _build(flow, volume, context, master, sessions)
     aaa = _row(result, "AAA", sessions[100])
     bbb = _row(result, "BBB", sessions[100])
     assert np.isclose(aaa["foreign_weighted_persistence_5"], 1.0)
     assert np.isclose(bbb["foreign_weighted_persistence_5"], -1.0)
     assert np.isclose(aaa["foreign_signed_streak_10"], 1.0)
     assert np.isclose(bbb["foreign_signed_streak_10"], -1.0)
+    assert aaa["foreign_participation_mean_5"] > 0.0
 
 
 def test_flow_price_divergence_uses_source_session_cross_section() -> None:
-    sessions, flow, volume, context = _frames()
-    result = build_foreign_flow_representation_v2(flow, volume, context, sessions)
-    aaa = _row(result, "AAA", sessions[100])
+    sessions, flow, volume, context, master = _frames()
+    aaa = _row(_build(flow, volume, context, master, sessions), "AAA", sessions[100])
     assert aaa["foreign_flow_price_divergence_5"] > 0.0
     assert aaa["foreign_flow_price_divergence_20"] > 0.0
 
 
 def test_market_context_rejects_outcome_columns() -> None:
-    sessions, flow, volume, context = _frames()
+    sessions, flow, volume, context, master = _frames()
     context["binary_target"] = 1
     with pytest.raises(ValueError, match="outcome-blind"):
-        build_foreign_flow_representation_v2(flow, volume, context, sessions)
+        _build(flow, volume, context, master, sessions)
+
+
+def test_market_context_rejects_string_booleans() -> None:
+    sessions, flow, volume, context, master = _frames()
+    context["universe_primary_liquid"] = "False"
+    with pytest.raises(ValueError, match="booleans"):
+        _build(flow, volume, context, master, sessions)
+
+
+def test_prelisting_rows_cannot_seed_historical_state() -> None:
+    sessions, flow, volume, context, master = _frames()
+    master.loc[master["ticker"].eq("AAA"), "listed_from"] = sessions[50]
+    result = _build(flow, volume, context, master, sessions)
+    assert not (
+        result["ticker"].eq("AAA") & result["flow_through_session"].lt(sessions[50])
+    ).any()
+    first = _row(result, "AAA", sessions[50])
+    assert np.isnan(first["foreign_flow_shock_1"])
