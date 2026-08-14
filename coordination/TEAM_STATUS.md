@@ -310,3 +310,15 @@ Focused provider tests passed 10/10; full suite was 49 passed and one
 pre-existing unrelated storage expectation failed. No effective-float
 calculation, supply score, Foreign Flow integration, model/outcome access, or
 other lane changes occurred.
+
+## Current status correction — 2026-08-15 — Foreign Flow V2 core alpha
+
+Foreign Flow V2 Core Alpha Experiment is claimed as `ACTIVE` by
+`Codex/Foreign-Flow-Core-Alpha-V2` on branch
+`research/idx-foreign-flow-alpha-v2-core`, based on accepted representation
+commit `ceb0c2c6f57aac0433cac9a5532daa0db4c99c0b`. Scope is one preregistered
+paired historical-development experiment: exact Clean V2 `HGB_XS_MARKET`
+control versus the exact frozen eight-feature Foreign Flow V2 core block.
+Free-float/effective-supply remains a separate active lane and is not included.
+No provider calls, forward/O2 counter changes, protected/fresh-forward outcomes,
+Financial PIT, Corporate Action, or TradingView work are authorized here.
