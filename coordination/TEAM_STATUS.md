@@ -259,3 +259,15 @@ ownership snapshot is evidence for concentration, not a true free-float ground
 truth. No inferred effective-float percentage, supply-tightness score, Foreign
 Flow V2 feature integration/materialization, outcome access, model fitting,
 Financial PIT, Corporate Action, O2, or TradingView work is authorized.
+
+## Current status correction — 2026-08-15 — Free Float / Effective Supply continuation
+
+The existing Free Float / Effective Supply source lane remains `ACTIVE` and is
+being continued by `Codex/Free-Float-Effective-Supply` on
+`data/idx-free-float-effective-supply-v1` at prepared HEAD
+`36a874da865b9d7f4e03b14f284b047e77bd8cc2`. This is the same bounded source
+audit, not a duplicate ownership lane. The current scope is live IDX Company
+Profile, official monthly >=1% shareholder publication, and KSEI
+BalanceposEfek schema/retention inspection only. No effective free-float
+calculation, supply-tightness feature, Foreign Flow integration, outcomes,
+models, or unrelated data lane work is authorized.
