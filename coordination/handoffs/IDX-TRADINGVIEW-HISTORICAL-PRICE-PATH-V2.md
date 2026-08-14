@@ -7,7 +7,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 97124d017de9533e1c84d7f84eab4b22edbfbda4
 branch: data/tradingview-historical-price-path-v2
-head_commit: pending runtime documentation commit
+head_commit: 240f2e926bd160c3dce5ce43f6980d4b1c103a23
 scope: preregister and then execute the frozen 2021-04-01..2026-07-31 official-session TradingView 60m regular-session price-path admission test
 files_changed: config/tradingview_historical_price_path_v2.json; config/curated_security_identities.csv; adapters/tradingview; src/idx_trade/tradingview_price_path_v2.py; scripts/prepare_tradingview_historical_price_path_v2.py; scripts/run_tradingview_historical_price_path_v2.py; tests/test_tradingview_historical_price_path_v2.py; tests/test_storage.py; docs/checkpoints/2026-08-14_TRADINGVIEW_HISTORICAL_PRICE_PATH_V2_PREREGISTERED.md
 findings: runtime completed with 962 AVAILABLE and 16 provider SYMBOL_ERROR responses; frozen pagination produced 87,372/994,265 covered ACTIVE sessions (8.7876%), so the full price-path gate rejected. Structural checks were clean; available-overlap HLC exact was 94.3705% and volume within 5% was 93.4885%.
