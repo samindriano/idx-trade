@@ -214,3 +214,16 @@ Foreign Flow archive and clean-V2 causal full-cross-section market context.
 No provider calls, outcome/label access, model fitting/scoring, Foreign Flow V1
 alpha reuse, effective-supply/free-float work, Financial PIT, Corporate Action,
 O2, or TradingView work is authorized in this lane.
+
+## Current status correction — 2026-08-15 — Free Float / Effective Supply source lane
+
+Free-float / ownership-concentration source work is claimed as `ACTIVE` by
+`ChatGPT/Free-Float-Effective-Supply` on branch
+`data/idx-free-float-effective-supply-v1`. Scope is source discovery, provider
+scaffolding, raw-provenance capture, and normalized ownership/free-float fields
+only. Reuse accepted direct-IDX transport patterns and the documented
+`nichsedge/idx-bei` Company Profile endpoints where valid. The external >1%
+ownership snapshot is evidence for concentration, not a true free-float ground
+truth. No inferred effective-float percentage, supply-tightness score, Foreign
+Flow V2 feature integration/materialization, outcome access, model fitting,
+Financial PIT, Corporate Action, O2, or TradingView work is authorized.
