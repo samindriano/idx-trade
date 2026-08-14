@@ -140,3 +140,18 @@ When claiming/updating a row, keep it compact:
 `<task> | ACTIVE/REVIEW/etc | <owner> | <branch + HEAD if useful> | <what is being done, blocker, or exact next boundary>`
 
 If a material lane is missing, add it before starting the work.
+
+## Current status correction — 2026-08-14 — Foreign Flow alpha lane
+
+The Foreign Flow feature contract V1 is closed as `DONE` based on the accepted
+branch `research/idx-foreign-flow-feature-contract-v1` at HEAD
+`ff15f335f43db645db18769c082ea5ee8773a72e`, with verdict
+`FOREIGN_FLOW_FEATURE_CONTRACT_V1_ACCEPTED`.
+
+The new lane is claimed as `ACTIVE` by `Codex/Foreign-Flow-Alpha` on branch
+`research/idx-foreign-flow-alpha-v1`. Scope is exactly one preregistered,
+paired historical-development experiment: clean V2 `HGB_XS_MARKET` control
+versus clean V2 plus all frozen Foreign Flow V1 features, on exact common
+support. No subset rescue, provider calls, Financial PIT/Corporate Actions,
+O2/forward-counter changes, protected/fresh-forward outcome access, or
+post-result tuning is authorized.
