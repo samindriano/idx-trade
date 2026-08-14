@@ -123,6 +123,12 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 |---|---|---|---|---|
 | Corporate Action IDX publication linkage V1 remediation | `ACTIVE` | `Codex/Corporate-Action-PIT-IDX-Publication-Linkage-Remediation`; independent review `36774d172efd7c742e760053c1ab4c366b49d3cd` | `data/corporate-action-pit-idx-publication-linkage-remediation-v1` / scientific base `13c54861821998d2148d0a8df6252d6dc1a8cd64` | Offline-only evaluator remediation over the same immutable 11 rows and parent manifest; no provider calls, market-wide acquisition, canonical table, OHLC adjustment, models, or outcomes. |
 
+## Current remediation result overrides (2026-08-15)
+
+| Lane | Status | Owner / acceptance | Branch / HEAD | Scope note |
+|---|---|---|---|---|
+| Corporate Action IDX publication linkage V1 remediation | `REVIEW` | ChatGPT independent review pending; review source `36774d172efd7c742e760053c1ab4c366b49d3cd` | `data/corporate-action-pit-idx-publication-linkage-remediation-v1` / `dc34287de2e46531eb837d3d9f18623d64d158e0` | Offline same-11 rerate: `6 EXACT`, `0 AMBIGUOUS`, `1 CONFLICT`, `4 UNRESOLVED`; verdict `IDX_PUBLICATION_LINKAGE_BOUNDED_GO`. Remediation manifest `D:\Documents\Project\idx-corporate-action-pit-idx-publication-linkage-remediation-20260815-v1\MANIFEST.json` SHA `74e3703f1a043150d9bd9784336c32c1e3f6aca64ec8393d30df7458bf3b3f9e`. Focused 42 passed; full suite retains one unrelated storage assertion failure. No provider calls, market-wide acquisition, canonical table, OHLC adjustment, models, or outcomes. |
+
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
