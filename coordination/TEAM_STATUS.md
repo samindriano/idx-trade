@@ -313,7 +313,7 @@ other lane changes occurred.
 
 ## Current status correction — 2026-08-15 — Foreign Flow V2 core alpha
 
-Foreign Flow V2 Core Alpha Experiment is claimed as `ACTIVE` by
+Foreign Flow V2 Core Alpha Experiment is complete and remains `REVIEW` by
 `Codex/Foreign-Flow-Core-Alpha-V2` on branch
 `research/idx-foreign-flow-alpha-v2-core`, based on accepted representation
 commit `ceb0c2c6f57aac0433cac9a5532daa0db4c99c0b`. Scope is one preregistered
@@ -322,3 +322,9 @@ control versus the exact frozen eight-feature Foreign Flow V2 core block.
 Free-float/effective-supply remains a separate active lane and is not included.
 No provider calls, forward/O2 counter changes, protected/fresh-forward outcomes,
 Financial PIT, Corporate Action, or TradingView work are authorized here.
+Result: `FOREIGN_FLOW_V2_CORE_NO_SURVIVOR`; branch HEAD
+`5867fd8377eb717659abef4caa01ae01a15df3e5` and external result manifest
+SHA-256 `23275d2a673ac99dc0928a5a6c0956a0059c82c80a13eea83b4e5db4c4252852`.
+Common support was 292,631 rows / 737 tickers / 1,231 sessions; median paired
+PR-AUC delta was -0.004294 with 1/6 positive folds. Focused tests passed 4/4;
+full pytest remains 67 passed / 1 pre-existing storage expectation failure.
