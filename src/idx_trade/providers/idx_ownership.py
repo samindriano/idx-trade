@@ -14,10 +14,10 @@ import requests
 from ..security_master import normalise_ticker
 
 
-IDX_HOME_URL = "https://www.idx.id/id"
-IDX_SESSION_VALIDATION_URL = "https://www.idx.id/primary/home/GetIndexList"
-IDX_COMPANY_PROFILE_LIST_URL = "https://www.idx.id/primary/ListedCompany/GetCompanyProfiles"
-IDX_COMPANY_PROFILE_DETAIL_URL = "https://www.idx.id/primary/ListedCompany/GetCompanyProfilesDetail"
+IDX_HOME_URL = "https://www.idx.co.id/id"
+IDX_SESSION_VALIDATION_URL = "https://www.idx.co.id/primary/home/GetIndexList"
+IDX_COMPANY_PROFILE_LIST_URL = "https://www.idx.co.id/primary/ListedCompany/GetCompanyProfiles"
+IDX_COMPANY_PROFILE_DETAIL_URL = "https://www.idx.co.id/primary/ListedCompany/GetCompanyProfilesDetail"
 IDX_STOCK_CODE_PATTERN = re.compile(r"^[A-Z0-9]{4,5}$")
 
 COMPANY_HOLDER_COLUMNS = (
@@ -38,12 +38,16 @@ COMPANY_HOLDER_COLUMNS = (
     "source_ref",
 )
 
+GT1_INVESTOR_CLASSIFICATION_ALIASES = (
+    "INVESTOR_TYPE",
+    "INVESTOR_CLASSIFICATION",
+)
+
 GT1_REQUIRED_COLUMNS = {
     "DATE",
     "SHARE_CODE",
     "ISSUER_NAME",
     "INVESTOR_NAME",
-    "INVESTOR_TYPE",
     "LOCAL_FOREIGN",
     "NATIONALITY",
     "DOMICILE",
@@ -99,7 +103,7 @@ def _browser_headers() -> dict[str, str]:
     return {
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-        "Referer": "https://www.idx.id/",
+        "Referer": "https://www.idx.co.id/",
         "User-Agent": "Mozilla/5.0 idx-trade-research/2.0",
         "X-Requested-With": "XMLHttpRequest",
     }
@@ -349,6 +353,15 @@ def parse_gt1_ownership_csv(
         raise ValueError(f"ownership >1% snapshot missing columns: {sorted(missing)}")
     if source.empty:
         raise ValueError("ownership >1% snapshot is empty")
+    investor_columns = [
+        column for column in GT1_INVESTOR_CLASSIFICATION_ALIASES if column in source.columns
+    ]
+    if len(investor_columns) != 1:
+        raise ValueError(
+            "ownership >1% snapshot must contain exactly one investor classification column: "
+            f"{GT1_INVESTOR_CLASSIFICATION_ALIASES}"
+        )
+    investor_column = investor_columns[0]
 
     dates = pd.to_datetime(source["DATE"].astype(str).str.strip(), errors="coerce", dayfirst=True)
     if dates.isna().any():
@@ -387,7 +400,7 @@ def parse_gt1_ownership_csv(
                 "holding_pct": pct,
                 "is_controller": None,
                 "holder_category": None,
-                "investor_type": _clean_optional_text(row["INVESTOR_TYPE"]),
+                "investor_type": _clean_optional_text(row[investor_column]),
                 "local_foreign": _clean_optional_text(row["LOCAL_FOREIGN"]),
                 "nationality": _clean_optional_text(row["NATIONALITY"]),
                 "domicile": _clean_optional_text(row["DOMICILE"]),
