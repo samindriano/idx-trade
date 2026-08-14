@@ -221,6 +221,26 @@ No provider calls, outcome/label access, model fitting/scoring, Foreign Flow V1
 alpha reuse, effective-supply/free-float work, Financial PIT, Corporate Action,
 O2, or TradingView work is authorized in this lane.
 
+## Current status correction — 2026-08-15 — Foreign Flow Representation V2 result
+
+Foreign Flow Representation V2 offline materialization is complete and is now
+`REVIEW` for ChatGPT independent review. Branch
+`research/idx-foreign-flow-representation-v2` is synchronized at HEAD
+`8204fd2224f526b23b1fdc89ec9de4d62b64dc4b`. The external output root is
+`D:\Documents\Project\idx-trade-foreign-flow-representation-v2-20260815-001`;
+manifest SHA-256 is
+`4e8e7278b6505a356c2f95c4ac69a47cb4dc91803cc819cf6b0aaafbe34c98dc`.
+
+The outcome-blind census contains 1,102,400 rows, 979 tickers, 1,259 feature
+sessions, 318,592 fully available rows, 783,240 partial rows, and 568
+all-missing rows. Exact next-official-session causality, own-history exclusion,
+full-panel primary-liquid cross-sectional scope, zero duplicates, and zero
+infinities passed. Focused tests passed 15/15. Full pytest is 63 passed / 1
+unrelated pre-existing storage expectation failure. No provider, outcome,
+model, V1-alpha, free-float, Financial PIT, Corporate Action, O2, or
+TradingView work occurred. Do not start the Foreign Flow alpha experiment
+until ChatGPT reviews the census.
+
 ## Current status correction — 2026-08-15 — Free Float / Effective Supply source lane
 
 Free-float / ownership-concentration source work is claimed as `ACTIVE` by
