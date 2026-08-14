@@ -288,3 +288,25 @@ Profile, official monthly >=1% shareholder publication, and KSEI
 BalanceposEfek schema/retention inspection only. No effective free-float
 calculation, supply-tightness feature, Foreign Flow integration, outcomes,
 models, or unrelated data lane work is authorized.
+
+## Current status correction — 2026-08-15 — Free Float source audit result
+
+The bounded Free Float / Effective Supply source audit is complete and remains
+`REVIEW` for ChatGPT independent review. Branch
+`data/idx-free-float-effective-supply-v1` is synchronized at HEAD
+`7eaac5d`. Official IDX Company Profile Detail succeeded for the bounded
+DCII/BBCA/BAIK/WBSA/RLCO sample and exposed current named-holder/controller
+rows, but no explicit reported-free-float field. Official KSEI
+`BalanceposEfek` ZIPs for 2026-02-27, 2026-05-29, and 2026-07-31 were
+hash-verified as aggregate local/foreign holding-composition files. The
+official monthly >=1% IDX attachment could not be recovered in this bounded
+probe because `ListedCompany/GetAnnouncement` returned non-JSON HTTP 503;
+the public mirror also contains one exact MAYA holding-reconciliation
+mismatch. Verdict: `SOURCE_REMEDIATION_REQUIRED`. External evidence root:
+`D:\Documents\Project\idx-trade-free-float-effective-supply-20260815-v1`;
+consolidated manifest SHA-256:
+`344b59cd84da8adc8866cb3e47f942a6ea92c1b32a6fb763d74b2a54647fed94`.
+Focused provider tests passed 10/10; full suite was 49 passed and one
+pre-existing unrelated storage expectation failed. No effective-float
+calculation, supply score, Foreign Flow integration, model/outcome access, or
+other lane changes occurred.
