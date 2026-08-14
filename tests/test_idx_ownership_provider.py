@@ -64,16 +64,19 @@ def test_company_profile_missing_holders_fails_but_empty_is_explicitly_valid() -
     assert meta.rows == 0
 
 
-def test_gt1_snapshot_uses_embedded_date_and_indonesian_numbers() -> None:
-    raw = (
-        "DATE,SHARE_CODE,ISSUER_NAME,INVESTOR_NAME,INVESTOR_TYPE,LOCAL_FOREIGN,"
+def _gt1_csv(classification_column: str = "INVESTOR_TYPE") -> bytes:
+    return (
+        f"DATE,SHARE_CODE,ISSUER_NAME,INVESTOR_NAME,{classification_column},LOCAL_FOREIGN,"
         "NATIONALITY,DOMICILE,HOLDINGS_SCRIPLESS,HOLDINGS_SCRIP,"
         "TOTAL_HOLDING_SHARES,PERCENTAGE\n"
         "27-Feb-2026,AADI,AADI Tbk,ADARO STRATEGIC INVESTMENTS,CP,L,,INDONESIA,"
         "3.200.142.830,0,3.200.142.830,\"41,10\"\n"
     ).encode()
+
+
+def test_gt1_snapshot_uses_embedded_date_and_indonesian_numbers() -> None:
     frame, meta = parse_gt1_ownership_csv(
-        raw,
+        _gt1_csv(),
         source_ref="mirror://1%ownership-2025-03-04.csv",
     )
 
@@ -82,7 +85,18 @@ def test_gt1_snapshot_uses_embedded_date_and_indonesian_numbers() -> None:
     assert frame.iloc[0]["holding_shares"] == 3_200_142_830
     assert frame.iloc[0]["holding_pct"] == 41.10
     assert frame.iloc[0]["holdings_scripless"] == 3_200_142_830
+    assert frame.iloc[0]["investor_type"] == "CP"
     assert meta.reported_free_float_pct is None
+
+
+def test_gt1_snapshot_accepts_official_investor_classification_alias() -> None:
+    frame, meta = parse_gt1_ownership_csv(
+        _gt1_csv("INVESTOR_CLASSIFICATION"),
+        source_ref="idx-announcement://ownership-gt1",
+    )
+    assert len(frame) == 1
+    assert frame.iloc[0]["investor_type"] == "CP"
+    assert meta.snapshot_date == "2026-02-27"
 
 
 def test_gt1_snapshot_reconciles_scrip_and_rejects_mixed_dates() -> None:
