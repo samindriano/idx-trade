@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import pickle
 
@@ -232,16 +233,27 @@ def test_dynamic_object_keys_are_redacted_but_fixed_provider_fields_remain_visib
     assert "private-value" not in rendered
 
 
-def test_secret_wrappers_are_redacted_and_not_pickle_serializable():
+def test_sensitive_containers_are_redacted_non_dataclass_and_not_serializable():
     credentials = EphemeralCredentials("private-user", "private-pass")
     secret = EphemeralSecret("bearer-token")
+    response = ProviderResponse(200, b'{"account":"123456789012"}')
+    activation = ActivationResult(secret, response)
     assert "private-user" not in repr(credentials)
     assert "private-pass" not in repr(credentials)
     assert "bearer-token" not in repr(secret)
+    assert "123456789012" not in repr(response)
+    assert dataclasses.is_dataclass(credentials) is False
+    assert dataclasses.is_dataclass(secret) is False
+    assert dataclasses.is_dataclass(response) is False
+    assert dataclasses.is_dataclass(activation) is False
     with pytest.raises(TypeError, match="cannot be serialized"):
         pickle.dumps(credentials)
     with pytest.raises(TypeError, match="cannot be serialized"):
         pickle.dumps(secret)
+    with pytest.raises(TypeError, match="cannot be serialized"):
+        pickle.dumps(response)
+    with pytest.raises(TypeError):
+        dataclasses.asdict(credentials)
 
 
 def test_invalid_json_body_fails_closed_without_body_echo():

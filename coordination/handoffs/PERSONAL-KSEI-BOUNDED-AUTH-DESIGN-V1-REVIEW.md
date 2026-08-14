@@ -38,8 +38,10 @@ Verify all of the following:
    no global identity;
 2. endpoint paths are exact and no caller can inject an arbitrary URL/path;
 3. no concrete provider/network client exists;
-4. credentials/transformed password/session token never appear in repr,
-   serialized report, pickle, exception propagation, fixtures, or docs;
+4. credentials/transformed password/session token/raw response bodies never
+   appear in repr, serialized report, pickle/reduce/getstate, or generic
+   `dataclasses.asdict()` paths; sensitive transport containers must remain
+   non-dataclass slot classes;
 5. `finally` clears credential/session/transformed-secret references and closes
    the transport on success and failure;
 6. activation/login auth failure stops before portfolio calls;

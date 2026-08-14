@@ -90,45 +90,52 @@ class ProbeFailureCode(StrEnum):
     SUMMARY_SHAPE_UNRECOGNIZED = "SUMMARY_SHAPE_UNRECOGNIZED"
 
 
-@dataclass(slots=True, repr=False)
-class EphemeralCredentials:
-    username: str
-    password: str
+class _NonSerializableSensitive:
+    __slots__ = ()
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.username, str) or not self.username.strip():
+    def __reduce__(self):
+        raise TypeError(f"{type(self).__name__} cannot be serialized")
+
+    def __reduce_ex__(self, protocol):
+        raise TypeError(f"{type(self).__name__} cannot be serialized")
+
+    def __getstate__(self):
+        raise TypeError(f"{type(self).__name__} cannot be serialized")
+
+
+class EphemeralCredentials(_NonSerializableSensitive):
+    __slots__ = ("username", "password")
+
+    def __init__(self, username: str, password: str):
+        if not isinstance(username, str) or not username.strip():
             raise ValueError("username is required")
-        if not isinstance(self.password, str) or not self.password:
+        if not isinstance(password, str) or not password:
             raise ValueError("password is required")
+        self.username = username
+        self.password = password
 
     def __repr__(self) -> str:
         return "EphemeralCredentials(<redacted>)"
 
     __str__ = __repr__
 
-    def __reduce__(self):
-        raise TypeError("EphemeralCredentials cannot be serialized")
-
     def clear(self) -> None:
         self.username = ""
         self.password = ""
 
 
-@dataclass(slots=True, repr=False)
-class EphemeralSecret:
-    value: str
+class EphemeralSecret(_NonSerializableSensitive):
+    __slots__ = ("value",)
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.value, str) or not self.value:
+    def __init__(self, value: str):
+        if not isinstance(value, str) or not value:
             raise ValueError("ephemeral secret is required")
+        self.value = value
 
     def __repr__(self) -> str:
         return "EphemeralSecret(<redacted>)"
 
     __str__ = __repr__
-
-    def __reduce__(self):
-        raise TypeError("EphemeralSecret cannot be serialized")
 
     def clear(self) -> None:
         self.value = ""
@@ -143,16 +150,16 @@ def prompt_ephemeral_credentials() -> EphemeralCredentials:
     )
 
 
-@dataclass(slots=True, repr=False)
-class ProviderResponse:
-    status_code: int
-    body: bytes
+class ProviderResponse(_NonSerializableSensitive):
+    __slots__ = ("status_code", "body")
 
-    def __post_init__(self) -> None:
-        if isinstance(self.status_code, bool) or not isinstance(self.status_code, int):
+    def __init__(self, status_code: int, body: bytes):
+        if isinstance(status_code, bool) or not isinstance(status_code, int):
             raise TypeError("status_code must be an integer")
-        if not isinstance(self.body, bytes):
+        if not isinstance(body, bytes):
             raise TypeError("body must be bytes")
+        self.status_code = status_code
+        self.body = body
 
     def __repr__(self) -> str:
         return f"ProviderResponse(status_code={self.status_code}, body=<redacted {len(self.body)} bytes>)"
@@ -161,10 +168,16 @@ class ProviderResponse:
         self.body = b""
 
 
-@dataclass(slots=True, repr=False)
-class ActivationResult:
-    transformed_password: EphemeralSecret
-    response: ProviderResponse
+class ActivationResult(_NonSerializableSensitive):
+    __slots__ = ("transformed_password", "response")
+
+    def __init__(self, transformed_password: EphemeralSecret, response: ProviderResponse):
+        if not isinstance(transformed_password, EphemeralSecret):
+            raise TypeError("transformed_password must be EphemeralSecret")
+        if not isinstance(response, ProviderResponse):
+            raise TypeError("response must be ProviderResponse")
+        self.transformed_password = transformed_password
+        self.response = response
 
     def __repr__(self) -> str:
         return "ActivationResult(<redacted>)"
@@ -174,10 +187,16 @@ class ActivationResult:
         self.response.clear()
 
 
-@dataclass(slots=True, repr=False)
-class LoginResult:
-    session_token: EphemeralSecret
-    response: ProviderResponse
+class LoginResult(_NonSerializableSensitive):
+    __slots__ = ("session_token", "response")
+
+    def __init__(self, session_token: EphemeralSecret, response: ProviderResponse):
+        if not isinstance(session_token, EphemeralSecret):
+            raise TypeError("session_token must be EphemeralSecret")
+        if not isinstance(response, ProviderResponse):
+            raise TypeError("response must be ProviderResponse")
+        self.session_token = session_token
+        self.response = response
 
     def __repr__(self) -> str:
         return "LoginResult(<redacted>)"

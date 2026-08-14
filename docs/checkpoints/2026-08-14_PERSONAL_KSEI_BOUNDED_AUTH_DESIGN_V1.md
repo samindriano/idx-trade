@@ -49,19 +49,25 @@ caller-supplied endpoint path. `global-identity` is not in the allowlist.
 
 ## Secret handling
 
-`EphemeralCredentials` and `EphemeralSecret`:
+`EphemeralCredentials`, `EphemeralSecret`, `ProviderResponse`,
+`ActivationResult`, and `LoginResult` are deliberately plain `__slots__`
+classes rather than dataclasses. This reduces accidental generic introspection
+and prevents `dataclasses.asdict()` from copying secret/raw-response fields.
 
-- redact `repr`/`str`;
-- reject pickle serialization;
-- are cleared after the one-shot runner exits;
-- are never included in the report.
+The sensitive containers:
+
+- redact `repr`/`str` where applicable;
+- reject pickle/reduce/getstate serialization;
+- are cleared after the one-shot runner exits where applicable;
+- are never included directly in the report.
 
 `prompt_ephemeral_credentials()` uses non-echoing `getpass` for both username
 and password, so credentials are not accepted as command-line arguments.
 
-Python cannot guarantee physical memory zeroization for immutable strings. The
-V1 guarantee is therefore **no persistence, no serialization, no logging, and
-best-effort reference clearing**, not cryptographic RAM erasure.
+Python cannot guarantee physical memory zeroization for immutable strings or
+bytes. The V1 guarantee is therefore **no persistence, no generic
+serialization, no logging, and best-effort reference clearing**, not
+cryptographic RAM erasure.
 
 ## Observation boundary
 
@@ -120,8 +126,9 @@ transport passed:
 The surrogate covered the frozen policy, exact six-endpoint order, one-shot
 budget, secret/reference clearing, report redaction, summary zero-state probe,
 auth-stop behavior, non-auth continuation without retry, raw exception
-sanitization, dynamic-key redaction, non-serializable secret wrappers, invalid
-JSON fail-closed behavior, and oversized-body fail-closed behavior.
+sanitization, dynamic-key redaction, non-dataclass/non-serializable sensitive
+containers, invalid JSON fail-closed behavior, and oversized-body fail-closed
+behavior.
 
 Exact repository tests and full pytest remain mandatory in independent review.
 
