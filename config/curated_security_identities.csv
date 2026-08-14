@@ -1,0 +1,2 @@
+ticker,company_name,security_type,listed_from,listed_to,source,source_ref,evidence_note
+FREN,PT Smartfren Telecom Tbk,Saham Biasa,2006-11-29,2025-04-16,ISSUER_OFFICIAL_IDENTITY_AND_MERGER_EVIDENCE,"https://www.smartfren.com/app/uploads/2022/07/AR_Smartfren_2021.pdf | https://www.smartfren.com/app/uploads/2025/03/Ringkasan-Merger-Plan-21-Mar-2025.pdf","Official Smartfren identity and merger evidence; listed_to is the last pre-deletion date."

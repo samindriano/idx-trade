@@ -1,0 +1,16 @@
+{
+  "schema": "idx-trade/tradingview-historical-price-path-v2-preregistration",
+  "lineage": {
+    "remediation_branch": "data/tradingview-open-price-path-remediation-v1",
+    "remediation_head": "97124d017de9533e1c84d7f84eab4b22edbfbda4",
+    "activity_branch": "data/tradingview-intraday-independent-activity-resolution-v1",
+    "activity_head": "c943a76fd56872d981a87519c2eb7072c413322c"
+  },
+  "window": { "start": "2021-04-01", "end": "2026-07-31", "session_basis": "official IDX exchange sessions only", "expected_session_count": 1279 },
+  "provider": { "provider": "TradingView", "adapter": "Mathieu2301/TradingView-API", "adapter_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c", "server": "prodata", "symbol_template": "IDX:<ticker>", "timeframe": "60", "session": "regular", "adjustment": "none", "access": "anonymous" },
+  "acquisition": { "initial_range": 500, "fetch_more_steps": 10, "fetch_more_batch": 5, "fetch_more_wait_ms": 8000, "timeout_ms": 25000, "max_retries": 0, "max_workers": 4, "stop_rule": "stop when earliest required official session is reached or max fetch-more steps are exhausted" },
+  "activity": { "classification": "ACTIVE iff regular Volume or Value or Frequency > 0; NO_TRADE iff exact row exists and all three are exactly zero; missing or malformed is UNKNOWN", "source": "official IDX Stock Summary" },
+  "corporate_actions": { "accepted_action_tokens": ["stocksplit", "reverse"], "quarantine_radius_sessions": 1, "source": "official IDX issued-history raw evidence" },
+  "gates": { "active_coverage_overall": 0.98, "active_coverage_year": 0.95, "unknown_activity_rate_max": 0.005, "hlc_exact_overall": 0.95, "hlc_exact_year": 0.90, "volume_within_5_overall": 0.90, "volume_within_5_year": 0.80, "canonical_fidelity_required": true },
+  "boundaries": { "no_model": true, "no_panel_mutation": true, "no_protected_outcomes": true, "no_open_repair": true, "no_extended_session": true }
+}
