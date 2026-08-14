@@ -150,6 +150,8 @@ def jsonable(value: Any) -> Any:
         return canonical_decimal(value)
     if isinstance(value, StrEnum):
         return value.value
+    if isinstance(value, str):
+        return str(value)
     if is_dataclass(value):
         return {field.name: jsonable(getattr(value, field.name)) for field in fields(value)}
     if isinstance(value, Mapping):
