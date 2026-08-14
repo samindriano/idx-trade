@@ -64,6 +64,17 @@ Row availability across all 15 features:
 - partial: **783,240**;
 - all-missing: **568**.
 
+Row availability by feature-session year:
+
+| Year | Fully available | Partial | All-missing |
+|---|---:|---:|---:|
+| 2021 | 25,490 | 98,037 | 319 |
+| 2022 | 67,856 | 127,668 | 247 |
+| 2023 | 58,970 | 149,279 | 0 |
+| 2024 | 55,203 | 164,967 | 1 |
+| 2025 | 62,893 | 162,236 | 0 |
+| 2026 | 48,180 | 81,053 | 1 |
+
 Finite counts by feature:
 
 | Feature | Finite rows |
