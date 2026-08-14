@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 13ad4b999c55af91faa2411e28d29303431a6add
 branch: research/idx-financial-pit-alpha-v1
-head_commit: 58c59d81b05c88adf3cdb181442af9617eb5e27c
+head_commit: bd1814db5c984124a59627248a225fdbb1d1a121
 
 ## Scope
 
