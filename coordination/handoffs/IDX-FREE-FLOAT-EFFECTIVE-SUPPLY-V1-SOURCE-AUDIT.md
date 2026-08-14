@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: https://github.com/samindriano/idx-trade
 source_commit: 36a874da865b9d7f4e03b14f284b047e77bd8cc2
 branch: data/idx-free-float-effective-supply-v1
-head_commit: 3a7b1a7
+head_commit: 5c0ba33
 scope: bounded live source audit only
 
 ## Files changed
