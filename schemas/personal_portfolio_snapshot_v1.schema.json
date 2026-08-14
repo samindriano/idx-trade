@@ -84,7 +84,7 @@
       },
       "allOf": [
         {"if": {"properties": {"succeeded": {"const": false}}}, "then": {"properties": {"observed_rows": {"const": 0}, "accepted_rows": {"const": 0}, "rejected_rows": {"const": 0}, "failure_code": {"type": "string"}}}},
-        {"if": {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}}, "required": ["succeeded", "rejected_rows"]}, "then": {"properties": {"failure_code": {"type": "null"}}}
+        {"if": {"properties": {"succeeded": {"const": true}, "rejected_rows": {"const": 0}}, "required": ["succeeded", "rejected_rows"]}, "then": {"properties": {"failure_code": {"type": "null"}}}}
       ]
     },
     "provenance": {
