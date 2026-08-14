@@ -35,6 +35,43 @@ Isolated synthetic validation: `10 passed`.
 
 The tests cover current-volume dilution separation, pure stock-split scale invariance, own-history exclusion of current observation, cross-sectional rank semantics, non-primary exclusion, accumulation dynamics, source-session divergence, outcome-column rejection, strict boolean parsing, and pre-listing contamination prevention.
 
+## Result — 2026-08-15 offline census
+
+The bounded outcome-blind materialization is complete and the lane is now
+`REVIEW`. The new runner is
+`src/idx_trade/foreign_flow_representation_v2_runner.py` with focused tests in
+`tests/test_foreign_flow_representation_v2_runner.py`.
+
+Authoritative output root:
+`D:\Documents\Project\idx-trade-foreign-flow-representation-v2-20260815-001`
+
+Output manifest SHA-256:
+`4e8e7278b6505a356c2f95c4ac69a47cb4dc91803cc819cf6b0aaafbe34c98dc`
+
+The census materialized 1,102,400 rows, 979 tickers, and 1,259 feature
+sessions from flow-through 2021-04-29 through 2026-07-30. It used the full
+canonical causal market panel for primary-liquid ranking, not the 292k H10
+support subset. There were 318,592 fully available rows, 783,240 partial rows,
+and 568 all-missing rows. There were 22,534 verified archive rows across 28
+archive sessions outside the pinned 2021-04-29 through 2026-07-31 official
+calendar; these are explicitly recorded in the manifest and were not passed to
+the builder. One pre-listing panel row (`KOCI`, 2023-10-06) was excluded.
+
+The exact per-feature finite counts, yearly/session availability,
+warm-up/source-data split, distributions, and all artifact hashes are in
+`docs/checkpoints/2026-08-15_FOREIGN_FLOW_REPRESENTATION_V2_OFFLINE_CENSUS_RESULT.md`
+and the external manifest. Causality, own-history current-observation
+exclusion, primary-liquid rank scope, zero duplicates, and zero infinities all
+passed.
+
+Focused tests passed 15/15. Full pytest remains 63 passed / 1 unrelated
+pre-existing failure in `tests/test_storage.py` because that test expects one
+revision conflict while the current storage contract reports two; no storage
+file was changed in this lane. `git diff --check` passed.
+
+No provider call, model fit/scoring, outcome/label access, V1-alpha access,
+free-float/effective-supply work, O2 work, or TradingView work occurred.
+
 ## Next local-only action
 
 Run an **offline materialization and availability census only** using the accepted external historical Foreign Flow archive and the canonical causal market context/security master. Do not call a provider.
