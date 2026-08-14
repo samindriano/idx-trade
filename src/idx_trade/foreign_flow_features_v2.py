@@ -1,9 +1,9 @@
 """Outcome-blind Foreign Flow V2 representation features.
 
-V2 separates current-turnover participation from abnormal flow magnitude,
-relative preference, accumulation dynamics, and flow/price divergence.
-Every source-session value at session t is assigned only to the next official
-feature session t+1.
+V2 separates current-turnover participation from abnormal economic flow
+magnitude, cross-sectional preference, accumulation dynamics, and flow/price
+divergence. Source-session information at t becomes usable only on the next
+official feature session t+1.
 """
 from __future__ import annotations
 
@@ -22,12 +22,14 @@ STREAK_CAP = 10
 
 FEATURE_COLUMNS_V2 = (
     "foreign_participation_1",
+    "foreign_participation_mean_5",
     "foreign_flow_shock_1",
     "foreign_flow_shock_mean_5",
     "foreign_flow_shock_mean_20",
     "foreign_flow_shock_percentile_120",
     "xs_rank_foreign_flow_shock_1",
     "xs_rank_foreign_flow_shock_mean_5",
+    "xs_rank_foreign_flow_shock_mean_20",
     "foreign_weighted_persistence_5",
     "foreign_weighted_persistence_20",
     "foreign_signed_streak_10",
@@ -45,7 +47,14 @@ OUTPUT_COLUMNS_V2 = (
 
 
 def _date(value: object) -> pd.Timestamp:
-    parsed = pd.Timestamp(value)
+    if isinstance(value, (int, float, np.integer, np.floating)) and not pd.isna(value):
+        numeric = float(value)
+        if not np.isfinite(numeric):
+            raise ValueError(f"invalid date: {value!r}")
+        unit = "ms" if abs(numeric) >= 1e11 else "s"
+        parsed = pd.to_datetime(numeric, unit=unit, utc=True)
+    else:
+        parsed = pd.Timestamp(value)
     if pd.isna(parsed):
         raise ValueError(f"invalid date: {value!r}")
     if parsed.tzinfo is not None:
@@ -58,6 +67,17 @@ def _sessions(values: Iterable[object]) -> pd.DatetimeIndex:
     if len(result) == 0 or result.has_duplicates:
         raise ValueError("official sessions are empty or duplicated")
     return result
+
+
+def _strict_bool(series: pd.Series, *, name: str) -> pd.Series:
+    def parse(value: object) -> bool:
+        if isinstance(value, (bool, np.bool_)):
+            return bool(value)
+        if isinstance(value, (int, np.integer)) and int(value) in (0, 1):
+            return bool(int(value))
+        raise ValueError(f"{name} must contain only booleans or integer 0/1")
+
+    return series.map(parse).astype(bool)
 
 
 def _normalise_flow(frame: pd.DataFrame) -> pd.DataFrame:
@@ -91,43 +111,106 @@ def _normalise_volume(frame: pd.DataFrame) -> pd.DataFrame:
         date_col, volume_col = "as_of_date", "volume"
     else:
         raise ValueError("volume needs (ticker,date,raw_volume) or (ticker,as_of_date,volume)")
-    out = frame[["ticker", date_col, volume_col]].rename(columns={date_col: "date", volume_col: "raw_volume"}).copy()
+    out = frame[["ticker", date_col, volume_col]].rename(
+        columns={date_col: "date", volume_col: "raw_volume"}
+    ).copy()
     out["ticker"] = out["ticker"].astype(str).str.upper().str.strip()
     out["date"] = [_date(v) for v in out["date"]]
     out["raw_volume"] = pd.to_numeric(out["raw_volume"], errors="coerce")
     if out.duplicated(["ticker", "date"]).any():
         raise ValueError("volume has duplicate ticker/session rows")
-    invalid = out["raw_volume"].notna() & ((~np.isfinite(out["raw_volume"])) | out["raw_volume"].lt(0))
+    invalid = out["raw_volume"].notna() & (
+        (~np.isfinite(out["raw_volume"])) | out["raw_volume"].lt(0)
+    )
     if invalid.any():
         raise ValueError("volume has invalid negative/infinite values")
     return out.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
 
 
 def _normalise_context(frame: pd.DataFrame) -> pd.DataFrame:
-    required = {"ticker", "date", "universe_primary_liquid", "close", "regular_market_value", "close_return_5", "close_return_20"}
+    required = {
+        "ticker",
+        "date",
+        "universe_primary_liquid",
+        "close",
+        "regular_market_value",
+        "close_return_5",
+        "close_return_20",
+    }
     missing = required - set(frame.columns)
     if missing:
         raise ValueError(f"market context missing columns: {sorted(missing)}")
     forbidden = [
-        c for c in frame.columns
-        if any(token in str(c).lower() for token in ("binary_target", "label_status", "outcome", "tp_first", "sl_first", "realized"))
+        c
+        for c in frame.columns
+        if any(
+            token in str(c).lower()
+            for token in (
+                "binary_target",
+                "label_status",
+                "outcome",
+                "tp_first",
+                "sl_first",
+                "realized",
+            )
+        )
     ]
     if forbidden:
         raise ValueError(f"market context must be outcome-blind: {sorted(forbidden)}")
-    out = frame[["ticker", "date", "universe_primary_liquid", "close", "regular_market_value", "close_return_5", "close_return_20"]].copy()
-    out["ticker"] = out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    out = frame[
+        [
+            "ticker",
+            "date",
+            "universe_primary_liquid",
+            "close",
+            "regular_market_value",
+            "close_return_5",
+            "close_return_20",
+        ]
+    ].copy()
+    out["ticker"] = (
+        out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    )
     out["date"] = [_date(v) for v in out["date"]]
     if out.duplicated(["ticker", "date"]).any():
         raise ValueError("market context has duplicate ticker/date rows")
-    for c in ("close", "regular_market_value", "close_return_5", "close_return_20"):
-        v = pd.to_numeric(out[c], errors="coerce").astype(float)
-        out[c] = v.where(np.isfinite(v))
+    for column in ("close", "regular_market_value", "close_return_5", "close_return_20"):
+        values = pd.to_numeric(out[column], errors="coerce").astype(float)
+        out[column] = values.where(np.isfinite(values))
     if (out["close"].dropna() <= 0.0).any():
         raise ValueError("market context has non-positive close")
     if (out["regular_market_value"].dropna() < 0.0).any():
         raise ValueError("market context has negative regular_market_value")
-    out["universe_primary_liquid"] = out["universe_primary_liquid"].astype(bool)
+    out["universe_primary_liquid"] = _strict_bool(
+        out["universe_primary_liquid"], name="universe_primary_liquid"
+    )
     return out.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+
+
+def _normalise_master(frame: pd.DataFrame) -> pd.DataFrame:
+    required = {"ticker", "listed_from", "listed_to"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"security master missing columns: {sorted(missing)}")
+    out = frame[["ticker", "listed_from", "listed_to"]].copy()
+    out["ticker"] = out["ticker"].astype(str).str.upper().str.strip()
+    out["listed_from"] = [_date(v) for v in out["listed_from"]]
+    out["listed_to"] = [
+        pd.NaT if v is None or pd.isna(v) or str(v).strip() == "" else _date(v)
+        for v in out["listed_to"]
+    ]
+    invalid = out["listed_to"].notna() & out["listed_to"].lt(out["listed_from"])
+    if invalid.any():
+        raise ValueError("security master has invalid listing interval")
+    return out.sort_values(["ticker", "listed_from"], kind="mergesort").reset_index(drop=True)
+
+
+def _listed_mask(rows: pd.DataFrame, sessions: pd.DatetimeIndex) -> np.ndarray:
+    mask = np.zeros(len(sessions), dtype=bool)
+    for row in rows.itertuples(index=False):
+        end = pd.Timestamp.max.normalize() if pd.isna(row.listed_to) else pd.Timestamp(row.listed_to)
+        mask |= (sessions >= pd.Timestamp(row.listed_from)) & (sessions <= end)
+    return mask
 
 
 def _historical_percentile(current: float, history: np.ndarray) -> float:
@@ -158,10 +241,10 @@ def _signed_streak(values: np.ndarray, *, cap: int = STREAK_CAP) -> float:
 def _weighted_persistence(values: np.ndarray) -> float:
     if len(values) == 0 or not np.isfinite(values).all():
         return np.nan
-    denom = float(np.abs(values).sum())
-    if denom == 0.0:
+    denominator = float(np.abs(values).sum())
+    if denominator == 0.0:
         return 0.0
-    return float(values.sum() / denom)
+    return float(values.sum() / denominator)
 
 
 def _ticker_source_features(
@@ -169,107 +252,116 @@ def _ticker_source_features(
     sessions: pd.DatetimeIndex,
     flow: pd.DataFrame,
     volume: pd.Series,
-    close: pd.Series,
-    regular_value: pd.Series,
+    context: pd.DataFrame,
+    master_rows: pd.DataFrame,
 ) -> pd.DataFrame:
-    by_date_flow = flow.set_index("session_date")
-    net = np.full(len(sessions), np.nan, dtype=float)
-    for i, day in enumerate(sessions):
-        if day in by_date_flow.index:
-            net[i] = float(by_date_flow.loc[day, "foreign_net"])
+    listed = _listed_mask(master_rows, sessions)
+    feature_listed = np.zeros(len(sessions), dtype=bool)
+    feature_listed[:-1] = listed[1:]
 
-    by_date_volume = volume.copy()
-    vol = np.full(len(sessions), np.nan, dtype=float)
-    for i, day in enumerate(sessions):
-        if day in by_date_volume.index:
-            vol[i] = float(by_date_volume.loc[day])
+    net = (
+        flow.set_index("session_date")["foreign_net"]
+        .reindex(sessions)
+        .to_numpy(dtype=float)
+    )
+    vol = volume.reindex(sessions).to_numpy(dtype=float)
+    close = context["close"].reindex(sessions).to_numpy(dtype=float)
+    regular_value = context["regular_market_value"].reindex(sessions).to_numpy(dtype=float)
+
+    net[~listed] = np.nan
+    vol[~listed] = np.nan
+    close[~listed] = np.nan
+    regular_value[~listed] = np.nan
 
     participation = np.full(len(sessions), np.nan, dtype=float)
     valid_current = np.isfinite(net) & np.isfinite(vol) & (vol > 0.0)
     participation[valid_current] = net[valid_current] / vol[valid_current]
 
-    close_values = np.full(len(sessions), np.nan, dtype=float)
-    regular_values = np.full(len(sessions), np.nan, dtype=float)
-    for i, day in enumerate(sessions):
-        if day in close.index:
-            close_values[i] = float(close.loc[day])
-        if day in regular_value.index:
-            regular_values[i] = float(regular_value.loc[day])
-
-    # Economic flow-shock magnitude uses a close-valued foreign-net proxy and
-    # a strictly prior regular-market-value baseline. This deliberately keeps
-    # same-day turnover out of the shock denominator and is scale-stable across
-    # pure stock-split share/price rescalings. Close is a notional proxy, not an
-    # assertion about actual foreign execution price.
-    foreign_net_notional = net * close_values
+    foreign_net_notional = net * close
     shock = np.full(len(sessions), np.nan, dtype=float)
-    for i in range(len(sessions)):
-        start = max(0, i - PRIOR_LIQUIDITY_LOOKBACK)
-        prior = regular_values[start:i]
+    for index in range(len(sessions)):
+        start = max(0, index - PRIOR_LIQUIDITY_LOOKBACK)
+        prior = regular_value[start:index]
         valid = prior[np.isfinite(prior) & (prior >= 0.0)]
-        if len(valid) < MIN_PRIOR_LIQUIDITY_OBSERVATIONS or not np.isfinite(foreign_net_notional[i]):
+        if (
+            len(valid) < MIN_PRIOR_LIQUIDITY_OBSERVATIONS
+            or not np.isfinite(foreign_net_notional[index])
+        ):
             continue
         baseline = float(np.median(valid))
         if baseline <= 0.0:
             continue
-        shock[i] = foreign_net_notional[i] / baseline
+        shock[index] = foreign_net_notional[index] / baseline
 
+    participation5 = np.full(len(sessions), np.nan, dtype=float)
     mean5 = np.full(len(sessions), np.nan, dtype=float)
     mean20 = np.full(len(sessions), np.nan, dtype=float)
-    persist5 = np.full(len(sessions), np.nan, dtype=float)
-    persist20 = np.full(len(sessions), np.nan, dtype=float)
+    persistence5 = np.full(len(sessions), np.nan, dtype=float)
+    persistence20 = np.full(len(sessions), np.nan, dtype=float)
     streak10 = np.full(len(sessions), np.nan, dtype=float)
-    pct120 = np.full(len(sessions), np.nan, dtype=float)
+    percentile120 = np.full(len(sessions), np.nan, dtype=float)
 
-    for i in range(len(sessions)):
-        if i + 1 >= SHORT_WINDOW:
-            x5 = shock[i - SHORT_WINDOW + 1 : i + 1]
+    for index in range(len(sessions)):
+        if index + 1 >= SHORT_WINDOW:
+            p5 = participation[index - SHORT_WINDOW + 1 : index + 1]
+            if np.isfinite(p5).all():
+                participation5[index] = float(np.mean(p5))
+            x5 = shock[index - SHORT_WINDOW + 1 : index + 1]
             if np.isfinite(x5).all():
-                mean5[i] = float(np.mean(x5))
-                persist5[i] = _weighted_persistence(x5)
-        if i + 1 >= MEDIUM_WINDOW:
-            x20 = shock[i - MEDIUM_WINDOW + 1 : i + 1]
+                mean5[index] = float(np.mean(x5))
+                persistence5[index] = _weighted_persistence(x5)
+        if index + 1 >= MEDIUM_WINDOW:
+            x20 = shock[index - MEDIUM_WINDOW + 1 : index + 1]
             if np.isfinite(x20).all():
-                mean20[i] = float(np.mean(x20))
-                persist20[i] = _weighted_persistence(x20)
-        start10 = max(0, i - STREAK_CAP + 1)
-        streak10[i] = _signed_streak(net[start10 : i + 1])
-        hist_start = max(0, i - HISTORY_PERCENTILE_LOOKBACK)
-        pct120[i] = _historical_percentile(shock[i], shock[hist_start:i])
+                mean20[index] = float(np.mean(x20))
+                persistence20[index] = _weighted_persistence(x20)
+        start10 = max(0, index - STREAK_CAP + 1)
+        streak10[index] = _signed_streak(net[start10 : index + 1])
+        history_start = max(0, index - HISTORY_PERCENTILE_LOOKBACK)
+        percentile120[index] = _historical_percentile(
+            shock[index], shock[history_start:index]
+        )
 
     acceleration = mean5 - mean20
-    return pd.DataFrame({
-        "ticker": ticker,
-        "source_session": sessions,
-        "foreign_participation_1": participation,
-        "foreign_flow_shock_1": shock,
-        "foreign_flow_shock_mean_5": mean5,
-        "foreign_flow_shock_mean_20": mean20,
-        "foreign_flow_shock_percentile_120": pct120,
-        "foreign_weighted_persistence_5": persist5,
-        "foreign_weighted_persistence_20": persist20,
-        "foreign_signed_streak_10": streak10,
-        "foreign_flow_acceleration_5_20": acceleration,
-    })
+    return pd.DataFrame(
+        {
+            "ticker": ticker,
+            "source_session": sessions,
+            "listed_at_source_session": listed,
+            "listed_at_feature_session": feature_listed,
+            "foreign_participation_1": participation,
+            "foreign_participation_mean_5": participation5,
+            "foreign_flow_shock_1": shock,
+            "foreign_flow_shock_mean_5": mean5,
+            "foreign_flow_shock_mean_20": mean20,
+            "foreign_flow_shock_percentile_120": percentile120,
+            "foreign_weighted_persistence_5": persistence5,
+            "foreign_weighted_persistence_20": persistence20,
+            "foreign_signed_streak_10": streak10,
+            "foreign_flow_acceleration_5_20": acceleration,
+        }
+    )
 
 
 def build_foreign_flow_representation_v2(
     flow_frame: pd.DataFrame,
     volume_frame: pd.DataFrame,
     market_context: pd.DataFrame,
+    security_master: pd.DataFrame,
     official_sessions: Iterable[object],
 ) -> pd.DataFrame:
     """Build V2 Foreign Flow representation without outcomes or model access.
 
-    ``market_context`` is source-session context. Cross-sectional ranks use the
-    exact Ranking-V2 convention: average percentile rank within each source
-    date's causal primary-liquid universe. Flow and price context from source
-    session t are assigned only to official feature session t+1.
+    Cross-sectional ranks follow Clean Ranking V2: average percentile rank
+    inside each source date's causal primary-liquid universe. All flow and price
+    context comes from source session t and is assigned only to official feature
+    session t+1. Listing intervals are enforced before any historical baseline.
     """
     sessions = _sessions(official_sessions)
     flow = _normalise_flow(flow_frame)
     volume = _normalise_volume(volume_frame)
     context = _normalise_context(market_context)
+    master = _normalise_master(security_master)
 
     session_set = set(sessions)
     if not set(flow["session_date"]).issubset(session_set):
@@ -282,17 +374,20 @@ def build_foreign_flow_representation_v2(
     pieces: list[pd.DataFrame] = []
     tickers = sorted(set(flow["ticker"]) | set(volume["ticker"]))
     for ticker in tickers:
-        tf = flow[flow["ticker"].eq(ticker)].copy()
-        tv = volume[volume["ticker"].eq(ticker)].set_index("date")["raw_volume"]
-        tc = context[context["ticker"].eq(ticker)].set_index("date")
+        master_rows = master[master["ticker"].eq(ticker)]
+        if master_rows.empty:
+            continue
+        ticker_flow = flow[flow["ticker"].eq(ticker)].copy()
+        ticker_volume = volume[volume["ticker"].eq(ticker)].set_index("date")["raw_volume"]
+        ticker_context = context[context["ticker"].eq(ticker)].set_index("date")
         pieces.append(
             _ticker_source_features(
                 ticker,
                 sessions,
-                tf,
-                tv,
-                tc["close"],
-                tc["regular_market_value"],
+                ticker_flow,
+                ticker_volume,
+                ticker_context,
+                master_rows,
             )
         )
     source = pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
@@ -307,36 +402,43 @@ def build_foreign_flow_representation_v2(
         validate="one_to_one",
     ).drop(columns=["date"])
 
-    source["xs_rank_foreign_flow_shock_1"] = np.nan
-    source["xs_rank_foreign_flow_shock_mean_5"] = np.nan
-    source["xs_rank_close_return_5_source"] = np.nan
-    source["xs_rank_close_return_20_source"] = np.nan
-
-    primary = source["universe_primary_liquid"].fillna(False).astype(bool)
-    primary_frame = source.loc[primary]
-    for raw, out in (
+    rank_specs = (
         ("foreign_flow_shock_1", "xs_rank_foreign_flow_shock_1"),
         ("foreign_flow_shock_mean_5", "xs_rank_foreign_flow_shock_mean_5"),
+        ("foreign_flow_shock_mean_20", "xs_rank_foreign_flow_shock_mean_20"),
         ("close_return_5", "xs_rank_close_return_5_source"),
         ("close_return_20", "xs_rank_close_return_20_source"),
-    ):
-        ranks = primary_frame.groupby("source_session", sort=True)[raw].rank(method="average", pct=True)
-        source.loc[ranks.index, out] = ranks.astype(float)
+    )
+    for _, output in rank_specs:
+        source[output] = np.nan
 
-    source["xs_rank_foreign_flow_shock_mean_20"] = np.nan
-    ranks20 = primary_frame.groupby("source_session", sort=True)["foreign_flow_shock_mean_20"].rank(method="average", pct=True)
-    source.loc[ranks20.index, "xs_rank_foreign_flow_shock_mean_20"] = ranks20.astype(float)
+    primary = (
+        source["listed_at_source_session"]
+        & source["universe_primary_liquid"].fillna(False).astype(bool)
+    )
+    primary_frame = source.loc[primary]
+    for raw, output in rank_specs:
+        ranks = primary_frame.groupby("source_session", sort=True)[raw].rank(
+            method="average", pct=True
+        )
+        source.loc[ranks.index, output] = ranks.astype(float)
 
     source["foreign_flow_price_divergence_5"] = (
-        source["xs_rank_foreign_flow_shock_mean_5"] - source["xs_rank_close_return_5_source"]
+        source["xs_rank_foreign_flow_shock_mean_5"]
+        - source["xs_rank_close_return_5_source"]
     )
     source["foreign_flow_price_divergence_20"] = (
-        source["xs_rank_foreign_flow_shock_mean_20"] - source["xs_rank_close_return_20_source"]
+        source["xs_rank_foreign_flow_shock_mean_20"]
+        - source["xs_rank_close_return_20_source"]
     )
 
     next_by_day = {sessions[i]: sessions[i + 1] for i in range(len(sessions) - 1)}
     source["feature_session"] = source["source_session"].map(next_by_day)
-    source = source[source["feature_session"].notna()].copy()
+    source = source[
+        source["feature_session"].notna()
+        & source["listed_at_source_session"]
+        & source["listed_at_feature_session"]
+    ].copy()
     source = source.rename(columns={"source_session": "flow_through_session"})
 
     for column in FEATURE_COLUMNS_V2:
