@@ -115,7 +115,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Lane | Status | Owner / acceptance | Branch / HEAD | Scope note |
 |---|---|---|---|---|
-| Corporate Action KSEI→IDX publication linkage V1 | `REVIEW` | ChatGPT independent review pending | `data/corporate-action-pit-idx-publication-linkage-v1` / `b7ced9d` | Bounded 11-row audit: 6 exact, 4 unresolved, 1 conflict. Exact attachment-level economic anchors yield `IDX_TIMESTAMP_CONFIRMED`; ambiguity/conflict remains null. External manifest `D:\Documents\Project\idx-corporate-action-pit-idx-publication-linkage-20260814-v1\MANIFEST.json` SHA `25714d922a1bbd3410babd60e041dca64eb9e4fdbb517ec5e02928d3910eb306`. Focused 37 passed; full suite retains 1 unrelated storage failure. No market-wide acquisition, canonical table, OHLC adjustment, models, outcomes, or other lane changes. |
+| Corporate Action KSEI→IDX publication linkage V1 | `REVIEW` | ChatGPT independent review pending | `data/corporate-action-pit-idx-publication-linkage-v1` / `13c54861821998d2148d0a8df6252d6dc1a8cd64` | Bounded 11-row audit: 6 exact, 4 unresolved, 1 conflict. Exact attachment-level economic anchors yield `IDX_TIMESTAMP_CONFIRMED`; ambiguity/conflict remains null. External manifest `D:\Documents\Project\idx-corporate-action-pit-idx-publication-linkage-20260814-v1\MANIFEST.json` SHA `25714d922a1bbd3410babd60e041dca64eb9e4fdbb517ec5e02928d3910eb306`. Focused 37 passed; full suite retains 1 unrelated storage failure. No market-wide acquisition, canonical table, OHLC adjustment, models, outcomes, or other lane changes. |
 
 ## Cross-chat no-duplicate rules currently in force
 
