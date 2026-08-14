@@ -3,7 +3,7 @@
 Date: 2026-08-15 Asia/Jakarta
 Branch: `data/idx-free-float-effective-supply-v1`
 Prepared parent: `36a874da865b9d7f4e03b14f284b047e77bd8cc2`
-Final documentation HEAD: `5c0ba33`
+Final documentation HEAD: `7eaac5d`
 
 ## Scope and verdict
 
