@@ -104,6 +104,13 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 | Corporate Action PIT deterministic linkage V1 | `REVIEW` | `Codex/Corporate-Action-PIT-Deterministic-Linkage` | `data/corporate-action-pit-deterministic-linkage-v1` / final `5222af3b68bf86765c43017912e990edf02148ad` | Bounded result: 5/5 official KSEI schedule documents parsed, 5/5 schedule-locator/document identities exact, MEGA append-only revision exact via prior KSEI reference, SINI rights identity exact, MLPT/RAJA split-family precedence verified. KSEI evidence remains DATE_ONLY; MLPT IDX correction timestamp is retained separately with explicit KSEI-linkage caveat. Full pytest 64 passed / 1 pre-existing unrelated storage expectation failed. No market-wide backfill, canonical table, OHLC adjustment, models, outcomes, Foreign Flow, Financial PIT, or AKSes. |
 | Corporate Action PIT availability provenance V1 | `REVIEW` | `Codex/Corporate-Action-PIT-Availability-Provenance` | `data/corporate-action-pit-availability-provenance-v1` / HEAD `314b99a3a91e2297fa0061a52849ee3c64d60222` | Semantic remediation and bounded audit complete over 34 official KSEI PDF records. Verdict `KSEI_ASSET_TIMESTAMP_CANDIDATE_ONLY`: 16 strict filename candidates, 18 generic names, YOII +5-day counterexample, 0 exact KSEI↔IDX timing linkages. External manifest `D:\Documents\Project\idx-corporate-action-pit-availability-20260814-v1-final\MANIFEST.json` SHA `c8f8639b2d076fd91cb684925c6a0c6c13d2e3ed87a2e7a2fc0da8cad69a39f7`. No market-wide backfill, canonical table, session mapping, OHLC adjustment, models, outcomes, Foreign Flow, Financial PIT, AKSes, or O2/forward changes. |
 
+## Current status overrides (2026-08-14)
+
+| Lane | Status | Owner / acceptance | Branch / HEAD | Scope note |
+|---|---|---|---|---|
+| Corporate Action PIT availability provenance V1 | `DONE` | ChatGPT acceptance `review/idx-corporate-action-pit-availability-acceptance-v1@4f776a8f34eda012d4368287fe37699d4c8dc0dc` | `data/corporate-action-pit-availability-provenance-v1` / `50718c3f23352444630160dc54934eaa2201289d` | Accepted bounded result; availability timestamps remain unverified. |
+| Corporate Action KSEI→IDX publication linkage V1 | `ACTIVE` | `Codex/Corporate-Action-PIT-IDX-Publication-Linkage` | `data/corporate-action-pit-idx-publication-linkage-v1` | Bounded 8–15 event linkage audit only; no market-wide acquisition or modeling. |
+
 ## Cross-chat no-duplicate rules currently in force
 
 - Do not create a second generic EOD capture system until the existing frontend/backend capture path and forward archive infrastructure are inspected.
