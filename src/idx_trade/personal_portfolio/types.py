@@ -90,7 +90,7 @@ class PortfolioPosition:
         if self.broker_or_custodian is not None:
             object.__setattr__(self, "broker_or_custodian", require_safe_text(self.broker_or_custodian, "broker_or_custodian", 120))
         if self.subaccount_ref is not None and not isinstance(self.subaccount_ref, SubaccountRef):
-            raise ValueError("subaccount_ref must come from derive_subaccount_ref")
+            raise ValueError("subaccount_ref must be a server-derived keyed-HMAC reference from derive_subaccount_ref")
 
     def identity_key(self) -> tuple[Any, ...]:
         return (self.security.symbol, self.security.security_code, self.asset_class.value, self.currency, self.broker_or_custodian, self.subaccount_ref)
@@ -109,7 +109,7 @@ class CashBalance:
         if self.bank_or_custodian is not None:
             object.__setattr__(self, "bank_or_custodian", require_safe_text(self.bank_or_custodian, "bank_or_custodian", 120))
         if self.subaccount_ref is not None and not isinstance(self.subaccount_ref, SubaccountRef):
-            raise ValueError("subaccount_ref must come from derive_subaccount_ref")
+            raise ValueError("subaccount_ref must be a server-derived keyed-HMAC reference from derive_subaccount_ref")
 
     def identity_key(self) -> tuple[Any, ...]:
         return (self.currency, self.bank_or_custodian, self.subaccount_ref)
