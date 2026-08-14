@@ -157,3 +157,29 @@ versus clean V2 plus all frozen Foreign Flow V1 features, on exact common
 support. No subset rescue, provider calls, Financial PIT/Corporate Actions,
 O2/forward-counter changes, protected/fresh-forward outcome access, or
 post-result tuning is authorized.
+
+## Current status correction — 2026-08-14 — Foreign Flow alpha result
+
+The Foreign Flow feature contract V1 is now closed as `DONE` at
+`research/idx-foreign-flow-feature-contract-v1` HEAD
+`ff15f335f43db645db18769c082ea5ee8773a72e`, verdict
+`FOREIGN_FLOW_FEATURE_CONTRACT_V1_ACCEPTED`.
+
+The one-shot Foreign Flow alpha lane is complete and remains `REVIEW` for
+ChatGPT independent review:
+`research/idx-foreign-flow-alpha-v1` at HEAD
+`d9fd985de9b0b1c8909574714c8c6f460517da62`.
+Verdict: `FOREIGN_FLOW_V1_NO_SURVIVOR`. Exact common support was 292,631 rows,
+737 tickers, and 1,231 sessions. The frozen paired PR-AUC gate failed with
+median delta `-0.0026589351774433945`, Q25 delta
+`-0.0030184760134138455`, and 2/6 positive paired PR folds.
+
+External result root:
+`D:\Documents\Project\idx-trade-foreign-flow-alpha-v1-20260814-001`.
+Result manifest SHA-256:
+`b13424ef614b60bcd5745974663cbc9b93ff7b80f1f15757e4fe052e2953c777`.
+Focused tests passed `4`; full pytest was `52 passed, 1 failed` due to the
+known unrelated storage revision-conflict expectation mismatch. No provider,
+protected/fresh-forward outcome, O2/forward-counter, rescue, or model-line
+integration work occurred. Do not launch a rescue experiment from this lane
+without a new frozen specification and authorization.
