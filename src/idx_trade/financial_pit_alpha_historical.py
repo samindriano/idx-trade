@@ -572,7 +572,9 @@ def main() -> int:
         result = freeze_financial_era_contract(census_dir=args.census_dir, output_dir=args.output_dir)
         print(json.dumps({"status": result["contract"]["status"], "eligible_folds": result["contract"]["eligible_folds"], "contract_sha256": result["contract_sha256"], "manifest_sha256": result["manifest_sha256"]}, indent=2, sort_keys=True))
         return 0
-    result = run_financial_era_experiment(**vars(args))
+    run_args = vars(args).copy()
+    run_args.pop("command", None)
+    result = run_financial_era_experiment(**run_args)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
