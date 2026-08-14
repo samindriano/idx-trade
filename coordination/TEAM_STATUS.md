@@ -294,7 +294,7 @@ models, or unrelated data lane work is authorized.
 The bounded Free Float / Effective Supply source audit is complete and remains
 `REVIEW` for ChatGPT independent review. Branch
 `data/idx-free-float-effective-supply-v1` is synchronized at HEAD
-`5c8f522`. Official IDX Company Profile Detail succeeded for the bounded
+`69cdd30`. Official IDX Company Profile Detail succeeded for the bounded
 DCII/BBCA/BAIK/WBSA/RLCO sample and exposed current named-holder/controller
 rows, but no explicit reported-free-float field. Official KSEI
 `BalanceposEfek` ZIPs for 2026-02-27, 2026-05-29, and 2026-07-31 were
