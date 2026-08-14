@@ -133,7 +133,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Lane | Status | Owner / review | Branch / base | Scope note |
 |---|---|---|---|---|
-| Corporate Action IDX publication linkage remediation R2 | `ACTIVE` | `Codex/Corporate-Action-PIT-IDX-Publication-Linkage-R2`; independent review `981e1586038d91392ac0397b12391a1cd37f010f` | `data/corporate-action-pit-idx-publication-linkage-remediation-r2-v1` / scientific parent `dc34287de2e46531eb837d3d9f18623d64d158e0` | Offline-only same-11-row rights-identity provenance correction. Reuse immutable KSEI/IDX/R1 roots; no provider calls, new cases, thresholds, market-wide acquisition, canonical table, OHLC adjustment, models, or outcomes. |
+| Corporate Action IDX publication linkage remediation R2 | `REVIEW` | ChatGPT independent review pending; review source `981e1586038d91392ac0397b12391a1cd37f010f` | `data/corporate-action-pit-idx-publication-linkage-remediation-r2-v1` / `92003f0` | Offline same-11 rerate: `4 EXACT`, `0 AMBIGUOUS`, `3 CONFLICT`, `4 UNRESOLVED`; SINI/YOII rights-ISIN presence conflicts preserved fail-closed; verdict `IDX_PUBLICATION_LINKAGE_BOUNDED_GO`. Final manifest `D:\Documents\Project\idx-corporate-action-pit-idx-publication-linkage-remediation-r2-20260815-v1\MANIFEST.json` SHA `ce82b342af066fcea8cdf6b1679be57be29f1788305412ef018e6c21c0d465c7`. Focused 44 passed; full suite 83 passed/1 unrelated storage assertion failure. No provider calls, new cases, market-wide acquisition, canonical table, OHLC adjustment, models, or outcomes. |
 
 ## Cross-chat no-duplicate rules currently in force
 
