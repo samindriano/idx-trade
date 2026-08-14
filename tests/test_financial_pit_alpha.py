@@ -7,7 +7,9 @@ import pandas as pd
 import pytest
 
 from idx_trade.financial_pit_alpha import (
+    CANDIDATE_FEATURE_COLUMNS,
     FINANCIAL_FEATURE_IDS,
+    FINANCIAL_SLOT_COLUMNS,
     FinancialAlphaContractError,
     freeze_comparison_support,
     load_v2_common_support,
@@ -41,8 +43,8 @@ def _financial_rows(*, available: tuple[str, str] | None = None, conflict: bool 
                         "representation_format": "XLSX",
                         "reporting_version_id": f"AAA-2024-{period_key}-{idx}",
                         "reporting_attachment_sha256": f"sha-{feature_id}-{period_key}-{idx}",
-                        "reporting_publication_at_utc": "2025-01-01T15:00:00Z",
-                        "reporting_knowledge_at_utc": "2025-01-01T15:00:00Z",
+                        "reporting_publication_at_utc": "2025-01-01T10:00:00Z",
+                        "reporting_knowledge_at_utc": "2025-01-01T10:00:00Z",
                         "reporting_period_start": "2024-01-01",
                         "reporting_period_end": "2024-12-31",
                         "reporting_instant_date": "",
@@ -89,7 +91,7 @@ def _write_inputs(tmp_path: Path, financial: pd.DataFrame, *, outcome: bool = Fa
 
 def test_cutoff_is_explicit_utc_timestamp_not_date_join() -> None:
     result = session_decision_cutoff_utc(pd.Series([pd.Timestamp("2025-01-01")]))
-    assert result.iloc[0].isoformat() == "2025-01-01T16:59:59.999999999+00:00"
+    assert result.iloc[0].isoformat() == "2025-01-01T11:00:00+00:00"
 
 
 def test_support_census_uses_latest_eligible_state_and_preserves_strata(tmp_path: Path) -> None:
@@ -118,6 +120,8 @@ def test_support_census_uses_latest_eligible_state_and_preserves_strata(tmp_path
     ].iloc[0]
     assert provenance.period_stratum == "Q1"
     assert provenance.reporting_attachment_sha256
+    slot_matrix = pd.read_parquet(output / "selected_slot_matrix.parquet")
+    assert not slot_matrix.duplicated(["row_id", "feature_id", "period_stratum"]).any()
 
 
 def test_same_timestamp_conflict_fails_closed_without_falling_back(tmp_path: Path) -> None:
@@ -200,7 +204,7 @@ def test_asof_join_uses_knowledge_timestamp_not_panel_asof_timestamp(tmp_path: P
     financial = _financial_rows(available=(FINANCIAL_FEATURE_IDS[0], "Q1"))
     mask = (financial["feature_id"] == FINANCIAL_FEATURE_IDS[0]) & financial["period_stratification_key"].eq("Q1")
     financial.loc[mask, "as_of_timestamp_utc"] = "2025-01-01T17:00:00Z"
-    financial.loc[mask, "reporting_knowledge_at_utc"] = "2025-01-01T15:00:00Z"
+    financial.loc[mask, "reporting_knowledge_at_utc"] = "2025-01-01T10:00:00Z"
     v2_path, financial_path = _write_inputs(tmp_path, financial)
     output = tmp_path / "out"
 
@@ -213,3 +217,11 @@ def test_asof_join_uses_knowledge_timestamp_not_panel_asof_timestamp(tmp_path: P
     )
 
     assert summary["financial_any_feature_rows"] == 1
+
+
+def test_candidate_matrix_has_exact_25_52_77_raw_feature_slots() -> None:
+    assert len(CANDIDATE_FEATURE_COLUMNS["CONTROL"]) == 25
+    assert len(FINANCIAL_SLOT_COLUMNS) == 52
+    assert len(CANDIDATE_FEATURE_COLUMNS["FINANCIAL_ONLY"]) == 52
+    assert len(CANDIDATE_FEATURE_COLUMNS["V2_PLUS_FINANCIAL"]) == 77
+    assert len(set(FINANCIAL_SLOT_COLUMNS)) == 52

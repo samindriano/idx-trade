@@ -18,6 +18,17 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
+from idx_trade.open_alpha_prereg import (
+    CONTROL_FEATURE_COLUMNS,
+    CONTROL_HGB_PARAMETERS,
+    CONTROL_MODEL,
+    CONTROL_PREPROCESSING,
+    FROZEN_V2_FOLDS,
+    SURVIVOR_GATE_RULE,
+    WINNER_SELECTION_RULE,
+    feature_order_sha256,
+)
+
 
 FINANCIAL_FEATURE_PANEL_SHA256 = (
     "1d60ee69070546d21040af8c61f2170c5cca2254f131626a19bf4c1d59f3f023"
@@ -25,8 +36,8 @@ FINANCIAL_FEATURE_PANEL_SHA256 = (
 V2_COMMON_SUPPORT_SHA256 = (
     "6590686c6790b81abf204b2fc4228e2bb8b3039a7d18c573ec116aee7c117ab6"
 )
-CONTRACT_VERSION = "FINANCIAL_PIT_ALPHA_V1_ASOF_JOIN_V1"
-DECISION_CUTOFF_CONTRACT = "SESSION_DATE_END_ASIA_JAKARTA_UTC_EXACT"
+CONTRACT_VERSION = "FINANCIAL_PIT_ALPHA_V1_ASOF_JOIN_V2"
+DECISION_CUTOFF_CONTRACT = "SESSION_DATE_18_00_ASIA_JAKARTA_UTC_EXACT"
 ALLOWED_SCOPE = "CONSOLIDATED"
 ALLOWED_INDUSTRY = "GENERAL"
 PERIOD_KEYS = ("Q1", "H1", "9M", "FY")
@@ -45,6 +56,21 @@ FINANCIAL_FEATURE_IDS = (
     "yoy_revenue",
     "yoy_net_income",
     "yoy_total_assets",
+)
+
+FINANCIAL_SLOT_COLUMNS = tuple(
+    f"financial__{feature_id}__{period_key}"
+    for feature_id in FINANCIAL_FEATURE_IDS
+    for period_key in PERIOD_KEYS
+)
+CANDIDATE_FEATURE_COLUMNS = {
+    "CONTROL": tuple(CONTROL_FEATURE_COLUMNS),
+    "FINANCIAL_ONLY": FINANCIAL_SLOT_COLUMNS,
+    "V2_PLUS_FINANCIAL": tuple(CONTROL_FEATURE_COLUMNS) + FINANCIAL_SLOT_COLUMNS,
+}
+MISSING_HANDLING_CONTRACT = (
+    "fold-local median SimpleImputer with missing indicators and "
+    "keep_empty_features=True; no global/full-sample statistics"
 )
 
 V2_IDENTITY_COLUMNS = ("ticker", "date", "signal_session_index")
@@ -133,11 +159,11 @@ def session_decision_cutoff_utc(session_dates: pd.Series) -> pd.Series:
 
     The clean V2 artifact exposes a normalized session date, while the frozen
     V2 contract says the signal is produced after that session's close.  The
-    contract therefore uses the exact final nanosecond of that Asia/Jakarta
-    civil date, converted to UTC.  This is an explicit timestamp rule, not a
-    calendar-date join, and is intentionally persisted in every diagnostic
-    row.  A future experiment requiring an earlier intraday cutoff must use a
-    separately frozen contract.
+    contract therefore uses exactly 18:00:00 Asia/Jakarta on that civil date,
+    converted to UTC. This is an explicit timestamp rule, not a calendar-date
+    join, and is intentionally persisted in every diagnostic row. A future
+    experiment requiring a different operational cutoff must use a separately
+    frozen contract.
     """
 
     values = pd.to_datetime(session_dates, errors="raise")
@@ -150,7 +176,7 @@ def session_decision_cutoff_utc(session_dates: pd.Series) -> pd.Series:
     normalized = local.dt.normalize()
     if not (local == normalized).all():
         raise FinancialAlphaContractError("V2 session dates must be normalized session dates")
-    cutoff = normalized + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+    cutoff = normalized + pd.Timedelta(hours=18)
     return cutoff.dt.tz_convert("UTC")
 
 
@@ -528,18 +554,6 @@ def run_support_census(
             output / "selected_feature_states.parquet", index=False
         )
 
-    coverage = (
-        diagnostics.assign(calendar_year=pd.to_datetime(diagnostics["date"]).dt.year)
-        .groupby("calendar_year", as_index=False)
-        .agg(
-            rows=("row_id", "size"),
-            rows_any_state=("financial_any_state_available", "sum"),
-            rows_any_feature=("financial_any_feature_available", "sum"),
-            issuers=("ticker", "nunique"),
-        )
-    )
-    coverage.to_csv(output / "coverage_by_year.csv", index=False)
-
     selected_states = (
         pd.concat(selected_chunks, ignore_index=True)
         if selected_chunks
@@ -554,8 +568,135 @@ def run_support_census(
             ]
         )
     )
+
+    # The long state audit retains every eligible fiscal-year state. The model
+    # contract, however, has exactly one raw slot per row and feature/period
+    # stratum. Select the latest eligible knowledge state, using the newest
+    # fiscal year only as a deterministic tie-break when knowledge timestamps
+    # are identical. Same-fiscal-year conflicts are already marked ambiguous.
+    if selected_states.empty:
+        slot_matrix = selected_states.copy()
+    else:
+        ordered = selected_states.copy()
+        ordered["_knowledge_sort"] = pd.to_datetime(
+            ordered["reporting_knowledge_at_utc"], utc=True
+        )
+        ordered["_asof_sort"] = pd.to_datetime(ordered["as_of_timestamp_utc"], utc=True)
+        ordered["_fiscal_year_sort"] = pd.to_numeric(
+            ordered["fiscal_year"], errors="coerce"
+        ).fillna(-1)
+        ordered["_version_sort"] = ordered["reporting_version_id"].fillna("").astype(str)
+        slot_matrix = (
+            ordered.sort_values(
+                [
+                    "row_id",
+                    "feature_id",
+                    "period_stratum",
+                    "_knowledge_sort",
+                    "_fiscal_year_sort",
+                    "_asof_sort",
+                    "_version_sort",
+                ],
+                ascending=[True, True, True, False, False, False, True],
+                kind="mergesort",
+            )
+            .drop_duplicates(["row_id", "feature_id", "period_stratum"], keep="first")
+            .drop(columns=["_knowledge_sort", "_asof_sort", "_fiscal_year_sort", "_version_sort"])
+            .sort_values(["row_id", "feature_id", "period_stratum"], kind="mergesort")
+            .reset_index(drop=True)
+        )
+    slot_matrix.to_parquet(output / "selected_slot_matrix.parquet", index=False)
+
+    any_state = np.zeros(row_count, dtype=bool)
+    any_available = np.zeros(row_count, dtype=bool)
+    available_slot_count = np.zeros(row_count, dtype=np.int16)
+    ambiguous_join = np.zeros(row_count, dtype=bool)
+    feature_available = {
+        feature: np.zeros(row_count, dtype=bool) for feature in FINANCIAL_FEATURE_IDS
+    }
+    latest_knowledge = pd.Series(
+        pd.NaT, index=np.arange(row_count), dtype="datetime64[ns, UTC]"
+    )
+    if not slot_matrix.empty:
+        slot_rows = slot_matrix["row_id"].to_numpy(dtype=np.int64)
+        any_state[slot_rows] = True
+        slot_available = slot_matrix["availability_status"].eq("AVAILABLE").to_numpy()
+        slot_ambiguous = slot_matrix["availability_status"].eq("AMBIGUOUS_SAME_TIME").to_numpy()
+        any_available[slot_rows[slot_available]] = True
+        ambiguous_join[slot_rows[slot_ambiguous]] = True
+        for row_id, count in slot_matrix.loc[slot_available].groupby("row_id").size().items():
+            available_slot_count[int(row_id)] = int(count)
+        for feature_id, group in slot_matrix.groupby("feature_id", sort=False):
+            feature_rows_available = group.loc[
+                group["availability_status"].eq("AVAILABLE"), "row_id"
+            ].to_numpy(dtype=np.int64)
+            feature_available[feature_id][feature_rows_available] = True
+        latest_by_row = slot_matrix.groupby("row_id", sort=False)[
+            "reporting_knowledge_at_utc"
+        ].max()
+        latest_by_row = pd.to_datetime(latest_by_row, utc=True)
+        latest_knowledge.loc[latest_by_row.index] = latest_by_row
+
+    diagnostics["financial_any_state_available"] = any_state
+    diagnostics["financial_any_feature_available"] = any_available
+    diagnostics["financial_available_slot_count"] = available_slot_count
+    diagnostics["financial_available_feature_count"] = (
+        pd.DataFrame(feature_available).sum(axis=1).astype("int16")
+    )
+    diagnostics["financial_ambiguous_join"] = ambiguous_join
+    diagnostics["financial_latest_knowledge_at_utc"] = latest_knowledge
+    cutoff = pd.to_datetime(diagnostics["decision_timestamp_utc"], utc=True)
+    diagnostics["financial_latest_filing_age_days"] = (
+        (cutoff - latest_knowledge).dt.total_seconds() / 86400.0
+    ).round(9)
+    diagnostics.to_parquet(output / "join_diagnostics.parquet", index=False)
+
+    matrix_feature_rows = []
+    for feature_id in FINANCIAL_FEATURE_IDS:
+        for period_key in PERIOD_KEYS:
+            group = slot_matrix[
+                slot_matrix["feature_id"].eq(feature_id)
+                & slot_matrix["period_stratum"].eq(period_key)
+            ]
+            statuses = group["availability_status"] if not group.empty else pd.Series(dtype="object")
+            matrix_feature_rows.append(
+                {
+                    "feature_id": feature_id,
+                    "period_stratum": period_key,
+                    "rows_with_state": int(group["row_id"].nunique()),
+                    "rows_available": int(statuses.eq("AVAILABLE").sum()),
+                    "selected_state_rows": int(len(group)),
+                    "rows_missing_or_unresolved": int(
+                        statuses.isin(
+                            [
+                                "MISSING_INPUT",
+                                "UNRESOLVED_INPUT",
+                                "DENOMINATOR_NONPOSITIVE",
+                                "UNIT_MISMATCH",
+                            ]
+                        ).sum()
+                    ),
+                    "rows_ambiguous_same_time": int(
+                        statuses.eq("AMBIGUOUS_SAME_TIME").sum()
+                    ),
+                }
+            )
+    pd.DataFrame(matrix_feature_rows).to_csv(output / "feature_support.csv", index=False)
+
+    coverage = (
+        diagnostics.assign(calendar_year=pd.to_datetime(diagnostics["date"]).dt.year)
+        .groupby("calendar_year", as_index=False)
+        .agg(
+            rows=("row_id", "size"),
+            rows_any_state=("financial_any_state_available", "sum"),
+            rows_any_feature=("financial_any_feature_available", "sum"),
+            issuers=("ticker", "nunique"),
+        )
+    )
+    coverage.to_csv(output / "coverage_by_year.csv", index=False)
+
     period_coverage = (
-        selected_states.groupby("period_stratum", as_index=False)
+        slot_matrix.groupby("period_stratum", as_index=False)
         .agg(
             selected_state_rows=("row_id", "size"),
             v2_rows=("row_id", "nunique"),
@@ -606,7 +747,8 @@ def run_support_census(
         ),
         "financial_state_any_rows": int(diagnostics["financial_any_state_available"].sum()),
         "financial_any_feature_rows": int(diagnostics["financial_any_feature_available"].sum()),
-        "selected_state_rows": int(len(selected_states)),
+        "eligible_long_state_rows": int(len(selected_states)),
+        "selected_state_rows": int(len(slot_matrix)),
         "period_strata": {
             str(row.period_stratum): {
                 "selected_state_rows": int(row.selected_state_rows),
@@ -679,6 +821,7 @@ def run_support_census(
     for name in (
         "join_diagnostics.parquet",
         "selected_feature_states.parquet",
+        "selected_slot_matrix.parquet",
         "feature_support.csv",
         "coverage_by_year.csv",
         "coverage_by_period.csv",
@@ -690,6 +833,187 @@ def run_support_census(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return summary
+
+
+def freeze_model_matrix_contract(output_dir: str | Path) -> dict[str, Any]:
+    """Persist the exact 25/52/77 feature-order and run contracts.
+
+    This is a definition-only artifact. It does not load labels, instantiate a
+    model, or fit/score any candidate.
+    """
+
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {
+        "contract_version": CONTRACT_VERSION,
+        "decision_cutoff_contract": DECISION_CUTOFF_CONTRACT,
+        "session_role": (
+            "Financial information observed by 18:00 Asia/Jakarta on session t "
+            "is used for a ranking produced at that cutoff and first actionable "
+            "from the next official session."
+        ),
+        "financial_raw_slot_contract": {
+            "count": len(FINANCIAL_SLOT_COLUMNS),
+            "order": list(FINANCIAL_SLOT_COLUMNS),
+            "feature_order": list(FINANCIAL_FEATURE_IDS),
+            "period_order": list(PERIOD_KEYS),
+            "fiscal_year_diagnostic_only": True,
+        },
+        "candidates": {
+            name: {
+                "feature_count": len(columns),
+                "feature_order": list(columns),
+                "feature_order_sha256": feature_order_sha256(columns),
+            }
+            for name, columns in CANDIDATE_FEATURE_COLUMNS.items()
+        },
+        "preprocessing": {
+            "family": CONTROL_PREPROCESSING,
+            "missing_handling": MISSING_HANDLING_CONTRACT,
+            "fit_scope": "training_fold_only",
+        },
+        "control_model": {
+            "identity": CONTROL_MODEL,
+            "hyperparameters": CONTROL_HGB_PARAMETERS,
+        },
+        "folds": [fold.__dict__ for fold in FROZEN_V2_FOLDS],
+        "survivor_rule": SURVIVOR_GATE_RULE,
+        "winner_selection_rule": WINNER_SELECTION_RULE,
+        "metrics_computed": False,
+        "model_fit": False,
+        "outcomes_accessed": False,
+    }
+    path = output / "financial_model_matrix_contract.json"
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "candidate_feature_order_sha256": {
+            name: item["feature_order_sha256"]
+            for name, item in payload["candidates"].items()
+        },
+        "financial_slot_count": len(FINANCIAL_SLOT_COLUMNS),
+    }
+
+
+def run_inherited_fold_support_census(
+    census_dir: str | Path,
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    """Audit V2F1..V2F6 support without opening labels or outcomes."""
+
+    census = Path(census_dir)
+    diagnostics = pd.read_parquet(census / "join_diagnostics.parquet")
+    slot_matrix = pd.read_parquet(census / "selected_slot_matrix.parquet")
+    _require_columns(
+        diagnostics.columns,
+        [*V2_IDENTITY_COLUMNS, "row_id", "financial_any_feature_available"],
+        "join diagnostics",
+    )
+    _require_columns(
+        slot_matrix.columns,
+        ["row_id", "feature_id", "period_stratum", "availability_status"],
+        "selected slot matrix",
+    )
+    slot_lookup = {
+        (feature_id, period_key): f"financial__{feature_id}__{period_key}"
+        for feature_id in FINANCIAL_FEATURE_IDS
+        for period_key in PERIOD_KEYS
+    }
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    folds: dict[str, Any] = {}
+    for fold in FROZEN_V2_FOLDS:
+        blocks = {
+            "train": (fold.train_start, fold.train_end),
+            "purge": (fold.purge_start, fold.purge_end),
+            "validation": (fold.validation_start, fold.validation_end),
+        }
+        fold_result: dict[str, Any] = {}
+        for block_name, (start, end) in blocks.items():
+            rows = diagnostics[
+                diagnostics["signal_session_index"].between(start, end, inclusive="both")
+            ]
+            row_ids = set(rows["row_id"].astype(int))
+            matrix_block = slot_matrix[slot_matrix["row_id"].isin(row_ids)]
+            availability_by_slot = {
+                slot_name: 0 for slot_name in slot_lookup.values()
+            }
+            observed_by_slot = {slot_name: 0 for slot_name in slot_lookup.values()}
+            for (feature_id, period_key), group in matrix_block.groupby(
+                ["feature_id", "period_stratum"], sort=False
+            ):
+                slot_name = slot_lookup[(feature_id, period_key)]
+                observed_by_slot[slot_name] = int(group["row_id"].nunique())
+                availability_by_slot[slot_name] = int(
+                    group["availability_status"].eq("AVAILABLE").sum()
+                )
+            empty_slots = [
+                slot for slot, observed in observed_by_slot.items() if observed == 0
+            ]
+            all_missing_slots = [
+                slot
+                for slot, available in availability_by_slot.items()
+                if available == 0 and slot not in empty_slots
+            ]
+            available_slot_values = int(sum(availability_by_slot.values()))
+            possible_slot_values = int(len(rows) * len(FINANCIAL_SLOT_COLUMNS))
+            feature_available_rows = rows["financial_any_feature_available"].astype(bool)
+            fold_result[block_name] = {
+                "session_index_start": start,
+                "session_index_end": end,
+                "v2_rows": int(len(rows)),
+                "v2_tickers": int(rows["ticker"].nunique()),
+                "financial_available_rows": int(feature_available_rows.sum()),
+                "financial_available_tickers": int(
+                    rows.loc[feature_available_rows, "ticker"].nunique()
+                ),
+                "financial_available_slot_values": available_slot_values,
+                "financial_possible_slot_values": possible_slot_values,
+                "financial_slot_availability_rate": (
+                    float(available_slot_values / possible_slot_values)
+                    if possible_slot_values
+                    else None
+                ),
+                "empty_slot_count": len(empty_slots),
+                "empty_slots": empty_slots,
+                "all_missing_slot_count": len(all_missing_slots),
+                "all_missing_slots": all_missing_slots,
+                "availability_by_slot": availability_by_slot,
+                "observed_state_by_slot": observed_by_slot,
+            }
+        folds[fold.name] = fold_result
+
+    result = {
+        "contract_version": CONTRACT_VERSION,
+        "decision_cutoff_contract": DECISION_CUTOFF_CONTRACT,
+        "financial_slot_count": len(FINANCIAL_SLOT_COLUMNS),
+        "folds": folds,
+        "labels_loaded": False,
+        "outcomes_accessed": False,
+        "scores_computed": False,
+        "metrics_computed": False,
+    }
+    path = output / "inherited_fold_support_census.json"
+    path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = {
+        "files": {path.name: sha256_file(path)},
+        "source_files": {
+            "join_diagnostics": sha256_file(census / "join_diagnostics.parquet"),
+            "selected_slot_matrix": sha256_file(census / "selected_slot_matrix.parquet"),
+        },
+        "labels_loaded": False,
+        "outcomes_accessed": False,
+    }
+    manifest_path = output / "inherited_fold_support_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "path": str(path),
+        "sha256": sha256_file(path),
+        "manifest_path": str(manifest_path),
+        "manifest_sha256": sha256_file(manifest_path),
+        "folds": folds,
+    }
 
 
 def freeze_comparison_support(

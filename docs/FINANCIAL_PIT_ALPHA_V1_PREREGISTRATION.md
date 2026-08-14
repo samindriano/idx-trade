@@ -1,6 +1,6 @@
 # Financial PIT Alpha V1 preregistration
 
-Status: `OUTCOME_BLIND_SUPPORT_CENSUS_COMPLETE_REVIEW_REQUIRED`
+Status: `OUTCOME_BLIND_SUPPORT_CENSUS_18_00_REMEDIATION_COMPLETE_REVIEW_REQUIRED`
 
 This document freezes the data join and comparison design before any model fit
 or performance metric is opened. It is not an authorization to train or score.
@@ -19,11 +19,11 @@ or performance metric is opened. It is not an authorization to train or score.
 ## Frozen as-of join contract
 
 The clean V2 support stores a normalized session date rather than an intraday
-decision timestamp. The frozen deterministic cutoff is:
+decision timestamp. The remediated deterministic cutoff is:
 
-`SESSION_DATE_END_ASIA_JAKARTA_UTC_EXACT`
+`SESSION_DATE_18_00_ASIA_JAKARTA_UTC_EXACT`
 
-That is the final nanosecond of the Asia/Jakarta civil session date, converted
+That is exactly `18:00:00 Asia/Jakarta` on the civil session date, converted
 to UTC. A Financial state is eligible only when its
 `reporting_knowledge_at_utc <= decision_timestamp_utc`. The panel's
 `as_of_timestamp_utc` is retained as provenance but is not used as a substitute
@@ -38,7 +38,14 @@ knowledge timestamp onward.
 
 This contract is intentionally limited by the date-only V2 parent: a future
 experiment requiring an earlier intraday cutoff needs a separate frozen
-timestamp contract.
+timestamp contract. Session-t Financial information is intended for a ranking
+produced at the 18:00 EOD cutoff and first actionable from the next official
+session.
+
+The exact raw Financial matrix is 52 slots: each of the 13 accepted features
+crossed with `Q1`, `H1`, `9M`, and `FY`. The slot order and candidate hashes are
+frozen in the remediation census contract. Fiscal year, knowledge timestamp,
+filing age, and provenance remain diagnostics; they are not model columns.
 
 ## Feature and period rules
 
@@ -73,7 +80,11 @@ semantics of clean V2. The preregistered comparison is:
 2. Financial-only, only if review confirms it is scientifically meaningful;
 3. clean V2 plus the frozen Financial PIT family.
 
-Missing-value handling must be frozen before metrics. No post-result tuning,
+Missing-value handling is frozen as the clean V2 family: fold-local median
+`SimpleImputer` with missing indicators and `keep_empty_features=True`, fitted
+on training rows only. No global/full-sample statistics, zero-fill, synthetic
+values, period pooling, annualization, TTM, interpolation, or carry-forward
+across unresolved states is allowed. No post-result tuning,
 feature additions, rescue candidate, or cross-lane combination is permitted.
 Foreign Flow, Corporate Actions, intraday, sector, Path Risk, V3-B, and O2
 are outside this experiment.
