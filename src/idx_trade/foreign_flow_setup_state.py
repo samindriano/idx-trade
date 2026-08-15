@@ -120,6 +120,15 @@ REQUIRED_FIELDS = (
     "foreign_flow_price_divergence_20",
 )
 
+FORBIDDEN_KEY_TOKENS = (
+    "binary_target",
+    "label_status",
+    "outcome",
+    "tp_first",
+    "sl_first",
+    "realized",
+)
+
 
 @dataclass(frozen=True)
 class ForeignFlowSetupState:
@@ -132,6 +141,16 @@ class ForeignFlowSetupState:
     acceleration_direction: FlowDirection
     setup_label: SetupLabel
     missing_fields: tuple[str, ...] = ()
+
+
+def _assert_outcome_blind(row: Mapping[str, object]) -> None:
+    forbidden = sorted(
+        str(key)
+        for key in row
+        if any(token in str(key).lower() for token in FORBIDDEN_KEY_TOKENS)
+    )
+    if forbidden:
+        raise ValueError(f"setup-state input must be outcome-blind: {forbidden}")
 
 
 def _finite_value(row: Mapping[str, object], field: str) -> float | None:
@@ -255,10 +274,13 @@ def classify_foreign_flow_setup(
 ) -> ForeignFlowSetupState:
     """Classify one accepted V2 representation row into descriptive states.
 
-    Missing required inputs fail closed to INDETERMINATE. The function performs
-    no fitting, target access, forward fill, or retrospective optimization.
+    Missing required inputs fail closed to INDETERMINATE. Inputs carrying
+    outcome/label keys are rejected even though this classifier would not use
+    those columns. The function performs no fitting, forward fill, or
+    retrospective optimization.
     """
 
+    _assert_outcome_blind(row)
     values = {field: _finite_value(row, field) for field in REQUIRED_FIELDS}
     missing = tuple(field for field, value in values.items() if value is None)
     if missing:
