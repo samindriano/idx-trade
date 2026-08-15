@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-14 23:38 Asia/Jakarta
+Last coordinated update: 2026-08-15 11:38 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -328,3 +328,25 @@ SHA-256 `23275d2a673ac99dc0928a5a6c0956a0059c82c80a13eea83b4e5db4c4252852`.
 Common support was 292,631 rows / 737 tickers / 1,231 sessions; median paired
 PR-AUC delta was -0.004294 with 1/6 positive folds. Focused tests passed 4/4;
 full pytest remains 67 passed / 1 pre-existing storage expectation failure.
+
+## Current status correction — 2026-08-15 — Foreign Flow Setup State V1
+
+Foreign Flow Setup State V1 is `REVIEW` by `ChatGPT/Foreign-Flow-Setup-State`
+on branch `research/idx-foreign-flow-setup-state-v1` at HEAD
+`42c30e30da7f4507393d025d42cf021773fc7a39`. This is an outcome-blind,
+prospective-only descriptive state layer built on the accepted Foreign Flow V2
+representation. It explicitly keeps current participation separate from
+own-history abnormality magnitude/percentile, preserves raw shock evidence,
+persistence, cross-sectional pressure, acceleration, and flow-price divergence,
+and emits deterministic setup labels such as
+`HIGH_PARTICIPATION_ROUTINE_FLOW` and `STEALTH_ACCUMULATION_CANDIDATE`.
+The sidecar emits no probability, expected return, trade recommendation, or
+fitted score. Outcome/label columns, invalid ranks, duplicate session keys, and
+missing required inputs fail closed. Focused isolated semantic validation is
+12/12 passed. Full repo pytest and `git diff --check` on a real checkout remain
+pending. No provider calls, historical alpha/performance evaluation, protected
+outcomes, model fitting, free-float/effective-supply inference, O2 changes, or
+new forward counter occurred. Next action is exact branch validation and then
+inspection/reuse of the existing accepted Foreign Flow prospective sidecar
+infrastructure before any runtime wiring; post-V2 price-state/confirmation
+research remains separate and prospective-only.
