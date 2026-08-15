@@ -842,13 +842,17 @@ independent review.
 
 ## Current status correction — 2026-08-16 — Statutory Free-Float Knowledge-State V1 remediation
 
-Statutory Free-Float Knowledge-State V1 remediation is now `ACTIVE` by
+Statutory Free-Float Knowledge-State V1 remediation is now `REVIEW` by
 `Codex/Statutory-Free-Float-State-Contract-Remediation` on branch
 `data/idx-statutory-free-float-state-contract-v1-remediation`, based on
 `data/idx-statutory-free-float-state-contract-v1@8e0892f6261b4553965949150df95d689ead1376`.
 This is a contract-correctness-only remediation: remove chronology asymmetry
 between LBRE and market evidence, stop exposing a silently LBRE-preferred
-percentage, and add adversarial tests. No source/network work, historical
+percentage, and add adversarial tests. Final branch HEAD is `506f734`.
+Focused tests pass (`18 passed`); full suite is `86 passed, 1 failed` out of 87
+collected because of the unrelated storage revision-conflict expectation. No
+source/network work, historical
 panel materialization, parser/monthly-history/reconciliation changes,
 effective supply, Foreign Flow, HSC, models, outcomes, or O2 changes are
-authorized.
+authorized. Ready for independent review; historical panel materialization
+remains unauthorized.
