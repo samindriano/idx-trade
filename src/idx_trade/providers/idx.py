@@ -39,7 +39,7 @@ def _inclusive_listed_to_from_delisting_effective_date(values: pd.Series) -> pd.
     """
 
     effective = pd.to_datetime(values, errors="coerce").dt.normalize()
-    return effective - pd.Timedelta(days=1)
+    return effective - pd.Timedelta(1, unit="D")
 
 
 def fetch_active_listings(
