@@ -443,3 +443,23 @@ smoke artifact is claimed. This calendar-identity contract needs independent
 review before retry. Canonical 2026-08-10/11/12 bytes, operator calendar/O2
 counter, outcomes, HSC/free-float, price-state, model, scheduler, and unrelated
 storage were not modified.
+
+## Current status correction — 2026-08-15 — HSC full-history ledger result
+
+HSC full-history ledger V1 is now `REVIEW` by `Codex/HSC-Full-History-Ledger`
+on branch `data/idx-hsc-full-history-ledger-v1` at final HEAD
+`b86e3f4906edcc57f8d5f579906321e44d12be06`. Verdict:
+`HSC_FULL_HISTORY_LEDGER_READY_FOR_OWNERSHIP_CONCENTRATION_CONTRACT` for the
+bounded 2026-08-15 cutoff.
+
+The ledger contains 59 official events: 56 originals, 2 corrections, and 1
+explicit LUCY removal. Strict replay passed all checkpoints: 9, 10, 11, 12,
+13, 15, 14, 51, and final bounded current state 55 active tickers. The final
+state is the July 51 plus AGAR, ALKA, BKDP, and BAJA. External artifact root:
+`D:\Documents\Project\idx-hsc-full-history-ledger-20260815-v1`; manifest
+SHA-256 `230fec0544fb7464e63008ee080fda0c8082049626529f0a565376601416b55d`.
+
+Focused HSC tests: 16 passed. Full pytest: 105 passed / 1 unrelated existing
+storage expectation failure. `git diff --check` passed. No free-float,
+effective-supply, HHI, feature, Foreign Flow, model, or outcome work occurred.
+Stop for ChatGPT review before ownership-concentration contract work.
