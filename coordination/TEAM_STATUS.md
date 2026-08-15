@@ -431,15 +431,15 @@ integration, models, outcomes, or unrelated lane changes are authorized.
 
 ## Current status correction — 2026-08-15 — Foreign Flow Forward Context Bridge V1
 
-Foreign Flow Forward Context Bridge V1 is claimed as `ACTIVE` by Codex on
-branch `data/foreign-flow-forward-context-bridge-v1` at starting HEAD
-`56b5b3c8041b87020f8cbfc25296eff3aeeacc4a`. Scope is bounded local runtime
-execution of the already-reviewed bridge planner/capture/producer: sync an
-immutable bridge calendar, capture only planner-authorized `NEED_BRIDGE_CAPTURE`
-dates through 2026-08-10, and produce one outcome-blind next-session Foreign
-Flow Representation V2 + Setup State smoke artifact if the planner reaches
-`CONTEXT_BRIDGE_READY`. No bridge fallback is allowed after 2026-08-10;
-`NEED_CANONICAL_EOD` dates must use the existing canonical EOD runtime.
-Canonical 2026-08-10/11/12 bytes remain immutable. No O2, HSC/free-float,
-price-state, model, outcome, counter, scheduler, or unrelated storage changes
-are authorized.
+Foreign Flow Forward Context Bridge V1 is now `REVIEW` by Codex on branch
+`data/foreign-flow-forward-context-bridge-v1` at final HEAD
+`1c4fb1a7044b797ecf4ffcb93cc36a9dc6b18700`. The immutable bridge calendar
+and six authorized bridge-only context sessions are ready; the planner
+reaches `CONTEXT_BRIDGE_READY`. The single prospective smoke attempt for
+source 2026-08-12 failed closed before output creation because the extension
+calendar pinned into the bridge manifests does not include the full historical
+session index required by the V2 materializer. No Representation V2/Setup State
+smoke artifact is claimed. This calendar-identity contract needs independent
+review before retry. Canonical 2026-08-10/11/12 bytes, operator calendar/O2
+counter, outcomes, HSC/free-float, price-state, model, scheduler, and unrelated
+storage were not modified.
