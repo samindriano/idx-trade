@@ -6,14 +6,15 @@ Branch: `integration/foreign-flow-representation-v2-forward-v1`
 
 ## Decision
 
-`FOREIGN_FLOW_V2_FORWARD_PRODUCER_IMPLEMENTED_REVIEW_REQUIRED`
+`FOREIGN_FLOW_V2_FORWARD_PRODUCER_TIMING_REMEDIATION_IMPLEMENTED_REVIEW_REQUIRED`
 
 The producer is outcome-blind and reuses the accepted
 `idx_trade.foreign_flow_features_v2.build_foreign_flow_representation_v2`
-implementation. It materializes one target feature session only after the
-canonical EOD session is `DATA_READY`, its Foreign Flow sidecar and market
-artifacts verify, and a complete official calendar/context extension is
-available.
+implementation. It materializes one target feature session immediately after
+the completed source EOD session `t`, using only Foreign Flow and market
+context through `t`. The next official calendar date `t+1` is enough to name
+the feature session; no target `t+1` session directory or target market/flow
+artifact is required.
 
 No real forward session was materialized in this task. In particular, the
 existing 2026-08-11/12 artifacts were not retroactively enriched or
@@ -33,7 +34,7 @@ security master. It then:
 
 1. verifies the pinned historical inputs;
 2. reads only verified canonical forward `DATA_READY` sessions through the
-   requested target;
+   completed source session;
 3. combines historical context with those immutable forward session rows in
    memory, rejecting duplicate/conflicting ticker-session identities;
 4. rejects any missing official extension session instead of silently
@@ -42,9 +43,12 @@ security master. It then:
    listing semantics;
 6. filters to exactly `feature_session=t+1` and asserts
    `flow_through_session=t`;
-7. writes the representation parquet and manifest with exclusive creation;
-8. invokes the existing `run_foreign_flow_catchup()` so Setup State V1 remains
-   the only downstream sidecar path.
+7. writes the representation parquet and manifest with exclusive creation in
+   `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/`;
+8. invokes the existing `run_foreign_flow_catchup()`. When the target EOD
+   session later completes, that existing catchup consumes the prospective
+   pair and writes the canonical Setup State sidecar; no second capture path
+   is introduced.
 
 Rolling context is preserved by deterministic replay from the pinned archive
    plus verified forward session artifacts, rather than a mutable unverified
@@ -54,8 +58,9 @@ Rolling context is preserved by deterministic replay from the pinned archive
    primary-liquid ranks/divergence.
 
 The producer requires the supplied official calendar to be the same path and
-SHA declared by the target session manifest. This prevents a sparse or stale
-runtime calendar from treating a missing official session as the next session.
+SHA declared by the completed source session manifest. This prevents a sparse
+or stale runtime calendar from treating a missing official session as the next
+session.
 The current local runtime calendar contains only 2026-08-10 through
 2026-08-12, so a real live run remains correctly blocked until the existing
 calendar-sync/capture path supplies the complete official extension.
@@ -74,10 +79,17 @@ owner.
 
 ## Artifact contract
 
-For a target session, the output is written in that canonical session folder:
+For a completed source session `t`, the prospective output for `t+1` is
+written in the immutable prospective folder:
 
-- `foreign_flow_representation_v2.parquet`
-- `foreign_flow_representation_v2.manifest.json`
+- `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/foreign_flow_representation_v2.parquet`
+- `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/foreign_flow_representation_v2.manifest.json`
+
+The completed target session's canonical folder is not touched before its own
+EOD capture. Existing `run_foreign_flow_catchup()` detects this prospective
+pair after target capture and passes its explicit paths to the existing Setup
+State consumer. If a session-local pair and prospective pair both exist, the
+runtime fails closed instead of choosing one.
 
 The parquet uses the exact accepted V2 columns:
 `ticker`, `feature_session`, `flow_through_session`, and the 15 frozen V2
@@ -96,11 +108,11 @@ manifest metadata fail closed as a revision conflict.
 
 Focused Foreign Flow V2/producer/setup/runner tests:
 
-`24 passed`
+`26 passed, 5 warnings`
 
 Full repository suite from the repository root:
 
-`294 passed, 1 failed, 3 warnings`
+`111 collected; 110 passed, 1 failed, 5 warnings`
 
 The one failure is the pre-existing unrelated
 `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`:
@@ -111,9 +123,10 @@ storage file was changed in this lane.
 `git diff --check`: PASS.
 
 The focused producer tests cover causal invariance of all 15 features when
-the target session changes, exact `t` to `t+1` mapping, hash-pinned manifest
-creation, idempotent no-overwrite rerun, and fail-closed missing target/prior
-evidence.
+the target session changes, successful production with no target rows at all,
+exact `t` to `t+1` mapping, hash-pinned manifest creation, idempotent
+no-overwrite rerun, prospective Setup State consumption, and fail-closed
+missing source evidence.
 
 ## Boundaries
 

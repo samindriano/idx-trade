@@ -180,6 +180,35 @@ def test_runtime_wires_setup_only_when_v2_representation_is_present(tmp_path: Pa
     assert result["status"] == "COMPLETE"
 
 
+def test_runtime_consumes_prospective_representation_after_target_capture(tmp_path: Path) -> None:
+    directory = _session(tmp_path)
+    prospective = (
+        tmp_path
+        / "forward_monitoring"
+        / "prospective"
+        / "foreign_flow_representation_v2"
+        / "2026-08-12"
+    )
+    prospective.mkdir(parents=True)
+    representation = _representation(prospective)
+
+    result = run_foreign_flow_catchup(tmp_path)
+
+    assert result["status"] == "COMPLETE"
+    assert result["setup_state_consumed_prospective"] == ["2026-08-12"]
+    setup_manifest = json.loads(
+        (directory / "idx_foreign_flow_setup.manifest.json").read_text()
+    )
+    assert setup_manifest["representation_path"] == str(representation)
+    assert setup_manifest["representation_sha256"] == sha256_file(representation)
+    assert verify_session_foreign_flow_setup(
+        tmp_path,
+        "2026-08-12",
+        representation_path=representation,
+        representation_manifest_path=prospective / "foreign_flow_representation_v2.manifest.json",
+    )
+
+
 def test_runtime_marks_missing_v2_input_without_failing_raw_sidecar(tmp_path: Path) -> None:
     _session(tmp_path)
     result = run_foreign_flow_catchup(tmp_path)

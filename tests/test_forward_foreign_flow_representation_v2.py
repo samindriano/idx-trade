@@ -53,13 +53,14 @@ def _inputs(days: int = 45):
 
 def test_producer_is_causal_for_every_v2_feature_and_writes_pinned_pair(tmp_path: Path) -> None:
     sessions, flow, market, master = _inputs()
+    source = sessions[34]
     target = sessions[35]
     base = materialize_representation_v2_for_session(
         flow=flow,
         market=market,
         security_master=master,
         official_sessions=sessions,
-        session_date=target,
+        source_session=source,
         output_directory=tmp_path,
         input_provenance={"calendar_sha256": "c" * 64, "source_sha256": "s" * 64},
     )
@@ -80,7 +81,7 @@ def test_producer_is_causal_for_every_v2_feature_and_writes_pinned_pair(tmp_path
         market=changed_market,
         security_master=master,
         official_sessions=sessions,
-        session_date=target,
+        source_session=source,
         output_directory=second_dir,
         input_provenance={"calendar_sha256": "c" * 64, "source_sha256": "s" * 64},
     )
@@ -92,20 +93,20 @@ def test_producer_is_causal_for_every_v2_feature_and_writes_pinned_pair(tmp_path
     assert saved["artifact_sha256"] == base["artifact_sha256"]
     assert saved["outcome_blind"] is True
     assert saved["provider_calls"] == 0
-    assert saved["flow_through_session"] == sessions[34].date().isoformat()
+    assert saved["flow_through_session"] == source.date().isoformat()
     assert (before_frame["feature_session"] == target).all()
     assert (before_frame["flow_through_session"] == sessions[34]).all()
 
 
 def test_producer_reuses_existing_pair_without_overwrite(tmp_path: Path) -> None:
     sessions, flow, market, master = _inputs()
-    target = sessions[35]
+    source = sessions[34]
     kwargs = dict(
         flow=flow,
         market=market,
         security_master=master,
         official_sessions=sessions,
-        session_date=target,
+        source_session=source,
         output_directory=tmp_path,
         input_provenance={"calendar_sha256": "c" * 64, "source_sha256": "s" * 64},
     )
@@ -124,24 +125,45 @@ def test_producer_reuses_existing_pair_without_overwrite(tmp_path: Path) -> None
 
 def test_producer_fails_closed_when_causal_or_target_evidence_is_missing(tmp_path: Path) -> None:
     sessions, flow, market, master = _inputs()
-    target = sessions[35]
-    with pytest.raises(RuntimeError, match="prior causal"):
+    source = sessions[34]
+    with pytest.raises(RuntimeError, match="source canonical Foreign Flow"):
         materialize_representation_v2_for_session(
-            flow=flow.loc[flow["session_date"].ne(sessions[34])],
+            flow=flow.loc[flow["session_date"].ne(source)],
             market=market,
             security_master=master,
             official_sessions=sessions,
-            session_date=target,
+            source_session=source,
             output_directory=tmp_path / "missing-flow",
             input_provenance={},
         )
-    with pytest.raises(RuntimeError, match="target canonical market"):
+    with pytest.raises(RuntimeError, match="source canonical market"):
         materialize_representation_v2_for_session(
             flow=flow,
-            market=market.loc[market["session_date"].ne(target)],
+            market=market.loc[market["session_date"].ne(source)],
             security_master=master,
             official_sessions=sessions,
-            session_date=target,
+            source_session=source,
             output_directory=tmp_path / "missing-market",
             input_provenance={},
         )
+
+
+def test_producer_succeeds_without_any_feature_session_market_or_flow_rows(tmp_path: Path) -> None:
+    sessions, flow, market, master = _inputs()
+    source = sessions[34]
+    target = sessions[35]
+    no_target_flow = flow.loc[flow["session_date"].ne(target)].copy()
+    no_target_market = market.loc[market["session_date"].ne(target)].copy()
+    result = materialize_representation_v2_for_session(
+        flow=no_target_flow,
+        market=no_target_market,
+        security_master=master,
+        official_sessions=sessions,
+        source_session=source,
+        output_directory=tmp_path,
+        input_provenance={"calendar_sha256": "c" * 64, "source_sha256": "s" * 64},
+    )
+    output = pd.read_parquet(result["artifact_path"])
+    assert result["created"] is True
+    assert (output["feature_session"] == target).all()
+    assert (output["flow_through_session"] == source).all()

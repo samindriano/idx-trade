@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: d204a8fd3edaacef91aacbe90ac39f0e1969e420
 branch: integration/foreign-flow-representation-v2-forward-v1
-head_commit: 8e0c47e008f8480e9ed0aadac05ce7f9f0eb79f8
+head_commit: pending until remediation commit/push
 scope: outcome-blind prospective Foreign Flow Representation V2 producer and minimal Setup State catchup wiring
 files_changed:
   - src/idx_trade/forward_foreign_flow_representation_v2.py
@@ -22,6 +22,12 @@ files_changed:
   redesign was made.
 - Each output target is `feature_session=t+1` from one prior official
   `flow_through_session=t`.
+- The remediation now accepts a completed source session `t` only; target
+  `t+1` market/flow rows and target session directory are not required.
+- Prospective pairs live under
+  `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/`.
+  Existing catchup consumes that pair after target capture and passes explicit
+  paths to the existing Setup State consumer.
 - Historical rolling state is replayed from SHA-pinned accepted history and
   extended only by verified canonical forward EOD artifacts.
 - Market context uses canonical forward OHLCV plus `session_evidence` official
@@ -31,9 +37,10 @@ files_changed:
 - Missing extension sessions, invalid/partial market evidence, duplicate or
   conflicting identities, hash mismatch, non-causal rows, and immutable
   artifact revision conflicts fail closed.
-- After the target representation pair is verified, the existing
-  `run_foreign_flow_catchup()` is called to materialize Setup State V1. No new
-  scheduler, capture system, or counter was introduced.
+- After the prospective representation pair is verified, the existing
+  `run_foreign_flow_catchup()` is called. It consumes the pair once the target
+  session is complete and materializes Setup State V1. No new scheduler,
+  capture system, or counter was introduced.
 
 ## Decisions made
 
@@ -51,8 +58,8 @@ files_changed:
 
 ## Validation
 
-- Focused producer + V2 + setup + runner tests: 24 passed.
-- Full repository pytest: 294 passed, 1 failed, 3 warnings.
+- Focused producer + V2 + setup + runner tests: 26 passed, 5 warnings.
+- Full repository pytest: 111 collected; 110 passed, 1 failed, 5 warnings.
 - Failure: existing `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`; it expects one conflict while current storage returns independent `raw_close` and `vendor_adj_close` conflicts.
 - `git diff --check`: PASS.
 
@@ -61,6 +68,10 @@ files_changed:
 - Existing EOD automation must pass a complete official calendar (not the
   currently sparse local calendar) and invoke the new producer for a new
   target session. This task intentionally did not edit or create a scheduler.
+- The producer's source trigger is the completed source EOD session; the
+  feature target is the next official date and may not yet have a session
+  folder. A session-local and prospective pair together fail closed as
+  ambiguous.
 - Setup State creation still relies on the existing parent-manifest calendar
   identity; this is deliberate to prevent calendar compression or stale
   provenance.

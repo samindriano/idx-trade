@@ -37,6 +37,7 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
         "skipped_no_stock_summary": [],
         "setup_state_created": [],
         "setup_state_already_valid": [],
+        "setup_state_consumed_prospective": [],
         "setup_state_skipped_no_representation": [],
         "setup_state_verified": [],
         "failed": [],
@@ -88,19 +89,74 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
         directory = sessions_root / session
         representation = directory / "foreign_flow_representation_v2.parquet"
         representation_manifest = directory / "foreign_flow_representation_v2.manifest.json"
-        if not representation.exists() or not representation_manifest.exists():
+        prospective_directory = (
+            root
+            / "forward_monitoring"
+            / "prospective"
+            / "foreign_flow_representation_v2"
+            / session
+        )
+        prospective_representation = prospective_directory / "foreign_flow_representation_v2.parquet"
+        prospective_manifest = prospective_directory / "foreign_flow_representation_v2.manifest.json"
+        local_pair = representation.exists() or representation_manifest.exists()
+        prospective_pair = prospective_representation.exists() or prospective_manifest.exists()
+        if local_pair and prospective_pair:
+            # Two locations for one target are ambiguous.  Do not choose one
+            # silently; the producer's immutable convention is prospective
+            # until the target session is complete.
+            result["status"] = "INCOMPLETE"
+            result["failed"].append(
+                {
+                    "session_date": session,
+                    "error_code": "DUPLICATE_REPRESENTATION_LOCATIONS",
+                    "error_message": "both session-local and prospective V2 representation pairs exist",
+                }
+            )
+            continue
+        if not local_pair and not prospective_pair:
             result["setup_state_skipped_no_representation"].append(session)
             continue
+        if prospective_pair and (
+            not prospective_representation.exists() or not prospective_manifest.exists()
+        ):
+            result["status"] = "INCOMPLETE"
+            result["failed"].append(
+                {
+                    "session_date": session,
+                    "error_code": "INCOMPLETE_PROSPECTIVE_REPRESENTATION",
+                    "error_message": "prospective V2 representation pair is incomplete",
+                }
+            )
+            continue
+        representation_path = prospective_representation if prospective_pair else representation
+        representation_manifest_path = prospective_manifest if prospective_pair else representation_manifest
         try:
-            if verify_session_foreign_flow_setup(root, session):
+            if verify_session_foreign_flow_setup(
+                root,
+                session,
+                representation_path=representation_path,
+                representation_manifest_path=representation_manifest_path,
+            ):
                 result["setup_state_already_valid"].append(session)
                 result["setup_state_verified"].append(
-                    inspect_session_foreign_flow_setup(root, session)
+                    inspect_session_foreign_flow_setup(
+                        root,
+                        session,
+                        representation_path=representation_path,
+                        representation_manifest_path=representation_manifest_path,
+                    )
                 )
             else:
-                setup_artifact = enrich_session_foreign_flow_setup(root, session)
+                setup_artifact = enrich_session_foreign_flow_setup(
+                    root,
+                    session,
+                    representation_path=representation_path,
+                    representation_manifest_path=representation_manifest_path,
+                )
                 result["setup_state_created"].append(setup_artifact)
                 result["setup_state_verified"].append(setup_artifact)
+                if prospective_pair:
+                    result["setup_state_consumed_prospective"].append(session)
         except Exception as error:
             result["status"] = "INCOMPLETE"
             result["failed"].append(

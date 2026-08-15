@@ -241,29 +241,36 @@ def materialize_representation_v2_for_session(
     market: pd.DataFrame,
     security_master: pd.DataFrame,
     official_sessions: Iterable[object],
-    session_date: str | pd.Timestamp,
+    source_session: str | pd.Timestamp,
     output_directory: str | Path,
     input_provenance: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Build and atomically persist exactly one prospective feature session."""
+    """Build one feature session immediately after a completed source session.
 
-    target = _date(session_date)
+    ``source_session`` is the only completed market/flow session required.
+    The next official date is represented in the calendar but deliberately
+    need not have a session directory or any market/flow rows yet.
+    """
+
+    source = _date(source_session)
     sessions = pd.DatetimeIndex([_date(value) for value in official_sessions]).sort_values()
-    if len(sessions) == 0 or sessions.has_duplicates or target not in set(sessions):
-        raise RuntimeError("target is not in a unique official session calendar")
-    position = int(sessions.get_loc(target))
-    if position == 0:
-        raise RuntimeError("first official session has no prior causal flow session")
-    previous = sessions[position - 1]
+    if len(sessions) == 0 or sessions.has_duplicates or source not in set(sessions):
+        raise RuntimeError("source is not in a unique official session calendar")
+    position = int(sessions.get_loc(source))
+    if position >= len(sessions) - 1:
+        raise RuntimeError("source has no next official feature session")
+    target = sessions[position + 1]
     flow = _normalise_flow(flow)
     market = _normalise_market(market)
     master = _normalise_master(security_master)
-    if target not in set(market["session_date"]):
-        raise RuntimeError("target canonical market session is missing")
-    if previous not in set(flow["session_date"]):
-        raise RuntimeError("prior causal Foreign Flow session is missing")
-    if target not in set(flow["session_date"]):
-        raise RuntimeError("target canonical Foreign Flow session is missing")
+    if source not in set(market["session_date"]):
+        raise RuntimeError("source canonical market session is missing")
+    if source not in set(flow["session_date"]):
+        raise RuntimeError("source canonical Foreign Flow session is missing")
+    # Explicitly clip the inputs at t.  This makes the timing guarantee
+    # structural even when a caller passes a larger cached frame.
+    flow = flow.loc[flow["session_date"].le(source)].reset_index(drop=True)
+    market = market.loc[market["session_date"].le(source)].reset_index(drop=True)
 
     context, excluded = build_causal_market_context(
         market[["ticker", "session_date", "close", "volume", "regular_market_value"]].rename(
@@ -285,7 +292,7 @@ def materialize_representation_v2_for_session(
     features = features.loc[features["feature_session"].eq(target)].copy()
     if features.empty:
         raise RuntimeError("target representation has no listing-valid rows")
-    if not features["flow_through_session"].eq(previous).all():
+    if not features["flow_through_session"].eq(source).all():
         raise RuntimeError("representation violates t to t+1 causality")
     if features.duplicated(["ticker", "feature_session"]).any():
         raise RuntimeError("representation has duplicate target keys")
@@ -302,14 +309,14 @@ def materialize_representation_v2_for_session(
         column: {"finite": int(finite[:, index].sum()), "missing": int((~finite[:, index]).sum())}
         for index, column in enumerate(FEATURE_COLUMNS_V2)
     }
-    context_source = context.loc[context["date"].eq(previous)]
+    context_source = context.loc[context["date"].eq(source)]
     availability_counts = finite.sum(axis=1)
     diagnostics = {
         "official_session_index": position,
         "official_session_count": int(len(sessions)),
         "official_session_first": sessions[0].date().isoformat(),
         "official_session_last": sessions[-1].date().isoformat(),
-        "source_session": previous.date().isoformat(),
+        "source_session": source.date().isoformat(),
         "feature_session": target.date().isoformat(),
         "flow_rows_used": int(len(flow)),
         "market_rows_used": int(len(market)),
@@ -332,7 +339,7 @@ def materialize_representation_v2_for_session(
     # historical publication timestamp.
     provenance = dict(input_provenance)
     provenance["feature_session"] = target.date().isoformat()
-    provenance["flow_through_session"] = previous.date().isoformat()
+    provenance["flow_through_session"] = source.date().isoformat()
     provenance["excluded_listing_rows"] = int(len(excluded))
     provenance["input_fingerprint"] = _context_fingerprint(provenance)
     expected_artifact_sha: str
@@ -351,7 +358,7 @@ def materialize_representation_v2_for_session(
         "feature_columns": list(FEATURE_COLUMNS_V2),
         "output_columns": list(OUTPUT_COLUMNS_V2),
         "feature_session": target.date().isoformat(),
-        "flow_through_session": previous.date().isoformat(),
+        "flow_through_session": source.date().isoformat(),
         "row_count": int(len(features)),
         "ticker_count": int(features["ticker"].nunique()),
         "diagnostics": diagnostics,
@@ -389,7 +396,7 @@ def materialize_representation_v2_for_session(
     return {
         "status": manifest["status"],
         "session_date": target.date().isoformat(),
-        "flow_through_session": previous.date().isoformat(),
+        "flow_through_session": source.date().isoformat(),
         "created": created,
         "rows": int(len(features)),
         "tickers": int(features["ticker"].nunique()),
@@ -404,7 +411,7 @@ def materialize_representation_v2_for_session(
     }
 
 
-def _runtime_session_keys(runtime_root: Path, target: pd.Timestamp) -> list[str]:
+def _runtime_session_keys(runtime_root: Path, source: pd.Timestamp) -> list[str]:
     root = runtime_root / "forward_monitoring" / "sessions"
     if not root.is_dir():
         raise FileNotFoundError("forward monitoring sessions root is missing")
@@ -416,7 +423,7 @@ def _runtime_session_keys(runtime_root: Path, target: pd.Timestamp) -> list[str]
             key = _date(directory.name).date().isoformat()
         except ValueError:
             continue
-        if _date(key) <= target:
+        if _date(key) <= source:
             keys.append(key)
     return sorted(set(keys))
 
@@ -424,7 +431,7 @@ def _runtime_session_keys(runtime_root: Path, target: pd.Timestamp) -> list[str]
 def produce_session_foreign_flow_representation_v2(
     *,
     runtime_root: str | Path,
-    session_date: str | pd.Timestamp,
+    source_session: str | pd.Timestamp,
     archive_root: str | Path,
     archive_manifest_sha256: str,
     historical_panel_path: str | Path,
@@ -434,19 +441,20 @@ def produce_session_foreign_flow_representation_v2(
     security_master_path: str | Path,
     security_master_sha256: str,
 ) -> dict[str, Any]:
-    """Produce one target artifact from pinned history plus verified EOD rows."""
+    """Produce the next-session artifact immediately after source EOD ``t``."""
 
     runtime = Path(runtime_root).expanduser().resolve()
-    target = _date(session_date)
+    source = _date(source_session)
     sessions_path = Path(official_sessions_path).expanduser().resolve()
     if not sessions_path.is_file() or provenance_sha256_file(sessions_path) != official_sessions_sha256.lower():
         raise RuntimeError("official session calendar missing or hash-mismatched")
     sessions = _session_index(sessions_path)
-    if target not in set(sessions):
-        raise RuntimeError("target session is absent from the supplied official calendar")
-    target_position = int(sessions.get_loc(target))
-    if target_position == 0:
-        raise RuntimeError("target has no prior official session")
+    if source not in set(sessions):
+        raise RuntimeError("source session is absent from the supplied official calendar")
+    source_position = int(sessions.get_loc(source))
+    if source_position >= len(sessions) - 1:
+        raise RuntimeError("source has no next official feature session")
+    target = sessions[source_position + 1]
 
     archive_flow, archive_meta = read_verified_flow_archive(
         Path(archive_root).expanduser().resolve(), archive_manifest_sha256
@@ -476,7 +484,7 @@ def produce_session_foreign_flow_representation_v2(
     forward_sources: list[dict[str, Any]] = []
     # Only verified canonical sessions through the requested target are read.
     # No raw provider request or synthetic session is created here.
-    runtime_keys = _runtime_session_keys(runtime, target)
+    runtime_keys = _runtime_session_keys(runtime, source)
     for key in runtime_keys:
         forward_market, market_meta = _read_verified_forward_market(runtime, key)
         forward_flow, flow_meta = _read_verified_forward_flow(runtime, key)
@@ -498,20 +506,19 @@ def produce_session_foreign_flow_representation_v2(
         ["ticker", "session_date"],
         label="Foreign Flow context",
     )
-    # Never allow artifacts after the requested decision session to enter the
+    # Never allow artifacts after the completed source session to enter the
     # build, even if an archive already contains later captures.
     market = market.loc[
-        market["session_date"].le(target) & market["session_date"].isin(set(sessions))
+        market["session_date"].le(source) & market["session_date"].isin(set(sessions))
     ].reset_index(drop=True)
     flow = flow.loc[
-        flow["session_date"].le(target) & flow["session_date"].isin(set(sessions))
+        flow["session_date"].le(source) & flow["session_date"].isin(set(sessions))
     ].reset_index(drop=True)
     if not market["session_date"].isin(set(sessions)).all() or not flow["session_date"].isin(set(sessions)).all():
         raise RuntimeError("market or flow contains a date outside the supplied official calendar")
 
-    previous = sessions[target_position - 1]
     extension_sessions = sessions[
-        (sessions > historical_market["session_date"].max()) & (sessions <= target)
+        (sessions > historical_market["session_date"].max()) & (sessions <= source)
     ]
     available_market_sessions = set(market["session_date"])
     available_flow_sessions = set(flow["session_date"])
@@ -525,8 +532,7 @@ def produce_session_foreign_flow_representation_v2(
             "MISSING_FORWARD_ROLLING_CONTEXT_SESSIONS: " + ",".join(missing_context)
         )
 
-    target_dir = runtime / "forward_monitoring" / "sessions" / target.date().isoformat()
-    parent = _canonical_evidence(runtime, target.date().isoformat())["parent"]
+    parent = _canonical_evidence(runtime, source.date().isoformat())["parent"]
     parent_calendar = Path(str(parent.get("calendar_path") or "")).expanduser().resolve()
     parent_calendar_sha = str(parent.get("calendar_sha256") or "").lower()
     if parent_calendar != sessions_path or parent_calendar_sha != official_sessions_sha256.lower():
@@ -552,7 +558,7 @@ def produce_session_foreign_flow_representation_v2(
         "security_master_path": str(master_path),
         "security_master_sha256": security_master_sha256.lower(),
         "forward_session_sources": forward_sources,
-        "source_session": previous.date().isoformat(),
+        "source_session": source.date().isoformat(),
         "feature_session": target.date().isoformat(),
         "rolling_context_policy": "PINNED_HISTORY_PLUS_VERIFIED_CANONICAL_FORWARD_SESSIONS",
         "no_provider_calls": True,
@@ -563,8 +569,12 @@ def produce_session_foreign_flow_representation_v2(
         market=market,
         security_master=master,
         official_sessions=sessions,
-        session_date=target,
-        output_directory=target_dir,
+        source_session=source,
+        output_directory=runtime
+        / "forward_monitoring"
+        / "prospective"
+        / "foreign_flow_representation_v2"
+        / target.date().isoformat(),
         input_provenance=provenance,
     )
     materialized["setup_catchup"] = run_foreign_flow_catchup(runtime)
@@ -574,7 +584,7 @@ def produce_session_foreign_flow_representation_v2(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Produce one causal prospective Foreign Flow V2 session")
     parser.add_argument("--runtime-root", type=Path, required=True)
-    parser.add_argument("--session-date", required=True)
+    parser.add_argument("--source-session", required=True)
     parser.add_argument("--archive-root", type=Path, required=True)
     parser.add_argument("--archive-manifest-sha256", required=True)
     parser.add_argument("--historical-panel", type=Path, required=True)
@@ -590,7 +600,7 @@ def main() -> int:
     args = build_parser().parse_args()
     result = produce_session_foreign_flow_representation_v2(
         runtime_root=args.runtime_root,
-        session_date=args.session_date,
+        source_session=args.source_session,
         archive_root=args.archive_root,
         archive_manifest_sha256=args.archive_manifest_sha256,
         historical_panel_path=args.historical_panel,
