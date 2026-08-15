@@ -36,7 +36,7 @@ class HSCEvent:
     ownership_as_of_date: date
     published_at: datetime
     concentration_pct: float | None
-    methodology_version: HSCMethodologyVersion
+    determination_methodology_version: HSCMethodologyVersion
     idx_announcement_no: str
     ksei_announcement_no: str
     revision_kind: HSCRevisionKind
@@ -98,7 +98,7 @@ class HSCActiveState:
     last_event_id: str
     ownership_as_of_date: date
     concentration_pct: float | None
-    methodology_version: HSCMethodologyVersion
+    determination_methodology_version: HSCMethodologyVersion
 
 
 @dataclass(frozen=True)
@@ -149,7 +149,7 @@ def replay_hsc_events(
                 last_event_id=event.event_id,
                 ownership_as_of_date=event.ownership_as_of_date,
                 concentration_pct=event.concentration_pct,
-                methodology_version=event.methodology_version,
+                determination_methodology_version=event.determination_methodology_version,
             )
         elif event.revision_kind is HSCRevisionKind.CORRECTION:
             superseded = seen_ids.get(event.supersedes_event_id or "")
@@ -174,7 +174,7 @@ def replay_hsc_events(
                 last_event_id=event.event_id,
                 ownership_as_of_date=event.ownership_as_of_date,
                 concentration_pct=event.concentration_pct,
-                methodology_version=event.methodology_version,
+                determination_methodology_version=event.determination_methodology_version,
             )
         else:
             state = active.get(event.ticker)
