@@ -431,18 +431,16 @@ integration, models, outcomes, or unrelated lane changes are authorized.
 
 ## Current status correction — 2026-08-15 — Foreign Flow Forward Context Bridge V1
 
-Foreign Flow Forward Context Bridge V1 is now `REVIEW` by Codex on branch
-`data/foreign-flow-forward-context-bridge-v1` at final HEAD
-`1c4fb1a7044b797ecf4ffcb93cc36a9dc6b18700`. The immutable bridge calendar
-and six authorized bridge-only context sessions are ready; the planner
-reaches `CONTEXT_BRIDGE_READY`. The single prospective smoke attempt for
-source 2026-08-12 failed closed before output creation because the extension
-calendar pinned into the bridge manifests does not include the full historical
-session index required by the V2 materializer. No Representation V2/Setup State
-smoke artifact is claimed. This calendar-identity contract needs independent
-review before retry. Canonical 2026-08-10/11/12 bytes, operator calendar/O2
-counter, outcomes, HSC/free-float, price-state, model, scheduler, and unrelated
-storage were not modified.
+Foreign Flow Forward Context Bridge V1 is `ACTIVE` for the narrowly authorized
+calendar-contract remediation on branch
+`data/foreign-flow-forward-context-bridge-v1` at
+`1c4fb1a7044b797ecf4ffcb93cc36a9dc6b18700`. The accepted bridge captures and
+planner remain immutable. This remediation separates the pinned historical
+calendar from the existing 10-session bridge calendar, verifies bridge
+manifests against their original SHA, and passes only the validated union to
+the accepted V2 materializer. No recapture or artifact rewrite is authorized.
+No O2, HSC/free-float, price-state, model, outcome, counter, scheduler, or
+storage changes are in scope.
 
 ## Current status correction — 2026-08-15 — HSC full-history ledger result
 
