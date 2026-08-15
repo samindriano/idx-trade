@@ -627,3 +627,16 @@ expectation failure`; `git diff --check` passed. No provider calls, new month
 acquisition, free-float arithmetic, forward-fill, features, models, outcomes,
 or unrelated lane work occurred. Monthly history remains blocked pending
 independent review.
+
+## Current status correction — 2026-08-15 — LBRE Monthly Free-Float History V1
+
+LBRE monthly free-float history V1 is now `ACTIVE` by
+`Codex/LBRE-Monthly-History` on branch
+`data/idx-lbre-monthly-free-float-history-v1` at prepared HEAD
+`f6537c09b5121cc8b185df4fd9d672e305a879d1`. Scope is generalized official
+IDX LBRE acquisition and append-only parser/lineage replay for positions
+2024-04-30 through 2026-06-30 inclusive, reusing the accepted June-2026
+corpus and the reviewed bounded LBRE lineage/parser parent. Discovery and
+pagination completeness must be proven before bulk acquisition. No holder,
+HSC, >=1%, forward-fill, effective-supply, Foreign Flow, feature, model,
+outcome, or unrelated lane work is authorized.
