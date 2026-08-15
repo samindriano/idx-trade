@@ -17,7 +17,6 @@ import pandas as pd
 
 from .foreign_flow_representation_v2_runner import read_verified_flow_archive
 from .forward_foreign_flow_context_bridge import (
-    bridge_session_dir,
     load_context_bridge_session,
     verify_context_bridge_session,
 )
@@ -31,6 +30,13 @@ from .forward_foreign_flow_representation_v2 import (
 )
 from .forward_foreign_flow_setup import enrich_prospective_foreign_flow_setup
 from .provenance import sha256_file
+
+
+# Bridge fallback is only authorized for the pre-monitor gap plus the monitor
+# start session itself when its preserved canonical capture is invalid.  Any
+# later session belongs to the existing canonical EOD runtime and must not be
+# silently replaced by a bridge capture.
+BRIDGE_FALLBACK_THROUGH = pd.Timestamp("2026-08-10")
 
 
 def _date(value: object) -> pd.Timestamp:
@@ -68,6 +74,7 @@ def _resolve_extension_session(
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     """Resolve exactly one verified source for one extension session."""
 
+    session = _date(session)
     key = session.date().isoformat()
     canonical_present = _canonical_dir(runtime_root, session).exists()
     canonical_error: str | None = None
@@ -85,10 +92,11 @@ def _resolve_extension_session(
                 "market": market_meta,
                 "flow": flow_meta,
             }
-        except Exception as error:  # fail closed unless an independent bridge is verified below
+        except Exception as error:  # fail closed unless an authorized bridge is verified below
             canonical_error = f"{type(error).__name__}: {error}"
 
-    bridge_valid = verify_context_bridge_session(
+    bridge_eligible = session <= BRIDGE_FALLBACK_THROUGH
+    bridge_valid = bridge_eligible and verify_context_bridge_session(
         runtime_root,
         session,
         calendar_path=calendar_path,
@@ -99,6 +107,11 @@ def _resolve_extension_session(
         if bridge_valid:
             raise RuntimeError(f"AMBIGUOUS_CONTEXT_SOURCES: canonical and bridge both valid for {key}")
         return canonical_market, canonical_flow, canonical_meta or {"kind": "CANONICAL_EOD", "session_date": key}
+
+    if not bridge_eligible:
+        if canonical_error is not None:
+            raise RuntimeError(f"POST_MONITOR_SESSION_REQUIRES_VALID_CANONICAL_EOD {key}: {canonical_error}")
+        raise RuntimeError(f"POST_MONITOR_SESSION_REQUIRES_CANONICAL_EOD: {key}")
 
     if bridge_valid:
         market, flow, bridge_meta = load_context_bridge_session(
@@ -111,6 +124,7 @@ def _resolve_extension_session(
         bridge_meta["canonical_validation_error"] = canonical_error
         bridge_meta["canonical_bytes_mutated"] = False
         bridge_meta["canonical_session_repair"] = False
+        bridge_meta["bridge_fallback_through"] = BRIDGE_FALLBACK_THROUGH.date().isoformat()
         return market, flow, bridge_meta
 
     if canonical_error is not None:
@@ -162,9 +176,13 @@ def produce_with_context_bridge(
     if historical_cutoff >= source:
         raise RuntimeError("bridge adapter is only for source sessions after historical market cutoff")
 
-    archive_flow = archive_flow.loc[
-        pd.to_datetime(archive_flow["session_date"], errors="coerce").dt.tz_localize(None).dt.normalize().le(historical_cutoff)
-    ].copy()
+    archive_dates = pd.to_datetime(archive_flow["session_date"], errors="coerce")
+    if archive_dates.isna().any():
+        raise RuntimeError("historical Foreign Flow archive has malformed session dates")
+    if getattr(archive_dates.dt, "tz", None) is not None:
+        archive_dates = archive_dates.dt.tz_convert("Asia/Jakarta").dt.tz_localize(None)
+    archive_dates = archive_dates.dt.normalize()
+    archive_flow = archive_flow.loc[archive_dates.le(historical_cutoff)].copy()
     archive_flow = _normalise_flow(archive_flow)
 
     extension_sessions = sessions[(sessions > historical_cutoff) & (sessions <= source)]
@@ -227,6 +245,7 @@ def produce_with_context_bridge(
         "rolling_context_policy": "PINNED_HISTORY_PLUS_VERIFIED_CANONICAL_OR_BRIDGE_SESSIONS",
         "extension_session_sources": session_sources,
         "bridge_namespace": str(runtime / "forward_monitoring" / "context_bridge"),
+        "bridge_fallback_through": BRIDGE_FALLBACK_THROUGH.date().isoformat(),
         "canonical_session_repair": False,
         "operator_calendar_mutated": False,
         "operator_counter_modified": False,
@@ -260,6 +279,7 @@ def produce_with_context_bridge(
         "source_kinds": [str(item.get("kind")) for item in session_sources],
         "calendar_path": str(calendar_path),
         "calendar_sha256": official_sessions_sha256.lower(),
+        "bridge_fallback_through": BRIDGE_FALLBACK_THROUGH.date().isoformat(),
         "operator_calendar_mutated": False,
         "operator_counter_modified": False,
     }
