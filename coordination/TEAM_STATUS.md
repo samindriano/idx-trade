@@ -754,3 +754,30 @@ compute diagnostics without replacing official values, and determine whether
 issuer LBRE shares are a safe historical denominator. No network, acquisition,
 parser/lineage change, daily FF state, effective supply, Foreign Flow,
 features, models, outcomes, or unrelated lane work is authorized.
+
+## Current status correction — 2026-08-16 — LBRE Market-Wide Anchor Reconciliation V1 result
+
+LBRE / market-wide free-float reconciliation V1 is now `REVIEW` by
+`Codex/LBRE-Market-Anchor-Reconciliation` on branch
+`data/idx-lbre-market-anchor-reconciliation-v1` at final HEAD
+`d61d4f4f52f6c8710397e687dad9de0862f5bf07`.
+
+The exact final branch HEAD is recorded in the handoff; the branch was pushed
+successfully after the offline run. The 923-ticker 2025-12-31 union decomposed
+to 260 `EXACT_AGREE`, 616 `SHARES_AGREE_PCT_DIFF`, 0
+`SHARES_DIFF_PCT_AGREE`, 9 `SHARES_AND_PCT_DIFF`, 0 `LBRE_ONLY`, and 38
+`MARKET_ONLY`. Thus 616/625 prior conflicts had identical shares, while 9/625
+had genuine share-count disagreements ranging from 400,000 to 2,986,991,880
+shares and 0.064% to 50.061% relative to LBRE shares. Publication comparison
+was LBRE-before-market for 882 overlaps, after for BHIT/EKAD/NISP, and equal
+for none. Final verdict:
+`LBRE_FF_SHARES_DENOMINATOR_PARTIAL_CONFLICT_REVIEW_REQUIRED`.
+
+External manifest SHA-256 is
+`34fe46f9077fe8c6630fbec5f3682718f01cea1456d7bcb904fa7be6a9479840` under
+`D:\Documents\Project\idx-lbre-market-anchor-reconciliation-20260816-v1`.
+Focused tests passed 3. Full pytest was 72 collected, 71 passed, and 1
+unrelated pre-existing storage expectation failed. No network, acquisition,
+parser/lineage, daily FF state, effective supply, Foreign Flow, features,
+models, outcomes, or unrelated lanes were touched. The lane is awaiting
+independent review.
