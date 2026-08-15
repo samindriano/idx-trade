@@ -82,6 +82,8 @@ def _find_matching_files(root: Path, expected_sha256: str) -> list[Path]:
 
 def _assert_frame_session(path: Path, *, session: str, date_columns: tuple[str, ...]) -> dict[str, Any]:
     frame = pd.read_parquet(path)
+    if frame.empty:
+        raise RuntimeError(f"{path.name} is empty")
     column = next((name for name in date_columns if name in frame.columns), None)
     if column is None:
         raise RuntimeError(f"{path.name} has no session-date column")
