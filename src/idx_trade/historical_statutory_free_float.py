@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from math import isfinite
@@ -178,7 +178,12 @@ def replay_historical_free_float(
 
     return HistoricalFreeFloatReplay(
         admitted=tuple(admitted),
-        current=dict(sorted(current.items(), key=lambda item: item[0])),
+        current=dict(
+            sorted(
+                current.items(),
+                key=lambda item: (item[0][0], item[0][1], item[0][2].value),
+            )
+        ),
     )
 
 
