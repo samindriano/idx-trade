@@ -543,13 +543,16 @@ warnings reported. `git diff --check` passed.
 
 ## Current status correction — 2026-08-15 — Price / Trend Runtime Bridge Adapter V1
 
-Price / Trend Runtime Bridge Adapter V1 is `ACTIVE` for one bounded local
-zero-provider smoke on branch
-`integration/price-trend-runtime-bridge-adapter-v1` at latest HEAD
-`d5055e29e34802ae789789107ffe71e41c0c3c89`, with validated implementation
-lineage including `2df8134aac531ec1214f560a8393cda607b9da7a`. Scope is exact
-Windows artifact/SHA verification, focused/full tests, and the authorized
-`forward_price_trend_controlled_smoke` only. No provider call, recapture,
-scheduler/counter change, outcome/performance access, threshold tuning,
-Foreign Flow + Price State combination, O2, HSC/free-float, or trade-state
-logic is authorized.
+Price / Trend Runtime Bridge Adapter V1 is now `REVIEW` on branch
+`integration/price-trend-runtime-bridge-adapter-v1` at final HEAD
+`6d0470e81599b4772cd62a676ae2201f94001efe`, with validated implementation
+lineage including `2df8134aac531ec1214f560a8393cda607b9da7a`. Focused tests
+passed `39`; full pytest was `78 passed, 1 unrelated storage expectation
+failure, 4 warnings`; `git diff --check` passed. The exactly-one local smoke
+failed closed before Price State materialization because canonical
+2026-08-11 declares parent calendar SHA `e61a3b7e...` while the current bytes
+at that path are `bd33e977...`; no Price State artifacts were created or
+overwritten. Provider calls and outcome access were both zero/false. Do not
+retry, recapture, rewrite canonical EOD, or alter Price State semantics
+without independent review. No scheduler/counter, Foreign Flow + Price State
+combination, O2, HSC/free-float, or trade-state logic is in scope.
