@@ -8,7 +8,7 @@ reasoning_level: LIGHT orchestration with independent read-only audit
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `7db73a5`
 branch: `research/idx-foreign-flow-setup-state-v1`
-head_commit: pending documentation commit
+head_commit: `45a679d`
 scope: Wire Setup State V1 as an outcome-blind consumer of verified prospective Foreign Flow Representation V2 session artifacts.
 files_changed:
   - `src/idx_trade/forward_foreign_flow_setup.py`
