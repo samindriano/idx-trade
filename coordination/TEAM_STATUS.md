@@ -541,6 +541,18 @@ Foreign Flow, feature, model, or outcome work occurred. Focused tests passed
 14; full pytest was 61 passed / 1 unrelated storage expectation failure / 0
 warnings reported. `git diff --check` passed.
 
+## Current status correction — 2026-08-15 — LBRE Lineage / Parser Remediation V1
+
+LBRE lineage/parser remediation is now `ACTIVE` by
+`Codex/LBRE-Lineage-Parser-Remediation` on branch
+`data/idx-lbre-lineage-parser-remediation-v1` at prepared HEAD
+`936181b15214edbe7eb721e672bce057b2690c32`. Scope is forensic inventory and
+evidence-backed remediation of the immutable 2026-06-30 LBRE corpus from the
+accepted Historical Statutory Free Float Snapshot V1 parent. No new month
+acquisition, synthetic originals, ambiguous-original selection, holder/HSC/
+>=1% arithmetic, forward-fill, effective supply, Foreign Flow, features,
+models, outcomes, or unrelated lane work is authorized.
+
 ## Current status correction — 2026-08-15 — Price / Trend Runtime Bridge Adapter V1
 
 Price / Trend Runtime Bridge Adapter V1 is now `REVIEW` on branch
