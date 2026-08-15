@@ -2,7 +2,9 @@
 
 ## Scope and safety
 
-This is an audit-only snapshot generated from the fully fetched/pruned local `origin` refs. It makes no branch deletion, tag creation, PR closure, history rewrite, or force-push. Remote branch inventory count: **158**; unique branch names: **158**; generated CSV rows: **158**; main HEAD: `8d250f2a6c12ffee930ac90d38ac528e12a230da`.
+This is an audit-only snapshot generated from the fully fetched/pruned local `origin` refs. It makes no branch deletion, tag creation, PR closure, history rewrite, or force-push. Remote branch inventory count: **159**; unique branch names: **159**; generated CSV rows: **159**; main HEAD: `a5c3837842183bb5368b19b0885c16faf9b9678d`.
+
+The audit branch is included in this snapshot. Because committing a regenerated report advances that branch, its self-row records the branch HEAD observed immediately before this report commit; the inventory count remains the authoritative no-missed-branch check.
 
 GitHub PR/Issue metadata could not be authenticated in this environment (`gh` returned HTTP 401; the public Issue #30 URL was not retrievable). The CSV therefore records `UNAVAILABLE_GITHUB_AUTH` rather than inferring PR numbers or states.
 
@@ -10,7 +12,7 @@ GitHub PR/Issue metadata could not be authenticated in this environment (`gh` re
 
 | Classification | Count |
 |---|---:|
-| `KEEP` | 61 |
+| `KEEP` | 62 |
 | `ARCHIVE_TAG_THEN_DELETE_BRANCH` | 30 |
 | `DELETE_SAFE` | 2 |
 | `ABANDONED_NO_DECISION` | 49 |

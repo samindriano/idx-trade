@@ -245,6 +245,12 @@ def write_reports(rows: list[Branch], main_head: str) -> None:
             "It makes no branch deletion, tag creation, PR closure, history rewrite, or force-push. "
             f"Remote branch inventory count: **{len(rows)}**; unique branch names: **{unique_names}**; generated CSV rows: **{len(rows)}**; main HEAD: `{main_head}`.\n\n"
         )
+        if any(row.name == "codex/repository-hygiene-v1" for row in rows):
+            handle.write(
+                "The audit branch is included in this snapshot. Because committing a regenerated report advances "
+                "that branch, its self-row records the branch HEAD observed immediately before this report commit; "
+                "the inventory count remains the authoritative no-missed-branch check.\n\n"
+            )
         handle.write(
             "GitHub PR/Issue metadata could not be authenticated in this environment (`gh` returned HTTP 401; "
             "the public Issue #30 URL was not retrievable). The CSV therefore records `UNAVAILABLE_GITHUB_AUTH` "
