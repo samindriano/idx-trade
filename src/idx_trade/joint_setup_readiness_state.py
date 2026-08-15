@@ -22,6 +22,8 @@ from .price_trend_state import STATE_CONTRACT_VERSION as PRICE_STATE_CONTRACT_VE
 
 JOINT_STATE_CONTRACT_VERSION = "JOINT_SETUP_READINESS_STATE_V1"
 FOREIGN_FLOW_STATE_CONTRACT_VERSION = "FOREIGN_FLOW_SETUP_STATE_V1"
+# Parent SHA fields are declared identities here.  A future runtime adapter
+# owns the actual artifact/manifest byte verification.
 
 
 class JointReadinessState(StrEnum):
@@ -46,28 +48,49 @@ class ParentProvenance:
     manifest_sha256: str
     contract_version: str
     source_kind: str
-    outcome_blind: bool = True
-    provider_calls: int = 0
-    model_fitted: bool = False
-    model_scoring: bool = False
-    trade_recommendation: bool = False
+    outcome_blind: bool
+    provider_calls: int
+    model_fitted: bool
+    model_scoring: bool
+    trade_recommendation: bool
+    forward_outcomes_accessed: bool | None
+    outcomes_or_labels_accessed: bool | None
 
 
 def _provenance(value: ParentProvenance | Mapping[str, object], *, label: str) -> ParentProvenance:
     if isinstance(value, ParentProvenance):
         result = value
     elif isinstance(value, Mapping):
+        required_fields = (
+            "artifact_sha256",
+            "manifest_sha256",
+            "contract_version",
+            "source_kind",
+            "outcome_blind",
+            "provider_calls",
+            "model_fitted",
+            "model_scoring",
+            "trade_recommendation",
+        )
+        missing_fields = [field for field in required_fields if field not in value]
+        if missing_fields:
+            raise JointStateContractError(
+                f"{label} provenance is missing explicit fields: {missing_fields}",
+                ("PROVENANCE_INCOMPLETE",),
+            )
         try:
             result = ParentProvenance(
                 artifact_sha256=str(value["artifact_sha256"]),
                 manifest_sha256=str(value["manifest_sha256"]),
                 contract_version=str(value["contract_version"]),
                 source_kind=str(value["source_kind"]),
-                outcome_blind=bool(value.get("outcome_blind", True)),
-                provider_calls=int(value.get("provider_calls", 0)),
-                model_fitted=bool(value.get("model_fitted", False)),
-                model_scoring=bool(value.get("model_scoring", False)),
-                trade_recommendation=bool(value.get("trade_recommendation", False)),
+                outcome_blind=value["outcome_blind"],
+                provider_calls=value["provider_calls"],
+                model_fitted=value["model_fitted"],
+                model_scoring=value["model_scoring"],
+                trade_recommendation=value["trade_recommendation"],
+                forward_outcomes_accessed=value.get("forward_outcomes_accessed"),
+                outcomes_or_labels_accessed=value.get("outcomes_or_labels_accessed"),
             )
         except (KeyError, TypeError, ValueError) as error:
             raise JointStateContractError(
@@ -93,8 +116,36 @@ def _provenance(value: ParentProvenance | Mapping[str, object], *, label: str) -
             f"{label} provenance has empty contract/source identity",
             ("PROVENANCE_INCOMPLETE",),
         )
+    boolean_fields = (
+        "outcome_blind",
+        "model_fitted",
+        "model_scoring",
+        "trade_recommendation",
+    )
+    for field in boolean_fields:
+        if not isinstance(getattr(result, field), bool):
+            raise JointStateContractError(
+                f"{label} provenance field {field} is not boolean",
+                ("PROVENANCE_FIELD_INVALID",),
+            )
+    if not isinstance(result.provider_calls, int) or isinstance(result.provider_calls, bool):
+        raise JointStateContractError(
+            f"{label} provenance provider_calls is not an integer",
+            ("PROVENANCE_FIELD_INVALID",),
+        )
+    for field in ("forward_outcomes_accessed", "outcomes_or_labels_accessed"):
+        value = getattr(result, field)
+        if value is not None and not isinstance(value, bool):
+            raise JointStateContractError(
+                f"{label} provenance field {field} is not boolean",
+                ("PROVENANCE_FIELD_INVALID",),
+            )
     if (
         result.outcome_blind is not True
+        or result.forward_outcomes_accessed is not None
+        and result.forward_outcomes_accessed is not False
+        or result.outcomes_or_labels_accessed is not None
+        and result.outcomes_or_labels_accessed is not False
         or result.provider_calls != 0
         or result.model_fitted is not False
         or result.model_scoring is not False
@@ -166,6 +217,25 @@ def _reject_outcome_payload(frame: pd.DataFrame, *, label: str) -> None:
         )
 
 
+def _canonical_ticker(value: object, *, label: str) -> str:
+    if not isinstance(value, str):
+        raise JointStateContractError(
+            f"{label} parent ticker is null or not a string",
+            ("TICKER_IDENTITY_INVALID",),
+        )
+    if value != value.strip() or value != value.upper() or value.endswith(".JK"):
+        raise JointStateContractError(
+            f"{label} parent ticker is not canonical: {value!r}",
+            ("TICKER_IDENTITY_INVALID",),
+        )
+    if not re.fullmatch(r"[A-Z0-9]+", value):
+        raise JointStateContractError(
+            f"{label} parent ticker is not canonical: {value!r}",
+            ("TICKER_IDENTITY_INVALID",),
+        )
+    return value
+
+
 def _normalise_key_frame(
     frame: pd.DataFrame,
     *,
@@ -186,14 +256,7 @@ def _normalise_key_frame(
             ("PARENT_SCHEMA_INVALID",),
         )
     data = frame.copy()
-    data["ticker"] = (
-        data["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    )
-    if data["ticker"].eq("").any() or data["ticker"].isna().any():
-        raise JointStateContractError(
-            f"{label} parent contains empty ticker identity",
-            ("PARENT_KEY_INVALID",),
-        )
+    data["ticker"] = [_canonical_ticker(value, label=label) for value in data["ticker"]]
     for column in ("feature_session", source_column):
         try:
             data[column] = data[column].map(_date)
@@ -212,8 +275,19 @@ def _normalise_key_frame(
 
 
 def _check_flag_columns(frame: pd.DataFrame, *, label: str) -> None:
-    for column in ("outcome_blind", "model_fitted", "model_scoring", "trade_recommendation"):
-        if column in frame.columns and not frame[column].eq(column == "outcome_blind").all():
+    expected = {
+        "outcome_blind": True,
+        "forward_outcomes_accessed": False,
+        "outcomes_or_labels_accessed": False,
+        "model_fitted": False,
+        "model_scoring": False,
+        "trade_recommendation": False,
+    }
+    for column, expected_value in expected.items():
+        if column in frame.columns and not all(
+            isinstance(value, bool) and value is expected_value
+            for value in frame[column].tolist()
+        ):
             raise JointStateContractError(
                 f"{label} parent has invalid {column} flag",
                 ("PARENT_ACCESS_FLAGS_INVALID",),
@@ -237,6 +311,25 @@ _ALLOWED_CONFIRMATION_STATES = {
     "NO_BREAKOUT",
     "INDETERMINATE",
 }
+
+# Frozen descriptive semantics.  These tuples are part of the contract
+# fingerprint and are also the definitions consumed by the classifier below.
+HARD_BLOCKER_FLOW_LABELS = ("DISTRIBUTION_PRESSURE",)
+HARD_BLOCKER_TREND_STATES = ("DOWNTREND",)
+HARD_BLOCKER_CONFIRMATION_STATES = ("FAILED_BREAKOUT_RECENT",)
+SUPPORTIVE_FLOW_LABELS = (
+    "ABNORMAL_ACCUMULATION",
+    "PERSISTENT_ACCUMULATION",
+    "STEALTH_ACCUMULATION_CANDIDATE",
+)
+STRONG_FLOW_LABELS = (
+    "PERSISTENT_ACCUMULATION",
+    "STEALTH_ACCUMULATION_CANDIDATE",
+)
+READY_TREND_STATES = ("BASING", "EARLY_REVERSAL", "UPTREND")
+ENTRY_TREND_STATES = ("EARLY_REVERSAL", "UPTREND")
+EARLY_CONFIRMATION_STATES = ("BREAKOUT_WEAK_VOLUME", "NEAR_BREAKOUT")
+ENTRY_CONFIRMATION_STATES = ("BREAKOUT_CONFIRMED",)
 
 
 def _validate_parent_rows(
@@ -347,40 +440,37 @@ def _classify(flow_label: str, trend_state: str, confirmation_state: str) -> tup
         return JointReadinessState.IGNORE, tuple(reasons + ["FOREIGN_FLOW_STATE_INDETERMINATE"])
     if trend_state == "INDETERMINATE" or confirmation_state == "INDETERMINATE":
         return JointReadinessState.IGNORE, tuple(reasons + ["PRICE_STATE_INDETERMINATE"])
-    if flow_label == "DISTRIBUTION_PRESSURE":
+    if flow_label in HARD_BLOCKER_FLOW_LABELS:
         return JointReadinessState.IGNORE, tuple(reasons + ["FOREIGN_FLOW_DISTRIBUTION_PRESSURE"])
-    if trend_state == "DOWNTREND":
+    if trend_state in HARD_BLOCKER_TREND_STATES:
         return JointReadinessState.IGNORE, tuple(reasons + ["PRICE_DOWNTREND"])
-    if confirmation_state == "FAILED_BREAKOUT_RECENT":
+    if confirmation_state in HARD_BLOCKER_CONFIRMATION_STATES:
         return JointReadinessState.IGNORE, tuple(reasons + ["PRICE_FAILED_BREAKOUT_RECENT"])
 
-    flow_supportive = flow_label in {
-        "ABNORMAL_ACCUMULATION",
-        "PERSISTENT_ACCUMULATION",
-        "STEALTH_ACCUMULATION_CANDIDATE",
-    }
-    flow_strong = flow_label in {"PERSISTENT_ACCUMULATION", "STEALTH_ACCUMULATION_CANDIDATE"}
-    trend_supportive = trend_state in {"UPTREND", "EARLY_REVERSAL"}
-    breakout_confirmed = confirmation_state == "BREAKOUT_CONFIRMED"
+    flow_supportive = flow_label in SUPPORTIVE_FLOW_LABELS
+    flow_strong = flow_label in STRONG_FLOW_LABELS
+    ready_trend = trend_state in READY_TREND_STATES
+    entry_trend = trend_state in ENTRY_TREND_STATES
+    breakout_confirmed = confirmation_state in ENTRY_CONFIRMATION_STATES
 
-    if flow_strong and trend_supportive and breakout_confirmed:
+    if flow_strong and entry_trend and breakout_confirmed:
         reasons.extend(["FLOW_STRONG_ACCUMULATION", "PRICE_SUPPORTIVE_TREND", "PRICE_BREAKOUT_CONFIRMED"])
         return JointReadinessState.ENTRY_ELIGIBLE, tuple(reasons)
-    if flow_supportive and trend_supportive:
+    if flow_supportive and ready_trend:
         reasons.extend(["FLOW_ACCUMULATION_CONTEXT", "PRICE_SUPPORTIVE_TREND"])
         return JointReadinessState.READY, tuple(reasons)
     if flow_supportive:
         reasons.append("FLOW_ACCUMULATION_CONTEXT")
-    if trend_supportive:
+    if ready_trend:
         reasons.append("PRICE_SUPPORTIVE_TREND")
-    if confirmation_state in {"BREAKOUT_WEAK_VOLUME", "NEAR_BREAKOUT"}:
+    if confirmation_state in EARLY_CONFIRMATION_STATES:
         reasons.append("PRICE_EARLY_CONFIRMATION")
     if len(reasons) > 2:
         return JointReadinessState.WATCH, tuple(reasons)
     return JointReadinessState.IGNORE, tuple(reasons + ["NO_ALIGNED_SUPPORT"])
 
 
-OUTPUT_COLUMNS = (
+OUTPUT_SCHEMA = (
     "ticker",
     "feature_session",
     "flow_through_session",
@@ -404,12 +494,13 @@ OUTPUT_COLUMNS = (
     "model_scoring",
     "trade_recommendation",
 )
+OUTPUT_COLUMNS = OUTPUT_SCHEMA
 
 
 # Frozen descriptive matrix.  The implementation is intentionally explicit so
 # future runtime wiring cannot silently turn this state layer into a signal.
 JOINT_RULE_MATRIX = (
-    ("INVALID_OR_MISSING_PARENT", "IGNORE"),
+    ("INVALID_OR_MISSING_PARENT", "FAIL_CLOSED_NO_OUTPUT"),
     ("FOREIGN_FLOW_STATE_INDETERMINATE", "IGNORE"),
     ("PRICE_STATE_INDETERMINATE", "IGNORE"),
     ("FOREIGN_FLOW_DISTRIBUTION_PRESSURE", "IGNORE"),
@@ -501,5 +592,18 @@ def build_joint_setup_readiness_state(
 def joint_contract_fingerprint() -> str:
     """Return a stable identity for the frozen matrix and contract version."""
 
-    payload = repr((JOINT_STATE_CONTRACT_VERSION, JOINT_RULE_MATRIX, OUTPUT_COLUMNS)).encode()
+    frozen_definition = (
+        ("hard_blocker_flow_labels", HARD_BLOCKER_FLOW_LABELS),
+        ("hard_blocker_trend_states", HARD_BLOCKER_TREND_STATES),
+        ("hard_blocker_confirmation_states", HARD_BLOCKER_CONFIRMATION_STATES),
+        ("supportive_flow_labels", SUPPORTIVE_FLOW_LABELS),
+        ("strong_flow_labels", STRONG_FLOW_LABELS),
+        ("ready_trend_states", READY_TREND_STATES),
+        ("entry_trend_states", ENTRY_TREND_STATES),
+        ("early_confirmation_states", EARLY_CONFIRMATION_STATES),
+        ("entry_confirmation_states", ENTRY_CONFIRMATION_STATES),
+        ("output_schema", OUTPUT_SCHEMA),
+        ("ordered_rule_matrix", JOINT_RULE_MATRIX),
+    )
+    payload = repr((JOINT_STATE_CONTRACT_VERSION, frozen_definition)).encode()
     return hashlib.sha256(payload).hexdigest()

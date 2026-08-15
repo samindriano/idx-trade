@@ -6,6 +6,8 @@ import pytest
 from idx_trade.joint_setup_readiness_state import (
     FOREIGN_FLOW_STATE_CONTRACT_VERSION,
     JOINT_STATE_CONTRACT_VERSION,
+    JOINT_RULE_MATRIX,
+    OUTPUT_SCHEMA,
     PRICE_STATE_CONTRACT_VERSION,
     JointStateContractError,
     JointReadinessState,
@@ -29,12 +31,26 @@ def _provenance() -> tuple[ParentProvenance, ParentProvenance]:
             manifest_sha256=FF_MANIFEST_SHA,
             contract_version=FOREIGN_FLOW_STATE_CONTRACT_VERSION,
             source_kind="FOREIGN_FLOW_PROSPECTIVE_REPRESENTATION_V2",
+            outcome_blind=True,
+            provider_calls=0,
+            model_fitted=False,
+            model_scoring=False,
+            trade_recommendation=False,
+            forward_outcomes_accessed=False,
+            outcomes_or_labels_accessed=False,
         ),
         ParentProvenance(
             artifact_sha256=PRICE_SHA,
             manifest_sha256=PRICE_MANIFEST_SHA,
             contract_version=PRICE_STATE_CONTRACT_VERSION,
             source_kind="PRICE_TREND_CANONICAL_EOD",
+            outcome_blind=True,
+            provider_calls=0,
+            model_fitted=False,
+            model_scoring=False,
+            trade_recommendation=False,
+            forward_outcomes_accessed=False,
+            outcomes_or_labels_accessed=False,
         ),
     )
 
@@ -84,7 +100,7 @@ def test_frozen_progression_matrix_is_deterministic_and_descriptive_only() -> No
             "PERSISTENT_ACCUMULATION",
             "ABNORMAL_ACCUMULATION",
             "HIGH_PARTICIPATION_ROUTINE_FLOW",
-            "NEUTRAL_OR_MIXED",
+            "ABNORMAL_ACCUMULATION",
             "DISTRIBUTION_PRESSURE",
             "PERSISTENT_ACCUMULATION",
         ],
@@ -104,7 +120,7 @@ def test_frozen_progression_matrix_is_deterministic_and_descriptive_only() -> No
         "ENTRY_ELIGIBLE",
         "READY",
         "WATCH",
-        "IGNORE",
+        "READY",
         "IGNORE",
         "IGNORE",
     ]
@@ -154,7 +170,13 @@ def test_provenance_and_parent_access_flags_fail_closed() -> None:
         manifest_sha256=PRICE_MANIFEST_SHA,
         contract_version=PRICE_STATE_CONTRACT_VERSION,
         source_kind="PRICE_TREND_CANONICAL_EOD",
+        outcome_blind=True,
+        provider_calls=0,
+        model_fitted=False,
         model_scoring=True,
+        trade_recommendation=False,
+        forward_outcomes_accessed=False,
+        outcomes_or_labels_accessed=False,
     )
     with pytest.raises(JointStateContractError) as error:
         build_joint_setup_readiness_state(
@@ -198,6 +220,13 @@ def test_outcome_like_payload_and_invalid_hash_are_rejected() -> None:
         manifest_sha256=FF_MANIFEST_SHA,
         contract_version=FOREIGN_FLOW_STATE_CONTRACT_VERSION,
         source_kind="FOREIGN_FLOW_PROSPECTIVE_REPRESENTATION_V2",
+        outcome_blind=True,
+        provider_calls=0,
+        model_fitted=False,
+        model_scoring=False,
+        trade_recommendation=False,
+        forward_outcomes_accessed=False,
+        outcomes_or_labels_accessed=False,
     )
     _, price_provenance = _provenance()
     with pytest.raises(JointStateContractError) as error:
@@ -211,6 +240,60 @@ def test_outcome_like_payload_and_invalid_hash_are_rejected() -> None:
     assert error.value.reason_codes == ("PROVENANCE_HASH_INVALID",)
 
 
+@pytest.mark.parametrize("bad_ticker", [None, "BBCA.JK", "bbca"])
+def test_noncanonical_ticker_identity_is_rejected_without_normalization(bad_ticker: object) -> None:
+    ff, price = _parents(["PERSISTENT_ACCUMULATION"], ["UPTREND"], ["NO_BREAKOUT"])
+    ff.loc[0, "ticker"] = bad_ticker
+    with pytest.raises(JointStateContractError) as error:
+        _build(ff, price)
+    assert error.value.reason_codes == ("TICKER_IDENTITY_INVALID",)
+
+
+def test_provenance_fields_are_explicit_and_optional_flags_are_fail_closed() -> None:
+    ff, price = _parents(["PERSISTENT_ACCUMULATION"], ["UPTREND"], ["NO_BREAKOUT"])
+    ff_provenance, price_provenance = _provenance()
+    mapping = {
+        "artifact_sha256": ff_provenance.artifact_sha256,
+        "manifest_sha256": ff_provenance.manifest_sha256,
+        "contract_version": ff_provenance.contract_version,
+        "source_kind": ff_provenance.source_kind,
+        "outcome_blind": True,
+        "provider_calls": 0,
+        "model_fitted": False,
+        "model_scoring": False,
+        "trade_recommendation": False,
+    }
+    del mapping["provider_calls"]
+    with pytest.raises(JointStateContractError) as error:
+        build_joint_setup_readiness_state(
+            ff,
+            price,
+            official_sessions=SESSIONS,
+            foreign_flow_provenance=mapping,
+            price_state_provenance=price_provenance,
+        )
+    assert error.value.reason_codes == ("PROVENANCE_INCOMPLETE",)
+
+    mapping["provider_calls"] = 0
+    mapping["forward_outcomes_accessed"] = True
+    with pytest.raises(JointStateContractError) as error:
+        build_joint_setup_readiness_state(
+            ff,
+            price,
+            official_sessions=SESSIONS,
+            foreign_flow_provenance=mapping,
+            price_state_provenance=price_provenance,
+        )
+    assert error.value.reason_codes == ("PARENT_ACCESS_FLAGS_INVALID",)
+
+
 def test_contract_fingerprint_is_stable() -> None:
     assert len(joint_contract_fingerprint()) == 64
-    assert joint_contract_fingerprint() == joint_contract_fingerprint()
+    assert joint_contract_fingerprint() == "a79e37cacf9ec428e27b4b398a757b9415e6e358b11b0d10edaf78a50c3d3599"
+    assert JOINT_RULE_MATRIX[0] == ("INVALID_OR_MISSING_PARENT", "FAIL_CLOSED_NO_OUTPUT")
+    assert OUTPUT_SCHEMA[-4:] == (
+        "outcome_blind",
+        "model_fitted",
+        "model_scoring",
+        "trade_recommendation",
+    )

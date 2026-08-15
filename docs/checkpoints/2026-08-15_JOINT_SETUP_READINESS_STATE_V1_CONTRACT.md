@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Branch: `research/idx-joint-setup-readiness-state-v1`
-Status: `REVIEW`
+Status: `REVIEW` (remediation complete; runtime wiring still blocked pending review)
 Independent parent acceptance: `review/idx-price-trend-runtime-smoke-blocker-v1@5aa81aaf00533f3930cecdf302c0bf7de52acb4c`
 
 ## Scope
@@ -37,7 +37,7 @@ identities, contract version, source kind, `outcome_blind=true`,
 The joint output carries both parent identities, source kinds, exact source and
 feature sessions, contract version, reason codes, and the same protected flags.
 Contract fingerprint:
-`001669d2daca1df8c85cca774e577e21542cc47c061e9ad4f989f863afe31578`.
+`a79e37cacf9ec428e27b4b398a757b9415e6e358b11b0d10edaf78a50c3d3599`.
 
 ## Frozen descriptive rule matrix
 
@@ -51,7 +51,7 @@ Rules are evaluated in this order:
 | Price `DOWNTREND` | `IGNORE` |
 | Price `FAILED_BREAKOUT_RECENT` | `IGNORE` |
 | Strong flow (`PERSISTENT_ACCUMULATION` or `STEALTH_ACCUMULATION_CANDIDATE`) + supportive trend (`UPTREND` or `EARLY_REVERSAL`) + `BREAKOUT_CONFIRMED` | `ENTRY_ELIGIBLE` |
-| Supportive flow (`ABNORMAL_ACCUMULATION`, `PERSISTENT_ACCUMULATION`, or `STEALTH_ACCUMULATION_CANDIDATE`) + supportive trend | `READY` |
+| Supportive flow (`ABNORMAL_ACCUMULATION`, `PERSISTENT_ACCUMULATION`, or `STEALTH_ACCUMULATION_CANDIDATE`) + `BASING`, `EARLY_REVERSAL`, or `UPTREND` | `READY` |
 | One supportive context or early confirmation (`BREAKOUT_WEAK_VOLUME` / `NEAR_BREAKOUT`) | `WATCH` |
 | Otherwise | `IGNORE` |
 
@@ -75,8 +75,8 @@ Compatibility failures use fail-closed codes such as
 
 ## Validation
 
-- Focused: `python -m pytest tests/test_joint_setup_readiness_state.py -q` → **7 passed**.
-- Full: `python -m pytest -q` → **46 passed, 1 failed / 47 collected**.
+- Focused: `python -m pytest tests/test_joint_setup_readiness_state.py -q` → **11 passed**.
+- Full: `python -m pytest -q` → **50 passed, 1 failed / 51 collected**.
 - The sole failure is the known unrelated `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` expectation (expected 1, actual 2 independent `raw_close` and `vendor_adj_close` conflicts). This lane did not modify storage.
 - `git diff --check` is required before push.
 
@@ -84,6 +84,21 @@ Synthetic/adversarial coverage proves deterministic four-state mapping,
 missing/partial parent rejection, source-target causality, duplicate and
 unknown state rejection, outcome/model payload rejection, provenance/hash and
 flag enforcement, parent hash propagation, and stable contract identity.
+
+## Remediation review closure
+
+The reviewed issues are addressed without changing either accepted parent
+module. `BASING` is now a READY trend state, while ENTRY remains restricted to
+`EARLY_REVERSAL`/`UPTREND` plus strong accumulation and confirmed breakout.
+Hard blockers, supportive/strong labels, READY/ENTRY trend sets, early and
+entry confirmations, output schema, and the ordered matrix are explicit frozen
+constants. The classifier and fingerprint consume those same definitions.
+Invalid or incompatible parents are `FAIL_CLOSED_NO_OUTPUT`, not `IGNORE`.
+Ticker identity is already canonical and is now rejected on null, lowercase,
+whitespace, or `.JK` forms rather than normalized. Provenance flags are
+explicit and optional forward/outcome flags are rejected unless explicitly
+false. Parent SHA fields remain declared identities; byte verification is
+reserved for the future runtime adapter.
 
 ## Boundary
 

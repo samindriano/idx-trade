@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 5c98d8a674ddf6f2da24e7d52e9a308af4c88079
 branch: research/idx-joint-setup-readiness-state-v1
-head_commit: 8b226445714cb228fa1554aa74c71f0ff7915efe
+head_commit: remediation implementation commit pending final metadata push
 scope: Deterministic outcome-blind joint state contract over accepted Foreign Flow Setup State V1 and Price / Trend Confirmation State V1 parents; no runtime wiring.
 
 ## Parent lineage
@@ -41,13 +41,22 @@ scope: Deterministic outcome-blind joint state contract over accepted Foreign Fl
 - Valid rows classify only to `IGNORE`, `WATCH`, `READY`, or
   `ENTRY_ELIGIBLE`; the last state is descriptive context, never a trade
   recommendation.
+- `READY` includes supportive accumulation with `BASING`, `EARLY_REVERSAL`,
+  or `UPTREND`; `ENTRY_ELIGIBLE` remains strong accumulation with
+  `EARLY_REVERSAL`/`UPTREND` and `BREAKOUT_CONFIRMED`.
+- Rule sets, output schema, and ordered matrix are shared by classifier and
+  fingerprint. Invalid parent compatibility is `FAIL_CLOSED_NO_OUTPUT`.
+- Parent tickers must already be canonical uppercase IDX identities; `.JK`,
+  lowercase, whitespace, and null values are rejected without normalization.
+- Provenance flags are explicit; optional forward/outcome flags are accepted
+  only when false. SHA values are declared identities, not byte verification.
 - Frozen matrix and reason codes are recorded in the checkpoint and exported
   by the implementation.
 
 ## Validation
 
-- Focused tests: 7 passed.
-- Full pytest: 46 passed, 1 known unrelated storage expectation failure, 47
+- Focused tests: 11 passed.
+- Full pytest: 50 passed, 1 known unrelated storage expectation failure, 51
   collected.
 - `git diff --check`: pending final validation before push.
 - No provider calls, outcome access, model fitting/scoring, O2/counter changes,
@@ -55,7 +64,7 @@ scope: Deterministic outcome-blind joint state contract over accepted Foreign Fl
 
 ## Decisions needed
 
-Independent review should decide whether this contract is accepted. Runtime
+Remediation review should decide whether this contract is accepted. Runtime
 wiring is intentionally not started in this lane.
 
 recommended_next_action: review contract/matrix and tests; authorize any runtime wiring separately only after acceptance.
