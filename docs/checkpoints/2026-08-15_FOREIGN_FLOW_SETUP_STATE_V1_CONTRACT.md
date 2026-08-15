@@ -25,18 +25,29 @@ Do not collapse foreign activity into one `foreign_net / current_volume` number.
 The state layer preserves distinct economic axes:
 
 1. **Current participation** — dominance of net foreign activity relative to current regular-market volume.
-2. **Own-history abnormality** — how unusual current economic foreign pressure is relative to the ticker's prior behavior.
-3. **Cross-sectional pressure** — how strong the ticker is versus the same-session primary-liquid universe.
-4. **Persistence / acceleration** — whether pressure is sustained and strengthening or fading.
-5. **Flow-price divergence** — whether foreign pressure is strong while price response is comparatively weak.
+2. **Own-history abnormality magnitude** — how large the accepted V2 shock is versus the ticker's prior regular-market activity baseline.
+3. **Own-history percentile** — how unusual that shock is versus the ticker's own prior distribution.
+4. **Cross-sectional pressure** — how strong the ticker is versus the same-session primary-liquid universe.
+5. **Persistence / acceleration** — whether pressure is sustained and strengthening or fading.
+6. **Flow-price divergence** — whether foreign pressure is strong while price response is comparatively weak.
 
 This intentionally permits a 5% current-participation observation to be more informative than a 50% observation when the former is historically extreme and persistent while the latter is routine for its ticker.
+
+Illustrative interpretation:
+
+- ticker A: `foreign_participation_1 = 0.50`, but `foreign_flow_shock_1 = 0.20` and own-history percentile `0.65` -> high current participation, routine historical pressure;
+- ticker B: `foreign_participation_1 = 0.05`, but `foreign_flow_shock_1 = 3.20` and own-history percentile `0.99` -> lower participation, but extreme abnormal pressure relative to the ticker's own historical baseline.
+
+The setup layer must retain both observations rather than rank A above B purely because `50% > 5%`.
 
 ## Accepted V2 inputs reused
 
 The implementation reuses accepted causal Foreign Flow V2 fields without changing their formulas:
 
 - `foreign_participation_1`
+- `foreign_flow_shock_1`
+- `foreign_flow_shock_mean_5`
+- `foreign_flow_shock_mean_20`
 - `foreign_flow_shock_percentile_120`
 - `xs_rank_foreign_flow_shock_mean_5`
 - `xs_rank_foreign_flow_shock_mean_20`
@@ -47,6 +58,8 @@ The implementation reuses accepted causal Foreign Flow V2 fields without changin
 - `foreign_flow_price_divergence_20`
 
 The accepted t -> t+1 causality, listing-aware history, current-excluded own-history percentile, and source-session rank scope remain unchanged.
+
+The raw shock fields are preserved in the sidecar as explanatory evidence. V1 does not create a new fitted weighting between participation and shock magnitude.
 
 ## Coarse outcome-blind bands
 
@@ -71,6 +84,8 @@ Uses signed own-history percentile:
 - `NORMAL`: `>20th .. <80th`
 - `ACCUMULATION`: `>=80th .. <95th`
 - `EXTREME_ACCUMULATION`: `>=95th`
+
+Raw `shock_1`, `shock_mean_5`, and `shock_mean_20` remain visible beside this categorical state so a trader/system can distinguish modest versus very large abnormal pressure without introducing a new outcome-tuned score.
 
 ### Persistence
 
@@ -124,11 +139,31 @@ Examples:
 
 Price-state and confirmation semantics are out of scope here and must not be tuned from already-observed V1/V2 historical outcomes.
 
+## Sidecar contract
+
+`foreign_flow_setup_sidecar.py` emits:
+
+- ticker/session keys when present;
+- raw V2 evidence fields listed above;
+- participation intensity/direction;
+- historical abnormality state;
+- persistence state;
+- cross-sectional pressure;
+- divergence state;
+- acceleration direction;
+- composite setup label;
+- explicit missing-fields string;
+- state-contract and source-representation version identifiers.
+
+No probability, expected return, trade recommendation, or alpha score is emitted.
+
 ## Missingness / fail-closed
 
 - Do not forward-fill unavailable foreign-flow state.
 - Do not convert unavailable rank/divergence fields to neutral.
 - Non-finite required inputs emit `INDETERMINATE` with explicit missing fields.
+- Outcome/label columns are rejected even if the classifier would not consume them.
+- Duplicate `(ticker, feature_session)` sidecar keys fail closed.
 - No inferred effective-float denominator is allowed until PIT supply remediation succeeds.
 
 ## Validation rule
