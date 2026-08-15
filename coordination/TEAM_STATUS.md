@@ -357,7 +357,7 @@ representation producer for live EOD sessions.
 
 ## Current status correction — 2026-08-15 — Foreign Flow Representation V2 forward producer
 
-Foreign Flow Representation V2 forward producer is claimed as `ACTIVE` by
+Foreign Flow Representation V2 forward producer is `REVIEW` by
 `Codex/Foreign-Flow-Representation-V2-Forward` on branch
 `integration/foreign-flow-representation-v2-forward-v1`, starting from
 `research/idx-foreign-flow-setup-state-v1` at
@@ -368,7 +368,13 @@ history, canonical market/price artifacts, and existing Foreign Flow catch-up
 runtime. No scheduler, capture hierarchy, counter, provider expansion,
 historical performance test, model/outcome access, free-float/HSC integration,
 price-state layer, or O2 change is authorized. HSC/free-float remains a
-separate active lane and must not be modified.
+separate active lane and was not modified. Implementation is pushed at
+`af1d060aef17e6abb5ea2288394cb59dbfe326f1`. Focused producer/V2/setup tests
+pass 24; full pytest is 294 passed / 1 unrelated pre-existing storage
+expectation failure / 3 warnings. The producer is fail-closed when the
+official calendar or rolling context is incomplete; no real 2026-08-11/12
+backfill was run. Await independent review before a genuinely new live EOD
+session.
 
 ## Current status correction — 2026-08-15 — HSC source remediation lane
 
