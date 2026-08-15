@@ -749,7 +749,7 @@ semantics remain out of scope.
 
 ## Current status correction — 2026-08-16 — Joint Setup Readiness V1.1 generic prospective runner
 
-Joint Setup Readiness V1.1 generic prospective runner is `ACTIVE` for bounded
+Joint Setup Readiness V1.1 generic prospective runner is `REVIEW` after bounded
 parent-semantic remediation under independent review
 `review/idx-joint-setup-readiness-v1-1-forward-acceptance@2bdc8608d1900076b6e94f5f5c8b4c76c71b547f`.
 The frozen joint classifier, thresholds, domain semantics, output schema, and
@@ -760,17 +760,20 @@ pinning.
 The prior generic runner result was `REVIEW` by
 `Codex/Joint-Setup-Readiness-Generic-Runner` on branch
 `integration/joint-setup-readiness-v1-1-generic-runner-v1` at final HEAD
-`6d416f080482a4d1ebfa4c096c51ad565465e249`, based on accepted runtime parent
+`8e12796fa1887e031cbfa3d84919d243f0d56cc3`, based on accepted runtime parent
 `integration/joint-setup-readiness-v1-1-forward-v1@8ede786622713b03127fbf856abe2d7d2bd5c03d`.
-The generic runner passed compatibility replay for 2026-08-12 -> 2026-08-13
-with `created=false`, preserving artifact SHA
+The remediation adds strict upstream Price State context verification plus
+source-context replay and strict Foreign Flow Representation/Setup replay
+before parent hashes are recorded. The generic runner passed compatibility
+replay for 2026-08-12 -> 2026-08-13 with `created=false`, preserving artifact SHA
 `d83593b61a25f9f32a82c153001e0c548f29ffb255485b29a84760ae6ae03418` and
 manifest SHA `c3007af5af3061ee91be176fb0d29dc000cfc162fcc0c3642c5f26723646d646`.
-Focused joint tests: 43 passed. Full pytest: 81 passed, 1 unrelated
+Focused joint tests: 47 passed. Full pytest: 81 passed, 1 unrelated
 pre-existing `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
 failure, 82 collected. `git diff --check` PASS. No new prospective session,
 provider/network, scheduler, O2/counter, model, outcome, trade, or Repository
-Hygiene work was performed.
+Hygiene work was performed. See checkpoint
+`docs/checkpoints/2026-08-16_JOINT_SETUP_READINESS_V1_1_GENERIC_RUNNER_PARENT_SEMANTIC_REMEDIATION.md`.
 
 ## Current status correction — 2026-08-16 — LBRE Monthly Free-Float History V1 result
 
