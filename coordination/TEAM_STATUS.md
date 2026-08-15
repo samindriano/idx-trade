@@ -514,3 +514,28 @@ SINGLE_SOURCE reconciliation. Reuse the parent official bytes by exact hash;
 do not start full monthly acquisition. No holder reconstruction, 100%-minus-
 holders arithmetic, HSC subtraction, daily fill, effective supply, Foreign
 Flow, features, models, outcomes, or unrelated lane work is authorized.
+
+## Current status correction — 2026-08-15 — Historical Statutory Free Float Snapshot V1 result
+
+Historical statutory free-float snapshot V1 is complete and remains `REVIEW`
+for ChatGPT independent review. Branch
+`data/idx-historical-statutory-free-float-snapshot-v1` contains the factual
+checkpoint and handoff for the bounded run. Verdict:
+`HISTORICAL_STATUTORY_FF_SNAPSHOT_READY_WITH_GAPS`.
+
+The external artifact root is
+`D:\Documents\Project\idx-historical-statutory-free-float-snapshot-20260815-v1`
+with manifest SHA-256
+`7e5d9cad904374d66b2ef69d25de5c974e06799cc617494619addde2fedb3a7e`.
+The two parent market-wide reports were reused only after verifying parent
+manifest SHA-256
+`ff25cefed69af8cd221530a23f6fc31e85e0c510a21ef5bfb78526d618a45454`.
+
+The bounded census produced 923 exact market-wide observations at position
+2025-12-31 and 871 current issuer LBRE observations at position 2026-06-30,
+with AGREE=1, CONFLICT=1, and SINGLE_SOURCE=1,798 on overlapping positions.
+Complete quarterly market-wide coverage for 2024–2026 was not proven; no
+forward-fill, interpolation, holder/HSC reconstruction, effective supply,
+Foreign Flow, feature, model, or outcome work occurred. Focused tests passed
+14; full pytest was 61 passed / 1 unrelated storage expectation failure / 0
+warnings reported. `git diff --check` passed.
