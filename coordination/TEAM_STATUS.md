@@ -571,7 +571,7 @@ combination, O2, HSC/free-float, or trade-state logic is in scope.
 
 ## Current status correction — 2026-08-15 — Canonical EOD Calendar-Parent Attestation V1
 
-Canonical EOD calendar-parent provenance remediation is now `ACTIVE` for
+Canonical EOD calendar-parent provenance remediation is now `REVIEW` after
 temporal-dependency remediation on branch
 `integration/canonical-eod-calendar-parent-attestation-v1`, based on the
 independent Price/Trend runtime-smoke review
@@ -585,20 +585,21 @@ and trade-state logic remain out of scope. No Price State smoke rerun was
 authorized in this lane.
 
 Independent review `d862d3ac22672b30642cd2f5285f292b2b2645ac` accepted the
-read-only audit but identified two verifier temporal dependencies: mutable
+read-only audit and identified two verifier temporal dependencies: mutable
 calendar diagnostic SHA and continued global absence of the old calendar SHA.
-Implementation and checkpoint remain at final accepted base HEAD
-`a3e54c965ea5c417d58472365926f5356a924a8b`; remediation is limited to those
-verifier/writer semantics and tests. The read-only runtime audit found
+Remediation is pushed at final HEAD
+`e90f902c040d1458786dc68369be8c58d1e58fa1`; it is limited to those verifier/
+writer semantics and tests. The read-only runtime audit found
 2026-08-11's declared calendar SHA unrecoverable while all non-calendar
 canonical artifacts remain valid; 2026-08-12's declared calendar remains
 recoverable at its original path. The strict sibling attestation contract and
-Price State compatibility verifier are covered by 14 focused passing tests.
-Full pytest is `85 passed, 1 failed` out of 86 collected; the sole failure is
+Price State compatibility verifier are covered by 15 focused passing tests.
+Full pytest is `86 passed, 1 failed` out of 87 collected; the sole failure is
 the unrelated pre-existing storage conflict-count expectation. No runtime
 attestation was materialized, no provider calls were made, and no outcome,
 model, trade-state, scheduler, counter, O2, or canonical EOD artifact was
-changed.
+changed. Runtime attestation write and second Price State smoke remain blocked
+pending independent review.
 
 ## Current status correction — 2026-08-15 — LBRE Lineage / Parser Remediation V1 result
 
