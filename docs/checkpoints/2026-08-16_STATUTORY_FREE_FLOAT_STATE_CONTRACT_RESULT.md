@@ -76,7 +76,7 @@ days.
   `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`.
   It expects one conflict while current storage independently reports
   `raw_close` and `vendor_adj_close` conflicts. No storage change was made.
-- `git diff --check`: pending final staged validation.
+- `git diff --check`: PASS.
 
 ## Boundaries respected
 
