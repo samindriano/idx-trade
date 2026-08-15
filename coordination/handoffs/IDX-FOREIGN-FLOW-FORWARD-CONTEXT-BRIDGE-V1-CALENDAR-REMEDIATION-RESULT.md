@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 1c4fb1a7044b797ecf4ffcb93cc36a9dc6b18700
 branch: data/foreign-flow-forward-context-bridge-v1
-head_commit: pending final remediation commit
+head_commit: db57c02
 
 scope: >-
   Separate the pinned historical session calendar from the pinned 10-session
