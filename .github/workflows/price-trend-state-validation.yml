@@ -1,0 +1,24 @@
+name: price-trend-state-validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/idx_trade/price_trend_state.py'
+      - 'tests/test_price_trend_state.py'
+      - 'docs/checkpoints/2026-08-15_PRICE_TREND_CONFIRMATION_STATE_V1_CONTRACT.md'
+      - 'coordination/handoffs/IDX-PRICE-TREND-CONFIRMATION-STATE-V1.md'
+      - '.github/workflows/price-trend-state-validation.yml'
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . pytest
+      - run: pytest -q tests/test_price_trend_state.py
