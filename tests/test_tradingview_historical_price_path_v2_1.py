@@ -96,9 +96,9 @@ def test_request_schema_rejects_numeric_timeframe_and_accepts_frozen_controls() 
     invalid = {**valid, "timeframe": 60}
     with pytest.raises(TypeError):
         serialize_v2_1_request(invalid)
-    controls = control_request_fixture({"window": {"start": "2021-04-01", "end": "2026-07-31"}, "acquisition": {"fetch_more_batch": 5}})
+    controls = control_request_fixture({"window": {"start": "2021-04-01", "end": "2026-07-31"}, "acquisition": {"initial_range": 500, "fetch_more_batch": 5000, "fetch_more_steps": 3, "timeout_ms": 25000}})
     assert [row["ticker"] for row in controls] == ["BBCA", "BBRI", "BMRI", "TLKM", "ASII"]
-    assert all(row["initial_range"] == 10000 and row["fetch_more_steps"] == 0 for row in controls)
+    assert all(row["initial_range"] == 500 and row["fetch_more_steps"] == 3 and row["fetch_more_batch"] == 5000 for row in controls)
 
 
 def test_atomic_stream_artifact_hash_and_no_partial_on_failure(tmp_path: Path) -> None:
