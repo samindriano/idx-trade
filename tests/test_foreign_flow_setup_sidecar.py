@@ -14,6 +14,9 @@ def _frame() -> pd.DataFrame:
                 "feature_session": "2026-08-14",
                 "flow_through_session": "2026-08-13",
                 "foreign_participation_1": 0.50,
+                "foreign_flow_shock_1": 0.20,
+                "foreign_flow_shock_mean_5": 0.15,
+                "foreign_flow_shock_mean_20": 0.10,
                 "foreign_flow_shock_percentile_120": 0.65,
                 "xs_rank_foreign_flow_shock_mean_5": 0.55,
                 "xs_rank_foreign_flow_shock_mean_20": 0.60,
@@ -28,6 +31,9 @@ def _frame() -> pd.DataFrame:
                 "feature_session": "2026-08-14",
                 "flow_through_session": "2026-08-13",
                 "foreign_participation_1": 0.05,
+                "foreign_flow_shock_1": 3.20,
+                "foreign_flow_shock_mean_5": 2.40,
+                "foreign_flow_shock_mean_20": 1.60,
                 "foreign_flow_shock_percentile_120": 0.99,
                 "xs_rank_foreign_flow_shock_mean_5": 0.95,
                 "xs_rank_foreign_flow_shock_mean_20": 0.93,
@@ -51,8 +57,15 @@ def test_sidecar_preserves_separate_participation_and_abnormality_axes() -> None
     assert aaa["setup_label"] == "HIGH_PARTICIPATION_ROUTINE_FLOW"
 
     assert bbb["participation_intensity"] == "NORMAL"
+    assert bbb["foreign_flow_shock_1"] == pytest.approx(3.20)
     assert bbb["historical_abnormality"] == "EXTREME_ACCUMULATION"
     assert bbb["setup_label"] == "STEALTH_ACCUMULATION_CANDIDATE"
+
+    # The lower current-volume participation row retains the much larger
+    # own-history abnormality evidence instead of being ranked below AAA by
+    # participation alone.
+    assert bbb["foreign_participation_1"] < aaa["foreign_participation_1"]
+    assert bbb["foreign_flow_shock_1"] > aaa["foreign_flow_shock_1"]
 
 
 def test_sidecar_rejects_duplicate_keys() -> None:
@@ -69,7 +82,7 @@ def test_sidecar_rejects_outcome_columns() -> None:
         build_foreign_flow_setup_sidecar(frame)
 
 
-def test_sidecar_requires_all_v2_state_fields() -> None:
-    frame = _frame().drop(columns=["foreign_flow_price_divergence_20"])
+def test_sidecar_requires_all_v2_evidence_fields() -> None:
+    frame = _frame().drop(columns=["foreign_flow_shock_mean_20"])
     with pytest.raises(ValueError, match="missing columns"):
         build_foreign_flow_setup_sidecar(frame)
