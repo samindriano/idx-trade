@@ -541,6 +541,24 @@ features, models, or outcomes. The contract will preserve LBRE and market
 evidence independently, apply strict post-publication official-session
 eligibility, and keep genuine share-count conflicts fail-closed.
 
+## Current status correction — 2026-08-16 — Statutory Free-Float Knowledge-State Contract V1 result
+
+Statutory Free-Float Knowledge-State Contract V1 is now `REVIEW` by
+`Codex/Statutory-Free-Float-State-Contract` on branch
+`data/idx-statutory-free-float-state-contract-v1` at final HEAD
+`06f07d66823bf723aaacf793bcd85c41a69b6dad`.
+
+The query-level contract is implemented without historical session-panel
+materialization. It enforces strict post-publication official-session
+eligibility, append-only correction replay, maximum economic `as_of_date`
+selection, separate LBRE/market provenance, percentage-only disagreement as
+denominator-eligible, and genuine share-count conflicts as fail-closed.
+Focused state/statutory tests passed 33. Full pytest was 87 collected, 86
+passed, and 1 unrelated pre-existing storage expectation failed. `git diff
+--check` passed. No provider calls, acquisition, panel materialization,
+effective-supply, Foreign Flow, features, models, O2/counter, or outcomes were
+accessed. Awaiting ChatGPT review before any historical state materialization.
+
 The external artifact root is
 `D:\Documents\Project\idx-historical-statutory-free-float-snapshot-20260815-v1`
 with manifest SHA-256
