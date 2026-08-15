@@ -84,6 +84,18 @@ def test_original_correction_and_removal_preserve_pit_state() -> None:
     assert state.determination_methodology_version is HSCMethodologyVersion.INITIAL_2026
 
 
+def test_active_events_require_explicit_concentration() -> None:
+    with pytest.raises(ValueError, match="ORIGINAL HSC event requires explicit"):
+        _event(1, concentration_pct=None)
+    with pytest.raises(ValueError, match="CORRECTION HSC event requires explicit"):
+        _event(
+            2,
+            kind=HSCRevisionKind.CORRECTION,
+            supersedes="event-1",
+            concentration_pct=None,
+        )
+
+
 def test_duplicate_active_addition_fails_closed() -> None:
     with pytest.raises(ValueError, match="duplicate active addition"):
         replay_hsc_events([_event(1), _event(2, day=3)])
