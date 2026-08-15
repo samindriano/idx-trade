@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: a3e54c965ea5c417d58472365926f5356a924a8b
 branch: integration/canonical-eod-calendar-parent-attestation-v1
-head_commit: pending until push
+head_commit: 6a03885ab5b837f5745f221e780b9c31f6696b37
 scope: Remediate only temporal dependencies in the legacy canonical EOD calendar-parent attestation verifier/writer.
 files_changed:
   - src/idx_trade/canonical_eod_calendar_parent_attestation.py
