@@ -540,3 +540,16 @@ forward-fill, interpolation, holder/HSC reconstruction, effective supply,
 Foreign Flow, feature, model, or outcome work occurred. Focused tests passed
 14; full pytest was 61 passed / 1 unrelated storage expectation failure / 0
 warnings reported. `git diff --check` passed.
+
+## Current status correction — 2026-08-15 — Price / Trend Runtime Bridge Adapter V1
+
+Price / Trend Runtime Bridge Adapter V1 is `ACTIVE` for one bounded local
+zero-provider smoke on branch
+`integration/price-trend-runtime-bridge-adapter-v1` at latest HEAD
+`d5055e29e34802ae789789107ffe71e41c0c3c89`, with validated implementation
+lineage including `2df8134aac531ec1214f560a8393cda607b9da7a`. Scope is exact
+Windows artifact/SHA verification, focused/full tests, and the authorized
+`forward_price_trend_controlled_smoke` only. No provider call, recapture,
+scheduler/counter change, outcome/performance access, threshold tuning,
+Foreign Flow + Price State combination, O2, HSC/free-float, or trade-state
+logic is authorized.
