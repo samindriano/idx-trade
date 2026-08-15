@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 69cdd303ad937e6bc90d930955f751f1a2686ab0
 branch: data/idx-ownership-hsc-source-remediation-v1
-head_commit: pending until documentation commit
+head_commit: 18650f8a2d83df12a6caa83235893d6273583406
 scope: Official IDX/KSEI HSC/RSC transport, raw attachment/hash/provenance recovery, bounded PIT event representation, and one official monthly >=1% attachment retry.
 files_changed: docs/checkpoints/2026-08-15_HSC_SOURCE_REMEDIATION.md; coordination/handoffs/IDX-OWNERSHIP-HSC-SOURCE-REMEDIATION-V1.md
 external_artifact_root: D:\\Documents\\Project\\idx-ownership-hsc-source-remediation-20260815-v1
