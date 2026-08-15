@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `6d5b7f28b4f2e0adf10fc47e63412b67896f5e27`
 branch: `data/idx-historical-statutory-free-float-snapshot-v1`
-head_commit: pending documentation commit
+head_commit: `6e879fcf5b2005fdbc55eb22db11d36987d8748e`
 
 ## Scope
 
