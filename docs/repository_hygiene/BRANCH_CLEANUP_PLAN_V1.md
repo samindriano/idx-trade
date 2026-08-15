@@ -2,7 +2,7 @@
 
 ## Scope and safety
 
-This is an audit-only snapshot generated from the fully fetched/pruned local `origin` refs. It makes no branch deletion, tag creation, PR closure, history rewrite, or force-push. Remote branch inventory count: **159**; unique branch names: **159**; generated CSV rows: **159**; main HEAD: `a5c3837842183bb5368b19b0885c16faf9b9678d`.
+This is an audit-only snapshot generated from the fully fetched/pruned local `origin` refs. It makes no branch deletion, tag creation, PR closure, history rewrite, or force-push. Remote branch inventory count: **159**; unique branch names: **159**; generated CSV rows: **159**; main HEAD: `ddd4ff1a8e09be3517d41b225bf14e191b7cd01b`.
 
 The audit branch is included in this snapshot. Because committing a regenerated report advances that branch, its self-row records the branch HEAD observed immediately before this report commit; the inventory count remains the authoritative no-missed-branch check.
 
@@ -71,7 +71,7 @@ No PR closure is proposed as an executable action because authenticated PR metad
 - `data/idx-statutory-free-float-reconstruction-v1` at `9eb73df879d44456adfc8d5f717e6c75be5d07a0` — Scientific/documented branch is not reachable from main; deletion would risk losing a provenance anchor. References: coordination/TEAM_STATUS.md:474; coordination/TEAM_STATUS.md:486; origin/main:coordination/TEAM_STATUS.md.
 - `data/tradingview-intraday-independent-activity-resolution-v1` at `c943a76fd56872d981a87519c2eb7072c413322c` — Scientific/documented branch is not reachable from main; deletion would risk losing a provenance anchor. References: origin/main:coordination/TEAM_STATUS.md.
 - `integration/canonical-eod-calendar-parent-attestation-v1` at `32c30d17c7a2d1d5f434f9f6df0c7fb88e2b13ae` — Scientific/documented branch is not reachable from main; deletion would risk losing a provenance anchor. References: coordination/TEAM_STATUS.md:577; origin/main:coordination/TEAM_STATUS.md.
-- `research/idx-joint-setup-readiness-state-v1` at `0bed7e105ee58a62e0edf89e5148ca2789381929` — Scientific/documented branch is not reachable from main; deletion would risk losing a provenance anchor. References: coordination/TEAM_STATUS.md:650; origin/main:coordination/TEAM_STATUS.md.
+- `research/idx-joint-setup-readiness-state-v1` at `3ad481cc4b371f5022742101a12f6b9d603481a4` — Scientific/documented branch is not reachable from main; deletion would risk losing a provenance anchor. References: coordination/TEAM_STATUS.md:651; origin/main:coordination/TEAM_STATUS.md.
 - `research/idx-stage4-v1` at `899bbf3bb5987e9d345f4c8692a7656fe03a3b0e` — Lineage or retention decision remains ambiguous. References: coordination/TEAM_STATUS.md:59; origin/main:coordination/TEAM_STATUS.md.
 - `research/idx-stage4b-calibration-v1` at `f3209705ec4e5fe85e5e5b38035f6d2adf6d31c9` — Lineage or retention decision remains ambiguous. References: coordination/TEAM_STATUS.md:59; origin/main:coordination/TEAM_STATUS.md.
 - `research/idx-stage5-ranking-holdout-v1` at `8223899b4bae9b1225334b92908e85689ab8232f` — Lineage or retention decision remains ambiguous. References: coordination/TEAM_STATUS.md:59; origin/main:coordination/TEAM_STATUS.md.
