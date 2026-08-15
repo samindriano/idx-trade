@@ -671,10 +671,10 @@ tests: 11 passed. Full pytest: 50 passed / 1 known unrelated storage
 expectation failure / 51 collected. `git diff --check` PASS. Runtime wiring
 remains blocked pending ChatGPT review.
 
-## Current status correction — 2026-08-15 — Joint Setup Readiness State V1.1
+## Current status correction — 2026-08-16 — Joint Setup Readiness State V1.1
 
 Joint Setup Readiness State V1.1 real-parent domain remediation is now
-`ACTIVE` by Codex/Joint-Setup-Readiness on branch
+`REVIEW` by Codex/Joint-Setup-Readiness on branch
 `research/idx-joint-setup-readiness-state-v1-1-domain-remediation`, based on
 the accepted V1 contract at
 `research/idx-joint-setup-readiness-state-v1@3ad481cc4b371f5022742101a12f6b9d603481a4`
@@ -683,6 +683,10 @@ and acceptance review
 The bounded scope is only the V1.1 real-parent applicability domain: Price
 State is authoritative, every Price key must exist exactly once in Foreign
 Flow, Foreign-Flow-only keys are allowed but excluded with exact provenance,
-and no runtime joint artifact is created in this lane. Repository Hygiene,
-parent formulas/thresholds, providers, schedulers, O2/counters, models,
-outcomes, and trade semantics remain out of scope.
+and no runtime joint artifact is created in this lane. Real-parent audit is
+`JOINT_REAL_PARENT_DOMAIN_COMPATIBLE`: Price `836`, Foreign Flow `963`,
+overlap `836`, Price-only `0`, Foreign-Flow-only excluded `127`. Final branch
+HEAD is `471287c`. Focused tests: `22 passed`. Full pytest: `61 passed, 1
+unrelated storage expectation failure, 62 collected`; `git diff --check`
+PASS. Repository Hygiene, parent formulas/thresholds, providers, schedulers,
+O2/counters, models, outcomes, and trade semantics remain out of scope.
