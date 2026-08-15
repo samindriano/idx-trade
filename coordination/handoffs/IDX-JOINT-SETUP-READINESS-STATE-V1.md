@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 5c98d8a674ddf6f2da24e7d52e9a308af4c88079
 branch: research/idx-joint-setup-readiness-state-v1
-head_commit: implementation and contract checkpoint commit pending final push
+head_commit: 8b226445714cb228fa1554aa74c71f0ff7915efe
 scope: Deterministic outcome-blind joint state contract over accepted Foreign Flow Setup State V1 and Price / Trend Confirmation State V1 parents; no runtime wiring.
 
 ## Parent lineage
