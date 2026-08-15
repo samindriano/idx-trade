@@ -642,3 +642,17 @@ corpus and the reviewed bounded LBRE lineage/parser parent. Discovery and
 pagination completeness must be proven before bulk acquisition. No holder,
 HSC, >=1%, forward-fill, effective-supply, Foreign Flow, feature, model,
 outcome, or unrelated lane work is authorized.
+
+## Current status correction — 2026-08-15 — Joint Setup Readiness State V1
+
+Joint Setup Readiness State V1 is now `ACTIVE` by Codex/Joint-Setup-Readiness
+on branch `research/idx-joint-setup-readiness-state-v1`. This is a new,
+outcome-blind contract-only lane using the accepted Foreign Flow Setup State /
+Representation V2 and Price / Trend Confirmation State parents. Scope is
+limited to deterministic same-ticker/same-feature-session parent joining,
+explicit IGNORE -> WATCH -> READY -> ENTRY_ELIGIBLE mapping, reason codes,
+provenance compatibility, and synthetic/adversarial tests. `ENTRY_ELIGIBLE`
+remains descriptive context, never a trade recommendation. No prospective
+runtime wiring, scheduler/provider work, model/scoring, performance/outcome
+access, O2/counter change, HSC/free-float work, or modification of either
+parent formula is authorized.
