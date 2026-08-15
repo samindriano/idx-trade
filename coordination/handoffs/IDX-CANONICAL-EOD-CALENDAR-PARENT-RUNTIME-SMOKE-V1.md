@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: e90f902c040d1458786dc68369be8c58d1e58fa1
 branch: integration/canonical-eod-calendar-parent-attestation-v1
-head_commit: pending until push
+head_commit: a37f3579804f3682e036641baa6eec44b75ac074
 scope: Exactly one 2026-08-11 runtime calendar-parent attestation and exactly one zero-provider Price State smoke 2026-08-12 to 2026-08-13.
 files_changed:
   - docs/checkpoints/2026-08-15_CANONICAL_EOD_CALENDAR_PARENT_RUNTIME_SMOKE_RESULT.md
