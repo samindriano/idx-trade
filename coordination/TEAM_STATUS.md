@@ -646,14 +646,19 @@ outcome, or unrelated lane work is authorized.
 
 ## Current status correction — 2026-08-15 — Joint Setup Readiness State V1
 
-Joint Setup Readiness State V1 is now `ACTIVE` by Codex/Joint-Setup-Readiness
-on branch `research/idx-joint-setup-readiness-state-v1`. This is a new,
-outcome-blind contract-only lane using the accepted Foreign Flow Setup State /
-Representation V2 and Price / Trend Confirmation State parents. Scope is
-limited to deterministic same-ticker/same-feature-session parent joining,
-explicit IGNORE -> WATCH -> READY -> ENTRY_ELIGIBLE mapping, reason codes,
-provenance compatibility, and synthetic/adversarial tests. `ENTRY_ELIGIBLE`
-remains descriptive context, never a trade recommendation. No prospective
-runtime wiring, scheduler/provider work, model/scoring, performance/outcome
-access, O2/counter change, HSC/free-float work, or modification of either
-parent formula is authorized.
+Joint Setup Readiness State V1 is now `REVIEW` by Codex/Joint-Setup-Readiness
+on branch `research/idx-joint-setup-readiness-state-v1` at final HEAD
+`0bed7e105ee58a62e0edf89e5148ca2789381929`. This is a new, outcome-blind
+contract-only lane using the accepted Foreign Flow Setup State / Representation
+V2 and Price / Trend Confirmation State parents. The strict contract joins
+same ticker + feature session, requires Foreign Flow `flow_through_session` =
+Price State `source_session` and next-official-session causality, and carries
+parent artifact/manifest hashes and protected access flags. Explicit mapping is
+frozen as `IGNORE -> WATCH -> READY -> ENTRY_ELIGIBLE` with deterministic reason
+codes; `ENTRY_ELIGIBLE` remains descriptive context, never a trade
+recommendation. Focused tests: 7 passed. Full pytest: 46 passed / 1 known
+unrelated storage expectation failure / 47 collected. `git diff --check` PASS.
+No prospective runtime wiring, scheduler/provider work, model/scoring,
+performance/outcome access, O2/counter change, HSC/free-float work, or
+modification of either parent formula occurred. Await ChatGPT review before
+any runtime integration.
