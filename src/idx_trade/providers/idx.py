@@ -24,6 +24,24 @@ def _get_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
     return response.json()
 
 
+def _inclusive_listed_to_from_delisting_effective_date(values: pd.Series) -> pd.Series:
+    """Convert IDX ``DeListingDate`` into the security-master inclusive end date.
+
+    IDX reports the date on which delisting becomes effective.  The canonical
+    security-master contract stores ``listed_to`` as the last calendar date on
+    which the security is still considered listed, and ``existence_state``
+    treats that boundary inclusively.  Therefore the effective delisting date
+    itself must already resolve to ``DELISTED``.
+
+    Universe decisions are made only on official exchange sessions, so using
+    the preceding calendar date is sufficient even when the immediately prior
+    calendar day is a weekend or exchange holiday.
+    """
+
+    effective = pd.to_datetime(values, errors="coerce").dt.normalize()
+    return effective - pd.Timedelta(days=1)
+
+
 def fetch_active_listings(
     get_json: Callable[[str, dict[str, Any]], dict[str, Any]] = _get_json,
 ) -> pd.DataFrame:
@@ -58,7 +76,12 @@ def fetch_delisted_listings(
     end: date | None = None,
     get_json: Callable[[str, dict[str, Any]], dict[str, Any]] = _get_json,
 ) -> pd.DataFrame:
-    """Fetch historical delisting rows from IDX Digital Statistics month by month."""
+    """Fetch historical delisting rows from IDX Digital Statistics month by month.
+
+    ``DeListingDate`` is treated as an exclusive effective date.  The returned
+    ``listed_to`` therefore represents the inclusive last-listed boundary used
+    by the canonical security-master contract.
+    """
 
     end = end or pd.Timestamp.today().date()
     records: list[dict[str, Any]] = []
@@ -92,7 +115,7 @@ def fetch_delisted_listings(
             "ticker": rows["code"].map(normalise_ticker),
             "company_name": rows["issuerName"].astype(str).str.strip(),
             "listed_from": pd.to_datetime(rows["ListingDate"], errors="coerce").dt.normalize(),
-            "listed_to": pd.to_datetime(rows["DeListingDate"], errors="coerce").dt.normalize(),
+            "listed_to": _inclusive_listed_to_from_delisting_effective_date(rows["DeListingDate"]),
             "source": "IDX_DIGITAL_STATISTIC_DELISTING",
         }
     )
