@@ -43,7 +43,7 @@ Status vocabulary: `PLANNED`, `ACTIVE`, `AUTOMATED`, `WAITING`, `BLOCKED`, `REVI
 
 | Task / lane | Status | Owner | Branch / anchor | Current boundary / next action |
 |---|---|---|---|---|
-| Repository Hygiene V1 branch inventory dry-run audit | `REVIEW` | `Codex/Repository-Hygiene-V1` | `codex/repository-hygiene-v1` / final `ce90800` | Audit complete: 158 remote branches inventoried with full ancestry/reachability and documentation-reference checks; CSV/plan pushed. No branch deletion, tag creation, PR closure, history rewrite, force-push, or scientific-lane changes. GitHub PR/Issue metadata remains unavailable because local auth returned HTTP 401. |
+| Repository Hygiene V1 branch inventory dry-run audit | `REVIEW` | `Codex/Repository-Hygiene-V1` | `codex/repository-hygiene-v1` / final `473d38a` | Audit complete: 159 remote branches inventoried with full ancestry/reachability and documentation-reference checks; CSV/plan pushed. No branch deletion, tag creation, PR closure, history rewrite, force-push, or scientific-lane changes. GitHub PR/Issue metadata remains unavailable because local auth returned HTTP 401. |
 | O2 vs V2 common-support comparator | `DONE` | ChatGPT review + Codex | `research/idx-ranking-o2-v2-common-support-comparator-v1` / acceptance `a2c5666637f2e879ce107cd44fc2dae8cc22a5c5` | Historical-development evidence accepted; **do not rerun or extend automatically**. |
 | Market / Index / Breadth History V1 | `PARKED` | ChatGPT review + Codex | `data/market-index-breadth-history-v1` / review `d3827f1506736ec64c957e10f50f5447196d9983` | `CONDITIONAL_SOURCE_READY_PIT_BLOCKED`; no historical PIT bulk acquisition/model use. |
 | Stockbit intraday forward capture | `AUTOMATED` | Existing runtime | `data/stockbit-intraday-forward-capture-v1` / read-only verification `b94b272` | 2026-08-12 intraday run is complete: 111,695 rows for 835 current-session tickers, SMBR returned 2026-08-11, and 126 no-activity names returned HTTP 404. `unfinished_tickers=0`, no synthetic fill, policy remains SHADOW. This is not canonical EOD; do not build another capture system. |
@@ -646,9 +646,10 @@ outcome, or unrelated lane work is authorized.
 
 ## Current status correction — 2026-08-15 — Joint Setup Readiness State V1
 
-Joint Setup Readiness State V1 is now `ACTIVE` by Codex/Joint-Setup-Readiness
-on branch `research/idx-joint-setup-readiness-state-v1` at final HEAD
-`0bed7e105ee58a62e0edf89e5148ca2789381929`. This is a new, outcome-blind
+Joint Setup Readiness State V1 remediation is now `REVIEW` by
+Codex/Joint-Setup-Readiness on branch
+`research/idx-joint-setup-readiness-state-v1` at final HEAD
+`3ad481cc4b371f5022742101a12f6b9d603481a4`. This is an outcome-blind
 contract-only lane using the accepted Foreign Flow Setup State / Representation
 V2 and Price / Trend Confirmation State parents. The strict contract joins
 same ticker + feature session, requires Foreign Flow `flow_through_session` =
@@ -661,4 +662,11 @@ rule-definition/fingerprint completeness, fail-closed parent handling, strict
 ticker identity, and explicit provenance/protected-flag validation. No
 prospective runtime wiring, scheduler/provider work, model/scoring,
 performance/outcome access, O2/counter change, HSC/free-float work, or
-modification of either parent formula is authorized.
+modification of either parent formula occurred. The remediation restores
+`BASING` as a READY trend state, makes the ordered rule matrix/output schema
+fingerprint-complete, changes invalid parent compatibility to
+`FAIL_CLOSED_NO_OUTPUT`, rejects noncanonical ticker identities without
+normalization, and requires explicit provenance/protected fields. Focused
+tests: 11 passed. Full pytest: 50 passed / 1 known unrelated storage
+expectation failure / 51 collected. `git diff --check` PASS. Runtime wiring
+remains blocked pending ChatGPT review.
