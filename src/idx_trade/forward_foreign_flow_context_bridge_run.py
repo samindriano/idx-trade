@@ -9,6 +9,7 @@ capture.  It never rewrites canonical sessions and never changes V2 formulas.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,72 @@ def _session_index(path: Path) -> pd.DatetimeIndex:
     if len(sessions) == 0 or sessions.has_duplicates:
         raise RuntimeError("bridge calendar is empty or duplicated")
     return sessions
+
+
+def _verified_calendar(
+    path: str | Path,
+    expected_sha256: str,
+    *,
+    role: str,
+) -> tuple[Path, str, pd.DatetimeIndex]:
+    """Load one pinned calendar without conflating its authority or role."""
+
+    resolved = Path(path).expanduser().resolve()
+    expected = str(expected_sha256).lower()
+    if not resolved.is_file() or sha256_file(resolved) != expected:
+        raise RuntimeError(f"{role} calendar missing or hash-mismatched")
+    return resolved, expected, _session_index(resolved)
+
+
+def _session_set_sha256(sessions: pd.DatetimeIndex) -> str:
+    payload = "\n".join(pd.Timestamp(session).date().isoformat() for session in sessions)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _combined_session_index(
+    historical_sessions: pd.DatetimeIndex,
+    bridge_sessions: pd.DatetimeIndex,
+    *,
+    historical_cutoff: pd.Timestamp,
+    source_session: pd.Timestamp,
+) -> tuple[pd.DatetimeIndex, pd.Timestamp]:
+    """Validate the pinned calendar seam and return the in-memory union.
+
+    The historical calendar and the bridge extension must share exactly one
+    seam date.  The extension may contain ordinary non-trading gaps, but it
+    may not overlap the historical range anywhere else or omit the source's
+    next official session.
+    """
+
+    cutoff = _date(historical_cutoff)
+    source = _date(source_session)
+    if len(historical_sessions) == 0 or len(bridge_sessions) < 2:
+        raise RuntimeError("calendar seam requires non-empty historical and bridge calendars")
+    if _date(historical_sessions[-1]) != cutoff:
+        raise RuntimeError("historical calendar does not end at the historical market cutoff")
+    if _date(bridge_sessions[0]) != cutoff:
+        raise RuntimeError("bridge calendar must begin at the historical calendar seam")
+
+    historical_set = set(historical_sessions)
+    bridge_set = set(bridge_sessions)
+    overlap = historical_set.intersection(bridge_set)
+    if overlap != {cutoff}:
+        raise RuntimeError("calendar seam has missing or non-seam overlap")
+    if any(_date(day) <= cutoff for day in bridge_sessions[1:]):
+        raise RuntimeError("bridge calendar contains dates before or at the seam")
+
+    combined = pd.DatetimeIndex(list(historical_sessions) + list(bridge_sessions[1:]))
+    if combined.has_duplicates or not combined.is_monotonic_increasing:
+        raise RuntimeError("combined calendar is duplicated or out of order")
+    if source <= cutoff or source not in bridge_set:
+        raise RuntimeError("source session is absent from bridge extension after the seam")
+    source_position = int(combined.get_loc(source))
+    if source_position >= len(combined) - 1:
+        raise RuntimeError("source has no next official feature session")
+    target = combined[source_position + 1]
+    if target not in bridge_set or target <= source:
+        raise RuntimeError("source-to-target calendar transition is invalid")
+    return combined, target
 
 
 def _canonical_dir(runtime_root: Path, session: pd.Timestamp) -> Path:
@@ -140,25 +207,32 @@ def produce_with_context_bridge(
     archive_manifest_sha256: str,
     historical_panel_path: str | Path,
     historical_panel_sha256: str,
-    official_sessions_path: str | Path,
-    official_sessions_sha256: str,
+    historical_sessions_path: str | Path,
+    historical_sessions_sha256: str,
+    bridge_sessions_path: str | Path,
+    bridge_sessions_sha256: str,
     security_master_path: str | Path,
     security_master_sha256: str,
 ) -> dict[str, Any]:
-    """Produce prospective V2 + Setup State using a complete independent bridge calendar."""
+    """Produce prospective V2 + Setup State from a pinned calendar union.
+
+    The bridge calendar remains the authority for bridge capture verification.
+    The historical calendar is a separate pinned input; only their validated
+    union is passed in memory to the V2 materializer.
+    """
 
     runtime = Path(runtime_root).expanduser().resolve()
     source = _date(source_session)
-    calendar_path = Path(official_sessions_path).expanduser().resolve()
-    if not calendar_path.is_file() or sha256_file(calendar_path) != official_sessions_sha256.lower():
-        raise RuntimeError("bridge official calendar missing or hash-mismatched")
-    sessions = _session_index(calendar_path)
-    if source not in set(sessions):
-        raise RuntimeError("source session is absent from bridge official calendar")
-    position = int(sessions.get_loc(source))
-    if position >= len(sessions) - 1:
-        raise RuntimeError("source has no next official feature session")
-    target = sessions[position + 1]
+    historical_calendar_path, historical_calendar_sha, historical_sessions = _verified_calendar(
+        historical_sessions_path,
+        historical_sessions_sha256,
+        role="historical",
+    )
+    bridge_calendar_path, bridge_calendar_sha, bridge_sessions = _verified_calendar(
+        bridge_sessions_path,
+        bridge_sessions_sha256,
+        role="bridge extension",
+    )
 
     archive_flow, archive_meta = read_verified_flow_archive(
         Path(archive_root).expanduser().resolve(), archive_manifest_sha256
@@ -173,8 +247,17 @@ def produce_with_context_bridge(
     historical_market = pd.read_parquet(panel_path).rename(columns={"date": "session_date"})
     historical_market = _normalise_market(historical_market)
     historical_cutoff = historical_market["session_date"].max()
+    historical_start = _date(historical_sessions[0])
+    if historical_market["session_date"].min() < historical_start:
+        raise RuntimeError("historical market begins before pinned historical calendar")
     if historical_cutoff >= source:
         raise RuntimeError("bridge adapter is only for source sessions after historical market cutoff")
+    sessions, target = _combined_session_index(
+        historical_sessions,
+        bridge_sessions,
+        historical_cutoff=historical_cutoff,
+        source_session=source,
+    )
 
     archive_dates = pd.to_datetime(archive_flow["session_date"], errors="coerce")
     if archive_dates.isna().any():
@@ -182,7 +265,12 @@ def produce_with_context_bridge(
     if getattr(archive_dates.dt, "tz", None) is not None:
         archive_dates = archive_dates.dt.tz_convert("Asia/Jakarta").dt.tz_localize(None)
     archive_dates = archive_dates.dt.normalize()
-    archive_flow = archive_flow.loc[archive_dates.le(historical_cutoff)].copy()
+    # The accepted Foreign Flow archive is broader than the accepted market
+    # panel. Rows before the pinned historical calendar have no validated
+    # market/volume context and must not enter the materializer input.
+    archive_flow = archive_flow.loc[
+        archive_dates.ge(historical_start) & archive_dates.le(historical_cutoff)
+    ].copy()
     archive_flow = _normalise_flow(archive_flow)
 
     extension_sessions = sessions[(sessions > historical_cutoff) & (sessions <= source)]
@@ -196,8 +284,8 @@ def produce_with_context_bridge(
         market, flow, meta = _resolve_extension_session(
             runtime,
             pd.Timestamp(day),
-            calendar_path=calendar_path,
-            calendar_sha256=official_sessions_sha256.lower(),
+            calendar_path=bridge_calendar_path,
+            calendar_sha256=bridge_calendar_sha,
         )
         market_parts.append(_normalise_market(market))
         flow_parts.append(_normalise_flow(flow))
@@ -236,8 +324,20 @@ def produce_with_context_bridge(
         },
         "historical_panel_path": str(panel_path),
         "historical_panel_sha256": historical_panel_sha256.lower(),
-        "official_sessions_path": str(calendar_path),
-        "official_sessions_sha256": official_sessions_sha256.lower(),
+        # Setup State's existing validator consumes the bridge file because it
+        # contains the seam/source/target transition.  The complete materializer
+        # session index is the in-memory union below, never a new calendar file.
+        "official_sessions_path": str(bridge_calendar_path),
+        "official_sessions_sha256": bridge_calendar_sha,
+        "official_sessions_role": "PINNED_BRIDGE_EXTENSION_CALENDAR_FOR_SETUP_SEAM",
+        "historical_sessions_path": str(historical_calendar_path),
+        "historical_sessions_sha256": historical_calendar_sha,
+        "bridge_sessions_path": str(bridge_calendar_path),
+        "bridge_sessions_sha256": bridge_calendar_sha,
+        "combined_session_set_sha256": _session_set_sha256(sessions),
+        "combined_session_count": len(sessions),
+        "combined_session_first": sessions[0].date().isoformat(),
+        "combined_session_last": sessions[-1].date().isoformat(),
         "security_master_path": str(master_path),
         "security_master_sha256": security_master_sha256.lower(),
         "source_session": source.date().isoformat(),
@@ -277,8 +377,12 @@ def produce_with_context_bridge(
         "historical_cutoff": historical_cutoff.date().isoformat(),
         "extension_sessions": [pd.Timestamp(day).date().isoformat() for day in extension_sessions],
         "source_kinds": [str(item.get("kind")) for item in session_sources],
-        "calendar_path": str(calendar_path),
-        "calendar_sha256": official_sessions_sha256.lower(),
+        "historical_calendar_path": str(historical_calendar_path),
+        "historical_calendar_sha256": historical_calendar_sha,
+        "bridge_calendar_path": str(bridge_calendar_path),
+        "bridge_calendar_sha256": bridge_calendar_sha,
+        "combined_session_set_sha256": _session_set_sha256(sessions),
+        "combined_session_count": len(sessions),
         "bridge_fallback_through": BRIDGE_FALLBACK_THROUGH.date().isoformat(),
         "operator_calendar_mutated": False,
         "operator_counter_modified": False,
@@ -294,8 +398,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-manifest-sha256", required=True)
     parser.add_argument("--historical-panel", type=Path, required=True)
     parser.add_argument("--historical-panel-sha256", required=True)
-    parser.add_argument("--official-sessions", type=Path, required=True)
-    parser.add_argument("--official-sessions-sha256", required=True)
+    parser.add_argument("--historical-sessions", type=Path, required=True)
+    parser.add_argument("--historical-sessions-sha256", required=True)
+    parser.add_argument("--bridge-sessions", type=Path, required=True)
+    parser.add_argument("--bridge-sessions-sha256", required=True)
     parser.add_argument("--security-master", type=Path, required=True)
     parser.add_argument("--security-master-sha256", required=True)
     return parser
@@ -310,8 +416,10 @@ def main() -> int:
         archive_manifest_sha256=args.archive_manifest_sha256,
         historical_panel_path=args.historical_panel,
         historical_panel_sha256=args.historical_panel_sha256,
-        official_sessions_path=args.official_sessions,
-        official_sessions_sha256=args.official_sessions_sha256,
+        historical_sessions_path=args.historical_sessions,
+        historical_sessions_sha256=args.historical_sessions_sha256,
+        bridge_sessions_path=args.bridge_sessions,
+        bridge_sessions_sha256=args.bridge_sessions_sha256,
         security_master_path=args.security_master,
         security_master_sha256=args.security_master_sha256,
     )
