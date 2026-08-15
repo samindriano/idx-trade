@@ -760,7 +760,7 @@ pinning.
 The prior generic runner result was `REVIEW` by
 `Codex/Joint-Setup-Readiness-Generic-Runner` on branch
 `integration/joint-setup-readiness-v1-1-generic-runner-v1` at final HEAD
-`8e12796fa1887e031cbfa3d84919d243f0d56cc3`, based on accepted runtime parent
+`0a0943e3f86bc5b1200ca55cf4bc18a3a9a528ff`, based on accepted runtime parent
 `integration/joint-setup-readiness-v1-1-forward-v1@8ede786622713b03127fbf856abe2d7d2bd5c03d`.
 The remediation adds strict upstream Price State context verification plus
 source-context replay and strict Foreign Flow Representation/Setup replay
