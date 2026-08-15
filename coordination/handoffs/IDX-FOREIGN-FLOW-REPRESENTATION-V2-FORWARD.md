@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 5374c238d3ed90823a18c49f1b0b1be4a0583469
 branch: integration/foreign-flow-representation-v2-forward-v1
-head_commit: 07660db
+head_commit: 6c14fcf153d8890de04d236c5657b68efc77adc7
 scope: outcome-blind prospective Foreign Flow Representation V2 producer and immediate Setup State V1 delivery
 files_changed:
   - src/idx_trade/forward_foreign_flow_representation_v2.py
