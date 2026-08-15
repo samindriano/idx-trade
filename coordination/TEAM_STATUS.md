@@ -546,7 +546,7 @@ eligibility, and keep genuine share-count conflicts fail-closed.
 Statutory Free-Float Knowledge-State Contract V1 is now `REVIEW` by
 `Codex/Statutory-Free-Float-State-Contract` on branch
 `data/idx-statutory-free-float-state-contract-v1` at final HEAD
-`06f07d66823bf723aaacf793bcd85c41a69b6dad`.
+`8e0892f6261b4553965949150df95d689ead1376`.
 
 The query-level contract is implemented without historical session-panel
 materialization. It enforces strict post-publication official-session
