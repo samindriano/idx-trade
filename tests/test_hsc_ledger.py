@@ -42,7 +42,7 @@ def _event(
         ownership_as_of_date=ownership_as_of_date,
         published_at=datetime(2026, 4, day, hour, 0, tzinfo=TZ),
         concentration_pct=concentration_pct,
-        methodology_version=methodology,
+        determination_methodology_version=methodology,
         idx_announcement_no=f"Peng-{index:05d}-HSC/BEI.WAS/04-2026",
         ksei_announcement_no=f"KSEI-{index:04d}/DIR/0426",
         revision_kind=kind,
@@ -81,6 +81,7 @@ def test_original_correction_and_removal_preserve_pit_state() -> None:
     assert state.concentration_pct == 98.0
     assert state.active_since == original.published_at
     assert state.last_event_id == correction.event_id
+    assert state.determination_methodology_version is HSCMethodologyVersion.INITIAL_2026
 
 
 def test_duplicate_active_addition_fails_closed() -> None:
@@ -153,7 +154,7 @@ def test_naive_knowledge_timestamp_is_rejected() -> None:
             ownership_as_of_date=date(2026, 3, 31),
             published_at=datetime(2026, 4, 2, 18, 0),
             concentration_pct=97.0,
-            methodology_version=HSCMethodologyVersion.INITIAL_2026,
+            determination_methodology_version=HSCMethodologyVersion.INITIAL_2026,
             idx_announcement_no="Peng-00001-HSC/BEI.WAS/04-2026",
             ksei_announcement_no="KSEI-2148/DIR/0426",
             revision_kind=HSCRevisionKind.ORIGINAL,
@@ -194,6 +195,25 @@ def test_removal_must_be_after_active_state_begins() -> None:
     )
     with pytest.raises(ValueError, match="removal must be published after"):
         replay_hsc_events([original, removal_same_time])
+
+
+def test_old_active_state_is_not_silently_relabelled_after_methodology_revision() -> None:
+    old = _event(1, ticker="BREN", methodology=HSCMethodologyVersion.INITIAL_2026)
+    new = _event(
+        2,
+        ticker="DCII",
+        day=3,
+        methodology=HSCMethodologyVersion.PRICE_IMPACT_REVISION_2026,
+    )
+    replay = replay_hsc_events([old, new])
+    assert (
+        replay.active["BREN"].determination_methodology_version
+        is HSCMethodologyVersion.INITIAL_2026
+    )
+    assert (
+        replay.active["DCII"].determination_methodology_version
+        is HSCMethodologyVersion.PRICE_IMPACT_REVISION_2026
+    )
 
 
 def test_contract_does_not_infer_free_float_or_effective_supply() -> None:
