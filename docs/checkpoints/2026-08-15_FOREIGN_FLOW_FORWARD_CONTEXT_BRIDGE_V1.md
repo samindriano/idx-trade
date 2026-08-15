@@ -4,7 +4,9 @@ Date: 2026-08-15 (Asia/Jakarta)
 
 Branch: `data/foreign-flow-forward-context-bridge-v1`
 
-Status: `IMPLEMENTATION_READY_LOCAL_RUNTIME_REQUIRED`
+Status: `IMPLEMENTATION_VALIDATED_LOCAL_RUNTIME_REQUIRED`
+
+Validation PR: `#25` (draft, validation-only; no merge authorization)
 
 ## Purpose
 
@@ -31,12 +33,14 @@ and bridge-only context sessions under:
 Provides:
 
 - immutable official calendar-range sync using the existing `session_backfill.run_exchange_session_backfill()` / official IDX session parser;
-- bounded bridge-only session capture using the same official IDX Stock Summary provider already used by canonical EOD;
-- Foreign Flow normalization via the existing `parse_stock_summary_foreign_flow()` contract;
-- market context using the same Yahoo raw-OHLC semantics / existing local raw cache helpers as canonical EOD;
-- strict Stock Summary `recordsTotal` completeness;
+- a self-contained Stock Summary transport using the same official IDX endpoint/validation pattern and strict `recordsTotal` single-response completeness gate used by the canonical EOD design;
+- Foreign Flow normalization via the existing accepted `parse_stock_summary_foreign_flow()` contract;
+- market context using the repo's canonical Yahoo `auto_adjust=False` adapter, local raw-price cache when present, and raw OHLCV columns only;
 - immutable raw / market / Foreign Flow / manifest artifacts;
+- transaction-like behavior: provider/price validation completes before final bridge session files are created, so a failed attempt does not intentionally publish a partial bridge session;
 - hash, identity, session, unit, HLC, volume/value and outcome-blind verification.
+
+The first CI attempt exposed accidental imports from the separate operator-EOD branch (`forward_monitoring`, `idx_stock_summary`, and a batching helper). Those cross-branch imports were removed. The bridge is now self-contained relative to its accepted producer base and imports only modules actually present there.
 
 The bridge manifest explicitly records:
 
@@ -98,31 +102,43 @@ Previously recorded runtime evidence says:
 
 The bridge calendar, not weekday inference, must determine the exact official sessions in the gap. Expected dates such as 2026-08-03..07 are hypotheses until the official calendar sync verifies them.
 
-## Validation status
+## Validation
 
-Code and focused tests were authored through the GitHub connector. No local Python runtime, provider call, or user Windows artifact root is available to this ChatGPT environment, so **no test-pass claim is made here**.
+A scoped PR workflow was added only to validate this lane without importing unrelated historical-alpha tests.
 
-Added focused tests cover:
+Focused bridge + downstream semantic suite on GitHub Actions:
 
-- operator calendar bytes remain untouched by bridge calendar sync;
-- calendar range is immutable/idempotent;
-- invalid canonical session can use a verified bridge without canonical repair;
-- canonical + bridge ambiguity fails closed;
-- post-monitor sessions cannot fall back to bridge;
-- bridge adapter provenance keeps operator calendar/counter untouched;
-- read-only planner separates `NEED_BRIDGE_CAPTURE` from `NEED_CANONICAL_EOD`.
+`24 passed, 5 warnings`
+
+Covered test files:
+
+- `tests/test_forward_foreign_flow_context_bridge.py`
+- `tests/test_forward_foreign_flow_context_bridge_policy.py`
+- `tests/test_forward_foreign_flow_context_bridge_plan.py`
+- `tests/test_forward_foreign_flow_representation_v2.py`
+- `tests/test_forward_foreign_flow_setup.py`
+
+The warnings are existing pandas `FutureWarning`s in the accepted V2 feature implementation.
+
+The repository-wide default CI remains red **before test execution** because existing `tests/test_foreign_flow_alpha_v2.py` imports `joblib` while the branch's `pyproject.toml` does not declare/install `joblib` or scikit-learn. That dependency issue is outside this bridge lane and was not modified to manufacture a green full-suite result.
+
+The initial bridge CI collection errors caused by unavailable cross-branch imports are closed; after remediation, the only collection error in the default full workflow is the unrelated `joblib` dependency.
+
+No real provider call or user Windows artifact runtime was executed in this ChatGPT environment.
 
 ## Local execution gate
 
 Before any real bridge capture:
 
-1. checkout this exact branch and run focused + full pytest + `git diff --check`;
-2. sync a bridge-local official calendar from the historical cutoff through the desired source/next-session horizon;
-3. run the read-only planner;
-4. use bridge capture **only** for planner rows marked `NEED_BRIDGE_CAPTURE`;
-5. use the existing canonical EOD catch-up runtime for every `NEED_CANONICAL_EOD` session after 2026-08-10;
-6. rerun planner until `CONTEXT_BRIDGE_READY`;
-7. run exactly one bridge-aware prospective producer smoke test for the next official feature session;
-8. verify prospective Representation V2 + Setup State hashes and stop for independent review.
+1. fetch latest canonical `origin/main:coordination/TEAM_STATUS.md` and claim/continue this lane;
+2. checkout this exact branch and rerun focused tests plus the available full suite / `git diff --check` locally;
+3. identify the actual runtime root and accepted historical panel/archive/security-master pins already used by the V2 producer; do not guess paths or hashes;
+4. sync a bridge-local official calendar from the historical cutoff through the desired source/next-session horizon;
+5. run the read-only planner;
+6. use bridge capture **only** for planner rows marked `NEED_BRIDGE_CAPTURE` and only through 2026-08-10;
+7. use the existing canonical EOD catch-up runtime for every `NEED_CANONICAL_EOD` session after 2026-08-10;
+8. rerun planner until `CONTEXT_BRIDGE_READY` with no ambiguity;
+9. run exactly one bridge-aware prospective producer smoke test for the next official feature session;
+10. verify prospective Representation V2 + Setup State hashes and stop for independent review.
 
-Do not access outcomes, change O2 eligibility/counter rules, modify existing 2026-08-10/11/12 bytes, integrate HSC/free-float, or start price-state research in this lane.
+Do not access outcomes, change O2 eligibility/counter rules, modify existing 2026-08-10/11/12 canonical bytes, integrate HSC/free-float, or start price-state research in this lane.
