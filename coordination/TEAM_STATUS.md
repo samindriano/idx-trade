@@ -730,3 +730,17 @@ Verdict: `LBRE_MONTHLY_FF_HISTORY_PARTIAL_SOURCE_USEFUL`. Focused tests:
 expectation failure. No daily FF state, effective supply, Foreign Flow
 features, models, outcomes, or unrelated lanes were touched; daily-state and
 feature integration remain unclaimed pending review.
+
+## Current status correction — 2026-08-16 — LBRE Market-Wide Anchor Reconciliation V1
+
+LBRE / market-wide free-float reconciliation V1 is now `ACTIVE` by
+`Codex/LBRE-Market-Anchor-Reconciliation` on branch
+`data/idx-lbre-market-anchor-reconciliation-v1` at prepared HEAD
+`b2855061f470bc23e9aed6f91ebf8ec91e1b8e99`. This is an offline-only
+decomposition of the accepted 2025-12-31 reconciliation (260 AGREE / 625
+CONFLICT / 38 SINGLE_SOURCE) using the exact monthly-history and snapshot
+parent manifests. It will classify share-count and percentage disagreements,
+compute diagnostics without replacing official values, and determine whether
+issuer LBRE shares are a safe historical denominator. No network, acquisition,
+parser/lineage change, daily FF state, effective supply, Foreign Flow,
+features, models, outcomes, or unrelated lane work is authorized.
