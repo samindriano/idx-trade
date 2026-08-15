@@ -1,8 +1,8 @@
 """Prospective sidecar materialization for Foreign Flow Setup State V1.
 
 The sidecar consumes only accepted Foreign Flow V2 representation rows and
-emits deterministic descriptive states. It does not consume labels, outcomes,
-or model scores.
+emits deterministic descriptive states plus the raw causal evidence needed to
+interpret them. It does not consume labels, outcomes, or model scores.
 """
 from __future__ import annotations
 
@@ -19,6 +19,20 @@ STATE_CONTRACT_VERSION = "FOREIGN_FLOW_SETUP_STATE_V1"
 SOURCE_REPRESENTATION_VERSION = "FOREIGN_FLOW_REPRESENTATION_V2"
 
 KEY_COLUMNS = ("ticker", "feature_session", "flow_through_session")
+EVIDENCE_COLUMNS = (
+    "foreign_participation_1",
+    "foreign_flow_shock_1",
+    "foreign_flow_shock_mean_5",
+    "foreign_flow_shock_mean_20",
+    "foreign_flow_shock_percentile_120",
+    "xs_rank_foreign_flow_shock_mean_5",
+    "xs_rank_foreign_flow_shock_mean_20",
+    "foreign_weighted_persistence_5",
+    "foreign_weighted_persistence_20",
+    "foreign_flow_acceleration_5_20",
+    "foreign_flow_price_divergence_5",
+    "foreign_flow_price_divergence_20",
+)
 STATE_COLUMNS = (
     "participation_intensity",
     "participation_direction",
@@ -41,12 +55,17 @@ def build_foreign_flow_setup_sidecar(
 ) -> pd.DataFrame:
     """Build a deterministic setup-state sidecar from accepted V2 rows.
 
-    The input must contain the V2 fields required by the classifier. Outcome or
-    label columns are rejected by the row classifier. Duplicate
+    The sidecar intentionally retains both current participation and historical
+    abnormality evidence. This allows, for example, a 5% participation row to
+    remain visibly more abnormal than a 50% row when the former is much larger
+    relative to its ticker's own prior baseline.
+
+    Outcome or label columns are rejected by the row classifier. Duplicate
     ``(ticker, feature_session)`` keys fail closed when those keys are present.
     """
 
-    missing = sorted(set(REQUIRED_FIELDS) - set(frame.columns))
+    required = set(REQUIRED_FIELDS) | set(EVIDENCE_COLUMNS)
+    missing = sorted(required - set(frame.columns))
     if missing:
         raise ValueError(f"setup-state frame missing columns: {missing}")
 
@@ -60,6 +79,7 @@ def build_foreign_flow_setup_sidecar(
     for row in frame.to_dict(orient="records"):
         state = classify_foreign_flow_setup(row, thresholds=thresholds)
         record = {column: row[column] for column in present_keys}
+        record.update({column: row[column] for column in EVIDENCE_COLUMNS})
         record.update(
             {
                 "participation_intensity": state.participation_intensity.value,
@@ -77,4 +97,7 @@ def build_foreign_flow_setup_sidecar(
         )
         records.append(record)
 
-    return pd.DataFrame(records, columns=[*present_keys, *STATE_COLUMNS])
+    return pd.DataFrame(
+        records,
+        columns=[*present_keys, *EVIDENCE_COLUMNS, *STATE_COLUMNS],
+    )
