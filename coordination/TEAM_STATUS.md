@@ -584,7 +584,7 @@ and trade-state logic remain out of scope. No Price State smoke rerun was
 authorized in this lane.
 
 Implementation and checkpoint are pushed at final HEAD
-`4123a51f64a1d565a588c2186b1cc555ade7e8ac`. The read-only runtime audit found
+`a3e54c965ea5c417d58472365926f5356a924a8b`. The read-only runtime audit found
 2026-08-11's declared calendar SHA unrecoverable while all non-calendar
 canonical artifacts remain valid; 2026-08-12's declared calendar remains
 recoverable at its original path. The strict sibling attestation contract and
