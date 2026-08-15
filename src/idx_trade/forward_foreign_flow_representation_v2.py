@@ -31,6 +31,7 @@ from .foreign_flow_representation_v2_runner import (
     sha256_file,
 )
 from .forward_foreign_flow import _canonical_evidence, _verified_context, _write_parquet_exclusive
+from .forward_foreign_flow_setup import enrich_prospective_foreign_flow_setup
 from .forward_foreign_flow_runtime import run_foreign_flow_catchup
 from .provenance import sha256_file as provenance_sha256_file
 
@@ -576,6 +577,13 @@ def produce_session_foreign_flow_representation_v2(
         / "foreign_flow_representation_v2"
         / target.date().isoformat(),
         input_provenance=provenance,
+    )
+    # Setup State is a deterministic transform of the prospective V2 pair.
+    # Materialize it now at the source-session boundary; no target-session
+    # directory, market data, Foreign Flow data, or EOD completion is needed.
+    materialized["prospective_setup_state"] = enrich_prospective_foreign_flow_setup(
+        materialized["artifact_path"],
+        materialized["manifest_path"],
     )
     materialized["setup_catchup"] = run_foreign_flow_catchup(runtime)
     return materialized

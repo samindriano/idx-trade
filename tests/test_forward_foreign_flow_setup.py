@@ -11,7 +11,9 @@ from idx_trade.forward_foreign_flow_runtime import run_foreign_flow_catchup
 from idx_trade.forward_foreign_flow_setup import (
     SETUP_MANIFEST_FILENAME,
     SETUP_SIDECAR_FILENAME,
+    enrich_prospective_foreign_flow_setup,
     enrich_session_foreign_flow_setup,
+    verify_prospective_foreign_flow_setup,
     verify_session_foreign_flow_setup,
 )
 from idx_trade.provenance import sha256_file
@@ -106,6 +108,38 @@ def _representation(directory: Path) -> Path:
     return path
 
 
+def _prospective_representation(root: Path) -> tuple[Path, Path, Path]:
+    calendar = root / "forward_monitoring" / "calendar" / "exchange_sessions.csv"
+    calendar.parent.mkdir(parents=True, exist_ok=True)
+    calendar.write_text("date\n2026-08-11\n2026-08-12\n", encoding="utf-8")
+    directory = (
+        root
+        / "forward_monitoring"
+        / "prospective"
+        / "foreign_flow_representation_v2"
+        / "2026-08-12"
+    )
+    directory.mkdir(parents=True)
+    representation = _representation(directory)
+    manifest_path = representation.with_name("foreign_flow_representation_v2.manifest.json")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(
+        {
+            "status": "FOREIGN_FLOW_REPRESENTATION_V2_FORWARD_READY",
+            "feature_session": "2026-08-12",
+            "flow_through_session": "2026-08-11",
+            "input_provenance": {
+                "official_sessions_path": str(calendar.resolve()),
+                "official_sessions_sha256": sha256_file(calendar),
+                "source_session": "2026-08-11",
+                "feature_session": "2026-08-12",
+            },
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+    return representation, manifest_path, calendar
+
+
 def test_setup_sidecar_is_idempotent_and_pins_v2_and_parent(tmp_path: Path) -> None:
     directory = _session(tmp_path)
     representation = _representation(directory)
@@ -153,6 +187,66 @@ def test_setup_fails_closed_on_noncausal_flow_through_session(tmp_path: Path) ->
     manifest_path.write_text(json.dumps(manifest, sort_keys=True))
     with pytest.raises(RuntimeError, match="prior official session"):
         enrich_session_foreign_flow_setup(tmp_path, "2026-08-12")
+
+
+def test_prospective_setup_exists_before_target_capture(tmp_path: Path) -> None:
+    representation, representation_manifest, calendar = _prospective_representation(tmp_path)
+
+    result = enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+    setup_path = representation.with_name(SETUP_SIDECAR_FILENAME)
+    setup_manifest_path = representation.with_name(SETUP_MANIFEST_FILENAME)
+
+    assert result["status"] == "FOREIGN_FLOW_SETUP_STATE_PROSPECTIVE_READY"
+    assert result["source_session"] == "2026-08-11"
+    assert setup_path.is_file()
+    assert setup_manifest_path.is_file()
+    assert not (tmp_path / "forward_monitoring" / "sessions" / "2026-08-12").exists()
+    assert verify_prospective_foreign_flow_setup(
+        representation,
+        representation_manifest,
+    )
+    saved = json.loads(setup_manifest_path.read_text(encoding="utf-8"))
+    assert saved["target_session_captured"] is False
+    assert saved["calendar"]["sha256"] == sha256_file(calendar)
+    assert saved["source_session"] == "2026-08-11"
+    assert saved["feature_session"] == "2026-08-12"
+    assert saved["provider_calls"] == 0
+    assert saved["outcome_blind"] is True
+    assert saved["forward_outcomes_accessed"] is False
+
+
+def test_prospective_setup_is_invariant_to_later_target_data(tmp_path: Path) -> None:
+    representation, representation_manifest, _ = _prospective_representation(tmp_path)
+    enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+    setup_path = representation.with_name(SETUP_SIDECAR_FILENAME)
+    setup_manifest_path = representation.with_name(SETUP_MANIFEST_FILENAME)
+    sidecar_before = setup_path.read_bytes()
+    manifest_before = setup_manifest_path.read_bytes()
+
+    target = tmp_path / "forward_monitoring" / "sessions" / "2026-08-12"
+    target.mkdir(parents=True)
+    pd.DataFrame(
+        [{"ticker": "BBCA", "session_date": "2026-08-12", "close": 999999.0}]
+    ).to_parquet(target / "late_market.parquet", index=False)
+    pd.DataFrame(
+        [{"ticker": "BBCA", "session_date": "2026-08-12", "foreign_net": -999999.0}]
+    ).to_parquet(target / "late_flow.parquet", index=False)
+
+    assert verify_prospective_foreign_flow_setup(representation, representation_manifest)
+    assert sidecar_before == setup_path.read_bytes()
+    assert manifest_before == setup_manifest_path.read_bytes()
+
+
+def test_prospective_setup_fails_closed_on_representation_revision(tmp_path: Path) -> None:
+    representation, representation_manifest, _ = _prospective_representation(tmp_path)
+    enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+    changed = pd.read_parquet(representation)
+    changed.loc[0, "foreign_flow_shock_1"] = 99.0
+    changed.to_parquet(representation, index=False)
+
+    assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
+    with pytest.raises(RuntimeError, match="SHA mismatch"):
+        enrich_prospective_foreign_flow_setup(representation, representation_manifest)
 
 
 def test_setup_rejects_extra_outcome_like_representation_columns(tmp_path: Path) -> None:

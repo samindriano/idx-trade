@@ -6,7 +6,7 @@ Branch: `integration/foreign-flow-representation-v2-forward-v1`
 
 ## Decision
 
-`FOREIGN_FLOW_V2_FORWARD_PRODUCER_TIMING_REMEDIATION_IMPLEMENTED_REVIEW_REQUIRED`
+`FOREIGN_FLOW_V2_FORWARD_SETUP_DELIVERY_REMEDIATED_REVIEW_REQUIRED`
 
 The producer is outcome-blind and reuses the accepted
 `idx_trade.foreign_flow_features_v2.build_foreign_flow_representation_v2`
@@ -45,10 +45,12 @@ security master. It then:
    `flow_through_session=t`;
 7. writes the representation parquet and manifest with exclusive creation in
    `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/`;
-8. invokes the existing `run_foreign_flow_catchup()`. When the target EOD
-   session later completes, that existing catchup consumes the prospective
-   pair and writes the canonical Setup State sidecar; no second capture path
-   is introduced.
+8. immediately materializes and verifies the Setup State sidecar beside that
+   prospective pair, without requiring the target EOD session;
+9. invokes the existing `run_foreign_flow_catchup()`. When the target EOD
+   session later completes, that existing catchup can consume the already
+   verified prospective pair for canonical session wiring; no second capture
+   path is introduced.
 
 Rolling context is preserved by deterministic replay from the pinned archive
    plus verified forward session artifacts, rather than a mutable unverified
@@ -86,10 +88,12 @@ written in the immutable prospective folder:
 - `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/foreign_flow_representation_v2.manifest.json`
 
 The completed target session's canonical folder is not touched before its own
-EOD capture. Existing `run_foreign_flow_catchup()` detects this prospective
-pair after target capture and passes its explicit paths to the existing Setup
-State consumer. If a session-local pair and prospective pair both exist, the
-runtime fails closed instead of choosing one.
+EOD capture. The prospective folder now contains both the Representation V2
+pair and the immediately verified Setup State pair. Existing
+`run_foreign_flow_catchup()` can later pass the prospective Representation V2
+paths to the canonical session consumer after target capture. If a
+session-local pair and prospective pair both exist, the runtime fails closed
+instead of choosing one.
 
 The parquet uses the exact accepted V2 columns:
 `ticker`, `feature_session`, `flow_through_session`, and the 15 frozen V2

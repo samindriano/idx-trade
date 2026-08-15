@@ -189,6 +189,49 @@ def _validate_representation(
     return out, calendar
 
 
+def _validate_prospective_representation(
+    frame: pd.DataFrame,
+    *,
+    manifest: Mapping[str, Any],
+) -> tuple[pd.DataFrame, dict[str, Any], str, str, dict[str, Any]]:
+    """Validate a Representation V2 pair without opening the target session.
+
+    The prospective pair carries its own source/feature-session and calendar
+    provenance.  No target-session manifest, OHLCV, or Foreign Flow artifact is
+    consulted here: the setup state is a pure deterministic transform of the
+    already verified Representation V2 artifact.
+    """
+
+    if manifest.get("status") != "FOREIGN_FLOW_REPRESENTATION_V2_FORWARD_READY":
+        raise RuntimeError("prospective Representation V2 status is invalid")
+    provenance = manifest.get("input_provenance")
+    if not isinstance(provenance, Mapping):
+        raise RuntimeError("prospective Representation V2 input provenance is missing")
+    calendar_path = provenance.get("official_sessions_path")
+    calendar_sha = str(provenance.get("official_sessions_sha256") or "").lower()
+    source_value = manifest.get("flow_through_session") or provenance.get("source_session")
+    feature_value = manifest.get("feature_session") or provenance.get("feature_session")
+    if not source_value or not feature_value:
+        raise RuntimeError("prospective Representation V2 source/feature session is missing")
+    source = _date(source_value).date().isoformat()
+    feature = _date(feature_value).date().isoformat()
+    if str(provenance.get("source_session") or source) != source:
+        raise RuntimeError("prospective source-session provenance conflicts")
+    if str(provenance.get("feature_session") or feature) != feature:
+        raise RuntimeError("prospective feature-session provenance conflicts")
+    if not calendar_path or len(calendar_sha) != 64:
+        raise RuntimeError("prospective official calendar provenance is required")
+    calendar_parent = {"calendar_path": calendar_path, "calendar_sha256": calendar_sha}
+    out, calendar = _validate_representation(
+        frame,
+        session=feature,
+        parent=calendar_parent,
+    )
+    if source != calendar["flow_through_session"]:
+        raise RuntimeError("prospective source session is not the prior official session")
+    return out, calendar, source, feature, dict(provenance)
+
+
 def _same_frame(left: pd.DataFrame, right: pd.DataFrame) -> bool:
     if list(left.columns) != list(right.columns) or len(left) != len(right):
         return False
@@ -331,6 +374,224 @@ def enrich_session_foreign_flow_setup(
         "outcome_blind": True,
         "forward_outcomes_accessed": False,
     }
+
+
+def _prospective_manifest(
+    *,
+    representation_path: Path,
+    representation_sha: str,
+    representation_manifest_path: Path,
+    representation_manifest_sha: str,
+    sidecar_path: Path,
+    sidecar_sha: str,
+    frame: pd.DataFrame,
+    calendar: Mapping[str, Any],
+    source_session: str,
+    feature_session: str,
+    source_provenance: Mapping[str, Any],
+    thresholds: SetupThresholds,
+) -> dict[str, Any]:
+    return {
+        "status": "FOREIGN_FLOW_SETUP_STATE_PROSPECTIVE_READY",
+        "schema": "idx-trade/foreign-flow-setup-state-v1",
+        "prospective": True,
+        "target_session_captured": False,
+        "session_date": feature_session,
+        "feature_session": feature_session,
+        "flow_through_session": source_session,
+        "source_session": source_session,
+        "state_contract_version": "FOREIGN_FLOW_SETUP_STATE_V1",
+        "source_representation_version": "FOREIGN_FLOW_REPRESENTATION_V2",
+        "row_count": int(len(frame)),
+        "indeterminate_rows": int(frame["setup_label"].eq("INDETERMINATE").sum()),
+        "thresholds": dict(thresholds.__dict__),
+        "setup_sidecar_path": str(sidecar_path),
+        "setup_sidecar_sha256": sidecar_sha,
+        "representation_path": str(representation_path),
+        "representation_sha256": representation_sha,
+        "representation_manifest_path": str(representation_manifest_path),
+        "representation_manifest_sha256": representation_manifest_sha,
+        "source_provenance": dict(source_provenance),
+        "calendar": dict(calendar),
+        "observed_available_at_utc": None,
+        "publication_time_known": False,
+        "provider_calls": 0,
+        "outcome_blind": True,
+        "forward_outcomes_accessed": False,
+        "outcome_metrics_computed": False,
+        "model_fit": False,
+        "model_scoring": False,
+        "prohibited_actions": {
+            "fresh_forward_accessed": False,
+            "outcomes_or_labels_accessed": False,
+            "model_fit": False,
+            "model_scoring": False,
+        },
+    }
+
+
+def _write_json_exclusive(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode(
+        "utf-8"
+    )
+    try:
+        with path.open("xb") as handle:
+            handle.write(payload)
+    except FileExistsError:
+        return
+
+
+def enrich_prospective_foreign_flow_setup(
+    representation_path: str | Path,
+    representation_manifest_path: str | Path | None = None,
+    *,
+    output_directory: str | Path | None = None,
+    thresholds: SetupThresholds = DEFAULT_THRESHOLDS,
+) -> dict[str, Any]:
+    """Materialize Setup State immediately from a prospective V2 pair.
+
+    This path is intentionally independent of the future feature-session
+    directory.  It is used after source session ``t`` has produced a verified
+    V2 pair for ``t+1`` and before any ``t+1`` market/flow capture exists.
+    """
+
+    representation = Path(representation_path).expanduser().resolve()
+    rep_manifest_path = (
+        Path(representation_manifest_path).expanduser().resolve()
+        if representation_manifest_path is not None
+        else representation.with_name(REPRESENTATION_MANIFEST_FILENAME)
+    )
+    if not representation.is_file() or not rep_manifest_path.is_file():
+        raise FileNotFoundError("prospective Representation V2 artifact/manifest is missing")
+    manifest = _read_json(rep_manifest_path, label="Representation V2 manifest")
+    _assert_representation_manifest(manifest)
+    representation_sha = _representation_manifest_sha(manifest, representation)
+    try:
+        source_frame = pd.read_parquet(representation)
+    except Exception as error:
+        raise RuntimeError("Representation V2 artifact is unreadable") from error
+    source_frame, calendar, source_session, feature_session, source_provenance = (
+        _validate_prospective_representation(source_frame, manifest=manifest)
+    )
+    setup_frame = build_foreign_flow_setup_sidecar(source_frame, thresholds=thresholds)
+    directory = (
+        Path(output_directory).expanduser().resolve()
+        if output_directory is not None
+        else representation.parent
+    )
+    sidecar = directory / SETUP_SIDECAR_FILENAME
+    setup_manifest_path = directory / SETUP_MANIFEST_FILENAME
+    if sidecar.exists():
+        try:
+            existing = pd.read_parquet(sidecar)
+        except Exception as error:
+            raise RuntimeError("existing prospective setup sidecar is unreadable") from error
+        if not _same_frame(existing, setup_frame):
+            raise RuntimeError("immutable prospective setup sidecar revision conflict")
+    else:
+        _write_parquet_exclusive(setup_frame, sidecar)
+    sidecar_sha = sha256_file(sidecar)
+    expected = _prospective_manifest(
+        representation_path=representation,
+        representation_sha=representation_sha,
+        representation_manifest_path=rep_manifest_path,
+        representation_manifest_sha=sha256_file(rep_manifest_path),
+        sidecar_path=sidecar,
+        sidecar_sha=sidecar_sha,
+        frame=setup_frame,
+        calendar=calendar,
+        source_session=source_session,
+        feature_session=feature_session,
+        source_provenance=source_provenance,
+        thresholds=thresholds,
+    )
+    if setup_manifest_path.exists():
+        if _read_json(setup_manifest_path, label="prospective setup-state manifest") != expected:
+            raise RuntimeError("immutable prospective setup-state manifest revision conflict")
+    else:
+        _write_json_exclusive(setup_manifest_path, expected)
+    if not verify_prospective_foreign_flow_setup(
+        representation,
+        rep_manifest_path,
+        output_directory=directory,
+        thresholds=thresholds,
+    ):
+        raise RuntimeError("new prospective setup-state sidecar failed canonical verification")
+    return {
+        "status": expected["status"],
+        "session_date": feature_session,
+        "source_session": source_session,
+        "rows": int(len(setup_frame)),
+        "indeterminate_rows": int(expected["indeterminate_rows"]),
+        "setup_sidecar_path": str(sidecar),
+        "setup_sidecar_sha256": sidecar_sha,
+        "manifest_path": str(setup_manifest_path),
+        "manifest_sha256": sha256_file(setup_manifest_path),
+        "representation_path": str(representation),
+        "representation_sha256": representation_sha,
+        "representation_manifest_sha256": sha256_file(rep_manifest_path),
+        "provider_calls": 0,
+        "outcome_blind": True,
+        "forward_outcomes_accessed": False,
+    }
+
+
+def verify_prospective_foreign_flow_setup(
+    representation_path: str | Path,
+    representation_manifest_path: str | Path | None = None,
+    *,
+    output_directory: str | Path | None = None,
+    thresholds: SetupThresholds = DEFAULT_THRESHOLDS,
+) -> bool:
+    """Verify a prospective setup pair without reading future session data."""
+
+    representation = Path(representation_path).expanduser().resolve()
+    rep_manifest_path = (
+        Path(representation_manifest_path).expanduser().resolve()
+        if representation_manifest_path is not None
+        else representation.with_name(REPRESENTATION_MANIFEST_FILENAME)
+    )
+    directory = (
+        Path(output_directory).expanduser().resolve()
+        if output_directory is not None
+        else representation.parent
+    )
+    setup_path = directory / SETUP_SIDECAR_FILENAME
+    setup_manifest_path = directory / SETUP_MANIFEST_FILENAME
+    try:
+        if not representation.is_file() or not rep_manifest_path.is_file():
+            return False
+        manifest = _read_json(rep_manifest_path, label="Representation V2 manifest")
+        _assert_representation_manifest(manifest)
+        representation_sha = _representation_manifest_sha(manifest, representation)
+        source_frame = pd.read_parquet(representation)
+        source_frame, calendar, source_session, feature_session, source_provenance = (
+            _validate_prospective_representation(source_frame, manifest=manifest)
+        )
+        expected_frame = build_foreign_flow_setup_sidecar(source_frame, thresholds=thresholds)
+        if not setup_path.is_file() or not setup_manifest_path.is_file():
+            return False
+        stored = pd.read_parquet(setup_path)
+        if not _same_frame(stored, expected_frame):
+            return False
+        expected = _prospective_manifest(
+            representation_path=representation,
+            representation_sha=representation_sha,
+            representation_manifest_path=rep_manifest_path,
+            representation_manifest_sha=sha256_file(rep_manifest_path),
+            sidecar_path=setup_path,
+            sidecar_sha=sha256_file(setup_path),
+            frame=expected_frame,
+            calendar=calendar,
+            source_session=source_session,
+            feature_session=feature_session,
+            source_provenance=source_provenance,
+            thresholds=thresholds,
+        )
+        return _read_json(setup_manifest_path, label="prospective setup-state manifest") == expected
+    except (KeyError, OSError, RuntimeError, ValueError, TypeError, ImportError):
+        return False
 
 
 def verify_session_foreign_flow_setup(
