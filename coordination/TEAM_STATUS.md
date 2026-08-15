@@ -694,15 +694,25 @@ O2/counters, models, outcomes, and trade semantics remain out of scope.
 
 ## Current status correction — 2026-08-16 — Joint Setup Readiness V1.1 prospective runtime
 
-Joint Setup Readiness V1.1 prospective runtime adapter is now `ACTIVE` by
+Joint Setup Readiness V1.1 prospective runtime adapter is now `REVIEW` by
 Codex/Joint-Setup-Readiness on branch
-`integration/joint-setup-readiness-v1-1-forward-v1`, based on the accepted
-domain remediation at
-`research/idx-joint-setup-readiness-state-v1-1-domain-remediation@af2450c7e5166dba853a810ee77ebdc339198dc7`.
-Scope is one controlled, outcome-blind runtime materialization and strict
-replay verification for source session 2026-08-12 to feature session
-2026-08-13. Repository Hygiene, providers/network, scheduler, O2/counter,
-models, outcomes, and trade semantics remain out of scope.
+`integration/joint-setup-readiness-v1-1-forward-v1` at final HEAD
+`8ede786622713b03127fbf856abe2d7d2bd5c03d`. The controlled smoke completed
+with status `JOINT_SETUP_READINESS_V1_1_CONTROLLED_SMOKE_VERIFIED` for source
+session 2026-08-12 and feature session 2026-08-13. The output contains 836
+rows/tickers from the authoritative Price State domain; the reconciled domain
+was FF 963 / Price 836 / overlap 836 / Price-only 0 / FF-only 127, with state
+distribution IGNORE 697 / WATCH 84 / READY 54 / ENTRY_ELIGIBLE 1. The output
+artifact SHA-256 is
+`d83593b61a25f9f32a82c153001e0c548f29ffb255485b29a84760ae6ae03418` and the
+manifest SHA-256 is
+`c3007af5af3061ee91be176fb0d29dc000cfc162fcc0c3642c5f26723646d646`.
+Strict verification passed and the idempotent replay created no second
+artifact. Focused tests passed 33; full pytest was 72 passed, 1 unrelated
+pre-existing `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+failure out of 73 collected; `git diff --check` passed. Repository Hygiene,
+providers/network, scheduler, O2/counter, models, outcomes, and trade
+semantics remain out of scope.
 
 ## Current status correction — 2026-08-16 — LBRE Monthly Free-Float History V1 result
 
