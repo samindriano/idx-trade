@@ -571,11 +571,11 @@ combination, O2, HSC/free-float, or trade-state logic is in scope.
 
 ## Current status correction — 2026-08-15 — Canonical EOD Calendar-Parent Attestation V1
 
-Canonical EOD calendar-parent provenance/runtime smoke lane is now `ACTIVE` on
+Canonical EOD calendar-parent provenance/runtime smoke lane is now `REVIEW` on
 branch
 `integration/canonical-eod-calendar-parent-attestation-v1`, based on the
 independent Price/Trend runtime-smoke review
-`review/idx-price-trend-runtime-smoke-blocker-v1@face365af462d2e050bb5b5e0c78d3226b1bc911`.
+`review/idx-price-trend-runtime-smoke-blocker-v1@fa280cf9d9d618973b0b5292daf5cf64874b60a7`.
 Scope is limited to read-only audit of canonical EOD sessions 2026-08-11 and
 2026-08-12 plus an immutable sibling attestation and strict verifier when the
 only failure is unrecoverable capture-time calendar bytes. Canonical manifests,
@@ -586,20 +586,22 @@ authorized in this lane.
 
 Independent review `fa280cf9d9d618973b0b5292daf5cf64874b60a7` accepted the
 temporal remediation and authorized exactly one runtime attestation + one
-Price State smoke. Work is limited to the authorized sequence; no scheduler,
-counter, O2, Foreign Flow + Price State integration, or model/outcome work is
-allowed. Accepted implementation remains at
-`e90f902c040d1458786dc68369be8c58d1e58fa1`. The read-only runtime audit found
+Price State smoke. The authorized sequence completed exactly once. Accepted
+implementation remains at
+`e90f902c040d1458786dc68369be8c58d1e58fa1`; final result is on branch HEAD
+`32c30d17c7a2d1d5f434f9f6df0c7fb88e2b13ae`. The read-only runtime audit found
 2026-08-11's declared calendar SHA unrecoverable while all non-calendar
 canonical artifacts remain valid; 2026-08-12's declared calendar remains
-recoverable at its original path. The strict sibling attestation contract and
-Price State compatibility verifier are covered by 15 focused passing tests.
-Full pytest is `86 passed, 1 failed` out of 87 collected; the sole failure is
-the unrelated pre-existing storage conflict-count expectation. No runtime
-attestation was materialized, no provider calls were made, and no outcome,
-model, trade-state, scheduler, counter, O2, or canonical EOD artifact was
-changed. Runtime attestation write and second Price State smoke remain blocked
-pending independent review.
+recoverable at its original path. Exactly one immutable 2026-08-11 sibling
+attestation was written and strictly verified twice; no 2026-08-12 attestation
+was created. The single zero-provider smoke 2026-08-12 -> 2026-08-13 returned
+`PRICE_TREND_CONTROLLED_SMOKE_VERIFIED` with 836 rows/tickers, idempotent
+replay, and provider/outcome/model/trade flags false. Full pytest is
+`86 passed, 1 failed` out of 87 collected; the sole failure is the unrelated
+pre-existing storage conflict-count expectation. No second smoke, provider,
+outcome, model, trade-state, scheduler, counter, O2, Foreign Flow + Price
+State integration, or canonical EOD rewrite occurred. Lane is ready for
+ChatGPT review.
 
 ## Current status correction — 2026-08-15 — LBRE Lineage / Parser Remediation V1 result
 
