@@ -9,7 +9,7 @@ source_repository: samindriano/idx-trade
 source_commit: `f6537c09b5121cc8b185df4fd9d672e305a879d1`
 branch: `data/idx-lbre-monthly-free-float-history-v1`
 status: `REVIEW`
-head_commit: `PENDING_COMMIT`
+head_commit: `7afcd94cb0f3f8954f43dad1b8c866984167d042`
 
 ## Scope
 
