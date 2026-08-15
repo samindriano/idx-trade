@@ -14,7 +14,7 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
-from .foreign_flow_features_v2 import OUTPUT_COLUMNS_V2
+from .foreign_flow_features_v2 import FEATURE_COLUMNS_V2, OUTPUT_COLUMNS_V2
 from .foreign_flow_setup_sidecar import build_foreign_flow_setup_sidecar
 from .foreign_flow_setup_state import DEFAULT_THRESHOLDS, SetupThresholds
 from .forward_foreign_flow import (
@@ -227,9 +227,63 @@ def _validate_prospective_representation(
         session=feature,
         parent=calendar_parent,
     )
+    if int(manifest.get("row_count", -1)) != len(out):
+        raise RuntimeError("prospective Representation V2 row count conflicts")
+    if int(manifest.get("ticker_count", -1)) != out["ticker"].nunique():
+        raise RuntimeError("prospective Representation V2 ticker count conflicts")
     if source != calendar["flow_through_session"]:
         raise RuntimeError("prospective source session is not the prior official session")
     return out, calendar, source, feature, dict(provenance)
+
+
+def _assert_prospective_representation_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    representation: Path,
+) -> None:
+    """Apply the strict manifest identity/access contract for delivery."""
+
+    if manifest.get("schema") != "idx-trade/foreign-flow-representation-v2-forward-v1":
+        raise RuntimeError("prospective Representation V2 schema is invalid")
+    if manifest.get("feature_columns") != list(FEATURE_COLUMNS_V2):
+        raise RuntimeError("prospective Representation V2 feature columns are invalid")
+    if manifest.get("output_columns") != list(OUTPUT_COLUMNS_V2):
+        raise RuntimeError("prospective Representation V2 output columns are invalid")
+    if manifest.get("artifact_path") is None:
+        raise RuntimeError("prospective Representation V2 artifact path is missing")
+    if Path(str(manifest["artifact_path"])).expanduser().resolve() != representation:
+        raise RuntimeError("prospective Representation V2 artifact path conflicts")
+    if representation.name != REPRESENTATION_FILENAME:
+        raise RuntimeError("prospective Representation V2 artifact filename is invalid")
+    if representation.parent.name != str(manifest.get("feature_session") or ""):
+        raise RuntimeError("prospective Representation V2 directory does not match feature session")
+    if representation.parent.parent.name != "foreign_flow_representation_v2":
+        raise RuntimeError("prospective Representation V2 directory is invalid")
+    if representation.parent.parent.parent.name != "prospective":
+        raise RuntimeError("prospective Representation V2 is outside prospective root")
+    if not isinstance(manifest.get("row_count"), int) or manifest["row_count"] <= 0:
+        raise RuntimeError("prospective Representation V2 row count is invalid")
+    if not isinstance(manifest.get("ticker_count"), int) or manifest["ticker_count"] <= 0:
+        raise RuntimeError("prospective Representation V2 ticker count is invalid")
+    if manifest.get("provider_calls") != 0:
+        raise RuntimeError("prospective Representation V2 provider-call flag is invalid")
+    required_false = (
+        "fresh_forward_accessed",
+        "outcomes_or_labels_accessed",
+        "outcome_metrics_computed",
+        "model_fit",
+        "model_scoring",
+    )
+    if manifest.get("outcome_blind") is not True or any(
+        manifest.get(key) is not False for key in required_false
+    ):
+        raise RuntimeError("prospective Representation V2 access flags are invalid")
+    prohibited = manifest.get("prohibited_actions")
+    if not isinstance(prohibited, Mapping) or any(
+        prohibited.get(key) is not False
+        for key in ("fresh_forward_accessed", "outcomes_or_labels_accessed", "model_fit", "model_scoring")
+    ):
+        raise RuntimeError("prospective Representation V2 prohibited-action flags are invalid")
 
 
 def _same_frame(left: pd.DataFrame, right: pd.DataFrame) -> bool:
@@ -466,6 +520,7 @@ def enrich_prospective_foreign_flow_setup(
         raise FileNotFoundError("prospective Representation V2 artifact/manifest is missing")
     manifest = _read_json(rep_manifest_path, label="Representation V2 manifest")
     _assert_representation_manifest(manifest)
+    _assert_prospective_representation_manifest(manifest, representation=representation)
     representation_sha = _representation_manifest_sha(manifest, representation)
     try:
         source_frame = pd.read_parquet(representation)
@@ -480,6 +535,8 @@ def enrich_prospective_foreign_flow_setup(
         if output_directory is not None
         else representation.parent
     )
+    if directory != representation.parent:
+        raise RuntimeError("prospective setup output must share the Representation V2 directory")
     sidecar = directory / SETUP_SIDECAR_FILENAME
     setup_manifest_path = directory / SETUP_MANIFEST_FILENAME
     if sidecar.exists():
@@ -557,6 +614,8 @@ def verify_prospective_foreign_flow_setup(
         if output_directory is not None
         else representation.parent
     )
+    if directory != representation.parent:
+        return False
     setup_path = directory / SETUP_SIDECAR_FILENAME
     setup_manifest_path = directory / SETUP_MANIFEST_FILENAME
     try:
@@ -564,6 +623,7 @@ def verify_prospective_foreign_flow_setup(
             return False
         manifest = _read_json(rep_manifest_path, label="Representation V2 manifest")
         _assert_representation_manifest(manifest)
+        _assert_prospective_representation_manifest(manifest, representation=representation)
         representation_sha = _representation_manifest_sha(manifest, representation)
         source_frame = pd.read_parquet(representation)
         source_frame, calendar, source_session, feature_session, source_provenance = (

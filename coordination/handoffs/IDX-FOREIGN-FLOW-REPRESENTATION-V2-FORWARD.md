@@ -100,8 +100,8 @@ context extension should a genuinely new live EOD target be run.
 
 ## Remediation validation
 
-- Focused producer/V2/setup/runner suite: `29 passed, 5 warnings`.
-- Full repository suite: `114 collected; 113 passed, 1 failed, 5 warnings`.
+- Focused producer/V2/setup/runner suite: `32 passed, 5 warnings`.
+- Full repository suite: `117 collected; 116 passed, 1 failed, 5 warnings`.
 - The sole failure is the unrelated storage audit-conflict expectation in
   `tests/test_storage.py`; `storage.py` was not changed.
 - `git diff --check`: PASS.

@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from idx_trade.forward_foreign_flow_runtime import run_foreign_flow_catchup
+from idx_trade.foreign_flow_features_v2 import FEATURE_COLUMNS_V2, OUTPUT_COLUMNS_V2
 from idx_trade.forward_foreign_flow_setup import (
     SETUP_MANIFEST_FILENAME,
     SETUP_SIDECAR_FILENAME,
@@ -126,8 +127,26 @@ def _prospective_representation(root: Path) -> tuple[Path, Path, Path]:
     manifest.update(
         {
             "status": "FOREIGN_FLOW_REPRESENTATION_V2_FORWARD_READY",
+            "schema": "idx-trade/foreign-flow-representation-v2-forward-v1",
+            "feature_columns": list(FEATURE_COLUMNS_V2),
+            "output_columns": list(OUTPUT_COLUMNS_V2),
+            "artifact_path": str(representation.resolve()),
             "feature_session": "2026-08-12",
             "flow_through_session": "2026-08-11",
+            "row_count": 1,
+            "ticker_count": 1,
+            "provider_calls": 0,
+            "fresh_forward_accessed": False,
+            "outcomes_or_labels_accessed": False,
+            "outcome_metrics_computed": False,
+            "model_fit": False,
+            "model_scoring": False,
+            "prohibited_actions": {
+                "fresh_forward_accessed": False,
+                "outcomes_or_labels_accessed": False,
+                "model_fit": False,
+                "model_scoring": False,
+            },
             "input_provenance": {
                 "official_sessions_path": str(calendar.resolve()),
                 "official_sessions_sha256": sha256_file(calendar),
@@ -247,6 +266,40 @@ def test_prospective_setup_fails_closed_on_representation_revision(tmp_path: Pat
     assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
     with pytest.raises(RuntimeError, match="SHA mismatch"):
         enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+
+
+def test_prospective_setup_rejects_wrong_output_location(tmp_path: Path) -> None:
+    representation, representation_manifest, _ = _prospective_representation(tmp_path)
+
+    with pytest.raises(RuntimeError, match="share the Representation V2 directory"):
+        enrich_prospective_foreign_flow_setup(
+            representation,
+            representation_manifest,
+            output_directory=tmp_path / "other",
+        )
+
+
+def test_prospective_setup_rejects_manifest_flag_or_count_drift(tmp_path: Path) -> None:
+    representation, representation_manifest, _ = _prospective_representation(tmp_path)
+    manifest = json.loads(representation_manifest.read_text(encoding="utf-8"))
+    manifest["provider_calls"] = 1
+    representation_manifest.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+    assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
+    with pytest.raises(RuntimeError, match="provider-call flag"):
+        enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+
+    representation, representation_manifest, _ = _prospective_representation(tmp_path / "count")
+    manifest = json.loads(representation_manifest.read_text(encoding="utf-8"))
+    manifest["row_count"] = 2
+    representation_manifest.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+    assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
+
+
+def test_prospective_setup_rejects_calendar_revision(tmp_path: Path) -> None:
+    representation, representation_manifest, calendar = _prospective_representation(tmp_path)
+    enrich_prospective_foreign_flow_setup(representation, representation_manifest)
+    calendar.write_text("date\n2026-08-10\n2026-08-12\n", encoding="utf-8")
+    assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
 
 
 def test_setup_rejects_extra_outcome_like_representation_columns(tmp_path: Path) -> None:

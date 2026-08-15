@@ -69,6 +69,8 @@ Added regression coverage proving:
   prospective sidecar or manifest;
 - a Representation V2 byte revision after Setup State creation is rejected by
   both verification and materialization.
+- malformed access flags/counts, calendar revision, and an output directory
+  outside the prospective V2 folder are rejected.
 
 Focused command:
 
@@ -76,7 +78,7 @@ Focused command:
 python -m pytest tests/test_forward_foreign_flow_setup.py tests/test_forward_foreign_flow_representation_v2.py tests/test_foreign_flow_features_v2.py tests/test_foreign_flow_representation_v2_runner.py -q
 ```
 
-Result: `29 passed, 5 warnings`.
+Result: `32 passed, 5 warnings`.
 
 Full command:
 
@@ -84,7 +86,7 @@ Full command:
 python -m pytest -q
 ```
 
-Result: `114 collected; 113 passed, 1 failed, 5 warnings`.
+Result: `117 collected; 116 passed, 1 failed, 5 warnings`.
 
 The sole failure remains the unrelated pre-existing
 `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`:

@@ -112,11 +112,11 @@ manifest metadata fail closed as a revision conflict.
 
 Focused Foreign Flow V2/producer/setup/runner tests:
 
-`29 passed, 5 warnings`
+`32 passed, 5 warnings`
 
 Full repository suite from the repository root:
 
-`114 collected; 113 passed, 1 failed, 5 warnings`
+`117 collected; 116 passed, 1 failed, 5 warnings`
 
 The one failure is the pre-existing unrelated
 `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`:
