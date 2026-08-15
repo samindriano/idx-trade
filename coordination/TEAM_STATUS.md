@@ -369,12 +369,14 @@ runtime. No scheduler, capture hierarchy, counter, provider expansion,
 historical performance test, model/outcome access, free-float/HSC integration,
 price-state layer, or O2 change is authorized. HSC/free-float remains a
 separate active lane and was not modified. Implementation is pushed at
-`af1d060aef17e6abb5ea2288394cb59dbfe326f1`. Focused producer/V2/setup tests
+`3bd4675443885336f5cb3ff0f5586d52b6bfad38`. Focused producer/V2/setup tests
 pass 24; full pytest is 294 passed / 1 unrelated pre-existing storage
 expectation failure / 3 warnings. The producer is fail-closed when the
 official calendar or rolling context is incomplete; no real 2026-08-11/12
-backfill was run. Await independent review before a genuinely new live EOD
-session.
+backfill was run. Read-only audit confirms 2026-08-10 is incomplete and the
+pinned market panel ends 2026-07-31, so current local artifacts are
+`NO_GO_CURRENT_CONTEXT` until a versioned complete calendar/context extension
+is supplied. Await independent review before a genuinely new live EOD session.
 
 ## Current status correction — 2026-08-15 — HSC source remediation lane
 
