@@ -51,6 +51,16 @@ and two unrelated additions relative to the original audit snapshot. No KEEP,
 ABANDONED_NO_DECISION, or NEEDS_MANUAL_REVIEW branch was included in the delete
 command.
 
+After the immediate post-action snapshot and before final handoff verification,
+one additional unrelated branch appeared:
+
+- `data/idx-lbre-market-anchor-reconciliation-v1`
+
+The final remote inventory is therefore **131** branches. This later addition
+was not part of Batch 2 and was not touched. The action-time count remains
+`160 -> 130`; the final count is `131` solely because of this subsequent remote
+addition.
+
 ## Archive-tag verification
 
 - Archive tag rows verified: **30/30**.
@@ -98,4 +108,3 @@ Read-only post-action checks passed for target absence, tag annotation, exact
 peeled SHA, remote tag presence, and branch inventory reconciliation. The
 repository-hygiene task does not require pytest; no source or test files were
 changed. `git diff --check` is required after this documentation commit.
-
