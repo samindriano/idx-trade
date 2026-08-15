@@ -54,6 +54,8 @@ class HSCEvent:
         object.__setattr__(self, "ticker", ticker)
         if self.published_at.tzinfo is None or self.published_at.utcoffset() is None:
             raise ValueError("published_at must be timezone-aware")
+        if self.ownership_as_of_date > self.published_at.date():
+            raise ValueError("ownership_as_of_date cannot be after publication date")
         if self.concentration_pct is not None:
             value = float(self.concentration_pct)
             if not isfinite(value) or not 0.0 <= value <= 100.0:
@@ -158,6 +160,8 @@ def replay_hsc_events(
                 )
             if superseded.ticker != event.ticker:
                 raise ValueError("correction ticker differs from superseded event")
+            if event.published_at <= superseded.published_at:
+                raise ValueError("correction must be published after superseded event")
             state = active.get(event.ticker)
             if state is None:
                 raise ValueError("correction cannot revive an inactive HSC state")
@@ -173,8 +177,11 @@ def replay_hsc_events(
                 methodology_version=event.methodology_version,
             )
         else:
-            if event.ticker not in active:
+            state = active.get(event.ticker)
+            if state is None:
                 raise ValueError(f"removal of inactive ticker: {event.ticker}")
+            if event.published_at <= state.active_since:
+                raise ValueError("removal must be published after active state begins")
             del active[event.ticker]
 
         seen_ids[event.event_id] = event
