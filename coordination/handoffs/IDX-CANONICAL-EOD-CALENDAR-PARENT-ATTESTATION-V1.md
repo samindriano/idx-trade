@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 6d0470e81599b4772cd62a676ae2201f94001efe
 branch: integration/canonical-eod-calendar-parent-attestation-v1
-head_commit: pending until push
+head_commit: 30572f2ce9a4f14b9164fd0aa3ce2794cd50b5f8
 scope: Legacy canonical EOD capture-time calendar-parent attestation for 2026-08-11 and 2026-08-12 only.
 files_changed:
   - src/idx_trade/canonical_eod_calendar_parent_attestation.py
