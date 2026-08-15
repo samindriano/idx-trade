@@ -362,3 +362,28 @@ event semantics, and bounded secondary recovery of monthly >=1% attachments.
 Keep `BalanceposEfek` separate and unchanged. No effective-float
 calculation, HHI/features, Foreign Flow integration, models, outcomes, or
 unrelated lane changes are authorized.
+
+## Current status correction — 2026-08-15 — HSC source remediation result
+
+HSC source remediation is now `REVIEW` by `Codex/Ownership-HSC-Source-Remediation`
+on branch `data/idx-ownership-hsc-source-remediation-v1` at HEAD
+`ba03d0d0ebe89f9219a2ac885af758b5e51c68ef`. Verdict:
+`HSC_SOURCE_READY_FOR_CONTRACT`.
+
+Using preserved official IDX GetAnnouncement metadata locators and direct
+official StaticData retrieval through `www.idx.id`, the lane recovered and
+hash-pinned 9 initial April HSC publications, MGRO May HSC, DGWG July HSC,
+LUCY July HSC removal, and the MGRO correction lineage. A separate official
+monthly `Pemegang Saham di atas 1% (KSEI)` attachment was also recovered.
+External root:
+`D:\Documents\Project\idx-ownership-hsc-source-remediation-20260815-v1`;
+manifest SHA-256
+`8cae847d2aa2aad2c16f7510d2c94d4578af522cf37e9f634caaf60bd2b6925c`.
+
+The BEI/KSEI decree confirms scrip+scripless HSC review/publication and
+reannouncement/removal semantics, but the detailed written review mechanism
+and numeric threshold were not recovered; no threshold or free-float inference
+is authorized. Focused provider tests: 10 passed. Full pytest: 49 passed / 1
+unrelated pre-existing storage expectation failure. No BalanceposEfek rewrite,
+features, Foreign Flow, model, outcome, or unrelated lane changes occurred.
+Stop for ChatGPT review before contract integration.
