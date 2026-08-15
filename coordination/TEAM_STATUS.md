@@ -594,3 +594,30 @@ the unrelated pre-existing storage conflict-count expectation. No runtime
 attestation was materialized, no provider calls were made, and no outcome,
 model, trade-state, scheduler, counter, O2, or canonical EOD artifact was
 changed.
+
+## Current status correction — 2026-08-15 — LBRE Lineage / Parser Remediation V1 result
+
+LBRE lineage/parser remediation V1 is now `REVIEW` on branch
+`data/idx-lbre-lineage-parser-remediation-v1` at final HEAD
+`a42715f027fceb0c7cd24f68e65c9e91b7bfa049`. The exact immutable 2026-06-30
+corpus was reused after verifying parent manifest SHA-256
+`7e5d9cad904374d66b2ef69d25de5c974e06799cc617494619addde2fedb3a7e`.
+
+The remediation inventory accounts for 111 row-level problem cases / 107
+unique evidence keys. Parser exact rows changed `1050 -> 1051` and unresolved
+rows `18 -> 17`; lineage changed `957 admitted / 93 excluded / 871 current`
+to `963 admitted / 87 excluded / 877 current`. Six lineage rows were repaired
+deterministically (byte-identical duplicates, one same-announcement re-upload,
+and one explicit BAPA correction marker). Residual source ambiguity remains:
+17 parser rows and 87 lineage rows remain excluded or ambiguous. Verdict:
+`LBRE_REMEDIATION_ACCEPTED_WITH_RESIDUAL_AMBIGUITY`.
+
+External artifact root is
+`D:\Documents\Project\idx-lbre-lineage-parser-remediation-20260815-v1-final6`
+with manifest SHA-256
+`cb2e929a8e7d5fc481c0eed6add4a6ba848c5a3374c65ea38e5fbe3fa5727244`.
+Focused tests passed 19; full pytest was `67 passed / 1 unrelated storage
+expectation failure`; `git diff --check` passed. No provider calls, new month
+acquisition, free-float arithmetic, forward-fill, features, models, outcomes,
+or unrelated lane work occurred. Monthly history remains blocked pending
+independent review.
