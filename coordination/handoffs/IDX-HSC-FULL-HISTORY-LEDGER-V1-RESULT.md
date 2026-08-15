@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade  
 source_commit: 52a62c4913402ad5d6908c6c06f2a0f738a7ba80  
 branch: data/idx-hsc-full-history-ledger-v1  
-head_commit: pending-final-commit  
+head_commit: c9ec65899255c521a3e7262e65dac5068c4537d8
 
 ## Scope
 
