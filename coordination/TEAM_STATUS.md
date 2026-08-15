@@ -571,7 +571,7 @@ combination, O2, HSC/free-float, or trade-state logic is in scope.
 
 ## Current status correction — 2026-08-15 — Canonical EOD Calendar-Parent Attestation V1
 
-Canonical EOD calendar-parent provenance remediation is now `ACTIVE` on branch
+Canonical EOD calendar-parent provenance remediation is now `REVIEW` on branch
 `integration/canonical-eod-calendar-parent-attestation-v1`, based on the
 independent Price/Trend runtime-smoke review
 `review/idx-price-trend-runtime-smoke-blocker-v1@face365af462d2e050bb5b5e0c78d3226b1bc911`.
@@ -580,5 +580,17 @@ Scope is limited to read-only audit of canonical EOD sessions 2026-08-11 and
 only failure is unrecoverable capture-time calendar bytes. Canonical manifests,
 snapshots, evidence, formulas, thresholds, scheduler, counters, providers,
 outcomes, models, O2, Foreign Flow + Price State integration, HSC/free-float,
-and trade-state logic remain out of scope. No Price State smoke rerun is
+and trade-state logic remain out of scope. No Price State smoke rerun was
 authorized in this lane.
+
+Implementation and checkpoint are pushed at final HEAD
+`4123a51f64a1d565a588c2186b1cc555ade7e8ac`. The read-only runtime audit found
+2026-08-11's declared calendar SHA unrecoverable while all non-calendar
+canonical artifacts remain valid; 2026-08-12's declared calendar remains
+recoverable at its original path. The strict sibling attestation contract and
+Price State compatibility verifier are covered by 14 focused passing tests.
+Full pytest is `85 passed, 1 failed` out of 86 collected; the sole failure is
+the unrelated pre-existing storage conflict-count expectation. No runtime
+attestation was materialized, no provider calls were made, and no outcome,
+model, trade-state, scheduler, counter, O2, or canonical EOD artifact was
+changed.
