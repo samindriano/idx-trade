@@ -417,3 +417,18 @@ is authorized. Focused provider tests: 10 passed. Full pytest: 49 passed / 1
 unrelated pre-existing storage expectation failure. No BalanceposEfek rewrite,
 features, Foreign Flow, model, outcome, or unrelated lane changes occurred.
 Stop for ChatGPT review before contract integration.
+
+## Current status correction — 2026-08-15 — Foreign Flow Forward Context Bridge V1
+
+Foreign Flow Forward Context Bridge V1 is claimed as `ACTIVE` by Codex on
+branch `data/foreign-flow-forward-context-bridge-v1` at starting HEAD
+`56b5b3c8041b87020f8cbfc25296eff3aeeacc4a`. Scope is bounded local runtime
+execution of the already-reviewed bridge planner/capture/producer: sync an
+immutable bridge calendar, capture only planner-authorized `NEED_BRIDGE_CAPTURE`
+dates through 2026-08-10, and produce one outcome-blind next-session Foreign
+Flow Representation V2 + Setup State smoke artifact if the planner reaches
+`CONTEXT_BRIDGE_READY`. No bridge fallback is allowed after 2026-08-10;
+`NEED_CANONICAL_EOD` dates must use the existing canonical EOD runtime.
+Canonical 2026-08-10/11/12 bytes remain immutable. No O2, HSC/free-float,
+price-state, model, outcome, counter, scheduler, or unrelated storage changes
+are authorized.
