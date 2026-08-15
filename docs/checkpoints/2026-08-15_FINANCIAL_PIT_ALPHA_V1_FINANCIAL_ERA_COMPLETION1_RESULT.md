@@ -9,7 +9,7 @@ preprocessing, hyperparameter, evaluator, or gate was changed.
 ## Identity and preflight
 
 - Branch: `research/idx-financial-pit-alpha-v1`
-- Documentation HEAD after this checkpoint: recorded in the handoff
+- Documentation HEAD after this checkpoint: `59b5d76b09de8ebf24eed6851f20b340127f55fd`
 - Executable scientific code identity: `507aaf8bca3286996eb30f3f8e7ea161d8892cc1`
 - Documentation parent before this result: `a677cda58c2e963015aecf9bc9b4bb7809bede51`
 - Frozen contract SHA-256:
@@ -103,4 +103,3 @@ The latest branch validation before the completion run remains:
 - full pytest: `61 passed, 1 failed`, unrelated existing
   `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflict`;
 - `git diff --check`: passed.
-
