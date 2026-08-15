@@ -7,9 +7,11 @@ on:
     paths:
       - 'src/idx_trade/price_trend_state.py'
       - 'src/idx_trade/forward_price_trend_state.py'
+      - 'src/idx_trade/forward_price_trend_state_verifier.py'
       - 'tests/test_price_trend_state.py'
       - 'tests/test_price_trend_state_prospective.py'
       - 'tests/test_forward_price_trend_state.py'
+      - 'tests/test_forward_price_trend_state_strict_verifier.py'
       - 'docs/checkpoints/2026-08-15_PRICE_TREND_CONFIRMATION_STATE_V1_CONTRACT.md'
       - 'docs/checkpoints/2026-08-15_PRICE_TREND_CONFIRMATION_STATE_V1_INDEPENDENT_ACCEPTANCE.md'
       - 'docs/checkpoints/2026-08-15_PRICE_TREND_FORWARD_SIDECAR_V1.md'
@@ -27,5 +29,5 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e . pytest
-      - run: pytest -q tests/test_price_trend_state.py tests/test_price_trend_state_prospective.py tests/test_forward_price_trend_state.py
+      - run: pytest -q tests/test_price_trend_state.py tests/test_price_trend_state_prospective.py tests/test_forward_price_trend_state.py tests/test_forward_price_trend_state_strict_verifier.py
       - run: git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}"
