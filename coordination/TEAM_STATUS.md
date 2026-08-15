@@ -568,3 +568,17 @@ overwritten. Provider calls and outcome access were both zero/false. Do not
 retry, recapture, rewrite canonical EOD, or alter Price State semantics
 without independent review. No scheduler/counter, Foreign Flow + Price State
 combination, O2, HSC/free-float, or trade-state logic is in scope.
+
+## Current status correction — 2026-08-15 — Canonical EOD Calendar-Parent Attestation V1
+
+Canonical EOD calendar-parent provenance remediation is now `ACTIVE` on branch
+`integration/canonical-eod-calendar-parent-attestation-v1`, based on the
+independent Price/Trend runtime-smoke review
+`review/idx-price-trend-runtime-smoke-blocker-v1@face365af462d2e050bb5b5e0c78d3226b1bc911`.
+Scope is limited to read-only audit of canonical EOD sessions 2026-08-11 and
+2026-08-12 plus an immutable sibling attestation and strict verifier when the
+only failure is unrecoverable capture-time calendar bytes. Canonical manifests,
+snapshots, evidence, formulas, thresholds, scheduler, counters, providers,
+outcomes, models, O2, Foreign Flow + Price State integration, HSC/free-float,
+and trade-state logic remain out of scope. No Price State smoke rerun is
+authorized in this lane.
