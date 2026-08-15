@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import idx_trade.forward_price_trend_context_bridge as bridge_module
+from idx_trade.canonical_eod_calendar_parent_attestation import _fingerprint
 from idx_trade.canonical_eod_calendar_parent_attestation import (
     CALENDAR_BYTES_UNRECOVERED,
     audit_canonical_eod_calendar_parent,
@@ -152,12 +153,31 @@ def test_attestation_is_strict_and_immutable(tmp_path: Path) -> None:
 def test_current_mutable_calendar_cannot_substitute_old_parent(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     attestation = _write_attestation(fixture)
-    fixture["current_calendar"].write_text("date\n2026-08-10\n2026-08-11\n", encoding="utf-8")
+    fixture["current_calendar"].write_text(
+        "date\n2026-08-10\n2026-08-11\n2026-08-12\n", encoding="utf-8"
+    )
     assert verify_canonical_eod_calendar_parent_attestation(
         attestation,
         expected_bridge_calendar_path=fixture["bridge_calendar"],
         expected_bridge_calendar_sha256=fixture["bridge_sha"],
-    ) is False
+    ) is True
+
+
+def test_later_recovery_of_old_calendar_bytes_does_not_invalidate_attestation(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    attestation = _write_attestation(fixture)
+    recovered = tmp_path / "recovered-later" / "calendar-copy.bin"
+    recovered.parent.mkdir(parents=True, exist_ok=True)
+    recovered.write_text("date\n2026-08-10\n2026-08-11\n", encoding="utf-8")
+    assert sha256_file(recovered) == fixture["old_sha"]
+    fixture["current_calendar"].write_text(
+        "date\n2026-08-10\n2026-08-11\n", encoding="utf-8"
+    )
+    assert verify_canonical_eod_calendar_parent_attestation(
+        attestation,
+        expected_bridge_calendar_path=fixture["bridge_calendar"],
+        expected_bridge_calendar_sha256=fixture["bridge_sha"],
+    ) is True
 
 
 def test_arbitrary_bridge_and_wrong_order_are_rejected(tmp_path: Path) -> None:
@@ -234,6 +254,12 @@ def test_declared_old_sha_change_and_missing_attestation_fail_closed(tmp_path: P
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     payload["calendar_sha256"] = "f" * 64
     manifest.write_text(json.dumps(payload), encoding="utf-8")
+    attestation_payload = json.loads(attestation.read_text(encoding="utf-8"))
+    attestation_payload["canonical_manifest_sha256"] = sha256_file(manifest)
+    attestation_payload["attestation_fingerprint"] = _fingerprint(
+        {key: value for key, value in attestation_payload.items() if key != "attestation_fingerprint"}
+    )
+    attestation.write_text(json.dumps(attestation_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     assert verify_canonical_eod_calendar_parent_attestation(
         attestation,
         expected_bridge_calendar_path=fixture["bridge_calendar"],

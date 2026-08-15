@@ -16,7 +16,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import tempfile
 from typing import Any, Mapping
 
 import pandas as pd
@@ -244,6 +246,9 @@ def audit_canonical_eod_calendar_parent(
         key,
     )
     return {
+        "audit_time_calendar_search_root": str(runtime),
+        "audit_time_calendar_search_match_count": int(len(matches)),
+        "audit_time_calendar_search_matches": [str(path) for path in matches],
         "schema": ATTESTATION_SCHEMA,
         "session_date": key,
         "canonical_manifest_path": str(manifest_path),
@@ -295,6 +300,9 @@ def _attestation_payload(report: Mapping[str, Any]) -> dict[str, Any]:
         "declared_capture_time_calendar_sha256": report["declared_capture_time_calendar_sha256"],
         "declared_capture_time_calendar_status": CALENDAR_BYTES_UNRECOVERED,
         "current_declared_calendar_path_sha256": report.get("current_declared_calendar_path_sha256"),
+        "audit_time_calendar_search_root": report.get("audit_time_calendar_search_root"),
+        "audit_time_calendar_search_match_count": report.get("audit_time_calendar_search_match_count"),
+        "audit_time_calendar_search_matches": report.get("audit_time_calendar_search_matches", []),
         "accepted_bridge_calendar_path": report["accepted_bridge_calendar_path"],
         "accepted_bridge_calendar_sha256": report["accepted_bridge_calendar_sha256"],
         "accepted_bridge_calendar_session_count": report["accepted_bridge_calendar_session_count"],
@@ -334,8 +342,30 @@ def create_canonical_eod_calendar_parent_attestation(
         if existing != encoded:
             raise RuntimeError("existing attestation is immutable and differs")
         return destination
-    destination.write_text(encoded, encoding="utf-8", newline="\n")
-    return destination
+    temporary: Path | None = None
+    try:
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=".canonical-eod-calendar-parent-",
+            suffix=".tmp",
+            dir=destination.parent,
+        )
+        temporary = Path(temporary_name)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            # Hard-linking the fully written same-volume temporary file gives
+            # exclusive final-name creation without an overwrite race.
+            os.link(temporary, destination)
+        except FileExistsError:
+            existing = destination.read_text(encoding="utf-8")
+            if existing != encoded:
+                raise RuntimeError("existing attestation is immutable and differs") from None
+        return destination
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def verify_canonical_eod_calendar_parent_attestation(
@@ -403,12 +433,14 @@ def verify_canonical_eod_calendar_parent_attestation(
 
         calendar_path = Path(str(payload.get("declared_capture_time_calendar_path") or "")).expanduser().resolve()
         declared_sha = str(payload.get("declared_capture_time_calendar_sha256") or "").lower()
-        current_sha = sha256_file(calendar_path).lower() if calendar_path.is_file() else None
-        if current_sha == declared_sha:
+        # The current shared calendar hash and the audit-time exact-SHA search
+        # are observations, not future invariants.  Later extension or later
+        # recovery of the old bytes must not invalidate this attestation.
+        if raw_manifest.get("calendar_path") is None:
             return False
-        if payload.get("current_declared_calendar_path_sha256") != current_sha:
+        if Path(str(raw_manifest.get("calendar_path"))).expanduser().resolve() != calendar_path:
             return False
-        if _find_matching_files(manifest.parents[3], declared_sha):
+        if str(raw_manifest.get("calendar_sha256") or "").lower() != declared_sha:
             return False
 
         bridge_path = Path(str(payload.get("accepted_bridge_calendar_path") or "")).expanduser().resolve()
