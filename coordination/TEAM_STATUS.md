@@ -418,6 +418,17 @@ unrelated pre-existing storage expectation failure. No BalanceposEfek rewrite,
 features, Foreign Flow, model, outcome, or unrelated lane changes occurred.
 Stop for ChatGPT review before contract integration.
 
+## Current status correction — 2026-08-15 — HSC full-history ledger
+
+HSC full-history ledger V1 is now `ACTIVE` by `Codex/HSC-Full-History-Ledger`
+on branch `data/idx-hsc-full-history-ledger-v1`, prepared at
+`52a62c4913402ad5d6908c6c06f2a0f738a7ba80`. Scope is recovery of official
+HSC/RSC/correction events through 2026-08-15, strict event-ledger replay, and
+exact reconciliation to the official current active set. This lane may reuse
+the accepted HSC source-remediation transport and external artifacts.
+No free-float/effective-supply inference, HHI/features, Foreign Flow
+integration, models, outcomes, or unrelated lane changes are authorized.
+
 ## Current status correction — 2026-08-15 — Foreign Flow Forward Context Bridge V1
 
 Foreign Flow Forward Context Bridge V1 is claimed as `ACTIVE` by Codex on
