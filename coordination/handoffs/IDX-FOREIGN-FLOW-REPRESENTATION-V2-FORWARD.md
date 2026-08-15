@@ -6,14 +6,17 @@ task_id: IDX-FOREIGN-FLOW-REPRESENTATION-V2-FORWARD
 model_used: Luna xhigh
 reasoning_level: xhigh
 source_repository: samindriano/idx-trade
-source_commit: d204a8fd3edaacef91aacbe90ac39f0e1969e420
+source_commit: 5374c238d3ed90823a18c49f1b0b1be4a0583469
 branch: integration/foreign-flow-representation-v2-forward-v1
-head_commit: 84ad72dd65e5108ecaaa9a703672663e06cb6337
-scope: outcome-blind prospective Foreign Flow Representation V2 producer and minimal Setup State catchup wiring
+head_commit: 07660db
+scope: outcome-blind prospective Foreign Flow Representation V2 producer and immediate Setup State V1 delivery
 files_changed:
   - src/idx_trade/forward_foreign_flow_representation_v2.py
+  - src/idx_trade/forward_foreign_flow_setup.py
   - tests/test_forward_foreign_flow_representation_v2.py
+  - tests/test_forward_foreign_flow_setup.py
   - docs/checkpoints/2026-08-15_FOREIGN_FLOW_REPRESENTATION_V2_FORWARD_PRODUCER.md
+  - docs/checkpoints/2026-08-15_FOREIGN_FLOW_REPRESENTATION_V2_FORWARD_SETUP_DELIVERY_REMEDIATION.md
   - coordination/handoffs/IDX-FOREIGN-FLOW-REPRESENTATION-V2-FORWARD.md
 
 ## Findings
@@ -26,8 +29,9 @@ files_changed:
   `t+1` market/flow rows and target session directory are not required.
 - Prospective pairs live under
   `forward_monitoring/prospective/foreign_flow_representation_v2/<t+1>/`.
-  Existing catchup consumes that pair after target capture and passes explicit
-  paths to the existing Setup State consumer.
+  The producer immediately materializes and verifies Setup State beside the
+  pair; existing catchup can later consume the Representation V2 pair after
+  target capture for canonical session wiring.
 - Historical rolling state is replayed from SHA-pinned accepted history and
   extended only by verified canonical forward EOD artifacts.
 - Market context uses canonical forward OHLCV plus `session_evidence` official
@@ -37,10 +41,19 @@ files_changed:
 - Missing extension sessions, invalid/partial market evidence, duplicate or
   conflicting identities, hash mismatch, non-causal rows, and immutable
   artifact revision conflicts fail closed.
-- After the prospective representation pair is verified, the existing
-  `run_foreign_flow_catchup()` is called. It consumes the pair once the target
-  session is complete and materializes Setup State V1. No new scheduler,
-  capture system, or counter was introduced.
+- After the prospective representation pair is verified, the producer now
+  immediately calls `enrich_prospective_foreign_flow_setup()` and verifies
+  the Setup State pair in the same prospective folder. This requires no
+  target session directory, target market/Foreign Flow data, or target EOD
+  completion. Existing `run_foreign_flow_catchup()` remains available for
+  later canonical-session consumption. No new scheduler, capture system, or
+  counter was introduced.
+- The prospective Setup State manifest pins the source session, next official
+  feature session, calendar path/SHA, Representation V2 parquet/manifest
+  SHA, unchanged frozen thresholds, and outcome-blind/prohibited-access flags.
+- The prospective verifier does not read target-session files. It fails closed
+  on missing/ambiguous provenance, non-causal or non-official dates, duplicate
+  keys, source SHA mismatch, and immutable sidecar/manifest revision conflict.
 
 ## Decisions made
 
@@ -72,12 +85,25 @@ files_changed:
   feature target is the next official date and may not yet have a session
   folder. A session-local and prospective pair together fail closed as
   ambiguous.
-- Setup State creation still relies on the existing parent-manifest calendar
-  identity; this is deliberate to prevent calendar compression or stale
-  provenance.
+- The new prospective Setup State path relies on the Representation V2
+  manifest's hash-pinned official calendar identity; this avoids the prior
+  target-session dependency while preventing calendar compression or stale
+  provenance. The later canonical-session path retains its parent-manifest
+  calendar validation.
 
 ## Recommended next action
 
 Review the producer and decide whether the existing calendar-sync owner should
 expose a full historical-plus-current official session file to the producer.
-Only after that review should a genuinely new live EOD target be run.
+Only after that review and a complete post-2026-07-31 market/Foreign Flow
+context extension should a genuinely new live EOD target be run.
+
+## Remediation validation
+
+- Focused producer/V2/setup/runner suite: `29 passed, 5 warnings`.
+- Full repository suite: `114 collected; 113 passed, 1 failed, 5 warnings`.
+- The sole failure is the unrelated storage audit-conflict expectation in
+  `tests/test_storage.py`; `storage.py` was not changed.
+- `git diff --check`: PASS.
+- No real runtime run, provider call, outcome access, model work, O2 change,
+  scheduler/counter change, free-float/HSC work, or price-state work occurred.
