@@ -355,6 +355,21 @@ counter occurred. Post-V2 price-state/confirmation research remains separate
 and prospective-only; independent review is required before activating a V2
 representation producer for live EOD sessions.
 
+## Current status correction — 2026-08-15 — Foreign Flow Representation V2 forward producer
+
+Foreign Flow Representation V2 forward producer is claimed as `ACTIVE` by
+`Codex/Foreign-Flow-Representation-V2-Forward` on branch
+`integration/foreign-flow-representation-v2-forward-v1`, starting from
+`research/idx-foreign-flow-setup-state-v1` at
+`d204a8fd3edaacef91aacbe90ac39f0e1969e420`. Scope is outcome-blind
+prospective rolling-context materialization for new canonical EOD sessions,
+using the already accepted V2 formulas, official calendar, listing-aware
+history, canonical market/price artifacts, and existing Foreign Flow catch-up
+runtime. No scheduler, capture hierarchy, counter, provider expansion,
+historical performance test, model/outcome access, free-float/HSC integration,
+price-state layer, or O2 change is authorized. HSC/free-float remains a
+separate active lane and must not be modified.
+
 ## Current status correction — 2026-08-15 — HSC source remediation lane
 
 The new bounded High Shareholding Concentration (HSC) source-remediation lane
