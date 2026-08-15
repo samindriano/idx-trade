@@ -1,0 +1,59 @@
+{
+  "schema": "idx-trade/tradingview-historical-price-path-v2-1",
+  "lineage": {
+    "failed_v2_head": "f6716bb861eee396a8b57c42b207af31b4565db7",
+    "mathieu_adapter_commit": "5baea86c8c7e576f13464919c86c3b4c4b0ecf4c"
+  },
+  "window": {
+    "start": "2021-04-01",
+    "end": "2026-07-31",
+    "session_basis": "official IDX exchange sessions only",
+    "prior_session_buffer": 1
+  },
+  "provider": {
+    "provider": "TradingView",
+    "server": "prodata",
+    "symbol_template": "IDX:<ticker>",
+    "timeframe": "60",
+    "session": "regular",
+    "adjustment": "none",
+    "access": "anonymous"
+  },
+  "acquisition": {
+    "initial_range": 500,
+    "fetch_more_batch": 5000,
+    "fetch_more_steps": 3,
+    "stop_rule": "stop after required_start and prior official-session buffer are reached",
+    "completion_taxonomy": [
+      "REQUIRED_START_REACHED",
+      "MAX_DEPTH_EXHAUSTED",
+      "NO_EXTENSION",
+      "TIMEOUT",
+      "PROVIDER_ERROR"
+    ],
+    "max_workers": 4
+  },
+  "fidelity": {
+    "minimum_year_matched_rows": 10,
+    "oracle": "existing canonical daily source",
+    "official_stock_summary_role": "diagnostic_secondary_oracle_only"
+  },
+  "gates": {
+    "active_coverage_overall": 0.98,
+    "active_coverage_year": 0.95,
+    "unknown_activity_rate_max": 0.005,
+    "hlc_exact_overall": 0.95,
+    "hlc_exact_year": 0.90,
+    "volume_within_5_overall": 0.90,
+    "volume_within_5_year": 0.80
+  },
+  "boundaries": {
+    "no_full_978_ticker_acquisition": true,
+    "no_panel_write": true,
+    "no_model": true,
+    "no_path_risk": true,
+    "no_o2_or_outcomes": true,
+    "no_extended_session": true,
+    "no_alternate_symbols": true
+  }
+}

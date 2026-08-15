@@ -61,6 +61,13 @@ def test_normalize_preserves_raw_values_and_admits_regular_bar() -> None:
     assert frame.iloc[0]["session_admissible"]
 
 
+def test_normalize_does_not_admit_declared_regular_session_end() -> None:
+    request = {"ticker": "AAA", "security_id": "x", "request_index": 1, "session": "regular", "required_start": "2020-01-02", "required_end": "2020-01-02"}
+    epoch = int(pd.Timestamp("2020-01-02 09:30:00+00:00").timestamp())
+    frame, _ = normalize_response({"periods": [{"time": epoch, "open": 10, "high": 11, "low": 9, "close": 10.5, "volume": 4}]}, request, {"2020-01-02"})
+    assert not frame.iloc[0]["session_admissible"]
+
+
 def test_request_manifest_is_deterministic_and_frozen_contract() -> None:
     sessions = pd.DataFrame({"date": pd.to_datetime(["2020-01-02"])})
     config = {"window": {"start": "2020-01-01", "end": "2020-01-03"}, "provider": {"server": "prodata", "timeframe": "60", "session": "regular", "adjustment": "none"}, "acquisition": {"initial_range": 500, "fetch_more_steps": 10, "fetch_more_batch": 5, "fetch_more_wait_ms": 8000, "timeout_ms": 25000}}

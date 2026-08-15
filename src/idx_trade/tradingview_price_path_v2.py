@@ -225,7 +225,7 @@ def normalize_response(payload: Mapping[str, Any], request: Mapping[str, Any], o
         session_date = timestamp.date().isoformat()
         in_window = request["required_start"] <= session_date <= request["required_end"]
         session_ok = session_date in official_sessions
-        regular_ok = REGULAR_START <= timestamp.time() <= REGULAR_END
+        regular_ok = REGULAR_START <= timestamp.time() < REGULAR_END
         # Bars outside the requested range are retained for historical-depth
         # diagnostics; they are not contamination. Only a timestamp inside
         # the requested range can violate the official-session contract.
@@ -292,7 +292,7 @@ def evaluate_gates(expected: pd.DataFrame, activity: pd.DataFrame, bars: pd.Data
         covered_year = covered[covered["session_date"].str.startswith(str(year))]
         coverage_by_year[str(year)] = {"active": int(len(group)), "covered": int(len(covered_year)), "coverage": float(len(covered_year) / len(group)) if len(group) else 0.0}
     unknown_rate = float(activity["activity_state"].eq("UNKNOWN").mean()) if len(activity) else 1.0
-    structural = {"malformed_ohlcv": int(diagnostics["malformed_rows"].sum()) if not diagnostics.empty else 0, "duplicate_ticker_timestamp": int(diagnostics["duplicate_rows"].sum()) if not diagnostics.empty else 0, "session_date_leakage": int(diagnostics["session_date_leakage_rows"].sum()) if not diagnostics.empty else 0, "extended_preopen_contamination": int(diagnostics["extended_preopen_contamination_rows"].sum()) if not diagnostics.empty else 0}
+    structural = {"malformed_ohlcv": int(diagnostics.get("malformed_rows", pd.Series(dtype=int)).sum()) if not diagnostics.empty else 0, "invalid_ohlcv": int(diagnostics.get("invalid_ohlcv_rows", pd.Series(dtype=int)).sum()) if not diagnostics.empty else 0, "duplicate_ticker_timestamp": int(diagnostics.get("duplicate_rows", pd.Series(dtype=int)).sum()) if not diagnostics.empty else 0, "session_date_leakage": int(diagnostics.get("session_date_leakage_rows", pd.Series(dtype=int)).sum()) if not diagnostics.empty else 0, "extended_preopen_contamination": int(diagnostics.get("extended_preopen_contamination_rows", pd.Series(dtype=int)).sum()) if not diagnostics.empty else 0}
     gates = {"overall_active_coverage": coverage >= config["gates"]["active_coverage_overall"], "yearly_active_coverage": all(value["coverage"] >= config["gates"]["active_coverage_year"] for value in coverage_by_year.values()), "activity_unknown": unknown_rate <= config["gates"]["unknown_activity_rate_max"], "structural_integrity": all(value == 0 for value in structural.values()), "hlc_fidelity": fidelity.get("hlc_exact_rate") is not None and fidelity["hlc_exact_rate"] >= config["gates"]["hlc_exact_overall"], "volume_fidelity": fidelity.get("volume_within_5_rate") is not None and fidelity["volume_within_5_rate"] >= config["gates"]["volume_within_5_overall"]}
     yearly_fidelity = all(value["hlc_exact_rate"] >= config["gates"]["hlc_exact_year"] and value["volume_within_5_rate"] >= config["gates"]["volume_within_5_year"] for value in fidelity.get("by_year", {}).values())
     gates["yearly_fidelity"] = yearly_fidelity
