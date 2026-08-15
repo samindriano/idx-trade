@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import idx_trade.forward_foreign_flow_representation_v2 as representation_producer
 from idx_trade.forward_foreign_flow_runtime import run_foreign_flow_catchup
 from idx_trade.foreign_flow_features_v2 import FEATURE_COLUMNS_V2, OUTPUT_COLUMNS_V2
 from idx_trade.forward_foreign_flow_setup import (
@@ -300,6 +301,115 @@ def test_prospective_setup_rejects_calendar_revision(tmp_path: Path) -> None:
     enrich_prospective_foreign_flow_setup(representation, representation_manifest)
     calendar.write_text("date\n2026-08-10\n2026-08-12\n", encoding="utf-8")
     assert not verify_prospective_foreign_flow_setup(representation, representation_manifest)
+
+
+def test_producer_invokes_setup_delivery_before_target_capture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = tmp_path / "runtime"
+    (runtime / "forward_monitoring" / "sessions").mkdir(parents=True)
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    calendar = tmp_path / "exchange_sessions.csv"
+    calendar.write_text("date\n2026-08-11\n2026-08-12\n", encoding="utf-8")
+    market = pd.DataFrame(
+        [
+            {
+                "ticker": "BBCA",
+                "date": "2026-08-11",
+                "high": 101.0,
+                "low": 99.0,
+                "close": 100.0,
+                "volume": 1000.0,
+                "regular_market_value": 100000.0,
+            }
+        ]
+    )
+    market_path = tmp_path / "market.parquet"
+    market.to_parquet(market_path, index=False)
+    master_path = tmp_path / "master.csv"
+    pd.DataFrame(
+        [{"ticker": "BBCA", "listed_from": "2020-01-01", "listed_to": ""}]
+    ).to_csv(master_path, index=False)
+    flow = pd.DataFrame(
+        [
+            {
+                "ticker": "BBCA",
+                "session_date": "2026-08-11",
+                "foreign_buy": 100.0,
+                "foreign_sell": 50.0,
+                "foreign_net": 50.0,
+                "unit": "SHARES",
+                "source": "IDX_OFFICIAL_STOCK_SUMMARY",
+            }
+        ]
+    )
+    sha = sha256_file(calendar)
+    captured: dict[str, object] = {}
+    prospective_artifact = tmp_path / "prospective" / "foreign_flow_representation_v2.parquet"
+    prospective_manifest = tmp_path / "prospective" / "foreign_flow_representation_v2.manifest.json"
+
+    monkeypatch.setattr(
+        representation_producer,
+        "read_verified_flow_archive",
+        lambda *_args, **_kwargs: (
+            flow.copy(),
+            {
+                "archive_root": str(archive),
+                "archive_manifest_path": str(archive / "manifest.json"),
+                "archive_manifest_sha256": "a" * 64,
+                "archive_normalized_session_count": 1,
+                "archive_normalized_row_count": 1,
+                "archive_normalized_artifact_count": 1,
+                "archive_normalized_first_session": "2026-08-11",
+                "archive_normalized_last_session": "2026-08-11",
+            },
+        ),
+    )
+    monkeypatch.setattr(representation_producer, "_runtime_session_keys", lambda *_args: [])
+    monkeypatch.setattr(
+        representation_producer,
+        "_canonical_evidence",
+        lambda *_args: {"parent": {"calendar_path": str(calendar), "calendar_sha256": sha}},
+    )
+    monkeypatch.setattr(
+        representation_producer,
+        "materialize_representation_v2_for_session",
+        lambda **_kwargs: {
+            "artifact_path": str(prospective_artifact),
+            "manifest_path": str(prospective_manifest),
+        },
+    )
+    monkeypatch.setattr(
+        representation_producer,
+        "enrich_prospective_foreign_flow_setup",
+        lambda artifact, manifest: captured.update(
+            {"artifact": artifact, "manifest": manifest}
+        )
+        or {"status": "FOREIGN_FLOW_SETUP_STATE_PROSPECTIVE_READY"},
+    )
+    monkeypatch.setattr(
+        representation_producer,
+        "run_foreign_flow_catchup",
+        lambda *_args: {"status": "COMPLETE"},
+    )
+
+    result = representation_producer.produce_session_foreign_flow_representation_v2(
+        runtime_root=runtime,
+        source_session="2026-08-11",
+        archive_root=archive,
+        archive_manifest_sha256="b" * 64,
+        historical_panel_path=market_path,
+        historical_panel_sha256=sha256_file(market_path),
+        official_sessions_path=calendar,
+        official_sessions_sha256=sha,
+        security_master_path=master_path,
+        security_master_sha256=sha256_file(master_path),
+    )
+
+    assert result["prospective_setup_state"]["status"] == "FOREIGN_FLOW_SETUP_STATE_PROSPECTIVE_READY"
+    assert captured == {"artifact": str(prospective_artifact), "manifest": str(prospective_manifest)}
+    assert not (runtime / "forward_monitoring" / "sessions" / "2026-08-12").exists()
 
 
 def test_setup_rejects_extra_outcome_like_representation_columns(tmp_path: Path) -> None:
