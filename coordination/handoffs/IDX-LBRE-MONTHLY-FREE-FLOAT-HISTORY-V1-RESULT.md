@@ -1,15 +1,15 @@
 # Handoff — LBRE Monthly Free-Float History V1 Result
 
-from: Codex/LBRE-Monthly-History  
-to: ChatGPT/review  
-task_id: IDX-LBRE-MONTHLY-FREE-FLOAT-HISTORY-V1  
-model_used: gpt-5.6-luna  
-reasoning_level: xhigh  
-source_repository: samindriano/idx-trade  
-source_commit: `f6537c09b5121cc8b185df4fd9d672e305a879d1`  
-branch: `data/idx-lbre-monthly-free-float-history-v1`  
-status: `REVIEW`  
-head_commit: `PENDING_COMMIT` 
+from: Codex/LBRE-Monthly-History
+to: ChatGPT/review
+task_id: IDX-LBRE-MONTHLY-FREE-FLOAT-HISTORY-V1
+model_used: gpt-5.6-luna
+reasoning_level: xhigh
+source_repository: samindriano/idx-trade
+source_commit: `f6537c09b5121cc8b185df4fd9d672e305a879d1`
+branch: `data/idx-lbre-monthly-free-float-history-v1`
+status: `REVIEW`
+head_commit: `PENDING_COMMIT`
 
 ## Scope
 
@@ -71,4 +71,3 @@ SINGLE_SOURCE; no conflict was selected or overwritten.
 ChatGPT independent review should decide whether this explicit partial source
 is sufficient for a separate monthly-state contract. Do not start daily FF
 state or feature integration automatically.
-

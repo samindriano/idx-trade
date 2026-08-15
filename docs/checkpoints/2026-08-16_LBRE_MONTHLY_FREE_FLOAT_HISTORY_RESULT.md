@@ -1,7 +1,7 @@
 # LBRE Monthly Free-Float History V1 — Result
 
-Date: 2026-08-16 (Asia/Jakarta)  
-Branch: `data/idx-lbre-monthly-free-float-history-v1`  
+Date: 2026-08-16 (Asia/Jakarta)
+Branch: `data/idx-lbre-monthly-free-float-history-v1`
 Scientific parent: `data/idx-lbre-lineage-parser-remediation-v1@a42715f027fceb0c7cd24f68e65c9e91b7bfa049`
 
 ## Verdict
@@ -165,4 +165,3 @@ No conflict was resolved by preference; these are diagnostic statuses only.
 
 No models, features, outcomes, Foreign Flow integration, daily FF state,
 effective supply, holder/HSC reconstruction, or unrelated lanes were touched.
-
