@@ -141,7 +141,7 @@ market-only gaps before claiming complete market-wide denominator coverage.
   `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
   expects one conflict but current independent `raw_close` and
   `vendor_adj_close` auditing returns two. No storage change was made.
-- `git diff --check`: pending final staged validation.
+- `git diff --check`: PASS.
 
 No downstream daily free-float state, effective-supply, Foreign Flow,
 features, models, or outcomes were started.
