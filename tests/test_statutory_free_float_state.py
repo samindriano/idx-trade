@@ -132,6 +132,8 @@ def test_newer_snapshot_is_not_poisoned_by_later_old_period_market_conflict() ->
     assert state.source_as_of_date == date(2026, 3, 31)
     assert state.status is StatutoryFreeFloatKnowledgeStatus.USABLE_OFFICIAL_LBRE_STATE
     assert state.free_float_shares == 200
+    assert state.first_known_record_ids == ("newer",)
+    assert state.status_effective_published_at == newer.published_at
 
 
 def test_lbre_then_later_market_validation_preserves_both_provenance_records() -> None:
@@ -150,6 +152,14 @@ def test_lbre_then_later_market_validation_preserves_both_provenance_records() -
     assert after.lbre_record_id == "lbre"
     assert after.market_record_id == "market"
     assert after.validation_published_at == market.published_at
+    assert after.first_known_source_families == (FreeFloatSourceFamily.ISSUER_LBRE,)
+    assert after.first_known_record_ids == ("lbre",)
+    assert after.first_known_published_at == lbre.published_at
+    assert after.first_known_eligible_from_session == date(2026, 5, 7)
+    assert after.status_effective_published_at == market.published_at
+    assert after.status_effective_eligible_from_session == date(2026, 7, 1)
+    assert after.source_published_at == lbre.published_at
+    assert after.eligible_from_session == date(2026, 5, 7)
 
 
 def test_lbre_then_later_genuine_market_conflict_is_fail_closed() -> None:
@@ -166,6 +176,10 @@ def test_lbre_then_later_genuine_market_conflict_is_fail_closed() -> None:
     assert not state.denominator_eligible
     assert state.free_float_shares is None
     assert state.share_delta_lbre_minus_market == -1
+    assert state.first_known_record_ids == ("lbre",)
+    assert state.first_known_published_at == lbre.published_at
+    assert state.status_effective_published_at == market.published_at
+    assert state.status_effective_eligible_from_session == date(2026, 7, 1)
 
 
 def test_market_anchor_first_then_lbre_agree_or_conflict() -> None:
@@ -178,12 +192,29 @@ def test_market_anchor_first_then_lbre_agree_or_conflict() -> None:
     lbre = _row("lbre-later", published_at=datetime(2026, 6, 30, 12, 0, tzinfo=TZ), source_digit="b")
     agree = _resolve([market, lbre], session=date(2026, 7, 1))
     assert agree.status is StatutoryFreeFloatKnowledgeStatus.CROSS_SOURCE_SHARE_VALIDATED
+    assert agree.first_known_source_families == (FreeFloatSourceFamily.IDX_MARKET_WIDE_STATUS,)
+    assert agree.first_known_record_ids == ("market-first",)
+    assert agree.first_known_published_at == market.published_at
+    assert agree.first_known_eligible_from_session == date(2026, 5, 7)
+    assert agree.status_effective_published_at == lbre.published_at
+    assert agree.status_effective_eligible_from_session == date(2026, 7, 1)
+    assert agree.source_published_at == market.published_at
 
+    lbre_conflict = _row(
+        "lbre-conflict",
+        published_at=datetime(2026, 6, 30, 12, 0, tzinfo=TZ),
+        shares=101,
+        source_digit="c",
+    )
     conflict = _resolve(
-        [market, _row("lbre-conflict", published_at=datetime(2026, 6, 30, 12, 0, tzinfo=TZ), shares=101, source_digit="c")],
+        [market, lbre_conflict],
         session=date(2026, 7, 1),
     )
     assert conflict.status is StatutoryFreeFloatKnowledgeStatus.GENUINE_SHARE_COUNT_CONFLICT
+    assert conflict.first_known_record_ids == ("market-first",)
+    assert conflict.first_known_published_at == market.published_at
+    assert conflict.status_effective_published_at == lbre_conflict.published_at
+    assert conflict.status_effective_eligible_from_session == date(2026, 7, 1)
 
 
 def test_percentage_only_disagreement_does_not_block_denominator() -> None:
@@ -200,7 +231,47 @@ def test_percentage_only_disagreement_does_not_block_denominator() -> None:
     assert state.status is StatutoryFreeFloatKnowledgeStatus.PERCENTAGE_ONLY_DISAGREEMENT
     assert state.denominator_eligible
     assert state.free_float_shares == 100
+    assert state.free_float_pct is None
     assert state.percentage_delta_pp_lbre_minus_market == -1.0
+
+
+def test_within_tolerance_nonidentical_percentages_are_not_canonicalized() -> None:
+    lbre = _row("lbre", shares=100, pct=10.0)
+    market = _row(
+        "market",
+        shares=100,
+        pct=10.005,
+        published_at=datetime(2026, 6, 30, 12, 0, tzinfo=TZ),
+        family=FreeFloatSourceFamily.IDX_MARKET_WIDE_STATUS,
+        source_digit="b",
+    )
+    state = _resolve([lbre, market], session=date(2026, 7, 1))
+    assert state.status is StatutoryFreeFloatKnowledgeStatus.CROSS_SOURCE_SHARE_VALIDATED
+    assert state.denominator_eligible
+    assert state.free_float_shares == 100
+    assert state.free_float_pct is None
+    assert state.percentage_delta_pp_lbre_minus_market == pytest.approx(-0.005)
+
+
+def test_exactly_identical_percentages_may_be_canonical() -> None:
+    lbre = _row("lbre", shares=100, pct=10.0)
+    market = _row(
+        "market",
+        shares=100,
+        pct=10.0,
+        published_at=datetime(2026, 6, 30, 12, 0, tzinfo=TZ),
+        family=FreeFloatSourceFamily.IDX_MARKET_WIDE_STATUS,
+        source_digit="b",
+    )
+    state = _resolve([lbre, market], session=date(2026, 7, 1))
+    assert state.status is StatutoryFreeFloatKnowledgeStatus.CROSS_SOURCE_SHARE_VALIDATED
+    assert state.free_float_pct == 10.0
+
+
+def test_single_source_percentage_remains_official() -> None:
+    state = _resolve([_row("lbre", shares=100, pct=42.4)], session=date(2026, 5, 8))
+    assert state.status is StatutoryFreeFloatKnowledgeStatus.USABLE_OFFICIAL_LBRE_STATE
+    assert state.free_float_pct == 42.4
 
 
 def test_no_observation_is_explicit() -> None:

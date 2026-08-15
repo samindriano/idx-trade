@@ -16,7 +16,6 @@ from typing import Iterable
 from zoneinfo import ZoneInfo
 
 from .historical_statutory_free_float import (
-    FreeFloatRevisionKind,
     FreeFloatSourceFamily,
     HistoricalFreeFloatObservation,
     replay_historical_free_float,
@@ -53,6 +52,15 @@ class StatutoryFreeFloatKnowledgeState:
     free_float_shares: int | None
     free_float_pct: float | None
     source_as_of_date: date | None
+    first_known_source_families: tuple[FreeFloatSourceFamily, ...]
+    first_known_record_ids: tuple[str, ...]
+    first_known_published_at: datetime | None
+    first_known_eligible_from_session: date | None
+    status_effective_published_at: datetime | None
+    status_effective_eligible_from_session: date | None
+    status_age_sessions: int | None
+    status_age_days: int | None
+    # Backward-compatible aliases: these now mean first-known time, not LBRE time.
     source_published_at: datetime | None
     eligible_from_session: date | None
     knowledge_age_sessions: int | None
@@ -196,6 +204,14 @@ def _state_from_rows(
             free_float_shares=None,
             free_float_pct=None,
             source_as_of_date=None,
+            first_known_source_families=(),
+            first_known_record_ids=(),
+            first_known_published_at=None,
+            first_known_eligible_from_session=None,
+            status_effective_published_at=None,
+            status_effective_eligible_from_session=None,
+            status_age_sessions=None,
+            status_age_days=None,
             source_published_at=None,
             eligible_from_session=None,
             knowledge_age_sessions=None,
@@ -230,13 +246,25 @@ def _state_from_rows(
         market = None
         market_eligible = None
 
-    source_published_at = lbre.published_at if lbre is not None else market.published_at
-    eligible = lbre_eligible if lbre is not None else market_eligible
-    if eligible is None or source_published_at is None:
+    selected_rows = tuple(row for row in (lbre, market) if row is not None)
+    selected_eligibility = tuple(
+        eligible
+        for eligible in (lbre_eligible, market_eligible)
+        if eligible is not None
+    )
+    first_known_published_at = min(row.published_at for row in selected_rows)
+    first_known_eligible = min(selected_eligibility)
+    first_known_rows = tuple(
+        sorted(
+            (row for row in selected_rows if row.published_at == first_known_published_at),
+            key=lambda row: (row.source_family.value, row.record_id),
+        )
+    )
+    if first_known_eligible is None or first_known_published_at is None:
         raise ValueError("selected observation has no eligible session")
 
-    age_sessions = _age_sessions(sessions, eligible, session_date)
-    age_days = (session_date - _local_publication_date(source_published_at)).days
+    age_sessions = _age_sessions(sessions, first_known_eligible, session_date)
+    age_days = (session_date - _local_publication_date(first_known_published_at)).days
     economic_age_sessions = _economic_age_sessions(sessions, source_as_of, session_date)
     economic_age_days = (session_date - source_as_of).days
 
@@ -246,22 +274,28 @@ def _state_from_rows(
     if lbre is not None and market is not None:
         share_delta = lbre.free_float_shares - market.free_float_shares
         pct_delta = lbre.free_float_pct - market.free_float_pct
-        validation_published_at = max(lbre.published_at, market.published_at)
         if share_delta != 0:
             status = StatutoryFreeFloatKnowledgeStatus.GENUINE_SHARE_COUNT_CONFLICT
             denominator_eligible = False
             selected_shares = None
             selected_pct = None
-        elif abs(pct_delta) > percentage_tolerance:
-            status = StatutoryFreeFloatKnowledgeStatus.PERCENTAGE_ONLY_DISAGREEMENT
-            denominator_eligible = lbre.free_float_shares > 0
-            selected_shares = lbre.free_float_shares if denominator_eligible else None
-            selected_pct = lbre.free_float_pct if denominator_eligible else None
-        else:
+        elif pct_delta == 0.0:
             status = StatutoryFreeFloatKnowledgeStatus.CROSS_SOURCE_SHARE_VALIDATED
             denominator_eligible = lbre.free_float_shares > 0
             selected_shares = lbre.free_float_shares if denominator_eligible else None
             selected_pct = lbre.free_float_pct if denominator_eligible else None
+        elif abs(pct_delta) > percentage_tolerance:
+            status = StatutoryFreeFloatKnowledgeStatus.PERCENTAGE_ONLY_DISAGREEMENT
+            denominator_eligible = lbre.free_float_shares > 0
+            selected_shares = lbre.free_float_shares if denominator_eligible else None
+            selected_pct = None
+        else:
+            # Diagnostic share validation can pass within tolerance, but a
+            # non-identical official percentage is never canonicalized.
+            status = StatutoryFreeFloatKnowledgeStatus.CROSS_SOURCE_SHARE_VALIDATED
+            denominator_eligible = lbre.free_float_shares > 0
+            selected_shares = lbre.free_float_shares if denominator_eligible else None
+            selected_pct = None
     elif lbre is not None:
         status = StatutoryFreeFloatKnowledgeStatus.USABLE_OFFICIAL_LBRE_STATE
         denominator_eligible = lbre.free_float_shares > 0
@@ -285,6 +319,12 @@ def _state_from_rows(
     ):
         status = StatutoryFreeFloatKnowledgeStatus.INVALID_DENOMINATOR
 
+    status_effective_published_at = max(row.published_at for row in selected_rows) if len(selected_rows) > 1 else first_known_published_at
+    status_effective_eligible = max(selected_eligibility) if len(selected_rows) > 1 else first_known_eligible
+    status_age_sessions = _age_sessions(sessions, status_effective_eligible, session_date)
+    status_age_days = (session_date - _local_publication_date(status_effective_published_at)).days
+    validation_published_at = status_effective_published_at if len(selected_rows) > 1 else None
+
     return StatutoryFreeFloatKnowledgeState(
         ticker=ticker,
         session_date=session_date,
@@ -293,8 +333,16 @@ def _state_from_rows(
         free_float_shares=selected_shares,
         free_float_pct=selected_pct,
         source_as_of_date=source_as_of,
-        source_published_at=source_published_at,
-        eligible_from_session=eligible,
+        first_known_source_families=tuple(row.source_family for row in first_known_rows),
+        first_known_record_ids=tuple(row.record_id for row in first_known_rows),
+        first_known_published_at=first_known_published_at,
+        first_known_eligible_from_session=first_known_eligible,
+        status_effective_published_at=status_effective_published_at,
+        status_effective_eligible_from_session=status_effective_eligible,
+        status_age_sessions=status_age_sessions,
+        status_age_days=status_age_days,
+        source_published_at=first_known_published_at,
+        eligible_from_session=first_known_eligible,
         knowledge_age_sessions=age_sessions,
         knowledge_age_days=age_days,
         economic_position_age_sessions=economic_age_sessions,

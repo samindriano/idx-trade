@@ -82,13 +82,32 @@ Market evidence validates or conflicts with LBRE at the same economic date; it
 never overwrites LBRE. Market-only exact evidence can establish its own state
 from its own eligibility session.
 
+The chronology is source-symmetric. For the selected economic position, the
+state exposes `first_known_published_at` and
+`first_known_eligible_from_session` for the earliest official evidence from
+either source. It separately exposes `status_effective_published_at` and
+`status_effective_eligible_from_session` for the later evidence that makes the
+cross-source validation or conflict status knowable. A later source therefore
+changes validation status, not the original first-known time. The legacy
+`source_published_at` and `eligible_from_session` fields are compatibility
+aliases for the first-known timeline.
+
+When both sources report identical shares, the denominator remains eligible.
+`free_float_pct` is canonical only for a single source or exactly identical
+cross-source percentages. Any non-identical percentages, including values
+within the diagnostic tolerance, leave `free_float_pct` unset while retaining
+both source-specific percentages and their exact delta.
+
 ## Provenance and diagnostic ages
 
 The state exposes source record IDs, attachment SHA-256 values, metadata
 SHA-256 values, source-specific publication/as-of dates, and source-specific
-eligibility sessions. For the surfaced source it also exposes:
+eligibility sessions. It also exposes:
 
 - `source_as_of_date`;
+- `first_known_source_families` and `first_known_record_ids`;
+- `first_known_published_at` and `first_known_eligible_from_session`;
+- `status_effective_published_at` and `status_effective_eligible_from_session`;
 - `source_published_at`;
 - `eligible_from_session`;
 - `knowledge_age_sessions`: zero on the first eligible session, then elapsed
@@ -100,10 +119,11 @@ eligibility sessions. For the surfaced source it also exposes:
 - `economic_position_age_days`: query local session date minus economic as-of
   date.
 
-When both sources are present, `validation_published_at` records the later
-source publication that changes the cross-source validation status. No V1
-stale-state cutoff is applied; these age fields are diagnostics for a later
-coverage/policy decision.
+When both sources are present, `validation_published_at` records the same
+later source publication represented by the status-effective timeline. The
+corresponding `status_age_sessions` and `status_age_days` expose age from that
+status-effective evidence. No V1 stale-state cutoff is applied; these age
+fields are diagnostics for a later coverage/policy decision.
 
 ## Implementation and tests
 
