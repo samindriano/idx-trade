@@ -760,7 +760,7 @@ features, models, outcomes, or unrelated lane work is authorized.
 LBRE / market-wide free-float reconciliation V1 is now `REVIEW` by
 `Codex/LBRE-Market-Anchor-Reconciliation` on branch
 `data/idx-lbre-market-anchor-reconciliation-v1` at final HEAD
-`d61d4f4f52f6c8710397e687dad9de0862f5bf07`.
+`ed17ec840cf7cdcffd586f3f12bdd37b0044b004`.
 
 The exact final branch HEAD is recorded in the handoff; the branch was pushed
 successfully after the offline run. The 923-ticker 2025-12-31 union decomposed
