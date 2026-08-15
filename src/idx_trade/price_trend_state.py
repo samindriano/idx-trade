@@ -106,7 +106,7 @@ def _official_index(values: Iterable[object]) -> pd.DatetimeIndex:
     return sessions
 
 
-def _normalise_input(frame: pd.DataFrame) -> pd.DataFrame:
+def _reject_outcome_like_columns(frame: pd.DataFrame) -> None:
     forbidden = [
         str(column)
         for column in frame.columns
@@ -114,6 +114,10 @@ def _normalise_input(frame: pd.DataFrame) -> pd.DataFrame:
     ]
     if forbidden:
         raise ValueError(f"price state input contains outcome-like columns: {sorted(forbidden)}")
+
+
+def _normalise_input(frame: pd.DataFrame) -> pd.DataFrame:
+    _reject_outcome_like_columns(frame)
 
     data = frame.copy()
     if "date" in data.columns and "session_date" not in data.columns:
@@ -159,6 +163,32 @@ def _normalise_input(frame: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("price state input contains duplicate ticker/session identity")
 
     return data.sort_values(["ticker", "session_date"], kind="mergesort").reset_index(drop=True)
+
+
+def _clip_source_history(frame: pd.DataFrame, source: pd.Timestamp) -> pd.DataFrame:
+    """Clip a larger cache to ``<= source`` before validating HLCV semantics.
+
+    Outcome-bearing schemas are rejected globally.  Date parsing is the only
+    operation allowed before clipping, because malformed dates cannot be safely
+    classified as future and therefore fail closed.  All HLCV/identity checks
+    happen only on the causally relevant slice.
+    """
+
+    _reject_outcome_like_columns(frame)
+    data = frame.copy()
+    date_column = "session_date" if "session_date" in data.columns else "date" if "date" in data.columns else None
+    if date_column is None:
+        raise ValueError("price state input missing columns: ['session_date']")
+    parsed = pd.to_datetime(data[date_column], errors="coerce")
+    if parsed.isna().any():
+        raise ValueError("price state input contains malformed session_date")
+    if isinstance(parsed.dtype, pd.DatetimeTZDtype):
+        parsed = parsed.dt.tz_convert("Asia/Jakarta").dt.tz_localize(None)
+    parsed = parsed.dt.normalize()
+    clipped = data.loc[parsed.le(source)].copy()
+    if clipped.empty:
+        raise ValueError("requested source session is absent from price input")
+    return clipped
 
 
 def _safe_div(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
@@ -405,11 +435,10 @@ def build_price_state_for_source_session(
     """Return exactly one prospective feature-session slice for completed ``t``."""
 
     source = _date(source_session)
-    data = _normalise_input(frame)
+    clipped = _clip_source_history(frame, source)
+    data = _normalise_input(clipped)
     if source not in set(data["session_date"]):
         raise ValueError("requested source session is absent from price input")
-    if (data["session_date"] > source).any():
-        data = data.loc[data["session_date"] <= source].copy()
     built = build_price_trend_confirmation_state_v1(data, official_sessions)
     selected = built.loc[built["source_session"].eq(source)].copy()
     if selected.empty:
