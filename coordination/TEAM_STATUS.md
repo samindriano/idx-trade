@@ -501,3 +501,16 @@ Focused statutory tests: 8 passed. Full pytest: 50 passed / 1 known unrelated
 storage expectation failure. `git diff --check` passes. No free-float point
 estimate, HHI/effective-supply feature, Foreign Flow integration, model,
 outcome, or canonical artifact change occurred.
+
+## Current status correction — 2026-08-15 — Historical Statutory Free Float Snapshot V1
+
+Historical statutory free-float snapshot work is now `ACTIVE` by
+`Codex/Historical-Statutory-Free-Float` on branch
+`data/idx-historical-statutory-free-float-snapshot-v1` at prepared HEAD
+`6d5b7f28b4f2e0adf10fc47e63412b67896f5e27`. Scope is official reported FF
+snapshot history only: quarterly market-wide anchors first, one bounded
+monthly LBRE census, PIT correction lineage, and explicit AGREE/CONFLICT/
+SINGLE_SOURCE reconciliation. Reuse the parent official bytes by exact hash;
+do not start full monthly acquisition. No holder reconstruction, 100%-minus-
+holders arithmetic, HSC subtraction, daily fill, effective supply, Foreign
+Flow, features, models, outcomes, or unrelated lane work is authorized.
