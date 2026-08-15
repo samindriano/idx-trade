@@ -360,7 +360,7 @@ representation producer for live EOD sessions.
 Foreign Flow Representation V2 forward producer is `REVIEW` by
 `Codex/Foreign-Flow-Representation-V2-Forward` on branch
 `integration/foreign-flow-representation-v2-forward-v1` at
-`059232dff0921a036466d214bc3393840db06716`. Scope is outcome-blind
+`6c14fcf153d8890de04d236c5657b68efc77adc7`. Scope is outcome-blind
 prospective rolling-context materialization for new canonical EOD sessions,
 using the accepted V2 formulas, official calendar, listing-aware history,
 canonical market/price artifacts, and existing Foreign Flow catch-up runtime.
@@ -372,8 +372,8 @@ manifest is pinned to source/calendar/Representation V2 hashes and unchanged
 frozen thresholds; strict access flags, counts, path identity, calendar
 revision, and immutable sidecar revision checks fail closed. Existing catchup
 remains the later canonical-session consumption path. Focused
-producer/V2/setup tests pass 32; full pytest is 116 passed / 1 unrelated
-pre-existing storage expectation failure / 5 warnings out of 117 collected;
+producer/V2/setup tests pass 33; full pytest is 117 passed / 1 unrelated
+pre-existing storage expectation failure / 5 warnings out of 118 collected;
 `git diff --check` passes. No scheduler, capture hierarchy, counter, provider
 expansion, historical performance test, model/outcome access, free-float/HSC
 integration, price-state layer, or O2 change is authorized. HSC/free-float
