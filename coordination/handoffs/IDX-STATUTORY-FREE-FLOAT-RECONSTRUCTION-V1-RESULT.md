@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 414f4c232326f4da6e3fb1430d824eb1329877e7
 branch: data/idx-statutory-free-float-reconstruction-v1
-head_commit: pending after documentation commit
+head_commit: `fc5dc986fcd410066bad9bc62ea99f10aac60344`
 scope: bounded official statutory free-float rule/report/issuer-LBRE recovery and fail-closed reconstruction audit
 
 ## Findings
@@ -38,13 +38,15 @@ Manifest SHA-256: `ff25cefed69af8cd221530a23f6fc31e85e0c510a21ef5bfb78526d618a45
 
 ## Validation
 
-Focused statutory tests: to be rerun after documentation commit.
-Full pytest: known unrelated `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` expectation failure remains; statutory focused tests are green.
-`git diff --check`: to be rerun after documentation commit.
+Focused statutory tests: `8 passed, 0 failed`.
+Full pytest: `1 failed, 50 passed`; the only failure is the known unrelated
+`tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+expectation (`raw_close` and `vendor_adj_close` are independently reported, so
+the current implementation returns 2 conflicts while the old test expects 1).
+`git diff --check`: PASS.
 
 ## Recommended next action
 
 Keep the lane in review/remediation. Recover exact official rule attachments
 and establish 2021–2023 market-report depth before any historical statutory
 free-float panel or feature contract is considered.
-
