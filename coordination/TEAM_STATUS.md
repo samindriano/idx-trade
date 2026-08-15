@@ -477,3 +477,27 @@ attachments, and fail-closed diagnostic reconstruction. Official reported
 free float remains preferred; no 100%-minus-holder arithmetic, HSC or >=1%
 inference, effective-supply/HHI/features, Foreign Flow integration, models,
 outcomes, or unrelated lane changes are authorized.
+
+## Current status correction — 2026-08-15 — Statutory Free Float Reconstruction V1 result
+
+The bounded Statutory Free Float Reconstruction V1 run is complete and remains
+`REVIEW` for ChatGPT independent review. Branch
+`data/idx-statutory-free-float-reconstruction-v1` is synchronized at HEAD
+`9eb73df879d44456adfc8d5f717e6c75be5d07a0`. Official IDX static attachment
+transport recovered 34/34 bounded files, including official market reports
+`Peng-S-00006/BEI.PLP/02-2026` and `Peng-S-00011/BEI.PLP/04-2026`, each with
+956 parsed company rows. The issuer sample contains 15 exact LBRE records
+across DCII, WBSA, RLCO, BREN, BBCA, TLKM, and MAYA; all 15 expose explicit
+reported free-float fields and 5 are correction records, but all remain
+`BOUNDED_ONLY` because an independently complete share classification was not
+proven. Exact official rule bytes/locators for `Kep-00045`, `SE-00004`, and
+`Kep-00101` remain unresolved, and 2021–2023 historical report depth is not
+demonstrated. Final verdict: `STATUTORY_FREE_FLOAT_SOURCE_REMEDIATION_REQUIRED`.
+External evidence root:
+`D:\Documents\Project\idx-statutory-free-float-reconstruction-20260815-v1`;
+manifest SHA-256:
+`ff25cefed69af8cd221530a23f6fc31e85e0c510a21ef5bfb78526d618a45454`.
+Focused statutory tests: 8 passed. Full pytest: 50 passed / 1 known unrelated
+storage expectation failure. `git diff --check` passes. No free-float point
+estimate, HHI/effective-supply feature, Foreign Flow integration, model,
+outcome, or canonical artifact change occurred.
