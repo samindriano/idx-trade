@@ -431,16 +431,20 @@ integration, models, outcomes, or unrelated lane changes are authorized.
 
 ## Current status correction — 2026-08-15 — Foreign Flow Forward Context Bridge V1
 
-Foreign Flow Forward Context Bridge V1 is `ACTIVE` for the narrowly authorized
-calendar-contract remediation on branch
-`data/foreign-flow-forward-context-bridge-v1` at
-`1c4fb1a7044b797ecf4ffcb93cc36a9dc6b18700`. The accepted bridge captures and
-planner remain immutable. This remediation separates the pinned historical
-calendar from the existing 10-session bridge calendar, verifies bridge
-manifests against their original SHA, and passes only the validated union to
-the accepted V2 materializer. No recapture or artifact rewrite is authorized.
-No O2, HSC/free-float, price-state, model, outcome, counter, scheduler, or
-storage changes are in scope.
+Foreign Flow Forward Context Bridge V1 is now `REVIEW` on branch
+`data/foreign-flow-forward-context-bridge-v1` at final HEAD
+`490f1a9b09b3b5d67bfcfc7aa7e7930467ad3f1e`. The accepted bridge captures and
+planner remain immutable. Calendar-contract remediation now separates the
+pinned historical calendar from the existing 10-session bridge calendar,
+verifies bridge manifests against their original SHA, and passes only the
+validated in-memory union to the accepted V2 materializer. The controlled
+source `2026-08-12` smoke produced Representation V2 and Setup State for
+`2026-08-13` with 963 rows/tickers, combined session-set SHA
+`dd51d3dbcb29915ff80612d84a912da237331e979ee3847bd8fd4984ead413dd`, and
+zero provider calls/outcome access. Focused tests: 9 passed. Full pytest:
+126 passed, 1 pre-existing unrelated storage expectation failed, 5 warnings.
+No recapture, artifact rewrite, O2, HSC/free-float, price-state, model,
+outcome, counter, scheduler, or storage changes are in scope.
 
 ## Current status correction — 2026-08-15 — HSC full-history ledger result
 
