@@ -6,9 +6,9 @@ task_id: IDX-TRADINGVIEW-HISTORICAL-PRICE-PATH-V2-1-REMEDIATION
 model_used: Luna xhigh / DIRECT
 reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
-source_commit: `429917f`
+source_commit: `6e0194b`
 branch: `data/tradingview-historical-price-path-v2-1-remediation`
-head_commit: `0e6c7a4`
+head_commit: `6e0194b`
 scope: Continue the existing V2.1 remediation; harden the confirmed data/acquisition contracts, reuse the completed offline evidence, freeze the preregistration, and run at most the five-control anonymous TradingView depth preflight.
 files_changed: `config/tradingview_historical_price_path_v2_1.json`; `src/idx_trade/tradingview_price_path_v2.py`; `src/idx_trade/tradingview_price_path_v2_1.py`; `adapters/tradingview/index.js`; `scripts/run_tradingview_historical_price_path_v2_1_offline.py`; `scripts/finalize_tradingview_historical_price_path_v2_1_offline.py`; `scripts/run_tradingview_historical_price_path_v2_1_preflight.py`; focused V2/V2.1 tests; preregistration checkpoint.
 findings: Offline mapping is complete and unambiguous; UNKNOWN remains 592; corrected CA quarantine is 12; theoretical symbol-error ceiling clears frozen coverage gates; official Stock Summary HLCV is diagnostic and not supported as the admission oracle. The bounded depth preflight passed 5/5 controls, reached 2020-01-02 on every control, and returned 50,986 bars with zero structural/session violations.
