@@ -43,6 +43,10 @@ from .forward_price_trend_state import (
     _validate_state_artifact,
     materialize_price_trend_state_for_session,
 )
+from .canonical_eod_calendar_parent_attestation import (
+    ACCEPTED_BRIDGE_CALENDAR_SHA256,
+    verify_canonical_eod_calendar_parent_attestation,
+)
 from .provenance import sha256_file
 
 
@@ -176,14 +180,37 @@ def _canonical_session_dir(runtime_root: Path, session: pd.Timestamp) -> Path:
     return runtime_root / "forward_monitoring" / "sessions" / session.date().isoformat()
 
 
-def _read_parent_calendar(parent: Mapping[str, Any], session: pd.Timestamp) -> tuple[Path, str]:
+def _read_parent_calendar(
+    parent: Mapping[str, Any],
+    session: pd.Timestamp,
+    *,
+    runtime_root: Path | None = None,
+) -> tuple[Path, str, Path | None]:
     calendar = Path(str(parent.get("calendar_path") or "")).expanduser().resolve()
     expected = str(parent.get("calendar_sha256") or "").lower()
-    if len(expected) != 64 or not calendar.is_file() or sha256_file(calendar) != expected:
-        raise RuntimeError("canonical parent calendar missing or hash-mismatched")
-    if session not in set(_session_index(calendar)):
-        raise RuntimeError("canonical session is absent from its own pinned calendar")
-    return calendar, expected
+    if len(expected) == 64 and calendar.is_file() and sha256_file(calendar) == expected:
+        if session not in set(_session_index(calendar)):
+            raise RuntimeError("canonical session is absent from its own pinned calendar")
+        return calendar, expected, None
+
+    if runtime_root is not None:
+        attestation = (
+            runtime_root.resolve()
+            / "forward_monitoring"
+            / "provenance_attestations"
+            / "canonical_eod_calendar_parent_v1"
+            / session.date().isoformat()
+            / "attestation.json"
+        )
+        accepted_bridge = Path(APPROVED_BRIDGE_CALENDAR).expanduser().resolve()
+        if verify_canonical_eod_calendar_parent_attestation(
+            attestation,
+            expected_session=session,
+            expected_bridge_calendar_path=accepted_bridge,
+            expected_bridge_calendar_sha256=ACCEPTED_BRIDGE_CALENDAR_SHA256,
+        ):
+            return calendar, expected, attestation
+    raise RuntimeError("canonical parent calendar missing or hash-mismatched")
 
 
 def _read_verified_canonical_market(
@@ -210,12 +237,16 @@ def _read_verified_canonical_market(
     expected_snapshot_sha = str(parent.get("snapshot_sha256") or "").lower()
     if len(expected_snapshot_sha) != 64 or sha256_file(snapshot_path) != expected_snapshot_sha:
         raise RuntimeError(f"canonical snapshot hash mismatch for {key}")
-    parent_calendar, parent_calendar_sha = _read_parent_calendar(parent, session)
+    parent_calendar, parent_calendar_sha, calendar_attestation = _read_parent_calendar(
+        parent,
+        session,
+        runtime_root=runtime_root,
+    )
 
     market = _normalise_market(pd.read_parquet(snapshot_path))
     if market.empty or not market["session_date"].eq(session).all():
         raise RuntimeError(f"canonical snapshot session mismatch for {key}")
-    return market, {
+    metadata = {
         "kind": "CANONICAL_EOD",
         "session_date": key,
         "parent_manifest_path": str(manifest_path),
@@ -226,6 +257,10 @@ def _read_verified_canonical_market(
         "parent_calendar_sha256": parent_calendar_sha,
         "row_count": int(len(market)),
     }
+    if calendar_attestation is not None:
+        metadata["calendar_parent_attestation_path"] = str(calendar_attestation)
+        metadata["calendar_parent_attestation_sha256"] = sha256_file(calendar_attestation)
+    return market, metadata
 
 
 def _bridge_session_dir(runtime_root: Path, session: pd.Timestamp) -> Path:
@@ -553,6 +588,11 @@ def _verify_source_meta(
             "parent_calendar_path",
             "parent_calendar_sha256",
         )
+        if "calendar_parent_attestation_path" in fresh:
+            fields += (
+                "calendar_parent_attestation_path",
+                "calendar_parent_attestation_sha256",
+            )
     else:
         fields = (
             "manifest_path",
