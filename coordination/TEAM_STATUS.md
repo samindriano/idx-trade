@@ -519,7 +519,8 @@ Flow, features, models, outcomes, or unrelated lane work is authorized.
 
 Historical statutory free-float snapshot V1 is complete and remains `REVIEW`
 for ChatGPT independent review. Branch
-`data/idx-historical-statutory-free-float-snapshot-v1` contains the factual
+`data/idx-historical-statutory-free-float-snapshot-v1` is synchronized at final
+HEAD `4762f4751cb4cc30d348704c7e19e65c47b7a329` and contains the factual
 checkpoint and handoff for the bounded run. Verdict:
 `HISTORICAL_STATUTORY_FF_SNAPSHOT_READY_WITH_GAPS`.
 
