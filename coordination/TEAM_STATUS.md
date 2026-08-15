@@ -465,3 +465,15 @@ Focused HSC tests: 16 passed. Full pytest: 105 passed / 1 unrelated existing
 storage expectation failure. `git diff --check` passed. No free-float,
 effective-supply, HHI, feature, Foreign Flow, model, or outcome work occurred.
 Stop for ChatGPT review before ownership-concentration contract work.
+
+## Current status correction — 2026-08-15 — Statutory Free Float Reconstruction V1
+
+Statutory Free Float Reconstruction V1 is now `ACTIVE` by
+`Codex/Statutory-Free-Float-Reconstruction` on branch
+`data/idx-statutory-free-float-reconstruction-v1` at prepared HEAD
+`414f4c232326f4da6e3fb1430d824eb1329877e7`. Scope is the bounded recovery of
+official statutory free-float rules, BEI market-wide reports, issuer LBRE
+attachments, and fail-closed diagnostic reconstruction. Official reported
+free float remains preferred; no 100%-minus-holder arithmetic, HSC or >=1%
+inference, effective-supply/HHI/features, Foreign Flow integration, models,
+outcomes, or unrelated lane changes are authorized.
