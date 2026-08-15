@@ -691,3 +691,15 @@ HEAD is `471287c`. Focused tests: `22 passed`. Full pytest: `61 passed, 1
 unrelated storage expectation failure, 62 collected`; `git diff --check`
 PASS. Repository Hygiene, parent formulas/thresholds, providers, schedulers,
 O2/counters, models, outcomes, and trade semantics remain out of scope.
+
+## Current status correction — 2026-08-16 — Joint Setup Readiness V1.1 prospective runtime
+
+Joint Setup Readiness V1.1 prospective runtime adapter is now `ACTIVE` by
+Codex/Joint-Setup-Readiness on branch
+`integration/joint-setup-readiness-v1-1-forward-v1`, based on the accepted
+domain remediation at
+`research/idx-joint-setup-readiness-state-v1-1-domain-remediation@af2450c7e5166dba853a810ee77ebdc339198dc7`.
+Scope is one controlled, outcome-blind runtime materialization and strict
+replay verification for source session 2026-08-12 to feature session
+2026-08-13. Repository Hygiene, providers/network, scheduler, O2/counter,
+models, outcomes, and trade semantics remain out of scope.
