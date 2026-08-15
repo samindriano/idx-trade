@@ -368,10 +368,14 @@ history, canonical market/price artifacts, and existing Foreign Flow catch-up
 runtime. No scheduler, capture hierarchy, counter, provider expansion,
 historical performance test, model/outcome access, free-float/HSC integration,
 price-state layer, or O2 change is authorized. HSC/free-float remains a
-separate active lane and was not modified. Implementation is pushed at
-`3bd4675443885336f5cb3ff0f5586d52b6bfad38`. Focused producer/V2/setup tests
-pass 24; full pytest is 294 passed / 1 unrelated pre-existing storage
-expectation failure / 3 warnings. The producer is fail-closed when the
+separate active lane and was not modified. Timing remediation is pushed at
+`5374c238d3ed90823a18c49f1b0b1be4a0583469`. The producer now triggers from
+completed source session `t`, writes an immutable prospective `t+1` pair, and
+does not require target-session market/flow data. Existing catchup consumes
+that pair after target capture and materializes Setup State with explicit
+paths. Focused producer/V2/setup tests pass 26; full pytest is 110 passed / 1
+unrelated pre-existing storage expectation failure / 5 warnings. The producer
+is fail-closed when the
 official calendar or rolling context is incomplete; no real 2026-08-11/12
 backfill was run. Read-only audit confirms 2026-08-10 is incomplete and the
 pinned market panel ends 2026-07-31, so current local artifacts are
