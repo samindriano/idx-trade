@@ -18,6 +18,7 @@ def _frame() -> pd.DataFrame:
                 "foreign_flow_shock_mean_5": 0.15,
                 "foreign_flow_shock_mean_20": 0.10,
                 "foreign_flow_shock_percentile_120": 0.65,
+                "xs_rank_foreign_flow_shock_1": 0.50,
                 "xs_rank_foreign_flow_shock_mean_5": 0.55,
                 "xs_rank_foreign_flow_shock_mean_20": 0.60,
                 "foreign_weighted_persistence_5": 0.10,
@@ -35,6 +36,7 @@ def _frame() -> pd.DataFrame:
                 "foreign_flow_shock_mean_5": 2.40,
                 "foreign_flow_shock_mean_20": 1.60,
                 "foreign_flow_shock_percentile_120": 0.99,
+                "xs_rank_foreign_flow_shock_1": 0.94,
                 "xs_rank_foreign_flow_shock_mean_5": 0.95,
                 "xs_rank_foreign_flow_shock_mean_20": 0.93,
                 "foreign_weighted_persistence_5": 0.80,
@@ -73,6 +75,23 @@ def test_sidecar_rejects_duplicate_keys() -> None:
     duplicate = pd.concat([frame, frame.iloc[[0]]], ignore_index=True)
     with pytest.raises(ValueError, match="duplicate ticker/feature_session"):
         build_foreign_flow_setup_sidecar(duplicate)
+
+
+def test_sidecar_rejects_null_identity_keys() -> None:
+    invalid = _frame()
+    invalid.loc[0, "flow_through_session"] = None
+    with pytest.raises(ValueError, match="null identity keys"):
+        build_foreign_flow_setup_sidecar(invalid)
+
+
+def test_sidecar_marks_missing_preserved_shock_evidence_indeterminate() -> None:
+    invalid = _frame()
+    invalid.loc[0, "foreign_flow_shock_1"] = None
+    result = build_foreign_flow_setup_sidecar(invalid)
+    row = result.loc[result["ticker"].eq("AAA")].iloc[0]
+    assert row["setup_label"] == "INDETERMINATE"
+    assert row["historical_abnormality"] == "INDETERMINATE"
+    assert "foreign_flow_shock_1" in row["missing_fields"]
 
 
 def test_sidecar_rejects_outcome_columns() -> None:

@@ -25,6 +25,7 @@ EVIDENCE_COLUMNS = (
     "foreign_flow_shock_mean_5",
     "foreign_flow_shock_mean_20",
     "foreign_flow_shock_percentile_120",
+    "xs_rank_foreign_flow_shock_1",
     "xs_rank_foreign_flow_shock_mean_5",
     "xs_rank_foreign_flow_shock_mean_20",
     "foreign_weighted_persistence_5",
@@ -64,13 +65,17 @@ def build_foreign_flow_setup_sidecar(
     ``(ticker, feature_session)`` keys fail closed when those keys are present.
     """
 
-    required = set(REQUIRED_FIELDS) | set(EVIDENCE_COLUMNS)
+    required = set(KEY_COLUMNS) | set(REQUIRED_FIELDS) | set(EVIDENCE_COLUMNS)
     missing = sorted(required - set(frame.columns))
     if missing:
         raise ValueError(f"setup-state frame missing columns: {missing}")
 
-    present_keys = [column for column in KEY_COLUMNS if column in frame.columns]
-    if {"ticker", "feature_session"}.issubset(frame.columns) and frame.duplicated(
+    present_keys = list(KEY_COLUMNS)
+    if frame.loc[:, list(KEY_COLUMNS)].isna().any().any():
+        raise ValueError("setup-state frame has null identity keys")
+    if frame["ticker"].astype(str).str.strip().eq("").any():
+        raise ValueError("setup-state frame has empty ticker identity")
+    if frame.duplicated(list(KEY_COLUMNS)).any() or frame.duplicated(
         ["ticker", "feature_session"]
     ).any():
         raise ValueError("setup-state frame has duplicate ticker/feature_session rows")
@@ -80,17 +85,42 @@ def build_foreign_flow_setup_sidecar(
         state = classify_foreign_flow_setup(row, thresholds=thresholds)
         record = {column: row[column] for column in present_keys}
         record.update({column: row[column] for column in EVIDENCE_COLUMNS})
+        raw_evidence_missing = tuple(
+            column
+            for column in EVIDENCE_COLUMNS
+            if row[column] is None or pd.isna(row[column])
+        )
+        missing_fields = tuple(sorted(set(state.missing_fields) | set(raw_evidence_missing)))
+        indeterminate = raw_evidence_missing or bool(state.missing_fields)
         record.update(
             {
-                "participation_intensity": state.participation_intensity.value,
-                "participation_direction": state.participation_direction.value,
-                "historical_abnormality": state.historical_abnormality.value,
-                "persistence_state": state.persistence.value,
-                "cross_sectional_pressure": state.cross_sectional_pressure.value,
-                "divergence_state": state.divergence.value,
-                "acceleration_direction": state.acceleration_direction.value,
-                "setup_label": state.setup_label.value,
-                "missing_fields": "|".join(state.missing_fields),
+                "participation_intensity": (
+                    "INDETERMINATE" if indeterminate else state.participation_intensity.value
+                ),
+                "participation_direction": (
+                    "INDETERMINATE" if indeterminate else state.participation_direction.value
+                ),
+                "historical_abnormality": (
+                    "INDETERMINATE" if indeterminate else state.historical_abnormality.value
+                ),
+                "persistence_state": (
+                    "INDETERMINATE" if indeterminate else state.persistence.value
+                ),
+                "cross_sectional_pressure": (
+                    "INDETERMINATE" if indeterminate else state.cross_sectional_pressure.value
+                ),
+                "divergence_state": (
+                    "INDETERMINATE" if indeterminate else state.divergence.value
+                ),
+                "acceleration_direction": (
+                    "INDETERMINATE" if indeterminate else state.acceleration_direction.value
+                ),
+                "setup_label": (
+                    "INDETERMINATE"
+                    if raw_evidence_missing
+                    else state.setup_label.value
+                ),
+                "missing_fields": "|".join(missing_fields),
                 "state_contract_version": STATE_CONTRACT_VERSION,
                 "source_representation_version": SOURCE_REPRESENTATION_VERSION,
             }

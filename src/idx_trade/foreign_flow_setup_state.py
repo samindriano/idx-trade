@@ -203,6 +203,8 @@ def _persistence(
     thresholds: SetupThresholds,
 ) -> PersistenceState:
     floor = thresholds.persistence_floor
+    if not (-1.0 <= persistence_5 <= 1.0 and -1.0 <= persistence_20 <= 1.0):
+        return PersistenceState.INDETERMINATE
     if persistence_20 >= floor and persistence_5 >= 0.0:
         return PersistenceState.ACCUMULATION
     if persistence_20 <= -floor and persistence_5 <= 0.0:
@@ -223,6 +225,8 @@ def _xs_pressure(rank_5: float, rank_20: float, thresholds: SetupThresholds) -> 
 
 def _divergence(div_5: float, div_20: float, thresholds: SetupThresholds) -> DivergenceState:
     threshold = thresholds.divergence_threshold
+    if not (-1.0 <= div_5 <= 1.0 and -1.0 <= div_20 <= 1.0):
+        return DivergenceState.INDETERMINATE
     if max(div_5, div_20) >= threshold:
         return DivergenceState.POSITIVE
     if min(div_5, div_20) <= -threshold:
@@ -327,6 +331,22 @@ def classify_foreign_flow_setup(
     persistence = _persistence(persistence_5, persistence_20, thresholds)
     divergence = _divergence(divergence_5, divergence_20, thresholds)
     participation_intensity = _participation_intensity(participation, thresholds)
+
+    if (
+        persistence is PersistenceState.INDETERMINATE
+        or divergence is DivergenceState.INDETERMINATE
+    ):
+        return ForeignFlowSetupState(
+            participation_intensity=participation_intensity,
+            participation_direction=_direction(participation),
+            historical_abnormality=historical_abnormality,
+            persistence=persistence,
+            cross_sectional_pressure=cross_sectional_pressure,
+            divergence=divergence,
+            acceleration_direction=_direction(acceleration),
+            setup_label=SetupLabel.INDETERMINATE,
+            missing_fields=(),
+        )
 
     return ForeignFlowSetupState(
         participation_intensity=participation_intensity,

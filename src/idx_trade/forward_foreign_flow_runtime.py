@@ -9,6 +9,11 @@ from .forward_foreign_flow import (
     inspect_session_foreign_flow,
     verify_session_foreign_flow,
 )
+from .forward_foreign_flow_setup import (
+    enrich_session_foreign_flow_setup,
+    inspect_session_foreign_flow_setup,
+    verify_session_foreign_flow_setup,
+)
 
 
 def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
@@ -30,6 +35,10 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
         "already_valid": [],
         "verified": [],
         "skipped_no_stock_summary": [],
+        "setup_state_created": [],
+        "setup_state_already_valid": [],
+        "setup_state_skipped_no_representation": [],
+        "setup_state_verified": [],
         "failed": [],
     }
     if not sessions_root.exists():
@@ -56,21 +65,51 @@ def run_foreign_flow_catchup(runtime_root: str | Path) -> dict[str, object]:
                         "error_message": str(error),
                     }
                 )
+        else:
+            try:
+                artifact = enrich_session_foreign_flow(root, session)
+            except Exception as error:
+                result["status"] = "INCOMPLETE"
+                result["failed"].append(
+                    {
+                        "session_date": session,
+                        "error_code": type(error).__name__.upper(),
+                        "error_message": str(error),
+                    }
+                )
+                continue
+            result["created"].append(artifact)
+            result["verified"].append(artifact)
+
+        # Setup State is a consumer of an already materialized V2 representation,
+        # not a second capture/calculation path.  Existing raw-flow sessions that
+        # do not carry that input remain explicitly skipped and do not fail raw
+        # Foreign Flow readiness.
+        directory = sessions_root / session
+        representation = directory / "foreign_flow_representation_v2.parquet"
+        representation_manifest = directory / "foreign_flow_representation_v2.manifest.json"
+        if not representation.exists() or not representation_manifest.exists():
+            result["setup_state_skipped_no_representation"].append(session)
             continue
         try:
-            artifact = enrich_session_foreign_flow(root, session)
+            if verify_session_foreign_flow_setup(root, session):
+                result["setup_state_already_valid"].append(session)
+                result["setup_state_verified"].append(
+                    inspect_session_foreign_flow_setup(root, session)
+                )
+            else:
+                setup_artifact = enrich_session_foreign_flow_setup(root, session)
+                result["setup_state_created"].append(setup_artifact)
+                result["setup_state_verified"].append(setup_artifact)
         except Exception as error:
             result["status"] = "INCOMPLETE"
             result["failed"].append(
                 {
                     "session_date": session,
-                    "error_code": type(error).__name__.upper(),
+                    "error_code": f"SETUP_{type(error).__name__.upper()}",
                     "error_message": str(error),
                 }
             )
-            continue
-        result["created"].append(artifact)
-        result["verified"].append(artifact)
     return result
 
 
