@@ -350,3 +350,15 @@ new forward counter occurred. Next action is exact branch validation and then
 inspection/reuse of the existing accepted Foreign Flow prospective sidecar
 infrastructure before any runtime wiring; post-V2 price-state/confirmation
 research remains separate and prospective-only.
+
+## Current status correction — 2026-08-15 — HSC source remediation lane
+
+The new bounded High Shareholding Concentration (HSC) source-remediation lane
+is claimed as `ACTIVE` by `Codex/Ownership-HSC-Source-Remediation`
+on branch `data/idx-ownership-hsc-source-remediation-v1`, anchored at
+`69cdd303ad937e6bc90d930955f751f1a2686ab0`. Scope is official IDX/KSEI
+HSC/RSC publication transport, raw attachment/hash/provenance recovery, PIT
+event semantics, and bounded secondary recovery of monthly >=1% attachments.
+Keep `BalanceposEfek` separate and unchanged. No effective-float
+calculation, HHI/features, Foreign Flow integration, models, outcomes, or
+unrelated lane changes are authorized.
