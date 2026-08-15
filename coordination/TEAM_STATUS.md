@@ -360,7 +360,7 @@ representation producer for live EOD sessions.
 Foreign Flow Representation V2 forward producer is `REVIEW` by
 `Codex/Foreign-Flow-Representation-V2-Forward` on branch
 `integration/foreign-flow-representation-v2-forward-v1` at
-`6c14fcf153d8890de04d236c5657b68efc77adc7`. Scope is outcome-blind
+`db630a80ae5cac3e25acbe149a3c1335a38c99d8`. Scope is outcome-blind
 prospective rolling-context materialization for new canonical EOD sessions,
 using the accepted V2 formulas, official calendar, listing-aware history,
 canonical market/price artifacts, and existing Foreign Flow catch-up runtime.
