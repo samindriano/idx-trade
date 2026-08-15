@@ -525,7 +525,21 @@ for ChatGPT independent review. Branch
 `data/idx-historical-statutory-free-float-snapshot-v1` is synchronized at final
 HEAD `4762f4751cb4cc30d348704c7e19e65c47b7a329` and contains the factual
 checkpoint and handoff for the bounded run. Verdict:
-`HISTORICAL_STATUTORY_FF_SNAPSHOT_READY_WITH_GAPS`.
+  `HISTORICAL_STATUTORY_FF_SNAPSHOT_READY_WITH_GAPS`.
+
+## Current status correction — 2026-08-16 — Statutory Free-Float Knowledge-State Contract V1
+
+Statutory Free-Float Knowledge-State Contract V1 is now `ACTIVE` by
+`Codex/Statutory-Free-Float-State-Contract` on branch
+`data/idx-statutory-free-float-state-contract-v1`, based on scientific parent
+`data/idx-lbre-market-anchor-reconciliation-v1@ed17ec840cf7cdcffd586f3f12bdd37b0044b004`.
+The existing ACTIVE free-float source/reconstruction lanes remain separate:
+this lane performs only the PIT/session knowledge-state contract and adversarial
+offline tests, without source discovery, acquisition, daily panel
+materialization, effective-supply inference, Foreign Flow integration,
+features, models, or outcomes. The contract will preserve LBRE and market
+evidence independently, apply strict post-publication official-session
+eligibility, and keep genuine share-count conflicts fail-closed.
 
 The external artifact root is
 `D:\Documents\Project\idx-historical-statutory-free-float-snapshot-20260815-v1`
