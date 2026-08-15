@@ -333,23 +333,27 @@ full pytest remains 67 passed / 1 pre-existing storage expectation failure.
 
 Foreign Flow Setup State V1 is `REVIEW` by `ChatGPT/Foreign-Flow-Setup-State`
 on branch `research/idx-foreign-flow-setup-state-v1` at HEAD
-`42c30e30da7f4507393d025d42cf021773fc7a39`. This is an outcome-blind,
+`d204a8fd3edaacef91aacbe90ac39f0e1969e420`. This is an outcome-blind,
 prospective-only descriptive state layer built on the accepted Foreign Flow V2
-representation. It explicitly keeps current participation separate from
-own-history abnormality magnitude/percentile, preserves raw shock evidence,
-persistence, cross-sectional pressure, acceleration, and flow-price divergence,
-and emits deterministic setup labels such as
-`HIGH_PARTICIPATION_ROUTINE_FLOW` and `STEALTH_ACCUMULATION_CANDIDATE`.
+representation. The existing accepted Foreign Flow catch-up runtime now
+conditionally consumes a hash-pinned per-session Representation V2 artifact
+and writes an immutable Setup State sidecar; sessions without that V2 input are
+explicitly skipped rather than synthesized. It keeps current participation
+separate from own-history abnormality magnitude/percentile and preserves raw
+participation, shock 1/5/20, all three XS shock ranks, persistence,
+cross-sectional pressure, acceleration, and flow-price divergence. It emits
+deterministic setup labels such as `HIGH_PARTICIPATION_ROUTINE_FLOW` and
+`STEALTH_ACCUMULATION_CANDIDATE`, with the latter remaining descriptive only.
 The sidecar emits no probability, expected return, trade recommendation, or
-fitted score. Outcome/label columns, invalid ranks, duplicate session keys, and
-missing required inputs fail closed. Focused isolated semantic validation is
-12/12 passed. Full repo pytest and `git diff --check` on a real checkout remain
-pending. No provider calls, historical alpha/performance evaluation, protected
-outcomes, model fitting, free-float/effective-supply inference, O2 changes, or
-new forward counter occurred. Next action is exact branch validation and then
-inspection/reuse of the existing accepted Foreign Flow prospective sidecar
-infrastructure before any runtime wiring; post-V2 price-state/confirmation
-research remains separate and prospective-only.
+fitted score. Exact V2 schema/provenance, prior-official-session causality,
+identity/duplicate/missingness/revision gates, and outcome protection fail
+closed. Focused tests pass 38; full repo pytest is 105 passed / 1 unrelated
+pre-existing storage expectation failure out of 106 collected. No provider
+calls, historical alpha/performance evaluation, protected outcomes, model
+fitting, free-float/effective-supply inference, O2 changes, or new forward
+counter occurred. Post-V2 price-state/confirmation research remains separate
+and prospective-only; independent review is required before activating a V2
+representation producer for live EOD sessions.
 
 ## Current status correction — 2026-08-15 — HSC source remediation lane
 
