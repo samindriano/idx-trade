@@ -359,28 +359,27 @@ representation producer for live EOD sessions.
 
 Foreign Flow Representation V2 forward producer is `REVIEW` by
 `Codex/Foreign-Flow-Representation-V2-Forward` on branch
-`integration/foreign-flow-representation-v2-forward-v1`, starting from
-`research/idx-foreign-flow-setup-state-v1` at
-`d204a8fd3edaacef91aacbe90ac39f0e1969e420`. Scope is outcome-blind
+`integration/foreign-flow-representation-v2-forward-v1` at
+`059232dff0921a036466d214bc3393840db06716`. Scope is outcome-blind
 prospective rolling-context materialization for new canonical EOD sessions,
-using the already accepted V2 formulas, official calendar, listing-aware
-history, canonical market/price artifacts, and existing Foreign Flow catch-up
-runtime. No scheduler, capture hierarchy, counter, provider expansion,
-historical performance test, model/outcome access, free-float/HSC integration,
-price-state layer, or O2 change is authorized. HSC/free-float remains a
-separate active lane and was not modified. Timing remediation is pushed at
-`5374c238d3ed90823a18c49f1b0b1be4a0583469`. The producer now triggers from
-completed source session `t`, writes an immutable prospective `t+1` pair, and
-does not require target-session market/flow data. Existing catchup consumes
-that pair after target capture and materializes Setup State with explicit
-paths. Focused producer/V2/setup tests pass 26; full pytest is 110 passed / 1
-unrelated pre-existing storage expectation failure / 5 warnings. The producer
-is fail-closed when the
-official calendar or rolling context is incomplete; no real 2026-08-11/12
-backfill was run. Read-only audit confirms 2026-08-10 is incomplete and the
-pinned market panel ends 2026-07-31, so current local artifacts are
-`NO_GO_CURRENT_CONTEXT` until a versioned complete calendar/context extension
-is supplied. Await independent review before a genuinely new live EOD session.
+using the accepted V2 formulas, official calendar, listing-aware history,
+canonical market/price artifacts, and existing Foreign Flow catch-up runtime.
+The producer triggers from completed source session `t`, writes an immutable
+prospective `t+1` Representation V2 pair, and immediately materializes and
+verifies the Setup State V1 pair beside it without requiring any `t+1` session
+directory, market data, Foreign Flow data, or EOD completion. The Setup State
+manifest is pinned to source/calendar/Representation V2 hashes and unchanged
+frozen thresholds; strict access flags, counts, path identity, calendar
+revision, and immutable sidecar revision checks fail closed. Existing catchup
+remains the later canonical-session consumption path. Focused
+producer/V2/setup tests pass 32; full pytest is 116 passed / 1 unrelated
+pre-existing storage expectation failure / 5 warnings out of 117 collected;
+`git diff --check` passes. No scheduler, capture hierarchy, counter, provider
+expansion, historical performance test, model/outcome access, free-float/HSC
+integration, price-state layer, or O2 change is authorized. HSC/free-float
+remains separate and was not modified. No real runtime run occurred; the
+official calendar/rolling context after 2026-07-31 remains incomplete and the
+local state is `NO_GO_CURRENT_CONTEXT`.
 
 ## Current status correction — 2026-08-15 — HSC source remediation lane
 
