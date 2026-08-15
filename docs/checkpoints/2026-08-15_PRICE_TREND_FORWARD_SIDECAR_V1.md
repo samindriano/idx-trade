@@ -8,7 +8,9 @@ Scientific parent acceptance: `review/idx-price-trend-confirmation-state-v1-acce
 
 Frozen state implementation pin: `a33863953b4521dd4549a3089f0da2cfdfb6dcd3`
 
-Status: `IMPLEMENTED_VALIDATION_PENDING`
+Status: `REVIEW`
+
+Verdict: `PRICE_TREND_FORWARD_SIDECAR_V1_IMPLEMENTED_REVIEW_REQUIRED`
 
 ## Purpose
 
@@ -85,6 +87,48 @@ The manifest pins:
 
 Artifact and manifest are immutable. Existing complete pairs must be semantically identical; partial pairs or revisions fail closed.
 
+## Strict verification
+
+Runtime/acceptance verification must use:
+
+`idx_trade.forward_price_trend_state_verifier.verify_prospective_price_trend_state_strict`
+
+The strict verifier additionally:
+
+- requires exact manifest `output_columns` parity with the frozen sidecar schema;
+- recomputes state distributions from the parquet and reconciles them to the manifest;
+- re-reads both pinned calendars and recomputes exact source `t` -> target `t+1` semantics;
+- rechecks combined-calendar first/last/count metadata;
+- re-opens every stored canonical forward source through the original DATA_READY, outcome-blind, path-identity, snapshot-hash, and calendar-hash gates;
+- recomputes the deterministic provenance fingerprint.
+
+This prevents a consistently re-hashed but semantically modified parent/calendar/manifest from being treated as valid.
+
+## Validation result
+
+Draft validation PR: `#27`.
+
+Final validation at implementation HEAD before this documentation-only update:
+
+- focused Price State + producer + strict-verifier tests: **27 passed**;
+- `git diff --check`: **PASS**;
+- full repository pytest: **66 passed, 1 failed, 4 warnings**;
+- sole full-suite failure remains the unrelated pre-existing `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` assertion (storage emits independent `raw_close` and `vendor_adj_close` conflicts while the old test expects one).
+
+Focused coverage includes:
+
+- target-session-directory independence;
+- idempotency and immutable-revision rejection;
+- canonical snapshot hash mutation rejection;
+- pinned historical input mutation rejection;
+- outcome-like historical schema rejection;
+- missing next official session rejection;
+- exact output-schema and state-distribution reconciliation;
+- re-hashed parent semantic tamper rejection;
+- calendar semantic tamper rejection.
+
+No Price State / sidecar focused test failed.
+
 ## Prohibited
 
 - provider/network calls;
@@ -99,18 +143,8 @@ Artifact and manifest are immutable. Existing complete pairs must be semanticall
 - score/probability/expected-return generation;
 - WATCH/READY/ENTRY_ELIGIBLE logic.
 
-## Validation gate
+## Next boundary
 
-Before this lane can move to REVIEW:
+Independent sidecar review only. No real runtime materialization or scheduler/post-capture hook is authorized from this checkpoint.
 
-1. focused state + forward-sidecar tests pass;
-2. target-session-directory independence passes;
-3. idempotency and immutable-revision tests pass;
-4. canonical parent/snapshot hash mutation fails closed;
-5. pinned historical input mutation makes verification fail;
-6. outcome-like historical schemas fail closed;
-7. missing next official forward session fails closed;
-8. `git diff --check` passes;
-9. full repository pytest is recorded, with the known unrelated storage assertion reported separately if still present.
-
-No real runtime materialization is authorized by this implementation checkpoint.
+If independently accepted, the next milestone is a controlled zero-provider runtime hook/materialization using the same frozen producer + strict verifier. Foreign Flow + Price State combination remains later and separately frozen.
