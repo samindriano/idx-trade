@@ -749,7 +749,15 @@ semantics remain out of scope.
 
 ## Current status correction — 2026-08-16 — Joint Setup Readiness V1.1 generic prospective runner
 
-Joint Setup Readiness V1.1 generic prospective runner is now `REVIEW` by
+Joint Setup Readiness V1.1 generic prospective runner is `ACTIVE` for bounded
+parent-semantic remediation under independent review
+`review/idx-joint-setup-readiness-v1-1-forward-acceptance@2bdc8608d1900076b6e94f5f5c8b4c76c71b547f`.
+The frozen joint classifier, thresholds, domain semantics, output schema, and
+accepted 2026-08-13 artifact remain unchanged. The remediation is limited to
+strict upstream Price State and Foreign Flow parent verification before hash
+pinning.
+
+The prior generic runner result was `REVIEW` by
 `Codex/Joint-Setup-Readiness-Generic-Runner` on branch
 `integration/joint-setup-readiness-v1-1-generic-runner-v1` at final HEAD
 `6d416f080482a4d1ebfa4c096c51ad565465e249`, based on accepted runtime parent
