@@ -10,6 +10,7 @@ from idx_trade.historical_statutory_free_float import (
     FreeFloatSourceFamily,
     HistoricalFreeFloatObservation,
     arithmetic_percentage_difference,
+    census_historical_free_float,
     reconcile_cross_source,
     replay_historical_free_float,
 )
@@ -217,3 +218,34 @@ def test_cutoff_does_not_forward_fill_or_create_unpublished_months() -> None:
     assert len(replay.current) == 1
     only = next(iter(replay.current.values()))
     assert only.as_of_date == date(2026, 3, 31)
+
+
+def test_census_reports_only_observed_dates_and_sources() -> None:
+    march_lbre = _row("march-lbre")
+    march_market = _row(
+        "march-market",
+        family=FreeFloatSourceFamily.IDX_MARKET_WIDE_STATUS,
+        source_digit="b",
+    )
+    june = _row(
+        "june-lbre",
+        as_of=date(2026, 6, 30),
+        published_at=datetime(2026, 7, 7, 12, 0, tzinfo=TZ),
+        source_digit="c",
+    )
+    replay = replay_historical_free_float([march_lbre, march_market, june])
+    census = census_historical_free_float(replay)
+
+    assert census.admitted_record_count == 3
+    assert census.current_observation_count == 3
+    assert census.unique_ticker_count == 1
+    assert census.unique_as_of_dates == (date(2026, 3, 31), date(2026, 6, 30))
+    assert census.issuer_count_by_as_of_date == {
+        date(2026, 3, 31): 1,
+        date(2026, 6, 30): 1,
+    }
+    assert census.current_source_family_counts == {
+        "IDX_MARKET_WIDE_FF_STATUS": 1,
+        "ISSUER_LBRE": 2,
+    }
+    assert census.cross_source_status_counts == {"AGREE": 1, "SINGLE_SOURCE": 1}
