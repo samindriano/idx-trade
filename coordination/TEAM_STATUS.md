@@ -703,3 +703,30 @@ Scope is one controlled, outcome-blind runtime materialization and strict
 replay verification for source session 2026-08-12 to feature session
 2026-08-13. Repository Hygiene, providers/network, scheduler, O2/counter,
 models, outcomes, and trade semantics remain out of scope.
+
+## Current status correction — 2026-08-16 — LBRE Monthly Free-Float History V1 result
+
+LBRE Monthly Free-Float History V1 is now `REVIEW` by
+`Codex/LBRE-Monthly-History` on branch
+`data/idx-lbre-monthly-free-float-history-v1` at final HEAD
+`bf0648c9dd37ad4a25e2de42d6f4a18fd19f857d`. The generalized official IDX
+LBRE acquisition covered position dates 2024-04-30 through 2026-06-30: 27,724
+reported announcement records over 28 complete pages, 30,405 main
+attachments, 1,068 exact parent reuses, 29,335 new downloads, and 2 bounded
+HTTP 404 failures. Offline parsing produced 28,254 exact rows; append-only
+replay produced 24,394 admitted observations and 23,373 current exact rows,
+with 868 lineage cases kept unresolved (532 multiple originals, 332 missing
+original evidence, 4 invalid correction chronologies). The June-2026 current
+count is 870 versus the accepted 877 parent; all eight old-only tickers are
+explicitly fail-closed due to malformed/ambiguous evidence or missing
+correction lineage, while INAF is an additional exact row from the wider
+official discovery. No ambiguous value was selected. The 2025-12 cross-source
+diagnostic is 260 AGREE / 625 CONFLICT / 38 SINGLE_SOURCE. External artifact
+manifest SHA-256 is
+`e134809a1f1b745daf2f21c33ab7db78c38d1d5d520f5320564359d5b865bd86` under
+`D:\Documents\Project\idx-lbre-monthly-free-float-history-20260815-v1`.
+Verdict: `LBRE_MONTHLY_FF_HISTORY_PARTIAL_SOURCE_USEFUL`. Focused tests:
+21 passed. Full pytest: 69 collected, 68 passed, 1 unrelated storage
+expectation failure. No daily FF state, effective supply, Foreign Flow
+features, models, outcomes, or unrelated lanes were touched; daily-state and
+feature integration remain unclaimed pending review.
