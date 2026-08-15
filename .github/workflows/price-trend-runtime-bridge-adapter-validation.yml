@@ -9,11 +9,13 @@ on:
       - 'src/idx_trade/forward_price_trend_state.py'
       - 'src/idx_trade/forward_price_trend_state_verifier.py'
       - 'src/idx_trade/forward_price_trend_context_bridge.py'
+      - 'src/idx_trade/forward_price_trend_context_anchor.py'
       - 'tests/test_price_trend_state.py'
       - 'tests/test_price_trend_state_prospective.py'
       - 'tests/test_forward_price_trend_state.py'
       - 'tests/test_forward_price_trend_state_strict_verifier.py'
       - 'tests/test_forward_price_trend_context_bridge.py'
+      - 'tests/test_forward_price_trend_context_anchor.py'
       - 'docs/checkpoints/2026-08-15_PRICE_TREND_RUNTIME_CONTEXT_PIN_V1.md'
       - 'docs/checkpoints/2026-08-15_PRICE_TREND_RUNTIME_BRIDGE_ADAPTER_V1.md'
       - '.github/workflows/price-trend-runtime-bridge-adapter-validation.yml'
@@ -30,5 +32,5 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e . pytest
-      - run: pytest -q tests/test_price_trend_state.py tests/test_price_trend_state_prospective.py tests/test_forward_price_trend_state.py tests/test_forward_price_trend_state_strict_verifier.py tests/test_forward_price_trend_context_bridge.py
+      - run: pytest -q tests/test_price_trend_state.py tests/test_price_trend_state_prospective.py tests/test_forward_price_trend_state.py tests/test_forward_price_trend_state_strict_verifier.py tests/test_forward_price_trend_context_bridge.py tests/test_forward_price_trend_context_anchor.py
       - run: git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}"
