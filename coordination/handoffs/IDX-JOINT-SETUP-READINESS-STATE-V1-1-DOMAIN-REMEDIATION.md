@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 3ad481cc4b371f5022742101a12f6b9d603481a4
 branch: research/idx-joint-setup-readiness-state-v1-1-domain-remediation
-head_commit: pending final commit
+head_commit: 471287c (implementation/documentation push commit; branch HEAD may include later metadata-only synchronization)
 
 ## Scope
 
