@@ -4,6 +4,8 @@ Date: 2026-08-16 Asia/Jakarta
 Branch: `data/idx-statutory-free-float-state-contract-v1-remediation`  
 Scientific parent: `data/idx-statutory-free-float-state-contract-v1@8e0892f6261b4553965949150df95d689ead1376`
 
+Implementation commit: `7592bc9`
+
 ## Scope
 
 This was an independent contract-correctness remediation only. No provider or
@@ -45,12 +47,14 @@ agreement, single-source percentage preservation, no state, invalid
 denominator, ambiguous lineage, duplicate sessions, timezone rejection, and
 age diagnostics.
 
-The full-repository result is recorded in the final handoff after execution;
-the known unrelated storage revision-mode test remains separately reported if
-it persists.
+Full repository result: `87 collected, 86 passed, 1 failed`. The sole failure
+is the pre-existing unrelated
+`tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+expectation that one raw-price revision produces one conflict; current storage
+reports independent `raw_close` and `vendor_adj_close` conflicts. This lane
+does not touch storage. `git diff --check` passed.
 
 ## Decision
 
 `REVIEW` — remediation is complete and ready for independent ChatGPT review.
 Historical session-state materialization remains explicitly not authorized.
-

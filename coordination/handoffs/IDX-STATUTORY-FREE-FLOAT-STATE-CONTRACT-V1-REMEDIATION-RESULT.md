@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 8e0892f6261b4553965949150df95d689ead1376
 branch: data/idx-statutory-free-float-state-contract-v1-remediation
-head_commit: pending final commit
+head_commit: 7592bc9
 scope: contract-correctness remediation only; no historical panel materialization
 
 ## Files changed
@@ -39,7 +39,12 @@ scope: contract-correctness remediation only; no historical panel materializatio
 
 - Focused: `python -m pytest tests/test_statutory_free_float_state.py -q` —
   `18 passed, 0 failed`.
-- Full suite and `git diff --check` must be recorded here before push.
+- Full suite: `87 collected, 86 passed, 1 failed`. The sole failure is the
+  pre-existing unrelated `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+  expectation that one raw-price revision produces one conflict; current
+  storage correctly reports independent `raw_close` and `vendor_adj_close`
+  conflicts. This remediation does not touch storage.
+- `git diff --check`: PASS.
 - No provider/network calls and no protected outcome/model/O2 access.
 
 ## Blocking risks
@@ -54,4 +59,3 @@ current full-suite result shows a different, in-scope regression.
 
 Independent review of the remediation diff and focused/full validation. Do not
 materialize the historical session-state panel until separately authorized.
-
