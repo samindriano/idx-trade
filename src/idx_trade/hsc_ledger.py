@@ -77,11 +77,15 @@ class HSCEvent:
         if self.revision_kind is HSCRevisionKind.ORIGINAL:
             if self.status is not HSCStatus.ACTIVE:
                 raise ValueError("ORIGINAL event must be HSC_ACTIVE")
+            if self.concentration_pct is None:
+                raise ValueError("ORIGINAL HSC event requires explicit concentration_pct")
             if self.supersedes_event_id is not None:
                 raise ValueError("ORIGINAL event cannot supersede another event")
         elif self.revision_kind is HSCRevisionKind.CORRECTION:
             if self.status is not HSCStatus.ACTIVE:
                 raise ValueError("CORRECTION event must remain HSC_ACTIVE")
+            if self.concentration_pct is None:
+                raise ValueError("CORRECTION HSC event requires explicit concentration_pct")
             if not self.supersedes_event_id:
                 raise ValueError("CORRECTION event requires supersedes_event_id")
         elif self.revision_kind is HSCRevisionKind.REMOVAL:
@@ -97,7 +101,7 @@ class HSCActiveState:
     active_since: datetime
     last_event_id: str
     ownership_as_of_date: date
-    concentration_pct: float | None
+    concentration_pct: float
     determination_methodology_version: HSCMethodologyVersion
 
 
@@ -143,6 +147,7 @@ def replay_hsc_events(
                 raise ValueError(
                     f"duplicate active addition without correction: {event.ticker}"
                 )
+            assert event.concentration_pct is not None
             active[event.ticker] = HSCActiveState(
                 ticker=event.ticker,
                 active_since=event.published_at,
@@ -169,6 +174,7 @@ def replay_hsc_events(
                 raise ValueError(
                     "correction lineage is ambiguous: superseded event is not current state event"
                 )
+            assert event.concentration_pct is not None
             active[event.ticker] = replace(
                 state,
                 last_event_id=event.event_id,
