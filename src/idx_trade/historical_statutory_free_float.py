@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
@@ -128,6 +129,18 @@ class FreeFloatCrossSourceReconciliation:
     percentage_point_spread: float | None
 
 
+@dataclass(frozen=True)
+class HistoricalFreeFloatCensus:
+    admitted_record_count: int
+    current_observation_count: int
+    unique_ticker_count: int
+    unique_as_of_dates: tuple[date, ...]
+    issuer_count_by_as_of_date: Mapping[date, int]
+    current_source_family_counts: Mapping[str, int]
+    admitted_correction_count: int
+    cross_source_status_counts: Mapping[str, int]
+
+
 def replay_historical_free_float(
     observations: Iterable[HistoricalFreeFloatObservation],
     *,
@@ -236,6 +249,35 @@ def reconcile_cross_source(
         )
 
     return tuple(result)
+
+
+def census_historical_free_float(
+    replay: HistoricalFreeFloatReplay,
+) -> HistoricalFreeFloatCensus:
+    current_rows = tuple(replay.current.values())
+    as_of_dates = tuple(sorted({row.as_of_date for row in current_rows}))
+    issuer_count_by_as_of = {
+        as_of: len({row.ticker for row in current_rows if row.as_of_date == as_of})
+        for as_of in as_of_dates
+    }
+    family_counts = Counter(row.source_family.value for row in current_rows)
+    correction_count = sum(
+        row.revision_kind is FreeFloatRevisionKind.CORRECTION
+        for row in replay.admitted
+    )
+    reconciliations = reconcile_cross_source(replay)
+    status_counts = Counter(row.status.value for row in reconciliations)
+
+    return HistoricalFreeFloatCensus(
+        admitted_record_count=len(replay.admitted),
+        current_observation_count=len(current_rows),
+        unique_ticker_count=len({row.ticker for row in current_rows}),
+        unique_as_of_dates=as_of_dates,
+        issuer_count_by_as_of_date=dict(issuer_count_by_as_of),
+        current_source_family_counts=dict(sorted(family_counts.items())),
+        admitted_correction_count=correction_count,
+        cross_source_status_counts=dict(sorted(status_counts.items())),
+    )
 
 
 def arithmetic_percentage_difference(
