@@ -1,16 +1,23 @@
 """Bounded, outcome-blind context bridge for Foreign Flow prospective V2.
 
 This module does not create a second forward monitor, scheduler, model counter,
-or canonical-session repair path.  It exists only to bridge the small gap
+or canonical-session repair path. It exists only to bridge the small gap
 between the accepted historical market panel and the existing canonical EOD
-runtime.  Bridge artifacts are immutable, live under their own namespace, and
-reuse the exact IDX Stock Summary and Yahoo price semantics already used by the
-canonical EOD capture engine.
+runtime. Bridge artifacts are immutable and live under their own namespace.
+
+The implementation is deliberately self-contained relative to the accepted
+Foreign Flow producer branch: it reuses the repo's official session parser,
+Foreign Flow Stock Summary parser, canonical Yahoo adapter, and raw OHLCV
+semantics without importing private modules from the separate operator-EOD
+branch.
 """
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -19,17 +26,16 @@ from uuid import uuid4
 
 import numpy as np
 import pandas as pd
+import requests
 
 from .forward_foreign_flow import (
     _write_bytes_exclusive,
     _write_parquet_exclusive,
     parse_stock_summary_foreign_flow,
 )
-from .forward_monitoring import _price_payload, _raw_row, runtime_paths
-from .price_backfill import _download_in_batches
 from .provenance import sha256_file
-from .providers.idx_stock_summary import fetch_stock_summary_snapshot
 from .providers.yahoo import download_daily
+from .security_master import normalise_ticker
 from .session_backfill import run_exchange_session_backfill
 
 
@@ -38,6 +44,10 @@ MARKET_FILENAME = "market_context.parquet"
 FLOW_FILENAME = "foreign_flow.parquet"
 RAW_FILENAME = "idx_stock_summary.raw.json"
 MANIFEST_FILENAME = "manifest.json"
+
+IDX_HOME_URL = "https://www.idx.id/id"
+IDX_SESSION_VALIDATION_URL = "https://www.idx.id/primary/home/GetIndexList"
+IDX_STOCK_SUMMARY_URL = "https://www.idx.id/primary/TradingSummary/GetStockSummary"
 
 _FORBIDDEN_TOKENS = (
     "binary_target",
@@ -49,6 +59,21 @@ _FORBIDDEN_TOKENS = (
 )
 
 
+@dataclass(frozen=True)
+class _StockSummaryCapture:
+    payload: dict[str, object]
+    source_ref: str
+    raw_bytes: bytes
+    endpoint: str
+    params: dict[str, str]
+    retrieval_started_at_utc: str
+    observed_available_at_utc: str
+    records_total: int
+    records_filtered: int | None
+    row_count: int
+    completeness_status: str
+
+
 def _date(value: object) -> pd.Timestamp:
     parsed = pd.Timestamp(value)
     if pd.isna(parsed):
@@ -56,6 +81,10 @@ def _date(value: object) -> pd.Timestamp:
     if parsed.tzinfo is not None:
         parsed = parsed.tz_convert("Asia/Jakarta").tz_localize(None)
     return parsed.normalize()
+
+
+def _utc_now() -> str:
+    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _read_calendar(path: Path) -> pd.DatetimeIndex:
@@ -99,7 +128,7 @@ def sync_context_bridge_calendar(
     start: str | pd.Timestamp,
     end: str | pd.Timestamp,
     *,
-    fetch_month= None,
+    fetch_month=None,
 ) -> dict[str, Any]:
     """Create one immutable official IDX session-calendar range for bridge use."""
 
@@ -178,6 +207,226 @@ def sync_context_bridge_calendar(
             temporary.rmdir()
 
 
+def _metadata_integer(value: object, *, name: str, required: bool = True) -> int | None:
+    if value is None:
+        if required:
+            raise ValueError(f"Stock Summary {name} is missing")
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"Stock Summary {name} is invalid")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"Stock Summary {name} is not an integer") from error
+    if parsed < 0:
+        raise ValueError(f"Stock Summary {name} is negative")
+    return parsed
+
+
+def _fetch_stock_summary_capture(
+    session_date: str | pd.Timestamp,
+    *,
+    client: requests.Session | None = None,
+    timeout: int = 30,
+) -> _StockSummaryCapture:
+    """Fetch one complete official Stock Summary snapshot with raw response bytes."""
+
+    session = _date(session_date)
+    http = client or requests.Session()
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+        "Referer": "https://www.idx.id/",
+        "User-Agent": "Mozilla/5.0 idx-trade-research/2.0",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    started = _utc_now()
+    home = http.get(IDX_HOME_URL, headers=headers, timeout=timeout)
+    home.raise_for_status()
+    validation = http.get(IDX_SESSION_VALIDATION_URL, headers=headers, timeout=timeout)
+    validation.raise_for_status()
+    params = {"date": session.strftime("%Y%m%d")}
+    response = http.get(IDX_STOCK_SUMMARY_URL, params=params, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise ValueError("IDX Stock Summary response is not JSON") from error
+    if not isinstance(payload, dict):
+        raise ValueError("IDX Stock Summary response is not an object")
+    rows = payload.get("data")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("IDX Stock Summary is empty")
+    total = _metadata_integer(payload.get("recordsTotal"), name="recordsTotal")
+    filtered = _metadata_integer(payload.get("recordsFiltered"), name="recordsFiltered", required=False)
+    assert total is not None
+    if total <= 0 or len(rows) != total:
+        raise ValueError(f"IDX Stock Summary response is partial: rows={len(rows)} recordsTotal={total}")
+    if filtered is not None and filtered != total:
+        raise ValueError(
+            f"IDX Stock Summary response is filtered/partial: recordsFiltered={filtered} recordsTotal={total}"
+        )
+    seen: set[str] = set()
+    for position, raw in enumerate(rows):
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"IDX Stock Summary row {position} is not an object")
+        day = pd.to_datetime(raw.get("Date"), errors="coerce")
+        if pd.isna(day) or pd.Timestamp(day).tz_localize(None).normalize() != session:
+            raise ValueError(f"IDX Stock Summary date mismatch at row {position}")
+        ticker = normalise_ticker(raw.get("StockCode", ""))
+        if not ticker or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4,5}").iloc[0]:
+            raise ValueError(f"IDX Stock Summary invalid StockCode at row {position}")
+        if ticker in seen:
+            raise ValueError(f"IDX Stock Summary duplicate StockCode {ticker}")
+        seen.add(ticker)
+    return _StockSummaryCapture(
+        payload=payload,
+        source_ref=str(getattr(response, "url", "") or f"{IDX_STOCK_SUMMARY_URL}?date={params['date']}"),
+        raw_bytes=bytes(response.content),
+        endpoint=IDX_STOCK_SUMMARY_URL,
+        params=params,
+        retrieval_started_at_utc=started,
+        observed_available_at_utc=_utc_now(),
+        records_total=total,
+        records_filtered=filtered,
+        row_count=len(rows),
+        completeness_status="COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+    )
+
+
+def _number(value: object) -> float | None:
+    parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(parsed) or not np.isfinite(float(parsed)):
+        return None
+    return float(parsed)
+
+
+def _active_regular_values(payload: Mapping[str, object], session: pd.Timestamp) -> dict[str, float]:
+    rows = payload.get("data")
+    if not isinstance(rows, list):
+        raise ValueError("Stock Summary data is not a list")
+    result: dict[str, float] = {}
+    unresolved: list[str] = []
+    for raw in rows:
+        if not isinstance(raw, Mapping):
+            continue
+        ticker = normalise_ticker(raw.get("StockCode", ""))
+        if not ticker or len(ticker) != 4:
+            continue
+        day = pd.to_datetime(raw.get("Date"), errors="coerce")
+        if pd.isna(day) or pd.Timestamp(day).tz_localize(None).normalize() != session:
+            raise ValueError(f"Stock Summary date mismatch for {ticker}")
+        volume = _number(raw.get("Volume"))
+        frequency = _number(raw.get("Frequency"))
+        regular_value = _number(raw.get("Value"))
+        if volume is None or frequency is None or volume < 0 or frequency < 0:
+            unresolved.append(ticker)
+            continue
+        if volume > 0 and frequency > 0:
+            if regular_value is None or regular_value < 0:
+                unresolved.append(ticker)
+                continue
+            result[ticker] = regular_value
+        elif not (volume == 0 and frequency == 0):
+            unresolved.append(ticker)
+    if unresolved:
+        raise RuntimeError(
+            f"bridge Stock Summary has unresolved regular-market state for {len(unresolved)} tickers; "
+            f"sample={sorted(unresolved)[:20]}"
+        )
+    if not result:
+        raise RuntimeError("bridge Stock Summary has no ACTIVE regular-market rows")
+    return result
+
+
+def _raw_price_row(path: Path, session: pd.Timestamp) -> pd.Series | None:
+    if not path.is_file():
+        return None
+    try:
+        frame = pd.read_parquet(path)
+    except Exception:
+        return None
+    if "date" not in frame.columns:
+        return None
+    dates = pd.to_datetime(frame["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    selected = frame.loc[dates.eq(session)]
+    return None if selected.empty else selected.iloc[-1]
+
+
+def _row_evidence_sha256(ticker: str, session: pd.Timestamp, row: pd.Series) -> str:
+    fields = {}
+    for column in ("raw_open", "raw_high", "raw_low", "raw_close", "raw_volume"):
+        value = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
+        fields[column] = None if pd.isna(value) else float(value)
+    payload = json.dumps(
+        {"ticker": ticker, "session_date": session.date().isoformat(), **fields},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _price_payload(
+    ticker: str,
+    row: pd.Series,
+    session: pd.Timestamp,
+    regular_value: float,
+    *,
+    source: str,
+    source_ref: str,
+    source_sha256: str | None = None,
+) -> dict[str, object]:
+    required = ("raw_open", "raw_high", "raw_low", "raw_close", "raw_volume")
+    values: dict[str, float] = {}
+    for column in required:
+        parsed = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
+        if pd.isna(parsed) or not np.isfinite(float(parsed)):
+            raise RuntimeError(f"price row for {ticker} missing/invalid {column}")
+        values[column] = float(parsed)
+    if any(values[column] <= 0 for column in required[:-1]):
+        raise RuntimeError(f"price row for {ticker} has non-positive OHLC")
+    if values["raw_volume"] < 0:
+        raise RuntimeError(f"price row for {ticker} has negative volume")
+    if values["raw_low"] > min(values["raw_open"], values["raw_close"]):
+        raise RuntimeError(f"price row for {ticker} low is above open/close")
+    if values["raw_high"] < max(values["raw_open"], values["raw_close"]):
+        raise RuntimeError(f"price row for {ticker} high is below open/close")
+    return {
+        "ticker": ticker,
+        "session_date": session,
+        "high": values["raw_high"],
+        "low": values["raw_low"],
+        "close": values["raw_close"],
+        "volume": values["raw_volume"],
+        "regular_market_value": float(regular_value),
+        "source": source,
+        "source_ref": source_ref,
+        "source_sha256": source_sha256 or _row_evidence_sha256(ticker, session, row),
+    }
+
+
+def _download_price_batches(
+    tickers: list[str],
+    start: str,
+    end: str,
+    *,
+    batch_size: int,
+) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
+    payload: dict[str, pd.DataFrame] = {}
+    errors: dict[str, str] = {}
+    for offset in range(0, len(tickers), batch_size):
+        batch = tickers[offset : offset + batch_size]
+        try:
+            result = download_daily(batch, start, end)
+        except Exception as error:
+            for ticker in batch:
+                errors[ticker] = f"{type(error).__name__}: {error}"
+            continue
+        for ticker in batch:
+            payload[ticker] = result.get(ticker, pd.DataFrame())
+    return payload, errors
+
+
 def _normalise_market(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFrame:
     required = {"ticker", "session_date", "high", "low", "close", "volume", "regular_market_value"}
     missing = required - set(frame.columns)
@@ -190,7 +439,7 @@ def _normalise_market(frame: pd.DataFrame, session: pd.Timestamp) -> pd.DataFram
         raise RuntimeError(f"bridge market context contains outcome-like columns: {sorted(forbidden)}")
     out = frame.copy()
     out["ticker"] = out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    out["session_date"] = pd.to_datetime(out["session_date"], errors="coerce").dt.normalize()
+    out["session_date"] = pd.to_datetime(out["session_date"], errors="coerce").dt.tz_localize(None).dt.normalize()
     if out["session_date"].isna().any() or not out["session_date"].eq(session).all():
         raise RuntimeError("bridge market context session mismatch")
     if out["ticker"].eq("").any() or out.duplicated(["ticker", "session_date"]).any():
@@ -243,7 +492,7 @@ def _manifest(
     raw_path: Path,
     market_path: Path,
     flow_path: Path,
-    stock_capture: Any,
+    stock_capture: _StockSummaryCapture,
     flow_meta: Mapping[str, Any],
     market: pd.DataFrame,
     local_price_hits: int,
@@ -322,18 +571,17 @@ def verify_context_bridge_session(
         if manifest.get("session_date") != session.date().isoformat():
             return False
         calendar = Path(calendar_path).expanduser().resolve()
-        if sha256_file(calendar) != calendar_sha256.lower():
+        if not calendar.is_file() or sha256_file(calendar) != calendar_sha256.lower():
             return False
         if str(manifest.get("calendar_path")) != str(calendar) or manifest.get("calendar_sha256") != calendar_sha256.lower():
             return False
         if session not in set(_read_calendar(calendar)):
             return False
-        expected_hashes = (
+        for path, key in (
             (raw_path, "source_raw_sha256"),
             (market_path, "market_context_sha256"),
             (flow_path, "foreign_flow_sha256"),
-        )
-        for path, key in expected_hashes:
+        ):
             if manifest.get(key) != sha256_file(path):
                 return False
         market = _normalise_market(pd.read_parquet(market_path), session)
@@ -346,6 +594,9 @@ def verify_context_bridge_session(
         if not isinstance(source, Mapping) or source.get("completeness_status") != "COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE":
             return False
         if int(source.get("records_total", -1)) != len(flow):
+            return False
+        raw_payload = json.loads(raw_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_payload, Mapping) or int(raw_payload.get("recordsTotal", -1)) != len(flow):
             return False
         return True
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, ImportError):
@@ -402,7 +653,7 @@ def capture_context_bridge_session(
         raise ValueError("batch_size must be positive")
     session = _date(session_date)
     calendar = Path(calendar_path).expanduser().resolve()
-    if sha256_file(calendar) != calendar_sha256.lower():
+    if not calendar.is_file() or sha256_file(calendar) != calendar_sha256.lower():
         raise RuntimeError("bridge calendar hash mismatch")
     if session not in set(_read_calendar(calendar)):
         raise RuntimeError("bridge session is absent from official calendar")
@@ -425,49 +676,29 @@ def capture_context_bridge_session(
     directory = bridge_session_dir(runtime_root, session)
     if directory.exists() and any(directory.iterdir()):
         raise RuntimeError("incomplete/revision-conflicting bridge session already exists")
-    directory.mkdir(parents=True, exist_ok=True)
 
-    stock_result = fetch_stock_summary_snapshot(session, include_capture=True)
-    if len(stock_result) != 3:
-        raise RuntimeError("official Stock Summary raw capture metadata is missing")
-    stock_summary, _stock_meta, stock_capture = stock_result
-    raw_path = directory / RAW_FILENAME
-    if not _write_bytes_exclusive(raw_path, stock_capture.raw_bytes):
-        raise RuntimeError("unexpected bridge raw Stock Summary preexistence")
-
+    # Build and validate everything before creating final bridge files. A failed
+    # provider/price attempt therefore cannot strand a partial final session.
+    stock_capture = _fetch_stock_summary_capture(session)
+    raw_sha = hashlib.sha256(stock_capture.raw_bytes).hexdigest()
     flow, flow_meta = parse_stock_summary_foreign_flow(
         stock_capture.payload,
         session_date=session,
         knowledge_at_utc=stock_capture.observed_available_at_utc,
         source_ref=stock_capture.source_ref,
-        source_sha256=sha256_file(raw_path),
+        source_sha256=raw_sha,
     )
     flow = _normalise_flow(flow, session)
+    regular_values = _active_regular_values(stock_capture.payload, session)
+    active = sorted(regular_values)
 
-    summary = stock_summary.copy()
-    summary["ticker"] = summary["ticker"].astype(str).str.upper().str.strip()
-    summary["as_of_date"] = pd.to_datetime(summary["as_of_date"], errors="coerce").dt.normalize()
-    if summary["as_of_date"].isna().any() or not summary["as_of_date"].eq(session).all():
-        raise RuntimeError("Stock Summary normalized session mismatch")
-    volume = pd.to_numeric(summary["volume"], errors="coerce")
-    frequency = pd.to_numeric(summary["frequency"], errors="coerce")
-    regular_value = pd.to_numeric(summary["regular_value"], errors="coerce")
-    active_mask = volume.gt(0) & frequency.gt(0) & regular_value.notna() & regular_value.ge(0)
-    active = sorted(summary.loc[active_mask, "ticker"].dropna().astype(str).unique().tolist())
-    if not active:
-        raise RuntimeError("bridge Stock Summary has no ACTIVE regular-market rows")
-    regular_values = {
-        str(row.ticker): float(row.regular_value)
-        for row in summary.loc[active_mask, ["ticker", "regular_value"]].itertuples(index=False)
-    }
-
-    paths = runtime_paths(runtime_root)
+    raw_price_root = Path(runtime_root).expanduser().resolve() / "prices" / "raw"
     price_rows: dict[str, dict[str, Any]] = {}
     missing: list[str] = []
     local_hits = 0
     for ticker in active:
-        raw_price = paths.raw_price_root / f"{ticker}.parquet"
-        row = _raw_row(raw_price, session)
+        raw_price = raw_price_root / f"{ticker}.parquet"
+        row = _raw_price_row(raw_price, session)
         if row is None:
             missing.append(ticker)
             continue
@@ -485,18 +716,17 @@ def capture_context_bridge_session(
     downloaded_hits = 0
     download_errors: dict[str, str] = {}
     if missing:
-        payload, download_errors = _download_in_batches(
+        payload, download_errors = _download_price_batches(
             missing,
             session.date().isoformat(),
             (session + pd.Timedelta(days=1)).date().isoformat(),
-            downloader=download_daily,
             batch_size=batch_size,
         )
         for ticker in missing:
             frame = payload.get(ticker, pd.DataFrame())
             if frame.empty or "date" not in frame.columns:
                 continue
-            dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
+            dates = pd.to_datetime(frame["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
             selected = frame.loc[dates.eq(session)]
             if selected.empty:
                 continue
@@ -517,15 +747,19 @@ def capture_context_bridge_session(
             f"bridge ACTIVE tickers missing raw provider price: {missing_prices[:20]}; download_errors={detail}"
         )
 
-    market = pd.DataFrame(price_rows.values()).rename(columns={"date": "session_date"})
-    market = _normalise_market(market, session)
+    market = _normalise_market(pd.DataFrame(price_rows.values()), session)
+
+    directory.mkdir(parents=True, exist_ok=False)
+    raw_path = directory / RAW_FILENAME
     market_path = directory / MARKET_FILENAME
     flow_path = directory / FLOW_FILENAME
+    manifest_path = directory / MANIFEST_FILENAME
+    if not _write_bytes_exclusive(raw_path, stock_capture.raw_bytes):
+        raise RuntimeError("unexpected bridge raw Stock Summary preexistence")
     if not _write_parquet_exclusive(market, market_path):
         raise RuntimeError("unexpected bridge market artifact preexistence")
     if not _write_parquet_exclusive(flow, flow_path):
         raise RuntimeError("unexpected bridge Foreign Flow artifact preexistence")
-
     manifest = _manifest(
         session=session,
         calendar_path=calendar,
@@ -540,7 +774,6 @@ def capture_context_bridge_session(
         downloaded_price_hits=downloaded_hits,
         download_batch_upper_bound=math.ceil(len(missing) / batch_size) if missing else 0,
     )
-    manifest_path = directory / MANIFEST_FILENAME
     if not _write_json_exclusive(manifest_path, manifest):
         raise RuntimeError("unexpected bridge manifest preexistence")
     if not verify_context_bridge_session(
