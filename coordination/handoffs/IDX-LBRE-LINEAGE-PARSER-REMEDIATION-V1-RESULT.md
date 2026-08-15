@@ -87,4 +87,4 @@ Independent review should decide whether the residual ambiguity is acceptable
 for a separate monthly-history acquisition contract. This task does not start
 that work automatically.
 
-head_commit: `6b8074a`
+head_commit: `32b3f5897f6f908bfe7505eef60cec709b5fb643`
