@@ -42,6 +42,11 @@ files_changed:
 - The local runtime calendar is currently sparse (2026-08-10..12). The
   producer therefore refuses to run until the existing official calendar sync
   provides a complete path/SHA matching the target session manifest.
+- Read-only audit confirms 2026-08-10 is incomplete (962 rows versus
+  `recordsTotal=963` and no raw/Foreign Flow sidecar), while 2026-08-11/12
+  are verified but must remain immutable. The pinned historical market panel
+  ends 2026-07-31 and the separate 2026-08-03..11 calendar extension is
+  blocked. No producer run was attempted.
 - The unrelated storage test failure was not changed.
 
 ## Validation

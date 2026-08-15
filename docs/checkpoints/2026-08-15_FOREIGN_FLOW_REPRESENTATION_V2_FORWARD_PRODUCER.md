@@ -60,6 +60,18 @@ The current local runtime calendar contains only 2026-08-10 through
 2026-08-12, so a real live run remains correctly blocked until the existing
 calendar-sync/capture path supplies the complete official extension.
 
+Read-only runtime audit found the same boundary independently: 2026-08-10 is
+incomplete (`rows=962` against `recordsTotal=963`) and has no canonical raw
+JSON/Foreign Flow sidecar; 2026-08-11 and 2026-08-12 have verified raw
+Foreign Flow sidecars but no V2 representation pair. The pinned historical
+market panel ends at 2026-07-31, while the separately observed extension
+calendar for 2026-08-03 through 2026-08-11 is itself marked blocked. Therefore
+the producer must not compress 2026-08-03 through 2026-08-07 out of the
+calendar or use 2026-08-11/12 as synthetic repairs. The first genuinely new
+target remains blocked until a versioned, complete official calendar and
+market/flow context extension are supplied by the existing capture/calendar
+owner.
+
 ## Artifact contract
 
 For a target session, the output is written in that canonical session folder:
@@ -111,4 +123,5 @@ price-state layer, or O2 modification occurred.
 
 Next action is independent review of the producer contract and the existing
 calendar-sync integration before using it for a genuinely new live EOD
-session.
+session. The runtime readiness verdict is currently `NO_GO_CURRENT_CONTEXT`
+for the local artifacts, not a rejection of the frozen V2 feature formulas.
