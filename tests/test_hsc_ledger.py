@@ -31,14 +31,16 @@ def _event(
     supersedes: str | None = None,
     concentration_pct: float | None = 97.3,
     day: int = 2,
+    hour: int = 18,
+    ownership_as_of_date: date = date(2026, 3, 31),
     methodology: HSCMethodologyVersion = HSCMethodologyVersion.INITIAL_2026,
 ) -> HSCEvent:
     return HSCEvent(
         event_id=f"event-{index}",
         ticker=ticker,
         status=status,
-        ownership_as_of_date=date(2026, 3, 31),
-        published_at=datetime(2026, 4, day, 18, 0, tzinfo=TZ),
+        ownership_as_of_date=ownership_as_of_date,
+        published_at=datetime(2026, 4, day, hour, 0, tzinfo=TZ),
         concentration_pct=concentration_pct,
         methodology_version=methodology,
         idx_announcement_no=f"Peng-{index:05d}-HSC/BEI.WAS/04-2026",
@@ -160,6 +162,38 @@ def test_naive_knowledge_timestamp_is_rejected() -> None:
             source_sha256="a" * 64,
             metadata_source_sha256="b" * 64,
         )
+
+
+def test_ownership_as_of_cannot_be_after_publication_date() -> None:
+    with pytest.raises(ValueError, match="ownership_as_of_date cannot be after"):
+        _event(1, ownership_as_of_date=date(2026, 4, 3), day=2)
+
+
+def test_correction_must_be_strictly_later_than_superseded_event() -> None:
+    original = _event(1, day=2, hour=18)
+    correction_same_time = _event(
+        2,
+        kind=HSCRevisionKind.CORRECTION,
+        supersedes="event-1",
+        day=2,
+        hour=18,
+    )
+    with pytest.raises(ValueError, match="correction must be published after"):
+        replay_hsc_events([original, correction_same_time])
+
+
+def test_removal_must_be_after_active_state_begins() -> None:
+    original = _event(1, day=2, hour=18)
+    removal_same_time = _event(
+        2,
+        kind=HSCRevisionKind.REMOVAL,
+        status=HSCStatus.REMOVED,
+        concentration_pct=None,
+        day=2,
+        hour=18,
+    )
+    with pytest.raises(ValueError, match="removal must be published after"):
+        replay_hsc_events([original, removal_same_time])
 
 
 def test_contract_does_not_infer_free_float_or_effective_supply() -> None:
