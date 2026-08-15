@@ -140,6 +140,13 @@ def test_out_of_range_rank_fails_closed() -> None:
     assert state.setup_label is SetupLabel.INDETERMINATE
 
 
+def test_outcome_columns_are_rejected_even_when_not_consumed() -> None:
+    row = _row()
+    row["binary_target"] = 1.0
+    with pytest.raises(ValueError, match="outcome-blind"):
+        classify_foreign_flow_setup(row)
+
+
 def test_threshold_contract_rejects_invalid_ordering() -> None:
     with pytest.raises(ValueError, match="historical abnormality"):
         SetupThresholds(
