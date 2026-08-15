@@ -714,6 +714,19 @@ failure out of 73 collected; `git diff --check` passed. Repository Hygiene,
 providers/network, scheduler, O2/counter, models, outcomes, and trade
 semantics remain out of scope.
 
+## Current status correction — 2026-08-16 — Joint Setup Readiness V1.1 generic prospective runner
+
+Joint Setup Readiness V1.1 generic prospective runner is now `ACTIVE` by
+`Codex/Joint-Setup-Readiness-Generic-Runner` on branch
+`integration/joint-setup-readiness-v1-1-generic-runner-v1`, based on accepted
+runtime parent
+`integration/joint-setup-readiness-v1-1-forward-v1@8ede786622713b03127fbf856abe2d7d2bd5c03d`.
+Scope is limited to a session-parametric, outcome-blind adapter and compatibility
+replay for the already accepted 2026-08-12 -> 2026-08-13 pair. The frozen V1.1
+contract, parent state formulas, domain semantics, and fingerprints remain
+unchanged. No new prospective session, provider/network, scheduler, O2/counter,
+model, outcome, trade, or Repository Hygiene work is authorized.
+
 ## Current status correction — 2026-08-16 — LBRE Monthly Free-Float History V1 result
 
 LBRE Monthly Free-Float History V1 is now `REVIEW` by
