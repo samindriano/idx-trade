@@ -1,0 +1,65 @@
+{
+  "schema_version": "v4_ksei_ca_history_census_protocol_v1",
+  "status": "PREREGISTERED_BEFORE_610_TICKER_PROVIDER_RUN",
+  "outcome_blind": true,
+  "parent": {
+    "continuity_gate_branch": "data/idx-v4-corporate-action-continuity-gate-v1",
+    "continuity_gate_head": "7e03cdf7023590ea5b7881a61b4e0a958f147d25",
+    "blocked_continuity_ledger_sha256": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "prior_event_evidence_sha256": "4c9973781a3c254ad5c82d66d7f6f27afc3bc977681015236693b96d7be638b7"
+  },
+  "population": {
+    "source": "unique ticker identities in the exact blocked continuity ledger",
+    "expected_tickers": 610,
+    "frozen_validation_dates": 600,
+    "no_population_substitution": true
+  },
+  "provider": {
+    "name": "KSEI_PUBLIC_REGISTERED_SECURITY_HISTORY",
+    "url_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}?setLocale=en-US",
+    "transport": "curl_cffi chrome110",
+    "max_attempts_per_ticker": 3,
+    "backoff_seconds": [1.0, 3.0],
+    "default_timeout_seconds": 60.0,
+    "default_inter_ticker_sleep_seconds": 0.2,
+    "source_substitution": false,
+    "raw_capture_append_only": true
+  },
+  "coverage_contract": {
+    "ticker_identity_must_match_short_code": true,
+    "exactly_one_static_corporate_action_table_required": true,
+    "required_headers": [
+      "Type of CA",
+      "Ratio",
+      "Cum Date",
+      "Record Date",
+      "Distribution Date",
+      "Status"
+    ],
+    "successful_structural_parse_certifies_ticker_history_coverage": true,
+    "unknown_active_ca_type_is_not_dropped": true
+  },
+  "continuity_policy": {
+    "effective_date_inference": false,
+    "ticker_period_quarantine": true,
+    "halo_calendar_days": 60,
+    "cash_dividend_is_not_blocker": true,
+    "proxy_voting_is_not_blocker": true,
+    "cancelled_ca_is_not_basis_change": true,
+    "active_mechanical_ca_is_blocker_for_entire_v4_period": true,
+    "active_unknown_ca_is_blocker_for_entire_v4_period": true,
+    "prior_official_candidate_missing_from_complete_ksei_history_is_coverage_conflict": true,
+    "resolved_state": "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
+    "per_date_required_rate": 0.9
+  },
+  "forbidden": [
+    "R5_or_R10_materialization",
+    "target_rank_materialization",
+    "model_fit",
+    "prediction",
+    "IC_or_Top30_or_raw_return_performance",
+    "protected_or_fresh_forward_outcome_access",
+    "V4_target_or_evaluator_contract_change",
+    "post_result_continuity_policy_tuning"
+  ]
+}
