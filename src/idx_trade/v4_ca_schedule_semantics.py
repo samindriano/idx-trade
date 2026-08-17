@@ -1,6 +1,6 @@
 """Exact official-KSEI schedule semantics for V4 CA continuity.
 
-Only explicit regular-market basis transition dates are admitted.  Record and
+Only explicit regular-market basis transition dates are admitted. Record and
 distribution dates are retained for deterministic linkage but are never used as
 fallback transition dates.
 """
@@ -13,32 +13,16 @@ from typing import Any
 
 
 MONTHS = {
-    "januari": 1,
-    "februari": 2,
-    "maret": 3,
-    "april": 4,
-    "mei": 5,
-    "juni": 6,
-    "juli": 7,
-    "agustus": 8,
-    "september": 9,
-    "oktober": 10,
-    "november": 11,
-    "desember": 12,
-    "january": 1,
-    "february": 2,
-    "march": 3,
-    "may": 5,
-    "june": 6,
-    "july": 7,
-    "august": 8,
-    "september": 9,
-    "october": 10,
-    "november": 11,
-    "december": 12,
+    "januari": 1, "februari": 2, "maret": 3, "april": 4, "mei": 5,
+    "juni": 6, "juli": 7, "agustus": 8, "september": 9, "oktober": 10,
+    "november": 11, "desember": 12, "january": 1, "february": 2,
+    "march": 3, "may": 5, "june": 6, "july": 7, "august": 8,
+    "october": 10, "december": 12,
 }
 MONTH_PATTERN = "|".join(sorted(MONTHS, key=len, reverse=True))
-DATE_PATTERN = rf"(\d{{1,2}})\s+({MONTH_PATTERN})\s+(\d{{4}})"
+DAY_FIRST = rf"\d{{1,2}}\s+(?:{MONTH_PATTERN})\s+\d{{4}}"
+MONTH_FIRST = rf"(?:{MONTH_PATTERN})\s+\d{{1,2}}\s*,?\s+\d{{4}}"
+DATE_ANY = rf"(?:{DAY_FIRST}|{MONTH_FIRST})"
 
 
 @dataclass(frozen=True)
@@ -63,12 +47,24 @@ def clean(value: Any) -> str:
 def date_iso(value: str | None) -> str | None:
     if not value:
         return None
-    match = re.search(DATE_PATTERN, value, flags=re.IGNORECASE)
-    if not match:
-        return None
-    day = int(match.group(1))
-    month = MONTHS.get(match.group(2).casefold())
-    year = int(match.group(3))
+    text = str(value)
+    match = re.search(
+        rf"(\d{{1,2}})\s+({MONTH_PATTERN})\s+(\d{{4}})",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        day, month_text, year = int(match.group(1)), match.group(2), int(match.group(3))
+    else:
+        match = re.search(
+            rf"({MONTH_PATTERN})\s+(\d{{1,2}})\s*,?\s+(\d{{4}})",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            return None
+        month_text, day, year = match.group(1), int(match.group(2)), int(match.group(3))
+    month = MONTHS.get(month_text.casefold())
     if month is None:
         return None
     return f"{year:04d}-{month:02d}-{day:02d}"
@@ -76,14 +72,11 @@ def date_iso(value: str | None) -> str | None:
 
 def _date_after(pattern: str, text: str) -> str | None:
     match = re.search(
-        rf"{pattern}.{{0,160}}?({DATE_PATTERN})",
+        rf"{pattern}.{{0,180}}?({DATE_ANY})",
         text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    if not match:
-        return None
-    # The outer capture contains the full date; nested captures follow it.
-    return date_iso(match.group(1))
+    return date_iso(match.group(1)) if match else None
 
 
 def schedule_family(subject: str | None) -> str:
@@ -108,11 +101,10 @@ def schedule_family(subject: str | None) -> str:
 
 
 def _ticker_from_text(text: str, subject: str | None) -> str | None:
-    patterns = [
+    for pattern in (
         r"Kode\s+dan\s+Nama\s+Saham\s*:?\s*([A-Z0-9]{4})\b",
         r"Shares?\s+Code\s+and\s+Name\s*:?\s*([A-Z0-9]{4})\b",
-    ]
-    for pattern in patterns:
+    ):
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
             return match.group(1).upper()
@@ -125,29 +117,24 @@ def _ticker_from_text(text: str, subject: str | None) -> str | None:
 
 def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
     normalized = str(text or "").replace("\r", "")
-    compact = clean(normalized)
     diagnostics: list[str] = []
 
-    ref = None
     ref_match = re.search(
         r"(?:Nomor|No\.?|Number)\s*:\s*(KSEI-[0-9]+/[A-Z]+/[0-9]+)",
         normalized,
         flags=re.IGNORECASE,
     )
-    if ref_match:
-        ref = ref_match.group(1).upper()
-    else:
+    reference = ref_match.group(1).upper() if ref_match else None
+    if reference is None:
         diagnostics.append("MISSING_KSEI_REFERENCE")
 
-    subject = None
     subject_match = re.search(
         r"(?:Perihal|Re)\s*:\s*(.+?)(?=\n\s*\n|\n\s*(?:Berdasarkan|Based on|Dengan hormat|Dear)\b|$)",
         normalized,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    if subject_match:
-        subject = clean(subject_match.group(1))
-    else:
+    subject = clean(subject_match.group(1)) if subject_match else None
+    if subject is None:
         diagnostics.append("MISSING_SUBJECT")
 
     ticker = _ticker_from_text(normalized, subject)
@@ -156,18 +143,17 @@ def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
 
     document_date = None
     if ref_match:
-        tail = normalized[ref_match.end() : ref_match.end() + 180]
-        document_date = date_iso(tail)
+        document_date = date_iso(normalized[ref_match.end() : ref_match.end() + 180])
     if document_date is None:
         jakarta = re.search(
-            rf"(?:Jakarta|Jakarta,)\s*,?\s*({DATE_PATTERN})",
+            rf"Jakarta\s*,?\s*({DATE_ANY})",
             normalized,
             flags=re.IGNORECASE,
         )
         document_date = date_iso(jakarta.group(1)) if jakarta else None
 
     record_date = _date_after(
-        r"(?:Tanggal\s+(?:Pencatatan|Penentuan)[^\n]{0,100}(?:Recording\s+Date)?|Recording\s+Date)",
+        r"(?:Tanggal\s+(?:Pencatatan|Penentuan)[^\n]{0,110}(?:Recording\s+Date)?|Recording\s+Date)",
         normalized,
     )
     distribution_date = _date_after(
@@ -175,43 +161,37 @@ def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
         normalized,
     )
 
-    # Entitlement-style CA: the regular/negotiated Ex Date is the exact point
-    # at which regular-market prices cease carrying the entitlement.
     ex_patterns = [
-        r"(?:Tanggal\s+)?(?:perdagangan\s+bursa\s+)?(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date)[^\n]{0,140}(?:Pasar\s+Reguler|Regular\s+Market)[^\n]{0,80}",
-        r"(?:Bonus\s+Shares?|Dividen\s+Saham|Share\s+Dividend)[^\n]{0,80}Ex(?:-Date|\s+Date)?[^\n]{0,120}(?:Regular\s+Market|Pasar\s+Reguler)[^\n]{0,80}",
+        r"(?:Tanggal\s+)?(?:perdagangan\s+bursa\s+)?(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date)[^\n]{0,150}(?:Pasar\s+Reguler|Regular\s+Market)[^\n]{0,90}",
+        r"(?:Bonus\s+Shares?|Dividen\s+Saham|Share\s+Dividend)[^\n]{0,90}Ex(?:-Date|\s+Date)?[^\n]{0,130}(?:Regular\s+Market|Pasar\s+Reguler)[^\n]{0,90}",
     ]
-    regular_ex = None
-    for pattern in ex_patterns:
-        regular_ex = _date_after(pattern, normalized)
-        if regular_ex:
-            break
+    regular_ex = next(
+        (value for pattern in ex_patterns if (value := _date_after(pattern, normalized))),
+        None,
+    )
 
-    # Split/reverse split: regular-market price basis changes on the first
-    # trading date using the new nominal/share basis, not on record/distribution.
     new_basis_patterns = [
-        r"Mulai\s+perdagangan\s+saham\s+dengan\s+Nilai\s+Nominal\s+Baru[^\n]{0,180}(?:Pasar\s+Reguler|Pasar\s+Negosiasi)[^\n]{0,80}",
-        r"(?:First|Start)\s+(?:Trading|trading)\s+of\s+Shares?\s+with\s+(?:the\s+)?New\s+Nominal\s+Value[^\n]{0,180}(?:Regular\s+Market|Negotiated\s+Market)[^\n]{0,80}",
+        r"Mulai\s+perdagangan\s+saham\s+dengan\s+Nilai\s+Nominal\s+Baru[^\n]{0,190}(?:Pasar\s+Reguler|Pasar\s+Negosiasi)[^\n]{0,90}",
+        r"(?:First|Start)\s+(?:Trading|trading)\s+of\s+Shares?\s+with\s+(?:the\s+)?New\s+Nominal\s+Value[^\n]{0,190}(?:Regular\s+Market|Negotiated\s+Market)[^\n]{0,90}",
     ]
-    first_new_basis = None
-    for pattern in new_basis_patterns:
-        first_new_basis = _date_after(pattern, normalized)
-        if first_new_basis:
-            break
+    first_new_basis = next(
+        (value for pattern in new_basis_patterns if (value := _date_after(pattern, normalized))),
+        None,
+    )
 
     if regular_ex and first_new_basis and regular_ex != first_new_basis:
         diagnostics.append("MULTIPLE_TRANSITION_SEMANTICS_CONFLICT")
-        transition = None
-        semantic = None
+        transition_date = None
+        transition_semantic = None
     elif regular_ex:
-        transition = regular_ex
-        semantic = "REGULAR_MARKET_EX_DATE"
+        transition_date = regular_ex
+        transition_semantic = "REGULAR_MARKET_EX_DATE"
     elif first_new_basis:
-        transition = first_new_basis
-        semantic = "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
+        transition_date = first_new_basis
+        transition_semantic = "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
     else:
-        transition = None
-        semantic = None
+        transition_date = None
+        transition_semantic = None
         diagnostics.append("NO_EXPLICIT_REGULAR_MARKET_TRANSITION")
 
     family = schedule_family(subject)
@@ -220,19 +200,19 @@ def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
 
     parse_status = (
         "PARSED_EXACT_TRANSITION"
-        if ref and ticker and subject and transition and semantic
+        if reference and ticker and subject and transition_date and transition_semantic
         else "UNRESOLVED"
     )
     return ParsedScheduleTransition(
         parse_status=parse_status,
-        ksei_reference=ref,
+        ksei_reference=reference,
         ticker=ticker,
         subject=subject,
         event_family=family,
         document_date=document_date,
         record_date=record_date,
         distribution_date=distribution_date,
-        transition_date=transition,
-        transition_semantic=semantic,
+        transition_date=transition_date,
+        transition_semantic=transition_semantic,
         diagnostics=tuple(diagnostics),
     )
