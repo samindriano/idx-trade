@@ -60,9 +60,15 @@ def test_prelisting_row_is_removed_before_liquidity_and_market_context() -> None
     assert diagnostics.excluded_missing_security_master_rows == 0
     assert not ((features["ticker"] == "AAA") & (features["date"] == sessions[0])).any()
 
-    aaa_day19 = features[(features["ticker"] == "AAA") & (features["date"] == sessions[19])].iloc[0]
-    aaa_day20 = features[(features["ticker"] == "AAA") & (features["date"] == sessions[20])].iloc[0]
-    bbb_day19 = features[(features["ticker"] == "BBB") & (features["date"] == sessions[19])].iloc[0]
+    aaa_day19 = features[
+        (features["ticker"] == "AAA") & (features["date"] == sessions[19])
+    ].iloc[0]
+    aaa_day20 = features[
+        (features["ticker"] == "AAA") & (features["date"] == sessions[20])
+    ].iloc[0]
+    bbb_day19 = features[
+        (features["ticker"] == "BBB") & (features["date"] == sessions[19])
+    ].iloc[0]
 
     # AAA has only sessions 1..19 at day 19: 19 valid PIT observations, not 20.
     assert aaa_day19["liquidity_active_observations_60"] == 19
@@ -74,6 +80,25 @@ def test_prelisting_row_is_removed_before_liquidity_and_market_context() -> None
     assert bbb_day19["market_primary_liquid_count"] == 1.0
     assert aaa_day19["market_primary_liquid_count"] == 1.0
     assert aaa_day20["market_primary_liquid_count"] == 2.0
+
+
+def test_panel_listing_columns_cannot_override_authoritative_security_master() -> None:
+    sessions = pd.date_range("2024-01-02", periods=21, freq="B")
+    panel = make_panel("AAA", sessions, 2_000_000_000.0)
+    # Deliberately wrong fail-open panel metadata. It must be discarded.
+    panel["listed_from"] = sessions[0]
+    panel["listed_to"] = None
+    master = pd.DataFrame(
+        {
+            "ticker": ["AAA"],
+            "listed_from": [sessions[1]],
+            "listed_to": [None],
+        }
+    )
+    features, diagnostics = build_v4_control_feature_table(panel, sessions, master)
+    assert diagnostics.excluded_pre_listing_rows == 1
+    assert not (features["date"] == sessions[0]).any()
+    assert features["listed_from"].eq(sessions[1]).all()
 
 
 def test_missing_security_master_row_fails_closed_before_feature_history() -> None:
