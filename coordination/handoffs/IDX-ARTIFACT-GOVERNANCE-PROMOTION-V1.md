@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: d3f49a61ff51fe9075f3cfca12956a976219b8b2
 branch: codex/artifact-governance-v1
-head_commit: pending final promotion commit
+head_commit: 399b708275fe63ff6326cef2bf727626c926be91
 scope: actual Git promotion of accepted small 126-session data-gate artifacts
 files_changed: see ARTIFACT_PROMOTION_V1.csv and registry promoted_artifacts
 findings: 13 small artifacts promoted; 123650 bytes; exact hashes verified; source manifest scrubbed behind a pointer; large/raw/model/runtime/outcome payloads retained external
