@@ -1,0 +1,80 @@
+{
+  "schema_version": "v4_ca_event_window_semantics_v1",
+  "status": "FROZEN_BEFORE_EVENT_WINDOW_SUPPORT_RUN",
+  "outcome_blind": true,
+  "parent": {
+    "ksei_census_branch_head": "aef9037240849a3bba0b16838f3827e389ce9711",
+    "blocked_continuity_ledger_sha256": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "prior_event_evidence_sha256": "4c9973781a3c254ad5c82d66d7f6f27afc3bc977681015236693b96d7be638b7",
+    "ksei_census_manifest_sha256": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25",
+    "ksei_census_summary_sha256": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422",
+    "ksei_ticker_coverage_sha256": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70",
+    "ksei_history_sha256": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d"
+  },
+  "frozen_population": {
+    "tickers": 610,
+    "validation_dates": 600,
+    "horizons": [5, 10],
+    "continuity_gate_rate": 0.9
+  },
+  "event_semantics": {
+    "non_blocking_source_types": [
+      "Cash Dividend",
+      "Proxy Voting"
+    ],
+    "static_cum_exact_source_types": [
+      "Right Distribution",
+      "Stock Dividend",
+      "Mixed Dividend"
+    ],
+    "mixed_dividend_policy": {
+      "share_component_when_ratio_right_security_equals_ticker": "MECHANICAL_ENTITLEMENT",
+      "cash_component_when_ratio_right_security_is_currency": "NON_BLOCKING_PRICE_RETURN_TARGET",
+      "otherwise": "SCHEDULE_REQUIRED_OR_UNKNOWN"
+    },
+    "mandatory_conversion_policy": "EXACT_OFFICIAL_SCHEDULE_REQUIRED",
+    "voluntary_conversion_policy": "EXACT_OFFICIAL_SCHEDULE_REQUIRED",
+    "unknown_source_type_policy": "EXACT_OFFICIAL_SCHEDULE_REQUIRED",
+    "cancelled_event_policy": "NON_BLOCKING"
+  },
+  "static_cum_rule": {
+    "precondition": "coverage-certified KSEI row; active; mechanically relevant; source-native cum_date present and equal to an official exchange session",
+    "market_basis_transition": "first official exchange session strictly after cum_date",
+    "crossing_rule": "unresolved iff entry_date < market_basis_transition <= terminal_date",
+    "entry_on_transition_is_same_basis": true,
+    "no_calendar_day_inference": true
+  },
+  "schedule_evidence_rule": {
+    "accepted_transition_semantics": [
+      "REGULAR_MARKET_EX_DATE",
+      "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
+    ],
+    "source": "official public KSEI corporate-action schedule document only",
+    "identity_requirements": [
+      "ticker exact",
+      "event family compatible",
+      "official KSEI reference",
+      "source SHA-256",
+      "explicit transition date"
+    ],
+    "conflicting_exact_transition_dates": "FAIL_CLOSED",
+    "missing_schedule_evidence": "FAIL_CLOSED"
+  },
+  "coverage_policy": {
+    "ksei_history_not_certified": "PRICE_CONTINUITY_UNRESOLVED_COVERAGE_FOR_ALL_WINDOWS",
+    "prior_official_candidate_not_represented": "PRICE_CONTINUITY_UNRESOLVED_COVERAGE_FOR_ALL_WINDOWS",
+    "certified_no_mechanical_event": "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
+    "event_with_exact_transition": "WINDOW_SPECIFIC",
+    "event_without_exact_transition": "UNRESOLVED_ONLY_UNTIL_SCHEDULE_EVIDENCE_IS_ADMITTED; no synthetic transition"
+  },
+  "hard_prohibitions": [
+    "R5/R10 materialization",
+    "target-rank materialization",
+    "model fit",
+    "predictions",
+    "IC/Top30/spread/bootstrap performance",
+    "protected or fresh-forward outcomes",
+    "price-derived corporate-action inference",
+    "post-result threshold or semantics tuning"
+  ]
+}
