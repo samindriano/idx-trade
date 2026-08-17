@@ -19,7 +19,9 @@ NO_FUTURE_SESSION = "NO_FUTURE_SESSION"
 MARKET_ENTRY_UNAVAILABLE = "MARKET_ENTRY_UNAVAILABLE"
 TARGET_DATA_UNOBSERVABLE = "TARGET_DATA_UNOBSERVABLE"
 PRICE_CONTINUITY_UNRESOLVED = "PRICE_CONTINUITY_UNRESOLVED"
-TRADING_MECHANISM_REFERENCE_UNRESOLVED = "TRADING_MECHANISM_REFERENCE_UNRESOLVED"
+TRADING_MECHANISM_REFERENCE_UNRESOLVED = (
+    "TRADING_MECHANISM_REFERENCE_UNRESOLVED"
+)
 
 ACTIVE = "ACTIVE"
 NO_TRADE = "NO_TRADE"
@@ -31,10 +33,12 @@ MARKET_STATES = {ACTIVE, NO_TRADE, SUSPENDED, UNKNOWN, AMBIGUOUS}
 MECHANISM_UNRESOLVED_STATES = {UNKNOWN, AMBIGUOUS}
 ENTRY_UNAVAILABLE_STATES = {NO_TRADE, SUSPENDED}
 
-CONTINUITY_PASSING = {
-    "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
-    "RESOLVED_SAME_BASIS_ENDPOINTS",
-}
+# V4 generation 1 uses raw executable entry Open and raw terminal Close and does
+# not carry an adjusted endpoint-price layer. Therefore the only passing
+# continuity state is explicit evidence that no mechanical price-basis event
+# crosses the target interval. A future generation may add independently
+# admitted same-basis endpoint prices, but that is not authorized here.
+CONTINUITY_PASSING = {"RESOLVED_NO_MECHANICAL_DISCONTINUITY"}
 CONTINUITY_FAILING = {
     "PRICE_CONTINUITY_UNRESOLVED_COVERAGE",
     "PRICE_CONTINUITY_UNRESOLVED_EVENT",
@@ -70,7 +74,11 @@ def _normalize_ticker(series: pd.Series) -> pd.Series:
 
 
 def _normalize_date(series: pd.Series, *, name: str) -> pd.Series:
-    normalized = pd.to_datetime(series, errors="coerce").dt.tz_localize(None).dt.normalize()
+    normalized = (
+        pd.to_datetime(series, errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     if normalized.isna().any():
         raise ValueError(f"{name} contains invalid date")
     return normalized
@@ -119,15 +127,27 @@ def prepare_price_evidence(frame: pd.DataFrame) -> pd.DataFrame:
     if out.duplicated(["ticker", "date"]).any():
         raise ValueError("price evidence contains duplicate ticker/date identity")
 
-    out["market_state"] = out["market_state"].astype(str).str.upper().str.strip()
+    out["market_state"] = (
+        out["market_state"].astype(str).str.upper().str.strip()
+    )
     unknown_states = sorted(set(out["market_state"]) - MARKET_STATES)
     if unknown_states:
-        raise ValueError(f"price evidence contains unsupported market state: {unknown_states}")
+        raise ValueError(
+            f"price evidence contains unsupported market state: {unknown_states}"
+        )
 
-    out["open_admitted"] = _strict_boolean(out["open_admitted"], name="open_admitted")
-    out["close_admitted"] = _strict_boolean(out["close_admitted"], name="close_admitted")
-    out["accepted_open"] = pd.to_numeric(out["accepted_open"], errors="coerce").astype(float)
-    out["close"] = pd.to_numeric(out["close"], errors="coerce").astype(float)
+    out["open_admitted"] = _strict_boolean(
+        out["open_admitted"], name="open_admitted"
+    )
+    out["close_admitted"] = _strict_boolean(
+        out["close_admitted"], name="close_admitted"
+    )
+    out["accepted_open"] = pd.to_numeric(
+        out["accepted_open"], errors="coerce"
+    ).astype(float)
+    out["close"] = pd.to_numeric(
+        out["close"], errors="coerce"
+    ).astype(float)
 
     bad_open = out["open_admitted"] & (
         ~np.isfinite(out["accepted_open"]) | out["accepted_open"].le(0.0)
@@ -140,7 +160,9 @@ def prepare_price_evidence(frame: pd.DataFrame) -> pd.DataFrame:
     if bad_close.any():
         raise ValueError("admitted Close must be finite and positive")
 
-    return out.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
+    return out.sort_values(
+        ["date", "ticker"], kind="mergesort"
+    ).reset_index(drop=True)
 
 
 def prepare_continuity_evidence(frame: pd.DataFrame) -> pd.DataFrame:
@@ -155,32 +177,47 @@ def prepare_continuity_evidence(frame: pd.DataFrame) -> pd.DataFrame:
     }
     missing = required - set(frame.columns)
     if missing:
-        raise ValueError(f"continuity evidence missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"continuity evidence missing columns: {sorted(missing)}"
+        )
 
     out = frame.loc[:, sorted(required)].copy()
     out["ticker"] = _normalize_ticker(out["ticker"])
-    out["signal_date"] = _normalize_date(out["signal_date"], name="continuity evidence")
-    out["horizon"] = pd.to_numeric(out["horizon"], errors="raise").astype(int)
+    out["signal_date"] = _normalize_date(
+        out["signal_date"], name="continuity evidence"
+    )
+    out["horizon"] = pd.to_numeric(
+        out["horizon"], errors="raise"
+    ).astype(int)
     if not set(out["horizon"]).issubset(set(HORIZONS)):
         raise ValueError("continuity evidence horizon must be exactly 5 or 10")
 
     out["continuity_status"] = (
         out["continuity_status"].astype(str).str.upper().str.strip()
     )
-    unsupported = sorted(set(out["continuity_status"]) - CONTINUITY_STATES)
+    unsupported = sorted(
+        set(out["continuity_status"]) - CONTINUITY_STATES
+    )
     if unsupported:
         raise ValueError(f"unsupported continuity state: {unsupported}")
 
     for column in ("policy_id", "evidence_id", "evidence_sha256"):
         out[column] = out[column].fillna("").astype(str).str.strip()
         if out[column].eq("").any():
-            raise ValueError(f"continuity evidence missing provenance field: {column}")
+            raise ValueError(
+                f"continuity evidence missing provenance field: {column}"
+            )
     if (~out["evidence_sha256"].str.fullmatch(r"[0-9a-fA-F]{64}")).any():
-        raise ValueError("continuity evidence SHA must be a 64-character hex digest")
+        raise ValueError(
+            "continuity evidence SHA must be a 64-character hex digest"
+        )
     out["evidence_sha256"] = out["evidence_sha256"].str.lower()
 
     if out.duplicated(["ticker", "signal_date", "horizon"]).any():
-        raise ValueError("continuity evidence contains duplicate ticker/signal_date/horizon identity")
+        raise ValueError(
+            "continuity evidence contains duplicate ticker/signal_date/horizon "
+            "identity"
+        )
 
     return out.sort_values(
         ["signal_date", "ticker", "horizon"], kind="mergesort"
@@ -210,7 +247,9 @@ def build_geometry_from_accepted_open(
         raise ValueError("signal frame contains duplicate ticker/date identity")
 
     prices = prepare_price_evidence(price_evidence)
-    open_view = prices[["ticker", "date", "accepted_open", "open_admitted"]]
+    open_view = prices[
+        ["ticker", "date", "accepted_open", "open_admitted"]
+    ]
     merged = signal.merge(
         open_view,
         on=["ticker", "date"],
@@ -218,7 +257,11 @@ def build_geometry_from_accepted_open(
         validate="one_to_one",
     )
     admitted = merged["open_admitted"].fillna(False).astype(bool)
-    valid_open = admitted & np.isfinite(merged["accepted_open"]) & merged["accepted_open"].gt(0.0)
+    valid_open = (
+        admitted
+        & np.isfinite(merged["accepted_open"])
+        & merged["accepted_open"].gt(0.0)
+    )
     merged["open"] = merged["accepted_open"].where(valid_open, np.nan)
 
     geometry = build_session_geometry_features(merged)
@@ -253,10 +296,14 @@ def _materialize_horizon(
     signal_index: int,
     horizon: int,
     sessions: pd.DatetimeIndex,
-    price_lookup: dict[tuple[str, int], tuple[str, float, bool, float, bool]],
+    price_lookup: dict[
+        tuple[str, int], tuple[str, float, bool, float, bool]
+    ],
     continuity_lookup: dict[tuple[str, pd.Timestamp, int], str],
 ) -> HorizonResult:
-    available_state = TARGET_H5_AVAILABLE if horizon == 5 else TARGET_H10_AVAILABLE
+    available_state = (
+        TARGET_H5_AVAILABLE if horizon == 5 else TARGET_H10_AVAILABLE
+    )
     entry_index = int(signal_index) + 1
     terminal_index = int(signal_index) + int(horizon)
     if entry_index >= len(sessions) or terminal_index >= len(sessions):
@@ -308,11 +355,21 @@ def _materialize_horizon(
     continuity_resolved = continuity_status in CONTINUITY_PASSING
 
     mechanism_unresolved = (
-        (not entry_missing and entry_state in MECHANISM_UNRESOLVED_STATES)
-        or (not terminal_missing and terminal_state in MECHANISM_UNRESOLVED_STATES)
+        (
+            not entry_missing
+            and entry_state in MECHANISM_UNRESOLVED_STATES
+        )
+        or (
+            not terminal_missing
+            and terminal_state in MECHANISM_UNRESOLVED_STATES
+        )
     )
-    entry_unavailable = not entry_missing and entry_state in ENTRY_UNAVAILABLE_STATES
-    data_unobservable = not entry_open_observable or not terminal_close_observable
+    entry_unavailable = (
+        not entry_missing and entry_state in ENTRY_UNAVAILABLE_STATES
+    )
+    data_unobservable = (
+        not entry_open_observable or not terminal_close_observable
+    )
 
     # Frozen primary-state precedence. Component flags above remain available so
     # diagnostics do not lose secondary reasons.
@@ -365,7 +422,9 @@ def materialize_v4_target_ledger(
         raise ValueError(f"decision rows missing columns: {sorted(missing)}")
 
     sessions = _normalize_sessions(official_sessions)
-    index_by_date = {pd.Timestamp(day): idx for idx, day in enumerate(sessions)}
+    index_by_date = {
+        pd.Timestamp(day): idx for idx, day in enumerate(sessions)
+    }
 
     ledger = decision_rows.copy()
     ledger["ticker"] = _normalize_ticker(ledger["ticker"])
@@ -374,7 +433,9 @@ def materialize_v4_target_ledger(
         raise ValueError("decision rows contain duplicate ticker/date identity")
     ledger["signal_session_index"] = ledger["date"].map(index_by_date)
     if ledger["signal_session_index"].isna().any():
-        raise ValueError("decision row date is absent from official session calendar")
+        raise ValueError(
+            "decision row date is absent from official session calendar"
+        )
     ledger["signal_session_index"] = ledger["signal_session_index"].astype(int)
 
     prices = prepare_price_evidence(price_evidence)
@@ -389,8 +450,15 @@ def materialize_v4_target_ledger(
             float(close_value) if np.isfinite(close_value) else np.nan,
             bool(close_admitted),
         )
-        for ticker, index, market_state, open_value, open_admitted, close_value, close_admitted
-        in prices[
+        for (
+            ticker,
+            index,
+            market_state,
+            open_value,
+            open_admitted,
+            close_value,
+            close_admitted,
+        ) in prices[
             [
                 "ticker",
                 "session_index",
@@ -406,8 +474,7 @@ def materialize_v4_target_ledger(
     continuity = prepare_continuity_evidence(continuity_evidence)
     continuity_lookup = {
         (ticker, pd.Timestamp(signal_date), int(horizon)): str(status)
-        for ticker, signal_date, horizon, status
-        in continuity[
+        for ticker, signal_date, horizon, status in continuity[
             ["ticker", "signal_date", "horizon", "continuity_status"]
         ].itertuples(index=False)
     }
@@ -477,7 +544,8 @@ def materialize_v4_target_ledger(
     )
     ledger["realized_consensus"] = np.where(
         both_available,
-        0.5 * ledger["target_rank_h5"] + 0.5 * ledger["target_rank_h10"],
+        0.5 * ledger["target_rank_h5"]
+        + 0.5 * ledger["target_rank_h10"],
         np.nan,
     )
 
@@ -509,6 +577,10 @@ def materialize_v4_target_ledger(
     if len(ledger) != len(decision_rows):
         raise RuntimeError("target materialization changed decision-row count")
     if ledger.duplicated(["ticker", "date"]).any():
-        raise RuntimeError("target materialization produced duplicate decision identity")
+        raise RuntimeError(
+            "target materialization produced duplicate decision identity"
+        )
 
-    return ledger.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
+    return ledger.sort_values(
+        ["date", "ticker"], kind="mergesort"
+    ).reset_index(drop=True)
