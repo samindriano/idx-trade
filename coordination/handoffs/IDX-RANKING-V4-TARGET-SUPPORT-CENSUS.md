@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: `86981922c41354bc5629c5e6a327839667ccc6c6`
 branch: `research/idx-v4-target-support-census-v1`
-head_commit: pending final commit
+head_commit: `cc4d5d521ef5a614847bd4795fd9a07cb7d30b5d`
 scope: Outcome-blind V4 target/Open/continuity support census using accepted canonical artifacts and the verified 2,184-row Historical Open overlay.
 files_changed:
   - `scripts/run_v4_target_support_census.py`
