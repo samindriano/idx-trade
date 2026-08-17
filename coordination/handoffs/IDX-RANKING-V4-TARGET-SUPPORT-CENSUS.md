@@ -34,6 +34,8 @@ blocking_risks:
   - Accepted 1260 strict execution grade remains FAIL; this census does not promote it.
 validation_run:
   - `python -m py_compile scripts/run_v4_target_support_census.py` — PASS
+  - Full pytest — `39 passed, 1 failed`; sole failure is the unrelated pre-existing `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` expectation. No storage code changed.
+  - `git diff --check` — PASS
   - External manifest/input hash verification — PASS except the explicitly recorded missing pinned signal-contract path
   - Generated census manifest — outcome-blind, no labels/outcomes/model fit
 recommended_next_action: Stop for ChatGPT review. Do not materialize V4 targets or fit H5/H10 models without a new authorized decision.

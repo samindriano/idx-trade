@@ -157,5 +157,10 @@ External output root (immutable after creation):
 | `manifest.json` | `e8679e9fe6913bab1470b26ba5b90eb1ae827ecddaa8c36ca9acc9a54aebe6ff` |
 
 Validation: `python -m py_compile scripts/run_v4_target_support_census.py`
-passed; the generated manifest records `outcome_blind=true`,
+passed; `git diff --check` passed. Full pytest was `39 passed, 1 failed`.
+The sole failure is the unrelated pre-existing
+`tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+expectation, which expects one conflict while the current storage contract
+surfaces independent `raw_close` and `vendor_adj_close` conflicts. No storage
+code was changed. The generated manifest records `outcome_blind=true`,
 `model_fit=false`, and `labels_or_outcomes_loaded=false`.
