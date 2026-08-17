@@ -3,6 +3,7 @@
   "status": "V4_3_PREFIT_RUNTIME_CAPTURE_PROTOCOL_LOCKED_NO_TARGET_OR_MODEL_RUN",
   "outcome_blind": true,
   "scientific_config_mutable": false,
+  "required_repo_artifact_hash_semantics": "SHA-256 of canonical tracked bytes at Git HEAD, read via git show HEAD:<path>; working-tree bytes are recorded separately because checkout line-ending conversion is non-semantic",
   "required_repo_artifacts": {
     "config/ranking_v4_3_preregistration.json": "835da85549b1d6874cb2ab49a029b9f4358fdf28cb8379b3f9df105835b05849",
     "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
@@ -54,6 +55,8 @@
   },
   "capture_requirements": {
     "git_worktree_must_be_clean": true,
+    "verify_pinned_hashes_against_canonical_git_head_bytes": true,
+    "record_working_tree_hashes_separately": true,
     "record_git_head": true,
     "record_git_branch": true,
     "record_python_full_version": true,
