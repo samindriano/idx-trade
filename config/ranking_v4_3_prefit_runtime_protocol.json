@@ -1,0 +1,82 @@
+{
+  "schema_version": "ranking_v4_3_prefit_runtime_protocol_v1",
+  "status": "V4_3_PREFIT_RUNTIME_CAPTURE_PROTOCOL_LOCKED_NO_TARGET_OR_MODEL_RUN",
+  "outcome_blind": true,
+  "scientific_config_mutable": false,
+  "required_repo_artifacts": {
+    "config/ranking_v4_3_preregistration.json": "835da85549b1d6874cb2ab49a029b9f4358fdf28cb8379b3f9df105835b05849",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b"
+  },
+  "required_runtime_packages": [
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "scipy",
+    "scikit-learn",
+    "joblib",
+    "threadpoolctl"
+  ],
+  "learner": {
+    "class": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "loss": "squared_error",
+    "parameters": {
+      "learning_rate": 0.05,
+      "max_iter": 200,
+      "max_leaf_nodes": 31,
+      "max_depth": null,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "max_bins": 255,
+      "categorical_features": null,
+      "warm_start": false,
+      "early_stopping": false,
+      "random_state": 42
+    }
+  },
+  "imputers": {
+    "control": {
+      "class": "sklearn.impute.SimpleImputer",
+      "strategy": "median",
+      "add_indicator": true,
+      "keep_empty_features": true
+    },
+    "geometry": {
+      "class": "sklearn.impute.SimpleImputer",
+      "strategy": "median",
+      "add_indicator": false,
+      "keep_empty_features": true
+    }
+  },
+  "capture_requirements": {
+    "git_worktree_must_be_clean": true,
+    "record_git_head": true,
+    "record_git_branch": true,
+    "record_python_full_version": true,
+    "record_python_executable": true,
+    "record_platform": true,
+    "record_exact_package_versions": true,
+    "record_threadpool_libraries": true,
+    "record_relevant_thread_environment_variables": true,
+    "record_estimator_signature": true,
+    "record_effective_estimator_parameters": true,
+    "record_imputer_signatures_and_parameters": true,
+    "record_repo_file_hashes": true,
+    "refuse_overwrite": true
+  },
+  "forbidden_during_capture": [
+    "load R5 or R10",
+    "materialize target ranks",
+    "fit any estimator",
+    "generate predictions",
+    "compute IC or Top30 metrics",
+    "read protected or fresh-forward outcomes",
+    "call a market data provider",
+    "change package versions after target/performance access"
+  ],
+  "post_capture_rule": "The exact captured runtime manifest and exact execution-code hashes must be pinned before first historical V4 target/model execution. Any runtime change after target/performance access creates a new preregistered generation; it is not a V4 rescue."
+}
