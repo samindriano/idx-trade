@@ -57,7 +57,7 @@ recorded as a provenance warning; no alternate copy was substituted.
 | incremental overlay Open support | 2,184 |
 | final Open support | 940,323 |
 
-Final Open support is 95.6413% of the 981,940-row decision population. The
+Final Open support is 95.7618% of the 981,940-row decision population. The
 canonical signal panel was not rewritten.
 
 ## Target and continuity support
