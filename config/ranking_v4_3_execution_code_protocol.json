@@ -1,0 +1,47 @@
+{
+  "schema_version": "ranking_v4_3_execution_code_protocol_v1",
+  "status": "V4_3_EXECUTION_CODE_FREEZE_PENDING_LOCAL_SYNTHETIC_VALIDATION",
+  "outcome_blind": true,
+  "historical_target_access_authorized": false,
+  "runtime_manifest": {
+    "path": "docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json",
+    "sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
+  },
+  "scientific_preregistration": {
+    "path": "config/ranking_v4_3_preregistration.json",
+    "canonical_git_sha256": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed"
+  },
+  "source_paths_to_freeze": [
+    "config/ranking_v4_3_target_execution_protocol.json",
+    "config/ranking_v4_3_pit_feature_protocol.json",
+    "config/ranking_v4_3_execution_code_protocol.json",
+    "src/idx_trade/ranking_v4_3_preregistration.py",
+    "src/idx_trade/ranking_v4_3_target_execution.py",
+    "src/idx_trade/ranking_v4_3_features.py",
+    "src/idx_trade/ranking_v4_3_model_eval.py",
+    "scripts/run_v4_3_pit_support_refresh.py",
+    "tests/test_ranking_v4_3_preregistration.py",
+    "tests/test_ranking_v4_3_target_execution.py",
+    "tests/test_ranking_v4_3_features.py",
+    "tests/test_ranking_v4_3_model_eval.py"
+  ],
+  "synthetic_validation": {
+    "required_tests": [
+      "tests/test_ranking_v4_3_preregistration.py",
+      "tests/test_ranking_v4_3_prefit_runtime.py",
+      "tests/test_ranking_v4_3_target_execution.py",
+      "tests/test_ranking_v4_3_features.py",
+      "tests/test_ranking_v4_3_model_eval.py"
+    ],
+    "historical_panel_forbidden": true,
+    "R5_R10_forbidden": true,
+    "performance_metrics_on_historical_data_forbidden": true
+  },
+  "runtime_match_rule": "Python major/minor/micro and exact numpy/pandas/pyarrow/scipy/scikit-learn/joblib/threadpoolctl versions must equal the accepted prefit runtime manifest before first historical V4 target/model execution",
+  "post_freeze_rule": "after historical V4 target/performance access, any material code/runtime change creates a separately preregistered generation; bug fixes may not be used to rescue V4 results",
+  "remaining_pre_target_gates": [
+    "PIT-remediated support refresh preserves frozen 600 validation identities",
+    "market-wide forward-price corporate-action continuity evidence passes the frozen >=90% target-support gates",
+    "execution-code manifest captured and accepted"
+  ]
+}
