@@ -1,6 +1,7 @@
 # IDX-Trade Artifact Governance V1 — inventory and disposition
 
-Status: bounded audit complete; implementation is metadata-only.
+Status: bounded audit complete; accepted small-artifact promotion completed for
+the certified 126-session data-gate snapshot.
 
 Repository snapshot: `origin/main` at `2edee4baf1d1ef76b39ed3dde116ffd9231861b8`.
 The scan was performed on 2026-08-17 from the IDX-Trade repository and a
@@ -60,6 +61,38 @@ the project already has enough provenance metadata to curate Git-side pointers;
 they are not a reason to copy every run directory. The Foreign Flow historical
 root alone contains 1,288 `stock_summary.raw.json` session payloads (about 717
 MiB), which remain external.
+
+## Actual promotion — 2026-08-17
+
+The promotion used only the accepted 126-session checkpoint from
+`ed13ee0812e8db21d580e922f4e346873aa7b3cd`:
+`docs/checkpoints/2026-08-08_FULL_MARKET_126_SESSION_CERTIFIED.md`.
+The selected external snapshot was represented by the logical root key
+`IDX_TRADE_EXTERNAL_ROOT` and relative snapshot
+`idx-trade-data-gate-20260808u`. The older
+`idx-trade-data-gate-20260808p` snapshot was checked for duplicate hashes;
+exact duplicates were not copied a second time.
+
+Promoted Git paths (13 artifacts, 123,650 bytes) are recorded with source and
+promoted SHA-256 values in
+`docs/artifact_governance/ARTIFACT_PROMOTION_V1.csv` and in the registry's
+`promoted_artifacts` array:
+
+- six `PUSH_TO_GIT` canonical/reference tables under
+  `artifacts/canonical/idx_data_gate_126/`;
+- six `PUSH_SUMMARY_OR_MANIFEST_ONLY` summaries under the same directory;
+- one scrubbed certified-manifest pointer under `artifacts/manifests/`.
+
+The certified manifest itself remains external because it contains
+user-specific absolute paths. The Git pointer preserves its source SHA,
+certification checkpoint, window, gate result, and the external model-safe
+panel SHA without copying that panel. `tradability_anchors.csv` and
+`model_safe_price_panel_126_sessions.parquet` also remain external because
+they are large runtime/data payloads.
+
+All promoted exact-copy files have source SHA equal to the Git SHA. No raw
+provider payload, attachment, full OHLCV/Financial PIT/Foreign Flow panel,
+model binary, runtime state, credential, or outcome was promoted.
 
 ## What belongs in Git
 

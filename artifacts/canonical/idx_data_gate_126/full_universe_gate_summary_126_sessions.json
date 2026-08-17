@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "window_start": "2026-01-15",
+  "window_end": "2026-07-31",
+  "discovered_tickers_before_scope": 964,
+  "scope_excluded_tickers": [
+    "CNTX"
+  ],
+  "scope_excluded_count": 1,
+  "required_tickers": 963,
+  "passed_tickers": 963,
+  "failed_tickers": 0,
+  "identity_unresolved_tickers": [],
+  "price_required_tickers": 880,
+  "auto_price_semantics": true,
+  "price_semantics_verified_tickers": 889,
+  "unknown_sessions": 0,
+  "missing_active_prices": 0,
+  "quarantined_nonactive_bars": 2672,
+  "blocker_counts": {},
+  "failed_ticker_symbols": []
+}

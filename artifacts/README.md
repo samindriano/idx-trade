@@ -9,6 +9,8 @@ file is explicitly covered by the repository policy.
 - `manifests/` — small, hash-pinned manifests that describe external bytes.
 - `schemas/` — versioned data and artifact schemas.
 - `fixtures/` — sanitized, small test fixtures only.
+- `canonical/` — small, accepted reference tables promoted with exact
+  source/provenance hashes; never a home for full data panels.
 
 ## External-only areas
 
@@ -25,3 +27,8 @@ containing the payload.
 
 Each registry entry must avoid user-specific absolute paths. Use an
 `external_root_key` plus an external-relative path instead.
+
+The first actual promotion is the 126-session IDX data-gate snapshot. Its
+exact file list and source/promoted hashes are in
+`docs/artifact_governance/ARTIFACT_PROMOTION_V1.csv`; the certified snapshot
+manifest itself remains external behind a scrubbed pointer.

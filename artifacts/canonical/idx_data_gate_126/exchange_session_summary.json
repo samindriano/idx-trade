@@ -1,0 +1,28 @@
+{
+  "start": "2026-01-01",
+  "end": "2026-07-31",
+  "requested_months": 7,
+  "parsed_months": 7,
+  "error_months": 0,
+  "exchange_sessions": 135,
+  "first_session": "2026-01-02",
+  "last_session": "2026-07-31",
+  "sessions_sha256": "f25e7d05e6f860af9d7f13e7d1cf9871b49615e007b6baeb301333e782401b33",
+  "complete": true,
+  "source": "IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES",
+  "source_identity": "MULTI_SOURCE_OR_UNRESOLVED",
+  "source_identities": [
+    "IDX_DAILY_STATISTICS_PUBLICATION_LISTING",
+    "IDX_DIGITAL_STATISTICS_DAILY_TRADING_TABLE"
+  ],
+  "source_references": [
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiMSIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiMiIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiMyIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiNCIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiNSIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/DigitalStatistic/GetApiData?urlName=LINK_TABLE_DAILY_TRADING_INVESTOR_FOREIGN&query=eyJ5ZWFyIjoiMjAyNiIsIm1vbnRoIjoiNiIsInF1YXJ0ZXIiOjAsInR5cGUiOiJtb250aGx5In0%3D&isPrint=False&cumulative=false",
+    "https://www.idx.id/primary/Statistic/GetStatistic?type=daily&lang=en-us&StartDate=2026-07-01&EndDate=2026-07-31&keyword="
+  ],
+  "fallback_months": 1
+}

@@ -1,0 +1,3 @@
+requested_sessions,evaluated_sessions,window_start,window_end,status,passed,discovered_tickers_before_scope,scope_excluded_tickers,required_tickers,passed_tickers,failed_tickers,unknown_sessions,missing_active_prices,quarantined_nonactive_bars,blocker_counts
+43,43,2026-06-02,2026-07-31,PASS,True,964,['CNTX'],963,963,0,0,0,1359,{}
+126,126,2026-01-15,2026-07-31,PASS,True,964,['CNTX'],963,963,0,0,0,2672,{}

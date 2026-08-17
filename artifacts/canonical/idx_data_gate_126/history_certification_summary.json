@@ -1,0 +1,18 @@
+{
+  "latest_session": "2026-07-31",
+  "available_calendar_sessions": 126,
+  "horizons_tested": [
+    43,
+    126
+  ],
+  "passing_horizons": [
+    43,
+    126
+  ],
+  "longest_passing_window": {
+    "sessions": 126,
+    "window_start": "2026-01-15",
+    "window_end": "2026-07-31"
+  },
+  "all_tested_horizons_pass": true
+}

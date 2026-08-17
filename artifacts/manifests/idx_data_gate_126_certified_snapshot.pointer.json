@@ -1,0 +1,28 @@
+{
+  "pointer_schema_version": 1,
+  "artifact_id": "idx-data-gate-126-certified-snapshot-manifest-pointer",
+  "source_external_root_key": "IDX_TRADE_EXTERNAL_ROOT",
+  "source_relative_path": "idx-trade-data-gate-20260808u/certification/certified_snapshot_manifest_126_sessions.json",
+  "source_manifest_sha256": "650ab19e5a77085b7987ffaaa0ed7cbee0eb8c478a72c0c1166767e9eec68f5b",
+  "source_acceptance": {
+    "checkpoint_commit": "ed13ee0812e8db21d580e922f4e346873aa7b3cd",
+    "checkpoint_path": "docs/checkpoints/2026-08-08_FULL_MARKET_126_SESSION_CERTIFIED.md",
+    "status": "FULL_MARKET_126_SESSION_CERTIFIED_PASS",
+    "window_start": "2026-01-15",
+    "window_end": "2026-07-31",
+    "sessions": 126,
+    "required_common_stock_tickers": 963,
+    "passed_tickers": 963,
+    "unknown_sessions": 0,
+    "missing_active_prices": 0
+  },
+  "promoted_payload_policy": {
+    "source_manifest_bytes_promoted": false,
+    "absolute_local_paths_scrubbed": true,
+    "raw_provider_payloads_promoted": false,
+    "model_safe_panel_promoted": false,
+    "model_safe_panel_sha256": "401d2bdb65beaf9442f1a54212372e2adc5d1b2c006fc1e759738f6deea8a19a",
+    "outcomes_promoted": false
+  },
+  "notes": "Git stores this scrubbed pointer and source hash only. The certified manifest and model-safe panel remain external under the configured root."
+}
