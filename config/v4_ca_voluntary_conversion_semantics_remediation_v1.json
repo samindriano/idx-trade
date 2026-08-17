@@ -1,0 +1,48 @@
+{
+  "id": "V4_CA_VOLUNTARY_CONVERSION_SEMANTICS_REMEDIATION_V1",
+  "status": "PREREGISTERED_BEFORE_OFFLINE_REMEDIATION_RUN",
+  "scientific_parent_result_commit": "96a652b311f868babab94ca24b32bf1df382627c",
+  "purpose": "Correct only the price-basis interpretation of source-native KSEI Voluntary Conversion rows before any V4 target/model access.",
+  "allowed_non_blocking_rule": {
+    "event_family_source_casefold": "voluntary conversion",
+    "status_casefold": "active",
+    "ratio_parse_status": "PARSED_SOURCE_TEXT_ONLY",
+    "ratio_left_security_must_equal_requested_ticker": true,
+    "ratio_right_security_allowed_currency_tokens": [
+      "IDR",
+      "USD",
+      "SGD",
+      "EUR",
+      "JPY",
+      "AUD",
+      "GBP",
+      "CNY",
+      "HKD"
+    ],
+    "semantic_class": "NON_BLOCKING",
+    "family": "VOLUNTARY_CASH_SETTLEMENT"
+  },
+  "fail_closed_rule": "Every other Voluntary Conversion delegates unchanged to the parent V4 CA event-window classifier and therefore remains schedule-required unless independently resolved by already-admitted exact schedule evidence.",
+  "unchanged_contract": {
+    "continuity_gate_rate": 0.9,
+    "frozen_ticker_count": 610,
+    "frozen_signal_date_count": 600,
+    "window_crossing_rule": "entry_date < transition_date <= terminal_date",
+    "record_or_distribution_date_generic_transition_fallback": false,
+    "provider_calls_in_first_run": 0,
+    "target_or_model_access": false
+  },
+  "official_evidence": [
+    "https://web.ksei.co.id/services/types/corporate-action",
+    "https://web.ksei.co.id/services/registered-securities/shares/lc/PADA?setLocale=id-ID",
+    "https://web.ksei.co.id/services/registered-securities/shares/lc/KETR?setLocale=id-ID",
+    "https://web.ksei.co.id/services/registered-securities/shares/lc/EDGE",
+    "https://web.ksei.co.id/services/registered-securities/shares/lc/MFIN"
+  ],
+  "first_run": {
+    "mode": "OFFLINE_ONLY",
+    "runner": "scripts/run_v4_ca_voluntary_conversion_semantics_remediation.py",
+    "fresh_output_root": "D:\\Documents\\Project\\idx-v4-ca-voluntary-conversion-remediation-20260818-v1",
+    "stop_after_run_for_independent_review": true
+  }
+}
