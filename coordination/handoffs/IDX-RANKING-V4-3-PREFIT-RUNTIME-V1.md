@@ -4,7 +4,7 @@ Date: 2026-08-17 (Asia/Jakarta)
 Owner: `ChatGPT/V4-3-Prefit-Runtime`
 Branch: `research/idx-ranking-v4-3-prefit-runtime-v1`
 Parent support acceptance: `48dbca3799a71306a62a9ad156a106e1a978b006`
-Status: `READY_FOR_LOCAL_OUTCOME_BLIND_RUNTIME_CAPTURE`
+Status: `BLOCKED_PINNED_PREREGISTRATION_HASH_MISMATCH`
 
 ## Completed by ChatGPT
 
