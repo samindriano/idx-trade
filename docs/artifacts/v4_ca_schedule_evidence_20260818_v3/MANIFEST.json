@@ -1,0 +1,19 @@
+{
+  "input_hashes": {
+    "continuity_ledger": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "ksei_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "ksei_manifest": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25a",
+    "ksei_summary": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422",
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "outcome_blind": true,
+  "output_hashes": {
+    "event_schedule_linkage_audit": "e0aa6880035e78396c992b443f73389123dc130df61570fdad1de331f37c7006",
+    "request_records": "96a7a2d6013f6a6f86bc7548c9cda90514eb03a50d9b56039ec15c07969f6155",
+    "schedule_document_parse_audit": "d7ded2bf29ad8355ff7ce22af89004a4bbe7e7fd0bb01524f582be2ad1e4e796",
+    "schedule_evidence": "c9f396951ae82f2526c6e7943bff2ed359aa488697d3086f1afdb64127e8d3b4"
+  },
+  "schema_version": "v4_ca_schedule_acquisition_manifest_v1",
+  "status": "V4_CA_TARGETED_KSEI_SCHEDULE_ACQUISITION_COMPLETE",
+  "summary_sha256": "240f6fd03784429c16967d6c8b11b9f4afd1df8aa959a46c04fa17d3faa9375e"
+}

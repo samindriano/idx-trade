@@ -1,0 +1,2 @@
+event_id,ticker,event_source_type,linkage_status,transition_semantic,transition_date,ksei_reference,document_date,source_url,source_sha256,linkage_basis
+273d8d75c833a6bed57313b1d8eafd4bc2e3c73f33c738c798436419f6067870,WINS,Mixed Dividend,EXACT,REGULAR_MARKET_EX_DATE,2026-05-26,KSEI-12034/JKU/0526,2026-05-25,https://web.ksei.co.id/Announcement/Files/194594_ksei_12034_jku_0526_202605251700.pdf,f9d091302291a213096ff6531d43010944148b34399754de66b1ac4191f96f3d,TICKER_FAMILY_AND_EXACT_RECORD_OR_DISTRIBUTION_DATE
