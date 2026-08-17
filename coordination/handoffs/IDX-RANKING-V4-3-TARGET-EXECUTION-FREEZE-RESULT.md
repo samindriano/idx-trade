@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `7f6b90e0ed09347c5f0fa638b6c3ba3e73273d59`
 branch: `research/idx-ranking-v4-3-target-execution-freeze-v1`
-head_commit: `pending result commit`
+head_commit: `162a056132de220d261d62263fc1c497896b2961`
 scope: Outcome-blind synthetic validation, PIT support refresh, and execution-code identity capture only.
 files_changed:
   - `docs/artifacts/ranking_v4_3_target_execution_freeze_v1/pit_support/summary.json`
