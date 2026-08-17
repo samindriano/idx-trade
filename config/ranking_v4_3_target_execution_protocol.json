@@ -1,0 +1,129 @@
+{
+  "schema_version": "ranking_v4_3_target_execution_protocol_v1",
+  "status": "V4_3_TARGET_EXECUTION_CODE_LOCKED_SYNTHETIC_ONLY_CA_CONTINUITY_LEDGER_PENDING",
+  "outcome_blind": true,
+  "scientific_config_mutable": false,
+  "parents": {
+    "v4_1_target_commit": "199d770520edcd4a7b4537c75d5edaba2b0aa349",
+    "v4_2_evaluation_commit": "cdb061d32b1d9f63b1b5f719939678a1f15bb082",
+    "v4_3_preregistration_commit": "8dbde070b18edf432348062e5a9218f6ef2665f9",
+    "v4_3_support_acceptance_commit": "48dbca3799a71306a62a9ad156a106e1a978b006",
+    "v4_3_prefit_runtime_manifest_sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
+  },
+  "session_geometry_open_semantics": {
+    "signal_date_open_source": "accepted Open evidence on exact signal session t",
+    "no_raw_unadmitted_open": true,
+    "no_synthetic_open": true,
+    "missing_admitted_open_yields_nan_for_open_dependent_geometry": true,
+    "high_low_close_remain_canonical_signal_research_values": true
+  },
+  "target": {
+    "entry_offset_official_sessions": 1,
+    "h5_terminal_offset_official_sessions": 5,
+    "h10_terminal_offset_official_sessions": 10,
+    "h5_formula": "Close_(t+5) / Open_(t+1) - 1",
+    "h10_formula": "Close_(t+10) / Open_(t+1) - 1",
+    "close_t_fallback": false,
+    "synthetic_open": false,
+    "forward_fill": false,
+    "price_return_not_total_shareholder_return": true,
+    "cash_dividend_adjustment": false
+  },
+  "price_evidence_contract": {
+    "identity": ["ticker", "date"],
+    "required_columns": [
+      "ticker",
+      "date",
+      "market_state",
+      "accepted_open",
+      "open_admitted",
+      "close",
+      "close_admitted"
+    ],
+    "market_states": ["ACTIVE", "NO_TRADE", "SUSPENDED", "UNKNOWN", "AMBIGUOUS"],
+    "open_rule": "entry Open is usable only when market_state ACTIVE, open_admitted true, and accepted_open finite positive",
+    "close_rule": "terminal Close is usable only when market_state ACTIVE, close_admitted true, and close finite positive"
+  },
+  "continuity_evidence_contract": {
+    "identity": ["ticker", "signal_date", "horizon"],
+    "required_columns": [
+      "ticker",
+      "signal_date",
+      "horizon",
+      "continuity_status",
+      "policy_id",
+      "evidence_id",
+      "evidence_sha256"
+    ],
+    "allowed_horizons": [5, 10],
+    "passing_states": [
+      "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
+      "RESOLVED_SAME_BASIS_ENDPOINTS"
+    ],
+    "failing_states": [
+      "PRICE_CONTINUITY_UNRESOLVED_COVERAGE",
+      "PRICE_CONTINUITY_UNRESOLVED_EVENT",
+      "PRICE_CONTINUITY_UNRESOLVED_EFFECTIVE_DATE",
+      "PRICE_CONTINUITY_UNRESOLVED_CONFLICT"
+    ],
+    "missing_record_rule": "PRICE_CONTINUITY_UNRESOLVED_COVERAGE",
+    "no_event_inference_from_missing_record": true,
+    "no_effective_date_inference_from_price_jump": true,
+    "no_tanggal_pencatatan_as_generic_effective_date": true,
+    "corporate_action_integrity_verified_boolean_is_not_full_v4_continuity_proof": true,
+    "cash_dividend_alone_is_not_a_mechanical_continuity_blocker": true,
+    "cross_basis_event_policy": "do not adjust V4 target prices in generation 1; if a split, reverse split, stock dividend, bonus share, rights issue, or other mechanical share/price-basis event crosses after Open_(t+1) through and including Close_(t+h), the row is unresolved unless an independently admitted same-basis continuity record explicitly resolves the endpoints"
+  },
+  "target_states": [
+    "TARGET_H5_AVAILABLE",
+    "TARGET_H10_AVAILABLE",
+    "TARGET_BOTH_AVAILABLE",
+    "NO_FUTURE_SESSION",
+    "MARKET_ENTRY_UNAVAILABLE",
+    "TARGET_DATA_UNOBSERVABLE",
+    "PRICE_CONTINUITY_UNRESOLVED",
+    "TRADING_MECHANISM_REFERENCE_UNRESOLVED"
+  ],
+  "primary_state_precedence": [
+    "NO_FUTURE_SESSION",
+    "TRADING_MECHANISM_REFERENCE_UNRESOLVED",
+    "MARKET_ENTRY_UNAVAILABLE",
+    "PRICE_CONTINUITY_UNRESOLVED",
+    "TARGET_DATA_UNOBSERVABLE",
+    "TARGET_AVAILABLE"
+  ],
+  "ledger_rule": {
+    "preserve_every_original_decision_row": true,
+    "store_component_reason_flags": true,
+    "negative_return_is_available_target": true,
+    "zero_return_is_available_target": true,
+    "no_future_unobservable_row_drop": true
+  },
+  "rank_transform": {
+    "population": "defensibly horizon-target-observable rows inside the frozen decision universe on the same decision date",
+    "method": "average_tie_normalized_rank",
+    "formula": "n > 1: (average_rank_ascending - 1) / (n - 1); n == 1: 0.5",
+    "higher_return_is_better": true,
+    "h5_column": "target_rank_h5",
+    "h10_column": "target_rank_h10",
+    "consensus_column": "realized_consensus",
+    "consensus_formula": "0.5 * target_rank_h5 + 0.5 * target_rank_h10 only when both targets are available"
+  },
+  "historical_execution_authorization": {
+    "target_materialization": false,
+    "model_fit": false,
+    "performance_access": false,
+    "blocker": "market-wide V4 forward-price continuity evidence ledger has not yet passed an outcome-blind support census under this protocol"
+  },
+  "forbidden_before_continuity_acceptance": [
+    "materialize historical R5 or R10",
+    "materialize historical target ranks",
+    "fit V4 model on historical targets",
+    "generate historical V4 predictions",
+    "compute IC, Top30, spread, bootstrap, or raw-return diagnostics",
+    "infer corporate-action effective date from price discontinuity",
+    "treat missing corporate-action evidence as no event",
+    "silently reinterpret corporate_action_integrity_verified as full V4 continuity proof",
+    "change target/evaluator/preregistration because continuity support is inconvenient"
+  ]
+}
