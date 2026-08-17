@@ -1,0 +1,30 @@
+{
+  "schema_version": "v4_ca_event_window_semantics_v1_input_pin_remediation",
+  "status": "FROZEN_PREFLIGHT_PROVENANCE_PIN_CORRECTION_BEFORE_STAGE1",
+  "outcome_blind": true,
+  "parent_branch_head": "a281c91a313e8c4ed2ecd823e7f53ccf500ec5b4",
+  "parent_scientific_config_path": "config/v4_ca_event_window_semantics_v1.json",
+  "correction": {
+    "field": "ksei_census_manifest_sha256",
+    "erroneous_literal": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25",
+    "erroneous_literal_length": 63,
+    "authoritative_sha256": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25a",
+    "authoritative_sha256_length": 64,
+    "evidence": "local SHA-256 of immutable KSEI census MANIFEST.json reported before Stage 1 census executed"
+  },
+  "scope": {
+    "scientific_semantics_changed": false,
+    "coverage_gate_changed": false,
+    "event_window_rule_changed": false,
+    "provider_scope_changed": false,
+    "only_input_identity_pin_corrected": true
+  },
+  "prohibitions_unchanged": [
+    "no R5/R10",
+    "no target ranks",
+    "no model fit or predictions",
+    "no performance/outcome access",
+    "no price-derived CA inference",
+    "no post-result semantic tuning"
+  ]
+}
