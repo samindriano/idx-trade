@@ -1,0 +1,109 @@
+{
+  "continuity_status_counts": {
+    "PRICE_CONTINUITY_UNRESOLVED_COVERAGE": 344740,
+    "PRICE_CONTINUITY_UNRESOLVED_EFFECTIVE_DATE": 50
+  },
+  "decision_ticker_universe_sha256": "700037b38a7202e4c8a58b1068a885f903a568493f379b7fcb3afa88cc620bbe",
+  "decision_tickers": 739,
+  "event_evidence_rows": 26,
+  "event_family_counts": [
+    {
+      "event_family": "BONUS_SHARES",
+      "evidence_rows": 1,
+      "source_kind": "IDX_GET_ISSUED_HISTORY"
+    },
+    {
+      "event_family": "CAPITAL_RESTRUCTURING",
+      "evidence_rows": 1,
+      "source_kind": "IDX_GET_ISSUED_HISTORY"
+    },
+    {
+      "event_family": "MANDATORY_CONVERSION",
+      "evidence_rows": 4,
+      "source_kind": "KSEI_REGISTERED_SECURITY"
+    },
+    {
+      "event_family": "RIGHTS_HMETD",
+      "evidence_rows": 1,
+      "source_kind": "IDX_GET_ISSUED_HISTORY"
+    },
+    {
+      "event_family": "RIGHTS_HMETD",
+      "evidence_rows": 9,
+      "source_kind": "KSEI_REGISTERED_SECURITY"
+    },
+    {
+      "event_family": "STOCK_DIVIDEND",
+      "evidence_rows": 3,
+      "source_kind": "KSEI_REGISTERED_SECURITY"
+    },
+    {
+      "event_family": "STOCK_SPLIT",
+      "evidence_rows": 7,
+      "source_kind": "IDX_GET_ISSUED_HISTORY"
+    }
+  ],
+  "event_family_inventory": {
+    "BONUS_SHARES": 1,
+    "CAPITAL_RESTRUCTURING": 1,
+    "MANDATORY_CONVERSION": 4,
+    "MERGER": 0,
+    "REVERSE_SPLIT": 0,
+    "RIGHTS_HMETD": 10,
+    "STOCK_DIVIDEND": 3,
+    "STOCK_SPLIT": 7
+  },
+  "frozen_decision_rows": 172395,
+  "frozen_decision_tickers": 610,
+  "frozen_gate": {
+    "consensus_pass": false,
+    "h10_pass": false,
+    "h5_pass": false,
+    "required_rate": 0.9
+  },
+  "frozen_validation_dates": 600,
+  "input_hashes": {
+    "ca_cross_source": "46018e496cb18c8007866e6ddbbbd84b15c8bd6d2441e935082bdec6aa66670a",
+    "ca_idx_linkages": "e52442489f034c6737c576bf815b07d54985410757e5eeb7ca24017a8d786378",
+    "ca_ksei_actions": "afadd79e619a0ab4493d2d7b9c5b5d45b0f3b9ef445d570caa5cb4b7dc63a8e7",
+    "ca_manifest": "d44b9362909f5c05d8412ff07ca4c5616a74b43930bd1caf92242ed25b5e10cf",
+    "ca_normalized_candidates": "d3a11d3e51887ebde4af5b6a2f37ab64d9ad1bfd1d70179b58fca79d18e9909e",
+    "calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "panel": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76",
+    "security_master": "c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240",
+    "validation_folds": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "output_hashes": {
+    "continuity_ledger": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "event_counts": "6e3f7fa9f8b3e04bb723999d28e4992a31dd1ceb115243f42dd035862d0bd544",
+    "event_evidence": "4c9973781a3c254ad5c82d66d7f6f27afc3bc977681015236693b96d7be638b7",
+    "per_date": "4f246f6f5773e978f177ea786bb8cce8d8e860ce5240818aa0287730ef35f4f8"
+  },
+  "parent_freeze_commit": "b536c832730bd0c5e2dd6952b44cf9b11b4573f9",
+  "per_date": {
+    "consensus_gate_dates": 0,
+    "consensus_min_rate": 0.0,
+    "h10_gate_dates": 0,
+    "h10_min_rate": 0.0,
+    "h5_gate_dates": 0,
+    "h5_min_rate": 0.0
+  },
+  "performance_computed": false,
+  "policy": {
+    "cash_dividend_is_not_blocker": true,
+    "missing_evidence_does_not_prove_no_event": true,
+    "only_passing_state": "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
+    "tanggal_pencatatan_is_not_generic_effective_date": true
+  },
+  "protected_forward_accessed": false,
+  "provider_calls": false,
+  "schema_version": "v4_corporate_action_price_basis_continuity_gate_v1",
+  "target_or_rank_materialized": false,
+  "unresolved_reason_counts": {
+    "EVENT_CANDIDATE_CROSSES_WINDOW_WITHOUT_PROVEN_EFFECTIVE_DATE": 50,
+    "NO_MARKET_WIDE_NO_EVENT_COVERAGE;ABSENCE_CANNOT_PROVE_NO_EVENT": 344740
+  },
+  "verdict": "BLOCKED"
+}
