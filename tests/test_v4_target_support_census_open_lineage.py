@@ -1,7 +1,10 @@
 import pandas as pd
 import pytest
 
-from scripts.run_v4_target_support_census import validate_and_attach_open_lineage
+from scripts.run_v4_target_support_census import (
+    state_map_from_inputs,
+    validate_and_attach_open_lineage,
+)
 
 
 def _panel() -> pd.DataFrame:
@@ -57,3 +60,23 @@ def test_open_lineage_rejects_derivative_identity_mismatch() -> None:
 
     with pytest.raises(RuntimeError, match="OPEN_DERIVATIVE_IDENTITY_MISMATCH"):
         validate_and_attach_open_lineage(panel, derivative, overlay)
+
+
+def test_remediation_preserves_parent_ambiguous_anchor_semantics() -> None:
+    anchors = pd.DataFrame(
+        {
+            "ticker": ["AAA", "AAA"],
+            "market": ["REGULAR", "REGULAR"],
+            "as_of_date": ["2024-01-02", "2024-01-02"],
+            "state": ["ACTIVE", "NO_TRADE"],
+        }
+    )
+    intervals = pd.DataFrame(
+        columns=["ticker", "market", "state", "effective_from", "effective_to"]
+    )
+    dates = pd.DataFrame({"date": ["2024-01-02"], "session_index": [0]})
+
+    states, conflicts = state_map_from_inputs(anchors, intervals, dates)
+
+    assert conflicts == 1
+    assert states[("AAA", 0)] == "AMBIGUOUS"
