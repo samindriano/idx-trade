@@ -74,7 +74,11 @@ HEAD_SPECS = {
 
 
 def _normalize_dates(series: pd.Series, *, label: str) -> pd.Series:
-    values = pd.to_datetime(series, errors="coerce").dt.tz_localize(None).dt.normalize()
+    values = (
+        pd.to_datetime(series, errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     if values.isna().any():
         raise ValueError(f"{label} contains invalid dates")
     return values
@@ -85,7 +89,10 @@ def model_feature_columns(mode: str) -> tuple[str, ...]:
     if normalized == CONTROL:
         return tuple(V4_CONTROL_FEATURE_COLUMNS)
     if normalized == CHALLENGER:
-        return (*V4_CONTROL_FEATURE_COLUMNS, *SESSION_GEOMETRY_FEATURE_COLUMNS)
+        return (
+            *V4_CONTROL_FEATURE_COLUMNS,
+            *SESSION_GEOMETRY_FEATURE_COLUMNS,
+        )
     raise ValueError(f"unsupported V4 model mode: {mode}")
 
 
@@ -101,7 +108,13 @@ def build_v4_regressor(mode: str) -> Pipeline:
     )
     if normalized == CONTROL:
         preprocess = ColumnTransformer(
-            [("control", control_imputer, list(V4_CONTROL_FEATURE_COLUMNS))],
+            [
+                (
+                    "control",
+                    control_imputer,
+                    list(V4_CONTROL_FEATURE_COLUMNS),
+                )
+            ],
             remainder="drop",
         )
     else:
@@ -112,8 +125,16 @@ def build_v4_regressor(mode: str) -> Pipeline:
         )
         preprocess = ColumnTransformer(
             [
-                ("control", control_imputer, list(V4_CONTROL_FEATURE_COLUMNS)),
-                ("geometry", geometry_imputer, list(SESSION_GEOMETRY_FEATURE_COLUMNS)),
+                (
+                    "control",
+                    control_imputer,
+                    list(V4_CONTROL_FEATURE_COLUMNS),
+                ),
+                (
+                    "geometry",
+                    geometry_imputer,
+                    list(SESSION_GEOMETRY_FEATURE_COLUMNS),
+                ),
             ],
             remainder="drop",
         )
@@ -144,7 +165,9 @@ def fit_v4_head(
     required = {"date", target_column, *model_feature_columns(mode)}
     missing = required - set(frame.columns)
     if missing:
-        raise ValueError(f"V4 training frame missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"V4 training frame missing columns: {sorted(missing)}"
+        )
     if frame.empty:
         raise ValueError("V4 training frame must not be empty")
 
@@ -175,25 +198,36 @@ def score_v4_head(
     required = {"ticker", "date", *model_feature_columns(mode)}
     missing = required - set(frame.columns)
     if missing:
-        raise ValueError(f"V4 scoring frame missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"V4 scoring frame missing columns: {sorted(missing)}"
+        )
     scored = frame.copy()
-    scored["date"] = _normalize_dates(scored["date"], label="V4 scoring frame")
+    scored["date"] = _normalize_dates(
+        scored["date"], label="V4 scoring frame"
+    )
     if scored.duplicated(["ticker", "date"]).any():
         raise ValueError("V4 scoring frame contains duplicate identity")
     raw = np.asarray(model.predict(scored), dtype=float)
     if len(raw) != len(scored) or not np.isfinite(raw).all():
-        raise RuntimeError("V4 model produced non-finite or misaligned predictions")
+        raise RuntimeError(
+            "V4 model produced non-finite or misaligned predictions"
+        )
     scored[raw_score_column] = raw
     scored[alpha_column] = np.nan
     for _, block in scored.groupby("date", sort=False):
         ranked = normalized_percentile_rank(block[raw_score_column])
         scored.loc[ranked.index, alpha_column] = ranked
     if scored[alpha_column].isna().any():
-        raise RuntimeError("within-date V4 prediction rank unexpectedly missing")
+        raise RuntimeError(
+            "within-date V4 prediction rank unexpectedly missing"
+        )
     return scored
 
 
-def attach_consensus_alpha(scored_h5: pd.DataFrame, scored_h10: pd.DataFrame) -> pd.DataFrame:
+def attach_consensus_alpha(
+    scored_h5: pd.DataFrame,
+    scored_h10: pd.DataFrame,
+) -> pd.DataFrame:
     required_h5 = {"ticker", "date", "alpha_h5"}
     required_h10 = {"ticker", "date", "alpha_h10"}
     if not required_h5.issubset(scored_h5.columns):
@@ -202,8 +236,12 @@ def attach_consensus_alpha(scored_h5: pd.DataFrame, scored_h10: pd.DataFrame) ->
         raise ValueError("H10 scoring table missing identity/alpha")
     left = scored_h5[["ticker", "date", "alpha_h5"]].copy()
     right = scored_h10[["ticker", "date", "alpha_h10"]].copy()
-    left["date"] = _normalize_dates(left["date"], label="H5 scoring table")
-    right["date"] = _normalize_dates(right["date"], label="H10 scoring table")
+    left["date"] = _normalize_dates(
+        left["date"], label="H5 scoring table"
+    )
+    right["date"] = _normalize_dates(
+        right["date"], label="H10 scoring table"
+    )
     merged = left.merge(
         right,
         on=["ticker", "date"],
@@ -214,7 +252,9 @@ def attach_consensus_alpha(scored_h5: pd.DataFrame, scored_h10: pd.DataFrame) ->
     if not merged["_merge"].eq("both").all():
         raise RuntimeError("H5/H10 scoring populations differ")
     merged = merged.drop(columns="_merge")
-    merged["alpha_consensus"] = 0.5 * merged["alpha_h5"] + 0.5 * merged["alpha_h10"]
+    merged["alpha_consensus"] = (
+        0.5 * merged["alpha_h5"] + 0.5 * merged["alpha_h10"]
+    )
     return merged
 
 
@@ -235,6 +275,9 @@ def _fixed_extreme_identities(
 ) -> tuple[set[str], set[str]]:
     if len(block) < 2 * TOP_K:
         return set(), set()
+    # Top and bottom use exact reverse lexicographic ordering. This keeps the
+    # lists deterministic and disjoint even if many stocks have identical
+    # model scores. Target observability is not involved in the selection.
     ordered_top = block.sort_values(
         [alpha_column, "ticker"],
         ascending=[False, True],
@@ -242,10 +285,14 @@ def _fixed_extreme_identities(
     )
     ordered_bottom = block.sort_values(
         [alpha_column, "ticker"],
-        ascending=[True, True],
+        ascending=[True, False],
         kind="mergesort",
     )
-    return set(ordered_top.head(TOP_K)["ticker"]), set(ordered_bottom.head(TOP_K)["ticker"])
+    top = set(ordered_top.head(TOP_K)["ticker"])
+    bottom = set(ordered_bottom.head(TOP_K)["ticker"])
+    if top & bottom:
+        raise RuntimeError("TOP30_BOTTOM30_IDENTITY_OVERLAP")
+    return top, bottom
 
 
 def evaluate_head_by_date(
@@ -267,44 +314,81 @@ def evaluate_head_by_date(
     missing_score = score_required - set(scored_population.columns)
     missing_target = target_required - set(target_ledger.columns)
     if missing_score:
-        raise ValueError(f"scoring population missing columns: {sorted(missing_score)}")
+        raise ValueError(
+            f"scoring population missing columns: {sorted(missing_score)}"
+        )
     if missing_target:
-        raise ValueError(f"target ledger missing columns: {sorted(missing_target)}")
+        raise ValueError(
+            f"target ledger missing columns: {sorted(missing_target)}"
+        )
 
     scored = scored_population[list(score_required)].copy()
-    scored["ticker"] = scored["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    scored["date"] = _normalize_dates(scored["date"], label="scoring population")
+    scored["ticker"] = (
+        scored["ticker"]
+        .astype(str)
+        .str.upper()
+        .str.replace(".JK", "", regex=False)
+        .str.strip()
+    )
+    scored["date"] = _normalize_dates(
+        scored["date"], label="scoring population"
+    )
     if scored.duplicated(["ticker", "date"]).any():
         raise ValueError("scoring population contains duplicate identity")
-    scored[spec.alpha_column] = pd.to_numeric(scored[spec.alpha_column], errors="coerce")
-    if scored[spec.alpha_column].isna().any() or not np.isfinite(scored[spec.alpha_column]).all():
-        raise ValueError("scoring population contains missing/non-finite alpha")
+    scored[spec.alpha_column] = pd.to_numeric(
+        scored[spec.alpha_column], errors="coerce"
+    )
+    if (
+        scored[spec.alpha_column].isna().any()
+        or not np.isfinite(scored[spec.alpha_column]).all()
+    ):
+        raise ValueError(
+            "scoring population contains missing/non-finite alpha"
+        )
 
     targets = target_ledger[list(target_required)].copy()
-    targets["ticker"] = targets["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    targets["date"] = _normalize_dates(targets["date"], label="target ledger")
+    targets["ticker"] = (
+        targets["ticker"]
+        .astype(str)
+        .str.upper()
+        .str.replace(".JK", "", regex=False)
+        .str.strip()
+    )
+    targets["date"] = _normalize_dates(
+        targets["date"], label="target ledger"
+    )
     if targets.duplicated(["ticker", "date"]).any():
         raise ValueError("target ledger contains duplicate identity")
 
     rows: list[dict[str, object]] = []
     for day, score_block in scored.groupby("date", sort=True):
-        # Top/Bottom identities are fixed before target observability is inspected.
-        top_ids, bottom_ids = _fixed_extreme_identities(score_block, spec.alpha_column)
+        # Top/Bottom identities are fixed before target observability is
+        # inspected.
+        top_ids, bottom_ids = _fixed_extreme_identities(
+            score_block, spec.alpha_column
+        )
         merged = score_block.merge(
             targets[targets["date"].eq(day)],
             on=["ticker", "date"],
             how="left",
             validate="one_to_one",
         )
-        available = merged[spec.target_state_column].eq(spec.target_available_state)
+        available = merged[spec.target_state_column].eq(
+            spec.target_available_state
+        )
         coverage = float(available.mean()) if len(merged) else np.nan
         coverage_admitted = bool(
-            len(merged) >= 2 * TOP_K and coverage >= DATE_TARGET_COVERAGE_GATE
+            len(merged) >= 2 * TOP_K
+            and coverage >= DATE_TARGET_COVERAGE_GATE
         )
 
         observable = merged.loc[available].copy()
-        top_observable = observable[observable["ticker"].isin(top_ids)]
-        bottom_observable = observable[observable["ticker"].isin(bottom_ids)]
+        top_observable = observable[
+            observable["ticker"].isin(top_ids)
+        ]
+        bottom_observable = observable[
+            observable["ticker"].isin(bottom_ids)
+        ]
         top_ok = len(top_observable) >= TOP_K_MIN_OBSERVABLE
         bottom_ok = len(bottom_observable) >= TOP_K_MIN_OBSERVABLE
 
@@ -317,7 +401,9 @@ def evaluate_head_by_date(
                 observable[spec.target_rank_column],
             )
             if top_ok:
-                top_mean = float(top_observable[spec.target_rank_column].mean())
+                top_mean = float(
+                    top_observable[spec.target_rank_column].mean()
+                )
             if top_ok and bottom_ok:
                 spread = float(
                     top_observable[spec.target_rank_column].mean()
@@ -325,9 +411,14 @@ def evaluate_head_by_date(
                 )
 
         ic_admitted = bool(coverage_admitted and np.isfinite(ic))
-        top_metric_admitted = bool(coverage_admitted and top_ok and np.isfinite(top_mean))
+        top_metric_admitted = bool(
+            coverage_admitted and top_ok and np.isfinite(top_mean)
+        )
         spread_metric_admitted = bool(
-            coverage_admitted and top_ok and bottom_ok and np.isfinite(spread)
+            coverage_admitted
+            and top_ok
+            and bottom_ok
+            and np.isfinite(spread)
         )
 
         row: dict[str, object] = {
@@ -343,46 +434,83 @@ def evaluate_head_by_date(
             "top30_metric_admitted": top_metric_admitted,
             "spread_metric_admitted": spread_metric_admitted,
             "daily_ic": ic if ic_admitted else np.nan,
-            "top30_mean_realized_percentile": top_mean if top_metric_admitted else np.nan,
-            "top30_bottom30_spread": spread if spread_metric_admitted else np.nan,
+            "top30_mean_realized_percentile": (
+                top_mean if top_metric_admitted else np.nan
+            ),
+            "top30_bottom30_spread": (
+                spread if spread_metric_admitted else np.nan
+            ),
         }
 
         if spec.raw_return_column is not None:
-            raw = pd.to_numeric(observable[spec.raw_return_column], errors="coerce")
-            top_raw = pd.to_numeric(top_observable[spec.raw_return_column], errors="coerce")
+            raw = pd.to_numeric(
+                observable[spec.raw_return_column], errors="coerce"
+            )
+            top_raw = pd.to_numeric(
+                top_observable[spec.raw_return_column], errors="coerce"
+            )
             row.update(
                 {
-                    "raw_top30_mean_return": float(top_raw.mean()) if top_metric_admitted else np.nan,
-                    "raw_universe_mean_return": float(raw.mean()) if coverage_admitted and len(raw) else np.nan,
+                    "raw_top30_mean_return": (
+                        float(top_raw.mean())
+                        if top_metric_admitted
+                        else np.nan
+                    ),
+                    "raw_universe_mean_return": (
+                        float(raw.mean())
+                        if coverage_admitted and len(raw)
+                        else np.nan
+                    ),
                     "raw_top30_minus_universe_return": (
                         float(top_raw.mean() - raw.mean())
                         if top_metric_admitted and len(raw)
                         else np.nan
                     ),
-                    "raw_top30_median_return": float(top_raw.median()) if top_metric_admitted else np.nan,
-                    "raw_top30_fraction_positive": float((top_raw > 0.0).mean()) if top_metric_admitted else np.nan,
+                    "raw_top30_median_return": (
+                        float(top_raw.median())
+                        if top_metric_admitted
+                        else np.nan
+                    ),
+                    "raw_top30_fraction_positive": (
+                        float((top_raw > 0.0).mean())
+                        if top_metric_admitted
+                        else np.nan
+                    ),
                 }
             )
         rows.append(row)
 
-    return pd.DataFrame(rows).sort_values("date", kind="mergesort").reset_index(drop=True)
+    return pd.DataFrame(rows).sort_values(
+        "date", kind="mergesort"
+    ).reset_index(drop=True)
 
 
-def attach_folds(date_metrics: pd.DataFrame, validation_folds: pd.DataFrame) -> pd.DataFrame:
+def attach_folds(
+    date_metrics: pd.DataFrame,
+    validation_folds: pd.DataFrame,
+) -> pd.DataFrame:
     required = {"fold", "date"}
     missing = required - set(validation_folds.columns)
     if missing:
-        raise ValueError(f"validation fold table missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"validation fold table missing columns: {sorted(missing)}"
+        )
     folds = validation_folds[["fold", "date"]].copy()
-    folds["date"] = _normalize_dates(folds["date"], label="validation folds")
+    folds["date"] = _normalize_dates(
+        folds["date"], label="validation folds"
+    )
     if folds["date"].duplicated().any():
         raise ValueError("validation fold dates must be unique")
     counts = folds["fold"].value_counts().sort_index()
     if len(counts) != 6 or counts.tolist() != [100] * 6:
-        raise ValueError("validation folds must contain exactly six folds of 100 dates")
+        raise ValueError(
+            "validation folds must contain exactly six folds of 100 dates"
+        )
 
     metrics = date_metrics.copy()
-    metrics["date"] = _normalize_dates(metrics["date"], label="date metrics")
+    metrics["date"] = _normalize_dates(
+        metrics["date"], label="date metrics"
+    )
     merged = folds.merge(
         metrics,
         on="date",
@@ -391,7 +519,9 @@ def attach_folds(date_metrics: pd.DataFrame, validation_folds: pd.DataFrame) -> 
         indicator=True,
     )
     if not merged["_merge"].eq("both").all():
-        raise RuntimeError("date metrics do not cover every frozen validation date")
+        raise RuntimeError(
+            "date metrics do not cover every frozen validation date"
+        )
     return merged.drop(columns="_merge").sort_values(
         ["fold", "date"], kind="mergesort"
     ).reset_index(drop=True)
@@ -411,12 +541,16 @@ def summarize_fold_metrics(
     }
     missing = required - set(fold_metrics.columns)
     if missing:
-        raise ValueError(f"fold metrics missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"fold metrics missing columns: {sorted(missing)}"
+        )
 
     rows: list[dict[str, object]] = []
     for fold, block in fold_metrics.groupby("fold", sort=True):
         if len(block) != 100:
-            raise ValueError("every validation fold must contain exactly 100 dates")
+            raise ValueError(
+                "every validation fold must contain exactly 100 dates"
+            )
         ic_mask = block["ic_admitted"].fillna(False).astype(bool)
         top_mask = block["top30_metric_admitted"].fillna(False).astype(bool)
         spread_mask = block["spread_metric_admitted"].fillna(False).astype(bool)
@@ -435,35 +569,78 @@ def summarize_fold_metrics(
                 "fold_ic_valid": ic_valid,
                 "fold_top30_valid": top_valid,
                 "fold_spread_valid": spread_valid,
-                "fold_all_primary_valid": bool(ic_valid and top_valid and spread_valid),
-                "fold_mean_daily_ic": float(block.loc[ic_mask, "daily_ic"].mean()) if ic_valid else np.nan,
-                "fold_mean_top30_percentile": float(block.loc[top_mask, "top30_mean_realized_percentile"].mean()) if top_valid else np.nan,
-                "fold_mean_top30_bottom30_spread": float(block.loc[spread_mask, "top30_bottom30_spread"].mean()) if spread_valid else np.nan,
+                "fold_all_primary_valid": bool(
+                    ic_valid and top_valid and spread_valid
+                ),
+                "fold_mean_daily_ic": (
+                    float(block.loc[ic_mask, "daily_ic"].mean())
+                    if ic_valid
+                    else np.nan
+                ),
+                "fold_mean_top30_percentile": (
+                    float(
+                        block.loc[
+                            top_mask,
+                            "top30_mean_realized_percentile",
+                        ].mean()
+                    )
+                    if top_valid
+                    else np.nan
+                ),
+                "fold_mean_top30_bottom30_spread": (
+                    float(
+                        block.loc[
+                            spread_mask,
+                            "top30_bottom30_spread",
+                        ].mean()
+                    )
+                    if spread_valid
+                    else np.nan
+                ),
             }
         )
     folds = pd.DataFrame(rows).sort_values("fold").reset_index(drop=True)
 
     def values(column: str, valid_column: str) -> pd.Series:
         return pd.to_numeric(
-            folds.loc[folds[valid_column].astype(bool), column], errors="coerce"
+            folds.loc[folds[valid_column].astype(bool), column],
+            errors="coerce",
         ).dropna()
 
     ic = values("fold_mean_daily_ic", "fold_ic_valid")
     top = values("fold_mean_top30_percentile", "fold_top30_valid")
-    spread = values("fold_mean_top30_bottom30_spread", "fold_spread_valid")
+    spread = values(
+        "fold_mean_top30_bottom30_spread", "fold_spread_valid"
+    )
     aggregate: dict[str, float | int | bool] = {
         "all_six_primary_metric_folds_valid": bool(
             len(folds) == 6 and folds["fold_all_primary_valid"].all()
         ),
         "valid_ic_fold_count": int(folds["fold_ic_valid"].sum()),
         "valid_top30_fold_count": int(folds["fold_top30_valid"].sum()),
-        "valid_spread_fold_count": int(folds["fold_spread_valid"].sum()),
+        "valid_spread_fold_count": int(
+            folds["fold_spread_valid"].sum()
+        ),
         "positive_fold_count": int((ic > 0.0).sum()),
-        "median_fold_mean_daily_ic": float(ic.median()) if len(ic) else np.nan,
-        "q25_fold_mean_daily_ic": float(ic.quantile(0.25, interpolation="linear")) if len(ic) else np.nan,
-        "median_fold_top30_mean_realized_percentile": float(top.median()) if len(top) else np.nan,
-        "median_fold_top30_bottom30_spread": float(spread.median()) if len(spread) else np.nan,
-        "q25_fold_top30_bottom30_spread": float(spread.quantile(0.25, interpolation="linear")) if len(spread) else np.nan,
+        "median_fold_mean_daily_ic": (
+            float(ic.median()) if len(ic) else np.nan
+        ),
+        "q25_fold_mean_daily_ic": (
+            float(ic.quantile(0.25, interpolation="linear"))
+            if len(ic)
+            else np.nan
+        ),
+        "median_fold_top30_mean_realized_percentile": (
+            float(top.median()) if len(top) else np.nan
+        ),
+        "median_fold_top30_bottom30_spread": (
+            float(spread.median()) if len(spread) else np.nan
+        ),
+        "q25_fold_top30_bottom30_spread": (
+            float(spread.quantile(0.25, interpolation="linear"))
+            if len(spread)
+            else np.nan
+        ),
     }
     return folds, aggregate
 
@@ -479,10 +656,16 @@ def fold_stratified_block_bootstrap_mean(
     for fold, frame in fold_metrics.groupby("fold", sort=True):
         ordered = frame.sort_values("date", kind="mergesort")
         if len(ordered) != 100:
-            raise ValueError("bootstrap requires exactly 100 dates in every fold")
-        values = pd.to_numeric(ordered[value_column], errors="coerce").to_numpy(dtype=float)
+            raise ValueError(
+                "bootstrap requires exactly 100 dates in every fold"
+            )
+        values = pd.to_numeric(
+            ordered[value_column], errors="coerce"
+        ).to_numpy(dtype=float)
         if int(np.isfinite(values).sum()) < MIN_ADMITTED_DATES_PER_FOLD:
-            raise ValueError("bootstrap requires at least 90 finite metric dates per fold")
+            raise ValueError(
+                "bootstrap requires at least 90 finite metric dates per fold"
+            )
         blocks[int(fold)] = values
     if sorted(blocks) != [1, 2, 3, 4, 5, 6]:
         raise ValueError("bootstrap requires folds 1..6")
@@ -500,7 +683,9 @@ def fold_stratified_block_bootstrap_mean(
             )
         sampled = np.concatenate(sampled_parts)
         finite = sampled[np.isfinite(sampled)]
-        out[replicate] = float(finite.mean()) if len(finite) else np.nan
+        out[replicate] = (
+            float(finite.mean()) if len(finite) else np.nan
+        )
     return out
 
 
@@ -509,7 +694,9 @@ def percentile_ci(values: np.ndarray) -> tuple[float, float]:
     finite = finite[np.isfinite(finite)]
     if not len(finite):
         return np.nan, np.nan
-    low, high = np.quantile(finite, [0.025, 0.975], method="linear")
+    low, high = np.quantile(
+        finite, [0.025, 0.975], method="linear"
+    )
     return float(low), float(high)
 
 
@@ -524,12 +711,19 @@ def paired_date_delta(
     ),
 ) -> pd.DataFrame:
     required = {"date", "fold", *metric_columns}
-    if not required.issubset(challenger.columns) or not required.issubset(control.columns):
+    if (
+        not required.issubset(challenger.columns)
+        or not required.issubset(control.columns)
+    ):
         raise ValueError("paired delta inputs are missing metric columns")
     left = challenger[list(required)].copy()
     right = control[list(required)].copy()
-    left["date"] = _normalize_dates(left["date"], label="challenger paired metrics")
-    right["date"] = _normalize_dates(right["date"], label="control paired metrics")
+    left["date"] = _normalize_dates(
+        left["date"], label="challenger paired metrics"
+    )
+    right["date"] = _normalize_dates(
+        right["date"], label="control paired metrics"
+    )
     merged = left.merge(
         right,
         on=["date", "fold"],
@@ -539,14 +733,24 @@ def paired_date_delta(
         indicator=True,
     )
     if not merged["_merge"].eq("both").all():
-        raise RuntimeError("challenger/control metric date support differs")
+        raise RuntimeError(
+            "challenger/control metric date support differs"
+        )
     merged = merged.drop(columns="_merge")
     for column in metric_columns:
-        c = pd.to_numeric(merged[f"{column}_challenger"], errors="coerce")
-        b = pd.to_numeric(merged[f"{column}_control"], errors="coerce")
+        c = pd.to_numeric(
+            merged[f"{column}_challenger"], errors="coerce"
+        )
+        b = pd.to_numeric(
+            merged[f"{column}_control"], errors="coerce"
+        )
         both = c.notna() & b.notna()
-        merged[f"delta_{column}"] = np.where(both, c - b, np.nan)
-    return merged.sort_values(["fold", "date"], kind="mergesort").reset_index(drop=True)
+        merged[f"delta_{column}"] = np.where(
+            both, c - b, np.nan
+        )
+    return merged.sort_values(
+        ["fold", "date"], kind="mergesort"
+    ).reset_index(drop=True)
 
 
 def summarize_paired_deltas(
@@ -560,12 +764,16 @@ def summarize_paired_deltas(
     required = {"fold", *metric_map.values()}
     missing = required - set(paired.columns)
     if missing:
-        raise ValueError(f"paired delta table missing columns: {sorted(missing)}")
+        raise ValueError(
+            f"paired delta table missing columns: {sorted(missing)}"
+        )
 
     rows: list[dict[str, object]] = []
     for fold, block in paired.groupby("fold", sort=True):
         if len(block) != 100:
-            raise ValueError("paired delta fold must contain exactly 100 dates")
+            raise ValueError(
+                "paired delta fold must contain exactly 100 dates"
+            )
         row: dict[str, object] = {"fold": int(fold)}
         for label, column in metric_map.items():
             values = pd.to_numeric(block[column], errors="coerce")
@@ -574,16 +782,23 @@ def summarize_paired_deltas(
             valid = count >= MIN_ADMITTED_DATES_PER_FOLD
             row[f"{label}_paired_dates"] = count
             row[f"{label}_paired_valid"] = valid
-            row[f"fold_mean_{label}_delta"] = float(finite.mean()) if valid else np.nan
+            row[f"fold_mean_{label}_delta"] = (
+                float(finite.mean()) if valid else np.nan
+            )
         row["fold_all_paired_valid"] = bool(
-            row["ic_paired_valid"] and row["top30_paired_valid"] and row["spread_paired_valid"]
+            row["ic_paired_valid"]
+            and row["top30_paired_valid"]
+            and row["spread_paired_valid"]
         )
         rows.append(row)
     folds = pd.DataFrame(rows).sort_values("fold").reset_index(drop=True)
 
     def values(label: str) -> pd.Series:
         return pd.to_numeric(
-            folds.loc[folds[f"{label}_paired_valid"], f"fold_mean_{label}_delta"],
+            folds.loc[
+                folds[f"{label}_paired_valid"],
+                f"fold_mean_{label}_delta",
+            ],
             errors="coerce",
         ).dropna()
 
@@ -595,10 +810,20 @@ def summarize_paired_deltas(
             len(folds) == 6 and folds["fold_all_paired_valid"].all()
         ),
         "positive_fold_ic_delta_count": int((ic > 0.0).sum()),
-        "median_fold_mean_ic_delta": float(ic.median()) if len(ic) else np.nan,
-        "q25_fold_mean_ic_delta": float(ic.quantile(0.25, interpolation="linear")) if len(ic) else np.nan,
-        "median_fold_top30_percentile_delta": float(top.median()) if len(top) else np.nan,
-        "median_fold_top30_bottom30_spread_delta": float(spread.median()) if len(spread) else np.nan,
+        "median_fold_mean_ic_delta": (
+            float(ic.median()) if len(ic) else np.nan
+        ),
+        "q25_fold_mean_ic_delta": (
+            float(ic.quantile(0.25, interpolation="linear"))
+            if len(ic)
+            else np.nan
+        ),
+        "median_fold_top30_percentile_delta": (
+            float(top.median()) if len(top) else np.nan
+        ),
+        "median_fold_top30_bottom30_spread_delta": (
+            float(spread.median()) if len(spread) else np.nan
+        ),
     }
     return folds, aggregate
 
@@ -611,20 +836,34 @@ def evaluate_absolute_viability_gates(
     bootstrap_ci: tuple[float, float] | None = None,
 ) -> dict[str, object]:
     config = preregistration["absolute_viability_gates"]
-    key = "head_H5" if head == "H5" else "head_H10" if head == "H10" else "consensus"
+    key = (
+        "head_H5"
+        if head == "H5"
+        else "head_H10"
+        if head == "H10"
+        else "consensus"
+    )
     thresholds = config[key]
     gates: dict[str, bool] = {
         "all_six_primary_metric_folds_valid": bool(
             aggregate.get("all_six_primary_metric_folds_valid", False)
         ),
-        "median_fold_mean_daily_ic": float(aggregate["median_fold_mean_daily_ic"])
+        "median_fold_mean_daily_ic": float(
+            aggregate["median_fold_mean_daily_ic"]
+        )
         >= float(thresholds["median_fold_mean_daily_ic_min"]),
-        "q25_fold_mean_daily_ic": float(aggregate["q25_fold_mean_daily_ic"])
+        "q25_fold_mean_daily_ic": float(
+            aggregate["q25_fold_mean_daily_ic"]
+        )
         >= float(thresholds["q25_fold_mean_daily_ic_min"]),
         "median_fold_top30_mean_realized_percentile": float(
             aggregate["median_fold_top30_mean_realized_percentile"]
         )
-        >= float(thresholds["median_fold_top30_mean_realized_percentile_min"]),
+        >= float(
+            thresholds[
+                "median_fold_top30_mean_realized_percentile_min"
+            ]
+        ),
         "median_fold_top30_bottom30_spread": float(
             aggregate["median_fold_top30_bottom30_spread"]
         )
@@ -637,12 +876,23 @@ def evaluate_absolute_viability_gates(
             aggregate["q25_fold_top30_bottom30_spread"]
         ) >= float(thresholds["q25_fold_top30_bottom30_spread_min"])
     if "bootstrap_95pct_lower_mean_daily_ic_strictly_gt" in thresholds:
-        lower = np.nan if bootstrap_ci is None else float(bootstrap_ci[0])
+        lower = (
+            np.nan if bootstrap_ci is None else float(bootstrap_ci[0])
+        )
         gates["bootstrap_95pct_lower_mean_daily_ic"] = bool(
             np.isfinite(lower)
-            and lower > float(thresholds["bootstrap_95pct_lower_mean_daily_ic_strictly_gt"])
+            and lower
+            > float(
+                thresholds[
+                    "bootstrap_95pct_lower_mean_daily_ic_strictly_gt"
+                ]
+            )
         )
-    return {"head": head, "gates": gates, "pass": bool(all(gates.values()))}
+    return {
+        "head": head,
+        "gates": gates,
+        "pass": bool(all(gates.values())),
+    }
 
 
 def evaluate_incremental_promotion_gates(
@@ -654,7 +904,9 @@ def evaluate_incremental_promotion_gates(
     challenger_absolute_pass: bool,
     preregistration: dict[str, object],
 ) -> dict[str, object]:
-    thresholds = preregistration["challenger_incremental_promotion_gates"]
+    thresholds = preregistration[
+        "challenger_incremental_promotion_gates"
+    ]
     lower = float(consensus_bootstrap_delta_ci[0])
     gates = {
         "challenger_absolute_pass": bool(challenger_absolute_pass),
@@ -665,34 +917,60 @@ def evaluate_incremental_promotion_gates(
             h10_delta.get("all_six_paired_metric_folds_valid", False)
         ),
         "all_six_consensus_paired_metric_folds_valid": bool(
-            consensus_delta.get("all_six_paired_metric_folds_valid", False)
+            consensus_delta.get(
+                "all_six_paired_metric_folds_valid", False
+            )
         ),
-        "H5_median_fold_mean_ic_delta": float(h5_delta["median_fold_mean_ic_delta"])
+        "H5_median_fold_mean_ic_delta": float(
+            h5_delta["median_fold_mean_ic_delta"]
+        )
         >= float(thresholds["H5_median_fold_mean_ic_delta_min"]),
-        "H5_q25_fold_mean_ic_delta": float(h5_delta["q25_fold_mean_ic_delta"])
+        "H5_q25_fold_mean_ic_delta": float(
+            h5_delta["q25_fold_mean_ic_delta"]
+        )
         >= float(thresholds["H5_q25_fold_mean_ic_delta_min"]),
-        "H10_median_fold_mean_ic_delta": float(h10_delta["median_fold_mean_ic_delta"])
+        "H10_median_fold_mean_ic_delta": float(
+            h10_delta["median_fold_mean_ic_delta"]
+        )
         >= float(thresholds["H10_median_fold_mean_ic_delta_min"]),
-        "H10_q25_fold_mean_ic_delta": float(h10_delta["q25_fold_mean_ic_delta"])
+        "H10_q25_fold_mean_ic_delta": float(
+            h10_delta["q25_fold_mean_ic_delta"]
+        )
         >= float(thresholds["H10_q25_fold_mean_ic_delta_min"]),
         "consensus_median_fold_mean_ic_delta": float(
             consensus_delta["median_fold_mean_ic_delta"]
         )
-        >= float(thresholds["consensus_median_fold_mean_ic_delta_min"]),
-        "consensus_q25_fold_mean_ic_delta": float(consensus_delta["q25_fold_mean_ic_delta"])
+        >= float(
+            thresholds["consensus_median_fold_mean_ic_delta_min"]
+        ),
+        "consensus_q25_fold_mean_ic_delta": float(
+            consensus_delta["q25_fold_mean_ic_delta"]
+        )
         >= float(thresholds["consensus_q25_fold_mean_ic_delta_min"]),
         "consensus_median_fold_top30_percentile_delta": float(
             consensus_delta["median_fold_top30_percentile_delta"]
         )
-        >= float(thresholds["consensus_median_fold_top30_percentile_delta_min"]),
+        >= float(
+            thresholds[
+                "consensus_median_fold_top30_percentile_delta_min"
+            ]
+        ),
         "consensus_median_fold_top30_bottom30_spread_delta": float(
-            consensus_delta["median_fold_top30_bottom30_spread_delta"]
+            consensus_delta[
+                "median_fold_top30_bottom30_spread_delta"
+            ]
         )
-        >= float(thresholds["consensus_median_fold_top30_bottom30_spread_delta_min"]),
+        >= float(
+            thresholds[
+                "consensus_median_fold_top30_bottom30_spread_delta_min"
+            ]
+        ),
         "consensus_positive_fold_ic_delta_count": int(
             consensus_delta["positive_fold_ic_delta_count"]
         )
-        >= int(thresholds["consensus_positive_fold_ic_delta_count_min"]),
+        >= int(
+            thresholds["consensus_positive_fold_ic_delta_count_min"]
+        ),
         "consensus_bootstrap_95pct_lower_mean_daily_ic_delta": bool(
             np.isfinite(lower)
             and lower
