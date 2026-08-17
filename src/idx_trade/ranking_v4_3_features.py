@@ -126,16 +126,22 @@ def _prepare_security_master(frame: pd.DataFrame) -> pd.DataFrame:
     master["ticker"] = _ticker(master["ticker"])
     if master["ticker"].eq("").any() or master["ticker"].duplicated().any():
         raise ValueError("security master ticker identity must be non-empty and unique")
-    master["listed_from"] = pd.to_datetime(master["listed_from"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    master["listed_from"] = pd.to_datetime(
+        master["listed_from"], errors="coerce"
+    ).dt.tz_localize(None).dt.normalize()
     if master["listed_from"].isna().any():
         raise ValueError("security master contains invalid listed_from")
     listed_to_raw = master["listed_to"]
-    parsed_to = pd.to_datetime(listed_to_raw, errors="coerce").dt.tz_localize(None).dt.normalize()
+    parsed_to = pd.to_datetime(
+        listed_to_raw, errors="coerce"
+    ).dt.tz_localize(None).dt.normalize()
     finite_to = listed_to_raw.notna() & listed_to_raw.astype(str).str.strip().ne("")
     if (finite_to & parsed_to.isna()).any():
         raise ValueError("security master contains malformed non-empty listed_to")
     master["listed_to"] = parsed_to
-    invalid_interval = master["listed_to"].notna() & master["listed_to"].lt(master["listed_from"])
+    invalid_interval = master["listed_to"].notna() & master["listed_to"].lt(
+        master["listed_from"]
+    )
     if invalid_interval.any():
         raise ValueError("security master contains listed_to before listed_from")
     return master
@@ -145,24 +151,46 @@ def filter_pit_listing_rows(
     panel: pd.DataFrame,
     security_master: pd.DataFrame,
 ) -> tuple[pd.DataFrame, PitFeatureDiagnostics]:
-    """Remove invalid listing-domain rows before any sequential feature build."""
+    """Remove invalid listing-domain rows before any sequential feature build.
 
-    required = {"ticker", "date", "high", "low", "close", "volume", "regular_market_value"}
+    Any listing columns already carried by the panel are explicitly discarded:
+    the separately hash-pinned security master is authoritative for this gate.
+    """
+
+    required = {
+        "ticker",
+        "date",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "regular_market_value",
+    }
     missing = required - set(panel.columns)
     if missing:
         raise ValueError(f"signal panel missing columns: {sorted(missing)}")
 
-    data = panel.copy()
+    data = panel.drop(columns=["listed_from", "listed_to"], errors="ignore").copy()
     data["ticker"] = _ticker(data["ticker"])
     data["date"] = _date(data["date"], label="signal panel")
     if data.duplicated(["ticker", "date"]).any():
         raise ValueError("signal panel contains duplicate ticker/date identity")
 
     master = _prepare_security_master(security_master)
-    data = data.merge(master, on="ticker", how="left", validate="many_to_one", indicator="_master_join")
+    data = data.merge(
+        master,
+        on="ticker",
+        how="left",
+        validate="many_to_one",
+        indicator="_master_join",
+    )
     missing_master = data["_master_join"].ne("both")
     pre_listing = (~missing_master) & data["date"].lt(data["listed_from"])
-    post_listing = (~missing_master) & data["listed_to"].notna() & data["date"].gt(data["listed_to"])
+    post_listing = (
+        (~missing_master)
+        & data["listed_to"].notna()
+        & data["date"].gt(data["listed_to"])
+    )
     admitted = ~(missing_master | pre_listing | post_listing)
 
     diagnostics = PitFeatureDiagnostics(
@@ -175,7 +203,9 @@ def filter_pit_listing_rows(
         tickers_admitted=int(data.loc[admitted, "ticker"].nunique()),
     )
     out = data.loc[admitted].drop(columns=["_master_join"]).copy()
-    return out.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True), diagnostics
+    return out.sort_values(
+        ["ticker", "date"], kind="mergesort"
+    ).reset_index(drop=True), diagnostics
 
 
 def _add_causal_atr(data: pd.DataFrame) -> pd.DataFrame:
@@ -263,7 +293,9 @@ def build_v4_control_feature_table(
         frame["relative_volume_20"] = _safe_divide(volume, median_volume20)
         median_value20 = value.rolling(20, min_periods=20).median()
         value_ratio = _safe_divide(value, median_value20)
-        frame["log_regular_value_relative_20"] = np.log(value_ratio.where(value_ratio > 0.0))
+        frame["log_regular_value_relative_20"] = np.log(
+            value_ratio.where(value_ratio > 0.0)
+        )
 
         indices = frame["session_index"].to_numpy(dtype=int)
         values = frame["regular_market_value"].to_numpy(dtype=float)
@@ -281,7 +313,9 @@ def build_v4_control_feature_table(
         frame["liquidity_active_observations_60"] = counts
         frame["median_regular_value_60"] = medians
         frame["universe_history_qualified"] = (
-            frame["liquidity_active_observations_60"].ge(PRIMARY_MIN_ACTIVE_OBSERVATIONS)
+            frame["liquidity_active_observations_60"].ge(
+                PRIMARY_MIN_ACTIVE_OBSERVATIONS
+            )
             & frame["median_regular_value_60"].notna()
         )
         frame["universe_primary_liquid"] = (
@@ -299,10 +333,14 @@ def build_v4_control_feature_table(
     if primary.empty:
         raise ValueError("PIT-safe feature build has no primary-liquid rows")
 
-    for source, output in zip(V4_XS_SOURCE_FEATURES, V4_XS_FEATURE_COLUMNS, strict=True):
+    for source, output in zip(
+        V4_XS_SOURCE_FEATURES, V4_XS_FEATURE_COLUMNS, strict=True
+    ):
         result[output] = np.nan
         source_values = _finite(primary[source])
-        ranks = source_values.groupby(primary["date"]).rank(method="average", pct=True)
+        ranks = source_values.groupby(primary["date"]).rank(
+            method="average", pct=True
+        )
         result.loc[ranks.index, output] = ranks.astype(float)
 
     context_rows: list[dict[str, object]] = []
@@ -312,22 +350,44 @@ def build_v4_control_feature_table(
 
         r5 = finite_values("close_return_5")
         r20 = finite_values("close_return_20")
+        atr14 = finite_values("atr14_over_close")
+        close_pos = finite_values("close_position_20")
+        rel_volume = finite_values("relative_volume_20")
+        rel_value = finite_values("log_regular_value_relative_20")
         context_rows.append(
             {
                 "date": pd.Timestamp(day),
                 "market_primary_liquid_count": float(len(block)),
-                "market_breadth_return_5_positive": float((r5 > 0.0).mean()) if len(r5) else np.nan,
-                "market_breadth_return_20_positive": float((r20 > 0.0).mean()) if len(r20) else np.nan,
-                "market_median_close_return_5": float(r5.median()) if len(r5) else np.nan,
-                "market_median_close_return_20": float(r20.median()) if len(r20) else np.nan,
-                "market_median_atr14_over_close": float(finite_values("atr14_over_close").median()) if len(finite_values("atr14_over_close")) else np.nan,
-                "market_median_close_position_20": float(finite_values("close_position_20").median()) if len(finite_values("close_position_20")) else np.nan,
-                "market_median_relative_volume_20": float(finite_values("relative_volume_20").median()) if len(finite_values("relative_volume_20")) else np.nan,
-                "market_median_log_regular_value_relative_20": float(finite_values("log_regular_value_relative_20").median()) if len(finite_values("log_regular_value_relative_20")) else np.nan,
+                "market_breadth_return_5_positive": (
+                    float((r5 > 0.0).mean()) if len(r5) else np.nan
+                ),
+                "market_breadth_return_20_positive": (
+                    float((r20 > 0.0).mean()) if len(r20) else np.nan
+                ),
+                "market_median_close_return_5": (
+                    float(r5.median()) if len(r5) else np.nan
+                ),
+                "market_median_close_return_20": (
+                    float(r20.median()) if len(r20) else np.nan
+                ),
+                "market_median_atr14_over_close": (
+                    float(atr14.median()) if len(atr14) else np.nan
+                ),
+                "market_median_close_position_20": (
+                    float(close_pos.median()) if len(close_pos) else np.nan
+                ),
+                "market_median_relative_volume_20": (
+                    float(rel_volume.median()) if len(rel_volume) else np.nan
+                ),
+                "market_median_log_regular_value_relative_20": (
+                    float(rel_value.median()) if len(rel_value) else np.nan
+                ),
             }
         )
     context = pd.DataFrame(context_rows)
-    result = result.merge(context, on="date", how="left", validate="many_to_one")
+    result = result.merge(
+        context, on="date", how="left", validate="many_to_one"
+    )
 
     primary_mask = result["universe_primary_liquid"].astype(bool)
     for source, (market_column, output) in _RELATIVE_SOURCE_TO_MARKET.items():
@@ -337,12 +397,21 @@ def build_v4_control_feature_table(
             - _finite(result.loc[primary_mask, market_column])
         )
 
-    return result.sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True), diagnostics
+    return result.sort_values(
+        ["date", "ticker"], kind="mergesort"
+    ).reset_index(drop=True), diagnostics
 
 
 def v4_primary_control_view(features: pd.DataFrame) -> pd.DataFrame:
-    required = {"ticker", "date", "universe_primary_liquid", *V4_CONTROL_FEATURE_COLUMNS}
+    required = {
+        "ticker",
+        "date",
+        "universe_primary_liquid",
+        *V4_CONTROL_FEATURE_COLUMNS,
+    }
     missing = required - set(features.columns)
     if missing:
         raise ValueError(f"V4 control feature table missing columns: {sorted(missing)}")
-    return features[features["universe_primary_liquid"].astype(bool)].copy().reset_index(drop=True)
+    return features[
+        features["universe_primary_liquid"].astype(bool)
+    ].copy().reset_index(drop=True)
