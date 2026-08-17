@@ -1,0 +1,195 @@
+{
+  "estimator": {
+    "class": "sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingRegressor",
+    "effective_parameters": {
+      "categorical_features": null,
+      "early_stopping": false,
+      "interaction_cst": null,
+      "l2_regularization": 1.0,
+      "learning_rate": 0.05,
+      "loss": "squared_error",
+      "max_bins": 255,
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_iter": 200,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 20,
+      "monotonic_cst": null,
+      "n_iter_no_change": 10,
+      "quantile": null,
+      "random_state": 42,
+      "scoring": "loss",
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "fit_called": false,
+    "signature": "(loss='squared_error', *, quantile=None, learning_rate=0.1, max_iter=100, max_leaf_nodes=31, max_depth=None, min_samples_leaf=20, l2_regularization=0.0, max_features=1.0, max_bins=255, categorical_features='from_dtype', monotonic_cst=None, interaction_cst=None, warm_start=False, early_stopping='auto', scoring='loss', validation_fraction=0.1, n_iter_no_change=10, tol=1e-07, verbose=0, random_state=None)"
+  },
+  "git": {
+    "branch": "research/idx-ranking-v4-3-prefit-runtime-v1",
+    "head": "640cb257bb93775ec69e3a6f6683fd50cb22417b",
+    "worktree_clean": true
+  },
+  "hash_semantics": {
+    "scientific_pins": "canonical Git HEAD bytes via git show HEAD:<path>",
+    "working_tree": "recorded separately; may differ only due to clean-checkout transformations such as CRLF"
+  },
+  "imputers": {
+    "class": "sklearn.impute._base.SimpleImputer",
+    "control_effective_parameters": {
+      "add_indicator": true,
+      "copy": true,
+      "fill_value": null,
+      "keep_empty_features": true,
+      "missing_values": NaN,
+      "strategy": "median"
+    },
+    "fit_called": false,
+    "geometry_effective_parameters": {
+      "add_indicator": false,
+      "copy": true,
+      "fill_value": null,
+      "keep_empty_features": true,
+      "missing_values": NaN,
+      "strategy": "median"
+    },
+    "signature": "(*, missing_values=nan, strategy='mean', fill_value=None, copy=True, add_indicator=False, keep_empty_features=False)"
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "package_versions": {
+    "joblib": "1.5.3",
+    "numpy": "2.4.2",
+    "pandas": "2.3.3",
+    "pyarrow": "23.0.1",
+    "scikit-learn": "1.8.0",
+    "scipy": "1.18.0",
+    "threadpoolctl": "3.6.0"
+  },
+  "performance_computed": false,
+  "platform": {
+    "architecture": [
+      "64bit",
+      "WindowsPE"
+    ],
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "release": "11",
+    "system": "Windows",
+    "version": "10.0.26200"
+  },
+  "prediction_generated": false,
+  "provider_calls": false,
+  "python": {
+    "executable": "C:\\Users\\Sam\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+    "implementation": "CPython",
+    "version": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+    "version_info": [
+      3,
+      13,
+      5,
+      "final",
+      0
+    ]
+  },
+  "repo_git_head_sha256": {
+    "config/ranking_v4_3_prefit_runtime_protocol.json": "9382992293e1057ca55e6eade759220b18948b427ee3783e60ce7e80b597bfaf",
+    "config/ranking_v4_3_preregistration.json": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "scripts/capture_v4_3_prefit_environment.py": "33117b2f57b5643c0ffd4804b4001592d985ad8adc40be8ef79526c145ed4d5a",
+    "scripts/run_v4_3_primary_liquid_support.py": "34442701e9bd83c3de6eb7b3157357daa01039dc1d582506633f6d6a4ded2d93",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "17f49bbfd6b755b918ff36b4c070bad71a1ead5ba2503a4b179df67aad785468",
+    "tests/test_ranking_v4_3_prefit_runtime.py": "ed4b3ffa7314ea71b3153f21e75e05f94fea97ed71ea37e2d90c5a344c515b60",
+    "tests/test_ranking_v4_3_preregistration.py": "072e692ccc5fe9a66dccfc93527c632f96871db33e521d57d352f080ca549839"
+  },
+  "repo_worktree_sha256": {
+    "config/ranking_v4_3_prefit_runtime_protocol.json": "9382992293e1057ca55e6eade759220b18948b427ee3783e60ce7e80b597bfaf",
+    "config/ranking_v4_3_preregistration.json": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "scripts/capture_v4_3_prefit_environment.py": "33117b2f57b5643c0ffd4804b4001592d985ad8adc40be8ef79526c145ed4d5a",
+    "scripts/run_v4_3_primary_liquid_support.py": "34442701e9bd83c3de6eb7b3157357daa01039dc1d582506633f6d6a4ded2d93",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "17f49bbfd6b755b918ff36b4c070bad71a1ead5ba2503a4b179df67aad785468",
+    "tests/test_ranking_v4_3_prefit_runtime.py": "ed4b3ffa7314ea71b3153f21e75e05f94fea97ed71ea37e2d90c5a344c515b60",
+    "tests/test_ranking_v4_3_preregistration.py": "072e692ccc5fe9a66dccfc93527c632f96871db33e521d57d352f080ca549839"
+  },
+  "required_artifact_actual_git_sha256": {
+    "config/ranking_v4_3_preregistration.json": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "required_artifact_expected_git_sha256": {
+    "config/ranking_v4_3_preregistration.json": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "required_artifact_worktree_sha256": {
+    "config/ranking_v4_3_preregistration.json": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md": "ffff2d21b275744a3a2b74c2f7d32be7b589f3c46cf9950c5ff45c48e5bffd73",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/manifest.json": "6cb8df059d310bb337ffe7f5026d416f0e15252c79ecc04e6c597925a0d243a4",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_consensus_sessions.csv": "06f7af7d0bc34c1714ed3c19684177cd27dd911c11fd509c231b9bdfb90f970b",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h10_sessions.csv": "c6aa516058aae6406dc58844f27c434ebd4cd12ab4b637a74b135d66b9dda373",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_eligible_h5_sessions.csv": "e5a9d541f74c5ec1c07496aac9597510e115c230b8e5b754e91721baa0eed0bb",
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "schema_version": "ranking_v4_3_prefit_environment_manifest_v1_1",
+  "status": "V4_3_PREFIT_ENVIRONMENT_CAPTURED_NO_TARGET_OR_MODEL_RUN",
+  "target_or_return_loaded": false,
+  "thread_environment": {
+    "MKL_NUM_THREADS": null,
+    "NUMEXPR_NUM_THREADS": null,
+    "OMP_NUM_THREADS": null,
+    "OPENBLAS_NUM_THREADS": null,
+    "PYTHONHASHSEED": null
+  },
+  "threadpool_info": [
+    {
+      "architecture": "SkylakeX",
+      "filepath": "C:\\Users\\Sam\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy.libs\\libscipy_openblas64_-74a408729250596b0973e69fdd954eea.dll",
+      "internal_api": "openblas",
+      "num_threads": 16,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.31.dev"
+    },
+    {
+      "filepath": "C:\\Users\\Sam\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\sklearn\\.libs\\vcomp140.dll",
+      "internal_api": "openmp",
+      "num_threads": 16,
+      "prefix": "vcomp",
+      "user_api": "openmp",
+      "version": null
+    },
+    {
+      "architecture": "SkylakeX",
+      "filepath": "C:\\Users\\Sam\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\scipy.libs\\libscipy_openblas-197ee2fc9b4d071f7e048078cac74115.dll",
+      "internal_api": "openblas",
+      "num_threads": 16,
+      "prefix": "libscipy_openblas",
+      "threading_layer": "pthreads",
+      "user_api": "blas",
+      "version": "0.3.31.dev"
+    }
+  ]
+}
