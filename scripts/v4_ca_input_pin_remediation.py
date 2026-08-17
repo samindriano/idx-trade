@@ -22,15 +22,19 @@ GOOD_KSEI_MANIFEST_SHA = (
 
 def remediated_source_text(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
-    count = text.count(BAD_KSEI_MANIFEST_SHA)
+    bad_literal = f'"{BAD_KSEI_MANIFEST_SHA}"'
+    good_literal = f'"{GOOD_KSEI_MANIFEST_SHA}"'
+
+    count = text.count(bad_literal)
     if count != 1:
         raise RuntimeError(
             f"V4_CA_PIN_REMEDIATION_EXPECTED_ONE_BAD_LITERAL:{path}:{count}"
         )
-    remediated = text.replace(BAD_KSEI_MANIFEST_SHA, GOOD_KSEI_MANIFEST_SHA)
-    if BAD_KSEI_MANIFEST_SHA in remediated:
+
+    remediated = text.replace(bad_literal, good_literal)
+    if bad_literal in remediated:
         raise RuntimeError("V4_CA_PIN_REMEDIATION_BAD_LITERAL_REMAINS")
-    if remediated.count(GOOD_KSEI_MANIFEST_SHA) != 1:
+    if remediated.count(good_literal) != 1:
         raise RuntimeError("V4_CA_PIN_REMEDIATION_GOOD_LITERAL_COUNT_INVALID")
     return remediated
 
