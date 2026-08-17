@@ -1,0 +1,330 @@
+{
+  "absolute_viability_gates": {
+    "all_gates_required": true,
+    "consensus": {
+      "bootstrap_95pct_lower_mean_daily_ic_strictly_gt": 0.0,
+      "median_fold_mean_daily_ic_min": 0.025,
+      "median_fold_top30_bottom30_spread_min": 0.04,
+      "median_fold_top30_mean_realized_percentile_min": 0.52,
+      "positive_fold_count_min": 5,
+      "q25_fold_mean_daily_ic_min": 0.01,
+      "q25_fold_top30_bottom30_spread_min": 0.0
+    },
+    "head_H10": {
+      "median_fold_mean_daily_ic_min": 0.015,
+      "median_fold_top30_bottom30_spread_min": 0.02,
+      "median_fold_top30_mean_realized_percentile_min": 0.51,
+      "positive_fold_count_min": 4,
+      "q25_fold_mean_daily_ic_min": 0.0
+    },
+    "head_H5": {
+      "median_fold_mean_daily_ic_min": 0.015,
+      "median_fold_top30_bottom30_spread_min": 0.02,
+      "median_fold_top30_mean_realized_percentile_min": 0.51,
+      "positive_fold_count_min": 4,
+      "q25_fold_mean_daily_ic_min": 0.0
+    },
+    "interpretation": "historical-development viability only; passing does not establish independent validation or a tradable system"
+  },
+  "challenger": {
+    "added_feature_count": 3,
+    "added_features": [
+      "session_open_position_range",
+      "session_body_signed_range",
+      "session_log_high_low_range"
+    ],
+    "admission": {
+      "flat_range": "open-position and body features NaN; log-range equals 0 when High == Low > 0",
+      "missing_features_do_not_remove_row": true,
+      "no_synthetic_open": true,
+      "open_must_be_defensible_and_inside_daily_low_high_for_open_dependent_features": true
+    },
+    "base_control": "V4_CONTROL_CONTEXT25_HGBR",
+    "feature_formulas": {
+      "session_body_signed_range": "if finite valid Open/Close/High/Low and High > Low: (Close - Open) / (High - Low); else NaN",
+      "session_log_high_low_range": "if finite High >= Low > 0: log(High / Low); else NaN",
+      "session_open_position_range": "if finite valid Open/High/Low and High > Low: (Open - Low) / (High - Low); else NaN"
+    },
+    "id": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "no_geometry_subset_rescue": true,
+    "role": "only initial V4 challenger",
+    "selection_reason": "bounded non-redundant completed-session geometry is causally available at EOD t, has accepted Open coverage, and avoids the unresolved long-window corporate-action continuity risk of Structure-Lite",
+    "structure_lite_status": "PARKED_FOR_SEPARATE_PREREGISTERED_CHALLENGER_UNTIL_LONG_WINDOW_PRICE_CONTINUITY_IS_EXPLICITLY_RESOLVED"
+  },
+  "challenger_incremental_promotion_gates": {
+    "H10_median_fold_mean_ic_delta_min": 0.0,
+    "H10_q25_fold_mean_ic_delta_min": -0.005,
+    "H5_median_fold_mean_ic_delta_min": 0.0,
+    "H5_q25_fold_mean_ic_delta_min": -0.005,
+    "all_gates_required": true,
+    "challenger_must_also_pass_absolute_viability_gates": true,
+    "comparison_support": "paired exact same validation dates and target-observable row support; Top30 deltas require both models' date metrics to be individually admissible",
+    "consensus_bootstrap_95pct_lower_mean_daily_ic_delta_strictly_gt": 0.0,
+    "consensus_median_fold_mean_ic_delta_min": 0.005,
+    "consensus_median_fold_top30_bottom30_spread_delta_min": 0.01,
+    "consensus_median_fold_top30_percentile_delta_min": 0.005,
+    "consensus_positive_fold_ic_delta_count_min": 4,
+    "consensus_q25_fold_mean_ic_delta_min": 0.0
+  },
+  "control": {
+    "feature_count": 25,
+    "features": [
+      "xs_rank_close_return_5",
+      "xs_rank_close_return_20",
+      "xs_rank_atr14_over_close",
+      "xs_rank_close_position_20",
+      "xs_rank_distance_high_20_atr",
+      "xs_rank_distance_low_20_atr",
+      "xs_rank_distance_high_60_atr",
+      "xs_rank_distance_low_60_atr",
+      "xs_rank_relative_volume_20",
+      "xs_rank_log_regular_value_relative_20",
+      "market_primary_liquid_count",
+      "market_breadth_return_5_positive",
+      "market_breadth_return_20_positive",
+      "market_median_close_return_5",
+      "market_median_close_return_20",
+      "market_median_atr14_over_close",
+      "market_median_close_position_20",
+      "market_median_relative_volume_20",
+      "market_median_log_regular_value_relative_20",
+      "market_relative_close_return_5",
+      "market_relative_close_return_20",
+      "market_relative_atr14_over_close",
+      "market_relative_close_position_20",
+      "market_relative_relative_volume_20",
+      "market_relative_log_regular_value_relative_20"
+    ],
+    "id": "V4_CONTROL_CONTEXT25_HGBR",
+    "note": "the representation is retained as the initial control only; old target, fitted model, performance magnitude, and final-alpha status are not inherited",
+    "representation": "exact Clean-V2 25-column contextual information representation on the frozen primary-liquid universe",
+    "role": "main within-V4 promotion control"
+  },
+  "decision_logic": {
+    "fresh_confirmation_required": true,
+    "if_challenger_passes_absolute_and_incremental": "CHALLENGER_PROMOTED_FOR_FRESH_PROSPECTIVE_CONFIRMATION",
+    "if_control_fails_and_challenger_fails": "V4_GENERATION_NO_SURVIVOR",
+    "if_control_fails_but_challenger_passes_absolute_and_incremental": "CHALLENGER_PROMOTED_FOR_FRESH_PROSPECTIVE_CONFIRMATION",
+    "if_control_passes_and_challenger_fails_promotion": "CONTROL_RETAINED",
+    "legacy_clean_v2": "contextual benchmark only; not promotion control and not allowed to override V4 gates"
+  },
+  "decision_universe": {
+    "freeze_reason": "preserves the clean contextual V2 decision-universe baseline without optimizing a new liquidity threshold on V4 outcomes",
+    "future_information_allowed": false,
+    "id": "V4_PRIMARY_LIQUID_CAUSAL_V1",
+    "liquidity_lookback_official_sessions": 60,
+    "liquidity_statistic": "median_regular_market_value_60",
+    "minimum_finite_regular_value_observations": 20,
+    "minimum_median_regular_market_value_idr": 1000000000.0,
+    "signal_contract": "SIGNAL_RESEARCH_HLCV",
+    "listing_and_activity": "authoritative PIT common share, LISTED and ACTIVE at EOD t",
+    "top_n_filter": null,
+    "window_includes_signal_session": true
+  },
+  "evaluation": {
+    "bootstrap": {
+      "algorithm": "within each 100-date fold, sample 10 non-circular contiguous 10-date blocks with replacement from starts 0..90; concatenate six resampled folds; compute the statistic; repeat 2000 times",
+      "block_length": 10,
+      "ci": [
+        0.025,
+        0.975
+      ],
+      "replications": 2000,
+      "seed": 42,
+      "type": "fold_stratified_moving_date_block"
+    },
+    "date_target_coverage_gate": 0.9,
+    "no_refill": true,
+    "positive_definition": "strictly greater than zero",
+    "primary_metrics": [
+      "daily_spearman_ic",
+      "top30_mean_realized_target_percentile",
+      "top30_minus_bottom30_realized_target_percentile_spread"
+    ],
+    "quantile_method": "linear",
+    "raw_return_diagnostics_are_mandatory_but_not_promotion_gates": true,
+    "top30_min_observable": 27,
+    "top_k": 30
+  },
+  "forbidden_after_target_access": [
+    "change H5/H10 definitions or 50/50 consensus weight",
+    "change primary-liquid threshold/lookback/minimum observations",
+    "change validation tail-600 rule, fold count, fold size, purge, Top30, or observability gates",
+    "change target/prediction rank convention",
+    "change training date weighting",
+    "change learner family or hyperparameters",
+    "change imputation policy",
+    "add/remove/redefine geometry features or test a subset",
+    "replace the challenger with Structure-Lite or another information block",
+    "add a ranking-native learner as rescue",
+    "change absolute or incremental promotion thresholds",
+    "choose alternative metrics/shortlist sizes/folds because the frozen result is weak"
+  ],
+  "learner": {
+    "early_stopping_validation_split": false,
+    "environment_gate": "before first fit, pin exact Python/numpy/pandas/scikit-learn versions and verify estimator signature/effective parameters; package-version choice may not be changed after any V4 target/performance access",
+    "family": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "hyperparameter_search": false,
+    "loss": "squared_error",
+    "parameters": {
+      "categorical_features": null,
+      "early_stopping": false,
+      "l2_regularization": 1.0,
+      "learning_rate": 0.05,
+      "max_bins": 255,
+      "max_depth": null,
+      "max_iter": 200,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 20,
+      "random_state": 42,
+      "warm_start": false
+    },
+    "separate_heads": [
+      "H5",
+      "H10"
+    ]
+  },
+  "legacy_benchmark": {
+    "admission": "only pre-existing genuinely out-of-sample scores on the exact V4 validation dates may be evaluated; a final refit trained through those dates is prohibited",
+    "id": "FROZEN_CLEAN_V2_OLD_TARGET",
+    "required_for_promotion": false,
+    "unavailable_state": "LEGACY_BENCHMARK_NOT_COMPARABLE"
+  },
+  "outcome_blind": true,
+  "parents": {
+    "target_support_acceptance": {
+      "broad_consensus_eligible_sessions": 815,
+      "broad_consensus_identity_sha256": "7336454fed8aaefffbc92cfae5860a1486c11a9235820894eb896bf4f82312ee",
+      "commit": "34fc78fa6234cdcc5093e8c4ea36a444b358cec7"
+    },
+    "v4_0": {
+      "checkpoint_sha256": "7d55c2b11db50ca6a589daa74627c5a963954b42",
+      "commit": "02716c29e6c41fe1f5244708f9cccac77d978eb9"
+    },
+    "v4_1": {
+      "checkpoint_sha256": "afc4d171cf4f735839782d31256c8894283701f4",
+      "commit": "199d770520edcd4a7b4537c75d5edaba2b0aa349"
+    },
+    "v4_2": {
+      "checkpoint_sha256": "48ebfc2bd37ced730f2257d49b708f4a2e1d3963",
+      "commit": "cdb061d32b1d9f63b1b5f719939678a1f15bb082"
+    }
+  },
+  "pre_fit_hard_gates": [
+    "primary-liquid support census >=600 consensus-eligible sessions",
+    "exact H5/H10/consensus eligible-session bytes hash-pinned",
+    "exact six fold identities and official-session purge boundaries materialized and hash-pinned",
+    "restored signal-research contract blob identity verified",
+    "exact runtime dependency versions pinned",
+    "no V4 target/performance artifact exists before all prior gates are complete"
+  ],
+  "prediction": {
+    "alpha_consensus": "0.5 * alpha_h5 + 0.5 * alpha_h10",
+    "alpha_h10": "within-date percentile of H10 raw prediction",
+    "alpha_h5": "within-date percentile of H5 raw prediction",
+    "no_calibration_or_clipping": true,
+    "rank_population": "full frozen decision-time primary-liquid scoring population before future target observability is known",
+    "raw_model_output": "continuous HGB regressor prediction",
+    "within_date_score_transform": "same average-tie normalized-rank convention as target"
+  },
+  "preprocessing": {
+    "challenger_geometry_block": {
+      "add_indicator": false,
+      "fit_on_training_only": true,
+      "keep_empty_features": true,
+      "numeric_imputer": "sklearn.impute.SimpleImputer",
+      "reason_no_missing_indicator": "historical Open missingness is partly source/provenance driven and must not become an alpha feature",
+      "scaling": false,
+      "strategy": "median"
+    },
+    "control_block": {
+      "add_indicator": true,
+      "fit_on_training_only": true,
+      "keep_empty_features": true,
+      "numeric_imputer": "sklearn.impute.SimpleImputer",
+      "scaling": false,
+      "strategy": "median"
+    },
+    "geometry_availability_reported_as_diagnostic_only": true,
+    "row_drop_for_feature_missingness": false
+  },
+  "provenance": {
+    "signal_research_contract": {
+      "git_blob_sha1": "4d034e628838f56a0c88b3f23e249fae51a803ac",
+      "path": "docs/SIGNAL_RESEARCH_HLCV_CONTRACT.md",
+      "recovered_from_commit": "765bdba170eba68d3beab28dae30bd7e694743f8",
+      "semantic_edits": false
+    },
+    "v2_baseline_feature_source": {
+      "commit": "46a5a2e9eaadb6111d59214633511eb11d21ab9e",
+      "git_blob_sha1": "05102f47031b61e6a71032244167cb7f36a981f5",
+      "path": "src/idx_trade/research_features.py"
+    },
+    "v2_context_feature_source": {
+      "commit": "46a5a2e9eaadb6111d59214633511eb11d21ab9e",
+      "git_blob_sha1": "ccbcc7553a5aeb8ede9b32a8dd12ec7a45cb7290",
+      "path": "src/idx_trade/research_v2_features.py"
+    },
+    "v2_model_source": {
+      "commit": "46a5a2e9eaadb6111d59214633511eb11d21ab9e",
+      "git_blob_sha1": "9387a662ccea3d189a224115af947fbcfce3f214",
+      "path": "src/idx_trade/research_v2_models.py"
+    }
+  },
+  "schema_version": "ranking_v4_3_preregistration_v1",
+  "status": "V4_3_SCIENTIFIC_CONFIG_LOCKED_PRIMARY_LIQUID_SUPPORT_AND_FOLD_BYTES_PENDING",
+  "target": {
+    "h10": "Close_(t+10) / Open_(t+1) - 1",
+    "h5": "Close_(t+5) / Open_(t+1) - 1",
+    "rank_transform": {
+      "H10_population": "all defensibly H10-observable rows in the frozen decision universe on that date",
+      "H5_population": "all defensibly H5-observable rows in the frozen decision universe on that date",
+      "consensus_rule": "compute H5/H10 ranks independently on their horizon-observable populations, then average only on rows where both are observable",
+      "formula": "n > 1: (average_rank_ascending - 1) / (n - 1); n == 1: 0.5",
+      "higher_return_is_better": true,
+      "method": "average_tie_normalized_rank",
+      "population": "defensibly target-observable rows inside the frozen decision universe on that date",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "raw_returns_retained_for_diagnostics": true
+  },
+  "training_weighting": {
+    "equal_date_total_weight": true,
+    "normalization": "sum of sample weights equals N_train_rows",
+    "reason": "align pooled learner loss with the date-centric product/evaluator while preserving comparable regularization scale",
+    "row_weight_formula": "N_train_rows / (N_train_dates * n_target_rows_on_date)",
+    "unit": "decision_date"
+  },
+  "validation": {
+    "below_gate_dates_remain_in_full_decision_ledger": true,
+    "feature_missingness": "never drops a training/scoring row; preprocessing handles missing feature values",
+    "fold_assignment": "selected tail 600 split chronologically into six non-overlapping consecutive 100-session blocks",
+    "fold_count": 6,
+    "fold_size": 100,
+    "minimum_admitted_metric_dates_per_100_session_fold": 90,
+    "purge": {
+      "basis": "official_exchange_session_index",
+      "filtered_eligible_sequence_is_not_used_for_purge": true,
+      "length": 10,
+      "rule": "for validation start official index s, signal sessions s-10 through s-1 are excluded from training; maximum training signal index is s-11"
+    },
+    "required_consensus_eligible_sessions": 600,
+    "selection_rule": "last 600 chronologically ordered consensus-eligible sessions",
+    "shared_validation_calendar": "CONSENSUS_ELIGIBLE_PRIMARY_LIQUID",
+    "shared_validation_for": [
+      "H5",
+      "H10",
+      "CONSENSUS"
+    ],
+    "support_refresh_reason": "accepted broad ACTIVE census is conservative feasibility evidence but V4-3 freezes a narrower primary-liquid scoring universe; exact >=90% date gates and fold identities must therefore be recomputed outcome-blind on that universe",
+    "support_refresh_required": true,
+    "training_date_sets": {
+      "H10": "all prior H10-eligible primary-liquid dates before the official-session purge boundary",
+      "H5": "all prior H5-eligible primary-liquid dates before the official-session purge boundary"
+    },
+    "training_rows": "defensibly target-observable rows for the head on admitted training dates; control and challenger use exact same row identities"
+  }
+}
