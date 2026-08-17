@@ -71,6 +71,14 @@ def date_iso(value: str | None) -> str | None:
 
 
 def _date_after(pattern: str, text: str) -> str | None:
+    """Return the first date after an exact semantic anchor.
+
+    The semantic regex must end at the anchor itself (for example, ``Regular
+    Market``), not after arbitrary trailing text. This prevents a greedy anchor
+    from consuming the transition date and accidentally selecting a later
+    Recording/Distribution date on the same schedule.
+    """
+
     match = re.search(
         rf"{pattern}.{{0,180}}?({DATE_ANY})",
         text,
@@ -161,9 +169,11 @@ def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
         normalized,
     )
 
+    # End every pattern at the market anchor. Do not allow a trailing wildcard
+    # here: the date finder below must see the first date after that anchor.
     ex_patterns = [
-        r"(?:Tanggal\s+)?(?:perdagangan\s+bursa\s+)?(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date)[^\n]{0,150}(?:Pasar\s+Reguler|Regular\s+Market)[^\n]{0,90}",
-        r"(?:Bonus\s+Shares?|Dividen\s+Saham|Share\s+Dividend)[^\n]{0,90}Ex(?:-Date|\s+Date)?[^\n]{0,130}(?:Regular\s+Market|Pasar\s+Reguler)[^\n]{0,90}",
+        r"(?:Tanggal\s+)?(?:perdagangan\s+bursa\s+)?(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date)[^\n]{0,150}(?:Pasar\s+Reguler|Pasar\s+Regular|Regular\s+Market)",
+        r"(?:Bonus\s+Shares?|Dividen\s+Saham|Share\s+Dividend)[^\n]{0,90}Ex(?:-Date|\s+Date)?[^\n]{0,130}(?:Regular\s+Market|Pasar\s+Reguler|Pasar\s+Regular)",
     ]
     regular_ex = next(
         (value for pattern in ex_patterns if (value := _date_after(pattern, normalized))),
@@ -171,8 +181,8 @@ def parse_ksei_schedule_transition(text: str) -> ParsedScheduleTransition:
     )
 
     new_basis_patterns = [
-        r"Mulai\s+perdagangan\s+saham\s+dengan\s+Nilai\s+Nominal\s+Baru[^\n]{0,190}(?:Pasar\s+Reguler|Pasar\s+Negosiasi)[^\n]{0,90}",
-        r"(?:First|Start)\s+(?:Trading|trading)\s+of\s+Shares?\s+with\s+(?:the\s+)?New\s+Nominal\s+Value[^\n]{0,190}(?:Regular\s+Market|Negotiated\s+Market)[^\n]{0,90}",
+        r"Mulai\s+perdagangan\s+saham\s+dengan\s+Nilai\s+Nominal\s+Baru[^\n]{0,190}(?:Pasar\s+Reguler|Pasar\s+Regular|Pasar\s+Negosiasi)",
+        r"(?:First|Start)\s+(?:Trading|trading)\s+of\s+Shares?\s+with\s+(?:the\s+)?New\s+Nominal\s+Value[^\n]{0,190}(?:Regular\s+Market|Negotiated\s+Market)",
     ]
     first_new_basis = next(
         (value for pattern in new_basis_patterns if (value := _date_after(pattern, normalized))),
