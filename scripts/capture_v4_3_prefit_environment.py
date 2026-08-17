@@ -41,7 +41,12 @@ SOURCE_HASH_PATHS = (
     "scripts/run_v4_3_primary_liquid_support.py",
     "scripts/capture_v4_3_prefit_environment.py",
     "tests/test_ranking_v4_3_preregistration.py",
+    "tests/test_ranking_v4_3_prefit_runtime.py",
 )
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def sha256(path: Path) -> str:
@@ -60,6 +65,19 @@ def run_git(repo_root: Path, *args: str) -> str:
         text=True,
     )
     return completed.stdout.strip()
+
+
+def git_head_bytes(repo_root: Path, relative: str) -> bytes:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f"HEAD:{relative}"],
+        check=True,
+        capture_output=True,
+    )
+    return completed.stdout
+
+
+def git_head_sha256(repo_root: Path, relative: str) -> str:
+    return sha256_bytes(git_head_bytes(repo_root, relative))
 
 
 def package_version(distribution_name: str) -> str:
@@ -99,22 +117,34 @@ def main() -> int:
     if output_dir.exists():
         raise RuntimeError(f"REFUSE_OVERWRITE_EXISTING_OUTPUT: {output_dir}")
 
-    required_hashes = protocol["required_repo_artifacts"]
-    for relative, expected in required_hashes.items():
-        path = repo_root / relative
-        if not path.is_file():
-            raise RuntimeError(f"REQUIRED_REPO_ARTIFACT_MISSING: {relative}")
-        actual = sha256(path)
-        if actual != expected:
-            raise RuntimeError(
-                f"REQUIRED_REPO_ARTIFACT_HASH_MISMATCH: {relative}: {actual} != {expected}"
-            )
-
+    # A clean Git worktree is the semantic identity gate. On Windows, a clean
+    # checkout may still contain CRLF bytes while the canonical Git object uses
+    # LF. Scientific pins therefore verify canonical HEAD bytes; local checkout
+    # bytes are recorded separately for full runtime provenance.
     git_status = run_git(repo_root, "status", "--porcelain")
     if git_status:
         raise RuntimeError("GIT_WORKTREE_NOT_CLEAN")
     git_head = run_git(repo_root, "rev-parse", "HEAD")
     git_branch = run_git(repo_root, "rev-parse", "--abbrev-ref", "HEAD")
+
+    required_hashes = protocol["required_repo_artifacts"]
+    required_git_hashes: dict[str, str] = {}
+    required_worktree_hashes: dict[str, str] = {}
+    for relative, expected in required_hashes.items():
+        path = repo_root / relative
+        if not path.is_file():
+            raise RuntimeError(f"REQUIRED_REPO_ARTIFACT_MISSING: {relative}")
+        try:
+            canonical = git_head_sha256(repo_root, relative)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"REQUIRED_REPO_ARTIFACT_NOT_TRACKED_AT_HEAD: {relative}") from exc
+        required_git_hashes[relative] = canonical
+        required_worktree_hashes[relative] = sha256(path)
+        if canonical != expected:
+            raise RuntimeError(
+                f"REQUIRED_REPO_ARTIFACT_GIT_HASH_MISMATCH: {relative}: "
+                f"{canonical} != {expected}"
+            )
 
     # Import only runtime libraries. No dataset or outcome artifact is touched.
     import joblib
@@ -165,12 +195,17 @@ def main() -> int:
                     f"{effective_imputer.get(key)!r} != {cfg[key]!r}"
                 )
 
-    source_hashes: dict[str, str] = {}
+    source_git_hashes: dict[str, str] = {}
+    source_worktree_hashes: dict[str, str] = {}
     for relative in SOURCE_HASH_PATHS:
         path = repo_root / relative
         if not path.is_file():
             raise RuntimeError(f"PREFIT_SOURCE_PATH_MISSING: {relative}")
-        source_hashes[relative] = sha256(path)
+        try:
+            source_git_hashes[relative] = git_head_sha256(repo_root, relative)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"PREFIT_SOURCE_PATH_NOT_TRACKED_AT_HEAD: {relative}") from exc
+        source_worktree_hashes[relative] = sha256(path)
 
     versions = {
         "numpy": np.__version__,
@@ -183,7 +218,7 @@ def main() -> int:
     }
 
     payload = {
-        "schema_version": "ranking_v4_3_prefit_environment_manifest_v1",
+        "schema_version": "ranking_v4_3_prefit_environment_manifest_v1_1",
         "status": "V4_3_PREFIT_ENVIRONMENT_CAPTURED_NO_TARGET_OR_MODEL_RUN",
         "outcome_blind": True,
         "target_or_return_loaded": False,
@@ -191,6 +226,10 @@ def main() -> int:
         "prediction_generated": False,
         "performance_computed": False,
         "provider_calls": False,
+        "hash_semantics": {
+            "scientific_pins": "canonical Git HEAD bytes via git show HEAD:<path>",
+            "working_tree": "recorded separately; may differ only due to clean-checkout transformations such as CRLF",
+        },
         "git": {
             "head": git_head,
             "branch": git_branch,
@@ -227,8 +266,11 @@ def main() -> int:
             "geometry_effective_parameters": _jsonable(geometry_imputer.get_params(deep=False)),
             "fit_called": False,
         },
-        "repo_file_sha256": source_hashes,
-        "required_artifact_sha256": required_hashes,
+        "repo_git_head_sha256": source_git_hashes,
+        "repo_worktree_sha256": source_worktree_hashes,
+        "required_artifact_expected_git_sha256": required_hashes,
+        "required_artifact_actual_git_sha256": required_git_hashes,
+        "required_artifact_worktree_sha256": required_worktree_hashes,
     }
 
     output_dir.mkdir(parents=True)
