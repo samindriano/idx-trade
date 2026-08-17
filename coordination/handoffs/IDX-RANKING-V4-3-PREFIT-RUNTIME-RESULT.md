@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `640cb257bb93775ec69e3a6f6683fd50cb22417b`
 branch: `research/idx-ranking-v4-3-prefit-runtime-v1`
-head_commit: `pending result commit`
+head_commit: `758bd94ed92dce52860c306d0d705bf7d6f6633e`
 scope: Outcome-blind V4-3 estimator/imputer/package environment capture only.
 files_changed:
   - `docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json`
@@ -32,4 +32,3 @@ validation_run:
   - `python -m py_compile scripts/capture_v4_3_prefit_environment.py` — PASS.
   - `git diff --check` — PASS.
 recommended_next_action: Stop for ChatGPT review; do not materialize R5/R10 or run V4 target/model execution in this lane.
-
