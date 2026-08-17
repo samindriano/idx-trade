@@ -1,0 +1,7 @@
+fold,validation_start_session_index,validation_end_session_index,validation_start_date,validation_end_date,max_training_signal_session_index,h5_training_eligible_dates,h10_training_eligible_dates
+1,650,749,2023-12-28,2024-06-10,639,493,492
+2,750,849,2024-06-11,2024-10-31,739,593,592
+3,850,949,2024-11-01,2025-04-10,839,693,692
+4,950,1049,2025-04-11,2025-09-12,939,793,792
+5,1050,1149,2025-09-15,2026-02-06,1039,893,892
+6,1150,1249,2026-02-09,2026-07-17,1139,993,992
