@@ -277,6 +277,8 @@ def _materialize_horizon(
     terminal_date = pd.Timestamp(sessions[terminal_index])
     entry = _lookup_row(price_lookup, ticker, entry_index)
     terminal = _lookup_row(price_lookup, ticker, terminal_index)
+    entry_missing = entry is None
+    terminal_missing = terminal is None
 
     entry_state = entry[0] if entry is not None else UNKNOWN
     terminal_state = terminal[0] if terminal is not None else UNKNOWN
@@ -306,10 +308,10 @@ def _materialize_horizon(
     continuity_resolved = continuity_status in CONTINUITY_PASSING
 
     mechanism_unresolved = (
-        entry_state in MECHANISM_UNRESOLVED_STATES
-        or terminal_state in MECHANISM_UNRESOLVED_STATES
+        (not entry_missing and entry_state in MECHANISM_UNRESOLVED_STATES)
+        or (not terminal_missing and terminal_state in MECHANISM_UNRESOLVED_STATES)
     )
-    entry_unavailable = entry_state in ENTRY_UNAVAILABLE_STATES
+    entry_unavailable = not entry_missing and entry_state in ENTRY_UNAVAILABLE_STATES
     data_unobservable = not entry_open_observable or not terminal_close_observable
 
     # Frozen primary-state precedence. Component flags above remain available so
@@ -496,7 +498,12 @@ def materialize_v4_target_ledger(
             consensus_state.append(TARGET_BOTH_AVAILABLE)
             continue
         pair = {str(h5_state), str(h10_state)}
-        consensus_state.append(next((state for state in precedence if state in pair), TARGET_DATA_UNOBSERVABLE))
+        consensus_state.append(
+            next(
+                (state for state in precedence if state in pair),
+                TARGET_DATA_UNOBSERVABLE,
+            )
+        )
     ledger["target_state_consensus"] = consensus_state
 
     if len(ledger) != len(decision_rows):
