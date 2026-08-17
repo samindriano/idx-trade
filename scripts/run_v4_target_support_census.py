@@ -31,7 +31,7 @@ PINNED = {
     "overlay_manifest": "dfb7219bddec77ced3e3aadfaa2d85d04c19e1d9fd9a8af1badba523ecf91977",
 }
 
-STATE_NAMES = ("ACTIVE", "NO_TRADE", "SUSPENDED", "UNKNOWN", "NO_FUTURE_SESSION")
+STATE_NAMES = ("ACTIVE", "NO_TRADE", "SUSPENDED", "UNKNOWN", "AMBIGUOUS", "NO_FUTURE_SESSION")
 REQUIRED_ELIGIBLE_SESSIONS = 600
 
 
@@ -73,7 +73,7 @@ def state_map_from_inputs(
         lambda values: tuple(sorted({str(value).upper() for value in values.dropna()}))
     ).reset_index(name="states")
     states = {
-        (ticker, int(index)): (values[0] if len(values) == 1 else "UNKNOWN")
+        (ticker, int(index)): (values[0] if len(values) == 1 else "AMBIGUOUS")
         for ticker, index, values in grouped.itertuples(index=False)
         if pd.notna(index)
     }
