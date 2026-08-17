@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "idx-trade-artifact-registry-v1",
+  "type": "object",
+  "required": ["registry_id", "schema_version", "inventory_snapshot", "groups"],
+  "properties": {
+    "registry_id": {"const": "idx-trade-artifact-registry-v1"},
+    "schema_version": {"const": 1},
+    "inventory_snapshot": {
+      "type": "object",
+      "required": ["repository_commit", "scanned_at", "external_roots_scanned"],
+      "properties": {
+        "repository": {"type": "string"},
+        "repository_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "branch_context": {"type": "string"},
+        "scanned_at": {"type": "string", "format": "date-time"},
+        "tracked_files": {"type": "integer", "minimum": 0},
+        "tracked_data_or_model_binaries": {"type": "integer", "minimum": 0},
+        "largest_tracked_file_bytes": {"type": "integer", "minimum": 0},
+        "external_scan_scope": {"type": "string"},
+        "external_roots_scanned": {"type": "integer", "minimum": 0},
+        "external_files_scanned": {"type": "integer", "minimum": 0},
+        "external_bytes_scanned": {"type": "integer", "minimum": 0},
+        "external_size_gb_approx": {"type": "number", "minimum": 0},
+        "primary_worktree_untracked_frontend_excluded": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["group_id", "recommended_action", "scope", "reason"],
+        "properties": {
+          "group_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "recommended_action": {"enum": ["PUSH_TO_GIT", "KEEP_EXTERNAL", "PUSH_SUMMARY_OR_MANIFEST_ONLY"]},
+          "scope": {"type": "string"},
+          "root_patterns": {"type": "array", "items": {"type": "string"}},
+          "observed_roots": {"type": "integer", "minimum": 0},
+          "observed_files": {"type": "integer", "minimum": 0},
+          "approx_bytes": {"type": "integer", "minimum": 0},
+          "reason": {"type": "string"},
+          "examples": {"type": "array", "items": {"type": "string"}},
+          "payload_policy": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

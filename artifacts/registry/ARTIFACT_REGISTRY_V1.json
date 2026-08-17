@@ -1,0 +1,130 @@
+{
+  "registry_id": "idx-trade-artifact-registry-v1",
+  "schema_version": 1,
+  "inventory_snapshot": {
+    "repository": "samindriano/idx-trade",
+    "repository_commit": "2edee4baf1d1ef76b39ed3dde116ffd9231861b8",
+    "branch_context": "origin/main",
+    "scanned_at": "2026-08-17T17:12:00+07:00",
+    "tracked_files": 48,
+    "tracked_data_or_model_binaries": 0,
+    "largest_tracked_file_bytes": 89290,
+    "external_scan_scope": "Targeted IDX/forward/Open/Financial/Foreign/Corporate/Ownership/Free-float/Market/Universe roots under the configured external project root; unrelated project roots excluded.",
+    "external_roots_scanned": 122,
+    "external_files_scanned": 107691,
+    "external_bytes_scanned": 19037127361,
+    "external_size_gb_approx": 17.73,
+    "primary_worktree_untracked_frontend_excluded": true
+  },
+  "external_root_convention": {
+    "root_key": "IDX_TRADE_EXTERNAL_ROOT",
+    "absolute_path_is_git_forbidden": true,
+    "registry_path_form": "external_root_key + relative_path"
+  },
+  "groups": [
+    {
+      "group_id": "repo-contracts-and-small-fixtures",
+      "recommended_action": "PUSH_TO_GIT",
+      "scope": "Tracked source, tests, docs, config samples, schemas, frozen identity tables, and sanitized fixtures.",
+      "root_patterns": ["src/", "tests/", "docs/", "coordination/", "config/", "*.pyproject", "AGENTS.md"],
+      "observed_roots": 1,
+      "observed_files": 48,
+      "approx_bytes": 1166000,
+      "reason": "These files define contracts, executable code, reproducibility metadata, and small test inputs; origin/main currently contains no large data/model payload.",
+      "payload_policy": "Keep payloads small, reviewable, deterministic, and free of credentials or user-specific absolute paths."
+    },
+    {
+      "group_id": "accepted-summary-and-manifest-pointers",
+      "recommended_action": "PUSH_SUMMARY_OR_MANIFEST_ONLY",
+      "scope": "Small external summaries, coverage tables, manifest/hash files, and frozen row/session identity lists.",
+      "root_patterns": ["idx-trade-data-gate-20260808*", "idx-trade-financial-pit-*", "idx-trade-foreign-flow-*", "idx-trade-market-index-breadth-*", "idx-trade-historical-universe-*", "idx-corporate-action-pit-*", "idx-trade-free-float-*", "idx-lbre-*"],
+      "reason": "The repository needs the decision summary and byte identity, not the payload. Copy only scrubbed small metadata when a lane explicitly accepts it; otherwise reference it by external root key and SHA.",
+      "examples": ["certification/*manifest*.json", "*_summary.json", "coverage_*.csv", "*.sha256", "frozen fold/session identity tables"],
+      "payload_policy": "No raw attachment, provider response, full panel, runtime log, or model binary is promoted by this registry task."
+    },
+    {
+      "group_id": "data-gate-and-forward-runtime",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "Full OHLCV/session/tradability/execution archives, forward monitoring runtime, and generated caches.",
+      "root_patterns": ["idx-trade-data-gate-20260808*", "forward_monitoring", "sessions/", "prices/", "tradability/", "execution/"],
+      "observed_roots": 23,
+      "observed_files": 27358,
+      "approx_bytes": 5174425600,
+      "reason": "Large raw/derived market data and runtime state are expensive, mutable, and not suitable for Git; manifests and accepted summaries are sufficient for identity.",
+      "examples": ["*.parquet", "*.csv raw exports", "*.gz", "*.joblib", "*.pkl", "runtime SQLite/logs"],
+      "payload_policy": "Never copy or rewrite these files as part of repository organization."
+    },
+    {
+      "group_id": "financial-pit",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "Financial filing attachments, raw responses, fact/provenance JSONL, feature panels, and model-era run directories.",
+      "root_patterns": ["idx-financial-pit-*", "idx-trade-financial-pit-*", "financial-pit-*"],
+      "observed_roots": 50,
+      "observed_files": 13159,
+      "approx_bytes": 10919014400,
+      "reason": "The corpus contains thousands of XLSX/ZIP attachments and large provenance/panel artifacts. Only small accepted census summaries and manifests are Git candidates.",
+      "examples": ["MANIFEST*.json", "coverage_summary.json", "coverage_by_year_period.csv", "*.xlsx", "*.zip", "*.jsonl", "feature_provenance.jsonl"],
+      "payload_policy": "Do not push filing payloads, feature panels, joblib models, or protected outcomes."
+    },
+    {
+      "group_id": "foreign-flow",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "Historical/session foreign-flow raw captures, representations, and alpha-run outputs.",
+      "root_patterns": ["idx-trade-foreign-flow-*"],
+      "observed_roots": 6,
+      "observed_files": 3975,
+      "approx_bytes": 997680128,
+      "reason": "Session raw JSON and parquet archives are large and provider-derived; preserve hash-pinned manifests and coverage summaries only.",
+      "examples": ["archive_manifest.json", "coverage_census.json", "calendar/*.manifest.json", "sessions/*/stock_summary.raw.json", "*.parquet"],
+      "payload_policy": "No model/alpha outputs or raw session archive is copied to Git."
+    },
+    {
+      "group_id": "corporate-actions",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "Official/KSEI PDF, HTML, binary, and raw corporate-action captures.",
+      "root_patterns": ["idx-corporate-action-*", "idx-trade-corporate-actions-*"],
+      "observed_roots": 20,
+      "observed_files": 830,
+      "approx_bytes": 39007027,
+      "reason": "Raw source bytes remain provenance evidence and should stay external; small verdict/manifests may be summarized in Git.",
+      "examples": ["MANIFEST.json", "derived/summary.json", "*.pdf", "*.bin", "*.html"],
+      "payload_policy": "Do not adjust prices or copy source attachments under this task."
+    },
+    {
+      "group_id": "ownership-free-float-lbre",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "KSEI/IDX ownership, HSC, free-float, and LBRE source/history captures.",
+      "root_patterns": ["idx-ownership-*", "idx-trade-ownership-*", "idx-trade-free-float-*", "idx-hsc-*", "idx-lbre-*"],
+      "observed_roots": 15,
+      "observed_files": 61214,
+      "approx_bytes": 1829555200,
+      "reason": "The scan includes thousands of PDF/TXT/binary source captures and large monthly histories; Git should carry contracts, summaries, and hashes only.",
+      "examples": ["artifact_manifest*.json", "audit_summary.json", "*.pdf", "*.txt", "*.bin", "monthly history archives"],
+      "payload_policy": "No source archive or derived panel is copied."
+    },
+    {
+      "group_id": "market-index-sector-universe",
+      "recommended_action": "PUSH_SUMMARY_OR_MANIFEST_ONLY",
+      "scope": "Market/index/breadth, PIT sector, and historical-universe source captures.",
+      "root_patterns": ["idx-trade-market-index-*", "idx-market-index-*", "idx-pit-sector-*", "idx-trade-historical-universe-*"],
+      "observed_roots": 4,
+      "observed_files": 394,
+      "approx_bytes": 28835840,
+      "reason": "Small normalized calendars, membership tables, and audit summaries are reproducibility-critical; raw API/attachment captures are not.",
+      "examples": ["summary.json", "acquisition_summary.json", "exchange_session_summary.json", "normalized membership tables", "raw/*.json", "*.zip", "*.xlsx"],
+      "payload_policy": "Promotion requires an accepted source contract and scrubbed metadata; no raw-source copy here."
+    },
+    {
+      "group_id": "open-intraday-and-provider-archives",
+      "recommended_action": "KEEP_EXTERNAL",
+      "scope": "Historical Open residuals, TradingView/Investing/Stockbit captures, and provider archives.",
+      "root_patterns": ["open_*", "tradingview_*", "investing_*", "stockbit_*", "forward_*"],
+      "observed_roots": 1,
+      "observed_files": 9,
+      "approx_bytes": 15309209,
+      "reason": "The targeted top-level scan captured the Open root separately; broader provider/runtime roots are governed by the same external-only rule even when their names are nested in runtime roots.",
+      "examples": ["raw provider responses", "OHLCV/parquet", "session captures", "runtime logs"],
+      "payload_policy": "No provider call, backfill, model/outcome work, or source migration is authorized."
+    }
+  ]
+}

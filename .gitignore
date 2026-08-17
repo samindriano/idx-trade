@@ -18,3 +18,24 @@ models/*
 !data/processed/.gitkeep
 !data/results/.gitkeep
 !models/.gitkeep
+
+# Repository artifact governance: only registry/manifests/schemas/fixtures
+# belong in Git. External/runtime drops are local and must never be committed.
+/artifacts/external/
+/artifacts/raw/
+/artifacts/cache/
+/artifacts/runtime/
+/artifacts/models/
+/artifacts/outcomes/
+/artifacts/**/*.parquet
+/artifacts/**/*.parquet.*
+/artifacts/**/*.pkl
+/artifacts/**/*.joblib
+/artifacts/**/*.zip
+/artifacts/**/*.gz
+/artifacts/**/*.xlsx
+/artifacts/**/*.xls
+/artifacts/**/*.bin
+/artifacts/**/*.db
+/artifacts/**/*.sqlite
+/artifacts/**/*.raw.json

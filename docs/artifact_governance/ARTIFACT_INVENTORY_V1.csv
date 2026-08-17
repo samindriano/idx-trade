@@ -1,0 +1,13 @@
+scope,artifact_family,observed_roots,observed_files,approx_mb,recommendation,git_action,external_action,notes
+repo,source-contracts,1,48,1.1,PUSH_TO_GIT,retain source/tests/docs/config in Git,none,origin/main has no tracked data/model binaries
+repo,small-reference-configs,1,4,0.0,PUSH_TO_GIT,retain sanitized sample tables and schemas,none,config samples are already tracked
+external,data-gate-and-forward-runtime,23,27358,4934.5,KEEP_EXTERNAL,reference summary/hash only,retain full panels/raw/runtime,includes parquet/csv/gz/joblib/pkl/runtime state
+external,financial-pit,50,13159,10413.1,KEEP_EXTERNAL,reference accepted manifest/summary only,retain XLSX/ZIP/JSONL/panels/models,largest sampled family
+external,foreign-flow,6,3975,951.3,KEEP_EXTERNAL,reference archive manifest/coverage only,retain raw sessions/parquet/alpha outputs,no model or raw archive in Git
+external,corporate-actions,20,830,37.2,KEEP_EXTERNAL,reference verdict/manifest only,retain PDF/HTML/BIN source bytes,source provenance stays external
+external,ownership-free-float-lbre,15,61214,1744.8,KEEP_EXTERNAL,reference summaries/hashes only,retain PDF/TXT/BIN/monthly history,large source-history corpus
+external,market-index-sector-universe,4,394,27.5,PUSH_SUMMARY_OR_MANIFEST_ONLY,publish scrubbed calendar/membership/audit summary when accepted,retain raw API/attachment captures,do not promote unaccepted source rows
+external,open-and-provider-archives,1,9,14.6,KEEP_EXTERNAL,reference residual summary/hash only,retain raw provider/Open archives,no source migration
+external,manifest-and-summary-sidecars,122,3396,not separately summed,PUSH_SUMMARY_OR_MANIFEST_ONLY,curate one accepted bundle per canonical lane,retain duplicate run manifests externally,observed approximately 1606 manifest-named and 1790 summary-named files plus 17 sha256 sidecars
+policy,manifests-and-hashes,all,not applicable,not applicable,PUSH_SUMMARY_OR_MANIFEST_ONLY,store logical root key plus relative path/size/SHA,keep payload external,never embed absolute user path or credential
+policy,credentials-and-secrets,all,not inventoried,not applicable,KEEP_EXTERNAL,never commit,environment/local secret store only,includes .env/API keys/tokens
