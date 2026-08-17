@@ -17,6 +17,7 @@ files_changed:
 findings:
   - 981,940 active signal rows, 945 tickers, 1,260 official sessions.
   - Open(t+1) support 532,028 rows; H5 Close 961,366; H10 Close 954,379.
+  - Open support was 529,863 before overlay; 2,165 new panel rows were admitted from 2,184 overlay rows.
   - H5 target support 523,956; H10 target support 518,145; both 515,257.
   - Both-target date gate passes on 264/1,260 dates; both CA gate passes on 1,250/1,260 dates.
   - Consensus eligible identity list has 264 dates, SHA-256 `cdad58189694d71d1ca4ebce1c12da7dea4a663d3930262325a637ca53fca7dc`.

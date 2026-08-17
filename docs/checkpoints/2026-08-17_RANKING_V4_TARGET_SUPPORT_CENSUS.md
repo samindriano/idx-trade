@@ -77,7 +77,9 @@ sessions from 2021-04-29 through 2026-07-31. Overall row support is:
 Open(t+1) detail: 968,095 rows have an ACTIVE future state; 532,028 have
 usable Open and 436,067 ACTIVE-state rows do not. The remaining future-state
 rows are 13,015 `NO_TRADE`, 830 `NO_FUTURE_SESSION`, 0 `SUSPENDED`, and 0
-`UNKNOWN`.
+`UNKNOWN`. Before the overlay, Open(t+1) support was 529,863 rows; the
+overlay contributed 2,165 newly supported panel rows from 2,184 overlay rows
+(19 overlay keys already had base support).
 
 H5 future-state detail: 961,366 `ACTIVE`, 16,401 `NO_TRADE`, 5 `UNKNOWN`,
 4,168 `NO_FUTURE_SESSION`, and 0 `SUSPENDED`.
