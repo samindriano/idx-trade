@@ -30,7 +30,11 @@ def sessions() -> pd.DatetimeIndex:
     return pd.date_range("2024-01-02", periods=15, freq="B")
 
 
-def continuity(tickers: list[str], signal_date: pd.Timestamp, status: str = "RESOLVED_NO_MECHANICAL_DISCONTINUITY") -> pd.DataFrame:
+def continuity(
+    tickers: list[str],
+    signal_date: pd.Timestamp,
+    status: str = "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
+) -> pd.DataFrame:
     rows = []
     for ticker in tickers:
         for horizon in (5, 10):
@@ -71,19 +75,27 @@ def price_row(
 
 def test_protocol_is_locked_and_historical_execution_is_still_blocked() -> None:
     protocol = json.loads(
-        (ROOT / "config" / "ranking_v4_3_target_execution_protocol.json").read_text(
-            encoding="utf-8"
-        )
+        (
+            ROOT / "config" / "ranking_v4_3_target_execution_protocol.json"
+        ).read_text(encoding="utf-8")
     )
     assert protocol["outcome_blind"] is True
     assert protocol["target"]["entry_offset_official_sessions"] == 1
     assert protocol["target"]["h5_terminal_offset_official_sessions"] == 5
     assert protocol["target"]["h10_terminal_offset_official_sessions"] == 10
     assert protocol["target"]["close_t_fallback"] is False
-    assert protocol["continuity_evidence_contract"][
+    continuity_contract = protocol["continuity_evidence_contract"]
+    assert continuity_contract[
         "corporate_action_integrity_verified_boolean_is_not_full_v4_continuity_proof"
     ] is True
-    assert protocol["historical_execution_authorization"]["target_materialization"] is False
+    assert continuity_contract["passing_states"] == [
+        "RESOLVED_NO_MECHANICAL_DISCONTINUITY"
+    ]
+    assert "same-basis" in continuity_contract["cross_basis_event_policy"]
+    assert (
+        protocol["historical_execution_authorization"]["target_materialization"]
+        is False
+    )
     assert protocol["historical_execution_authorization"]["model_fit"] is False
 
 
@@ -105,9 +117,15 @@ def test_geometry_uses_admitted_open_not_signal_open_and_missing_open_fails_clos
             price_row("BBB", day, open_value=None, open_admitted=False),
         ]
     )
-    geometry = build_geometry_from_accepted_open(signal, prices).set_index("ticker")
-    assert np.isclose(geometry.loc["AAA", "session_open_position_range"], 0.5)
-    assert np.isclose(geometry.loc["AAA", "session_body_signed_range"], 0.3)
+    geometry = build_geometry_from_accepted_open(signal, prices).set_index(
+        "ticker"
+    )
+    assert np.isclose(
+        geometry.loc["AAA", "session_open_position_range"], 0.5
+    )
+    assert np.isclose(
+        geometry.loc["AAA", "session_body_signed_range"], 0.3
+    )
     assert bool(geometry.loc["AAA", "geometry_open_admitted"])
     assert np.isnan(geometry.loc["BBB", "session_open_position_range"])
     assert np.isnan(geometry.loc["BBB", "session_body_signed_range"])
@@ -119,20 +137,37 @@ def test_exact_t1_h5_h10_offsets_returns_ranks_ties_and_consensus() -> None:
     cal = sessions()
     signal_date = cal[0]
     tickers = ["AAA", "BBB", "CCC"]
-    decisions = pd.DataFrame({"ticker": tickers, "date": signal_date, "keep": [1, 2, 3]})
+    decisions = pd.DataFrame(
+        {"ticker": tickers, "date": signal_date, "keep": [1, 2, 3]}
+    )
     rows: list[dict[str, object]] = []
     h5_close = {"AAA": 110.0, "BBB": 100.0, "CCC": 90.0}
     h10_close = {"AAA": 120.0, "BBB": 100.0, "CCC": 80.0}
     for ticker in tickers:
         rows.extend(
             [
-                price_row(ticker, cal[1], open_value=100.0, close_value=101.0),
-                price_row(ticker, cal[5], open_value=100.0, close_value=h5_close[ticker]),
-                price_row(ticker, cal[10], open_value=100.0, close_value=h10_close[ticker]),
+                price_row(
+                    ticker, cal[1], open_value=100.0, close_value=101.0
+                ),
+                price_row(
+                    ticker,
+                    cal[5],
+                    open_value=100.0,
+                    close_value=h5_close[ticker],
+                ),
+                price_row(
+                    ticker,
+                    cal[10],
+                    open_value=100.0,
+                    close_value=h10_close[ticker],
+                ),
             ]
         )
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(tickers, signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(tickers, signal_date),
     ).set_index("ticker")
 
     assert ledger.loc["AAA", "h5_entry_date"] == cal[1]
@@ -143,7 +178,10 @@ def test_exact_t1_h5_h10_offsets_returns_ranks_ties_and_consensus() -> None:
     assert np.isclose(ledger.loc["CCC", "r5"], -0.10)
     assert ledger.loc["AAA", "target_state_h5"] == TARGET_H5_AVAILABLE
     assert ledger.loc["AAA", "target_state_h10"] == TARGET_H10_AVAILABLE
-    assert ledger.loc["AAA", "target_state_consensus"] == TARGET_BOTH_AVAILABLE
+    assert (
+        ledger.loc["AAA", "target_state_consensus"]
+        == TARGET_BOTH_AVAILABLE
+    )
     assert ledger.loc["AAA", "target_rank_h5"] == 1.0
     assert ledger.loc["BBB", "target_rank_h5"] == 0.5
     assert ledger.loc["CCC", "target_rank_h5"] == 0.0
@@ -169,7 +207,10 @@ def test_average_ties_are_ranked_without_dropping_valid_zero_or_negative_returns
             ]
         )
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(tickers, signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(tickers, signal_date),
     ).set_index("ticker")
     assert ledger.loc["AAA", "r5"] == 0.0
     assert ledger.loc["BBB", "r5"] == 0.0
@@ -185,12 +226,21 @@ def test_entry_no_trade_is_market_entry_unavailable_without_close_t_fallback() -
     decisions = pd.DataFrame({"ticker": ["AAA"], "date": [signal_date]})
     rows = [
         price_row("AAA", cal[0], open_value=777.0, close_value=777.0),
-        price_row("AAA", cal[1], state="NO_TRADE", open_value=None, open_admitted=False),
+        price_row(
+            "AAA",
+            cal[1],
+            state="NO_TRADE",
+            open_value=None,
+            open_admitted=False,
+        ),
         price_row("AAA", cal[5], close_value=110.0),
         price_row("AAA", cal[10], close_value=120.0),
     ]
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(["AAA"], signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(["AAA"], signal_date),
     ).iloc[0]
     assert ledger["target_state_h5"] == MARKET_ENTRY_UNAVAILABLE
     assert ledger["target_state_h10"] == MARKET_ENTRY_UNAVAILABLE
@@ -208,10 +258,19 @@ def test_explicit_ambiguous_mechanism_fails_as_mechanism_unresolved() -> None:
         price_row("AAA", cal[10], close_value=120.0),
     ]
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(["AAA"], signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(["AAA"], signal_date),
     ).iloc[0]
-    assert ledger["target_state_h5"] == TRADING_MECHANISM_REFERENCE_UNRESOLVED
-    assert ledger["target_state_h10"] == TRADING_MECHANISM_REFERENCE_UNRESOLVED
+    assert (
+        ledger["target_state_h5"]
+        == TRADING_MECHANISM_REFERENCE_UNRESOLVED
+    )
+    assert (
+        ledger["target_state_h10"]
+        == TRADING_MECHANISM_REFERENCE_UNRESOLVED
+    )
 
 
 def test_active_entry_with_unadmitted_open_is_data_unobservable() -> None:
@@ -219,12 +278,21 @@ def test_active_entry_with_unadmitted_open_is_data_unobservable() -> None:
     signal_date = cal[0]
     decisions = pd.DataFrame({"ticker": ["AAA"], "date": [signal_date]})
     rows = [
-        price_row("AAA", cal[1], state="ACTIVE", open_value=None, open_admitted=False),
+        price_row(
+            "AAA",
+            cal[1],
+            state="ACTIVE",
+            open_value=None,
+            open_admitted=False,
+        ),
         price_row("AAA", cal[5], close_value=110.0),
         price_row("AAA", cal[10], close_value=120.0),
     ]
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(["AAA"], signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(["AAA"], signal_date),
     ).iloc[0]
     assert ledger["target_state_h5"] == TARGET_DATA_UNOBSERVABLE
     assert ledger["target_state_h10"] == TARGET_DATA_UNOBSERVABLE
@@ -239,7 +307,10 @@ def test_missing_price_row_is_data_unobservable_not_invented_unknown_market_stat
         price_row("AAA", cal[10], close_value=120.0),
     ]
     ledger = materialize_v4_target_ledger(
-        decisions, cal, pd.DataFrame(rows), continuity(["AAA"], signal_date)
+        decisions,
+        cal,
+        pd.DataFrame(rows),
+        continuity(["AAA"], signal_date),
     ).iloc[0]
     assert ledger["target_state_h5"] == TARGET_DATA_UNOBSERVABLE
     assert ledger["target_state_h10"] == TARGET_DATA_UNOBSERVABLE
@@ -248,7 +319,9 @@ def test_missing_price_row_is_data_unobservable_not_invented_unknown_market_stat
 def test_missing_or_explicit_failed_continuity_never_computes_return() -> None:
     cal = sessions()
     signal_date = cal[0]
-    decisions = pd.DataFrame({"ticker": ["AAA", "BBB"], "date": signal_date})
+    decisions = pd.DataFrame(
+        {"ticker": ["AAA", "BBB"], "date": signal_date}
+    )
     rows = []
     for ticker in ("AAA", "BBB"):
         rows.extend(
@@ -258,22 +331,49 @@ def test_missing_or_explicit_failed_continuity_never_computes_return() -> None:
                 price_row(ticker, cal[10], close_value=120.0),
             ]
         )
-    ca = continuity(["BBB"], signal_date, "PRICE_CONTINUITY_UNRESOLVED_EVENT")
-    ledger = materialize_v4_target_ledger(decisions, cal, pd.DataFrame(rows), ca).set_index("ticker")
-    assert ledger.loc["AAA", "target_state_h5"] == PRICE_CONTINUITY_UNRESOLVED
-    assert ledger.loc["AAA", "h5_continuity_status"] == "PRICE_CONTINUITY_UNRESOLVED_COVERAGE"
-    assert ledger.loc["BBB", "target_state_h5"] == PRICE_CONTINUITY_UNRESOLVED
-    assert ledger.loc["BBB", "h5_continuity_status"] == "PRICE_CONTINUITY_UNRESOLVED_EVENT"
+    ca = continuity(
+        ["BBB"], signal_date, "PRICE_CONTINUITY_UNRESOLVED_EVENT"
+    )
+    ledger = materialize_v4_target_ledger(
+        decisions, cal, pd.DataFrame(rows), ca
+    ).set_index("ticker")
+    assert (
+        ledger.loc["AAA", "target_state_h5"]
+        == PRICE_CONTINUITY_UNRESOLVED
+    )
+    assert ledger.loc["AAA", "h5_continuity_status"] == (
+        "PRICE_CONTINUITY_UNRESOLVED_COVERAGE"
+    )
+    assert (
+        ledger.loc["BBB", "target_state_h5"]
+        == PRICE_CONTINUITY_UNRESOLVED
+    )
+    assert ledger.loc["BBB", "h5_continuity_status"] == (
+        "PRICE_CONTINUITY_UNRESOLVED_EVENT"
+    )
     assert np.isnan(ledger.loc["AAA", "r5"])
     assert np.isnan(ledger.loc["BBB", "r5"])
 
 
+def test_same_basis_shortcut_is_not_admitted_in_generation_1() -> None:
+    day = sessions()[0]
+    same_basis = continuity(
+        ["AAA"], day, "RESOLVED_SAME_BASIS_ENDPOINTS"
+    )
+    with pytest.raises(ValueError, match="unsupported continuity state"):
+        prepare_continuity_evidence(same_basis)
+
+
 def test_no_future_session_is_explicit_and_row_is_retained() -> None:
     cal = sessions()
-    decisions = pd.DataFrame({"ticker": ["AAA"], "date": [cal[-3]], "sentinel": [7]})
+    decisions = pd.DataFrame(
+        {"ticker": ["AAA"], "date": [cal[-3]], "sentinel": [7]}
+    )
     prices = pd.DataFrame([price_row("AAA", cal[-2])])
     ca = continuity(["AAA"], cal[-3])
-    ledger = materialize_v4_target_ledger(decisions, cal, prices, ca).iloc[0]
+    ledger = materialize_v4_target_ledger(
+        decisions, cal, prices, ca
+    ).iloc[0]
     assert ledger["target_state_h5"] == NO_FUTURE_SESSION
     assert ledger["target_state_h10"] == NO_FUTURE_SESSION
     assert ledger["sentinel"] == 7
