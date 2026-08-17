@@ -11,6 +11,12 @@
     "path": "config/ranking_v4_3_preregistration.json",
     "canonical_git_sha256": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed"
   },
+  "evaluation_tie_break": {
+    "top30": "alpha descending, ticker ascending",
+    "bottom30": "alpha ascending, ticker descending",
+    "reason": "exact reverse deterministic order keeps Top30 and Bottom30 disjoint for scored universe size >=60 even under large score ties",
+    "target_observability_used_for_selection": false
+  },
   "source_paths_to_freeze": [
     "config/ranking_v4_3_target_execution_protocol.json",
     "config/ranking_v4_3_pit_feature_protocol.json",
@@ -26,6 +32,7 @@
     "tests/test_ranking_v4_3_target_execution.py",
     "tests/test_ranking_v4_3_features.py",
     "tests/test_ranking_v4_3_model_eval.py",
+    "tests/test_ranking_v4_3_evaluator_ties.py",
     "tests/test_ranking_v4_3_execution_code_capture.py"
   ],
   "synthetic_validation": {
@@ -35,6 +42,7 @@
       "tests/test_ranking_v4_3_target_execution.py",
       "tests/test_ranking_v4_3_features.py",
       "tests/test_ranking_v4_3_model_eval.py",
+      "tests/test_ranking_v4_3_evaluator_ties.py",
       "tests/test_ranking_v4_3_execution_code_capture.py"
     ],
     "historical_panel_forbidden": true,
