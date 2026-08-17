@@ -1,0 +1,58 @@
+{
+  "schema_version": "ranking_v4_3_pit_feature_protocol_v1",
+  "status": "V4_3_PIT_FEATURE_REMEDIATION_LOCKED_SUPPORT_REFRESH_PENDING",
+  "outcome_blind": true,
+  "scientific_feature_list_changed": false,
+  "control_information_columns": 25,
+  "remediation_reason": "forensic audit proved an invalid pre-listing KOCI row entered historical V2/V3-B/O2 sequential feature construction; V4 must enforce listing-domain eligibility before ATR, rolling features, causal liquidity, cross-sectional ranks, breadth, medians, and market-relative context",
+  "source_formula_lineage": {
+    "v2_baseline_features_commit": "46a5a2e9eaadb6111d59214633511eb11d21ab9e",
+    "v2_baseline_features_blob_sha1": "05102f47031b61e6a71032244167cb7f36a981f5",
+    "v2_context_features_commit": "46a5a2e9eaadb6111d59214633511eb11d21ab9e",
+    "v2_context_features_blob_sha1": "ccbcc7553a5aeb8ede9b32a8dd12ec7a45cb7290",
+    "frozen_lineage_impact_audit_head": "9395b5c26e0db1a280acee4cac9d5fa76d198e8c"
+  },
+  "security_master": {
+    "source": "accepted artifact-governance security listing reference table",
+    "source_external_relative_path": "idx-trade-data-gate-20260808u/certification/security_master.csv",
+    "sha256": "c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240",
+    "governance_branch": "codex/artifact-governance-v1",
+    "governance_commit": "30478f435c1d1f30aa1a3ced9b6db201c396d8cb",
+    "governance_git_path": "artifacts/canonical/idx_data_gate_126/security_master.csv",
+    "missing_ticker_rule": "exclude row before sequential feature construction and report diagnostic",
+    "pre_listing_rule": "exclude row before sequential feature construction",
+    "post_listing_rule": "exclude row before sequential feature construction",
+    "malformed_finite_listing_date_rule": "fail closed"
+  },
+  "causal_feature_order": [
+    "normalize identity and validate source row identity",
+    "join authoritative security listing interval",
+    "remove missing-master/pre-listing/post-listing rows",
+    "compute causal ATR and observed-row rolling price/volume features",
+    "compute 60-official-session primary-liquidity state",
+    "compute within-date cross-sectional ranks from primary-liquid rows only",
+    "compute market breadth/medians from primary-liquid rows only",
+    "compute stock-minus-market context"
+  ],
+  "control_feature_semantics": {
+    "within_date_rank_method": "pandas average percentile rank, pct=True, preserving Clean-V2 information representation",
+    "market_context_population": "PIT-valid primary-liquid decision rows on the same signal date",
+    "open_dependency": false,
+    "time_proxy_columns_in_control": false
+  },
+  "support_refresh": {
+    "required_before_historical_target_access": true,
+    "frozen_validation_sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "rule": "recompute basic Open(t+1)/Close(t+5)/Close(t+10)/mechanism support on the PIT-remediated primary-liquid universe; keep the already-frozen 600 validation dates only if all remain >=90% basic consensus target support and the corrected eligible tail-600 identity is unchanged",
+    "corporate_action_continuity_is_separate": true,
+    "if_identity_changes": "stop for pre-outcome review; do not inspect R5/R10 or performance"
+  },
+  "historical_execution_authorized": false,
+  "forbidden": [
+    "retain invalid listing-domain rows merely to reproduce historical V2 metrics",
+    "change the 25 control information columns due to the bug fix",
+    "inspect historical V4 target values while deciding PIT remediation",
+    "change validation folds because of performance",
+    "treat this listing remediation as corporate-action continuity certification"
+  ]
+}
