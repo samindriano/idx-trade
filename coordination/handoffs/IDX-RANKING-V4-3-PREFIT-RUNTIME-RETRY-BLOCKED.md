@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `c540981255972cac10b11cfc48b9e8550418add1`
 branch: `research/idx-ranking-v4-3-prefit-runtime-v1`
-head_commit: `pending result commit`
+head_commit: `fc7ad38fbae2c418ff025465fb367e11d3f5ab5e`
 scope: Outcome-blind prefit runtime retry; blocked before environment capture.
 files_changed:
   - `docs/checkpoints/2026-08-17_RANKING_V4_3_PREFIT_RUNTIME_RETRY_BLOCKED.md`
