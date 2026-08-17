@@ -1,0 +1,18 @@
+{
+  "created_at_utc": "2026-08-17T17:57:30.656588Z",
+  "input_hashes": {
+    "continuity_ledger_sha256": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb"
+  },
+  "outcome_blind": true,
+  "output_hashes": {
+    "active_mechanical_or_unknown_events": "bdaa71113ab42d69fe87ca0a81b047196ff567cc36336862b023205020b4cded",
+    "ksei_ca_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "request_records": "e68d60103cc3efc04299c1b330c4ef39e55ba1e44bbcf79f178b2f1ccff812e5",
+    "ticker_coverage": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70"
+  },
+  "raw_capture_bytes": 49961415,
+  "raw_capture_count": 804,
+  "schema_version": "v4_ksei_ca_history_census_manifest_v1",
+  "status": "KSEI_610_HISTORY_CENSUS_COMPLETE_WITH_COVERAGE_GAPS",
+  "summary_sha256": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422"
+}

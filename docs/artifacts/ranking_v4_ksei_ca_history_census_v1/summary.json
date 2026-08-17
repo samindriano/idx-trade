@@ -1,0 +1,40 @@
+{
+  "active_mechanical_or_unknown_rows": 739,
+  "active_unknown_rows": 37,
+  "coverage_certified_tickers": 567,
+  "coverage_unresolved_tickers": 43,
+  "history_rows": 14723,
+  "input": {
+    "continuity_ledger_sha256": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb"
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "output_hashes": {
+    "active_mechanical_or_unknown_events": "bdaa71113ab42d69fe87ca0a81b047196ff567cc36336862b023205020b4cded",
+    "ksei_ca_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "request_records": "e68d60103cc3efc04299c1b330c4ef39e55ba1e44bbcf79f178b2f1ccff812e5",
+    "ticker_coverage": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70"
+  },
+  "performance_computed": false,
+  "prediction_generated": false,
+  "protected_forward_accessed": false,
+  "provider": "KSEI_PUBLIC_REGISTERED_SECURITY_HISTORY",
+  "provider_calls": true,
+  "schema_version": "v4_ksei_ca_history_census_v1",
+  "status": "KSEI_610_HISTORY_CENSUS_COMPLETE_WITH_COVERAGE_GAPS",
+  "target_or_rank_materialized": false,
+  "ticker_count": 610,
+  "ticker_identity_sha256": "2db45fde63e5f5d755abd81858242bf2089fa5cbb397de1f2b8a78bb37db5f4c",
+  "transport": {
+    "backoff_seconds": [
+      1.0,
+      3.0
+    ],
+    "impersonate": "chrome110",
+    "inter_ticker_sleep_seconds": 0.2,
+    "library": "curl_cffi",
+    "max_attempts_per_ticker": 3,
+    "source_substitution": false,
+    "timeout_seconds": 60.0
+  }
+}
