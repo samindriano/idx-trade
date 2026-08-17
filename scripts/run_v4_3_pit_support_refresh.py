@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -35,7 +36,18 @@ PINNED = {
     "validation_folds": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
 }
 
-STATE_NAMES = ("ACTIVE", "NO_TRADE", "SUSPENDED", "UNKNOWN", "AMBIGUOUS", "NO_FUTURE_SESSION")
+VALIDATION_FOLD_REPO_PATH = (
+    "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/"
+    "v4_3_validation_folds.csv"
+)
+STATE_NAMES = (
+    "ACTIVE",
+    "NO_TRADE",
+    "SUSPENDED",
+    "UNKNOWN",
+    "AMBIGUOUS",
+    "NO_FUTURE_SESSION",
+)
 
 
 def sha256(path: Path) -> str:
@@ -46,10 +58,33 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def git_head_bytes(repo_root: Path, relative: str) -> bytes:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f"HEAD:{relative}"],
+        check=True,
+        capture_output=True,
+    )
+    return completed.stdout
+
+
 def normalize_identity(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
-    out["ticker"] = out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    out["date"] = pd.to_datetime(out["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    out["ticker"] = (
+        out["ticker"]
+        .astype(str)
+        .str.upper()
+        .str.replace(".JK", "", regex=False)
+        .str.strip()
+    )
+    out["date"] = (
+        pd.to_datetime(out["date"], errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     if out["date"].isna().any():
         raise ValueError("identity contains invalid date")
     return out
@@ -62,15 +97,33 @@ def state_map_from_inputs(
 ) -> tuple[dict[tuple[str, int], str], int]:
     date_to_index = dict(zip(calendar["date"], calendar["session_index"]))
     regular = anchors[anchors["market"].eq("REGULAR")].copy()
-    regular["ticker"] = regular["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    regular["as_of_date"] = pd.to_datetime(regular["as_of_date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    regular["ticker"] = (
+        regular["ticker"]
+        .astype(str)
+        .str.upper()
+        .str.replace(".JK", "", regex=False)
+        .str.strip()
+    )
+    regular["as_of_date"] = (
+        pd.to_datetime(regular["as_of_date"], errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     regular["session_index"] = regular["as_of_date"].map(date_to_index)
     regular = regular[regular["session_index"].notna()].copy()
-    grouped = regular.groupby(["ticker", "session_index"])["state"].agg(
-        lambda values: tuple(sorted({str(value).upper() for value in values.dropna()}))
-    ).reset_index(name="states")
+    grouped = (
+        regular.groupby(["ticker", "session_index"])["state"]
+        .agg(
+            lambda values: tuple(
+                sorted({str(value).upper() for value in values.dropna()})
+            )
+        )
+        .reset_index(name="states")
+    )
     states = {
-        (ticker, int(index)): (values[0] if len(values) == 1 else "AMBIGUOUS")
+        (ticker, int(index)): (
+            values[0] if len(values) == 1 else "AMBIGUOUS"
+        )
         for ticker, index, values in grouped.itertuples(index=False)
     }
 
@@ -86,7 +139,10 @@ def state_map_from_inputs(
             if pd.notna(row.effective_to)
             else pd.Timestamp(calendar_dates.iloc[-1])
         )
-        covered = calendar.loc[(calendar_dates >= start) & (calendar_dates <= end), "session_index"]
+        covered = calendar.loc[
+            (calendar_dates >= start) & (calendar_dates <= end),
+            "session_index",
+        ]
         ticker = str(row.ticker).upper().replace(".JK", "").strip()
         for index in covered:
             states.setdefault((ticker, int(index)), "SUSPENDED")
@@ -122,7 +178,9 @@ def attach_open_support(
         raise RuntimeError("OPEN_DERIVATIVE_IDENTITY_MISMATCH")
 
     merged = base.merge(
-        derivative[["ticker", "date", "open"]].rename(columns={"open": "_accepted_open"}),
+        derivative[["ticker", "date", "open"]].rename(
+            columns={"open": "_accepted_open"}
+        ),
         on=["ticker", "date"],
         how="left",
         validate="one_to_one",
@@ -134,15 +192,23 @@ def attach_open_support(
     if not overlay_keys.issubset(panel_keys):
         raise RuntimeError("OPEN_OVERLAY_HAS_KEYS_OUTSIDE_SIGNAL_PANEL")
     overlay_support = pd.Series(
-        [(ticker, day) in overlay_keys for ticker, day in zip(panel["ticker"], panel["date"])],
+        [
+            (ticker, day) in overlay_keys
+            for ticker, day in zip(panel["ticker"], panel["date"])
+        ],
         index=panel.index,
         dtype=bool,
     )
-    panel["open_support"] = derivative_support.to_numpy(dtype=bool) | overlay_support.to_numpy(dtype=bool)
+    panel["open_support"] = (
+        derivative_support.to_numpy(dtype=bool)
+        | overlay_support.to_numpy(dtype=bool)
+    )
     return {
         "derivative_supported_rows": int(derivative_support.sum()),
         "overlay_rows": int(len(overlay)),
-        "overlay_incremental_rows": int((overlay_support & ~derivative_support).sum()),
+        "overlay_incremental_rows": int(
+            (overlay_support & ~derivative_support).sum()
+        ),
         "final_supported_rows": int(panel["open_support"].sum()),
     }
 
@@ -160,33 +226,68 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    repo_root = args.repo_root.resolve()
     if args.output_dir.exists():
-        raise RuntimeError(f"REFUSE_OVERWRITE_EXISTING_OUTPUT: {args.output_dir}")
+        raise RuntimeError(
+            f"REFUSE_OVERWRITE_EXISTING_OUTPUT: {args.output_dir}"
+        )
 
     paths = {
         "calendar": args.artifact_root / "official_exchange_sessions_1260.csv",
-        "panel": args.artifact_root / "unknown_state_diagnostic_1260_20260809" / "model_safe_signal_research_panel_1260.parquet",
+        "panel": (
+            args.artifact_root
+            / "unknown_state_diagnostic_1260_20260809"
+            / "model_safe_signal_research_panel_1260.parquet"
+        ),
         "anchors": args.artifact_root / "tradability_anchors_1260.csv",
         "intervals": args.artifact_root / "tradability_intervals_1260.csv",
-        "open_derivative_panel": args.open_derivative_root / "execution_open_candidate_panel_yahoo_tradingview.parquet",
-        "open_derivative_manifest": args.open_derivative_root / "artifact_manifest.json",
+        "open_derivative_panel": (
+            args.open_derivative_root
+            / "execution_open_candidate_panel_yahoo_tradingview.parquet"
+        ),
+        "open_derivative_manifest": (
+            args.open_derivative_root / "artifact_manifest.json"
+        ),
         "overlay_parquet": args.overlay_root / "open_recovery_overlay.parquet",
         "overlay_manifest": args.overlay_root / "manifest.json",
         "security_master": args.security_master,
-        "validation_folds": args.repo_root / "docs" / "artifacts" / "ranking_v4_3_primary_liquid_support_v1" / "v4_3_validation_folds.csv",
+        "validation_folds": repo_root / VALIDATION_FOLD_REPO_PATH,
     }
+
+    input_hashes: dict[str, str] = {}
+    input_worktree_hashes: dict[str, str] = {}
     for name, path in paths.items():
         if not path.is_file():
             raise RuntimeError(f"REQUIRED_INPUT_MISSING: {name}: {path}")
-        actual = sha256(path)
+        if name == "validation_folds":
+            canonical = sha256_bytes(
+                git_head_bytes(repo_root, VALIDATION_FOLD_REPO_PATH)
+            )
+            worktree = sha256(path)
+            input_hashes[name] = canonical
+            input_worktree_hashes[name] = worktree
+            actual = canonical
+        else:
+            actual = sha256(path)
+            input_hashes[name] = actual
+            input_worktree_hashes[name] = actual
         if actual != PINNED[name]:
-            raise RuntimeError(f"PINNED_INPUT_HASH_MISMATCH {name}: {actual} != {PINNED[name]}")
+            raise RuntimeError(
+                f"PINNED_INPUT_HASH_MISMATCH {name}: "
+                f"{actual} != {PINNED[name]}"
+            )
 
     calendar = pd.read_csv(paths["calendar"])
-    calendar["date"] = pd.to_datetime(calendar["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    calendar["date"] = (
+        pd.to_datetime(calendar["date"], errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     if calendar["date"].isna().any() or calendar["date"].duplicated().any():
         raise RuntimeError("OFFICIAL_CALENDAR_INVALID")
-    calendar = calendar.sort_values("date", kind="mergesort").reset_index(drop=True)
+    calendar = calendar.sort_values("date", kind="mergesort").reset_index(
+        drop=True
+    )
     calendar["session_index"] = np.arange(len(calendar), dtype=np.int64)
     date_to_index = dict(zip(calendar["date"], calendar["session_index"]))
 
@@ -197,7 +298,9 @@ def main() -> int:
     if panel["session_index"].isna().any():
         raise RuntimeError("SIGNAL_PANEL_DATE_OUTSIDE_CALENDAR")
     panel["session_index"] = panel["session_index"].astype(int)
-    panel["close_valid"] = pd.to_numeric(panel["close"], errors="coerce").gt(0.0)
+    panel["close_valid"] = pd.to_numeric(
+        panel["close"], errors="coerce"
+    ).gt(0.0)
 
     derivative = pd.read_parquet(paths["open_derivative_panel"])
     overlay = pd.read_parquet(paths["overlay_parquet"])
@@ -209,13 +312,22 @@ def main() -> int:
         calendar["date"],
         security_master,
     )
-    primary = features[features["universe_primary_liquid"].astype(bool)][["ticker", "date"]].copy()
+    primary = features[
+        features["universe_primary_liquid"].astype(bool)
+    ][["ticker", "date"]].copy()
     primary["session_index"] = primary["date"].map(date_to_index).astype(int)
     if primary.duplicated(["ticker", "date"]).any():
         raise RuntimeError("PIT_PRIMARY_DECISION_DUPLICATE_IDENTITY")
 
-    panel_key = panel.set_index(["ticker", "date"])[["open_support", "close_valid"]]
-    decision = primary.join(panel_key, on=["ticker", "date"], how="left", validate="one_to_one")
+    panel_key = panel.set_index(["ticker", "date"])[
+        ["open_support", "close_valid"]
+    ]
+    decision = primary.join(
+        panel_key,
+        on=["ticker", "date"],
+        how="left",
+        validate="one_to_one",
+    )
     if decision[["open_support", "close_valid"]].isna().any().any():
         raise RuntimeError("PIT_PRIMARY_DECISION_MISSING_PANEL_SUPPORT")
 
@@ -225,12 +337,15 @@ def main() -> int:
     intervals = pd.read_csv(paths["intervals"])
     intervals["market"] = intervals["market"].astype(str).str.upper()
     intervals["state"] = intervals["state"].astype(str).str.upper()
-    states, state_conflicts = state_map_from_inputs(anchors, intervals, calendar)
+    states, state_conflicts = state_map_from_inputs(
+        anchors, intervals, calendar
+    )
 
     support_lookup = {
         (ticker, int(index)): (bool(open_support), bool(close_valid))
-        for ticker, index, open_support, close_valid
-        in panel[["ticker", "session_index", "open_support", "close_valid"]].itertuples(index=False)
+        for ticker, index, open_support, close_valid in panel[
+            ["ticker", "session_index", "open_support", "close_valid"]
+        ].itertuples(index=False)
     }
 
     def future_state(ticker: str, index: int, offset: int) -> str:
@@ -239,13 +354,19 @@ def main() -> int:
             return "NO_FUTURE_SESSION"
         return states.get((ticker, target), "UNKNOWN")
 
-    def future_support(ticker: str, index: int, offset: int) -> tuple[bool, bool]:
-        return support_lookup.get((ticker, int(index) + int(offset)), (False, False))
+    def future_support(
+        ticker: str, index: int, offset: int
+    ) -> tuple[bool, bool]:
+        return support_lookup.get(
+            (ticker, int(index) + int(offset)), (False, False)
+        )
 
     entry_ok: list[bool] = []
     h5_close_ok: list[bool] = []
     h10_close_ok: list[bool] = []
-    for ticker, index in decision[["ticker", "session_index"]].itertuples(index=False):
+    for ticker, index in decision[
+        ["ticker", "session_index"]
+    ].itertuples(index=False):
         entry_state = future_state(ticker, int(index), 1)
         h5_state = future_state(ticker, int(index), 5)
         h10_state = future_state(ticker, int(index), 10)
@@ -258,24 +379,40 @@ def main() -> int:
     decision["entry_open_support"] = entry_ok
     decision["h5_close_support"] = h5_close_ok
     decision["h10_close_support"] = h10_close_ok
-    decision["h5_target_support"] = decision["entry_open_support"] & decision["h5_close_support"]
-    decision["h10_target_support"] = decision["entry_open_support"] & decision["h10_close_support"]
-    decision["both_target_support"] = decision["h5_target_support"] & decision["h10_target_support"]
+    decision["h5_target_support"] = (
+        decision["entry_open_support"] & decision["h5_close_support"]
+    )
+    decision["h10_target_support"] = (
+        decision["entry_open_support"] & decision["h10_close_support"]
+    )
+    decision["both_target_support"] = (
+        decision["h5_target_support"] & decision["h10_target_support"]
+    )
 
-    grouped = decision.groupby(["session_index", "date"], sort=True).agg(
-        decision_rows=("ticker", "size"),
-        open_t1_rows=("entry_open_support", "sum"),
-        h5_target_rows=("h5_target_support", "sum"),
-        h10_target_rows=("h10_target_support", "sum"),
-        both_target_rows=("both_target_support", "sum"),
-    ).reset_index()
+    grouped = (
+        decision.groupby(["session_index", "date"], sort=True)
+        .agg(
+            decision_rows=("ticker", "size"),
+            open_t1_rows=("entry_open_support", "sum"),
+            h5_target_rows=("h5_target_support", "sum"),
+            h10_target_rows=("h10_target_support", "sum"),
+            both_target_rows=("both_target_support", "sum"),
+        )
+        .reset_index()
+    )
     per_date = calendar[["session_index", "date"]].merge(
         grouped,
         on=["session_index", "date"],
         how="left",
         validate="one_to_one",
     )
-    for column in ("decision_rows", "open_t1_rows", "h5_target_rows", "h10_target_rows", "both_target_rows"):
+    for column in (
+        "decision_rows",
+        "open_t1_rows",
+        "h5_target_rows",
+        "h10_target_rows",
+        "both_target_rows",
+    ):
         per_date[column] = per_date[column].fillna(0).astype(int)
     for prefix in ("open_t1", "h5_target", "h10_target", "both_target"):
         per_date[f"{prefix}_rate"] = np.where(
@@ -283,22 +420,46 @@ def main() -> int:
             per_date[f"{prefix}_rows"] / per_date["decision_rows"],
             np.nan,
         )
-        per_date[f"{prefix}_gate"] = per_date["decision_rows"].gt(0) & per_date[f"{prefix}_rate"].ge(0.90)
+        per_date[f"{prefix}_gate"] = (
+            per_date["decision_rows"].gt(0)
+            & per_date[f"{prefix}_rate"].ge(0.90)
+        )
     per_date["basic_consensus_eligible"] = per_date["both_target_gate"]
 
     frozen = pd.read_csv(paths["validation_folds"])
-    frozen["date"] = pd.to_datetime(frozen["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    frozen["date"] = (
+        pd.to_datetime(frozen["date"], errors="coerce")
+        .dt.tz_localize(None)
+        .dt.normalize()
+    )
     if len(frozen) != 600 or frozen["date"].duplicated().any():
         raise RuntimeError("FROZEN_VALIDATION_IDENTITY_INVALID")
-    frozen_check = frozen[["fold", "validation_position", "session_index", "date"]].merge(
-        per_date[["session_index", "date", "decision_rows", "both_target_rate", "basic_consensus_eligible"]],
+    frozen_check = frozen[
+        ["fold", "validation_position", "session_index", "date"]
+    ].merge(
+        per_date[
+            [
+                "session_index",
+                "date",
+                "decision_rows",
+                "both_target_rate",
+                "basic_consensus_eligible",
+            ]
+        ],
         on=["session_index", "date"],
         how="left",
         validate="one_to_one",
     )
-    all_frozen_basic_eligible = bool(frozen_check["basic_consensus_eligible"].fillna(False).all())
-    corrected_eligible = per_date[per_date["basic_consensus_eligible"]][["session_index", "date"]].copy()
-    eligible_after_frozen_end = int((corrected_eligible["session_index"] > int(frozen["session_index"].max())).sum())
+    all_frozen_basic_eligible = bool(
+        frozen_check["basic_consensus_eligible"].fillna(False).all()
+    )
+    corrected_eligible = per_date[
+        per_date["basic_consensus_eligible"]
+    ][["session_index", "date"]].copy()
+    frozen_end = int(frozen["session_index"].max())
+    eligible_after_frozen_end = int(
+        (corrected_eligible["session_index"] > frozen_end).sum()
+    )
     tail_600_same = False
     if len(corrected_eligible) >= 600:
         tail = corrected_eligible.tail(600).reset_index(drop=True)
@@ -314,14 +475,23 @@ def main() -> int:
     args.output_dir.mkdir(parents=True)
     outputs = {
         "per_date": args.output_dir / "v4_3_pit_support_per_date.csv",
-        "frozen_check": args.output_dir / "v4_3_pit_frozen_validation_check.csv",
-        "eligible": args.output_dir / "v4_3_pit_basic_consensus_eligible_sessions.csv",
+        "frozen_check": (
+            args.output_dir / "v4_3_pit_frozen_validation_check.csv"
+        ),
+        "eligible": (
+            args.output_dir
+            / "v4_3_pit_basic_consensus_eligible_sessions.csv"
+        ),
         "summary": args.output_dir / "summary.json",
         "manifest": args.output_dir / "manifest.json",
     }
     per_date.to_csv(outputs["per_date"], index=False, lineterminator="\n")
-    frozen_check.to_csv(outputs["frozen_check"], index=False, lineterminator="\n")
-    corrected_eligible.to_csv(outputs["eligible"], index=False, lineterminator="\n")
+    frozen_check.to_csv(
+        outputs["frozen_check"], index=False, lineterminator="\n"
+    )
+    corrected_eligible.to_csv(
+        outputs["eligible"], index=False, lineterminator="\n"
+    )
 
     payload = {
         "schema_version": "v4_3_pit_support_refresh_v1",
@@ -341,23 +511,45 @@ def main() -> int:
         "eligible_sessions_after_frozen_end": eligible_after_frozen_end,
         "state_conflict_keys": int(state_conflicts),
         "open_lineage": open_stats,
-        "input_hashes": {name: sha256(path) for name, path in paths.items()},
+        "input_hashes": input_hashes,
+        "input_worktree_hashes": input_worktree_hashes,
+        "validation_fold_hash_semantics": (
+            "input_hashes.validation_folds is SHA-256 of canonical Git HEAD "
+            "bytes; worktree bytes are diagnostic only"
+        ),
     }
-    outputs["summary"].write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    outputs["summary"].write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     manifest = {
         "schema_version": "v4_3_pit_support_refresh_manifest_v1",
         "status": verdict,
         "outcome_blind": True,
         "corporate_action_continuity_certified": False,
-        "input_hashes": payload["input_hashes"],
+        "input_hashes": input_hashes,
+        "input_worktree_hashes": input_worktree_hashes,
         "outputs": {
             name: sha256(path)
             for name, path in outputs.items()
             if name != "manifest" and path.is_file()
         },
     }
-    outputs["manifest"].write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"verdict": verdict, "summary": payload, "manifest_sha256": sha256(outputs["manifest"])}, indent=2, sort_keys=True))
+    outputs["manifest"].write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        json.dumps(
+            {
+                "verdict": verdict,
+                "summary": payload,
+                "manifest_sha256": sha256(outputs["manifest"]),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
