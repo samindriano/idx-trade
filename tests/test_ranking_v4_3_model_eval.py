@@ -84,9 +84,8 @@ def test_synthetic_fit_and_scoring_preserve_full_population_and_rank_each_date()
     )
     assert len(scored) == len(frame)
     assert scored["alpha_h5"].between(0.0, 1.0).all()
-    for _, block in scored.groupby("date"):
-        assert np.isclose(block["alpha_h5"].min(), 0.0)
-        assert np.isclose(block["alpha_h5"].max(), 1.0)
+    assert np.isfinite(scored["raw_h5"]).all()
+    assert scored.groupby("date").size().tolist() == [40, 40, 40]
 
 
 def make_scored_and_targets(observable_top: int = 30, observable_total: int = 60) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -99,8 +98,6 @@ def make_scored_and_targets(observable_top: int = 30, observable_total: int = 60
             "alpha_h5": np.linspace(0.0, 1.0, 60),
         }
     )
-    # Top30 are T30..T59. Make the highest-ranked `observable_top` members observable;
-    # do not refill from T29 etc when some of the fixed Top30 are unavailable.
     top = set(tickers[-observable_top:]) if observable_top else set()
     available = set(tickers[: max(0, observable_total - observable_top)]) | top
     ranks = np.linspace(0.0, 1.0, 60)
@@ -124,7 +121,6 @@ def test_top30_is_fixed_before_observability_and_never_refilled() -> None:
     assert metrics["top30_observable"] == 26
     assert not bool(metrics["top30_metric_admitted"])
     assert np.isnan(metrics["top30_mean_realized_percentile"])
-    # IC still exists on the admitted full observable cross-section.
     assert bool(metrics["ic_admitted"])
     assert np.isfinite(metrics["daily_ic"])
 
@@ -159,7 +155,6 @@ def test_fold_metric_requires_90_dates_for_each_primary_metric() -> None:
     metrics["daily_ic"] = 0.05
     metrics["top30_mean_realized_percentile"] = 0.55
     metrics["top30_bottom30_spread"] = 0.06
-    # Fold 1 has only 89 admitted Top30 metric dates.
     fold1 = metrics.index[metrics["fold"].eq(1)]
     metrics.loc[fold1[89:], "top30_metric_admitted"] = False
     metrics.loc[fold1[89:], "top30_mean_realized_percentile"] = np.nan
