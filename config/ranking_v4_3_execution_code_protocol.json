@@ -20,10 +20,13 @@
     "src/idx_trade/ranking_v4_3_features.py",
     "src/idx_trade/ranking_v4_3_model_eval.py",
     "scripts/run_v4_3_pit_support_refresh.py",
+    "scripts/capture_v4_3_execution_code_manifest.py",
     "tests/test_ranking_v4_3_preregistration.py",
+    "tests/test_ranking_v4_3_prefit_runtime.py",
     "tests/test_ranking_v4_3_target_execution.py",
     "tests/test_ranking_v4_3_features.py",
-    "tests/test_ranking_v4_3_model_eval.py"
+    "tests/test_ranking_v4_3_model_eval.py",
+    "tests/test_ranking_v4_3_execution_code_capture.py"
   ],
   "synthetic_validation": {
     "required_tests": [
@@ -31,7 +34,8 @@
       "tests/test_ranking_v4_3_prefit_runtime.py",
       "tests/test_ranking_v4_3_target_execution.py",
       "tests/test_ranking_v4_3_features.py",
-      "tests/test_ranking_v4_3_model_eval.py"
+      "tests/test_ranking_v4_3_model_eval.py",
+      "tests/test_ranking_v4_3_execution_code_capture.py"
     ],
     "historical_panel_forbidden": true,
     "R5_R10_forbidden": true,
