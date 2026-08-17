@@ -39,14 +39,17 @@ def test_remediation_overlay_pins_exact_authoritative_manifest_sha():
 
 
 def test_frozen_runners_receive_only_the_exact_pin_replacement():
+    bad_literal = f'"{BAD_KSEI_MANIFEST_SHA}"'
+    good_literal = f'"{GOOD_KSEI_MANIFEST_SHA}"'
+
     for relative in (
         "scripts/run_v4_ca_event_window_support.py",
         "scripts/run_v4_ca_schedule_acquisition.py",
     ):
         path = ROOT / relative
         original = path.read_text(encoding="utf-8")
-        assert original.count(BAD_KSEI_MANIFEST_SHA) == 1
+        assert original.count(bad_literal) == 1
         remediated = remediated_source_text(path)
-        assert BAD_KSEI_MANIFEST_SHA not in remediated
-        assert remediated.count(GOOD_KSEI_MANIFEST_SHA) == 1
+        assert bad_literal not in remediated
+        assert remediated.count(good_literal) == 1
         compile(remediated, str(path), "exec")
