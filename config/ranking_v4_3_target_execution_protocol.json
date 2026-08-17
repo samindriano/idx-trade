@@ -42,7 +42,8 @@
     ],
     "market_states": ["ACTIVE", "NO_TRADE", "SUSPENDED", "UNKNOWN", "AMBIGUOUS"],
     "open_rule": "entry Open is usable only when market_state ACTIVE, open_admitted true, and accepted_open finite positive",
-    "close_rule": "terminal Close is usable only when market_state ACTIVE, close_admitted true, and close finite positive"
+    "close_rule": "terminal Close is usable only when market_state ACTIVE, close_admitted true, and close finite positive",
+    "generation_1_basis": "raw executable price basis only; no adjusted endpoint-price layer is admitted"
   },
   "continuity_evidence_contract": {
     "identity": ["ticker", "signal_date", "horizon"],
@@ -57,8 +58,7 @@
     ],
     "allowed_horizons": [5, 10],
     "passing_states": [
-      "RESOLVED_NO_MECHANICAL_DISCONTINUITY",
-      "RESOLVED_SAME_BASIS_ENDPOINTS"
+      "RESOLVED_NO_MECHANICAL_DISCONTINUITY"
     ],
     "failing_states": [
       "PRICE_CONTINUITY_UNRESOLVED_COVERAGE",
@@ -72,7 +72,7 @@
     "no_tanggal_pencatatan_as_generic_effective_date": true,
     "corporate_action_integrity_verified_boolean_is_not_full_v4_continuity_proof": true,
     "cash_dividend_alone_is_not_a_mechanical_continuity_blocker": true,
-    "cross_basis_event_policy": "do not adjust V4 target prices in generation 1; if a split, reverse split, stock dividend, bonus share, rights issue, or other mechanical share/price-basis event crosses after Open_(t+1) through and including Close_(t+h), the row is unresolved unless an independently admitted same-basis continuity record explicitly resolves the endpoints"
+    "cross_basis_event_policy": "generation 1 never adjusts target endpoint prices. Any split, reverse split, stock dividend, bonus share, rights issue, or other mechanical share/price-basis event that may cross after Open_(t+1) through and including Close_(t+h) is PRICE_CONTINUITY_UNRESOLVED. A future same-basis endpoint layer requires a new preregistered generation and is not an allowed passing shortcut here."
   },
   "target_states": [
     "TARGET_H5_AVAILABLE",
@@ -124,6 +124,7 @@
     "infer corporate-action effective date from price discontinuity",
     "treat missing corporate-action evidence as no event",
     "silently reinterpret corporate_action_integrity_verified as full V4 continuity proof",
+    "admit a same-basis crossing-event shortcut without a new preregistered adjusted-endpoint price layer",
     "change target/evaluator/preregistration because continuity support is inconvenient"
   ]
 }
