@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `2c50e4a24e42593360f5ef6e87b28abe4768b5db`
 branch: `research/idx-ranking-v4-3-prefit-runtime-v1`
-head_commit: `pending result commit`
+head_commit: `98cfb2e0858885656a568b3228e4233e8dd8ea8f`
 scope: Outcome-blind prefit runtime preflight only; capture was blocked before environment access.
 files_changed:
   - `coordination/handoffs/IDX-RANKING-V4-3-PREFIT-RUNTIME-V1.md`
