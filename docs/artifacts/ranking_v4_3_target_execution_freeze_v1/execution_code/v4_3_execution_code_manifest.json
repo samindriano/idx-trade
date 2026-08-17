@@ -1,0 +1,76 @@
+{
+  "canonical_git_source_sha256": {
+    "config/ranking_v4_3_execution_code_protocol.json": "81f450cfafebd9fe2415711c790bcc1c7ba963ad3566d62f57f3cf364a1ac844",
+    "config/ranking_v4_3_pit_feature_protocol.json": "4e944d8af5a85c012a84ed4296236b8415f5d716377ca68494c22e007e2fb3be",
+    "config/ranking_v4_3_target_execution_protocol.json": "05baa1e5626235e25e44d59968396359595c03ef06efeba244b4053c558ff382",
+    "scripts/capture_v4_3_execution_code_manifest.py": "309adf84b3692d67b4169986dc7e70ce748e2ffc7973a238423eb989d1eeba34",
+    "scripts/run_v4_3_pit_support_refresh.py": "3a96dda675f578a8e7f18136da297ac4b727e3bf49500277bcb9453a19fc9dcf",
+    "src/idx_trade/ranking_v4_3_features.py": "834fa3e1672b0837289bf866b0eca04ee3e564e7a8fd0af640fc6c447d732c0b",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "f28899ea29f1752de15ff25d8637a1421bdff4318b493306c9fa23dd314752f6",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "17f49bbfd6b755b918ff36b4c070bad71a1ead5ba2503a4b179df67aad785468",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "f344874c3619c08605d97058edb8331814cd74c430c60a275a5f96ca48899002",
+    "tests/test_ranking_v4_3_evaluator_ties.py": "9d44ae1ae99f3a02f1ab4431dee2052274c7e548adbb819ac073dab347e04781",
+    "tests/test_ranking_v4_3_execution_code_capture.py": "525f1040767569dbd2775c43848d4a7ada9adb3ba2a0532371b8a8f5f05011e6",
+    "tests/test_ranking_v4_3_features.py": "3cd2d74d705b563b2a7ab1feccd8861665ebab026dee20f0863ea9183433c215",
+    "tests/test_ranking_v4_3_model_eval.py": "4b96a170e6efc7bcdc56e9b1f802a2a61df9bcf9ca94dc931d572edad54ce4a5",
+    "tests/test_ranking_v4_3_prefit_runtime.py": "ed4b3ffa7314ea71b3153f21e75e05f94fea97ed71ea37e2d90c5a344c515b60",
+    "tests/test_ranking_v4_3_preregistration.py": "072e692ccc5fe9a66dccfc93527c632f96871db33e521d57d352f080ca549839",
+    "tests/test_ranking_v4_3_target_execution.py": "14a1cb99b24eb4a2d3aa6dee21a8ce733668a8f0e0dc5fc7496565cec7735892"
+  },
+  "git": {
+    "branch": "research/idx-ranking-v4-3-target-execution-freeze-v1",
+    "head": "7f6b90e0ed09347c5f0fa638b6c3ba3e73273d59",
+    "worktree_clean": true
+  },
+  "historical_model_fit": false,
+  "historical_performance_computed": false,
+  "historical_prediction_generated": false,
+  "historical_target_loaded": false,
+  "line_ending_note": "canonical Git hashes govern scientific identity; worktree hashes are diagnostic only",
+  "outcome_blind": true,
+  "provider_calls": false,
+  "remaining_hard_gates": [
+    "PIT-remediated support refresh preserves frozen 600 validation identities",
+    "market-wide forward-price corporate-action continuity evidence passes the frozen >=90% target-support gates",
+    "execution-code manifest captured and accepted"
+  ],
+  "runtime": {
+    "accepted_manifest_sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6",
+    "exact_match": true,
+    "package_versions": {
+      "joblib": "1.5.3",
+      "numpy": "2.4.2",
+      "pandas": "2.3.3",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.8.0",
+      "scipy": "1.18.0",
+      "threadpoolctl": "3.6.0"
+    },
+    "python_version": [
+      3,
+      13,
+      5
+    ]
+  },
+  "schema_version": "ranking_v4_3_execution_code_manifest_v1",
+  "scientific_preregistration_sha256": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+  "status": "V4_3_EXECUTION_CODE_IDENTITY_CAPTURED_NO_HISTORICAL_TARGET_ACCESS",
+  "working_tree_source_sha256": {
+    "config/ranking_v4_3_execution_code_protocol.json": "81f450cfafebd9fe2415711c790bcc1c7ba963ad3566d62f57f3cf364a1ac844",
+    "config/ranking_v4_3_pit_feature_protocol.json": "4e944d8af5a85c012a84ed4296236b8415f5d716377ca68494c22e007e2fb3be",
+    "config/ranking_v4_3_target_execution_protocol.json": "05baa1e5626235e25e44d59968396359595c03ef06efeba244b4053c558ff382",
+    "scripts/capture_v4_3_execution_code_manifest.py": "309adf84b3692d67b4169986dc7e70ce748e2ffc7973a238423eb989d1eeba34",
+    "scripts/run_v4_3_pit_support_refresh.py": "3a96dda675f578a8e7f18136da297ac4b727e3bf49500277bcb9453a19fc9dcf",
+    "src/idx_trade/ranking_v4_3_features.py": "834fa3e1672b0837289bf866b0eca04ee3e564e7a8fd0af640fc6c447d732c0b",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "f28899ea29f1752de15ff25d8637a1421bdff4318b493306c9fa23dd314752f6",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "17f49bbfd6b755b918ff36b4c070bad71a1ead5ba2503a4b179df67aad785468",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "f344874c3619c08605d97058edb8331814cd74c430c60a275a5f96ca48899002",
+    "tests/test_ranking_v4_3_evaluator_ties.py": "9d44ae1ae99f3a02f1ab4431dee2052274c7e548adbb819ac073dab347e04781",
+    "tests/test_ranking_v4_3_execution_code_capture.py": "525f1040767569dbd2775c43848d4a7ada9adb3ba2a0532371b8a8f5f05011e6",
+    "tests/test_ranking_v4_3_features.py": "3cd2d74d705b563b2a7ab1feccd8861665ebab026dee20f0863ea9183433c215",
+    "tests/test_ranking_v4_3_model_eval.py": "4b96a170e6efc7bcdc56e9b1f802a2a61df9bcf9ca94dc931d572edad54ce4a5",
+    "tests/test_ranking_v4_3_prefit_runtime.py": "ed4b3ffa7314ea71b3153f21e75e05f94fea97ed71ea37e2d90c5a344c515b60",
+    "tests/test_ranking_v4_3_preregistration.py": "072e692ccc5fe9a66dccfc93527c632f96871db33e521d57d352f080ca549839",
+    "tests/test_ranking_v4_3_target_execution.py": "14a1cb99b24eb4a2d3aa6dee21a8ce733668a8f0e0dc5fc7496565cec7735892"
+  }
+}
