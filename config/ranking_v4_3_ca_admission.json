@@ -1,0 +1,60 @@
+{
+  "schema_version": "ranking_v4_3_ca_admission_v1",
+  "status": "V4_3_CA_ADMISSION_FROZEN_PRE_TARGET_ACCESS",
+  "outcome_blind": true,
+  "scientific_config_mutable": false,
+  "historical_target_access_before_pass": false,
+  "historical_model_fit_before_pass": false,
+  "historical_performance_access_before_pass": false,
+  "parents": {
+    "v4_3_target_execution_freeze_status": "V4_3_PIT_REMEDIATED_SUPPORT_PRESERVES_FROZEN_6X100",
+    "v4_3_prefit_runtime_manifest_sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6",
+    "v4_3_pit_support_manifest_sha256": "7a15008ccd565678ae85c8a78ce50aac696304b9ddfaca554a35cd38e929cf0b",
+    "v4_3_execution_code_manifest_sha256": "631a3b6f5b4ef75ddded196f1327a84cb0136b8d8316ecc86310939a1c8d6ef6",
+    "v4_3_validation_identity_sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "v4_ca_final_manifest_sha256": "6cb1e660c6baa2d9b7a7aca5cece66691d5cd9564378104b618eed2cfce610ab",
+    "v4_ca_final_continuity_summary_sha256": "b6cdf8eb47ac1020707f4fbb4e45cbebf962876b1350d82e352b086bea0709e1",
+    "v4_ca_final_continuity_ledger_sha256": "bce52718fd2731142d84bbeb51beae93147746e2150015a36644dd98dcaee5bf",
+    "v4_ca_final_per_date_sha256": "c84210982a0945dea1b6609e120f8768592ad8b558ad4d12d4bcb29e3dafdfee"
+  },
+  "ca_gate": {
+    "required_verdict": "V4_CA_EVENT_WINDOW_CONTINUITY_CERTIFIED",
+    "required_corporate_action_continuity_certified": true,
+    "required_frozen_dates": 600,
+    "required_frozen_rows": 345394,
+    "required_frozen_tickers": 611,
+    "minimum_per_date_rate": 0.9,
+    "required_gate_dates": {
+      "h5": 600,
+      "h10": 600,
+      "consensus": 600
+    },
+    "required_cross_source_conflict_tickers": 0,
+    "expected_coverage_certified_tickers": 602,
+    "expected_coverage_unresolved_tickers": 9,
+    "remaining_unresolved_outside_material_six_is_allowed": true
+  },
+  "required_guardrails": {
+    "outcome_blind": true,
+    "model_fit": false,
+    "performance_computed": false,
+    "prediction_generated": false,
+    "target_or_rank_materialized": false,
+    "protected_forward_accessed": false,
+    "provider_calls": false,
+    "price_inference": false,
+    "record_date_inference": false,
+    "excl_price_stitching": false
+  },
+  "authorization_on_pass": {
+    "historical_target_materialization": true,
+    "historical_target_rank_materialization": true,
+    "historical_model_fit": true,
+    "historical_prediction_generation": true,
+    "historical_frozen_evaluation": true,
+    "scientific_config_changes": false,
+    "post_result_rescue": false,
+    "new_provider_calls": false,
+    "protected_forward_access": false
+  }
+}
