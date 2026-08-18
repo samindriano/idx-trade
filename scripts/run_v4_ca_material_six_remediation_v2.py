@@ -1,12 +1,15 @@
 """Compatibility entrypoint for the V4 material-six one-shot runner.
 
-Two orchestration-only corrections are applied before V1 runs:
+Three orchestration-only corrections are applied before V1 runs:
 1. the frozen CA runner's canonical output filename is redirected from the
-   earlier draft alias; and
+   earlier draft alias;
 2. AVIA/SMAR strict KSEI retry failure is allowed to remain explicitly
-   unresolved instead of aborting the whole six-name audit.
+   unresolved instead of aborting the whole six-name audit; and
+3. the frozen prior-event evidence CSV is read as text so integer action IDs
+   cannot drift to float-looking strings such as 82840.0.
 
-Neither correction changes any scientific classification or relaxes coverage.
+None of these corrections changes any scientific classification or relaxes
+coverage/evidence requirements.
 """
 
 from __future__ import annotations
@@ -34,6 +37,11 @@ def _read_csv_with_frozen_output_alias(path, *args, **kwargs):
         canonical = candidate.with_name("v4_frozen_continuity_ledger_event_window.csv")
         if not candidate.exists() and canonical.is_file():
             path = canonical
+            candidate = canonical
+    if candidate is not None and candidate.name == "event_family_evidence.csv":
+        kwargs.setdefault("dtype", str)
+        kwargs.setdefault("keep_default_na", False)
+        kwargs.setdefault("low_memory", False)
     return _ORIGINAL_READ_CSV(path, *args, **kwargs)
 
 
