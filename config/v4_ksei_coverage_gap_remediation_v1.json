@@ -1,0 +1,51 @@
+{
+  "schema_version": "v4_ksei_coverage_gap_remediation_v1",
+  "policy_id": "V4_KSEI_COVERAGE_GAP_REMEDIATION_V1",
+  "outcome_blind": true,
+  "parent_census": {
+    "commit": "aef9037240849a3bba0b16838f3827e389ce9711",
+    "manifest_sha256": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25a",
+    "summary_sha256": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422",
+    "ticker_coverage_sha256": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70",
+    "ksei_ca_history_sha256": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "request_records_sha256": "e68d60103cc3efc04299c1b330c4ef39e55ba1e44bbcf79f178b2f1ccff812e5",
+    "expected_tickers": 610,
+    "expected_certified": 567,
+    "expected_unresolved": 43
+  },
+  "gap_tickers": [
+    "ACRO", "AMAN", "AVIA", "AYAM", "BCIP", "BDKR", "BJTM", "CBRE",
+    "DFAM", "DGIK", "HELI", "IBOS", "ICBP", "ISAP", "ISAT", "JPFA",
+    "KEJU", "KRAS", "MAPA", "MAPI", "MIDI", "MIKA", "MINA", "MSJA",
+    "NASI", "OLIV", "PMMP", "PMUI", "PRIM", "PSAB", "SDMU", "SKRN",
+    "SLIS", "SMAR", "SNLK", "SOCI", "SOFA", "STAA", "STRK", "TCPI",
+    "TEBE", "TOSK", "VISI"
+  ],
+  "gap_ticker_identity_sha256": "1cd050985841519d24f58a38d10014693ff4a843cbd438586237ad4419ffe812",
+  "provider": {
+    "name": "KSEI_PUBLIC_REGISTERED_SECURITY_HISTORY",
+    "home": "https://web.ksei.co.id/",
+    "security_url_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}?setLocale=en-US",
+    "source_substitution": false,
+    "parser_relaxation": false,
+    "transport_library": "curl_cffi",
+    "impersonate": "chrome110",
+    "fresh_session_per_ticker": true,
+    "home_warmup_per_ticker": true,
+    "max_security_attempts_per_ticker": 2,
+    "backoff_seconds": [1.0],
+    "timeout_seconds": 60.0,
+    "inter_ticker_sleep_seconds": 0.2
+  },
+  "hard_boundaries": {
+    "full_610_recrawl": false,
+    "alternate_provider": false,
+    "alternate_ksei_security_identity": false,
+    "parser_or_semantic_relaxation": false,
+    "target_or_rank_materialization": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
