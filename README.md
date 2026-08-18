@@ -1,207 +1,135 @@
-# IDX Trade Research
+# IDX Trade
 
-A modular, point-in-time research system for turning daily/EOD Indonesia Stock Exchange (IDX) data into **opportunity ranking, risk characterization, trade selection, portfolio decisions, execution research, and eventually paper/live monitoring**.
+Point-in-time research infrastructure for **Indonesia Stock Exchange (IDX) equities**.
 
-The core idea is deliberately **not** to build one giant model that tries to do everything. IDX Trade separates each question into its own layer so that alpha, risk, probability, sizing, and execution can be researched and validated independently.
+IDX Trade is built around one principle: **data validity, alpha, risk, decision rules, sizing, execution, and validation are different problems and should stay separate.** The repository is designed to make each layer auditable before it is allowed to influence the next one.
 
-## Project map
+> Research software only. Historical-development results are not evidence of live profitability.
 
-<p align="center">
-  <img src="docs/assets/model-ecosystem-overview.svg" alt="IDX Trade model ecosystem: data gate, alpha ranker, path risk, decision engine, portfolio, execution, and paper/live monitoring" width="100%">
-</p>
+## System map
 
-**Legend:** green = built/locked · yellow = next research lane · gray = future · red = protected validation boundary.
+```mermaid
+flowchart TD
+    S[Official / retained market evidence] --> G[Data & Universe Gate]
+    G --> A[Opportunity / Alpha Ranker]
+    A --> R[Secondary evidence<br/>Risk · Reliability · Probability · Payoff]
+    A --> D[Decision / Trade Selection]
+    R --> D
+    D --> P[Portfolio / Position Sizing]
+    P --> X[Execution / Costs]
+    X --> L[Paper / Live Monitoring]
 
-## The project in one sentence
-
-**First make sure the stock/session is defensible to score, then rank opportunities, characterize their risk and uncertainty, combine only validated evidence into trade decisions, size the portfolio, model execution, and only then move toward paper/live operation.**
-
-## What each layer is responsible for
-
-### 0. Data / Universe Gate
-
-This is the foundation. A stock/session must first be defensible from a point-in-time perspective before any model is allowed to score it.
-
-The data layer separates:
-
-- listing/existence state;
-- market-specific tradability state;
-- provider-data availability;
-- official IDX sessions;
-- raw execution OHLCV semantics;
-- dynamic liquidity eligibility;
-- corporate-action provenance;
-- missing/unknown evidence.
-
-A missing provider row is never automatically interpreted as a suspension or no-trade session.
-
-### 1. Alpha / Opportunity Ranker — current core model
-
-The current final historical-development ranker is:
-
-`V3-B-STRUCTURE-LITE-V1-CANDIDATE-005`
-
-Its job is **not** to output a blind BUY/SELL instruction. It ranks the eligible IDX universe cross-sectionally:
-
-> Among the setups available today, which ones look relatively more attractive under the frozen H10 research objective?
-
-The final ranker combines the frozen V2 `HGB_XS_MARKET` information set with eight causal Structure-Lite price-geometry features. The historical architecture search is closed; later V4 challengers did not earn promotion.
-
-The exact final model has also received one frozen historical refit. This is still **historical-development evidence**, not independent future validation.
-
-### Fresh-forward validation — protected branch
-
-The ranker still needs true future evidence.
-
-Its first independent verdict is reserved for the first exact **100 consecutive H10-mature official signal sessions strictly after 2026-07-31**.
-
-Until that full block exists and is explicitly authorized:
-
-- fresh-forward outcomes remain untouched;
-- no interim peek is allowed;
-- the ranker must not be retuned in response to future results.
-
-### 2. Secondary models — enrich the opportunity, do not replace it
-
-The next research lane is **Path Risk**.
-
-Path Risk asks a different question from the ranker:
-
-> If this setup is attractive, how severe might the adverse price path be before the setup resolves?
-
-A future candidate can therefore look like:
-
-```text
-Ticker               BBCA
-Alpha rank percentile 94
-Path Risk q75          0.42 R
-Probability            not yet validated
-Expected payoff        not yet validated
-Reliability            not yet validated
+    G -. fail closed .-> U[Unknown / unresolved evidence]
+    A -. protected outcomes .-> V[Evaluation boundary]
+    R -. independent validation required .-> V
 ```
 
-Path Risk is **not automatically a second screening gate**. A rule such as `risk > 0.8R => reject` would itself be a new decision hypothesis that must be preregistered and tested.
-
-Other secondary lanes may later include:
-
-- calibrated probability;
-- expected payoff / return distribution;
-- reliability / uncertainty;
-- other risk dimensions with defensible targets and provenance.
-
-### 3. Decision / Trade Selection Engine
-
-This is the future layer where independently validated evidence can be combined into a real selection policy.
-
-Conceptually:
+The architecture intentionally avoids an all-in-one model. A useful ranker does not automatically imply a valid risk model, sizing rule, or execution policy.
 
 ```text
-Alpha Rank
-    +
-Path Risk
-    +
-Probability / Payoff / Reliability
-    +
-Operational constraints
-    ↓
-Trade Selection
+Opportunity != Path Risk != Probability != Payoff != Decision != Sizing != Execution
 ```
 
-The rule must not be invented post hoc by searching whichever historical combination looks best.
+## Current research track — V4
 
-### 4. Portfolio / Position Sizing
+The old ranking lineage has been forensically closed. The current research track is **V4**, which redesigns the decision, target, and evaluation contracts around executable timing and date-centric validation.
 
-Once trade selection itself is defensible, the system can research:
+```mermaid
+flowchart LR
+    T[EOD signal t] --> U[PIT eligible universe]
+    U --> F[Features known by cutoff]
+    F --> H5[Alpha-H5]
+    F --> H10[Alpha-H10]
+    H5 --> C[50 / 50 consensus]
+    H10 --> C
 
-- maximum positions;
-- exposure and concentration;
-- risk budgets;
-- diversification constraints;
-- sizing rules;
-- Kelly-style sizing only if probability/payoff semantics eventually justify it.
+    O[Official Open t+1] --> Y[H5 / H10 return-rank targets]
+    Q[Close t+5 / t+10] --> Y
+    CA[Corporate-action<br/>price-basis continuity] --> Y
 
-### 5. Execution / Cost Layer
+    C --> E[Date-centric evaluator]
+    Y --> E
+    E --> P[Fresh prospective confirmation]
+```
 
-A promising model is not automatically a profitable trading system. This layer models the market mechanics needed to translate research signals into realistic trades:
+### V4 contract in brief
 
-- spread;
-- slippage;
-- liquidity;
-- fees;
-- order/fill assumptions;
-- execution feasibility.
+- Signal information is frozen after official EOD session `t`.
+- The earliest executable reference is **official Open(t+1)** — never Close(t).
+- Forecast horizons are H5 and H10:
+  - `R5 = Close(t+5) / Open(t+1) - 1`
+  - `R10 = Close(t+10) / Open(t+1) - 1`
+- Raw forward returns are converted into **same-date cross-sectional percentile ranks**.
+- H5 and H10 are modeled separately; consensus is frozen at `0.5 × H5 + 0.5 × H10`.
+- Evaluation is **date-centric**, not pooled-row-centric.
+- The historical-development validation block is frozen as **6 × 100 consecutive eligible signal sessions** with H10-aware purge.
+- Target observability and price-basis continuity are hard gates. Missing or ambiguous evidence is not silently filled.
+- Passing historical-development gates would still require a **fresh prospective confirmation** before deployment claims.
 
-### 6. Paper / Live + Monitoring
+## Current status
 
-Only after upstream evidence is defensible should the project move toward:
+_As of 2026-08-18._
 
-- paper trading;
-- live deployment;
-- data-quality monitoring;
-- model drift;
-- signal/performance monitoring;
-- failure and provenance logging.
-
-## Current project position
-
-| Layer | Status |
+| Area | Status |
 |---|---|
-| Data / Universe foundation | **Built / research foundation established** |
-| Alpha Ranker | **Frozen final historical ranker: V3-B Structure-Lite** |
-| Historical alpha search | **Closed** |
-| Final historical refit | **Done** |
-| Independent fresh-forward validation | **Waiting for future data** |
-| Path Risk | **Next research lane** |
-| Probability / Expected Payoff / Reliability | Not started |
-| Decision engine | Not started |
-| Portfolio / sizing | Not started |
-| Execution / costs | Not started |
-| Paper / live | Not started |
+| PIT security master / listing-state controls | Established |
+| Primary-liquid V4 universe + frozen 6×100 validation identity | Frozen |
+| Historical Open support | Accepted for the frozen V4 support path |
+| V4 decision / target / evaluation contracts | Frozen |
+| V4 runtime + execution code | Prefit accepted |
+| Corporate-action price-basis continuity | **Current hard blocker** |
+| KSEI CA-history coverage | Targeted gap remediation in progress |
+| V4 R5 / R10 target materialization | **Not run** |
+| V4 model fit / predictions / IC / Top30 performance | **Not run** |
+| Protected / fresh-forward V4 outcomes | **Not accessed** |
 
-## Architectural rule
+The current blocker is deliberately upstream of model fitting: V4 does not materialize its research targets until the corporate-action continuity gate is defensible.
 
-The project should remain modular:
+## Historical lineage
 
-```text
-Opportunity != Path Risk != Probability != Payoff != Sizing != Execution
-```
+Earlier ranking generations remain useful as research history, but their interpretation is constrained by later forensic work.
 
-A secondary model can fail without reopening the alpha ranker. Conversely, a useful secondary model does not automatically earn permission to filter trades, alter ranking, or change position sizes.
+- **Clean V2 `HGB_XS_MARKET`** is retained as a **clean contextual historical benchmark under the old target contract**.
+- Older V1 / V3-B / O2 work is retained for lineage, diagnostics, and lessons learned — not as proof of executable V4 edge.
+- The old binary barrier target conditioned on future barrier resolution and used a non-executable Close(t) reference; V4 was designed specifically to remove those contract problems.
+- Failed candidates and blocked data hypotheses are preserved rather than deleted after the fact.
 
-That separation is one of the main safeguards against turning IDX Trade into an overfit all-in-one model.
+## Scientific guardrails
 
----
+### Point-in-time first
 
-## Data foundation architecture
+The universe is dynamic. Current survivors are never backfilled into the past, and listing state is applied before sequential feature construction.
 
-The diagram below shows the lower-level data foundation that underpins the higher-level ecosystem above.
+### Fail closed
 
-<p align="center">
-  <img src="docs/assets/current-architecture.svg" alt="Current IDX Trade data foundation and Data Gate architecture" width="100%">
-</p>
+Unknown evidence stays unknown. Examples:
 
-## Research scope
+- missing provider row ≠ suspension;
+- Record Date / Distribution Date ≠ automatic market price-basis transition;
+- unresolved corporate-action identity ≠ harmless event;
+- unavailable Open ≠ synthetic Close fallback.
 
-- Market: Indonesia Stock Exchange (IDX) equities.
-- Initial execution venue: **Regular Market**.
-- Timeframe: daily/EOD only.
-- The research universe is point-in-time and dynamic; current survivors must never be backfilled into the past.
-- Raw OHLC prices are execution prices and are never overwritten by adjusted prices.
-- Missing price rows are not interpreted as suspensions or no-trade sessions.
-- Listing state, market-specific tradability state, and provider-data availability are separate concepts.
-- FCA/watchlist securities are excluded from the initial trade universe but may remain in the historical data store.
-- Historical delisted securities remain in the historical universe before their effective delisting date.
-- IPOs use an explicit warm-up state before becoming model-eligible.
+### Execution prices stay raw
 
-## Canonical state model
+Observed `raw_*` OHLC values are the execution layer. Vendor-adjusted series may be retained as separate information, but adjusted prices are never substituted for fills, stops, gaps, or target references.
 
-Existence:
+### Outcomes are gated
+
+Research contracts are frozen before outcome access. Bugs may be fixed; a failed hypothesis may motivate a **new preregistered generation**; the existing contract is not rescued post hoc.
+
+### Evaluation follows the decision unit
+
+The product makes one cross-sectional decision per signal date, so V4 evaluates daily cross-sectional behavior rather than allowing dates with more rows to dominate pooled metrics.
+
+## Data-state model
+
+Existence state:
 
 - `NOT_LISTED`
 - `LISTED`
 - `DELISTED`
 
-Tradability is resolved **per IDX market** (`REGULAR`, `CASH`, `NEGOTIATED`, or `ALL` fallback):
+Tradability is tracked separately and market-specifically:
 
 - `ACTIVE`
 - `SUSPENDED`
@@ -209,26 +137,49 @@ Tradability is resolved **per IDX market** (`REGULAR`, `CASH`, `NEGOTIATED`, or 
 - `NO_TRADE`
 - `UNKNOWN`
 
-An exact market-specific interval overrides an `ALL` interval. This matters because IDX can open or suspend different markets differently.
-
 Provider availability is separate again:
 
 - `PRESENT`
 - `ABSENT_UNRESOLVED`
 - `DATA_MISSING`
 
-A missing Yahoo/provider row is therefore never enough evidence to infer either `SUSPENDED`, `NO_TRADE`, or even confirmed `DATA_MISSING`.
+These concepts are intentionally not collapsed into one boolean eligibility flag.
 
-## Price semantics
+## Repository layout
 
-The codebase keeps distinct price layers:
+```text
+src/idx_trade/        scientific and data-contract implementation
+config/               frozen experiment / data-policy configuration
+scripts/              reproducible runners and audit entrypoints
+tests/                unit, regression, and adversarial tests
+docs/checkpoints/     scientific decisions, results, blockers, acceptance notes
+docs/artifacts/       small promoted manifests / summaries / reproducibility artifacts
+coordination/          cross-lane claims, handoffs, and repository-wide status
+```
 
-1. `raw_*`: actual observed OHLC used for execution, gap, stop and target evaluation.
-2. `vendor_adj_close` / `vendor_total_return_factor`: vendor-adjusted information retained separately. It is never used as an execution price.
-3. Split-adjusted technical prices are intentionally **not** synthesized from `Adj Close`, because that factor may also include distributions/dividends. They must be built from explicit split events when split-event coverage passes the data gate.
+Large raw provider captures, full panels, runtime environments, fitted binaries, credentials, and protected outcomes are intentionally kept outside normal Git history. Git stores the reproducibility contract: code, hashes, manifests, provenance, and small accepted artifacts.
 
-## Research lineage
+## Working conventions
 
-The project selectively ports infrastructure ideas from earlier Indonesian-stock research, but the current modelling core is rebuilt under stricter point-in-time, provenance, bounded-search, and outcome-access rules.
+Before material work:
 
-The historical experiment record intentionally retains failed candidates and blocked data hypotheses rather than deleting them after the fact.
+1. read the latest `main:coordination/TEAM_STATUS.md`;
+2. check active lanes;
+3. claim a non-overlapping branch/lane;
+4. freeze the relevant contract before accessing outcomes;
+5. preserve exact input/output hashes and failure states;
+6. stop at the declared review boundary.
+
+The repository treats negative results as first-class research output. A failed experiment is generally cheaper than an unverifiable success.
+
+## Scope
+
+- Market: IDX equities.
+- Initial execution venue: Regular Market.
+- Primary timeframe: daily / EOD.
+- Research universe: dynamic and point-in-time.
+- Initial objective: defensible cross-sectional opportunity ranking, then independently validated decision and execution layers.
+
+---
+
+For the live cross-project state, blockers, active owners, and exact branch anchors, see [`coordination/TEAM_STATUS.md`](coordination/TEAM_STATUS.md).
