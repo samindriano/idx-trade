@@ -9,6 +9,7 @@ from idx_trade.v4_ca_material_six_remediation import (
     FREN_EFFECTIVE_DATE,
     MEGA_REGULAR_EX_BONUS_DATE,
     new_fren_coverage_row,
+    normalize_source_action_id,
     synthetic_fren_event,
     synthetic_mega_event,
     validate_scma_halo_only,
@@ -66,6 +67,21 @@ def test_scma_20260810_is_halo_only_after_frozen_terminal() -> None:
     )
     result = validate_scma_halo_only(prior, max_terminal=pd.Timestamp("2026-07-31"))
     assert result["classification"] == "OUTSIDE_FROZEN_TARGET_PERIOD_NONBLOCKING_HALO_ONLY"
+
+
+def test_scma_numeric_csv_action_id_normalizes_losslessly() -> None:
+    assert normalize_source_action_id(82840.0) == "82840"
+    assert normalize_source_action_id("82840.0") == "82840"
+    assert normalize_source_action_id("IDX-82840") == "IDX-82840"
+    prior = pd.DataFrame(
+        {
+            "ticker": ["SCMA"],
+            "candidate_date": ["2026-08-10"],
+            "source_action_id": [82840.0],
+        }
+    )
+    result = validate_scma_halo_only(prior, max_terminal=pd.Timestamp("2026-07-31"))
+    assert result["source_action_id"] == "82840"
 
 
 def test_scma_cannot_be_halo_cleared_if_any_candidate_is_in_period() -> None:
