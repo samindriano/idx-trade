@@ -100,4 +100,4 @@ def test_adro_blank_cum_right_distribution_never_infers_record_or_distribution_a
     event = classify_event(row, official_sessions=sessions)
     assert event.semantic_class == "SCHEDULE_REQUIRED"
     assert event.transition_date is None
-    assert event.reason == "STATIC_ENTITLEMENT_CUM_DATE_MISSING"
+    assert event.reason == "SOURCE_NATIVE_CUM_MISSING_OR_NOT_OFFICIAL_SESSION"
