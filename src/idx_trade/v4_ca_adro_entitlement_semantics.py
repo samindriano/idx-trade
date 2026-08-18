@@ -21,7 +21,7 @@ from typing import Any, Mapping
 import pandas as pd
 from pypdf import PdfReader
 
-from idx_trade.v4_ca_event_windows import EventSemantic, event_identity, source_dates
+from idx_trade.v4_ca_event_windows import EventSemantic, source_dates
 
 
 ADRO_EVENT_ID = "41c1e8493213d0151799837330c0dc7d8fea633d458c03e40b61ea0247bb9e58"
@@ -113,15 +113,15 @@ def _text(value: Any) -> str:
     return " ".join(str(value or "").split())
 
 
-def is_exact_adro_pups_row(row: Mapping[str, Any]) -> bool:
+def is_exact_adro_pups_row(
+    row: Mapping[str, Any],
+    *,
+    event_id: str,
+) -> bool:
     """Bind the cross-document evidence to one immutable KSEI event only."""
 
-    try:
-        identity = event_identity(row)
-    except Exception:
-        return False
     return bool(
-        identity == ADRO_EVENT_ID
+        event_id == ADRO_EVENT_ID
         and _text(row.get("ticker")).upper().replace(".JK", "") == "ADRO"
         and _text(row.get("event_family_source")).casefold() == "right distribution"
         and _text(row.get("status")).casefold() == "active"
@@ -143,7 +143,7 @@ def apply_adro_entitlement_evidence(
 ) -> EventSemantic:
     """Promote only the exact frozen ADRO PUPS event to a proven transition."""
 
-    if not is_exact_adro_pups_row(row):
+    if not is_exact_adro_pups_row(row, event_id=base_event.event_id):
         return base_event
     if evidence.transition_date != ADRO_TRANSITION_DATE:
         raise RuntimeError("ADRO_ENTITLEMENT_TRANSITION_DATE_CHANGED")
