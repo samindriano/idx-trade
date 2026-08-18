@@ -1,22 +1,25 @@
 """V3 compatibility entrypoint for the V4 material-six remediation.
 
-Adds two narrow, outcome-blind corrections on top of V2:
+Adds narrow, outcome-blind corrections on top of V2:
 1. when the frozen KSEI home warmup fails before any security request, retry
    the exact registered-security URL directly in a fresh session using the
-   identical strict parser; and
+   identical strict parser;
 2. classify exactly one SMAR Voluntary Conversion row (1 SMAR : 5265 IDR,
    distribution 2026-06-11) as non-blocking security-to-currency semantics,
-   matching the already accepted NISP treatment.
+   matching the already accepted NISP treatment; and
+3. do not re-crawl MEGA as a coverage ticker because the frozen 611 support has
+   zero MEGA target-window rows. MEGA remains represented only by its already
+   pinned issuer-official 2026 bonus-share ex-date evidence.
 
 No alternate provider, no alternate URL, no parser relaxation, no price
-inference, and no ADRO date inference are introduced.
+inference, no ADRO date inference, and no universe-row waiver are introduced.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 import sys
-from typing import Any
+from typing import Any, Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_ROOT = Path(__file__).resolve().parent
@@ -33,6 +36,18 @@ from idx_trade.v4_ksei_ca_history import parse_ksei_security_history
 _ORIGINAL_RECOVER_TICKER = base.gap_runner.recover_ticker
 _ORIGINAL_MATERIAL_CLASSIFIER_FACTORY = base.material_six_classifier
 _DIRECT_FALLBACK_TICKERS = {"AVIA", "SMAR", "SCMA", "ADRO"}
+
+
+def retry_scope_without_zero_support_mega(values: Iterable[str]) -> tuple[str, ...]:
+    """Remove only MEGA from provider retry scope; its frozen window count is zero."""
+
+    normalized = tuple(str(value).upper().strip() for value in values)
+    if "MEGA" not in normalized:
+        raise RuntimeError("MATERIAL_SIX_MEGA_EXPECTED_IN_ORIGINAL_RETRY_SCOPE")
+    result = tuple(value for value in normalized if value != "MEGA")
+    if set(result) != set(normalized) - {"MEGA"}:
+        raise RuntimeError("MATERIAL_SIX_MEGA_RETRY_SCOPE_MUTATION_INVALID")
+    return result
 
 
 def recover_ticker_with_direct_security_fallback(*, ticker: str, provider, raw_root: Path):
@@ -152,6 +167,9 @@ def material_six_classifier_v3(fren_source_sha: str):
 def main() -> int:
     base.gap_runner.recover_ticker = recover_ticker_with_direct_security_fallback
     base.material_six_classifier = material_six_classifier_v3
+    base.KSEI_RETRY_TICKERS = retry_scope_without_zero_support_mega(
+        base.KSEI_RETRY_TICKERS
+    )
     return int(v2.main() or 0)
 
 
