@@ -107,7 +107,7 @@ def strict_layout_transition(text: str) -> tuple[str | None, str | None, tuple[s
 
     rights_ex = _single_date_for_lines(
         lines,
-        r"(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date).*(?:Pasar\s+Reguler|Pasar\s+Regular|Regular\s+Market)",
+        r"(?:(?:tidak\s+memuat\s+HMETD|Ex\s+HMETD|Ex\s+Dividen|Ex\s+Date|Ex-Date)|(?:Tanggal\s+)?Ex(?:\s+HMETD)?(?:\s+di|\s+pada)?).*(?:Pasar\s+Reguler|Pasar\s+Regular|Regular\s+Market)",
     )
     if rights_ex:
         candidates.add((rights_ex, "REGULAR_MARKET_EX_DATE"))
