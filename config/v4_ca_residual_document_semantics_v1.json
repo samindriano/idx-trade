@@ -1,0 +1,58 @@
+{
+  "schema_version": "v4_ca_residual_document_semantics_v1",
+  "policy_id": "V4_CA_RESIDUAL_DOCUMENT_SEMANTICS_V1",
+  "scientific_parent": "c2246e5e82dc642950017e38e57cd97700e15199",
+  "outcome_blind": true,
+  "provider_calls_allowed": false,
+  "expected_residual_events": 61,
+  "expected_residual_voluntary_conversion_events": 29,
+  "gate_rate": 0.9,
+  "pins": {
+    "continuity_ledger_sha256": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "prior_event_evidence_sha256": "4c9973781a3c254ad5c82d66d7f6f27afc3bc977681015236693b96d7be638b7",
+    "official_calendar_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "ksei_history_sha256": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "ksei_manifest_sha256": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25a",
+    "ksei_summary_sha256": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422",
+    "ksei_coverage_sha256": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70",
+    "residual_schedule_needs_sha256": "aec30360dad932001d04bbb2fb6a2f772f9cfb1930f5a4336a0f699eb924d4be",
+    "voluntary_forensic_manifest_sha256": "495401d683b2faac953cb73086324561670c7c2b825055e18984729aba3b5287",
+    "stage2_manifest_sha256": "5073adb3178a90e71ea9105ddb6ff737896e86a709d1998eefbdb14ca12b6f8c",
+    "stage2_request_records_sha256": "96a7a2d6013f6a6f86bc7548c9cda90514eb03a50d9b56039ec15c07969f6155",
+    "stage2_document_parse_audit_sha256": "d7ded2bf29ad8355ff7ce22af89004a4bbe7e7fd0bb01524f582be2ad1e4e796"
+  },
+  "non_blocking_document_classes": [
+    "VOLUNTARY_TENDER_OFFER",
+    "MANDATORY_TENDER_OFFER",
+    "SHARE_BUYBACK_CASH",
+    "DISSENTING_SHAREHOLDER_CASH_REPURCHASE"
+  ],
+  "accepted_transition_semantics": [
+    "REGULAR_MARKET_EX_DATE",
+    "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
+  ],
+  "cash_linkage": {
+    "event_source_type": "Voluntary Conversion",
+    "requires_exact_ticker": true,
+    "requires_exact_source_date_overlap": true,
+    "allowed_document_dates": [
+      "PAYMENT_DATE",
+      "SETTLEMENT_DATE",
+      "CASH_PURCHASE_DATE"
+    ],
+    "record_date_alone_is_insufficient": true,
+    "document_semantics_alone_without_date_link_is_insufficient": true
+  },
+  "mechanical_linkage": {
+    "requires_exact_ticker": true,
+    "requires_compatible_family": true,
+    "requires_exact_source_date_overlap_with_record_or_distribution": true,
+    "transition_requires_explicit_regular_market_semantic": true,
+    "transition_must_be_official_session": true,
+    "record_or_distribution_as_transition_forbidden": true,
+    "price_inference_forbidden": true
+  },
+  "conflict_policy": "FAIL_CLOSED",
+  "continuity_replay_after_document_audit": true,
+  "stop_after_continuity_replay": true
+}
