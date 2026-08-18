@@ -58,13 +58,14 @@ def verify_ksei_fren_rights_schedule_pdf(payload: bytes) -> dict[str, object]:
         "18 april 2024",
         "19 april 2024",
         "22 april 2024",
-        "6 mei 2024",
         "178",
         "75",
     )
     missing = [token for token in required if token not in text]
     if missing:
         raise RuntimeError(f"FREN_KSEI_RIGHTS_SCHEDULE_CORE_MARKER_MISSING:{missing}")
+    if "6 mei 2024" not in text and "6 may 2024" not in text:
+        raise RuntimeError("FREN_KSEI_RIGHT_TRADING_END_MISSING")
 
     ex_labels = (
         "tanggal ex di pasar regular dan pasar negosiasi",
