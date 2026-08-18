@@ -1,0 +1,47 @@
+{
+  "classifier_replay": {
+    "added_event_count": 0,
+    "added_ids_empty": true,
+    "all_removed_ids_are_strict_voluntary_cash": true,
+    "parent_relevant_event_count": 136,
+    "parent_relevant_voluntary_conversion_count": 63,
+    "reclassified_to_nonblocking_count": 34,
+    "remaining_voluntary_schedule_required_count": 29,
+    "remediation_relevant_event_count": 102,
+    "removed_event_count": 34,
+    "removed_ids_equal_reclassified_nonblocking_ids": true,
+    "strict_cash_predicate_count": 34,
+    "verdict": "FORENSIC_REPLAY_CONFIRMS_VOLUNTARY_CASH_RECLASSIFICATION_REPORTING_UNDERCOUNT",
+    "zero_reclassification_event_identity_invariant": null
+  },
+  "continuity_comparison": {
+    "changed_date_rows": 600,
+    "date_count": 600,
+    "identical_date_rows": 0,
+    "zero_reclassification_continuity_identity_invariant": null
+  },
+  "input_hashes": {
+    "ksei_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "parent_event_audit": "ba08fbdab5b72b377888320163ba8b893e7d1a19f69384ba7be0fdac5ca33908",
+    "parent_per_date": "eefd6cbeed7381b01935a95b777cd88cfa4e073c0abc7d318005c2bc381fd85d",
+    "remediation_event_audit": "a2fe0206189916a796cda170e819053dd7147bf988ceed27f278081684ca4f1a",
+    "remediation_per_date": "55de6a8dc981bc2b16be96e3c02d767c6655b7025c402dbd50aa5d95aa65cbb9"
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "output_hashes": {
+    "classifier_side_by_side": "e621b19f4af6aee7ad5f5bdf433e0a26aad2bc3125ce932205d0fb25fedeb05d",
+    "continuity_per_date_diff": "dbfa35831cf80f54ff64fbeac1008e8f9e87764c384d6aba611e744c6a886976",
+    "event_set_diff": "e5bfe4311704b3bfa26a20448102084ab7397d7bd6ed6c85d39f6194467554df",
+    "voluntary_conversion_ratio_dump": "904a257e2070fe6237a8746c69d68cc1ea2d6505800c2339d8820b17ce39312f"
+  },
+  "performance_computed": false,
+  "prediction_generated": false,
+  "protected_forward_accessed": false,
+  "provider_calls": 0,
+  "schedule_acquisition": false,
+  "schema_version": "v4_ca_voluntary_conversion_forensic_replay_v1",
+  "target_or_rank_materialized": false,
+  "verdict": "FORENSIC_REPLAY_CONFIRMS_VOLUNTARY_CASH_RECLASSIFICATION_REPORTING_UNDERCOUNT"
+}
