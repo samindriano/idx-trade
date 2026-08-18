@@ -57,6 +57,25 @@ Emiten Kode dan Nama Saham Kode ISIN : TEST Tbk, PT : TEST - TEST Tbk : ID100000
     assert repaired.distribution_date == "2025-12-10"
 
 
+def test_layout_generic_tanggal_ex_regular_market_row_is_admitted():
+    text = """
+No : KSEI-22222/JKU/1225 Jakarta, 1 Desember 2025
+Jadwal HMETD PT Test Tbk
+Tanggal Cum di Pasar Reguler dan Pasar Negosiasi 8 Desember 2025
+Tanggal Ex di Pasar Reguler dan Pasar Negosiasi 9 Desember 2025
+Tanggal Cum di Pasar Tunai 10 Desember 2025
+Tanggal Pencatatan (Recording Date) 10 Desember 2025
+Tanggal Distribusi 10 Desember 2025
+Emiten Kode dan Nama Saham Kode ISIN : TEST Tbk, PT : TEST - TEST Tbk : ID1000000000
+"""
+    original = parse_ksei_schedule_transition(text)
+    repaired = repair_layout_parse(text, original)
+
+    assert repaired.parse_status == "PARSED_EXACT_TRANSITION"
+    assert repaired.transition_date == "2025-12-09"
+    assert repaired.transition_semantic == "REGULAR_MARKET_EX_DATE"
+
+
 def test_flattened_stock_split_date_list_is_not_inferred():
     text = """
 Pemecahan Nilai Nominal Saham (Stock Split)
