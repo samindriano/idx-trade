@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 from io import BytesIO
+import re
 from typing import Any, Iterable, Mapping, Sequence
 
 import pandas as pd
@@ -52,6 +53,23 @@ def sha256_bytes(payload: bytes) -> str:
 
 def normalize_ticker(value: Any) -> str:
     return str(value or "").upper().replace(".JK", "").strip()
+
+
+def normalize_source_action_id(value: Any) -> str:
+    """Normalize CSV dtype drift without changing the underlying action identity.
+
+    Pandas may promote an integer-like identifier column containing blanks or mixed
+    values to float, turning the exact IDX id 82840 into 82840.0.  Only that
+    lossless integer-like representation is collapsed; arbitrary text is preserved.
+    """
+
+    if value is None or bool(pd.isna(value)):
+        return ""
+    text = str(value).strip()
+    match = re.fullmatch(r"([0-9]+)\.0+", text)
+    if match:
+        return match.group(1)
+    return text
 
 
 def normalize_parent_coverage(frame: pd.DataFrame) -> pd.DataFrame:
@@ -236,13 +254,25 @@ def validate_scma_halo_only(prior: pd.DataFrame, *, max_terminal: pd.Timestamp) 
     work = prior.copy()
     work["ticker"] = work["ticker"].map(normalize_ticker)
     work["candidate_date"] = pd.to_datetime(work["candidate_date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    if "source_action_id" not in work.columns:
+        raise RuntimeError("SCMA_PRIOR_SOURCE_ACTION_ID_COLUMN_MISSING")
+    work["source_action_id"] = work["source_action_id"].map(normalize_source_action_id)
     scma = work[work["ticker"].eq("SCMA")].copy()
     exact = scma[
-        scma.get("source_action_id", pd.Series(index=scma.index, dtype=str)).astype(str).eq(SCMA_PRIOR_ACTION_ID)
+        scma["source_action_id"].eq(SCMA_PRIOR_ACTION_ID)
         & scma["candidate_date"].eq(SCMA_PRIOR_CANDIDATE_DATE)
     ]
     if len(exact) != 1:
-        raise RuntimeError(f"SCMA_EXACT_PRIOR_CANDIDATE_IDENTITY_CHANGED:{len(exact)}")
+        observed = sorted(
+            {
+                f"{row.source_action_id}@{row.candidate_date.date().isoformat()}"
+                for row in scma[["source_action_id", "candidate_date"]].itertuples(index=False)
+                if pd.notna(row.candidate_date)
+            }
+        )
+        raise RuntimeError(
+            f"SCMA_EXACT_PRIOR_CANDIDATE_IDENTITY_CHANGED:{len(exact)}:{observed}"
+        )
     in_period = scma[scma["candidate_date"] <= pd.Timestamp(max_terminal).normalize()]
     if not in_period.empty:
         raise RuntimeError("SCMA_HAS_IN_PERIOD_PRIOR_CANDIDATE_CANNOT_HALO_CLEAR")
