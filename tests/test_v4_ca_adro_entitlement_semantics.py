@@ -6,6 +6,7 @@ from idx_trade.v4_ca_adro_entitlement_semantics import (
     ADRO_EVENT_ID,
     ADRO_TRANSITION_DATE,
     AdroEntitlementEvidence,
+    _norm,
     apply_adro_entitlement_evidence,
     is_exact_adro_pups_row,
 )
@@ -96,3 +97,17 @@ def test_transition_evidence_date_cannot_drift() -> None:
         assert "TRANSITION_DATE_CHANGED" in str(exc)
     else:
         raise AssertionError("ADRO transition date drift must fail closed")
+
+
+def test_pdf_normalization_collapses_layout_and_ordinal_artifacts() -> None:
+    raw = (
+        "PIHAK YANG DAPAT BERPARTISIPASI DALAM PUPS INI\n"
+        "ADALAH PEMEGANG SAHAM PERSEROAN\u00a0YANG MEMPEROLEH DIVIDEN "
+        "BERDASARKAN KEPUTUSAN\nRAPAT UMUM PEMEGANG SAHAM LUAR BIASA "
+        "PERSEROAN TANGGAL 18 NOVEMBER 2024. November 29 th, 2024"
+    )
+    normalized = _norm(raw)
+    assert "pihak yang dapat berpartisipasi dalam pups ini" in normalized
+    assert "memperoleh dividen berdasarkan keputusan" in normalized
+    assert "rapat umum pemegang saham luar biasa perseroan tanggal 18 november 2024" in normalized
+    assert "november 29th, 2024" in normalized
