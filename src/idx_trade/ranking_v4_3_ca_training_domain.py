@@ -267,7 +267,14 @@ def build_training_date_sets(
     per_date: pd.DataFrame,
     validation_folds: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Freeze all prior head-eligible dates before each fold purge boundary."""
+    """Freeze all prior head-eligible dates before each fold purge boundary.
+
+    An empty result is a valid fail-closed diagnostic state, not an exception:
+    the caller still needs to persist the per-date support and CA diagnostics
+    that explain why no training date was admitted.  Returning an explicitly
+    typed empty frame guarantees that the runner can emit a BLOCKED manifest
+    without opening any target or model outcome.
+    """
 
     required_folds = {"fold", "max_training_signal_session_index"}
     missing = required_folds - set(validation_folds.columns)
@@ -286,6 +293,13 @@ def build_training_date_sets(
     if len(bad):
         raise ValueError("fold has non-unique purge boundary")
 
+    columns = [
+        "fold",
+        "head",
+        "session_index",
+        "date",
+        "max_training_signal_session_index",
+    ]
     rows: list[dict[str, object]] = []
     for fold, values in boundaries.items():
         maximum = int(values[0])
@@ -305,9 +319,9 @@ def build_training_date_sets(
                         "max_training_signal_session_index": maximum,
                     }
                 )
-    result = pd.DataFrame(rows)
+    result = pd.DataFrame(rows, columns=columns)
     if result.empty:
-        raise RuntimeError("no CA-admitted training dates")
+        return result
     if result.duplicated(["fold", "head", "session_index"]).any():
         raise RuntimeError("training date identity duplicated")
     return result.sort_values(
