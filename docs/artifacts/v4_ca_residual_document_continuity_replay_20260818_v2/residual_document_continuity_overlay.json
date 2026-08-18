@@ -1,0 +1,23 @@
+{
+  "continuity_summary_sha256": "034068663da617359baf7a8bdbcc9efbe1576b303bcd5af8e2ff99c2135fa9d5",
+  "continuity_verdict": "V4_CA_EVENT_WINDOW_CONTINUITY_STILL_BLOCKED",
+  "corporate_action_continuity_certified": false,
+  "document_conflict_events": 0,
+  "document_evidence_sha256": "6be49b4fc8a930c9bc61fde64a0652a7cb6233459f5a2e140cb4b4ad0f56592e",
+  "document_exact_nonblocking_events": 22,
+  "document_exact_transition_events": 1,
+  "document_manifest_sha256": "6f2070dbd89307c39579aa9617807c2c8ae746390466476f29504b31ae4988a5",
+  "document_unresolved_events": 38,
+  "outcome_blind": true,
+  "per_date": {
+    "consensus_gate_dates": 0,
+    "consensus_min_rate": 0.821656050955414,
+    "h10_gate_dates": 0,
+    "h10_min_rate": 0.821656050955414,
+    "h5_gate_dates": 0,
+    "h5_min_rate": 0.8237179487179487
+  },
+  "policy_id": "V4_CA_RESIDUAL_DOCUMENT_SEMANTICS_V1",
+  "provider_calls": false,
+  "schema_version": "v4_ca_residual_document_continuity_overlay_v1"
+}
