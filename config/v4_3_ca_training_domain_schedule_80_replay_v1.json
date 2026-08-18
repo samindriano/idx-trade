@@ -1,0 +1,49 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_80_replay_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_80_REPLAY_V1",
+  "outcome_blind": true,
+  "parent_replay": {
+    "manifest_sha256": "c115ea0bec59cab4da0cda45ee66ba2be5814e0bb9e854e3f7ecd616edc83861",
+    "status": "V4_3_CA_TRAINING_DOMAIN_KSEI_129_OFFLINE_REPLAY_BLOCKED_REVIEW_REQUIRED",
+    "coverage_census_tickers": 740,
+    "coverage_certified_tickers_total": 695,
+    "coverage_unresolved_decision_tickers": 45,
+    "coverage_missing_historical_tickers": 0,
+    "cross_source_conflict_tickers": []
+  },
+  "adjudication_parent": {
+    "manifest_sha256": "13f4e84d8586c22e100382071f0b4cd4cdbb87e3099b7f0526f844a495ab1fd0",
+    "status": "V4_3_CA_SCHEDULE_80_OFFLINE_ADJUDICATION_COMPLETE",
+    "schedule_event_count": 80,
+    "schedule_event_identity_sha256": "f89cd1e86b1de5f88792551a993311700e4ab15db19f8447e6e8dd61dec3594d",
+    "resolved_events": 21,
+    "exact_transition_events": 1,
+    "exact_nonblocking_events": 20,
+    "conflict_events": 0,
+    "unresolved_events": 59,
+    "verified_successful_raw_documents": 89,
+    "missing_raw_candidate_links": 0
+  },
+  "validation_folds": {
+    "path": "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv",
+    "sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "gate_rate": 0.90,
+  "hard_boundaries": {
+    "network_calls": false,
+    "provider_calls": false,
+    "source_substitution": false,
+    "new_document_discovery": false,
+    "fuzzy_event_matching": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "pass_preserving_subset_selection": false,
+    "threshold_change": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
