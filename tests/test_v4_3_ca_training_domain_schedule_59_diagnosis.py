@@ -84,7 +84,7 @@ def test_mechanical_candidate_without_explicit_transition_is_not_inferred() -> N
     )
     result = diag.diagnose_event(event, evidence, audit, {"2024-01-11"})
     assert result["failure_mode"] == "MECHANICAL_NO_EXPLICIT_REGULAR_MARKET_TRANSITION"
-    assert "2024-01-15" not in result.get("qualifying_rows_after_diagnosis", "") if isinstance(result.get("qualifying_rows_after_diagnosis"), str) else True
+    assert result["qualifying_rows_after_diagnosis"] == 0
 
 
 def test_voluntary_cash_source_date_must_match_layout_bound_cash_date() -> None:
