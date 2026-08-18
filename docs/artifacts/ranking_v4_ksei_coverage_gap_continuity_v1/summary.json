@@ -1,0 +1,72 @@
+{
+  "continuity_reason_counts": {
+    "CROSS_SOURCE_CANDIDATE_NOT_REPRESENTED_IN_KSEI_HISTORY": 1200,
+    "EXACT_OFFICIAL_EVENT_TRANSITION_REQUIRED": 24212,
+    "KSEI_REGISTERED_SECURITY_HISTORY_NOT_CERTIFIED": 6844,
+    "NO_MECHANICAL_CA_TRANSITION_CROSSES_TARGET_INTERVAL": 312294,
+    "TARGET_INTERVAL_CROSSES_MECHANICAL_CA_TRANSITION": 240
+  },
+  "continuity_status_counts": {
+    "PRICE_CONTINUITY_UNRESOLVED_COVERAGE": 8044,
+    "PRICE_CONTINUITY_UNRESOLVED_EFFECTIVE_DATE": 24452,
+    "RESOLVED_NO_MECHANICAL_DISCONTINUITY": 312294
+  },
+  "corporate_action_continuity_certified": false,
+  "coverage_certified_tickers": 598,
+  "coverage_unresolved_tickers": 12,
+  "cross_source_conflict_tickers": [
+    "MEGA",
+    "SCMA"
+  ],
+  "event_rows_relevant_to_study": 83,
+  "event_semantic_counts": {
+    "EXACT_TRANSITION": 44,
+    "SCHEDULE_REQUIRED": 39
+  },
+  "frozen_dates": 600,
+  "frozen_rows": 344790,
+  "frozen_tickers": 610,
+  "input_hashes": {
+    "continuity_ledger": "52ce3f172e126363b6c51b57fbcaf5551a4e2b0217f120e4b01e6ae0d75497eb",
+    "ksei_coverage": "c40bd6676c6c3a6f6d3182dcec9b7ae7ad50f01382a5c9bfc8dc27956c7bedac",
+    "ksei_history": "05d28697f149b04739eba5afca1f061b3f59aa00cde348ca3877588297fc06df",
+    "ksei_manifest": "7e86f5e52d7c2ff609ee9dd4be28ff1aefea1e4d5c7d7d9dbffb6abd07185f50",
+    "ksei_summary": "9ec069e9a9baaaeac05c0be90459b0ec211bba3981f2d3d478f21abbb09a855b",
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "prior_event_evidence": "4c9973781a3c254ad5c82d66d7f6f27afc3bc977681015236693b96d7be638b7",
+    "schedule_evidence": "6be49b4fc8a930c9bc61fde64a0652a7cb6233459f5a2e140cb4b4ad0f56592e"
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "output_hashes": {
+    "continuity_ledger": "9dce85c55a9e8a9e1effba5c7e0d24faa150bfb0d70c0162cfb85955d8a435ec",
+    "event_semantics_audit": "c88b267de29c7712219a67578b80399c2bc258afe1dd7bd276d2e3badcfd4d0d",
+    "per_date": "874a087152af219c74d3dbce01cca15669085aa84c081da44350a391c6f6d591",
+    "schedule_evidence_needs": "1988f2bb679b09835e045235fa7aa46f4d8c62cf9531e76a5b5b889d848a127a"
+  },
+  "per_date": {
+    "consensus_gate_dates": 461,
+    "consensus_min_rate": 0.8789808917197452,
+    "h10_gate_dates": 461,
+    "h10_min_rate": 0.8789808917197452,
+    "h5_gate_dates": 462,
+    "h5_min_rate": 0.8814102564102564
+  },
+  "performance_computed": false,
+  "policy": {
+    "entry_on_transition_is_post_event_basis": true,
+    "gate_rate": 0.9,
+    "missing_exact_schedule_fails_closed": true,
+    "price_inference": false,
+    "selection_halo_calendar_days": 60,
+    "static_cum_next_official_session": true
+  },
+  "prediction_generated": false,
+  "protected_forward_accessed": false,
+  "provider_calls": false,
+  "schedule_required_events": 39,
+  "schedule_required_tickers": 35,
+  "schema_version": "v4_ca_event_window_support_v1",
+  "target_or_rank_materialized": false,
+  "verdict": "V4_CA_EVENT_WINDOW_CONTINUITY_STILL_BLOCKED"
+}

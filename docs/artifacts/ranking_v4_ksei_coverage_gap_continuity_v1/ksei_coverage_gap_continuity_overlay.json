@@ -1,0 +1,35 @@
+{
+  "continuity_summary_sha256": "3939fbd7e5d63d702782ca7851c8249802a0341a8ac97d5ee15133f265a155ec",
+  "continuity_verdict": "V4_CA_EVENT_WINDOW_CONTINUITY_STILL_BLOCKED",
+  "corporate_action_continuity_certified": false,
+  "coverage_certified_tickers": 598,
+  "coverage_unresolved_tickers": 12,
+  "cross_source_conflict_tickers": [
+    "MEGA",
+    "SCMA"
+  ],
+  "document_evidence_sha256": "6be49b4fc8a930c9bc61fde64a0652a7cb6233459f5a2e140cb4b4ad0f56592e",
+  "document_manifest_sha256": "6f2070dbd89307c39579aa9617807c2c8ae746390466476f29504b31ae4988a5",
+  "event_rows_relevant_to_study": 83,
+  "event_semantic_counts": {
+    "EXACT_TRANSITION": 44,
+    "SCHEDULE_REQUIRED": 39
+  },
+  "ksei_recovered_active_mechanical_or_unknown_rows": 24,
+  "ksei_recovered_ticker_count": 31,
+  "ksei_remaining_unresolved_ticker_count": 12,
+  "ksei_remediation_manifest_sha256": "7e86f5e52d7c2ff609ee9dd4be28ff1aefea1e4d5c7d7d9dbffb6abd07185f50",
+  "outcome_blind": true,
+  "per_date": {
+    "consensus_gate_dates": 461,
+    "consensus_min_rate": 0.8789808917197452,
+    "h10_gate_dates": 461,
+    "h10_min_rate": 0.8789808917197452,
+    "h5_gate_dates": 462,
+    "h5_min_rate": 0.8814102564102564
+  },
+  "provider_calls_in_continuity_replay": false,
+  "schedule_required_events": 39,
+  "schedule_required_tickers": 35,
+  "schema_version": "v4_ca_ksei_coverage_gap_continuity_overlay_v1"
+}
