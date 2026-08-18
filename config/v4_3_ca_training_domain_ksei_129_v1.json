@@ -7,6 +7,17 @@
     "expected_missing_tickers": 129,
     "missing_ticker_identity_sha256": "28d39c8b1a08585724e6b78d3b76520073043aa7c0f0a53bf6ae1f2fb5bbf58f"
   },
+  "accepted_delta": {
+    "manifest_sha256": "bb1043f36f20cd418be1b602ce9204cfcf8ca7ec546c57d913590b3898ea4976",
+    "status": "V4_3_CA_TRAINING_DOMAIN_KSEI_129_CENSUS_COMPLETE_WITH_GAPS",
+    "ticker_count": 129,
+    "coverage_certified_tickers": 93,
+    "coverage_unresolved_tickers": 36,
+    "history_rows": 2065,
+    "failure_class_counts": {
+      "HTTP_NON_200_OR_EMPTY": 36
+    }
+  },
   "provider": {
     "name": "KSEI_PUBLIC_REGISTERED_SECURITY_HISTORY",
     "home": "https://web.ksei.co.id/",
