@@ -42,7 +42,8 @@ def test_no_candidate_is_discovery_gap() -> None:
             "parsed_candidate_document_count": "0",
         }
     )
-    result = diag.diagnose_event(event, evidence, pd.DataFrame(), {"2024-01-11"})
+    empty_audit = pd.DataFrame(columns=["event_id", "ticker"])
+    result = diag.diagnose_event(event, evidence, empty_audit, {"2024-01-11"})
     assert result["failure_mode"] == "NO_FROZEN_CANDIDATE_DOCUMENT"
     assert result["remediation_class"] == "SECONDARY_OFFICIAL_DOCUMENT_DISCOVERY"
 
