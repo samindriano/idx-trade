@@ -1,21 +1,26 @@
 """Offline parser remediation for the frozen seven-event V4 CA evidence bundle.
 
 No provider call is permitted here. The runner reuses the exact raw PDF bytes
-already captured by ``run_v4_ca_targeted_schedule_evidence.py``, performs a
-layout-preserving pypdf extraction, applies strict row/date remediation, and
-writes a new evidence root compatible with the existing continuity replay.
+already captured by ``run_v4_ca_targeted_schedule_evidence.py``, performs both
+layout- and geometry-preserving pypdf extraction, applies strict row/date
+remediation, and writes a new evidence root compatible with the existing
+continuity replay.
 
-Record/Distribution dates remain linkage-only. Price inference and source
-substitution remain prohibited.
+Record/Distribution dates are linkage-only and are trusted for linkage only
+when inherited unchanged from the frozen parent parse. A newly recovered exact
+transition may also establish event identity when that exact transition date is
+itself one of the frozen event source dates. Price inference, date reordering,
+and source substitution remain prohibited.
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from io import BytesIO
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 from typing import Any
@@ -34,7 +39,10 @@ import run_v4_ca_targeted_schedule_evidence as targeted
 from idx_trade.v4_ca_event_windows import ACCEPTED_SCHEDULE_SEMANTICS
 from idx_trade.v4_ca_schedule_semantics import clean, parse_ksei_schedule_transition
 from idx_trade.v4_ca_targeted_schedule_evidence import NISP_EVENT_ID
-from idx_trade.v4_ca_targeted_schedule_parser_remediation import repair_layout_parse
+from idx_trade.v4_ca_targeted_schedule_parser_remediation import (
+    geometry_lines,
+    repair_layout_parse,
+)
 from idx_trade.v4_ksei_coverage_gap import sha256_file
 
 
@@ -62,6 +70,81 @@ def strict_pdf_layout_text(payload: bytes) -> str:
     if not clean(text):
         raise RuntimeError("PYPDF_LAYOUT_EXTRACTION_EMPTY")
     return text
+
+
+def strict_pdf_geometry_text(payload: bytes) -> str:
+    """Reconstruct PDF visual rows from pypdf text-matrix coordinates."""
+
+    reader = PdfReader(BytesIO(payload))
+    pages: list[str] = []
+    for page in reader.pages:
+        fragments: list[tuple[float, float, str]] = []
+
+        def visitor(text: str, cm: list[float], tm: list[float], font_dict: Any, font_size: float) -> None:
+            del cm, font_dict, font_size
+            value = clean(text)
+            if not value:
+                return
+            try:
+                x = float(tm[4])
+                y = float(tm[5])
+            except (IndexError, TypeError, ValueError):
+                return
+            fragments.append((x, y, value))
+
+        try:
+            page.extract_text(visitor_text=visitor)
+        except TypeError as exc:
+            raise RuntimeError("PYPDF_VISITOR_TEXT_REQUIRED") from exc
+        pages.append("\n".join(geometry_lines(fragments)))
+    text = "\n".join(pages)
+    if not clean(text):
+        raise RuntimeError("PYPDF_GEOMETRY_EXTRACTION_EMPTY")
+    return text
+
+
+def transition_context(text: str) -> str:
+    patterns = (
+        r"nilai\s+nominal\s+baru",
+        r"pasar\s+reguler",
+        r"(?:tanggal\s+)?ex(?:\s+hmetd)?",
+        r"tidak\s+memuat\s+hmetd",
+    )
+    rows: list[str] = []
+    for raw in str(text or "").splitlines():
+        line = clean(raw)
+        if line and any(re.search(pattern, line, flags=re.IGNORECASE) for pattern in patterns):
+            rows.append(line)
+    return " || ".join(rows[:12])
+
+
+def choose_repaired_parse(layout_text: str, geometry_text: str):
+    layout = repair_layout_parse(layout_text, parse_ksei_schedule_transition(layout_text))
+    geometry = repair_layout_parse(geometry_text, parse_ksei_schedule_transition(geometry_text))
+    exact = [
+        value for value in (layout, geometry)
+        if value.parse_status == "PARSED_EXACT_TRANSITION"
+    ]
+    exact_keys = {
+        (value.transition_date, value.transition_semantic, value.ticker, value.event_family)
+        for value in exact
+    }
+    if len(exact_keys) > 1:
+        base_value = geometry if geometry.ticker else layout
+        return replace(
+            base_value,
+            parse_status="UNRESOLVED",
+            transition_date=None,
+            transition_semantic=None,
+            diagnostics=tuple(dict.fromkeys((*base_value.diagnostics, "LAYOUT_GEOMETRY_EXACT_TRANSITION_CONFLICT"))),
+        ), "LAYOUT_GEOMETRY_CONFLICT"
+    if geometry.parse_status == "PARSED_EXACT_TRANSITION":
+        return geometry, "GEOMETRY_EXACT"
+    if layout.parse_status == "PARSED_EXACT_TRANSITION":
+        return layout, "LAYOUT_EXACT"
+    # Geometry is preferred for identity diagnostics because it reconstructs
+    # positioned rows; no unresolved transition is invented by this choice.
+    return geometry if geometry.ticker else layout, "UNRESOLVED_BOTH"
 
 
 def verify_parent_outputs(root: Path, summary: dict[str, Any]) -> None:
@@ -101,6 +184,23 @@ def candidate_belongs_to_ticker(row: dict[str, Any], ticker: str) -> bool:
     return bool(subject and base.ticker_in_subject(ticker, subject))
 
 
+def remediation_linkage_basis(event: dict[str, Any], row: dict[str, Any]) -> str | None:
+    source_dates = {
+        token for token in clean(event.get("source_dates")).split("|") if token
+    }
+    transition = clean(row.get("transition_date"))
+    if transition and transition in source_dates:
+        return "EXACT_TRANSITION_DATE_EQUALS_FROZEN_SOURCE_DATE"
+
+    parent_identity = {
+        clean(row.get("parent_record_date")),
+        clean(row.get("parent_distribution_date")),
+    } - {""}
+    if source_dates & parent_identity:
+        return "FROZEN_PARENT_RECORD_OR_DISTRIBUTION_SOURCE_DATE_LINK"
+    return None
+
+
 def build_mechanical_evidence(
     selected: pd.DataFrame,
     parsed_documents: list[dict[str, Any]],
@@ -118,7 +218,7 @@ def build_mechanical_evidence(
     for event in mechanical.to_dict("records"):
         event_id = clean(event["event_id"])
         ticker = clean(event["ticker"]).upper()
-        candidates: list[dict[str, Any]] = []
+        candidates: list[tuple[dict[str, Any], str]] = []
         for row in parsed_documents:
             if not candidate_belongs_to_ticker(row, ticker):
                 continue
@@ -128,7 +228,8 @@ def build_mechanical_evidence(
                 continue
             if not base.compatible_family(clean(event["source_type"]), clean(row.get("event_family"))):
                 continue
-            if not targeted.exact_source_date_link(event, row):
+            linkage_basis = remediation_linkage_basis(event, row)
+            if linkage_basis is None:
                 continue
             transition = clean(row.get("transition_date"))
             semantic = clean(row.get("transition_semantic"))
@@ -136,19 +237,19 @@ def build_mechanical_evidence(
                 continue
             if not clean(row.get("source_sha256")) or not clean(row.get("ksei_reference") or row.get("reference")):
                 continue
-            candidates.append(row)
+            candidates.append((row, linkage_basis))
 
-        transitions = {clean(row.get("transition_date")) for row in candidates if clean(row.get("transition_date"))}
-        semantics = {clean(row.get("transition_semantic")) for row in candidates if clean(row.get("transition_semantic"))}
+        transitions = {clean(row.get("transition_date")) for row, _ in candidates if clean(row.get("transition_date"))}
+        semantics = {clean(row.get("transition_semantic")) for row, _ in candidates if clean(row.get("transition_semantic"))}
         if len(transitions) == 1 and len(semantics) == 1:
             transition = next(iter(transitions))
             semantic = next(iter(semantics))
             exact_rows = [
-                row for row in candidates
+                (row, basis) for row, basis in candidates
                 if clean(row.get("transition_date")) == transition
                 and clean(row.get("transition_semantic")) == semantic
             ]
-            for row in exact_rows:
+            for row, basis in exact_rows:
                 evidence_rows.append(
                     {
                         "event_id": event_id,
@@ -162,11 +263,11 @@ def build_mechanical_evidence(
                         "document_date": clean(row.get("document_date")),
                         "source_url": clean(row.get("source_url")),
                         "source_sha256": clean(row.get("source_sha256")),
-                        "linkage_basis": "EXACT_TICKER_FAMILY_SOURCE_DATE_AND_EXPLICIT_REGULAR_MARKET_TRANSITION_LAYOUT_REPARSE",
+                        "linkage_basis": f"{basis}+EXACT_TICKER_FAMILY_EXPLICIT_REGULAR_MARKET_TRANSITION",
                         "ratio_raw": "",
                         "ratio_left_security": "",
                         "ratio_right_security": "",
-                        "identity_date": "",
+                        "identity_date": transition if basis.startswith("EXACT_TRANSITION") else "",
                         "diagnostics": clean(row.get("diagnostics")),
                     }
                 )
@@ -221,7 +322,8 @@ def main() -> int:
         raw_path, payload = raw_pdf_by_sha(args.prior_targeted_root, source_sha)
         try:
             layout_text = strict_pdf_layout_text(payload)
-            parsed = repair_layout_parse(layout_text, parse_ksei_schedule_transition(layout_text))
+            geometry_text = strict_pdf_geometry_text(payload)
+            parsed, selection = choose_repaired_parse(layout_text, geometry_text)
             reparsed_rows.append(
                 {
                     **prior,
@@ -229,8 +331,12 @@ def main() -> int:
                     "diagnostics": "|".join(parsed.diagnostics),
                     "source_url": clean(prior.get("source_url") or prior.get("document_url")),
                     "source_sha256": source_sha,
+                    "parent_record_date": clean(prior.get("record_date")),
+                    "parent_distribution_date": clean(prior.get("distribution_date")),
                     "raw_relpath": raw_path.relative_to(args.prior_targeted_root).as_posix(),
-                    "remediation_status": "LAYOUT_REPARSED",
+                    "remediation_status": selection,
+                    "layout_transition_context": transition_context(layout_text),
+                    "geometry_transition_context": transition_context(geometry_text),
                 }
             )
         except Exception as exc:
@@ -241,8 +347,12 @@ def main() -> int:
                     "transition_date": "",
                     "transition_semantic": "",
                     "diagnostics": f"{type(exc).__name__}:{exc}",
+                    "parent_record_date": clean(prior.get("record_date")),
+                    "parent_distribution_date": clean(prior.get("distribution_date")),
                     "raw_relpath": raw_path.relative_to(args.prior_targeted_root).as_posix(),
-                    "remediation_status": "LAYOUT_REPARSE_FAILED",
+                    "remediation_status": "GEOMETRY_REPARSE_FAILED",
+                    "layout_transition_context": "",
+                    "geometry_transition_context": "",
                 }
             )
 
@@ -302,7 +412,11 @@ def main() -> int:
             "policy": {
                 **(parent_summary.get("policy") or {}),
                 "offline_layout_parser_remediation": True,
+                "offline_geometry_parser_remediation": True,
                 "provider_calls_in_remediation": False,
+                "record_distribution_linkage_only": False,
+                "frozen_parent_record_distribution_linkage_allowed": True,
+                "exact_transition_source_date_linkage_allowed": True,
                 "record_distribution_transition_fallback": False,
                 "price_inference": False,
                 "source_substitution": False,
