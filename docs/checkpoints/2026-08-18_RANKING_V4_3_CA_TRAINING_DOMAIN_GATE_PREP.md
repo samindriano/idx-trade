@@ -73,7 +73,7 @@ Expected roots from the accepted local lineage are:
 - canonical artifact root: `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809`
 - Open derivative root: `D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_tradingview_derivative_v1_20260811`
 - accepted Open recovery overlay: `D:\Documents\Project\idx-open-ca-scale-reconstruction-20260817-v1`
-- security master: `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260\20260809\security_master_1260.csv`
+- security master: `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\security_master_1260.csv`
 - PIT support root: `D:\Documents\Project\idx-v4-3-pit-support-refresh-20260817-v1`
 - final FREN/CA root: `D:\Documents\Project\idx-v4-ca-fren-ksei-exact-20260818-v1`
 - CA admission root: `D:\Documents\Project\idx-v4-3-ca-admission-20260818-v1`
