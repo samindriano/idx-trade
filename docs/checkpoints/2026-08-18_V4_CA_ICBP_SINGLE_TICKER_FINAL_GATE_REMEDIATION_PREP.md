@@ -61,8 +61,10 @@ Parent census assertions:
 
 Provider/parser assertions:
 
-- existing frozen config SHA-256:
-  `a749749d799030a74baee0fb0e555f4df45fa86d`;
+- frozen original 43-gap ticker identity SHA-256:
+  `1cd050985841519d24f58a38d10014693ff4a843cbd438586237ad4419ffe812`;
+- the tracked provider config is semantically revalidated at runtime and its
+  actual file SHA-256 is recorded in the artifact;
 - exact official KSEI security URL template unchanged;
 - `curl_cffi` / `chrome110` transport unchanged;
 - fresh session + KSEI home warmup unchanged;
