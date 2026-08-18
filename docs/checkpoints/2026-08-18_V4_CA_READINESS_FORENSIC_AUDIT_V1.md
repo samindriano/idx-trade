@@ -1,18 +1,18 @@
 # V4 Corporate-Action Continuity + Post-CA Readiness Forensic Audit V1
 
 Date: 2026-08-18 (Asia/Jakarta)
-Status: `AUDIT_IN_PROGRESS_NO_TARGET_OR_PROVIDER_ACCESS`
+Status: `FORENSIC_AUDIT_SUBSTANTIALLY_COMPLETE_PREPROVIDER_VALIDATION_PENDING`
 Owner: `ChatGPT/V4-CA-Readiness-Forensics`
 
 ## Scope
 
 Independent read-only/adversarial review requested by the user over the V4 corporate-action continuity lineage and the boundary from a future CA certification into the already frozen V4 target/model execution contract.
 
-No provider execution, historical R5/R10, target rank, model fit, prediction, performance metric, bootstrap, protected-forward, or fresh-forward outcome is accessed by this audit.
+No provider execution, historical R5/R10, target rank, model fit, prediction, performance metric, bootstrap, protected-forward, or fresh-forward outcome was accessed by this audit.
 
-## Current conclusions
+## Final scientific findings
 
-### A. No decision-changing CA scientific error found so far
+### A. No decision-changing CA scientific error found
 
 The latest CA semantics are aligned to the frozen target interval:
 
@@ -26,6 +26,8 @@ The latest CA semantics are aligned to the frozen target interval:
 
 The event-window preregistration explicitly froze the conservative rule that a relevant schedule-required event with unknown exact transition remains unresolved rather than using the ±60-day evidence-selection halo as a synthetic transition bound. This is conservative by design, not a runtime bug.
 
+The original base ledger also independently used `entry_index=signal_index+1` and `terminal_index=signal_index+h`, so the later event-window test is applied to exactly the same economic interval as the frozen V4 raw return target.
+
 ### B. Earlier Voluntary Conversion reporting defect was not a semantic defect
 
 The forensic replay established that the parent contained 63 relevant Voluntary Conversion rows; 34 strict source-native security-to-currency rows were actually removed/reclassified non-blocking, while 29 remained schedule-required. The earlier `0 reclassified` report was an audit-count underreporting caused by the narrower remediation audit. Removed IDs exactly equal the 34 strict predicate IDs. Current lineage therefore should retain the forensic replay as the authoritative explanation.
@@ -38,6 +40,10 @@ The 43-ticker targeted remediation recovered 31 strict histories and exposed 24 
 
 The seven-event set `NISP, ISAT, ADRO, PANI, RAJA, PTRO, CUAN` is deterministic inclusion-minimal under the frozen optimistic counterfactual attribution, not a proven global minimum. Its 600/600/600 counterfactual must not be interpreted as the expected provider result: newly exact mechanical transitions may become known crossing rows in the real continuity replay.
 
+### E. Current per-date consensus logic is scientifically correct
+
+The current event-window evaluator computes H5 and H10 resolved ticker sets separately and uses their exact intersection for consensus observability. This corrects the weaker early gate implementation that used only the minimum of H5/H10 resolved counts. The frozen base ledger is hash-pinned and current runs show the same decision population for both horizons. An explicit H5/H10 population-equality assertion remains useful hardening but is not evidence that prior current-lineage counts were wrong.
+
 ## Current targeted seven-event lane audit
 
 ### Pre-provider pytest import defect — fixed
@@ -48,7 +54,7 @@ Only the focused test harness was changed to put the repository `scripts/` direc
 
 The user's primary checkout also contains unrelated untracked `apps/`, so it is not an admissibly clean execution worktree. Use a fresh dedicated worktree; do not delete/stash unrelated bytes as part of CA.
 
-### Targeted acquisition semantics — current audit
+### Targeted acquisition semantics — accepted pre-provider design
 
 NISP is narrowly bound to the exact selected event ID and source-date set `{2024-09-06}`. A static non-blocking classification requires exactly one strict KSEI registered-security row with Voluntary Conversion, Active status, parsed source ratio, left security NISP, right security in the frozen currency-token set, exact source-date overlap, and official source URL/SHA. Multiple candidates fail closed.
 
@@ -58,7 +64,11 @@ The replay layers targeted evidence on top of accepted residual-document semanti
 
 A specific red-team check found no prior mechanical candidate row for NISP in the accepted prior event-evidence file, so reclassifying the selected NISP static cash event non-blocking does not by itself create a new NISP cross-source conflict under the frozen represented-vs-prior rule.
 
-## Post-CA readiness finding — real gap, not CA science failure
+No provider/scientific defect was found in the current seven-event acquisition/replay logic after the pytest harness remediation. Local focused validation must still pass in a clean worktree before the one authorized provider run.
+
+## Post-CA readiness findings — real engineering gaps, not CA science failures
+
+### 1. CA continuity provenance adapter was missing
 
 The frozen V4 target executor requires a continuity evidence table keyed by:
 
@@ -68,37 +78,51 @@ with non-empty:
 
 `continuity_status, policy_id, evidence_id, evidence_sha256`.
 
-The CA event-window ledger currently emits:
+The CA event-window ledger emits the scientific/audit state and `policy_id`, but not the target-executor-required per-row `evidence_id` and `evidence_sha256`.
 
-`ticker, signal_date, horizon, entry_date, terminal_date, continuity_status, continuity_reason, blocking_event_ids, blocking_transition_dates, policy_id`
+A separate outcome-blind bridge has therefore been prepared on:
 
-but does **not** emit the target-executor-required per-row `evidence_id` and `evidence_sha256`. There is also no authorized historical target execution runner yet; the target-execution freeze intentionally stopped at synthetic/local prefit validation while CA was pending.
+`integration/idx-v4-ca-target-continuity-bridge-v1`
 
-Therefore a future CA verdict `CERTIFIED` is necessary but not by itself sufficient to immediately run R5/R10. Before first target access, freeze a deterministic, outcome-blind CA→target continuity-evidence adapter/orchestrator that:
+It requires an externally supplied exact accepted final CA manifest SHA, refuses a non-certified bundle, verifies the final ledger identity and all 600 H5/H10/consensus date gates, requires identical H5/H10 per-date base populations, and deterministically derives row-level provenance hashes before delegating to the already frozen target-side continuity validator. It has not been run on historical CA output and does not access targets/outcomes.
 
-1. consumes only the final accepted, hash-pinned CA continuity bundle;
-2. preserves exact `(ticker, signal_date, horizon)` identities;
-3. maps continuity status without semantic reinterpretation;
-4. creates deterministic evidence IDs and SHA-256 provenance from the accepted CA ledger/manifest/policy bytes;
-5. verifies every required row has non-empty provenance;
-6. verifies H5/H10 per-date scoring population identity before consensus;
-7. refuses target materialization unless the final CA summary certifies all frozen H5/H10/consensus date gates;
-8. then passes the adapter output into the already frozen target executor without changing target/model/evaluation contracts.
+### 2. Row-level target price evidence was missing
 
-This bridge should be frozen while still outcome-blind. It is an engineering/provenance readiness step, not a new scientific hypothesis and must not access R5/R10 while being validated.
+The frozen target executor also requires:
 
-## Additional hardening candidates before provider execution
+`ticker, date, market_state, accepted_open, open_admitted, close, close_admitted`.
 
-These are currently classified as hardening, not known decision-validity defects:
+The accepted target-support census already computes the same source/state ingredients and proves technical support feasibility, but only emits aggregate/session support artifacts; it does not emit a row-level table directly consumable by the target executor.
 
-1. `verify_targeted_root` cryptographically verifies the summary and the scientifically consumed `targeted_evidence.csv`, but does not currently re-hash every auxiliary declared acquisition output (linkage audit, parse audit, request records). Full-output verification would strengthen provenance even though those auxiliary files are not fed into classification.
-2. The event-window per-date consensus computation correctly uses the H5/H10 resolved-ticker intersection, but should explicitly assert identical H5/H10 base decision populations per signal date before using the H5 denominator. The immutable base ledger is hash-pinned and prior runs are consistent; an explicit invariant would make this fail-closed rather than implicit.
-3. A stray four-byte `docs/checkpoints/__tmp_should_not_create.md` exists in older lineage. It is repository hygiene noise only and should not be interpreted as scientific evidence.
+A synthetic-only row-level price evidence builder has therefore also been prepared on the same bridge branch. It preserves the target-support census market-state precedence, requires exact derivative-panel identity, uses positive accepted derivative Open first, admits the accepted CA-scale overlay only on still-missing derivative rows, re-attests overlay canonical H/L/C identity and recovered-Open bounds, keeps canonical raw Close, and delegates its final schema validation to the frozen target-side `prepare_price_evidence` function.
 
-No hardening item above authorizes post-result rescue. Any code hardening must be completed and frozen before the targeted provider result is exposed.
+This builder is code-preparation only. Historical price-evidence materialization remains forbidden until CA continuity is independently certified and accepted.
 
-## Interim verdict
+### 3. Historical orchestration remains intentionally unauthorized
 
-`CA_SCIENCE_LINEAGE_NO_DECISION_CHANGING_ERROR_FOUND_SO_FAR_TARGETED_PREPROVIDER_TEST_DEFECT_FIXED_POST_CA_PROVENANCE_BRIDGE_REQUIRED`
+The target-execution protocol explicitly remains `SYNTHETIC_ONLY_CA_CONTINUITY_LEDGER_PENDING` and sets historical target/model/performance authorization false. No historical runner should be activated merely because bridge code exists. After CA certification, the final CA manifest SHA and bridge code/tests must be independently reviewed/frozen first; only then may a separate execution authorization materialize R5/R10.
 
-The current CA gate remains blocked until the exact seven-event provider acquisition and one frozen continuity replay are completed and independently reviewed. Even if that replay certifies continuity, historical V4 target/model execution remains blocked until the deterministic continuity-provenance bridge is frozen and validated outcome-blind.
+## Additional hardening notes
+
+These are hardening opportunities, not known decision-validity defects:
+
+1. `verify_targeted_root` verifies the summary and scientifically consumed `targeted_evidence.csv`; re-hashing every auxiliary declared acquisition output would strengthen full forensic provenance but does not alter the classification input.
+2. The event-window per-date consensus computation already uses exact resolved-set intersection. Adding an explicit H5/H10 base-population equality assertion would make a currently implicit invariant fail-closed.
+3. The old target-support census marks the accepted CA-scale overlay by membership because that overlay was independently hash-pinned and verified as exactly 2,184 valid rows. The new prepared price-evidence bridge re-attests the actual `recovered_open` and canonical H/L/C before any eventual target-side use.
+4. A stray four-byte `docs/checkpoints/__tmp_should_not_create.md` exists in older lineage. It is repository hygiene noise only and is not scientific evidence.
+
+No hardening item authorizes post-result rescue. Any code that changes the provider/replay classification path must be frozen before targeted evidence result exposure.
+
+## Forensic verdict
+
+`V4_CA_SCIENCE_LINEAGE_NO_DECISION_CHANGING_ERROR_FOUND_TARGETED_PREPROVIDER_TEST_DEFECT_FIXED_POST_CA_EXECUTION_BRIDGES_PREPARED_SYNTHETIC_ONLY`
+
+Current CA status remains blocked until the exact seven-event provider acquisition and one frozen continuity replay complete and are independently reviewed. The audit does not claim that the seven events will certify the gate.
+
+If the targeted replay later certifies continuity, the next sequence is:
+
+1. independently review and pin the exact final CA manifest/ledger hashes;
+2. validate the prepared continuity-provenance and row-level price-evidence bridges with synthetic/frozen-input tests only;
+3. issue a separate historical target-execution authorization;
+4. materialize the locked R5/R10 and rank ledger once;
+5. execute the frozen Control vs Geometry3 six-by-100 historical-development evaluation without rescue/tuning.
