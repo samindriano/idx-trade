@@ -1,11 +1,10 @@
 """Strict semantics for the seven-event V4 CA targeted evidence lane.
 
-The lane is intentionally narrow. Six selected mechanical events can be
-resolved only by the already accepted official-KSEI schedule transition path.
-The selected NISP Voluntary Conversion may additionally be classified as
-non-blocking when a freshly captured official KSEI registered-security row
-strictly proves a security-to-currency conversion for the exact historical
-source date.
+The lane is intentionally narrow. Mechanical events are resolved only by exact
+official-KSEI evidence. NISP may be non-blocking when exact static evidence
+proves a security-to-currency conversion. The single frozen ADRO 2024 PUPS
+event may also be non-blocking only when an exact two-document KSEI overlay
+proves the separate ADRO-H purchase-right structure.
 
 This is ex-post price-basis continuity evidence. It is not a decision-time
 feature and it never uses price behavior, Record/Distribution as a transition,
@@ -31,6 +30,14 @@ CURRENCY_TOKENS = {
 STATIC_LINKAGE_STATUS = "EXACT_NON_BLOCKING_STATIC_SECURITY_TO_CURRENCY"
 STATIC_EVIDENCE_KIND = "VOLUNTARY_CASH_STATIC_SECURITY_TO_CURRENCY"
 
+ADRO_EVENT_ID = "41c1e8493213d0151799837330c0dc7d8fea633d458c03e40b61ea0247bb9e58"
+ADRO_TICKER = "ADRO"
+ADRO_PUPS_LINKAGE_STATUS = "EXACT_NON_BLOCKING_PUPS_SEPARATE_SECURITY_PURCHASE_RIGHT"
+ADRO_PUPS_EVIDENCE_KIND = "PUPS_SEPARATE_SECURITY_PURCHASE_RIGHT"
+ADRO_PUPS_RIGHT_SECURITY = "ADRO-H"
+ADRO_PUPS_IDENTITY_DATES = "2024-11-29|2024-12-02"
+ADRO_PUPS_REFERENCES = frozenset({"KSEI-27597/JKU/1124", "KSEI-28171/JKU/1224"})
+
 
 def _text(value: Any) -> str:
     return " ".join(str(value or "").split())
@@ -51,13 +58,7 @@ def resolve_nisp_static_cash_evidence(
     selected_event: Mapping[str, Any],
     parsed_history_rows: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Bind exactly one current official KSEI static row to the frozen NISP event.
-
-    The static row must itself expose a parseable security-to-currency ratio.
-    Record/Distribution are used only to establish exact event identity against
-    the frozen historical source-date set; they are not interpreted as a market
-    basis transition.
-    """
+    """Bind exactly one current official KSEI static row to the frozen NISP event."""
 
     event_id = _text(selected_event.get("event_id"))
     ticker = _ticker(selected_event.get("ticker"))
@@ -121,8 +122,6 @@ def resolve_nisp_static_cash_evidence(
         "evidence_kind": STATIC_EVIDENCE_KIND,
         "transition_semantic": "",
         "transition_date": "",
-        # The static page has no schedule reference number. This literal is a
-        # source-class marker, not an invented KSEI document reference.
         "ksei_reference": "STATIC_REGISTERED_SECURITY_PAGE",
         "document_date": "",
         "source_url": _text(row.get("source_url")),
@@ -162,13 +161,55 @@ def _static_rows_for_event(
     return matches
 
 
+def _adro_pups_rows_for_event(
+    event_id: str,
+    evidence_rows: Iterable[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    matches: list[Mapping[str, Any]] = []
+    for row in evidence_rows:
+        if _text(row.get("event_id")) != event_id:
+            continue
+        if _text(row.get("linkage_status")) != ADRO_PUPS_LINKAGE_STATUS:
+            continue
+        if _text(row.get("evidence_kind")) != ADRO_PUPS_EVIDENCE_KIND:
+            continue
+        if _ticker(row.get("ticker")) != ADRO_TICKER:
+            continue
+        if _ticker(row.get("ratio_left_security")) != ADRO_TICKER:
+            continue
+        if _text(row.get("ratio_right_security")).upper() != ADRO_PUPS_RIGHT_SECURITY:
+            continue
+        if _text(row.get("identity_date")) != ADRO_PUPS_IDENTITY_DATES:
+            continue
+        if not _text(row.get("ksei_reference")):
+            continue
+        if not _text(row.get("source_url")) or not _text(row.get("source_sha256")):
+            continue
+        matches.append(row)
+    return matches
+
+
+def _fail_closed_from_base(base: EventSemantic, reason: str) -> EventSemantic:
+    return EventSemantic(
+        event_id=base.event_id,
+        ticker=base.ticker,
+        source_type=base.source_type,
+        family=base.family,
+        semantic_class="SCHEDULE_REQUIRED",
+        transition_date=None,
+        transition_source=None,
+        reason=reason,
+        source_dates=base.source_dates,
+    )
+
+
 def classify_event_with_targeted_evidence(
     row: Mapping[str, Any],
     *,
     official_sessions: Iterable[Any],
     schedule_evidence: Iterable[Mapping[str, Any]] = (),
 ) -> EventSemantic:
-    """Apply targeted evidence on top of all previously accepted CA semantics."""
+    """Apply exact-event targeted evidence on top of accepted CA semantics."""
 
     evidence_rows = list(schedule_evidence)
     base = classify_event_with_residual_document_evidence(
@@ -177,6 +218,32 @@ def classify_event_with_targeted_evidence(
         schedule_evidence=evidence_rows,
     )
     event_id = event_identity(row)
+
+    if event_id == ADRO_EVENT_ID:
+        pups_rows = _adro_pups_rows_for_event(event_id, evidence_rows)
+        if not pups_rows:
+            return base
+        references = {_text(item.get("ksei_reference")) for item in pups_rows}
+        if len(pups_rows) != 2 or references != ADRO_PUPS_REFERENCES:
+            return _fail_closed_from_base(base, "TARGETED_ADRO_PUPS_EVIDENCE_CONFLICT_FAIL_CLOSED")
+        if base.ticker != ADRO_TICKER or base.source_type.casefold() != "right distribution":
+            return base
+        if {value.date().isoformat() for value in base.source_dates} != {"2024-11-29", "2024-12-02"}:
+            return base
+        if base.semantic_class == "EXACT_TRANSITION":
+            return _fail_closed_from_base(base, "TARGETED_ADRO_PUPS_AND_TRANSITION_CONFLICT_FAIL_CLOSED")
+        return EventSemantic(
+            event_id=base.event_id,
+            ticker=base.ticker,
+            source_type=base.source_type,
+            family="PUPS_SEPARATE_SECURITY_PURCHASE_RIGHT",
+            semantic_class="NON_BLOCKING",
+            transition_date=None,
+            transition_source=None,
+            reason="EXACT_OFFICIAL_KSEI_PUPS_SEPARATE_SECURITY_PURCHASE_RIGHT_NOT_ADRO_SHARE_BASIS_REBASE",
+            source_dates=base.source_dates,
+        )
+
     if event_id != NISP_EVENT_ID:
         return base
 
@@ -184,33 +251,13 @@ def classify_event_with_targeted_evidence(
     if not static_rows:
         return base
     if len(static_rows) != 1:
-        return EventSemantic(
-            event_id=base.event_id,
-            ticker=base.ticker,
-            source_type=base.source_type,
-            family=base.family,
-            semantic_class="SCHEDULE_REQUIRED",
-            transition_date=None,
-            transition_source=None,
-            reason="TARGETED_STATIC_CASH_EVIDENCE_CONFLICT_FAIL_CLOSED",
-            source_dates=base.source_dates,
-        )
+        return _fail_closed_from_base(base, "TARGETED_STATIC_CASH_EVIDENCE_CONFLICT_FAIL_CLOSED")
     if base.ticker != NISP_TICKER or base.source_type.casefold() != "voluntary conversion":
         return base
     if {value.date().isoformat() for value in base.source_dates} != {"2024-09-06"}:
         return base
     if base.semantic_class == "EXACT_TRANSITION":
-        return EventSemantic(
-            event_id=base.event_id,
-            ticker=base.ticker,
-            source_type=base.source_type,
-            family=base.family,
-            semantic_class="SCHEDULE_REQUIRED",
-            transition_date=None,
-            transition_source=None,
-            reason="TARGETED_STATIC_CASH_AND_TRANSITION_CONFLICT_FAIL_CLOSED",
-            source_dates=base.source_dates,
-        )
+        return _fail_closed_from_base(base, "TARGETED_STATIC_CASH_AND_TRANSITION_CONFLICT_FAIL_CLOSED")
     return EventSemantic(
         event_id=base.event_id,
         ticker=base.ticker,
