@@ -18,7 +18,6 @@ import html
 from pathlib import Path
 import re
 import sys
-from typing import Iterable
 from urllib.parse import urljoin, urlparse
 
 SCRIPTS_ROOT = Path(__file__).resolve().parent
@@ -43,9 +42,26 @@ def _decoded_html(payload: bytes) -> str:
     return raw
 
 
+def _looks_like_locator(value: str) -> bool:
+    """Reject JSON/property keys while retaining actual URL/path-like values."""
+
+    candidate = html.unescape(str(value or "")).strip().strip('"\'')
+    if not candidate or any(char.isspace() for char in candidate):
+        return False
+    low = candidate.casefold()
+    if low.startswith(("http://", "https://", "//", "/", "./", "../")):
+        return True
+    # Relative attachment values commonly contain path separators or a filename
+    # extension. A bare key such as ``attachment`` must never become
+    # ``https://www.smartfren.com/attachment`` via urljoin.
+    if "/" in candidate or "\\" in candidate:
+        return True
+    return bool(re.search(r"\.[a-z0-9]{2,8}(?:[?#].*)?$", candidate, flags=re.I))
+
+
 def _canonical_asset_variants(url: str, base_url: str) -> tuple[str, ...]:
     value = html.unescape(str(url or "")).strip().strip('"\'')
-    if not value:
+    if not value or not _looks_like_locator(value):
         return tuple()
     value = value.replace("\\/", "/")
     value = value.replace("\\u002F", "/").replace("\\u002f", "/")
@@ -76,9 +92,13 @@ def extract_hidden_asset_candidates(payload: bytes, base_url: str) -> tuple[str,
         tokens.add(match.group(0))
 
     # Quoted relative/absolute values likely to carry an attachment target.
+    # Bare JSON/property keys such as ``attachment`` are deliberately rejected
+    # before urljoin so they cannot become fake same-domain candidates.
     for match in re.finditer(r'''["']([^"']+)["']''', raw):
         value = match.group(1)
         low = value.casefold()
+        if not _looks_like_locator(value):
+            continue
         if any(
             marker in low
             for marker in (
@@ -95,7 +115,9 @@ def extract_hidden_asset_candidates(payload: bytes, base_url: str) -> tuple[str,
 
     # CSS url(...) and JS window/open style fragments.
     for match in re.finditer(r"url\(([^)]+)\)", raw, flags=re.I):
-        tokens.add(match.group(1).strip().strip('"\''))
+        value = match.group(1).strip().strip('"\'')
+        if _looks_like_locator(value):
+            tokens.add(value)
 
     output: set[str] = set()
     for token in tokens:
