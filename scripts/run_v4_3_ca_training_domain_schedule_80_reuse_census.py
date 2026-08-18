@@ -13,11 +13,17 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 import pandas as pd
 
-from idx_trade.ranking_v4_3_ca_schedule_reuse import (
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from idx_trade.ranking_v4_3_ca_schedule_reuse import (  # noqa: E402
     CONFLICT,
     RESOLVED_NON_BLOCKING,
     RESOLVED_TRANSITION,
