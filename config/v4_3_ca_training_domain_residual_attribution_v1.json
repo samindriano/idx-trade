@@ -1,0 +1,29 @@
+{
+  "schema_version": "v4_3_ca_training_domain_residual_attribution_v1",
+  "outcome_blind": true,
+  "parent_replay": {
+    "manifest_sha256": "c115ea0bec59cab4da0cda45ee66ba2be5814e0bb9e854e3f7ecd616edc83861",
+    "status": "V4_3_CA_TRAINING_DOMAIN_KSEI_129_OFFLINE_REPLAY_BLOCKED_REVIEW_REQUIRED",
+    "coverage_census_tickers": 740,
+    "coverage_certified_tickers_total": 695,
+    "coverage_unresolved_decision_tickers": 45,
+    "ksei_129_certified": 93,
+    "ksei_129_unresolved": 36
+  },
+  "frozen_validation_folds_sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+  "gate_rate": 0.90,
+  "hard_boundaries": {
+    "network_calls": false,
+    "provider_calls": false,
+    "retry_unresolved_tickers": false,
+    "source_substitution": false,
+    "parser_or_semantic_relaxation": false,
+    "pass_preserving_subset_selection": false,
+    "target_or_rank_materialization": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false,
+    "waive_exact_mechanical_crossings": false
+  }
+}
