@@ -1,5 +1,6 @@
 from idx_trade.v4_ca_schedule_semantics import parse_ksei_schedule_transition
 from idx_trade.v4_ca_targeted_schedule_parser_remediation import (
+    geometry_lines,
     repair_layout_parse,
     strict_layout_transition,
     strict_ticker_from_layout,
@@ -11,6 +12,20 @@ def test_layout_ticker_never_admits_kode_header_token():
 Emiten Kode dan Nama Saham Kode ISIN : INDOSAT Tbk, PT : ISAT - INDOSAT Tbk : ID1000097405
 """
     assert strict_ticker_from_layout(text) == "ISAT"
+
+
+def test_geometry_lines_join_same_visual_row_left_to_right_only():
+    fragments = [
+        (300.0, 500.7, "15 Oktober 2024"),
+        (20.0, 500.0, "Mulai perdagangan saham dengan Nilai Nominal Baru di Pasar Reguler"),
+        (20.0, 480.0, "Tanggal Pencatatan (Recording Date)"),
+        (300.0, 480.8, "16 Oktober 2024"),
+    ]
+    lines = geometry_lines(fragments, y_tolerance=2.0)
+    assert lines == [
+        "Mulai perdagangan saham dengan Nilai Nominal Baru di Pasar Reguler 15 Oktober 2024",
+        "Tanggal Pencatatan (Recording Date) 16 Oktober 2024",
+    ]
 
 
 def test_layout_stock_split_repairs_exact_transition_without_subject_line():
