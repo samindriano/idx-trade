@@ -7,7 +7,7 @@ Status: `PRE_TARGET_CORRECTION_READY_FOR_LOCAL_OUTCOME_BLIND_RUN`
 ## Why this correction exists
 
 The accepted V4-3 CA admission bridge proved that the final Corporate Action
-replay passes the frozen 600 validation-date CA-only gate.  A subsequent
+replay passes the frozen 600 validation-date CA-only gate. A subsequent
 pre-target audit found that this is not sufficient for the preregistered
 walk-forward experiment:
 
@@ -16,7 +16,7 @@ walk-forward experiment:
 2. the final CA continuity ledger was materialized only for the frozen 600
    validation dates, not the earlier training domain;
 3. target availability requires the row-level intersection of market/Open/Close
-   observability and CA continuity.  Two independent >=90% gates do not imply
+   observability and CA continuity. Two independent >=90% gates do not imply
    that their row-level intersection is >=90%.
 
 No historical V4 return, target rank, prediction, model fit, or performance
@@ -60,7 +60,7 @@ The correction returns
 4. every fold has a non-empty exact H5 and H10 training-date set before its
    preregistered purge boundary.
 
-A failure does not trigger retuning or a waiver.  The emitted diagnostics must
+A failure does not trigger retuning or a waiver. The emitted diagnostics must
 be reviewed outcome-blind to determine whether the blocker is historical-only
 CA census coverage, unresolved exact event schedules, cross-source conflict, or
 combined price-support/CA intersection.
@@ -73,10 +73,26 @@ Expected roots from the accepted local lineage are:
 - canonical artifact root: `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809`
 - Open derivative root: `D:\Documents\Project\idx-trade-data-gate-20260808v\open_backfill_zapi_tradingview_derivative_v1_20260811`
 - accepted Open recovery overlay: `D:\Documents\Project\idx-open-ca-scale-reconstruction-20260817-v1`
-- security master: `D:\Documents\Project\idx-trade-data-gate-20260808v\research_feasibility_1260_20260809\security_master_1260.csv`
 - PIT support root: `D:\Documents\Project\idx-v4-3-pit-support-refresh-20260817-v1`
 - final FREN/CA root: `D:\Documents\Project\idx-v4-ca-fren-ksei-exact-20260818-v1`
 - CA admission root: `D:\Documents\Project\idx-v4-3-ca-admission-20260818-v1`
+
+### Security-master provenance
+
+The security-master input is **hash-authoritative, not path-authoritative**.
+The exact bytes accepted by the prior successful PIT-remediated V4-3 support
+run are SHA-256:
+
+`c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240`.
+
+A local file named `security_master_1260.csv` under the canonical artifact root
+was subsequently observed with SHA-256
+`9d0d30215ab129f196f494e4af499fff92fe510f5a432dd2dad321f02ff7a2f9`.
+That is **not** the frozen V4-3 security-master identity and must not be silently
+repinned or substituted. Locate the exact `c8efa462...` bytes locally before
+rerunning this gate. If the frozen bytes cannot be recovered, stop fail-closed
+for provenance review; do not regenerate or reinterpret the security master
+inside this lane.
 
 The material-six and ADRO parent roots remain the same immutable roots used by
 the accepted FREN final replay.
@@ -84,6 +100,6 @@ the accepted FREN final replay.
 ## Boundary after local run
 
 Do not materialize R5/R10 or fit V4-3 until this new manifest is reviewed and,
-if PASS, pinned into the final historical execution runner.  This is a
+if PASS, pinned into the final historical execution runner. This is a
 correction to pre-target admission completeness, not a new hypothesis or model
 variant.
