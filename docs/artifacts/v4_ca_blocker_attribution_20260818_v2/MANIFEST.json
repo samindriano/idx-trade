@@ -1,0 +1,11 @@
+{
+  "input_continuity_ledger_sha256": "9dce85c55a9e8a9e1effba5c7e0d24faa150bfb0d70c0162cfb85955d8a435ec",
+  "outcome_blind": true,
+  "output_hashes": {
+    "per_date": "9ec4fdeff545f03820fd4e5764f896014199b8b1679a13913a644bdbc4a85d1c"
+  },
+  "provider_calls": false,
+  "schema_version": "v4_ca_blocker_attribution_v2_manifest",
+  "status": "V4_CA_BLOCKER_ATTRIBUTION_V2_COMPLETE",
+  "summary_sha256": "cdbb60c4e69348c1d8084e66e6cd463e390801ad04a6bf379247b4d278ea97d0"
+}
