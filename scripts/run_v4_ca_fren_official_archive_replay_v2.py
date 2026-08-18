@@ -13,6 +13,10 @@ optional corroboration. The KSEI pages are currently intermittent and may
 return HTTP 500 even though the same archived article is publicly indexed.
 Non-200 KSEI bodies are never treated as evidence. The final attestation
 records whether KSEI corroboration was COMPLETE, PARTIAL, or UNAVAILABLE.
+
+For issuer sources the acceptance rule remains strict. Network exceptions are
+only normalized to RuntimeError so bounded discovery callers can record a
+failed candidate and continue, while mandatory issuer-page fetches still abort.
 """
 
 from __future__ import annotations
@@ -119,8 +123,15 @@ def _capture_ksei(url: str, path: Path) -> tuple[bytes, dict[str, Any]]:
 def get_v2(url: str, path: Path):
     if _is_ksei_news(url):
         return _capture_ksei(url, path)
-    # Issuer sources remain strict HTTP-200 requirements.
-    return _ORIGINAL_GET(url, path)
+    # Issuer sources remain strict. Normalize requests transport exceptions so
+    # optional discovery probes can record them and continue; mandatory issuer
+    # calls still abort because their callers do not catch this RuntimeError.
+    try:
+        return _ORIGINAL_GET(url, path)
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            f"FREN_ISSUER_TRANSPORT_FAILED:{url}:{type(exc).__name__}:{exc}"
+        ) from exc
 
 
 def verify_ksei_right_pages_v2(record_html: bytes, distribution_html: bytes) -> None:
