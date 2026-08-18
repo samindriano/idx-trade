@@ -1,0 +1,41 @@
+{
+  "schema_version": "v4_ca_voluntary_conversion_forensic_replay_v1",
+  "status": "PREREGISTERED_BEFORE_EXTERNAL_BYTE_REPLAY",
+  "scientific_parent_result": "data/idx-v4-ca-voluntary-conversion-semantics-remediation-v1@5b9afc24b758413f315351971b2cd07f634dc9c9",
+  "scope": "offline_forensic_replay_only",
+  "expected_counts": {
+    "parent_relevant_events": 136,
+    "remediation_relevant_events": 102,
+    "frozen_dates": 600
+  },
+  "pinned_sha256": {
+    "ksei_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "parent_event_audit": "ba08fbdab5b72b377888320163ba8b893e7d1a19f69384ba7be0fdac5ca33908",
+    "remediation_event_audit": "a2fe0206189916a796cda170e819053dd7147bf988ceed27f278081684ca4f1a",
+    "parent_per_date": "eefd6cbeed7381b01935a95b777cd88cfa4e073c0abc7d318005c2bc381fd85d",
+    "remediation_per_date": "55de6a8dc981bc2b16be96e3c02d767c6655b7025c402dbd50aa5d95aa65cbb9"
+  },
+  "required_invariants": {
+    "no_added_event_ids": true,
+    "removed_ids_must_equal_reclassified_nonblocking_ids": true,
+    "every_removed_id_must_be_strict_voluntary_security_to_currency": true,
+    "if_reclassification_count_is_zero_event_sets_must_be_identical": true,
+    "if_reclassification_count_is_zero_per_date_continuity_must_be_identical": true
+  },
+  "allowed_verdicts": [
+    "FORENSIC_REPLAY_CONFIRMS_VOLUNTARY_CASH_RECLASSIFICATION_REPORTING_UNDERCOUNT",
+    "FORENSIC_REPLAY_ZERO_RECLASS_IDENTITY_PASS",
+    "FORENSIC_REPLAY_INCONSISTENT_BLOCKED"
+  ],
+  "forbidden": [
+    "provider_calls",
+    "schedule_acquisition",
+    "new_CA_semantic_rules",
+    "target_or_rank_materialization",
+    "model_fit",
+    "prediction",
+    "performance_metrics",
+    "protected_or_fresh_forward_outcome_access"
+  ]
+}
