@@ -1,0 +1,51 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_80_ksei_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_80_KSEI_V1",
+  "outcome_blind": true,
+  "reuse_parent": {
+    "manifest_sha256": "d99252308d4aad1982ef97d3897315930b552b5de739ba85a5720ed07ac49022",
+    "status": "V4_3_CA_SCHEDULE_80_OFFLINE_REUSE_COMPLETE_RESIDUAL_ACQUISITION_REQUIRED",
+    "event_count": 80,
+    "event_identity_sha256": "f89cd1e86b1de5f88792551a993311700e4ab15db19f8447e6e8dd61dec3594d",
+    "resolved_existing_evidence_events": 0
+  },
+  "replay_parent": {
+    "manifest_sha256": "c115ea0bec59cab4da0cda45ee66ba2be5814e0bb9e854e3f7ecd616edc83861",
+    "status": "V4_3_CA_TRAINING_DOMAIN_KSEI_129_OFFLINE_REPLAY_BLOCKED_REVIEW_REQUIRED",
+    "event_audit_filename": "v4_3_ca_training_event_semantics_ksei129.csv"
+  },
+  "provider": {
+    "name": "KSEI_PUBLIC_CORPORATE_ACTION_SCHEDULES",
+    "base_url": "https://web.ksei.co.id",
+    "locale": "id-ID",
+    "month_offsets": [-2, -1, 0, 1, 2],
+    "max_attempts": 3,
+    "backoff_seconds": [1.0, 3.0],
+    "timeout_seconds": 60.0,
+    "inter_request_sleep_seconds": 0.15,
+    "source_substitution": false
+  },
+  "acquisition_scope": {
+    "all_80_events": true,
+    "query_months_from_exact_source_dates_only": true,
+    "ticker_must_appear_in_index_subject": true,
+    "capture_raw_index_pages": true,
+    "capture_raw_candidate_documents": true,
+    "parse_diagnostics_are_non_admissive": true,
+    "no_provider_retry_after_result_exposure": true
+  },
+  "hard_boundaries": {
+    "pass_preserving_subset_selection": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "source_date_inference": false,
+    "source_substitution": false,
+    "parser_or_semantic_relaxation_after_provider_result": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
