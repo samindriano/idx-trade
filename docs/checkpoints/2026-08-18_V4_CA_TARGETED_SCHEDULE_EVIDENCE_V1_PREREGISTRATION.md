@@ -12,15 +12,14 @@ The acquisition population is exactly the seven-event deterministic inclusion-mi
 1. NISP — Voluntary Conversion — `10e24d3621e0f5e65833655b2e11938fc53d64e68c03e6c87658eb74bb2ae26b`
 2. ISAT — Mandatory Conversion — `1285d019c8831fae39ad2909e699680df9071d5ebc38701a71a5a5dba951c60d`
 3. ADRO — Right Distribution — `41c1e8493213d0151799837330c0dc7d8fea633d458c03e40b61ea0247bb9e58`
-4. PANI — Right Distribution — `82e09144ecfe0d4375aa3e5e6710862f48977e008f4692619062f31a04cab1bc`
+4. PANI — Right Distribution — `82e09144ecfe0d4375a9260156fe75dd74ed01a2cd72262f55e14cd85ce6ebc7`
 5. RAJA — Mandatory Conversion — `072cf4b8b2f7f86f3c7a55a1128c85f338cbe7b41307b57a3240ad94dba0afae`
 6. PTRO — Mandatory Conversion — `9b21df59be9d68e088059e2dae04d2d0bd8832d9d1cb5e9dd5a300f05f369610`
 7. CUAN — Mandatory Conversion — `6df97832e47c00fc5653e90659f525a5c8258752f9fc2245803498bdeb30b45e`
 
-**Correction:** the canonical PANI event ID is the exact value in the hash-pinned selected-subset CSV, `82e09144ecfe0d4375a9260156fe75dd74ed01a2cd72262f55e14cd85ce6ebc7`. The shorter/wrong value above is explicitly non-authoritative; runtime identity is pinned to the CSV SHA below and the code constant. No manual transcription may override it.
-
 Selected-subset CSV SHA-256:
 `f6650daf7256196f976b0a9d161dbf0cf896d0d349306be4fe4c76b1d2168529`.
+Runtime identity is pinned to that exact CSV and the code constants; manual transcription must not override it.
 
 ## Evidence policy
 
