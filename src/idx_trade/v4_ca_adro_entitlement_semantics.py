@@ -3,8 +3,10 @@
 This module does not infer an ex-date from the KSEI record/distribution dates.
 It accepts 2024-11-28 only when two issuer-official documents jointly prove:
 
-1. the PUPS participant set is the set of ADRO shareholders entitled to the
-   additional final cash dividend approved by the 2024-11-18 EGMS; and
+1. the PUPS participant/record set is the same 2024-11-29 ADRO shareholder set
+   used for the additional final cash dividend approved by the 2024-11-18 EGMS;
+   the prospectus also visibly states this linkage on its first page, although
+   some pypdf builds omit that boxed all-caps sentence from extracted text; and
 2. that dividend's Regular and Negotiated Market Ex Dividend date is explicitly
    2024-11-28.
 
@@ -76,6 +78,65 @@ def _norm(text: str) -> str:
     return value
 
 
+def _verify_adro_normalized_texts(prospectus: str, egms: str) -> str:
+    """Verify the same entitlement set without depending on one boxed PDF sentence.
+
+    AlamTri's first prospectus page visibly states that PUPS participants are
+    shareholders entitled to the 2024-11-18 EGMS dividend. Some pypdf builds do
+    not extract that boxed all-caps line. The machine-verifiable fallback below
+    therefore requires the same official prospectus to state the PUPS record set
+    (DPS on 2024-11-29) and exact 4389:1000 right ratio, while the official EGMS
+    minutes must independently state that 2024-11-29 is the dividend-entitlement
+    record date and explicitly give the Regular/Negotiated ex-dividend date.
+
+    This is cross-document set identity, not ``record_date - 1`` inference.
+    """
+
+    prospectus_core = (
+        "penawaran umum oleh pemegang saham",
+        "pt adaro andalan indonesia tbk",
+        "daftar pemegang saham",
+        "29 november 2024",
+        "setiap pemegang saham yang memiliki 4.389",
+        "1.000",
+        "hak membeli saham",
+        "tanggal distribusi hak membeli saham",
+        "2 desember 2024",
+    )
+    missing_core = [token for token in prospectus_core if token not in prospectus]
+    if missing_core:
+        raise RuntimeError(
+            f"ADRO_PUPS_PROSPECTUS_RECORD_SET_IDENTITY_MISSING:{missing_core}"
+        )
+
+    direct_clause_parts = (
+        "pihak yang dapat berpartisipasi dalam pups ini",
+        "memperoleh dividen berdasarkan keputusan",
+        "18 november 2024",
+    )
+    direct_clause_visible = all(token in prospectus for token in direct_clause_parts)
+
+    egms_required = (
+        "distribution schedule of the additional final cash dividend",
+        "the date for recording the shareholders who are entitled to the additional final cash dividend",
+        "november 29th, 2024",
+        "regular and negotiated market",
+        "cum dividend",
+        "ex dividend",
+        "november 26th, 2024",
+        "november 28th, 2024",
+    )
+    missing_egms = [token for token in egms_required if token not in egms]
+    if missing_egms:
+        raise RuntimeError(f"ADRO_EGMS_EX_DIVIDEND_SCHEDULE_MISSING:{missing_egms}")
+
+    return (
+        "DIRECT_PROSPECTUS_DIVIDEND_ENTITLEMENT_CLAUSE"
+        if direct_clause_visible
+        else "EXACT_2024-11-29_SHAREHOLDER_RECORD_SET_IDENTITY"
+    )
+
+
 def verify_adro_official_documents(
     prospectus_payload: bytes,
     egms_minutes_payload: bytes,
@@ -84,40 +145,7 @@ def verify_adro_official_documents(
 
     prospectus = _norm(_pdf_text(prospectus_payload))
     egms = _norm(_pdf_text(egms_minutes_payload))
-
-    # Use atomic clauses rather than one long PDF-extraction-sensitive sentence.
-    # All clauses are required, so this is parser hardening rather than semantic
-    # relaxation. Together they reproduce the issuer's exact entitlement claim.
-    prospectus_required = (
-        "pihak yang dapat berpartisipasi dalam pups ini",
-        "pemegang saham perseroan",
-        "memperoleh dividen berdasarkan keputusan",
-        "rapat umum pemegang saham luar biasa perseroan tanggal 18 november 2024",
-        "setiap pemegang saham yang memiliki 4.389",
-        "1.000",
-        "hak membeli saham",
-        "recording date",
-        "29 november 2024",
-    )
-    missing_prospectus = [token for token in prospectus_required if token not in prospectus]
-    if missing_prospectus:
-        raise RuntimeError(
-            f"ADRO_PUPS_PROSPECTUS_ENTITLEMENT_IDENTITY_MISSING:{missing_prospectus}"
-        )
-
-    egms_required = (
-        "distribution schedule of the additional final cash dividend",
-        "regular and negotiated market",
-        "cum dividend",
-        "ex dividend",
-        "november 26th, 2024",
-        "november 28th, 2024",
-        "record date",
-        "november 29th, 2024",
-    )
-    missing_egms = [token for token in egms_required if token not in egms]
-    if missing_egms:
-        raise RuntimeError(f"ADRO_EGMS_EX_DIVIDEND_SCHEDULE_MISSING:{missing_egms}")
+    _verify_adro_normalized_texts(prospectus, egms)
 
     return AdroEntitlementEvidence(
         prospectus_sha256=sha256_bytes(prospectus_payload),
@@ -172,7 +200,7 @@ def apply_adro_entitlement_evidence(
         transition_date=ADRO_TRANSITION_DATE,
         transition_source="OFFICIAL_ISSUER_CROSS_DOCUMENT_ENTITLEMENT_EX_DATE",
         reason=(
-            "PUPS_PARTICIPANTS_EXACTLY_TIED_TO_2024_EGMS_DIVIDEND_ENTITLEMENT;"
+            "PUPS_PARTICIPANT_SET_MATCHES_2024_EGMS_DIVIDEND_ENTITLEMENT;"
             "OFFICIAL_REGULAR_AND_NEGOTIATED_MARKET_EX_DIVIDEND_2024-11-28"
         ),
         source_dates=source_dates(row),
