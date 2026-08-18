@@ -1,0 +1,1 @@
+Final preparation-only base commit follows this checkpoint. Provider acquisition remains unstarted.
