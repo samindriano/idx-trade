@@ -1,0 +1,68 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_59_ksei_news_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_59_KSEI_NEWS_V1",
+  "outcome_blind": true,
+  "diagnosis_parent": {
+    "manifest_sha256": "8c717e8f4bf7fb69edfe366cd0f219ef0c7d9f812006c409ed682eb6e9c9fb12",
+    "status": "V4_3_CA_SCHEDULE_59_FAILURE_MODE_CENSUS_COMPLETE",
+    "residual_events": 59,
+    "residual_event_identity_sha256": "f1c587eca59a9e7ec68cb8b1b2fc0980489a8f8a1b608f10403f2cc9f6d85707",
+    "failure_mode_counts": {
+      "MECHANICAL_NO_EXPLICIT_REGULAR_MARKET_TRANSITION": 47,
+      "MECHANICAL_SOURCE_DATE_NOT_LINKED_TO_LAYOUT_BOUND_RECORD_DISTRIBUTION": 2,
+      "NO_FROZEN_CANDIDATE_DOCUMENT": 6,
+      "VOLUNTARY_CASH_DATE_NOT_LINKED_TO_SOURCE_DATE": 1,
+      "VOLUNTARY_NO_LAYOUT_BOUND_CASH_DATE": 2,
+      "VOLUNTARY_NO_RECOGNIZED_CASH_DOCUMENT": 1
+    },
+    "remediation_class_counts": {
+      "SECONDARY_OFFICIAL_CASH_DOCUMENT_DISCOVERY": 1,
+      "SECONDARY_OFFICIAL_CASH_SCHEDULE_DISCOVERY": 2,
+      "SECONDARY_OFFICIAL_DOCUMENT_DISCOVERY": 6,
+      "SECONDARY_OFFICIAL_EVENT_LINKAGE_DISCOVERY": 3,
+      "SECONDARY_OFFICIAL_EX_OR_NEW_BASIS_SCHEDULE_DISCOVERY": 47
+    }
+  },
+  "provider": {
+    "name": "KSEI_PUBLIC_SITE_SEARCH_AND_NEWS",
+    "base_url": "https://web.ksei.co.id",
+    "search_path_prefix": "/search/results/",
+    "allowed_news_path_prefix": "/ksei_news/read/",
+    "max_pages_per_query": 20,
+    "max_attempts": 3,
+    "backoff_seconds": [1.0, 3.0],
+    "inter_request_sleep_seconds": 0.15,
+    "timeout_seconds": 30.0,
+    "source_substitution": false,
+    "external_search_engine": false,
+    "capture_official_news_attachments": true
+  },
+  "query_contract": {
+    "always_query_exact_ticker": true,
+    "always_query_exact_ticker_plus_each_source_year": true,
+    "stock_split_terms": ["stock split", "pemecahan saham"],
+    "reverse_stock_terms": ["reverse stock", "nilai nominal baru"],
+    "merger_terms": ["merger", "penggabungan"],
+    "mandatory_conversion_terms": ["mandatory conversion", "konversi"],
+    "capital_restructuring_terms": ["restrukturisasi modal", "pengurangan modal"],
+    "voluntary_conversion_terms": ["penawaran tender", "pembelian kembali"],
+    "unknown_mechanical_terms": ["corporate action", "jadwal pelaksanaan"]
+  },
+  "hard_boundaries": {
+    "pass_preserving_subset_selection": false,
+    "event_impact_ranking_for_discovery": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "source_date_inference": false,
+    "source_substitution": false,
+    "external_search_engine": false,
+    "parser_or_semantic_relaxation_after_provider_result": false,
+    "semantic_admission_during_acquisition": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
