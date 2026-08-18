@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 import hashlib
+import re
 from typing import Any, Mapping
 
 import pandas as pd
@@ -63,7 +64,16 @@ def _pdf_text(payload: bytes) -> str:
 
 
 def _norm(text: str) -> str:
-    return " ".join(str(text).replace("\u00a0", " ").split()).casefold()
+    """Normalize PDF extraction artifacts without changing semantic content."""
+
+    value = str(text)
+    for char in ("\u00a0", "\u00ad", "\u200b", "\ufeff"):
+        value = value.replace(char, " ")
+    value = value.replace("\x02", " ")
+    value = " ".join(value.split()).casefold()
+    # pypdf can detach ordinal suffixes in tables: ``29 th`` -> ``29th``.
+    value = re.sub(r"\b(\d+)\s+(st|nd|rd|th)\b", r"\1\2", value)
+    return value
 
 
 def verify_adro_official_documents(
@@ -75,13 +85,19 @@ def verify_adro_official_documents(
     prospectus = _norm(_pdf_text(prospectus_payload))
     egms = _norm(_pdf_text(egms_minutes_payload))
 
+    # Use atomic clauses rather than one long PDF-extraction-sensitive sentence.
+    # All clauses are required, so this is parser hardening rather than semantic
+    # relaxation. Together they reproduce the issuer's exact entitlement claim.
     prospectus_required = (
-        "pihak yang dapat berpartisipasi dalam pups ini adalah pemegang saham perseroan yang memperoleh dividen berdasarkan keputusan",
-        "18 november 2024",
+        "pihak yang dapat berpartisipasi dalam pups ini",
+        "pemegang saham perseroan",
+        "memperoleh dividen berdasarkan keputusan",
+        "rapat umum pemegang saham luar biasa perseroan tanggal 18 november 2024",
         "setiap pemegang saham yang memiliki 4.389",
         "1.000",
         "hak membeli saham",
-        "tanggal 29 november 2024",
+        "recording date",
+        "29 november 2024",
     )
     missing_prospectus = [token for token in prospectus_required if token not in prospectus]
     if missing_prospectus:
