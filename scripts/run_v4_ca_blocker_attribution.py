@@ -1,8 +1,8 @@
 """Outcome-blind blocker attribution over the immutable V4 CA Stage-B ledger.
 
-This script does not alter CA semantics or re-run provider acquisition.  It
+This script does not alter CA semantics or re-run provider acquisition. It
 computes row-level optimistic upper bounds by treating selected *currently
-observed* blocker reasons as if they were resolved.  Hidden downstream blockers
+observed* blocker reasons as if they were resolved. Hidden downstream blockers
 are not reconstructed, so every counterfactual is explicitly an upper bound,
 not a certification replay.
 """
@@ -87,6 +87,9 @@ def normalize_ledger(frame: pd.DataFrame) -> pd.DataFrame:
         raise RuntimeError("STAGE_B_LEDGER_HORIZON_SET_CHANGED")
     if out.duplicated(["ticker", "signal_date", "horizon"]).any():
         raise RuntimeError("STAGE_B_LEDGER_DUPLICATE_IDENTITY")
+    known_crossing_resolved = out["continuity_reason"].eq(REASON_KNOWN_CROSSING) & out["continuity_status"].eq(RESOLVED)
+    if known_crossing_resolved.any():
+        raise RuntimeError("KNOWN_MECHANICAL_CROSSING_ALREADY_MARKED_RESOLVED")
     return out
 
 
@@ -98,15 +101,16 @@ def scenario_resolved_mask(frame: pd.DataFrame, resolved_reasons: Iterable[str])
 def per_date_metrics(frame: pd.DataFrame, resolved_mask: pd.Series) -> pd.DataFrame:
     """Compute date-centric H5/H10/consensus metrics for the supplied frame.
 
-    This helper deliberately validates its output against the number of dates
-    present in *frame*, rather than the production constant of 600.  Production
-    identity is enforced earlier by ``normalize_ledger``; keeping this helper
-    cardinality-relative allows small deterministic unit fixtures without
-    weakening the real-run 600-date hard gate.
+    The helper validates against the date cardinality present in ``frame``.
+    Production identity remains independently hard-gated by ``normalize_ledger``
+    at exactly 600 dates. This keeps small deterministic tests valid without
+    weakening the production contract.
     """
 
     if len(resolved_mask) != len(frame):
         raise RuntimeError("SCENARIO_RESOLVED_MASK_LENGTH_MISMATCH")
+    if not resolved_mask.index.equals(frame.index):
+        raise RuntimeError("SCENARIO_RESOLVED_MASK_INDEX_MISMATCH")
     expected_dates = int(frame["signal_date"].nunique())
     work = frame[["ticker", "signal_date", "horizon"]].copy()
     work["scenario_resolved"] = resolved_mask.to_numpy(dtype=bool)
@@ -132,9 +136,7 @@ def per_date_metrics(frame: pd.DataFrame, resolved_mask: pd.Series) -> pd.DataFr
         rows.append(row)
     result = pd.DataFrame(rows)
     if len(result) != expected_dates:
-        raise RuntimeError(
-            f"SCENARIO_PER_DATE_COUNT_CHANGED:{len(result)}!={expected_dates}"
-        )
+        raise RuntimeError(f"SCENARIO_PER_DATE_COUNT_CHANGED:{len(result)}!={expected_dates}")
     return result
 
 
@@ -190,9 +192,8 @@ def main() -> int:
     args = parse_args()
     if args.output_dir.exists():
         raise RuntimeError(f"REFUSE_OVERWRITE_EXISTING_OUTPUT:{args.output_dir}")
-    input_sha = verify_input(args.stage_b_ledger)
-    args.output_dir.mkdir(parents=True)
 
+    input_sha = verify_input(args.stage_b_ledger)
     frame = normalize_ledger(pd.read_csv(args.stage_b_ledger))
     reason_counts = dict(sorted(Counter(frame["continuity_reason"]).items()))
     scenario_summaries: dict[str, dict[str, object]] = {}
@@ -207,6 +208,16 @@ def main() -> int:
         per_date_frames.append(tagged)
 
     verdict = attribution_verdict(scenario_summaries)
+    per_date_all = pd.concat(per_date_frames, ignore_index=True)
+
+    # Do not create the one-shot output root until every validation and
+    # in-memory scenario computation has completed successfully. This prevents
+    # a pre-output computation error from consuming the fresh-root retry budget.
+    args.output_dir.mkdir(parents=True)
+    per_date_path = args.output_dir / "blocker_attribution_per_date.csv"
+    summary_path = args.output_dir / "summary.json"
+    per_date_all.to_csv(per_date_path, index=False, lineterminator="\n")
+
     summary = {
         "schema_version": "v4_ca_blocker_attribution_v1",
         "status": "V4_CA_BLOCKER_ATTRIBUTION_COMPLETE",
@@ -226,14 +237,10 @@ def main() -> int:
         "reason_counts": reason_counts,
         "known_mechanical_crossing_rows_never_waived": int(reason_counts.get(REASON_KNOWN_CROSSING, 0)),
         "scenarios": scenario_summaries,
+        "output_hashes": {"per_date": sha256(per_date_path)},
     }
-
-    per_date_all = pd.concat(per_date_frames, ignore_index=True)
-    per_date_path = args.output_dir / "blocker_attribution_per_date.csv"
-    summary_path = args.output_dir / "summary.json"
-    per_date_all.to_csv(per_date_path, index=False, lineterminator="\n")
-    summary["output_hashes"] = {"per_date": sha256(per_date_path)}
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     manifest = {
         "schema_version": "v4_ca_blocker_attribution_manifest_v1",
         "status": summary["status"],
