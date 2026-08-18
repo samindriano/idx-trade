@@ -164,64 +164,99 @@ def cash_document_class(text: str, *, index_subject: str = "") -> str:
     return "NONE"
 
 
-def _explicit_transition_from_layout(layout_text: str) -> tuple[str | None, str | None, tuple[str, ...]]:
-    """Read an explicit transition only when one date is bound to the anchor.
+def _distinct_schedule_row(line: str) -> bool:
+    """Whether a line begins a different schedule row/semantic anchor."""
 
-    PDF table extraction can preserve schedule rows in layout mode even when
-    plain extraction groups all labels before all dates.  We use only a line or
-    short adjacent-line window containing one unambiguous date.
+    folded = clean(line).casefold()
+    anchors = (
+        "tanggal pencatatan",
+        "recording date",
+        "tanggal distribusi",
+        "distribution date",
+        "tanggal pembayaran",
+        "payment date",
+        "tanggal penyelesaian",
+        "settlement date",
+        "akhir perdagangan",
+        "mulai perdagangan",
+        "first trading",
+        "start trading",
+        "ex hmetd",
+        "ex dividen",
+        "ex-date",
+        "ex date",
+    )
+    return any(token in folded for token in anchors)
+
+
+def _transition_kind(window: str) -> str | None:
+    folded = clean(window).casefold()
+    regular = any(
+        token in folded
+        for token in ("pasar reguler", "pasar regular", "regular market")
+    )
+    if not regular:
+        return None
+    if any(
+        token in folded
+        for token in (
+            "ex hmetd",
+            "tidak memuat hmetd",
+            "ex dividen",
+            "ex-date",
+            "ex date",
+        )
+    ):
+        return "REGULAR_MARKET_EX_DATE"
+    if (
+        ("mulai perdagangan" in folded or "first trading" in folded or "start trading" in folded)
+        and (
+            "nilai nominal baru" in folded
+            or "new nominal value" in folded
+            or "basis baru" in folded
+            or "new basis" in folded
+        )
+    ):
+        return "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
+    return None
+
+
+def _explicit_transition_from_layout(layout_text: str) -> tuple[str | None, str | None, tuple[str, ...]]:
+    """Read only a date bound to the transition row itself.
+
+    Prefer a single physical layout line.  A two-line continuation is allowed
+    only when the second line is not itself another schedule-row anchor.  This
+    prevents a date-less `Mulai perdagangan ...` row from stealing the next
+    Recording/Distribution date.
     """
 
     lines = [clean(line) for line in str(layout_text or "").splitlines() if clean(line)]
-    ex_hits: set[str] = set()
-    basis_hits: set[str] = set()
-    for index in range(len(lines)):
-        window = " ".join(lines[index : index + 3])
-        dates = set(_all_dates(window))
-        if len(dates) != 1:
+    hits: set[tuple[str, str]] = set()
+    for index, line in enumerate(lines):
+        semantic = _transition_kind(line)
+        dates = set(_all_dates(line))
+        if semantic and len(dates) == 1:
+            hits.add((next(iter(dates)), semantic))
             continue
-        value = next(iter(dates))
-        folded = window.casefold()
-        regular = any(
-            token in folded
-            for token in ("pasar reguler", "pasar regular", "regular market")
-        )
-        if not regular:
-            continue
-        if any(
-            token in folded
-            for token in (
-                "ex hmetd",
-                "tidak memuat hmetd",
-                "ex dividen",
-                "ex-date",
-                "ex date",
-            )
-        ):
-            ex_hits.add(value)
-        if (
-            ("mulai perdagangan" in folded or "first trading" in folded or "start trading" in folded)
-            and (
-                "nilai nominal baru" in folded
-                or "new nominal value" in folded
-                or "basis baru" in folded
-                or "new basis" in folded
-            )
-        ):
-            basis_hits.add(value)
 
-    diagnostics: list[str] = []
-    if len(ex_hits) > 1 or len(basis_hits) > 1:
-        return None, None, ("MULTIPLE_LAYOUT_TRANSITION_DATES",)
-    ex_date = next(iter(ex_hits)) if ex_hits else None
-    basis_date = next(iter(basis_hits)) if basis_hits else None
-    if ex_date and basis_date and ex_date != basis_date:
-        return None, None, ("LAYOUT_TRANSITION_SEMANTICS_CONFLICT",)
-    if ex_date:
-        return ex_date, "REGULAR_MARKET_EX_DATE", tuple(diagnostics)
-    if basis_date:
-        return basis_date, "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE", tuple(diagnostics)
-    return None, None, ("NO_LAYOUT_EXPLICIT_TRANSITION",)
+        if index + 1 >= len(lines):
+            continue
+        next_line = lines[index + 1]
+        if _distinct_schedule_row(next_line):
+            continue
+        window = f"{line} {next_line}"
+        semantic = _transition_kind(window)
+        dates = set(_all_dates(window))
+        if semantic and len(dates) == 1:
+            hits.add((next(iter(dates)), semantic))
+
+    if not hits:
+        return None, None, ("NO_LAYOUT_EXPLICIT_TRANSITION",)
+    dates = {value for value, _ in hits}
+    semantics = {semantic for _, semantic in hits}
+    if len(dates) != 1 or len(semantics) != 1:
+        return None, None, ("MULTIPLE_LAYOUT_TRANSITION_DATES_OR_SEMANTICS",)
+    return next(iter(dates)), next(iter(semantics)), ()
 
 
 def parse_residual_document(
