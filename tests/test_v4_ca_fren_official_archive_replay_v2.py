@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+import requests
+
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -47,6 +49,24 @@ def test_complete_ksei_availability_is_explicit() -> None:
 def test_non_ksei_sources_stay_strict() -> None:
     assert not v2._is_ksei_news("https://www.smartfren.com/en/investor/")
     assert v2._is_ksei_news(next(iter(v2._KSEI_URLS)))
+
+
+def test_issuer_transport_exception_is_normalized_not_accepted(monkeypatch, tmp_path) -> None:
+    def fail(*args, **kwargs):
+        raise requests.ConnectionError("read timed out")
+
+    monkeypatch.setattr(v2, "_ORIGINAL_GET", fail)
+    try:
+        v2.get_v2(
+            "https://www.smartfren.com/app/uploads/2024/04/example.pdf",
+            tmp_path / "candidate.bin",
+        )
+    except RuntimeError as exc:
+        text = str(exc)
+        assert "FREN_ISSUER_TRANSPORT_FAILED" in text
+        assert "ConnectionError" in text
+    else:
+        raise AssertionError("issuer transport error must not be treated as evidence")
 
 
 def test_combined_hash_filters_unavailable_empty_payloads() -> None:
