@@ -96,6 +96,18 @@ def scenario_resolved_mask(frame: pd.DataFrame, resolved_reasons: Iterable[str])
 
 
 def per_date_metrics(frame: pd.DataFrame, resolved_mask: pd.Series) -> pd.DataFrame:
+    """Compute date-centric H5/H10/consensus metrics for the supplied frame.
+
+    This helper deliberately validates its output against the number of dates
+    present in *frame*, rather than the production constant of 600.  Production
+    identity is enforced earlier by ``normalize_ledger``; keeping this helper
+    cardinality-relative allows small deterministic unit fixtures without
+    weakening the real-run 600-date hard gate.
+    """
+
+    if len(resolved_mask) != len(frame):
+        raise RuntimeError("SCENARIO_RESOLVED_MASK_LENGTH_MISMATCH")
+    expected_dates = int(frame["signal_date"].nunique())
     work = frame[["ticker", "signal_date", "horizon"]].copy()
     work["scenario_resolved"] = resolved_mask.to_numpy(dtype=bool)
     rows: list[dict[str, object]] = []
@@ -119,8 +131,10 @@ def per_date_metrics(frame: pd.DataFrame, resolved_mask: pd.Series) -> pd.DataFr
         row["consensus_gate"] = bool(len(base) and consensus_rate >= GATE_RATE)
         rows.append(row)
     result = pd.DataFrame(rows)
-    if len(result) != EXPECTED_DATES:
-        raise RuntimeError("SCENARIO_PER_DATE_COUNT_CHANGED")
+    if len(result) != expected_dates:
+        raise RuntimeError(
+            f"SCENARIO_PER_DATE_COUNT_CHANGED:{len(result)}!={expected_dates}"
+        )
     return result
 
 
