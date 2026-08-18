@@ -39,12 +39,13 @@ from idx_trade.v4_ksei_coverage_gap import (
     merge_history,
     read_jsonl,
     sha256_file,
+    ticker_identity_sha256,
     write_jsonl,
 )
 
 
 EXPECTED_PARENT_MANIFEST_SHA256 = "7e86f5e52d7c2ff609ee9dd4be28ff1aefea1e4d5c7d7d9dbffb6abd07185f50"
-EXPECTED_CONFIG_SHA256 = "a749749d799030a74baee0fb0e555f4df45fa86d"
+EXPECTED_GAP_IDENTITY_SHA256 = "1cd050985841519d24f58a38d10014693ff4a843cbd438586237ad4419ffe812"
 DEFAULT_CONFIG = Path("config/v4_ksei_coverage_gap_remediation_v1.json")
 EXPECTED_URL_TEMPLATE = "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}?setLocale=en-US"
 
@@ -58,10 +59,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_provider_config(path: Path) -> dict[str, Any]:
-    if sha256_file(path) != EXPECTED_CONFIG_SHA256:
-        raise RuntimeError("ICBP_PROVIDER_CONFIG_HASH_CHANGED")
     config = gap_runner.load_config(path)
-    gaps = {str(value).upper().strip() for value in config.get("gap_tickers", [])}
+    gap_values = [str(value).upper().strip() for value in config.get("gap_tickers", [])]
+    gaps = set(gap_values)
+    if len(gap_values) != 43 or len(gaps) != 43:
+        raise RuntimeError("ICBP_FROZEN_ORIGINAL_GAP_COUNT_CHANGED")
+    if ticker_identity_sha256(gap_values) != EXPECTED_GAP_IDENTITY_SHA256:
+        raise RuntimeError("ICBP_FROZEN_ORIGINAL_GAP_IDENTITY_CHANGED")
+    if config.get("gap_ticker_identity_sha256") != EXPECTED_GAP_IDENTITY_SHA256:
+        raise RuntimeError("ICBP_CONFIG_GAP_IDENTITY_PIN_CHANGED")
     if TARGET_TICKER not in gaps:
         raise RuntimeError("ICBP_NOT_IN_FROZEN_ORIGINAL_GAP_SET")
     provider = config["provider"]
@@ -126,6 +132,7 @@ def main() -> int:
             "parser_relaxation": False,
             "full_610_recrawl": False,
             "parent_manifest_sha256": parent_manifest_sha,
+            "provider_config_sha256": sha256_file(args.config),
             "request_count": len(request_delta),
             "failure_class": gap_runner.failure_class(request_delta),
             "output_hashes": {"request_delta": sha256_file(request_delta_path)},
@@ -193,6 +200,7 @@ def main() -> int:
         "parent_coverage_sha256": sha256_file(parent_coverage_path),
         "parent_history_sha256": sha256_file(parent_history_path),
         "provider_config_sha256": sha256_file(args.config),
+        "provider_gap_identity_sha256": EXPECTED_GAP_IDENTITY_SHA256,
         "provider_security_url": EXPECTED_URL_TEMPLATE.format(ticker=TARGET_TICKER),
         "security_attempts": len(security_records),
         "request_count": len(request_delta),
