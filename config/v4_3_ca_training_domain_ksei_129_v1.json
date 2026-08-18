@@ -1,0 +1,37 @@
+{
+  "schema_version": "v4_3_ca_training_domain_ksei_129_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_KSEI_129_V1",
+  "outcome_blind": true,
+  "blocked_training_gate": {
+    "manifest_sha256": "b7c87f709d27b8d2860f7cde073d048042810c4de21ce6fd4441e8556d96b46d",
+    "expected_missing_tickers": 129,
+    "missing_ticker_identity_sha256": "28d39c8b1a08585724e6b78d3b76520073043aa7c0f0a53bf6ae1f2fb5bbf58f"
+  },
+  "provider": {
+    "name": "KSEI_PUBLIC_REGISTERED_SECURITY_HISTORY",
+    "home": "https://web.ksei.co.id/",
+    "security_url_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}?setLocale=en-US",
+    "source_substitution": false,
+    "parser_relaxation": false,
+    "transport_library": "curl_cffi",
+    "impersonate": "chrome110",
+    "fresh_session_per_ticker": true,
+    "home_warmup_per_ticker": true,
+    "max_security_attempts_per_ticker": 2,
+    "backoff_seconds": [1.0],
+    "timeout_seconds": 60.0,
+    "inter_ticker_sleep_seconds": 0.2
+  },
+  "hard_boundaries": {
+    "acquire_exact_129_only": true,
+    "full_parent_recrawl": false,
+    "alternate_provider": false,
+    "alternate_ksei_security_identity": false,
+    "parser_or_semantic_relaxation": false,
+    "target_or_rank_materialization": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
