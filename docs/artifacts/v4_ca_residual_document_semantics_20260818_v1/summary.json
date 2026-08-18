@@ -1,0 +1,37 @@
+{
+  "conflict_events": 0,
+  "event_document_candidate_rows": 241,
+  "exact_nonblocking_events": 22,
+  "exact_transition_events": 1,
+  "input_hashes": {
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "residual_needs": "aec30360dad932001d04bbb2fb6a2f772f9cfb1930f5a4336a0f699eb924d4be",
+    "stage2_document_parse_audit": "d7ded2bf29ad8355ff7ce22af89004a4bbe7e7fd0bb01524f582be2ad1e4e796",
+    "stage2_manifest": "5073adb3178a90e71ea9105ddb6ff737896e86a709d1998eefbdb14ca12b6f8c",
+    "stage2_request_records": "96a7a2d6013f6a6f86bc7548c9cda90514eb03a50d9b56039ec15c07969f6155"
+  },
+  "linkage_status_counts": {
+    "EXACT": 1,
+    "EXACT_NON_BLOCKING": 22,
+    "UNRESOLVED": 38
+  },
+  "model_fit": false,
+  "outcome_blind": true,
+  "output_hashes": {
+    "residual_document_audit": "762f283b349256960d1023d91aff2ac162c83323a30b1e40e14cd48838c5f317",
+    "residual_event_document_evidence": "6be49b4fc8a930c9bc61fde64a0652a7cb6233459f5a2e140cb4b4ad0f56592e"
+  },
+  "performance_computed": false,
+  "policy_id": "V4_CA_RESIDUAL_DOCUMENT_SEMANTICS_V1",
+  "prediction_generated": false,
+  "protected_forward_accessed": false,
+  "provider_calls": false,
+  "residual_events": 61,
+  "residual_voluntary_conversion_events": 29,
+  "schema_version": "v4_ca_residual_document_semantics_v1",
+  "source_substitution": false,
+  "status": "V4_CA_RESIDUAL_DOCUMENT_SEMANTICS_COMPLETE",
+  "successful_stage2_raw_documents_verified": 97,
+  "target_or_rank_materialized": false,
+  "unresolved_events": 38
+}
