@@ -59,3 +59,19 @@ def test_direct_fallback_scope_is_narrow() -> None:
     assert v3._DIRECT_FALLBACK_TICKERS == {"AVIA", "SMAR", "SCMA", "ADRO"}
     assert "FREN" not in v3._DIRECT_FALLBACK_TICKERS
     assert "MEGA" not in v3._DIRECT_FALLBACK_TICKERS
+
+
+def test_mega_is_removed_only_from_provider_retry_scope() -> None:
+    original = ("AVIA", "SMAR", "MEGA", "SCMA", "FREN", "ADRO")
+    result = v3.retry_scope_without_zero_support_mega(original)
+    assert result == ("AVIA", "SMAR", "SCMA", "FREN", "ADRO")
+    assert set(result) == set(original) - {"MEGA"}
+
+
+def test_retry_scope_requires_mega_identity() -> None:
+    try:
+        v3.retry_scope_without_zero_support_mega(("AVIA", "SMAR"))
+    except RuntimeError as exc:
+        assert "MEGA_EXPECTED_IN_ORIGINAL_RETRY_SCOPE" in str(exc)
+    else:
+        raise AssertionError("missing MEGA in original retry scope must fail closed")
