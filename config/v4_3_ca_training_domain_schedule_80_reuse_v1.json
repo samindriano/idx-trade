@@ -1,0 +1,39 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_80_reuse_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_80_REUSE_V1",
+  "outcome_blind": true,
+  "parent_attribution": {
+    "manifest_sha256": "7b5663bba944c039ed881d1fd71e7e3b80765c46013792fde5790fb6fa45ec4d",
+    "required_status": "V4_3_CA_RESIDUAL_ATTRIBUTION_SCHEDULE_ONLY_SUFFICIENT",
+    "required_schedule_events": 80,
+    "parent_replay_manifest_sha256": "c115ea0bec59cab4da0cda45ee66ba2be5814e0bb9e854e3f7ecd616edc83861"
+  },
+  "existing_evidence": {
+    "ksei_schedule_v3": {
+      "manifest_path": "docs/artifacts/v4_ca_schedule_evidence_20260818_v3/MANIFEST.json",
+      "manifest_sha256": "5073adb3178a90e71ea9105ddb6ff737896e86a709d1998eefbdb14ca12b6f8c",
+      "evidence_path": "docs/artifacts/v4_ca_schedule_evidence_20260818_v3/schedule_evidence.csv",
+      "evidence_sha256": "c9f396951ae82f2526c6e7943bff2ed359aa488697d3086f1afdb64127e8d3b4"
+    },
+    "residual_document_semantics_v1": {
+      "manifest_path": "docs/artifacts/v4_ca_residual_document_semantics_20260818_v1/MANIFEST.json",
+      "manifest_sha256": "6f2070dbd89307c39579aa9617807c2c8ae746390466476f29504b31ae4988a5",
+      "evidence_path": "docs/artifacts/v4_ca_residual_document_semantics_20260818_v1/residual_event_document_evidence.csv",
+      "evidence_sha256": "6be49b4fc8a930c9bc61fde64a0652a7cb6233459f5a2e140cb4b4ad0f56592e"
+    }
+  },
+  "hard_boundaries": {
+    "network_calls": false,
+    "provider_calls": false,
+    "source_substitution": false,
+    "fuzzy_event_matching": false,
+    "record_or_distribution_date_as_transition": false,
+    "price_inference": false,
+    "pass_preserving_subset_selection": false,
+    "target_or_rank_materialization": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
