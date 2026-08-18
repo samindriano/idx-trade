@@ -29,6 +29,28 @@ def test_ksei_schedule_accepts_only_explicit_regular_negotiated_ex_date(monkeypa
     assert result["reference_no"] == "KSEI-7000/JKU/0424"
 
 
+def test_ksei_schedule_accepts_english_may_trading_end(monkeypatch) -> None:
+    monkeypatch.setattr(fren, "sha256_bytes", lambda payload: fren.EXPECTED_KSEI_RIGHTS_SCHEDULE_SHA256)
+    monkeypatch.setattr(
+        fren,
+        "pdf_text",
+        lambda payload: _schedule_text().replace("6 Mei 2024", "6 May 2024"),
+    )
+    result = fren.verify_ksei_fren_rights_schedule_pdf(b"fake")
+    assert result["trading_end"] == "2024-05-06"
+
+
+def test_ksei_schedule_missing_trading_end_fails_closed(monkeypatch) -> None:
+    monkeypatch.setattr(fren, "sha256_bytes", lambda payload: fren.EXPECTED_KSEI_RIGHTS_SCHEDULE_SHA256)
+    monkeypatch.setattr(
+        fren,
+        "pdf_text",
+        lambda payload: _schedule_text().replace("6 Mei 2024", "tanggal akhir tidak tersedia"),
+    )
+    with pytest.raises(RuntimeError, match="RIGHT_TRADING_END_MISSING"):
+        fren.verify_ksei_fren_rights_schedule_pdf(b"fake")
+
+
 def test_ksei_schedule_record_date_without_explicit_ex_label_fails_closed(monkeypatch) -> None:
     monkeypatch.setattr(fren, "sha256_bytes", lambda payload: fren.EXPECTED_KSEI_RIGHTS_SCHEDULE_SHA256)
     monkeypatch.setattr(
