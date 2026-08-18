@@ -1,0 +1,17 @@
+{
+  "input_hashes": {
+    "continuity_ledger": "9dce85c55a9e8a9e1effba5c7e0d24faa150bfb0d70c0162cfb85955d8a435ec",
+    "schedule_evidence_needs": "1988f2bb679b09835e045235fa7aa46f4d8c62cf9531e76a5b5b889d848a127a"
+  },
+  "outcome_blind": true,
+  "output_hashes": {
+    "greedy_selection_trace": "a9cbed0220605b9e6639ac4df5bf4dfae5743c04c27f0ed8f6e53d02552242d8",
+    "schedule_event_impact": "c8abddfb4004b5fc2a3daf2d13f90129d1287a3c4e987a952603aaaa2c3a72b1",
+    "selected_schedule_event_subset": "f6650daf7256196f976b0a9d161dbf0cf896d0d349306be4fe4c76b1d2168529",
+    "selected_subset_per_date": "483408e1ebc8c4418b28c71924e4f34e22e23b3025ca0db893cbcee18eb24c4e"
+  },
+  "provider_calls": false,
+  "schema_version": "v4_ca_schedule_event_impact_attribution_manifest_v1",
+  "status": "V4_CA_SCHEDULE_EVENT_IMPACT_ATTRIBUTION_COMPLETE",
+  "summary_sha256": "b38be0874c61d6ef071a3ccb5cd873fea440a360e9d25d4ddf1afe6951f668d3"
+}
