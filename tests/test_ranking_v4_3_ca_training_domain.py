@@ -171,5 +171,5 @@ def test_runner_is_outcome_blind_and_does_not_import_model_execution() -> None:
     )
     for token in forbidden:
         assert token not in source
-    assert "historical_target_loaded\": False" in source
-    assert "historical_model_fit\": False" in source
+    assert '"historical_target_loaded": False' in source
+    assert '"historical_model_fit": False' in source
