@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
 import pandas as pd
 
-import run_v4_3_ca_training_domain_residual_attribution as v1
-from run_v4_3_ca_training_domain_residual_attribution_v2 import (
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_ROOT = ROOT / "scripts"
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
+
+import run_v4_3_ca_training_domain_residual_attribution as v1  # noqa: E402
+from run_v4_3_ca_training_domain_residual_attribution_v2 import (  # noqa: E402
     prepare_inputs_compact,
     schedule_event_impact_from_audit,
 )
@@ -104,10 +113,9 @@ def test_schedule_impact_fails_if_reason_has_no_event_audit_identity() -> None:
 
 
 def test_v2_wrapper_does_not_relax_scientific_scenarios() -> None:
-    source = open(
-        "scripts/run_v4_3_ca_training_domain_residual_attribution_v2.py",
-        encoding="utf-8",
-    ).read()
+    source = (
+        ROOT / "scripts" / "run_v4_3_ca_training_domain_residual_attribution_v2.py"
+    ).read_text(encoding="utf-8")
     forbidden = (
         "requests.get",
         "curl_cffi",
