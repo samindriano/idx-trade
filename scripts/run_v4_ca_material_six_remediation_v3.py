@@ -24,8 +24,6 @@ for value in (REPO_ROOT / "src", SCRIPTS_ROOT):
     if str(value) not in sys.path:
         sys.path.insert(0, str(value))
 
-import pandas as pd
-
 import run_v4_ca_material_six_remediation as base
 import run_v4_ca_material_six_remediation_v2 as v2
 from idx_trade.v4_ca_event_windows import EventSemantic, event_identity, source_dates
@@ -63,9 +61,12 @@ def recover_ticker_with_direct_security_fallback(*, ticker: str, provider, raw_r
             response,
             path=path,
             ticker=target,
-            request_kind="SECURITY_HISTORY_DIRECT_FALLBACK",
+            request_kind="SECURITY_HISTORY",
             attempt=1,
             requested_url=security_url,
+        )
+        record["transport_remediation"] = (
+            "DIRECT_EXACT_SECURITY_URL_AFTER_HOME_WARMUP_FAILURE"
         )
         records.append(record)
         if record["status_code"] != 200 or record["bytes"] <= 0:
@@ -79,21 +80,25 @@ def recover_ticker_with_direct_security_fallback(*, ticker: str, provider, raw_r
             source_url=record["final_url"],
             source_sha256=record["sha256"],
         )
-        record["transport_remediation"] = "DIRECT_EXACT_SECURITY_URL_AFTER_HOME_WARMUP_FAILURE"
         return record, records, parsed.rows
     except Exception as exc:
-        if records and records[-1].get("request_kind") == "SECURITY_HISTORY_DIRECT_FALLBACK":
+        if records and records[-1].get("request_kind") == "SECURITY_HISTORY":
             records[-1]["error"] = f"{type(exc).__name__}:{exc}"
-        else:
-            records.append(
-                base.gap_runner.error_record(
-                    ticker=target,
-                    request_kind="SECURITY_HISTORY_DIRECT_FALLBACK",
-                    attempt=1,
-                    requested_url=security_url,
-                    exc=exc,
-                )
+            records[-1]["transport_remediation"] = (
+                "DIRECT_EXACT_SECURITY_URL_AFTER_HOME_WARMUP_FAILURE"
             )
+        else:
+            failure = base.gap_runner.error_record(
+                ticker=target,
+                request_kind="SECURITY_HISTORY",
+                attempt=1,
+                requested_url=security_url,
+                exc=exc,
+            )
+            failure["transport_remediation"] = (
+                "DIRECT_EXACT_SECURITY_URL_AFTER_HOME_WARMUP_FAILURE"
+            )
+            records.append(failure)
         return None, records, tuple()
 
 
