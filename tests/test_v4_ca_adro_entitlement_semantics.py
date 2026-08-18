@@ -7,6 +7,7 @@ from idx_trade.v4_ca_adro_entitlement_semantics import (
     ADRO_TRANSITION_DATE,
     AdroEntitlementEvidence,
     _norm,
+    _verify_adro_normalized_texts,
     apply_adro_entitlement_evidence,
     is_exact_adro_pups_row,
 )
@@ -48,6 +49,31 @@ def _evidence() -> AdroEntitlementEvidence:
     return AdroEntitlementEvidence(
         prospectus_sha256="a" * 64,
         egms_minutes_sha256="b" * 64,
+    )
+
+
+def _prospectus_text(*, direct_clause: bool = False, record_date: str = "29 november 2024") -> str:
+    core = (
+        "penawaran umum oleh pemegang saham pt adaro andalan indonesia tbk "
+        f"daftar pemegang saham {record_date} "
+        "setiap pemegang saham yang memiliki 4.389 saham perseroan akan mendapatkan "
+        "1.000 hak membeli saham tanggal distribusi hak membeli saham 2 desember 2024"
+    )
+    if direct_clause:
+        core += (
+            " pihak yang dapat berpartisipasi dalam pups ini pemegang saham perseroan "
+            "memperoleh dividen berdasarkan keputusan rapat umum pemegang saham luar biasa "
+            "perseroan tanggal 18 november 2024"
+        )
+    return core
+
+
+def _egms_text(*, ex_date: str = "november 28th, 2024") -> str:
+    return (
+        "distribution schedule of the additional final cash dividend "
+        "the date for recording the shareholders who are entitled to the additional final cash dividend "
+        "november 29th, 2024 regular and negotiated market cum dividend ex dividend "
+        f"november 26th, 2024 {ex_date}"
     )
 
 
@@ -111,3 +137,39 @@ def test_pdf_normalization_collapses_layout_and_ordinal_artifacts() -> None:
     assert "memperoleh dividen berdasarkan keputusan" in normalized
     assert "rapat umum pemegang saham luar biasa perseroan tanggal 18 november 2024" in normalized
     assert "november 29th, 2024" in normalized
+
+
+def test_direct_clause_route_is_accepted() -> None:
+    method = _verify_adro_normalized_texts(
+        _prospectus_text(direct_clause=True), _egms_text()
+    )
+    assert method == "DIRECT_PROSPECTUS_DIVIDEND_ENTITLEMENT_CLAUSE"
+
+
+def test_boxed_clause_extraction_loss_uses_exact_record_set_identity() -> None:
+    method = _verify_adro_normalized_texts(
+        _prospectus_text(direct_clause=False), _egms_text()
+    )
+    assert method == "EXACT_2024-11-29_SHAREHOLDER_RECORD_SET_IDENTITY"
+
+
+def test_record_set_mismatch_fails_closed() -> None:
+    try:
+        _verify_adro_normalized_texts(
+            _prospectus_text(record_date="28 november 2024"), _egms_text()
+        )
+    except RuntimeError as exc:
+        assert "RECORD_SET_IDENTITY_MISSING" in str(exc)
+    else:
+        raise AssertionError("ADRO record-set mismatch must fail closed")
+
+
+def test_egms_ex_date_mismatch_fails_closed() -> None:
+    try:
+        _verify_adro_normalized_texts(
+            _prospectus_text(), _egms_text(ex_date="november 27th, 2024")
+        )
+    except RuntimeError as exc:
+        assert "EGMS_EX_DIVIDEND_SCHEDULE_MISSING" in str(exc)
+    else:
+        raise AssertionError("ADRO explicit ex-date mismatch must fail closed")
