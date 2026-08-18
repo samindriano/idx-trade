@@ -1,0 +1,1 @@
+Child branch must start from commit `1af82a4372af8dd0bca829c88a313ece51f993f2` or a fast-forward descendant containing the complete schedule-59 diagnosis/prep lineage.
