@@ -8,14 +8,14 @@ explicit regular-market transition could lose its row/date association.
 This module repairs only those parser mechanics. It does not fetch providers,
 does not infer from prices, and never promotes Record/Distribution dates to a
 transition. Exact transition dates are admitted only when the semantic anchor
-and one date occur on the same layout-preserved PDF line.
+and one date occur on the same layout- or geometry-preserved PDF row.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
 import re
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from idx_trade.v4_ca_schedule_semantics import (
     ParsedScheduleTransition,
@@ -67,6 +67,51 @@ def strict_ticker_from_layout(text: str, subject: str | None = None) -> str | No
         if len(tokens) == 1:
             return next(iter(tokens))
     return None
+
+
+def geometry_lines(
+    fragments: Sequence[tuple[float, float, str]],
+    *,
+    y_tolerance: float = 4.0,
+) -> list[str]:
+    """Rebuild visual rows from positioned PDF text fragments.
+
+    ``pypdf`` visitor callbacks expose text-matrix x/y coordinates. KSEI table
+    labels and their dates may be emitted as separate fragments even though
+    they share one visual row. This function groups only near-identical y
+    baselines and then orders fragments left-to-right. It never moves a date
+    between different visual rows.
+    """
+
+    if y_tolerance <= 0:
+        raise ValueError("Y_TOLERANCE_MUST_BE_POSITIVE")
+    items = [
+        (float(x), float(y), clean(text))
+        for x, y, text in fragments
+        if clean(text)
+    ]
+    groups: list[dict[str, object]] = []
+    for x, y, text in sorted(items, key=lambda item: (-item[1], item[0])):
+        target: dict[str, object] | None = None
+        for group in groups:
+            if abs(float(group["y"]) - y) <= y_tolerance:
+                target = group
+                break
+        if target is None:
+            target = {"y": y, "parts": []}
+            groups.append(target)
+        parts = target["parts"]
+        assert isinstance(parts, list)
+        parts.append((x, text))
+
+    lines: list[str] = []
+    for group in sorted(groups, key=lambda value: -float(value["y"])):
+        parts = group["parts"]
+        assert isinstance(parts, list)
+        line = clean(" ".join(text for _, text in sorted(parts, key=lambda value: value[0])))
+        if line:
+            lines.append(line)
+    return lines
 
 
 def _dates_on_line(line: str) -> list[str]:
@@ -128,7 +173,7 @@ def strict_layout_transition(text: str) -> tuple[str | None, str | None, tuple[s
 
 
 def repair_layout_parse(text: str, parsed: ParsedScheduleTransition) -> ParsedScheduleTransition:
-    """Repair identity and row/date semantics from layout-preserved official text."""
+    """Repair identity and row/date semantics from row-preserved official text."""
 
     normalized = str(text or "").replace("\r", "")
     lines = normalized.splitlines()
