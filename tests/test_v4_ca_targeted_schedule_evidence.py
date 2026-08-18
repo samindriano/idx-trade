@@ -2,8 +2,18 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import sys
 
 import pandas as pd
+
+# The targeted runners intentionally retain direct-script sibling imports for
+# the local Windows execution path. When pytest imports a runner through the
+# ``scripts.*`` package namespace, add that same scripts directory explicitly
+# so collection exercises the runtime module without changing provider/science
+# semantics.
+SCRIPTS_ROOT = Path(__file__).resolve().parents[1] / "scripts"
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
 
 import idx_trade.v4_ca_targeted_schedule_evidence as targeted
 from idx_trade.v4_ca_event_windows import EventSemantic
