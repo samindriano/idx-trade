@@ -19,6 +19,10 @@ def test_config_pins_parent_and_keeps_firewall() -> None:
     assert cfg["adjudication"]["accepted_transition_semantic"] == (
         "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"
     )
+    assert cfg["official_calendar"]["filename"] == "official_exchange_sessions_1260.csv"
+    assert cfg["official_calendar"]["sha256"] == (
+        "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+    )
     for value in cfg["hard_boundaries"].values():
         assert value is False
 
