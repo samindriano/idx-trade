@@ -1,0 +1,64 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_59_idx_announcements_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_59_IDX_ANNOUNCEMENTS_V1",
+  "outcome_blind": true,
+  "diagnosis_parent": {
+    "manifest_sha256": "8c717e8f4bf7fb69edfe366cd0f219ef0c7d9f812006c409ed682eb6e9c9fb12",
+    "status": "V4_3_CA_SCHEDULE_59_FAILURE_MODE_CENSUS_COMPLETE",
+    "residual_events": 59,
+    "residual_event_identity_sha256": "f1c587eca59a9e7ec68cb8b1b2fc0980489a8f8a1b608f10403f2cc9f6d85707"
+  },
+  "prior_news_adjudication": {
+    "manifest_sha256": "cda56ccd03949aa2f95030179e14ee07328072b1ed59b6b7845b9e2257e07c76",
+    "status": "V4_3_CA_SCHEDULE_59_KSEI_NEWS_OFFLINE_ADJUDICATION_COMPLETE",
+    "resolved_events": 0,
+    "unresolved_events": 59,
+    "conflict_events": 0
+  },
+  "provider": {
+    "name": "IDX_OFFICIAL_LISTED_COMPANY_ANNOUNCEMENTS",
+    "base_url": "https://www.idx.co.id",
+    "endpoint": "/primary/ListedCompany/GetAnnouncement",
+    "referer": "https://www.idx.co.id/id/perusahaan-tercatat/ringkasan-perusahaan/",
+    "language": "id-id",
+    "emiten_type": "*",
+    "page_size": 200,
+    "date_window_days_before": 180,
+    "date_window_days_after": 180,
+    "max_pages_per_ticker_window": 5,
+    "max_attempts": 3,
+    "backoff_seconds": [1.0, 3.0],
+    "inter_request_sleep_seconds": 0.75,
+    "timeout_seconds": 40.0
+  },
+  "candidate_terms": {
+    "stock split": ["stock split", "pemecahan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
+    "reverse stock": ["reverse stock", "reverse split", "penggabungan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
+    "reverse stock split": ["reverse stock", "reverse split", "penggabungan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
+    "reverse split": ["reverse stock", "reverse split", "penggabungan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
+    "merger": ["merger", "penggabungan", "hasil penggabungan", "efektif penggabungan", "jadwal pelaksanaan"],
+    "mandatory conversion": ["mandatory conversion", "konversi", "perubahan efek", "jadwal pelaksanaan"],
+    "capital restructuring": ["restrukturisasi modal", "pengurangan modal", "perubahan modal", "nilai nominal", "jadwal pelaksanaan"],
+    "capital reduction": ["pengurangan modal", "restrukturisasi modal", "perubahan modal", "nilai nominal", "jadwal pelaksanaan"],
+    "voluntary conversion": ["penawaran tender", "tender", "pembelian kembali", "buyback", "konversi", "jadwal pelaksanaan"]
+  },
+  "generic_candidate_terms": ["aksi korporasi", "corporate action", "jadwal", "pelaksanaan"],
+  "allowed_attachment_hosts": ["www.idx.co.id", "idx.co.id"],
+  "hard_boundaries": {
+    "pass_preserving_subset_selection": false,
+    "event_impact_ranking_for_discovery": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "source_date_inference": false,
+    "source_substitution": false,
+    "external_search_engine": false,
+    "semantic_admission_during_acquisition": false,
+    "parser_or_semantic_relaxation_after_provider_result": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
