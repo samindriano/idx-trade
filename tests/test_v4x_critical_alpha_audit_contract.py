@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MARKET_AUDIT = ROOT / "scripts" / "audit_v4x_frozen_market_inputs.py"
 RESULT_AUDIT = ROOT / "scripts" / "audit_v4x_consumed_result_consistency.py"
+NULL_AUDIT = ROOT / "scripts" / "audit_v4x_consumed_result_nulls.py"
 ADVERSARIAL = ROOT / "tests" / "test_v4x_critical_alpha_audit.py"
 
 
@@ -15,16 +16,18 @@ def source(path: Path) -> str:
 
 
 def test_audit_scripts_parse_and_pin_consumed_inputs() -> None:
-    for path in (MARKET_AUDIT, RESULT_AUDIT, ADVERSARIAL):
+    for path in (MARKET_AUDIT, RESULT_AUDIT, NULL_AUDIT, ADVERSARIAL):
         ast.parse(source(path))
-    assert "05c00e5ab42adf34f9bffff4dd5237043d6d281b3e0abe1571f14a59eeb16fef" in source(RESULT_AUDIT)
+    manifest_sha = "05c00e5ab42adf34f9bffff4dd5237043d6d281b3e0abe1571f14a59eeb16fef"
+    assert manifest_sha in source(RESULT_AUDIT)
+    assert manifest_sha in source(NULL_AUDIT)
     assert "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76" in source(MARKET_AUDIT)
     assert "a1dae0714971904b266a380be6bb96a2a4976068c9d60c54c8c43746826f7cab" in source(MARKET_AUDIT)
     assert "2aeab3906434f48c15d9ed7a8fb073fdd3bafff362cedcc7b46f9bf16482ca41" in source(MARKET_AUDIT)
 
 
 def test_audits_do_not_fit_score_or_call_providers() -> None:
-    combined = source(MARKET_AUDIT) + source(RESULT_AUDIT)
+    combined = source(MARKET_AUDIT) + source(RESULT_AUDIT) + source(NULL_AUDIT)
     forbidden = (
         "fit_v4_head(",
         "score_v4_head(",
@@ -64,3 +67,11 @@ def test_market_audit_checks_row_lag_drift_and_open_scale() -> None:
     assert "longer_than_intended_span" in body
     assert "finite_open_outside_canonical_low_high" in body
     assert "derivative_overlay_finite_conflicts" in body
+
+
+def test_null_audit_is_within_date_and_common_support() -> None:
+    body = source(NULL_AUDIT)
+    assert "rng.permutation(y)" in body
+    assert "TARGET_BOTH_AVAILABLE" in body
+    assert "observed_mean_common_support_spearman_ic" in body
+    assert "empirical_p_one_sided" in body
