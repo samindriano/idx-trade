@@ -1,14 +1,14 @@
 """Scoped legacy canonical-EOD compatibility for the V4-X1 automation path.
 
-The canonical hardening verifier remains authoritative. A legacy DATA_READY row
-that cannot satisfy the modern manifest contract is accepted only when its DB
-core artifacts are still byte-identical and an immutable, strictly verified
-calendar-parent attestation exists for that exact session.
+The canonical hardening verifier remains authoritative. Legacy DATA_READY rows
+are accepted only when their DB core artifacts remain byte-identical and either:
+(1) the accepted legacy artifact contract passes with the original calendar
+    bytes still present at the declared path, or
+(2) an immutable, strictly verified calendar-parent attestation exists.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 from typing import Any, Callable
@@ -18,6 +18,7 @@ from . import v4_x1_eod_pipeline as pipeline
 from .canonical_eod_calendar_parent_attestation import (
     ATTESTATION_FILENAME,
     ATTESTATION_NAMESPACE,
+    _artifact_contract,
     verify_canonical_eod_calendar_parent_attestation,
 )
 from .provenance import sha256_file
@@ -51,6 +52,27 @@ def _db_core_artifacts_still_exact(row: Any) -> bool:
         return False
 
 
+def _legacy_direct_parent_still_exact(row: Any) -> bool:
+    """Validate an old manifest whose original shared calendar still matches."""
+
+    try:
+        session = str(row["session_date"])
+        manifest_path = Path(str(row["manifest_path"])).expanduser().resolve()
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict):
+            return False
+        _artifact_contract(manifest, session_dir=manifest_path.parent, session=session)
+
+        calendar_value = manifest.get("calendar_path")
+        expected_hash = manifest.get("calendar_sha256")
+        if not isinstance(calendar_value, str) or not isinstance(expected_hash, str):
+            return False
+        calendar = Path(calendar_value).expanduser().resolve()
+        return calendar.is_file() and sha256_file(calendar) == expected_hash
+    except Exception:
+        return False
+
+
 def build_scoped_ready_verifier(
     runtime_root: str | Path,
     strict_verifier: Callable[[Any], bool],
@@ -67,6 +89,14 @@ def build_scoped_ready_verifier(
             session = str(row["session_date"])
             if not _db_core_artifacts_still_exact(row):
                 return False
+
+            # Legacy sessions whose original calendar bytes are still present
+            # need no new provenance artifact.
+            if _legacy_direct_parent_still_exact(row):
+                return True
+
+            # If the shared calendar moved on, only the already accepted
+            # immutable attestation contract can bridge that missing parent.
             proof = attestation_path(root, session)
             if not proof.is_file():
                 return False
@@ -104,7 +134,7 @@ def run_with_legacy_attestation_compat(
         monitor._verify_ready_row = original
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser():
     parser = pipeline.build_parser()
     parser.description = "Canonical EOD + frozen V4-X1 pipeline with strict legacy attestation compatibility"
     return parser
