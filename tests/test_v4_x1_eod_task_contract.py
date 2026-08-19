@@ -11,10 +11,21 @@ UPDATE_TASK_PS1 = ROOT / "scripts" / "update_forward_eod_task_v4_x1.ps1"
 def test_pipeline_wrapper_invokes_only_canonical_eod_x1_module() -> None:
     source = PIPELINE_PS1.read_text(encoding="utf-8")
     assert "idx_trade.v4_x1_eod_pipeline" in source
-    assert "-RuntimeRoot" in source
-    assert "-X1ModelRoot" in source
-    assert "-RepoRoot" in source
-    assert "-PythonExe" in source
+
+    # PowerShell-facing parameters are declared as variables, while the
+    # Python module receives GNU-style CLI flags.  Verify both sides of the
+    # forwarding contract rather than looking for non-existent '-RuntimeRoot'
+    # literals in the wrapper body.
+    assert '[string]$RuntimeRoot' in source
+    assert '[string]$X1ModelRoot' in source
+    assert '[string]$RepoRoot' in source
+    assert '[string]$PythonExe' in source
+    assert "--runtime-root $resolvedRuntime" in source
+    assert "--x1-model-root $resolvedModel" in source
+    assert "--repo-root $resolvedRepo" in source
+    assert "& $PythonExe -m idx_trade.v4_x1_eod_pipeline" in source
+
+    # The wrapper must not become a second market-data/provider path.
     assert "fetch_stock_summary" not in source
     assert "download_daily" not in source
 
