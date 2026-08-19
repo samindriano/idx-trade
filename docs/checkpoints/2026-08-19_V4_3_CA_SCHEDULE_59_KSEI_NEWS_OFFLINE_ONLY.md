@@ -1,0 +1,1 @@
+Offline-only boundary: no network/provider call is authorized by the schedule-59 KSEI News adjudication runner. Any provider failure or missing raw document remains unresolved and is not retried inside adjudication.
