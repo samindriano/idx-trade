@@ -32,6 +32,13 @@
     "timeout_seconds": 40.0
   },
   "candidate_terms": {
+    "right distribution": ["hmetd", "right issue", "rights issue", "hak memesan efek terlebih dahulu", "ex right", "jadwal pelaksanaan"],
+    "stock dividend": ["dividen saham", "stock dividend", "saham bonus", "jadwal pelaksanaan"],
+    "mixed dividend": ["dividen saham", "dividen campuran", "mixed dividend", "jadwal pelaksanaan"],
+    "share bonus": ["saham bonus", "bonus saham", "share bonus", "jadwal pelaksanaan"],
+    "bonus shares": ["saham bonus", "bonus saham", "bonus shares", "jadwal pelaksanaan"],
+    "bonus share": ["saham bonus", "bonus saham", "bonus share", "jadwal pelaksanaan"],
+    "bonus distribution": ["saham bonus", "bonus saham", "distribusi bonus", "jadwal pelaksanaan"],
     "stock split": ["stock split", "pemecahan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
     "reverse stock": ["reverse stock", "reverse split", "penggabungan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
     "reverse stock split": ["reverse stock", "reverse split", "penggabungan saham", "nilai nominal", "nominal baru", "jadwal pelaksanaan"],
