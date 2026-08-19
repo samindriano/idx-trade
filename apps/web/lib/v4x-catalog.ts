@@ -14,16 +14,23 @@ export const V4X_ALPHA = {
   modelBundleManifestSha256: "3d5420dd69f348b7e712b6cca3b11f4673f02581c493e04be6ce9da693125094",
   historicalParent: "V4-3R",
 
-  // Frozen V4-3R chart/protocol aggregates. These are medians of six fold-mean
-  // daily ICs and are retained so the original historical chart stays exact.
-  historicalConsensusIc: 0.09775243938276076,
-  historicalControlConsensusIc: 0.08415844149089491,
+  // Audited common-support values drive generic frontend summary cards. The
+  // fold chart itself remains pinned separately in V4X_CONSENSUS_FOLDS.
+  historicalConsensusIc: 0.09545975125676774,
+  historicalControlConsensusIc: 0.08979323509925058,
+  historicalConsensusRelativeLift: 0.06310627021349466,
+
+  // H5/H10 frozen fold-median values remain here because the current Overview
+  // copy explicitly labels them as medians. Audited common-support H5/H10 are
+  // stored separately below.
   historicalH5Ic: 0.07891122009359626,
   historicalH10Ic: 0.09095594288451861,
-  historicalConsensusRelativeLift: 0.161534,
 
-  // Preferred audited historical headline: mean daily Spearman after restricting
-  // alpha and realized target to identical observable names and reranking both.
+  // Original frozen V4-3R protocol aggregates retained for exact lineage.
+  frozenMedianFoldConsensusIc: 0.09775243938276076,
+  frozenControlMedianFoldConsensusIc: 0.08415844149089491,
+
+  // Preferred audited historical evidence.
   auditedCommonSupportConsensusIc: 0.09545975125676774,
   auditedCommonSupportControlConsensusIc: 0.08979323509925058,
   auditedCommonSupportH5Ic: 0.07493424533009098,
