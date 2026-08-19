@@ -35,11 +35,32 @@ def test_scoped_verifier_prefers_modern_strict_verifier(tmp_path: Path, monkeypa
     assert verify(row) is True
 
 
+def test_scoped_verifier_accepts_verified_modern_calendar_extension(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    row = _row(tmp_path)
+    monkeypatch.setattr(compat, "_modern_calendar_extension_compatible", lambda root, candidate: True)
+    monkeypatch.setattr(
+        compat,
+        "_legacy_direct_parent_still_exact",
+        lambda _: (_ for _ in ()).throw(AssertionError("legacy path must not be consulted")),
+    )
+    monkeypatch.setattr(
+        compat,
+        "verify_canonical_eod_calendar_parent_attestation",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("attestation must not be consulted")),
+    )
+    verify = compat.build_scoped_ready_verifier(tmp_path, lambda _: False)
+    assert verify(row) is True
+
+
 def test_scoped_verifier_accepts_legacy_direct_parent_without_attestation(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     row = _row(tmp_path)
+    monkeypatch.setattr(compat, "_modern_calendar_extension_compatible", lambda root, candidate: False)
     monkeypatch.setattr(compat, "_legacy_direct_parent_still_exact", lambda _: True)
     monkeypatch.setattr(
         compat,
@@ -50,8 +71,13 @@ def test_scoped_verifier_accepts_legacy_direct_parent_without_attestation(
     assert verify(row) is True
 
 
-def test_scoped_verifier_requires_attestation_when_strict_and_direct_fail(tmp_path: Path) -> None:
+def test_scoped_verifier_requires_attestation_when_all_compat_checks_fail(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     row = _row(tmp_path)
+    monkeypatch.setattr(compat, "_modern_calendar_extension_compatible", lambda root, candidate: False)
+    monkeypatch.setattr(compat, "_legacy_direct_parent_still_exact", lambda _: False)
     verify = compat.build_scoped_ready_verifier(tmp_path, lambda _: False)
     assert verify(row) is False
 
@@ -65,6 +91,9 @@ def test_scoped_verifier_accepts_only_verified_attestation_with_exact_db_core(
     proof.parent.mkdir(parents=True, exist_ok=True)
     proof.write_text("{}\n", encoding="utf-8")
     seen = {}
+
+    monkeypatch.setattr(compat, "_modern_calendar_extension_compatible", lambda root, candidate: False)
+    monkeypatch.setattr(compat, "_legacy_direct_parent_still_exact", lambda _: False)
 
     def verified(path, **kwargs):
         seen["path"] = Path(path).resolve()
