@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FINAL_RANKER, O2_CHALLENGER, V2_CHAMPION } from "@/lib/model-catalog";
+import { V2_CHAMPION } from "@/lib/model-catalog";
+import { V4X_ALPHA } from "@/lib/v4x-catalog";
 
 type SessionState = "AVAILABLE" | "FETCHING" | "DATA_READY" | "DATA_FAILED";
 
@@ -42,37 +43,40 @@ type StatusResponse = {
 
 type MonitoredModel = {
   id: string;
-  route: "o2" | "v3" | "v2";
+  route: "v4x" | "v2";
   shortName: string;
   generation: string;
   featureCount: number;
-  modelSha256: string;
+  fingerprint: string;
   forwardTargetSessions: number;
   role: string;
   note: string;
-  accent: "challenger" | "incumbent" | "baseline";
+  accent: "challenger" | "baseline";
 };
 
 const MONITORED_MODELS: readonly MonitoredModel[] = [
   {
-    ...O2_CHALLENGER,
-    route: "o2",
-    role: "Primary challenger",
-    note: "Historical leader; monitored on the same sessions as both references.",
+    id: V4X_ALPHA.id,
+    route: "v4x",
+    shortName: V4X_ALPHA.shortName,
+    generation: V4X_ALPHA.generation,
+    featureCount: V4X_ALPHA.featureCount,
+    fingerprint: V4X_ALPHA.modelBundleManifestSha256,
+    forwardTargetSessions: V4X_ALPHA.forwardTargetSessions,
+    role: "Current alpha",
+    note: "Frozen Geometry3 final refit. Forward outcomes remain locked until the 100-session X1 gate matures.",
     accent: "challenger",
   },
   {
-    ...FINAL_RANKER,
-    route: "v3",
-    role: "Incumbent reference",
-    note: "Current incumbent; retained as the prospective comparison anchor.",
-    accent: "incumbent",
-  },
-  {
-    ...V2_CHAMPION,
+    id: V2_CHAMPION.id,
     route: "v2",
-    role: "Historical baseline",
-    note: "Original champion; kept in the monitoring lane for a fair three-model record.",
+    shortName: V2_CHAMPION.shortName,
+    generation: V2_CHAMPION.generation,
+    featureCount: V2_CHAMPION.featureCount,
+    fingerprint: V2_CHAMPION.modelSha256,
+    forwardTargetSessions: V2_CHAMPION.forwardTargetSessions,
+    role: "Reference model",
+    note: "Original V2 champion retained as the durable forward reference.",
     accent: "baseline",
   },
 ];
@@ -157,9 +161,9 @@ export default function MonitoringPage() {
   );
 
   const sharedScoredDates = useMemo(() => {
-    const [first, ...rest] = MONITORED_MODELS.map((model) => modelDates[model.id] ?? new Set<string>());
-    if (!first) return new Set<string>();
-    return new Set([...first].filter((date) => rest.every((dates) => dates.has(date))));
+    const v4x = modelDates[V4X_ALPHA.id] ?? new Set<string>();
+    const v2 = modelDates[V2_CHAMPION.id] ?? new Set<string>();
+    return new Set([...v4x].filter((date) => v2.has(date)));
   }, [modelDates]);
 
   const latestReadySession = useMemo(
@@ -195,7 +199,6 @@ export default function MonitoringPage() {
           <nav className="primaryNav" aria-label="Primary navigation">
             <a href="/#overview">Overview</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
-            <a href="/compare">Compare</a>
           </nav>
         </div>
       </header>
@@ -203,67 +206,51 @@ export default function MonitoringPage() {
       <div className="page monitoringPage">
         <section className="monitorHero">
           <div>
-            <p className="eyebrow">FORWARD MODEL OBSERVATORY</p>
+            <p className="eyebrow">V4-X · OUTCOME-BLIND</p>
             <h1>Forward Monitoring</h1>
-            <p className="heroCopy">One automated session archive, three monitored ranking models, and one shared prospective record.</p>
+            <p className="heroCopy">One canonical EOD archive. V4-X is the current alpha candidate; V2 stays as the forward reference.</p>
           </div>
         </section>
 
         <section className="monitorSummaryGrid monitorSummaryGridThree" aria-label="Monitoring summary">
-          <article className="summaryBlock prominent"><span>Monitored lanes</span><strong>3</strong><small>O2 · V3-B · V2</small></article>
+          <article className="summaryBlock prominent"><span>V4-X forward</span><strong>{statusLoading ? "—" : modelDates[V4X_ALPHA.id]?.size ?? 0}</strong><small>/ {V4X_ALPHA.forwardTargetSessions} sessions · vault locked</small></article>
           <article className="summaryBlock"><span>Latest session</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>{status?.data_ready_sessions ?? 0} data-ready session(s)</small></article>
-          <article className="summaryBlock"><span>Model artifacts</span><strong>{statusLoading ? "—" : latestArtifactModelCount}</strong><small>on the latest session</small></article>
+          <article className="summaryBlock"><span>Active model artifacts</span><strong>{statusLoading ? "—" : latestArtifactModelCount}</strong><small>V4-X + V2 on latest session</small></article>
         </section>
 
         <section className="surface autoArchivePanel" aria-labelledby="archive-title">
           <div className="autoArchiveHead">
-            <div>
-              <span className="panelKicker">AUTOMATED SESSION ARCHIVE</span>
-              <h2 id="archive-title">Automated market data</h2>
-            </div>
-            <div className={`archiveConnection ${configured && connected ? "isConnected" : "isUnavailable"}`}>
-              <i aria-hidden="true" />
-              <strong>{runtimeLabel}</strong>
-            </div>
+            <div><span className="panelKicker">AUTOMATED SESSION ARCHIVE</span><h2 id="archive-title">Canonical market data</h2></div>
+            <div className={`archiveConnection ${configured && connected ? "isConnected" : "isUnavailable"}`}><i aria-hidden="true" /><strong>{runtimeLabel}</strong></div>
           </div>
 
           <div className="archiveFacts">
             <div><span>Latest ready session</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>official EOD archive</small></div>
-            <div><span>Data status</span><strong>{statusLoading ? "—" : configured && connected ? "Ready" : "Unavailable"}</strong><small>archive refreshes automatically</small></div>
+            <div><span>Outcome access</span><strong>Locked</strong><small>no realized forward metrics yet</small></div>
             <div><span>Next expected session</span><strong>{statusLoading ? "—" : shortDate(status?.next_missing_session ?? null)}</strong><small>runtime queue</small></div>
           </div>
 
-          {requestError && (
-            <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>
-          )}
-          {latestFailure && !requestError && (
-            <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Session failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "See runtime diagnostics."}</p></div></div>
-          )}
+          {requestError && <div className="runtimeNotice danger"><i /><div><strong>{requestError}</strong>{requestDetail && <p>{requestDetail}</p>}</div></div>}
+          {latestFailure && !requestError && <div className="runtimeNotice danger"><i /><div><strong>{shortDate(latestFailure.session_date)} · Session failed</strong><p>{latestFailure.error_message ?? latestFailure.error_code ?? "See runtime diagnostics."}</p></div></div>}
 
-          <div className="sessionArchiveHead">
-            <div><span className="panelKicker">RECENT SESSIONS</span><h3>Archive activity</h3></div>
-            <small>{statusLoading ? "Reading runtime..." : "Updates automatically"}</small>
-          </div>
+          <div className="sessionArchiveHead"><div><span className="panelKicker">RECENT SESSIONS</span><h3>Archive activity</h3></div><small>{statusLoading ? "Reading runtime..." : "Updates automatically"}</small></div>
           {statusLoading ? (
             <div className="loadingSessionState"><i />Reading forward session status...</div>
           ) : status?.sessions.length ? (
             <div className="sessionStrip">
               {status.sessions.slice(-12).map((session) => (
                 <div key={session.session_date} className={`sessionTile ${session.state.toLowerCase()}`} title={session.error_message ?? undefined}>
-                  <span>{shortSessionDate(session.session_date)}</span>
-                  <strong>{sessionLabel(session.state)}</strong>
+                  <span>{shortSessionDate(session.session_date)}</span><strong>{sessionLabel(session.state)}</strong>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="emptySessionState"><strong>No sessions in the archive yet</strong></div>
-          )}
+          ) : <div className="emptySessionState"><strong>No sessions in the archive yet</strong></div>}
         </section>
 
         <section className="monitoringModelsSection" aria-labelledby="models-title">
           <div className="monitoringSectionHead">
-            <div><span className="panelKicker">MONITORED MODELS · O2 · V3-B · V2</span><h2 id="models-title">Prospective score coverage</h2></div>
-            <p>Three score lanes, one automated session record.</p>
+            <div><span className="panelKicker">ACTIVE MODELS · V4-X · V2</span><h2 id="models-title">Prospective score coverage</h2></div>
+            <p>Current alpha plus one durable reference. Retired research lanes are no longer promoted in the primary monitor.</p>
           </div>
           <div className="monitoredModelGrid">
             {MONITORED_MODELS.map((model) => {
@@ -273,6 +260,7 @@ export default function MonitoringPage() {
                 <a key={model.id} className={`surface monitoredModelCard ${model.accent}`} href={`/monitoring/models/${model.route}`} aria-label={`View forward detail for ${model.shortName}`}>
                   <div className="monitoredModelTopline"><span>{model.role}</span><b>{model.generation}</b></div>
                   <h3>{model.shortName}</h3>
+                  <p className="modelCardNote">{model.note}</p>
                   <div className="monitoredModelScore"><strong>{statusLoading ? "—" : count}</strong><span>/ {model.forwardTargetSessions} sessions</span></div>
                   <div className={`progressTrack ${statusLoading ? "isLoading" : ""}`}><span style={{ width: `${progress}%` }} /></div>
                   <div className="monitoredModelMeta"><span>{modelArtifactDates(status, model.id).size ? "Score artifacts available" : "Awaiting score artifacts"}</span><span>{model.featureCount} features</span></div>
@@ -284,12 +272,8 @@ export default function MonitoringPage() {
         </section>
 
         <section className="sharedSessionLine" aria-label="Shared session record">
-          <div>
-            <span className="panelKicker">SHARED SESSION RECORD</span>
-            <strong>{statusLoading ? "—" : sharedScoredDates.size} shared session(s)</strong>
-            <small>verified artifacts for O2, V3-B, and V2</small>
-          </div>
-          <p>Gaps stay visible and are never inferred.</p>
+          <div><span className="panelKicker">V4-X / V2 SHARED RECORD</span><strong>{statusLoading ? "—" : sharedScoredDates.size} shared session(s)</strong><small>verified score artifacts for both active lanes</small></div>
+          <p>Historical V4-X IC is shown on Overview. Forward performance remains intentionally hidden until the X1 gate opens.</p>
         </section>
       </div>
     </main>
