@@ -54,7 +54,7 @@ def test_runner_is_non_admissive_and_has_no_model_or_target_materializer() -> No
     for token in forbidden:
         assert token not in source
     assert "IDX_GET_ANNOUNCEMENT" in source
-    assert "semantic_admission_performed\": False" in source
+    assert '"semantic_admission_performed": False' in source
 
 
 def test_runner_refuses_existing_output_before_provider_session_creation() -> None:
