@@ -59,8 +59,11 @@ def test_v4_control_has_user_facing_label_not_internal_context25_name() -> None:
 def test_v4x_catalog_preserves_frozen_folds_and_pins_audited_evidence() -> None:
     catalog = text(CATALOG)
     assert 'id: "V4_X1_GEOMETRY3_PROSPECTIVE"' in catalog
-    assert "historicalConsensusIc: 0.09775243938276076" in catalog
-    assert "historicalControlConsensusIc: 0.08415844149089491" in catalog
+    assert "historicalConsensusIc: 0.09545975125676774" in catalog
+    assert "historicalControlConsensusIc: 0.08979323509925058" in catalog
+    assert "historicalConsensusRelativeLift: 0.06310627021349466" in catalog
+    assert "frozenMedianFoldConsensusIc: 0.09775243938276076" in catalog
+    assert "frozenControlMedianFoldConsensusIc: 0.08415844149089491" in catalog
     assert "auditedCommonSupportConsensusIc: 0.09545975125676774" in catalog
     assert "auditedCommonSupportControlConsensusIc: 0.08979323509925058" in catalog
     assert "auditedStrictSupportConsensusIc: 0.08327323251280924" in catalog
