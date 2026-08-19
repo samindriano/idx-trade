@@ -23,18 +23,37 @@ def test_primary_navigation_hides_compare_without_deleting_page() -> None:
         assert ">Compare<" not in source
 
 
-def test_primary_dashboard_focuses_v4x_and_v2() -> None:
+def test_primary_dashboard_focuses_v4x_and_v2_without_erasing_history() -> None:
     home = text(HOME)
     monitor = text(MONITOR)
     assert "V4-X Geometry3" in home
     assert "V4X_ALPHA" in home
     assert "V2_CHAMPION" in home
+    assert "RESEARCH_EXPERIMENTS" in home
+    assert "PAST MODEL EVIDENCE" in home
+    assert "RESEARCH ARCHIVE" in home
     assert "V4X_ALPHA" in monitor
     assert "V2_CHAMPION" in monitor
-    assert "O2_CHALLENGER" not in home
-    assert "FINAL_RANKER" not in home
     assert "O2_CHALLENGER" not in monitor
     assert "FINAL_RANKER" not in monitor
+
+
+def test_interactive_model_evidence_features_remain_available() -> None:
+    home = text(HOME)
+    assert "ModelEvidencePicker" in home
+    assert "EvidenceChart" in home
+    assert "onMouseEnter" in home
+    assert "styles.tooltip" in home
+    assert "evidenceHelpButton" in home
+    assert "archiveSort" in home
+    assert "archiveStatusFilter" in home
+    assert "expandedArchiveKey" in home
+
+
+def test_v4_control_has_user_facing_label_not_internal_context25_name() -> None:
+    home = text(HOME)
+    assert "V4 control · 25 features" in home
+    assert "CONTEXT25 CONTROL" not in home
 
 
 def test_v4x_catalog_pins_current_historical_evidence() -> None:
@@ -54,9 +73,15 @@ def test_v4x_catalog_pins_current_historical_evidence() -> None:
         assert value in catalog
 
 
-def test_monitoring_routes_only_active_primary_models() -> None:
+def test_monitoring_routes_only_active_primary_models_and_names_v2() -> None:
     monitor = text(MONITOR)
+    detail = text(DETAIL)
     assert 'route: "v4x"' in monitor
     assert 'route: "v2"' in monitor
     assert 'route: "o2"' not in monitor
     assert 'route: "v3"' not in monitor
+    assert "V2 ${V2_CHAMPION.shortName}" in monitor
+    assert "V2 ${V2_CHAMPION.shortName}" in detail
+    assert "median PR-AUC delta +2.39%" in detail
+    assert "median ROC-AUC 0.5244" in detail
+    assert "median Q5−Q1 +5.12%" in detail
