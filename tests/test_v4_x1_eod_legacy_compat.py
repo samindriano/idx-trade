@@ -35,7 +35,22 @@ def test_scoped_verifier_prefers_modern_strict_verifier(tmp_path: Path, monkeypa
     assert verify(row) is True
 
 
-def test_scoped_verifier_requires_attestation_when_strict_fails(tmp_path: Path) -> None:
+def test_scoped_verifier_accepts_legacy_direct_parent_without_attestation(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    row = _row(tmp_path)
+    monkeypatch.setattr(compat, "_legacy_direct_parent_still_exact", lambda _: True)
+    monkeypatch.setattr(
+        compat,
+        "verify_canonical_eod_calendar_parent_attestation",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("attestation must not be consulted")),
+    )
+    verify = compat.build_scoped_ready_verifier(tmp_path, lambda _: False)
+    assert verify(row) is True
+
+
+def test_scoped_verifier_requires_attestation_when_strict_and_direct_fail(tmp_path: Path) -> None:
     row = _row(tmp_path)
     verify = compat.build_scoped_ready_verifier(tmp_path, lambda _: False)
     assert verify(row) is False
