@@ -47,6 +47,7 @@ def test_config_keeps_original_scientific_firewall() -> None:
 
 def test_existing_output_is_refused_before_acquisition_read() -> None:
     source = RUNNER.read_text(encoding="utf-8")
-    refusal = source.index("REFUSE_OVERWRITE_EXISTING_OUTPUT")
-    verification = source.index("verify_acquisition_root(")
+    main_start = source.index("def main()")
+    refusal = source.index("REFUSE_OVERWRITE_EXISTING_OUTPUT", main_start)
+    verification = source.index("verify_acquisition_root(", main_start)
     assert refusal < verification
