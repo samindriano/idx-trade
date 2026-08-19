@@ -33,6 +33,7 @@ def test_identical_overlap_is_idempotent():
 
 def test_explicit_revision_mode_returns_audit_conflicts():
     merged, conflicts = merge_daily_history(_frame(102.0), _frame(103.0), "TEST", allow_revisions=True)
-    assert len(conflicts) == 1
-    assert conflicts[0].column == "raw_close"
+    assert len(conflicts) == 2
+    assert {conflict.column for conflict in conflicts} == {"raw_close", "vendor_adj_close"}
     assert merged.iloc[0]["raw_close"] == 103.0
+    assert merged.iloc[0]["vendor_adj_close"] == 103.0
