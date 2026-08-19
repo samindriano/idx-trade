@@ -1,0 +1,13 @@
+ticker,expected_factor,ca_type,ca_ratio,record_date,distribution_date,source,source_url,certification_status
+BUAH,2.0,MANDATORY_CONVERSION,1:2,2025-10-23,2025-10-24,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/BUAH,CERTIFIED_PRIMARY
+CLEO,2.0,RIGHT_DISTRIBUTION,1:1,2025-06-11,2025-06-26,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/CLEO,CERTIFIED_PRIMARY
+CUAN,10.0,MANDATORY_CONVERSION,1:10,2025-07-16,2025-07-17,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/CUAN,CERTIFIED_PRIMARY
+CYBR,2.0,MANDATORY_CONVERSION,1:2,2026-05-18,2026-05-19,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/CYBR,CERTIFIED_PRIMARY
+DSSA,25.0,MANDATORY_CONVERSION,1:25,2026-04-10,2026-04-13,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/DSSA,CERTIFIED_PRIMARY
+MEGA,2.0,RIGHT_DISTRIBUTION,1:1,2026-04-13,2026-04-30,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/MEGA,CERTIFIED_PRIMARY
+MLPT,25.0,MANDATORY_CONVERSION,1:25,2026-07-22,2026-07-23,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/MLPT,CERTIFIED_PRIMARY
+MMIX,2.0,RIGHT_DISTRIBUTION,1:1,2025-10-27,2025-11-10,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/MMIX,CERTIFIED_PRIMARY
+RAJA,5.0,MANDATORY_CONVERSION,1:5,2026-07-17,2026-07-20,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/RAJA,CERTIFIED_PRIMARY
+RISE,1.48,RIGHT_DISTRIBUTION,25:12,2026-01-21,2026-02-09,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/RISE,CERTIFIED_PRIMARY
+RMKE,5.0,MANDATORY_CONVERSION,1:5,2026-07-20,2026-07-21,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/RMKE,CERTIFIED_PRIMARY
+WGSH,2.0,RIGHT_DISTRIBUTION,1:1,2026-04-07,2026-04-24,KSEI,https://web.ksei.co.id/services/registered-securities/shares/lc/WGSH,CERTIFIED_PRIMARY
