@@ -1,0 +1,101 @@
+{
+  "schema_version": "ranking_v4_3r_execution_freeze_v1",
+  "generation_id": "V4_3R_CA80",
+  "status": "V4_3R_EXECUTION_FREEZE_PREREGISTERED_LOCAL_CAPTURE_PENDING",
+  "outcome_blind": true,
+  "historical_target_access_authorized_before_capture": false,
+  "prefit_support_result": {
+    "manifest_sha256": "0c222a10d8c48852f53451f0ce0bdec44b1156b8b9050c536f51b416ff18cfcc",
+    "expected_status": "V4_3R_CA80_PREFIT_SUPPORT_PASS_READY_TO_FREEZE_EXECUTION",
+    "support_gate": 0.8,
+    "historical_execution_authorized": true,
+    "eligible_sessions": {
+      "h5": 986,
+      "h10": 982,
+      "consensus": 982
+    },
+    "frozen_consensus_support_buckets": {
+      "below_0.80": 0,
+      "0.80_to_below_0.90": 541,
+      "at_least_0.90": 59
+    },
+    "frozen_validation": {
+      "all_frozen_600_full_target_eligible": true,
+      "tail_600_identity_unchanged": true,
+      "eligible_sessions_after_frozen_end": 0,
+      "frozen_h5_min_rate": 0.8432203389830508,
+      "frozen_h10_min_rate": 0.8395061728395061,
+      "frozen_consensus_min_rate": 0.8395061728395061
+    },
+    "training_date_counts": [
+      {"fold": 1, "head": "H10", "training_dates": 372},
+      {"fold": 1, "head": "H5", "training_dates": 376},
+      {"fold": 2, "head": "H10", "training_dates": 472},
+      {"fold": 2, "head": "H5", "training_dates": 476},
+      {"fold": 3, "head": "H10", "training_dates": 572},
+      {"fold": 3, "head": "H5", "training_dates": 576},
+      {"fold": 4, "head": "H10", "training_dates": 672},
+      {"fold": 4, "head": "H5", "training_dates": 676},
+      {"fold": 5, "head": "H10", "training_dates": 772},
+      {"fold": 5, "head": "H5", "training_dates": 776},
+      {"fold": 6, "head": "H10", "training_dates": 872},
+      {"fold": 6, "head": "H5", "training_dates": 876}
+    ]
+  },
+  "runtime_manifest": {
+    "path": "docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json",
+    "sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
+  },
+  "v4_3r_contract_git_blobs": {
+    "config/ranking_v4_3r_ca80_preregistration_v1.json": "bbdbd28dc642f9af78fdce1e3a164ac8631eb376",
+    "src/idx_trade/ranking_v4_3r_support.py": "eb7595d81042afb2d2e0e61180659537a10e92c1",
+    "scripts/run_v4_3r_ca80_prefit_support_gate.py": "1b99304c7567aaec40cbead616d845bcc1b0a1ba",
+    "tests/test_v4_3r_ca80_prefit_support_gate_contract.py": "56adb08044195bd221be59310b6e4256e4f007b6"
+  },
+  "inherited_v4_3_scientific_git_blobs": {
+    "config/ranking_v4_3_target_execution_protocol.json": "c3fab424c49022c8d6e223f3d722a3b3b55637f8",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "cc1308feb51bbed16606bf7bded1ca0111644326",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "8aba40c32e6069d1f8bdf5b8b19bf41d2065c422"
+  },
+  "scientific_contract": {
+    "only_generation_delta": "date-level target-support/evaluation coverage threshold 0.90 -> 0.80",
+    "target_h5": "Close_(t+5) / Open_(t+1) - 1",
+    "target_h10": "Close_(t+10) / Open_(t+1) - 1",
+    "unsupported_rows_never_receive_target": true,
+    "known_or_unresolved_mechanical_crossing_remains_fail_closed": true,
+    "control": "V4_CONTROL_CONTEXT25_HGBR",
+    "challenger": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "folds": "6x100",
+    "purge_official_sessions": 10,
+    "top_k": 30,
+    "top30_min_observable": 27,
+    "learner_or_hyperparameter_change": false,
+    "feature_change": false,
+    "promotion_gate_change": false
+  },
+  "capture_gate": {
+    "prefit_manifest_exact_match": true,
+    "prefit_summary_child_hash_exact_match": true,
+    "prefit_summary_expected_values_exact_match": true,
+    "git_worktree_clean": true,
+    "contract_git_blobs_exact_match": true,
+    "runtime_exact_match": true,
+    "provider_calls": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction_generated": false,
+    "performance_computed": false,
+    "protected_forward_accessed": false
+  },
+  "post_capture_authorization": {
+    "historical_target_materialization": true,
+    "historical_model_fit": true,
+    "historical_prediction_generation": true,
+    "historical_performance_computation": true,
+    "protected_forward_access": false,
+    "condition": "only after capture_v4_3r_execution_freeze.py completes with exact pinned inputs/runtime/code identity"
+  },
+  "post_target_rule": "After first V4-3R historical target/model/performance access, any material threshold, universe, fold, purge, target, feature, learner, runtime, evaluator, metric, or promotion-rule change requires another separately preregistered generation."
+}
