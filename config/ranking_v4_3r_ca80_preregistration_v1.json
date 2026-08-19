@@ -1,0 +1,115 @@
+{
+  "schema_version": "ranking_v4_3r_ca80_preregistration_v1",
+  "generation_id": "V4_3R_CA80",
+  "status": "V4_3R_CA80_PREREGISTERED_PREFIT_SUPPORT_REPLAY_PENDING",
+  "outcome_blind": true,
+  "historical_target_access_authorized": false,
+  "adaptation_disclosure": {
+    "reason": "V4-3 remained blocked after outcome-blind official-source corporate-action remediation exhausted the agreed stop rule.",
+    "observed_without_target_access": true,
+    "v4_3_final_worst_frozen_h5_support": 0.8432203389830508,
+    "v4_3_final_worst_frozen_h10_support": 0.8395061728395061,
+    "v4_3_final_worst_frozen_consensus_support": 0.8395061728395061,
+    "v4_3_resolved_schedule_events": 33,
+    "v4_3_unresolved_schedule_events": 47,
+    "statement": "This is a new generation. The original V4-3 >=90% gate remains failed and is not retroactively waived. The round 80% threshold is frozen before any historical target, prediction, model-performance, or protected-forward access."
+  },
+  "parent_outcome_blind_support": {
+    "manifest_sha256": "12d60b703d9617db95e89374485abb335a4024c4c6642a5cbee0d72e1eeb2f43",
+    "status": "V4_3_CA_IDX_COMBINED_REPLAY_BLOCKED_REVIEW_REQUIRED",
+    "resolved_schedule_events": 33,
+    "remaining_schedule_events": 47,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "performance_computed": false
+  },
+  "changed_from_v4_3": {
+    "prefit_date_full_target_support_gate": {
+      "v4_3": 0.90,
+      "v4_3r": 0.80
+    },
+    "evaluation_date_target_coverage_gate": {
+      "v4_3": 0.90,
+      "v4_3r": 0.80
+    }
+  },
+  "unchanged_scientific_contract": {
+    "target_h5": "Close_(t+5) / Open_(t+1) - 1",
+    "target_h10": "Close_(t+10) / Open_(t+1) - 1",
+    "target_rank_population": "only defensibly horizon-target-observable rows inside the frozen decision universe on the same date",
+    "unsupported_rows_never_receive_target": true,
+    "known_or_unresolved_mechanical_crossing_never_passes_row_continuity": true,
+    "missing_ca_evidence_fails_closed_at_row_level": true,
+    "decision_universe": "V4_PRIMARY_LIQUID_CAUSAL_V1",
+    "control": "V4_CONTROL_CONTEXT25_HGBR",
+    "challenger": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "control_feature_count": 25,
+    "challenger_added_feature_count": 3,
+    "learner": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "learner_hyperparameter_search": false,
+    "top_k": 30,
+    "top30_min_observable": 27,
+    "validation_fold_count": 6,
+    "validation_dates_per_fold": 100,
+    "purge_official_sessions": 10,
+    "bootstrap_replications": 2000,
+    "bootstrap_block_length": 10,
+    "bootstrap_seed": 42,
+    "promotion_gates_unchanged": true
+  },
+  "inherited_v4_3_lineage": {
+    "preregistration_path": "config/ranking_v4_3_preregistration.json",
+    "preregistration_canonical_sha256": "3a54dcf0266f8a2808b8c1d73dda41a32baea368e6b48aac21e9fa073f6824ed",
+    "preregistration_git_blob_sha1": "57cc72ee68a9484b6bfe3843da17caadd5373908",
+    "target_execution_protocol_path": "config/ranking_v4_3_target_execution_protocol.json",
+    "target_execution_protocol_git_blob_sha1": "c3fab424c49022c8d6e223f3d722a3b3b55637f8",
+    "preregistration_code_git_blob_sha1": "cc1308feb51bbed16606bf7bded1ca0111644326",
+    "target_execution_code_git_blob_sha1": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "features_code_git_blob_sha1": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "model_eval_code_git_blob_sha1": "8aba40c32e6069d1f8bdf5b8b19bf41d2065c422",
+    "prefit_runtime_manifest_sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
+  },
+  "validation_folds": {
+    "path": "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv",
+    "sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915"
+  },
+  "support_diagnostics": {
+    "mandatory_frozen_date_buckets": [
+      "0.80_to_below_0.90",
+      "at_least_0.90"
+    ],
+    "bucket_metrics_are_diagnostic_only": true,
+    "may_not_change_primary_verdict": true,
+    "strict_v4_3_90pct_result_remains_recorded_as_blocked": true
+  },
+  "prefit_authorization_gate": {
+    "all_frozen_600_h5_h10_consensus_dates_must_pass_0_80": true,
+    "tail_600_identity_must_equal_frozen_validation_identity": true,
+    "eligible_sessions_after_frozen_end_must_equal": 0,
+    "all_12_fold_head_training_sets_must_be_nonempty": true,
+    "historical_target_access_before_pass": false
+  },
+  "hard_boundaries": {
+    "provider_calls": false,
+    "network_calls": false,
+    "new_ca_discovery": false,
+    "ca_semantic_relaxation": false,
+    "source_substitution": false,
+    "price_inference_for_ca": false,
+    "record_or_distribution_date_as_transition": false,
+    "unsupported_row_target_materialization": false,
+    "decision_universe_change": false,
+    "fold_change": false,
+    "purge_change": false,
+    "feature_change": false,
+    "learner_change": false,
+    "hyperparameter_change": false,
+    "promotion_gate_change": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  },
+  "post_target_rule": "After first historical V4-3R target/performance access, any material scientific code, threshold, universe, feature, learner, fold, metric, or promotion-rule change requires another separately preregistered generation."
+}
