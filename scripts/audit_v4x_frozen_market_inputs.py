@@ -79,6 +79,36 @@ def rolling_span_audit(panel: pd.DataFrame, calendar: pd.DataFrame) -> dict[str,
     return output
 
 
+def value_field_audit(panel: pd.DataFrame) -> dict[str, Any]:
+    required = {"close", "volume", "regular_market_value"}
+    missing = required - set(panel.columns)
+    if missing:
+        raise RuntimeError(f"PANEL_VALUE_FIELD_COLUMNS_MISSING:{sorted(missing)}")
+    close = pd.to_numeric(panel["close"], errors="coerce").to_numpy(dtype=float)
+    volume = pd.to_numeric(panel["volume"], errors="coerce").to_numpy(dtype=float)
+    value = pd.to_numeric(panel["regular_market_value"], errors="coerce").to_numpy(dtype=float)
+    expected_traded_value = close * volume
+    mask = (
+        np.isfinite(expected_traded_value)
+        & np.isfinite(value)
+        & (expected_traded_value > 0.0)
+        & (value > 0.0)
+    )
+    ratio = value[mask] / expected_traded_value[mask]
+    if not len(ratio):
+        return {"comparable_rows": 0, "interpretation": "NO_COMPARABLE_POSITIVE_ROWS"}
+    log_abs = np.abs(np.log(ratio))
+    return {
+        "comparable_rows": int(len(ratio)),
+        "median_regular_market_value_over_close_x_volume": float(np.median(ratio)),
+        "p01_ratio": float(np.quantile(ratio, 0.01)),
+        "p99_ratio": float(np.quantile(ratio, 0.99)),
+        "exact_close_x_volume_rows": int(np.isclose(ratio, 1.0, rtol=1e-12, atol=1e-12).sum()),
+        "within_1pct_of_close_x_volume_rate": float((log_abs <= np.log(1.01)).mean()),
+        "note": "Descriptive only. If ratio is ~1, regular_market_value behaves as same-session traded value (Close x Volume), not shares-outstanding market cap. Material deviations require provenance review before interpreting liquidity features.",
+    }
+
+
 def open_range_audit(name: str, opens: pd.DataFrame, panel: pd.DataFrame, value_column: str) -> dict[str, Any]:
     source = normalize_identity(opens[["ticker", "date", value_column]])
     if source.duplicated(["ticker", "date"]).any():
@@ -185,7 +215,7 @@ def main() -> int:
         status = "V4X_FROZEN_MARKET_INPUT_AUDIT_CRITICAL_ERROR"
 
     output = {
-        "schema_version": "v4x_frozen_market_input_audit_v1",
+        "schema_version": "v4x_frozen_market_input_audit_v2",
         "status": status,
         "hashes": hashes,
         "provider_calls": False,
@@ -195,7 +225,9 @@ def main() -> int:
         "calendar_sessions": int(len(calendar)),
         "panel_rows": int(len(panel)),
         "panel_tickers": int(panel["ticker"].nunique()),
+        "panel_columns": sorted(str(column) for column in panel.columns),
         "invalid_canonical_hlc_rows": int(invalid_hlc.sum()),
+        "regular_market_value_semantics": value_field_audit(panel),
         "rolling_row_lag_semantics": rolling_span_audit(panel, calendar),
         "derivative_open": derivative_audit,
         "overlay_open": overlay_audit,
@@ -206,6 +238,7 @@ def main() -> int:
         "interpretation": {
             "rolling_lag_note": "V4 control uses ticker-row shift/rolling windows. Any longer-than-intended official-session spans are a semantic horizon drift, not future leakage, but can matter if frequent.",
             "open_note": "Any finite accepted Open outside the frozen canonical Low/High range is critical because V4 target entry trusts the derivative/overlay admission boundary.",
+            "raw_price_note": "Repository canonicalization explicitly preserves vendor raw OHLC separately from adjusted close; this audit reports frozen panel columns and range semantics but does not independently reconstruct vendor raw bytes.",
         },
     }
     print(json.dumps(output, indent=2, sort_keys=True, allow_nan=False))
