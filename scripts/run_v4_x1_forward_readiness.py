@@ -1,16 +1,17 @@
 """Read-only readiness audit for V4-X1 prospective score capture.
 
 This script never calls a provider, scores a model, opens an outcome, mutates the
-canonical forward registry, or creates a second EOD capture path.  It verifies
+canonical forward registry, or creates a second EOD capture path. It verifies
 the frozen V4-X1 model bundle and inspects the existing IDXTrade-ForwardEOD
-runtime for the first canonical DATA_READY session whose capture completed
-strictly after the conservative model-freeze observed-by timestamp.
+runtime for the first canonical DATA_READY session that is genuinely fresh:
+its canonical EOD availability and its actual DATA_READY completion must both
+be strictly after the conservative model-freeze observed-by timestamp.
 """
 
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import datetime, time
 import json
 from pathlib import Path
 import sys
@@ -43,6 +44,9 @@ EXPECTED_MODEL_MANIFEST_SHA256 = (
 )
 EXPECTED_STATUS = "V4_X1_FINAL_REFIT_FROZEN_READY_FOR_FRESH_PROSPECTIVE_SCORING"
 DEFAULT_OBSERVED_BY = "2026-08-19T14:37:16+07:00"
+CANONICAL_EOD_CAPTURE_HOUR_JAKARTA = 18
+JAKARTA = ZoneInfo("Asia/Jakarta")
+UTC = ZoneInfo("UTC")
 REQUIRED_MODEL_OUTPUTS = (
     "model_control_h5",
     "model_control_h10",
@@ -64,7 +68,18 @@ def _parse_timestamp(value: str) -> datetime:
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("observed-by timestamp must be timezone-aware")
-    return parsed.astimezone(ZoneInfo("UTC"))
+    return parsed.astimezone(UTC)
+
+
+def _session_eod_available_at_utc(session: pd.Timestamp) -> datetime:
+    """Conservative canonical EOD availability for one official IDX session."""
+
+    day = pd.Timestamp(session).normalize().date()
+    return datetime.combine(
+        day,
+        time(hour=CANONICAL_EOD_CAPTURE_HOUR_JAKARTA),
+        tzinfo=JAKARTA,
+    ).astimezone(UTC)
 
 
 def _read_json(path: Path, label: str) -> dict[str, Any]:
@@ -176,6 +191,7 @@ def _verify_snapshot_row(paths, row: dict[str, Any]) -> dict[str, Any]:
         "session_ohlcv_sha256": sha256_file(ohlcv_path),
         "rows": int(len(snapshot)),
         "completed_at": row.get("completed_at"),
+        "canonical_eod_available_at": _session_eod_available_at_utc(session).astimezone(JAKARTA).isoformat(),
     }
 
 
@@ -211,16 +227,32 @@ def main() -> int:
     }
 
     post_freeze: list[tuple[pd.Timestamp, dict[str, Any]]] = []
+    ignored_post_freeze_backfills: list[dict[str, Any]] = []
     for session, row in sorted(ready_by_date.items()):
         completed = _parse_utc(row.get("completed_at"))
-        if completed is not None and completed > observed_by:
-            post_freeze.append((session, row))
+        if completed is None or completed <= observed_by:
+            continue
+        session_eod = _session_eod_available_at_utc(session)
+        if session_eod <= observed_by:
+            ignored_post_freeze_backfills.append(
+                {
+                    "session_date": session.date().isoformat(),
+                    "completed_at": row.get("completed_at"),
+                    "canonical_eod_available_at": session_eod.astimezone(JAKARTA).isoformat(),
+                    "reason": "SESSION_EOD_PREDATES_MODEL_FREEZE",
+                }
+            )
+            continue
+        post_freeze.append((session, row))
 
     base = {
-        "schema_version": "v4_x1_forward_readiness_v1",
+        "schema_version": "v4_x1_forward_readiness_v2",
         "generation_id": "V4_X1_GEOMETRY3_PROSPECTIVE",
         "model_manifest_sha256": model_bundle["manifest_sha256"],
         "model_freeze_observed_by": args.observed_by,
+        "canonical_eod_capture_hour_jakarta": CANONICAL_EOD_CAPTURE_HOUR_JAKARTA,
+        "fresh_session_rule": "CANONICAL_SESSION_EOD_AND_DATA_READY_COMPLETION_BOTH_STRICTLY_AFTER_MODEL_FREEZE",
+        "ignored_post_freeze_backfills": ignored_post_freeze_backfills,
         "runtime_root": str(paths.runtime_root),
         "registry_path": str(paths.registry_path),
         "historical_panel_path": str(panel_path),
@@ -237,7 +269,7 @@ def main() -> int:
             **base,
             "status": "V4_X1_FORWARD_READYNESS_WAITING_NO_POST_FREEZE_DATA_READY",
             "candidate_first_score_session": None,
-            "next": "WAIT_FOR_EXISTING_CANONICAL_EOD_RUNTIME_TO_PRODUCE_A_POST_FREEZE_DATA_READY_SESSION",
+            "next": "WAIT_FOR_EXISTING_CANONICAL_EOD_RUNTIME_TO_PRODUCE_A_GENUINELY_FRESH_POST_FREEZE_DATA_READY_SESSION",
         }, indent=2, sort_keys=True))
         return 0
 
@@ -258,6 +290,7 @@ def main() -> int:
             **base,
             "status": "V4_X1_FORWARD_READYNESS_BLOCKED_CANONICAL_HISTORY_GAP",
             "candidate_first_score_session": candidate.date().isoformat(),
+            "candidate_canonical_eod_available_at": _session_eod_available_at_utc(candidate).astimezone(JAKARTA).isoformat(),
             "required_forward_history_sessions": int(len(required_sessions)),
             "missing_data_ready_sessions": missing_ready,
             "next": "USE_ONLY_THE_EXISTING_CANONICAL_FORWARD_EOD_CATCHUP_TO_CLOSE_THE_LISTED_SESSION_GAPS_THEN_RERUN_READINESS",
@@ -276,6 +309,7 @@ def main() -> int:
         "status": "V4_X1_FORWARD_READYNESS_PASS_FIRST_SCORE_SESSION_IDENTIFIED",
         "candidate_first_score_session": candidate.date().isoformat(),
         "candidate_completed_at": candidate_row.get("completed_at"),
+        "candidate_canonical_eod_available_at": _session_eod_available_at_utc(candidate).astimezone(JAKARTA).isoformat(),
         "required_forward_history_sessions": int(len(required_sessions)),
         "verified_forward_history_sessions": int(len(verified_history)),
         "candidate_artifacts": candidate_verified,
