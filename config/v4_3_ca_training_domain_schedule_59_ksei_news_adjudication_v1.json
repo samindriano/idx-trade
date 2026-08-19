@@ -1,0 +1,60 @@
+{
+  "schema_version": "v4_3_ca_training_domain_schedule_59_ksei_news_adjudication_v1",
+  "policy_id": "V4_3_CA_TRAINING_DOMAIN_SCHEDULE_59_KSEI_NEWS_ADJUDICATION_V1",
+  "outcome_blind": true,
+  "acquisition_parent": {
+    "manifest_sha256": "96c11caa6ed728cbd19af8f13cc30bedde45c04e7a256e6d0c9a591dd62fc7d1",
+    "status": "V4_3_CA_SCHEDULE_59_KSEI_NEWS_ACQUISITION_COMPLETE",
+    "residual_events": 59,
+    "residual_event_identity_sha256": "f1c587eca59a9e7ec68cb8b1b2fc0980489a8f8a1b608f10403f2cc9f6d85707",
+    "search_queries": 227,
+    "failed_search_queries": 159,
+    "search_parse_failures": 0,
+    "search_pagination_truncated_queries": 6,
+    "unique_ksei_news_results": 1114,
+    "events_with_ksei_news_candidate": 56,
+    "events_without_ksei_news_candidate": 3,
+    "events_with_ticker_evidenced_news": 56,
+    "unique_news_articles_requested": 1114,
+    "provider_failed_news_articles": 4,
+    "news_parse_failures": 0,
+    "unique_news_attachments_requested": 1,
+    "provider_failed_news_attachments": 1,
+    "successful_raw_response_identity_sha256": "45132e0b5ae17b74ee005c55d26ddb464bdd5bb692b4a3a62d6649189f7ff7a8"
+  },
+  "official_calendar": {
+    "filename": "official_exchange_sessions_1260.csv",
+    "sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "adjudication_contract": {
+    "candidate_event_identity_from_frozen_acquisition_only": true,
+    "exact_ticker_evidence_required": true,
+    "mechanical_family_compatibility_required": true,
+    "mechanical_source_date_linkage_required": true,
+    "cash_source_date_linkage_required": true,
+    "explicit_regular_market_transition_required": true,
+    "transition_must_be_official_session": true,
+    "record_or_distribution_dates_are_linkage_only": true,
+    "cash_nonblocking_only_for_exact_voluntary_cash_document": true,
+    "html_transition_dates_must_be_bound_to_explicit_block_or_table_row": true,
+    "conflicts_fail_closed": true
+  },
+  "hard_boundaries": {
+    "network_calls": false,
+    "provider_calls": false,
+    "source_substitution": false,
+    "new_document_discovery": false,
+    "external_search_engine": false,
+    "fuzzy_event_matching": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "pass_preserving_subset_selection": false,
+    "parser_or_semantic_relaxation_after_observed_corpus": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
