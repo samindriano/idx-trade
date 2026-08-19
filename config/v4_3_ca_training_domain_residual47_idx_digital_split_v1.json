@@ -43,7 +43,7 @@
     "source_date_is_linkage_only": true
   },
   "official_calendar": {
-    "filename": "official_idx_session_calendar.csv",
+    "filename": "official_exchange_sessions_1260.csv",
     "sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
   },
   "hard_boundaries": {
