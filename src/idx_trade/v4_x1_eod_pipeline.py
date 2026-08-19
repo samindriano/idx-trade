@@ -1,13 +1,13 @@
 """Operational EOD -> frozen V4-X1 score pipeline.
 
-The canonical EOD engine remains the only market-data capture path.  This
+The canonical EOD engine remains the only market-data capture path. This
 orchestrator runs it first and, only after a successful catch-up, invokes the
-already frozen V4-X1 prospective scorer.  It never opens outcomes, fits a
+already frozen V4-X1 prospective scorer. It never opens outcomes, fits a
 model, changes science, or creates a second provider path.
 
 Deployment adds one deliberately conservative prospective guard: a new X1
 score may only be committed on the same Jakarta calendar date as its signal
-session and its canonical DATA_READY completion.  Late catch-up remains useful
+session and its canonical DATA_READY completion. Late catch-up remains useful
 for causal history/continuity but cannot be promoted retroactively into the X1
 prospective counter.
 """
@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from .forward_eod_runner import run_eod_catchup
-from .forward_monitoring import _parse_utc, runtime_paths
+from .forward_monitoring import _connect, _parse_utc, runtime_paths
 from .provenance import sha256_file, write_manifest_atomic
 from . import v4_x1_forward_score as x1
 
@@ -33,6 +33,7 @@ from . import v4_x1_forward_score as x1
 JAKARTA = ZoneInfo("Asia/Jakarta")
 UTC = ZoneInfo("UTC")
 PIPELINE_SCHEMA_VERSION = 1
+X1_FORWARD_TARGET = 100
 NO_SCORE_ERRORS = {
     "V4_X1_NO_GENUINELY_FRESH_DATA_READY_SESSION",
     "V4_X1_NO_PENDING_FRESH_SESSION",
@@ -58,7 +59,7 @@ def _filter_same_day_pending(
     """Keep only genuinely same-day operational candidates.
 
     This is stricter than the model-freeze gate and is intentionally an
-    operational anti-backfill rule.  It guarantees that a laptop waking days
+    operational anti-backfill rule. It guarantees that a laptop waking days
     later can repair canonical history without manufacturing a retrospective
     X1 prospective observation.
     """
@@ -90,6 +91,40 @@ def _filter_same_day_pending(
             }
         )
     return eligible, ignored
+
+
+def _verified_x1_counter(runtime_root: str | Path) -> dict[str, Any]:
+    """Count only DONE X1 rows whose immutable files still match the registry."""
+
+    paths = runtime_paths(runtime_root)
+    fingerprint = x1.EXPECTED_MODEL_MANIFEST_SHA256
+    with _connect(paths) as connection:
+        rows = connection.execute(
+            """
+            SELECT * FROM model_runs
+            WHERE model_id=? AND model_fingerprint=? AND state='DONE'
+            ORDER BY session_date
+            """,
+            (x1.MODEL_ID, fingerprint),
+        ).fetchall()
+    sessions: list[str] = []
+    for row in rows:
+        verified = x1._verify_existing_done(dict(row))
+        sessions.append(str(verified["session_date"]))
+    if len(sessions) > X1_FORWARD_TARGET:
+        raise RuntimeError(
+            f"V4_X1_COUNTER_EXCEEDS_FROZEN_TARGET:{len(sessions)}>{X1_FORWARD_TARGET}"
+        )
+    return {
+        "model_id": x1.MODEL_ID,
+        "model_fingerprint": fingerprint,
+        "completed": len(sessions),
+        "target": X1_FORWARD_TARGET,
+        "remaining": X1_FORWARD_TARGET - len(sessions),
+        "sessions": sessions,
+        "artifact_verification": "PASS_ALL_DONE_ROWS",
+        "protected_outcome_accessed": False,
+    }
 
 
 def _pipeline_log_paths(runtime_root: str | Path, run_id: str) -> tuple[Path, Path]:
@@ -150,6 +185,7 @@ def run_eod_v4_x1_pipeline(
         if not bool(eod.get("today_capture_allowed")):
             result["status"] = "PIPELINE_OK_PRIOR_SESSION_CATCHUP_ONLY_BEFORE_EOD"
             result["x1_score_attempted"] = False
+            result["x1_counter"] = _verified_x1_counter(runtime_root)
             result["finished_at_jakarta"] = _now_jakarta().isoformat()
             _persist(runtime_root, run_id, result)
             return result
@@ -200,6 +236,7 @@ def run_eod_v4_x1_pipeline(
         else:
             raise RuntimeError(f"V4_X1_PIPELINE_UNEXPECTED_SCORE_STATUS:{score_status}")
 
+        result["x1_counter"] = _verified_x1_counter(runtime_root)
         result["finished_at_jakarta"] = _now_jakarta().isoformat()
         _persist(runtime_root, run_id, result)
         return result
