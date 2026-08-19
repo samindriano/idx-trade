@@ -23,6 +23,7 @@ export const V4X_ALPHA = {
   historicalStrictSupportConsensusIc: 0.08327323251280924,
   historicalStrictSupportRetainedFraction: 0.8996852225456887,
   historicalCommonSupportIncrementalIc: 0.00566651615751716,
+  historicalConsensusRelativeLift: 0.06310627021349466,
 
   // Frozen V4-3R protocol aggregates remain preserved for exact lineage. These
   // are medians of six fold-mean daily ICs, not the preferred generic RankIC.
