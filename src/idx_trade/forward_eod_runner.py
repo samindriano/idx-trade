@@ -32,7 +32,24 @@ def _run_log_dir(runtime_root: str | Path) -> Path:
 
 
 def _before_cutoff(now: datetime) -> bool:
-    return now.hour < EOD_CAPTURE_HOUR
+    return now.astimezone(JAKARTA).hour < EOD_CAPTURE_HOUR
+
+
+def _closed_through_for_run(now: datetime) -> pd.Timestamp:
+    """Return the latest session date this invocation may capture.
+
+    The canonical base helper permits today's EOD after 17:00.  This automation
+    deliberately keeps the more conservative 18:00 operational boundary.  A
+    logon/catch-up run before 18:00 may still repair prior closed sessions, but
+    it can never capture the current Jakarta calendar date.
+    """
+
+    local = now.astimezone(JAKARTA)
+    closed = base._closed_through_date(local)
+    if _before_cutoff(local):
+        previous_day = pd.Timestamp(local.date()) - pd.Timedelta(days=1)
+        closed = min(pd.Timestamp(closed).normalize(), previous_day.normalize())
+    return pd.Timestamp(closed).normalize()
 
 
 def run_eod_catchup(
@@ -40,7 +57,7 @@ def run_eod_catchup(
     *,
     batch_size: int = 100,
 ) -> dict[str, object]:
-    """Capture every missing closed session chronologically through the stable engine."""
+    """Capture every eligible missing closed session chronologically."""
 
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
@@ -50,7 +67,7 @@ def run_eod_catchup(
     log_dir = _run_log_dir(root)
     log_path = log_dir / "runs" / f"{run_id}.json"
     result: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_id": run_id,
         "status": "RUNNING",
         "runtime_root": str(root),
@@ -58,6 +75,8 @@ def run_eod_catchup(
         "started_at_utc": started_at.astimezone(ZoneInfo("UTC")).isoformat(),
         "market_close_cutoff_hour_jakarta": MARKET_CLOSE_CUTOFF_HOUR,
         "capture_hour_jakarta": EOD_CAPTURE_HOUR,
+        "today_capture_allowed": not _before_cutoff(started_at),
+        "pre_eod_prior_session_catchup_allowed": True,
         "captured_sessions": [],
         "stopped_on_first_failure": False,
         "outcome_access": "LOCKED",
@@ -67,31 +86,33 @@ def run_eod_catchup(
     def persist() -> None:
         write_manifest_atomic(log_path, result)
         latest = log_dir / "latest.json"
-        write_manifest_atomic(latest, result | {"run_log_path": str(log_path), "run_log_sha256": sha256_file(log_path)})
+        write_manifest_atomic(
+            latest,
+            result
+            | {
+                "run_log_path": str(log_path),
+                "run_log_sha256": sha256_file(log_path),
+            },
+        )
 
     try:
-        if _before_cutoff(started_at):
-            result.update(
-                {
-                    "status": "BEFORE_EOD_CUTOFF",
-                    "error_code": "BEFORE_EOD_CUTOFF",
-                    "error_message": "No real EOD capture is allowed before 18:00 Asia/Jakarta.",
-                }
-            )
-            persist()
-            return result
-
         paths = base.runtime_paths(root)
-        closed_through = base._closed_through_date()
+        closed_through = _closed_through_for_run(started_at)
         sessions = runtime.sync_forward_calendar(paths, through=closed_through)
         result["closed_through_session"] = closed_through.date().isoformat()
+        result["closed_through_policy"] = (
+            "PRIOR_CALENDAR_DAY_ONLY_BEFORE_18_JAKARTA"
+            if _before_cutoff(started_at)
+            else "CANONICAL_CLOSED_THROUGH_AT_OR_AFTER_18_JAKARTA"
+        )
         result["official_calendar_validation"] = "PASS_EXACT_IDX_SESSION_CALENDAR"
         result["calendar_first_session"] = sessions.min().date().isoformat() if len(sessions) else None
         result["calendar_last_session"] = sessions.max().date().isoformat() if len(sessions) else None
 
         # Legacy DATA_READY sessions predate the OHLCV sidecar. Enrich them
         # before catching up new sessions; the original model_input/manifest
-        # remain immutable and a failed enrichment stops the cycle.
+        # remain immutable. A legacy Open repair failure is diagnostic only and
+        # never prevents newer canonical EOD catch-up.
         result["open_enrichment"] = []
         result["legacy_open_repair_status"] = "COMPLETE"
         for row in base._session_states(paths).values():
@@ -101,22 +122,40 @@ def run_eod_catchup(
             sidecar = paths.session_root / session_key / "session_ohlcv.parquet"
             if sidecar.exists():
                 continue
-            enrichment = enrich_session_ohlcv(root, session_key, fetch_missing=True, batch_size=batch_size)
+            enrichment = enrich_session_ohlcv(
+                root,
+                session_key,
+                fetch_missing=True,
+                batch_size=batch_size,
+            )
             result["open_enrichment"].append(enrichment)
             if enrichment.get("status") != "OPEN_COMPLETE":
-                # Legacy sidecars are a repair lane.  They must never rewrite
-                # or invalidate the old DATA_READY snapshot, nor prevent the
-                # canonical EOD engine from catching up newer sessions.
                 result["legacy_open_repair_status"] = "INCOMPLETE"
 
         while True:
             sessions = runtime._load_forward_calendar(paths)
-            earliest = base._earliest_missing(paths, sessions) if len(sessions) else None
-            result["next_missing_session"] = earliest.date().isoformat() if earliest is not None else None
+            eligible_sessions = sessions[sessions <= closed_through]
+            earliest = (
+                base._earliest_missing(paths, eligible_sessions)
+                if len(eligible_sessions)
+                else None
+            )
+            result["next_missing_session"] = (
+                earliest.date().isoformat() if earliest is not None else None
+            )
             if earliest is None:
                 result["status"] = "NO_MISSING_SESSION"
                 break
-            captured = runtime.capture_session(root, target_date=earliest, batch_size=batch_size)
+            if earliest > closed_through:
+                raise RuntimeError(
+                    "EOD_RUNNER_SELECTED_SESSION_BEYOND_CLOSED_THROUGH:"
+                    f"{earliest.date().isoformat()}>{closed_through.date().isoformat()}"
+                )
+            captured = runtime.capture_session(
+                root,
+                target_date=earliest,
+                batch_size=batch_size,
+            )
             if captured.get("status") != "DATA_READY":
                 result.update(
                     {
@@ -126,7 +165,9 @@ def run_eod_catchup(
                     }
                 )
                 break
-            captured["session_date_validation"] = "PASS_CALENDAR_AND_EXACT_SOURCE_DATE"
+            captured["session_date_validation"] = (
+                "PASS_CALENDAR_EXACT_SOURCE_DATE_AND_CLOSED_THROUGH_BOUND"
+            )
             result["captured_sessions"].append(captured)
 
         result["finished_at_jakarta"] = _now_jakarta().isoformat()
@@ -157,7 +198,7 @@ def main() -> int:
     args = build_parser().parse_args()
     result = run_eod_catchup(args.runtime_root, batch_size=args.batch_size)
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
-    return 0 if result.get("status") in {"NO_MISSING_SESSION", "BEFORE_EOD_CUTOFF"} else 1
+    return 0 if result.get("status") == "NO_MISSING_SESSION" else 1
 
 
 if __name__ == "__main__":
@@ -166,7 +207,11 @@ if __name__ == "__main__":
     except Exception as error:
         print(
             json.dumps(
-                {"status": "ERROR", "error_code": type(error).__name__.upper(), "error_message": str(error)},
+                {
+                    "status": "ERROR",
+                    "error_code": type(error).__name__.upper(),
+                    "error_message": str(error),
+                },
                 ensure_ascii=False,
             ),
             file=sys.stderr,
