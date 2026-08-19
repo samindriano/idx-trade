@@ -79,7 +79,10 @@ def test_official_counterfactual_propagates_into_value_representation() -> None:
         "volume": "idx_volume",
         "regular_market_value": "idx_regular_market_value",
     })
-    mask = (idx["ticker"] == "AAAA") & (idx["date"] == dates[19])
+    # BBBB starts with a lower own-history value ratio than AAAA at day 20.
+    # Increasing BBBB's official value by 1.5x therefore exercises both the
+    # own-history representation change and an actual cross-sectional rank flip.
+    mask = (idx["ticker"] == "BBBB") & (idx["date"] == dates[19])
     idx.loc[mask, "idx_regular_market_value"] *= 1.5
 
     corrected, evidence = apply_official_value_counterfactual(panel, idx)
