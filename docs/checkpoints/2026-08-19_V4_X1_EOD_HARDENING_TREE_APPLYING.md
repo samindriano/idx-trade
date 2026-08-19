@@ -1,1 +1,0 @@
-Applying accepted EOD hardening tree now. Scheduler remains untouched.
