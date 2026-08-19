@@ -38,8 +38,8 @@ def _before_cutoff(now: datetime) -> bool:
 def _closed_through_for_run(now: datetime) -> pd.Timestamp:
     """Return the latest session date this invocation may capture.
 
-    The canonical base helper permits today's EOD after 17:00.  This automation
-    deliberately keeps the more conservative 18:00 operational boundary.  A
+    The canonical base helper permits today's EOD after 17:00. This automation
+    deliberately keeps the more conservative 18:00 operational boundary. A
     logon/catch-up run before 18:00 may still repair prior closed sessions, but
     it can never capture the current Jakarta calendar date.
     """
@@ -132,6 +132,7 @@ def run_eod_catchup(
             if enrichment.get("status") != "OPEN_COMPLETE":
                 result["legacy_open_repair_status"] = "INCOMPLETE"
 
+        attempted_sessions: set[str] = set()
         while True:
             sessions = runtime._load_forward_calendar(paths)
             eligible_sessions = sessions[sessions <= closed_through]
@@ -151,6 +152,13 @@ def run_eod_catchup(
                     "EOD_RUNNER_SELECTED_SESSION_BEYOND_CLOSED_THROUGH:"
                     f"{earliest.date().isoformat()}>{closed_through.date().isoformat()}"
                 )
+            expected_session = earliest.date().isoformat()
+            if expected_session in attempted_sessions:
+                raise RuntimeError(
+                    "EOD catch-up made no chronological progress after a DATA_READY capture: "
+                    f"session={expected_session}"
+                )
+            attempted_sessions.add(expected_session)
             captured = runtime.capture_session(
                 root,
                 target_date=earliest,
@@ -165,6 +173,17 @@ def run_eod_catchup(
                     }
                 )
                 break
+            try:
+                captured_session = base._normal_date(captured.get("session_date"))
+            except (TypeError, ValueError) as error:
+                raise RuntimeError("DATA_READY capture did not return a valid session_date") from error
+            if captured_session != earliest:
+                raise RuntimeError(
+                    "DATA_READY capture returned a different session than requested: "
+                    f"requested={expected_session} "
+                    f"returned={captured_session.date().isoformat()}"
+                )
+            captured = dict(captured)
             captured["session_date_validation"] = (
                 "PASS_CALENDAR_EXACT_SOURCE_DATE_AND_CLOSED_THROUGH_BOUND"
             )

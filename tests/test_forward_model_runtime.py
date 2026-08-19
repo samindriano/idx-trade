@@ -4,16 +4,66 @@ from pathlib import Path
 import json
 
 import pandas as pd
+import pytest
 
 from idx_trade import forward_model_runtime as model_runtime
 from idx_trade import forward_monitoring as base
 from idx_trade import forward_monitoring_runtime as runtime
+from idx_trade.forward_ohlcv import SESSION_OHLCV_COLUMNS
+from idx_trade.provenance import sha256_file, write_manifest_atomic
+from idx_trade.storage import write_parquet_atomic
 
 
 def _ready_session(root: Path, session: str = "2026-08-10") -> None:
     paths = base.runtime_paths(root)
     paths.calendar_root.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame({"date": [session]}).to_csv(paths.calendar_root / "exchange_sessions.csv", index=False)
+    calendar_path = paths.calendar_root / "exchange_sessions.csv"
+    pd.DataFrame({"date": [session]}).to_csv(calendar_path, index=False)
+    session_dir = paths.session_root / session
+    session_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_path = session_dir / "model_input.parquet"
+    evidence_path = session_dir / "session_evidence.parquet"
+    ohlcv_path = session_dir / "session_ohlcv.parquet"
+    stock_path = session_dir / "idx_stock_summary.csv"
+    stock_raw_path = session_dir / "idx_stock_summary.raw.json"
+    index_path = session_dir / "idx_index_summary.csv"
+    index_raw_path = session_dir / "idx_index_summary.raw.json"
+    manifest_path = session_dir / "manifest.json"
+    snapshot = pd.DataFrame({
+        "ticker": ["AAAA"], "date": [session], "high": [11.0], "low": [9.0],
+        "close": [10.0], "volume": [100.0], "regular_market_value": [1000.0],
+    })
+    evidence = pd.DataFrame({"ticker": ["AAAA"], "session_date": [session], "point_state": ["ACTIVE"]})
+    ohlcv = pd.DataFrame({
+        "ticker": ["AAAA"], "session_date": [session], "open": [10.0], "high": [11.0],
+        "low": [9.0], "close": [10.0], "volume": [100.0], "source": ["TEST"],
+        "source_ref": ["test://price"], "source_sha256": ["a" * 64],
+        "observed_retrieved_at_utc": [None],
+    })
+    write_parquet_atomic(snapshot, snapshot_path)
+    write_parquet_atomic(evidence, evidence_path)
+    write_parquet_atomic(ohlcv.loc[:, SESSION_OHLCV_COLUMNS], ohlcv_path)
+    pd.DataFrame({"ticker": ["AAAA"], "as_of_date": [session]}).to_csv(stock_path, index=False)
+    pd.DataFrame({"index_code": ["COMPOSITE"], "session_date": [session]}).to_csv(index_path, index=False)
+    stock_raw_path.write_text(json.dumps({"data": []}), encoding="utf-8")
+    index_raw_path.write_text(json.dumps({"data": []}), encoding="utf-8")
+    manifest = {
+        "schema_version": base.MONITOR_SCHEMA_VERSION,
+        "status": "DATA_READY", "session_date": session,
+        "outcome_blind": True, "forward_outcomes_accessed": False,
+        "model_input_rows": 1, "point_evidence_rows": 1,
+        "snapshot_path": str(snapshot_path), "snapshot_sha256": sha256_file(snapshot_path),
+        "evidence_path": str(evidence_path), "evidence_sha256": sha256_file(evidence_path),
+        "session_ohlcv_path": str(ohlcv_path), "session_ohlcv_sha256": sha256_file(ohlcv_path),
+        "stock_summary_path": str(stock_path), "stock_summary_sha256": sha256_file(stock_path),
+        "stock_summary_raw_path": str(stock_raw_path), "stock_summary_raw_sha256": sha256_file(stock_raw_path),
+        "stock_summary_source": {"session_date": session},
+        "index_summary_path": str(index_path), "index_summary_sha256": sha256_file(index_path),
+        "index_summary_raw_path": str(index_raw_path), "index_summary_raw_sha256": sha256_file(index_raw_path),
+        "index_summary_source": {"session_date": session},
+        "calendar_path": str(calendar_path), "calendar_sha256": sha256_file(calendar_path),
+    }
+    write_manifest_atomic(manifest_path, manifest)
     connection = base._connect(paths)
     try:
         connection.execute(
@@ -22,9 +72,15 @@ def _ready_session(root: Path, session: str = "2026-08-10") -> None:
                 session_date, state, snapshot_path, snapshot_sha256,
                 evidence_path, evidence_sha256, manifest_path, manifest_sha256,
                 updated_at
-            ) VALUES (?, 'DATA_READY', ?, 'snapshot', ?, 'evidence', ?, 'manifest', 'now')
+            ) VALUES (?, 'DATA_READY', ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session, str(root / "snapshot.parquet"), str(root / "evidence.parquet"), str(root / "manifest.json")),
+            (
+                session,
+                str(snapshot_path), sha256_file(snapshot_path),
+                str(evidence_path), sha256_file(evidence_path),
+                str(manifest_path), sha256_file(manifest_path),
+                "now",
+            ),
         )
     finally:
         connection.close()
@@ -158,6 +214,17 @@ def test_o2_counter_accepts_mixed_session_without_row_level_geometry_failure(tmp
     assert state["outcomes_accessed"] is False
 
 
+def test_o2_counter_registration_is_idempotent_for_the_same_session(tmp_path: Path) -> None:
+    paths = base.runtime_paths(tmp_path)
+    sessions = pd.DatetimeIndex(pd.to_datetime(["2026-08-11", "2026-08-12"]))
+
+    assert model_runtime._register_o2_counter(paths, sessions, session_index=2) == (0, 1)
+    assert model_runtime._register_o2_counter(paths, sessions, session_index=2) == (1, 1)
+    state = json.loads((paths.monitor_root / model_runtime.O2_COUNTER_FILENAME).read_text(encoding="utf-8"))
+    assert state["session_count"] == 1
+    assert state["last_session_index"] == 2
+
+
 def test_o2_mixed_session_scores_valid_row_and_keeps_flat_row_unscored(tmp_path: Path, monkeypatch) -> None:
     paths = base.runtime_paths(tmp_path)
     session_key = "2026-08-12"
@@ -222,3 +289,70 @@ def test_o2_mixed_session_scores_valid_row_and_keeps_flat_row_unscored(tmp_path:
     assert manifest["fresh_forward_outcomes_accessed"] is False
     assert manifest["forward_outcome_access_marker_written"] is False
     assert registrations == [(2, 2)]
+
+
+def test_model_result_verifier_rejects_fingerprint_mismatch(tmp_path: Path) -> None:
+    artifact_path = tmp_path / "score_artifact.parquet"
+    manifest_path = tmp_path / "manifest.json"
+    model_id = "HGB_XS_MARKET"
+    fingerprint = "f" * 64
+    frame = pd.DataFrame({
+        "ticker": ["AAAA"], "session_date": ["2026-08-10"], "score": [0.5],
+        "model_id": [model_id], "model_sha256": [fingerprint],
+    })
+    write_parquet_atomic(frame, artifact_path)
+    manifest = {
+        "status": "DONE", "session_date": "2026-08-10", "model_id": model_id,
+        "generation": "V2", "model_sha256": fingerprint,
+        "outcome_blind": True, "fresh_forward_outcomes_accessed": False,
+        "forward_outcome_access_marker_written": False,
+        "score_artifact_path": str(artifact_path),
+        "score_artifact_sha256": sha256_file(artifact_path),
+        "score_rows": 1, "scored_rows": 1,
+    }
+    write_manifest_atomic(manifest_path, manifest)
+    row = {
+        "artifact_path": str(artifact_path), "artifact_sha256": sha256_file(artifact_path),
+        "manifest_path": str(manifest_path), "manifest_sha256": sha256_file(manifest_path),
+        "session_date": "2026-08-10", "model_id": model_id,
+        "model_fingerprint": fingerprint, "generation": "V2",
+    }
+    assert base._verify_model_run_artifacts(row)
+
+    manifest["model_sha256"] = "m" * 64
+    write_manifest_atomic(manifest_path, manifest)
+    assert not base._verify_model_run_artifacts(row)
+
+
+def test_non_owner_cannot_release_model_worker_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = base.runtime_paths(tmp_path)
+    paths.monitor_root.mkdir(parents=True, exist_ok=True)
+    lock_path = paths.monitor_root / model_runtime.MODEL_WORKER_LOCK
+    lock_path.write_text("12345", encoding="utf-8")
+    monkeypatch.setattr(model_runtime.os, "getpid", lambda: 54321)
+
+    model_runtime.release_worker_lock(tmp_path)
+
+    assert lock_path.exists()
+    lock_path.write_text("54321", encoding="utf-8")
+    model_runtime.release_worker_lock(tmp_path)
+    assert not lock_path.exists()
+
+
+@pytest.mark.parametrize(
+    "dates, message",
+    [
+        (["2026-08-11", "2026-08-11"], "duplicate dates"),
+        (["2026-08-11", "not-a-date"], "invalid date"),
+    ],
+)
+def test_model_calendar_rejects_ambiguous_or_invalid_sessions(
+    tmp_path: Path,
+    dates: list[str],
+    message: str,
+) -> None:
+    path = tmp_path / "exchange_sessions.csv"
+    pd.DataFrame({"date": dates}).to_csv(path, index=False)
+
+    with pytest.raises(RuntimeError, match=message):
+        model_runtime._read_dates(path)

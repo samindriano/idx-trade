@@ -23,6 +23,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from . import forward_monitoring as base
 from .provenance import sha256_file, write_manifest_atomic
 from .forward_ohlcv import SESSION_OHLCV_COLUMNS, validate_ohlcv_against_model_input
 from .ranking_v2_forward_runtime import (
@@ -109,7 +110,7 @@ def _utcnow() -> str:
 def _normal_date(value: object) -> pd.Timestamp:
     timestamp = pd.Timestamp(value)
     if timestamp.tzinfo is not None:
-        timestamp = timestamp.tz_localize(None)
+        timestamp = timestamp.tz_convert(ZoneInfo("Asia/Jakarta")).tz_localize(None)
     return timestamp.normalize()
 
 
@@ -177,8 +178,15 @@ def _read_dates(path: Path) -> pd.DatetimeIndex:
     frame = pd.read_csv(path)
     if "date" not in frame.columns:
         raise RuntimeError(f"official session artifact has no date column: {path}")
-    dates = pd.to_datetime(frame["date"], errors="coerce").dropna()
-    return pd.DatetimeIndex(dates).tz_localize(None).normalize().unique().sort_values()
+    dates = pd.to_datetime(frame["date"], errors="coerce")
+    if dates.isna().any():
+        raise RuntimeError(f"official session artifact contains an invalid date: {path}")
+    normalized = pd.DatetimeIndex(dates).tz_localize(None).normalize()
+    if normalized.duplicated().any():
+        duplicates = normalized[normalized.duplicated(keep=False)]
+        sample = sorted({value.date().isoformat() for value in duplicates})[:10]
+        raise RuntimeError(f"official session artifact contains duplicate dates: {sample}")
+    return normalized.sort_values()
 
 
 def _official_sessions(paths, target: pd.Timestamp) -> pd.DatetimeIndex:
@@ -250,12 +258,12 @@ def _listed_from(paths) -> dict[str, pd.Timestamp]:
 
 
 def _load_model_panel(paths, session_key: str) -> tuple[pd.DataFrame, pd.DatetimeIndex, Path, Path]:
-    from .forward_monitoring import _existing_session
-
     session = _normal_date(session_key)
-    row = _existing_session(paths, session)
+    row = base._existing_session(paths, session)
     if row is None or row["state"] != "DATA_READY":
         raise RuntimeError(f"model fan-out requires DATA_READY session {session_key}")
+    if not base._verify_ready_row(row):
+        raise RuntimeError(f"model fan-out requires an integrity-verified DATA_READY session {session_key}")
     snapshot_path = Path(row["snapshot_path"])
     if not snapshot_path.exists():
         raise FileNotFoundError(f"DATA_READY snapshot missing for {session_key}")
@@ -274,7 +282,8 @@ def _load_model_panel(paths, session_key: str) -> tuple[pd.DataFrame, pd.Datetim
     snapshot = snapshot.loc[:, panel_columns].copy()
     snapshot["date"] = session
     snapshot["ticker"] = snapshot["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-    snapshot = snapshot.drop_duplicates(["ticker", "date"], keep="last")
+    if snapshot.duplicated(["ticker", "date"]).any():
+        raise RuntimeError(f"DATA_READY snapshot contains duplicate ticker/date rows for {session_key}")
     panel = pd.concat([panel, snapshot], ignore_index=True, sort=False)
     panel["ticker"] = panel["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
     panel = panel.drop_duplicates(["ticker", "date"], keep="last").sort_values(["date", "ticker"]).reset_index(drop=True)
@@ -465,6 +474,8 @@ def _register_o2_counter(paths, sessions: pd.DatetimeIndex, session_index: int) 
     path = _o2_counter_path(paths)
     before = _read_o2_counter(paths, sessions)
     expected = int(before["first_post_freeze_session_index"]) + int(before["session_count"])
+    if int(before["session_count"]) and int(session_index) == int(before["last_session_index"]):
+        return int(before["session_count"]), int(before["session_count"])
     if int(session_index) != expected:
         raise RuntimeError(f"O2 counter expected official session {expected}, received {session_index}")
     after_count = int(before["session_count"]) + 1
@@ -474,7 +485,7 @@ def _register_o2_counter(paths, sessions: pd.DatetimeIndex, session_index: int) 
         "last_session_index": int(session_index),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(after, indent=2, sort_keys=True), encoding="utf-8")
+    write_manifest_atomic(path, after)
     return int(before["session_count"]), after_count
 
 
@@ -636,12 +647,16 @@ def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.Da
         official_session_index = int(_o2_session_identity(paths, session_key)[0])
         counter_state = _read_o2_counter(paths, sessions)
         expected_index = int(counter_state["first_post_freeze_session_index"]) + int(counter_state["session_count"])
-        if official_session_index != expected_index:
+        already_registered = (
+            int(counter_state["session_count"]) > 0
+            and official_session_index == int(counter_state["last_session_index"])
+        )
+        if official_session_index != expected_index and not already_registered:
             raise RuntimeError(
                 f"O2 counter expected official session {expected_index}, received {official_session_index}"
             )
         counter_before = int(counter_state["session_count"])
-        counter_after = counter_before + 1
+        counter_after = counter_before if already_registered else counter_before + 1
         payload.update(
             {
                 "official_session_index": official_session_index,
@@ -654,7 +669,9 @@ def _score_frame(paths, spec: FrozenModelSpec, session_key: str, features: pd.Da
         )
     write_manifest_atomic(manifest_path, payload)
     if spec.model_id == O2_MODEL_ID:
-        _register_o2_counter(paths, sessions, official_session_index)
+        registered_before, registered_after = _register_o2_counter(paths, sessions, official_session_index)
+        if (registered_before, registered_after) != (counter_before, counter_after):
+            raise RuntimeError("O2 counter transition changed while scoring the same session")
         payload["o2_counter_registered"] = True
         write_manifest_atomic(manifest_path, payload)
     return artifact_path, manifest_path, artifact_sha, sha256_file(manifest_path)
@@ -676,17 +693,7 @@ def _update_run(paths, session_key: str, spec: FrozenModelSpec, **fields: object
 
 
 def _artifact_verified(row: Any) -> bool:
-    try:
-        artifact = Path(row["artifact_path"])
-        manifest = Path(row["manifest_path"])
-        return (
-            artifact.exists()
-            and manifest.exists()
-            and sha256_file(artifact) == row["artifact_sha256"]
-            and sha256_file(manifest) == row["manifest_sha256"]
-        )
-    except (OSError, TypeError):
-        return False
+    return base._verify_model_run_artifacts(row)
 
 
 def ensure_model_runs(paths, session_dates: Iterable[object] | None = None) -> int:
@@ -998,4 +1005,10 @@ def reconcile_and_request_worker(runtime_root: str | Path, session_dates: Iterab
 
 def release_worker_lock(runtime_root: str | Path) -> None:
     paths = _paths(runtime_root)
-    (paths.monitor_root / MODEL_WORKER_LOCK).unlink(missing_ok=True)
+    path = paths.monitor_root / MODEL_WORKER_LOCK
+    try:
+        owner_pid = int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return
+    if owner_pid == os.getpid():
+        path.unlink(missing_ok=True)

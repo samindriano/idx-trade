@@ -173,3 +173,93 @@ def test_runner_stops_on_first_capture_failure(tmp_path: Path, monkeypatch) -> N
     ).read_text()
     assert "DATA_FAILED" in latest
     assert "stopped_on_first_failure" in latest
+
+
+def test_runner_rejects_data_ready_result_for_wrong_session(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        runner,
+        "_now_jakarta",
+        lambda: datetime(2026, 8, 12, 18, 5, tzinfo=JAKARTA),
+    )
+    monkeypatch.setattr(
+        runner.base,
+        "_closed_through_date",
+        lambda now=None: pd.Timestamp("2026-08-12"),
+    )
+    monkeypatch.setattr(
+        runner.runtime,
+        "sync_forward_calendar",
+        lambda paths, through=None: pd.DatetimeIndex(["2026-08-11"]),
+    )
+    monkeypatch.setattr(
+        runner.runtime,
+        "_load_forward_calendar",
+        lambda paths: pd.DatetimeIndex(["2026-08-11"]),
+    )
+    _no_legacy_rows(monkeypatch)
+    monkeypatch.setattr(
+        runner.base,
+        "_earliest_missing",
+        lambda paths, sessions: pd.Timestamp("2026-08-11"),
+    )
+    monkeypatch.setattr(
+        runner.runtime,
+        "capture_session",
+        lambda *args, **kwargs: {"status": "DATA_READY", "session_date": "2026-08-12"},
+    )
+
+    try:
+        runner.run_eod_catchup(tmp_path)
+    except RuntimeError as error:
+        assert "different session" in str(error)
+    else:
+        raise AssertionError("runner must reject a mismatched DATA_READY session")
+
+    latest = (tmp_path / "forward_monitoring" / "eod_automation" / "latest.json").read_text()
+    assert "DATA_FAILED" in latest
+    assert "PASS_CALENDAR_EXACT_SOURCE_DATE_AND_CLOSED_THROUGH_BOUND" not in latest
+
+
+def test_runner_stops_if_data_ready_capture_makes_no_progress(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        runner,
+        "_now_jakarta",
+        lambda: datetime(2026, 8, 12, 18, 5, tzinfo=JAKARTA),
+    )
+    monkeypatch.setattr(
+        runner.base,
+        "_closed_through_date",
+        lambda now=None: pd.Timestamp("2026-08-12"),
+    )
+    monkeypatch.setattr(
+        runner.runtime,
+        "sync_forward_calendar",
+        lambda paths, through=None: pd.DatetimeIndex(["2026-08-11"]),
+    )
+    monkeypatch.setattr(
+        runner.runtime,
+        "_load_forward_calendar",
+        lambda paths: pd.DatetimeIndex(["2026-08-11"]),
+    )
+    _no_legacy_rows(monkeypatch)
+    monkeypatch.setattr(
+        runner.base,
+        "_earliest_missing",
+        lambda paths, sessions: pd.Timestamp("2026-08-11"),
+    )
+    calls: list[str] = []
+
+    def capture(*args, **kwargs):
+        calls.append("2026-08-11")
+        return {"status": "DATA_READY", "session_date": "2026-08-11"}
+
+    monkeypatch.setattr(runner.runtime, "capture_session", capture)
+
+    try:
+        runner.run_eod_catchup(tmp_path)
+    except RuntimeError as error:
+        assert "no chronological progress" in str(error)
+    else:
+        raise AssertionError("runner must not loop forever on an unchanged earliest session")
+
+    assert calls == ["2026-08-11"]

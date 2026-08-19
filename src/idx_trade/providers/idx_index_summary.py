@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 import hashlib
+from math import isfinite
 
 import pandas as pd
 import requests
@@ -56,10 +57,15 @@ def _integer_metadata(payload: Mapping[str, object], name: str) -> int | None:
     value = payload.get(name)
     if value is None:
         return None
+    if isinstance(value, bool):
+        raise ValueError(f"IDX Index Summary {name} is not an integer")
     try:
-        parsed = int(value)
-    except (TypeError, ValueError) as error:
+        numeric = float(value)
+        parsed = int(numeric)
+    except (TypeError, ValueError, OverflowError) as error:
         raise ValueError(f"IDX Index Summary {name} is not an integer") from error
+    if not isfinite(numeric) or numeric != parsed:
+        raise ValueError(f"IDX Index Summary {name} is not an integer")
     if parsed < 0:
         raise ValueError(f"IDX Index Summary {name} cannot be negative")
     return parsed
@@ -101,7 +107,12 @@ def _validate_complete_payload(
                 "IDX Index Summary row date mismatch: "
                 f"requested={requested.date().isoformat()} row={row.get('Date')!r}"
             )
-        code = str(row.get("IndexCode", "")).strip().upper()
+        raw_code = row.get("IndexCode", "")
+        try:
+            missing_code = raw_code is None or bool(pd.isna(raw_code))
+        except (TypeError, ValueError):
+            missing_code = raw_code is None
+        code = "" if missing_code else str(raw_code).strip().upper()
         if not code:
             raise ValueError(f"IDX Index Summary row {position} has an empty IndexCode")
         codes.append(code)
@@ -223,7 +234,7 @@ def parse_index_summary_payload(
     ]
     for column in numeric:
         data[column] = pd.to_numeric(data[column], errors="coerce")
-        if data[column].isna().any():
+        if data[column].isna().any() or not data[column].map(lambda value: isfinite(float(value))).all():
             raise ValueError(f"IDX Index Summary {column} contains invalid values")
     if (data[["Previous", "Highest", "Lowest", "Close"]] < 0).any().any():
         raise ValueError("IDX Index Summary prices cannot be negative")

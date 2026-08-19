@@ -12,7 +12,6 @@ from idx_trade import forward_monitoring as monitor
 from idx_trade.providers.idx_index_summary import IndexSummaryFetchMeta, IndexSummaryPayloadCapture
 from idx_trade.providers.idx_stock_summary import StockSummaryFetchMeta, StockSummaryPayloadCapture
 from idx_trade.provenance import sha256_file, write_manifest_atomic
-from idx_trade.storage import write_parquet_atomic
 
 
 SESSION = pd.Timestamp("2026-08-03")
@@ -307,28 +306,25 @@ def test_unresolved_point_evidence_fails_closed_and_is_retryable(tmp_path: Path,
     assert row["error_code"] == "RUNTIMEERROR"
 
 
-def test_stale_fetch_with_complete_final_artifacts_reconciles_without_refetch(tmp_path: Path) -> None:
+def test_stale_fetch_with_complete_final_artifacts_reconciles_without_refetch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    monitor.capture_session(tmp_path, target_date=SESSION)
     paths = monitor.runtime_paths(tmp_path)
     session_key = SESSION.date().isoformat()
-    final_dir = paths.session_root / session_key
-    final_dir.mkdir(parents=True)
-    snapshot = final_dir / "model_input.parquet"
-    evidence = final_dir / "session_evidence.parquet"
-    manifest = final_dir / "manifest.json"
-    write_parquet_atomic(pd.DataFrame({"ticker": ["AAAA"], "date": [SESSION]}), snapshot)
-    write_parquet_atomic(pd.DataFrame({"ticker": ["AAAA"], "session_date": [SESSION]}), evidence)
-    write_manifest_atomic(manifest, {"status": "DATA_READY", "session_date": session_key})
 
     stale = (datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=2)).isoformat()
     connection = monitor._connect(paths)
     try:
         connection.execute(
             """
-            INSERT INTO session_snapshots(
-                session_date, state, started_at, updated_at, lease_owner, heartbeat_at
-            ) VALUES (?, 'FETCHING', ?, ?, 'dead-worker', ?)
+            UPDATE session_snapshots
+            SET state='FETCHING', updated_at=?, lease_owner='dead-worker', heartbeat_at=?
+            WHERE session_date=?
             """,
-            (session_key, stale, stale, stale),
+            (stale, stale, session_key),
         )
     finally:
         connection.close()
@@ -337,6 +333,10 @@ def test_stale_fetch_with_complete_final_artifacts_reconciles_without_refetch(tm
     row = monitor._existing_session(paths, SESSION)
     assert row is not None
     assert row["state"] == "DATA_READY"
+    final_dir = paths.session_root / session_key
+    snapshot = final_dir / "model_input.parquet"
+    evidence = final_dir / "session_evidence.parquet"
+    manifest = final_dir / "manifest.json"
     assert row["snapshot_sha256"] == sha256_file(snapshot)
     assert row["evidence_sha256"] == sha256_file(evidence)
     assert row["manifest_sha256"] == sha256_file(manifest)
@@ -379,3 +379,153 @@ def test_later_session_cannot_skip_earlier_missing_date(tmp_path: Path, monkeypa
 
     with pytest.raises(ValueError, match="cannot skip an earlier missing session"):
         monitor.capture_session(tmp_path, target_date=later)
+
+
+@pytest.mark.parametrize(
+    "dates, message",
+    [
+        (["2026-08-11", "2026-08-11"], "duplicate dates"),
+        (["2026-08-11", "not-a-date"], "invalid date"),
+    ],
+)
+def test_forward_calendar_rejects_ambiguous_or_invalid_sessions(
+    tmp_path: Path,
+    dates: list[str],
+    message: str,
+) -> None:
+    path = tmp_path / "exchange_sessions.csv"
+    pd.DataFrame({"date": dates}).to_csv(path, index=False)
+
+    with pytest.raises(RuntimeError, match=message):
+        monitor._read_sessions(path)
+
+
+def test_timezone_aware_target_is_resolved_in_jakarta_session_date() -> None:
+    assert monitor._normal_date("2026-08-10T17:30:00Z") == pd.Timestamp("2026-08-11")
+
+
+def test_table_discovery_rejects_tied_canonical_artifacts(tmp_path: Path) -> None:
+    root = tmp_path / "listings"
+    root.mkdir()
+    columns = list(monitor.SECURITY_COLUMNS)
+    pd.DataFrame(columns=columns).to_csv(root / "security_master_a.csv", index=False)
+    pd.DataFrame(columns=columns).to_csv(root / "security_master_b.csv", index=False)
+
+    with pytest.raises(RuntimeError, match="ambiguous security master"):
+        monitor._discover_table(root, monitor.SECURITY_COLUMNS, label="security master")
+
+
+def test_corrupt_data_ready_session_is_failed_closed_before_status_counts_it(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    monitor.capture_session(tmp_path, target_date=SESSION)
+    paths = monitor.runtime_paths(tmp_path)
+    (paths.session_root / SESSION.date().isoformat() / "manifest.json").unlink()
+
+    status = monitor.monitoring_status(tmp_path)
+
+    assert status["data_ready_sessions"] == 0
+    assert status["next_missing_session"] == SESSION.date().isoformat()
+    row = monitor._existing_session(paths, SESSION)
+    assert row is not None
+    assert row["state"] == "DATA_FAILED"
+    assert row["error_code"] == "INCOMPLETE_ARTIFACTS"
+
+
+def test_stale_reconciliation_does_not_overwrite_a_newer_lease(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    monitor.capture_session(tmp_path, target_date=SESSION)
+    paths = monitor.runtime_paths(tmp_path)
+    session_key = SESSION.date().isoformat()
+    stale = (datetime.now(tz=ZoneInfo("UTC")) - timedelta(hours=2)).isoformat()
+    connection = monitor._connect(paths)
+    try:
+        connection.execute(
+            """UPDATE session_snapshots
+               SET state='FETCHING', updated_at=?, lease_owner='dead-worker', heartbeat_at=?
+             WHERE session_date=?""",
+            (stale, stale, session_key),
+        )
+    finally:
+        connection.close()
+
+    original = monitor._verify_ready_artifacts
+
+    def replace_lease(*args, **kwargs):
+        live = monitor._connect(paths)
+        try:
+            live.execute(
+                """UPDATE session_snapshots
+                   SET lease_owner='live-worker', heartbeat_at=?
+                 WHERE session_date=?""",
+                (monitor._utcnow(), session_key),
+            )
+        finally:
+            live.close()
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(monitor, "_verify_ready_artifacts", replace_lease)
+    monitor._reconcile_stale(paths)
+
+    row = monitor._existing_session(paths, SESSION)
+    assert row is not None
+    assert row["state"] == "FETCHING"
+    assert row["lease_owner"] == "live-worker"
+
+
+def test_duplicate_raw_price_rows_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _prepare(monkeypatch, tmp_path)
+    paths = monitor.runtime_paths(tmp_path)
+    raw_path = paths.raw_price_root / "AAAA.parquet"
+    frame = pd.read_parquet(raw_path)
+    pd.concat([frame, frame], ignore_index=True).to_parquet(raw_path, index=False)
+
+    with pytest.raises(RuntimeError, match="duplicate rows"):
+        monitor.capture_session(tmp_path, target_date=SESSION)
+
+    row = monitor._existing_session(paths, SESSION)
+    assert row is not None
+    assert row["state"] == "DATA_FAILED"
+
+
+def test_stale_stock_summary_date_fails_before_final_artifact_promotion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    frame, meta = _stock_summary()
+    frame["as_of_date"] = SESSION - pd.Timedelta(days=1)
+    capture = StockSummaryPayloadCapture(
+        payload={"data": []},
+        source_ref=meta.source_ref,
+        raw_bytes=b'{"stale":true}',
+        endpoint=meta.source_ref,
+        params={"date": SESSION.strftime("%Y%m%d")},
+        retrieval_started_at_utc="2026-08-03T10:00:00+00:00",
+        observed_available_at_utc="2026-08-03T10:00:01+00:00",
+        records_total=2,
+        records_filtered=2,
+        row_count=2,
+        completeness_status="COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+    )
+
+    monkeypatch.setattr(
+        monitor,
+        "fetch_stock_summary_snapshot",
+        lambda date, *, include_capture=False: (frame, meta, capture),
+    )
+
+    with pytest.raises(RuntimeError, match="stale or date-mismatched"):
+        monitor.capture_session(tmp_path, target_date=SESSION)
+
+    paths = monitor.runtime_paths(tmp_path)
+    final_dir = paths.session_root / SESSION.date().isoformat()
+    assert not (final_dir / "manifest.json").exists()
+    row = monitor._existing_session(paths, SESSION)
+    assert row is not None
+    assert row["state"] == "DATA_FAILED"

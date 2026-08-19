@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 import hashlib
+from math import isfinite
 
 import pandas as pd
 import requests
@@ -59,10 +60,15 @@ def _integer_metadata(payload: Mapping[str, object], name: str) -> int | None:
     value = payload.get(name)
     if value is None:
         return None
+    if isinstance(value, bool):
+        raise ValueError(f"IDX Stock Summary {name} is not an integer")
     try:
-        parsed = int(value)
-    except (TypeError, ValueError) as error:
+        numeric = float(value)
+        parsed = int(numeric)
+    except (TypeError, ValueError, OverflowError) as error:
         raise ValueError(f"IDX Stock Summary {name} is not an integer") from error
+    if not isfinite(numeric) or numeric != parsed:
+        raise ValueError(f"IDX Stock Summary {name} is not an integer")
     if parsed < 0:
         raise ValueError(f"IDX Stock Summary {name} cannot be negative")
     return parsed
@@ -202,7 +208,7 @@ def fetch_stock_summary_payload_capture(
 
 def _number(value: object) -> float | None:
     parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-    return None if pd.isna(parsed) else float(parsed)
+    return None if pd.isna(parsed) or not isfinite(float(parsed)) else float(parsed)
 
 
 def parse_stock_summary_payload(
@@ -287,13 +293,20 @@ def parse_stock_summary_payload(
         ),
     )
     if not frame.empty:
-        frame = frame.drop_duplicates(["ticker", "as_of_date"], keep="last")
+        if frame.duplicated(["ticker", "as_of_date"]).any():
+            raise ValueError("IDX Stock Summary contains duplicate ticker/date rows")
         frame = frame.sort_values(["as_of_date", "ticker"]).reset_index(drop=True)
 
     records_total = payload.get("recordsTotal")
     try:
-        records_total_value = int(records_total) if records_total is not None else None
-    except (TypeError, ValueError):
+        if records_total is None or isinstance(records_total, bool):
+            records_total_value = None
+        else:
+            numeric_total = float(records_total)
+            records_total_value = int(numeric_total)
+            if not isfinite(numeric_total) or numeric_total != records_total_value:
+                records_total_value = None
+    except (TypeError, ValueError, OverflowError):
         records_total_value = None
 
     regular_trade_rows = 0

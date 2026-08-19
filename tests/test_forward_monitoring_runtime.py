@@ -92,12 +92,14 @@ def test_status_ignores_prestart_registry_rows(tmp_path: Path) -> None:
 
     assert status["monitor_start_date"] == "2026-08-10"
     assert status["calendar_first_session"] == "2026-08-10"
-    assert status["data_ready_sessions"] == 1
+    # A registry-only DATA_READY row is not canonical completion; the
+    # integrity pass fails it closed even though the prestart row is filtered.
+    assert status["data_ready_sessions"] == 0
     assert [row["session_date"] for row in status["sessions"]] == [
         "2026-08-10",
         "2026-08-11",
     ]
-    assert status["next_missing_session"] == "2026-08-11"
+    assert status["next_missing_session"] == "2026-08-10"
 
 
 def test_legacy_aug_3_ready_does_not_block_aug_10_first_capture(tmp_path: Path) -> None:
