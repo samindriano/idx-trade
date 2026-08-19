@@ -248,7 +248,7 @@ def main() -> int:
     output = args.output_dir.resolve()
     if output.exists() and any(output.iterdir()):
         raise RuntimeError(f"REFUSE_OVERWRITE_NONEMPTY_OUTPUT:{output}")
-    manifest, summary = verify_v11(root)
+    _manifest, summary = verify_v11(root)
 
     basis = pd.read_csv(root / "panel_vs_idx_basis_rows.csv")
     runs = pd.read_csv(root / "stable_scale_runs.csv")
@@ -256,7 +256,7 @@ def main() -> int:
     v4_diff = pd.read_csv(root / "v4_x1_candidate_training_feature_impact_rows.csv")
     affected = set(runs["ticker"].astype(str).str.upper())
 
-    stable_rows = basis[str("panel_idx_stable_run_member")]
+    stable_rows = basis["panel_idx_stable_run_member"]
     stable_mask = strict_bool(stable_rows, label="panel_idx_stable_run_member")
     stable_basis = basis.loc[stable_mask].copy()
     provenance_counts = stable_basis.get("price_provenance", pd.Series(dtype=str)).astype(str).value_counts().to_dict()
@@ -265,6 +265,7 @@ def main() -> int:
     v2_scope = changed_scope_summary(v2_diff, affected)
     v4_candidate_scope = changed_scope_summary(v4_diff, affected)
     v4_exact = exact_v4_fit_audit(summary, v4_diff, affected)
+    v4_exact_found = v4_exact["verdict"] == "V4_X1_EXACT_FIT_REPRESENTATION_BASIS_IMPACT_FOUND"
 
     result = {
         "schema_version": "training_price_basis_impact_audit_v1_2",
@@ -295,7 +296,7 @@ def main() -> int:
         "adjudication": {
             "training_lineage_status": (
                 "PRICE_BASIS_CONTAMINATION_CONFIRMED_IN_FROZEN_MODEL_REPRESENTATIONS"
-                if v2_scope["changed_rows"] and v4_exact["verdict"].endswith("FOUND")
+                if v2_scope["changed_rows"] and v4_exact_found
                 else "PRICE_BASIS_TRAINING_IMPACT_PARTIAL_OR_UNRESOLVED"
             ),
             "retrain_authorized": False,
