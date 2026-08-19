@@ -15,7 +15,7 @@ $previousPythonPath = $env:PYTHONPATH
 $env:PYTHONPATH = if ($previousPythonPath) { "$src;$previousPythonPath" } else { $src }
 $env:PYTHONUNBUFFERED = "1"
 
-& $PythonExe -m idx_trade.v4_x1_eod_pipeline `
+& $PythonExe -m idx_trade.v4_x1_eod_legacy_compat `
   --runtime-root $resolvedRuntime `
   --x1-model-root $resolvedModel `
   --repo-root $resolvedRepo `
