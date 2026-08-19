@@ -111,6 +111,18 @@ def test_scorer_enforces_clean_freshness_and_chronological_next_session() -> Non
     assert "ignored_post_freeze_backfills" in source
 
 
+def test_scorer_uses_snapshots_only_for_history_and_exact_ohlcv_for_candidate() -> None:
+    source = SCORER.read_text(encoding="utf-8")
+    assert "require_ohlcv_exact=day == candidate" in source
+    assert "NOT_REQUIRED_FOR_FORWARD_FEATURE_HISTORY" in source
+    assert "LEGACY_OPEN_ENRICHMENT_NOT_REQUIRED" in source
+    assert "return snapshot, None, evidence" in source
+    assert "EXACT_HLCV_REQUIRED_FOR_FRESH_GEOMETRY3_CANDIDATE" in source
+    assert "compare_volume=True" in source
+    assert "candidate_ohlcv_exact_hlcv_match" in source
+    assert "V4_X1_CANDIDATE_OHLCV_NOT_VERIFIED" in source
+
+
 def test_scorer_writes_one_bundle_artifact_with_both_control_and_challenger() -> None:
     source = SCORER.read_text(encoding="utf-8")
     for column in (
