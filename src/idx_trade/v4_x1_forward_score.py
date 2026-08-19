@@ -1,10 +1,17 @@
 """Outcome-blind immutable prospective score capture for frozen V4-X1.
 
-This module is deliberately separate from the legacy V2/V3/O2 fan-out.  V4-X1
+This module is deliberately separate from the legacy V2/V3/O2 fan-out. V4-X1
 is a four-model bundle (CONTROL/CHALLENGER x H5/H10) with a frozen 50/50
-consensus contract.  It may read only causal market/session inputs and the
-frozen model bundle.  It never reads realized forward outcomes, refits a model,
+consensus contract. It may read only causal market/session inputs and the
+frozen model bundle. It never reads realized forward outcomes, refits a model,
 retunes science, or calls a provider.
+
+Forward-history sessions contribute only canonical DATA_READY model-input
+snapshots to the causal H/L/C/V/value feature build. Their separately enriched
+legacy Open artifacts are not scientific inputs to historical feature state and
+are therefore not required. The genuinely fresh candidate is different: its
+immutable sibling OHLCV supplies Geometry3 Open and must match the candidate
+model input exactly in H/L/C/V before scoring.
 """
 
 from __future__ import annotations
@@ -290,7 +297,20 @@ def _snapshot_rows(paths) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def _verify_snapshot(paths, row: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+def _verify_snapshot(
+    paths,
+    row: dict[str, Any],
+    *,
+    require_ohlcv_exact: bool,
+) -> tuple[pd.DataFrame, pd.DataFrame | None, dict[str, Any]]:
+    """Verify a canonical snapshot and optionally its fresh sibling OHLCV.
+
+    Historical forward rows feed only the frozen control feature state. Their
+    legacy Open enrichment is intentionally irrelevant. The candidate's Open is
+    a Geometry3 input, so only the candidate requires exact sibling H/L/C/V
+    reconciliation.
+    """
+
     if row.get("state") != "DATA_READY":
         raise RuntimeError("V4_X1_INTERNAL_NON_READY_ROW")
     session = _normal_date(row["session_date"])
@@ -315,26 +335,45 @@ def _verify_snapshot(paths, row: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataF
     if snapshot["ticker"].eq("").any() or snapshot["ticker"].duplicated().any():
         raise RuntimeError(f"V4_X1_DATA_READY_SNAPSHOT_TICKER_INVALID:{session.date()}")
 
+    evidence: dict[str, Any] = {
+        "session_date": session.date().isoformat(),
+        "snapshot_path": str(snapshot_path),
+        "snapshot_sha256": actual_snapshot_sha,
+        "rows": int(len(snapshot)),
+        "completed_at": row.get("completed_at"),
+        "canonical_eod_available_at": _session_eod_available_at_utc(session).astimezone(JAKARTA).isoformat(),
+        "ohlcv_requirement": (
+            "EXACT_HLCV_REQUIRED_FOR_FRESH_GEOMETRY3_CANDIDATE"
+            if require_ohlcv_exact
+            else "NOT_REQUIRED_FOR_FORWARD_FEATURE_HISTORY"
+        ),
+    }
+    if not require_ohlcv_exact:
+        return snapshot, None, evidence
+
     ohlcv_path = paths.session_root / session.date().isoformat() / "session_ohlcv.parquet"
     if not ohlcv_path.is_file():
-        raise RuntimeError(f"V4_X1_SESSION_OHLCV_MISSING:{ohlcv_path}")
+        raise RuntimeError(f"V4_X1_CANDIDATE_SESSION_OHLCV_MISSING:{ohlcv_path}")
     ohlcv = pd.read_parquet(ohlcv_path)
     missing_ohlcv = set(SESSION_OHLCV_COLUMNS) - set(ohlcv.columns)
     if missing_ohlcv:
         raise RuntimeError(
-            f"V4_X1_SESSION_OHLCV_COLUMNS_MISSING:{session.date()}:{sorted(missing_ohlcv)}"
+            f"V4_X1_CANDIDATE_SESSION_OHLCV_COLUMNS_MISSING:{session.date()}:{sorted(missing_ohlcv)}"
         )
-    validate_ohlcv_against_model_input(ohlcv, snapshot, session.date().isoformat())
-    return snapshot, ohlcv, {
-        "session_date": session.date().isoformat(),
-        "snapshot_path": str(snapshot_path),
-        "snapshot_sha256": actual_snapshot_sha,
-        "session_ohlcv_path": str(ohlcv_path),
-        "session_ohlcv_sha256": sha256_file(ohlcv_path),
-        "rows": int(len(snapshot)),
-        "completed_at": row.get("completed_at"),
-        "canonical_eod_available_at": _session_eod_available_at_utc(session).astimezone(JAKARTA).isoformat(),
-    }
+    validate_ohlcv_against_model_input(
+        ohlcv,
+        snapshot,
+        session.date().isoformat(),
+        compare_volume=True,
+    )
+    evidence.update(
+        {
+            "session_ohlcv_path": str(ohlcv_path),
+            "session_ohlcv_sha256": sha256_file(ohlcv_path),
+            "candidate_ohlcv_exact_hlcv_match": True,
+        }
+    )
+    return snapshot, ohlcv, evidence
 
 
 def _existing_run(paths, session_key: str, fingerprint: str) -> dict[str, Any] | None:
@@ -411,14 +450,21 @@ def _set_run_state(
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
-                    session_key, MODEL_ID, fingerprint, GENERATION,
-                    state, float(progress),
+                    session_key,
+                    MODEL_ID,
+                    fingerprint,
+                    GENERATION,
+                    state,
+                    float(progress),
                     str(artifact_path) if artifact_path else None,
                     artifact_sha256,
                     str(manifest_path) if manifest_path else None,
                     manifest_sha256,
-                    now, now, now if completed else None,
-                    error_code, error_message,
+                    now,
+                    now,
+                    now if completed else None,
+                    error_code,
+                    error_message,
                 ),
             )
         else:
@@ -431,14 +477,19 @@ def _set_run_state(
                 WHERE session_date=? AND model_id=? AND model_fingerprint=?
                 """,
                 (
-                    state, float(progress),
+                    state,
+                    float(progress),
                     str(artifact_path) if artifact_path else None,
                     artifact_sha256,
                     str(manifest_path) if manifest_path else None,
                     manifest_sha256,
-                    now, now if completed else None,
-                    error_code, error_message,
-                    session_key, MODEL_ID, fingerprint,
+                    now,
+                    now if completed else None,
+                    error_code,
+                    error_message,
+                    session_key,
+                    MODEL_ID,
+                    fingerprint,
                 ),
             )
 
@@ -479,8 +530,6 @@ def _fresh_sessions(
     if not fresh:
         raise RuntimeError("V4_X1_NO_GENUINELY_FRESH_DATA_READY_SESSION")
 
-    # Preserve chronology: choose the first genuinely fresh session that has
-    # not already been immutably completed for this exact frozen bundle.
     pending: list[tuple[pd.Timestamp, dict[str, Any]]] = []
     for session, row in fresh:
         existing = _existing_run(paths, session.date().isoformat(), fingerprint)
@@ -530,18 +579,27 @@ def score_v4_x1_session(
     historical_end = _normal_date(historical["date"].max())
 
     pending, ignored_backfills, ready_by_date = _fresh_sessions(
-        paths, freeze, historical_end, fingerprint
+        paths,
+        freeze,
+        historical_end,
+        fingerprint,
     )
     if not pending:
-        # All genuinely fresh sessions currently present have already been
-        # completed. Verify the latest one rather than creating a new artifact.
         fresh_done = [
             (day, _existing_run(paths, day.date().isoformat(), fingerprint))
             for day in sorted(ready_by_date)
             if _session_eod_available_at_utc(day) > freeze
-            and (_parse_utc(ready_by_date[day].get("completed_at")) or datetime.min.replace(tzinfo=UTC)) > freeze
+            and (
+                _parse_utc(ready_by_date[day].get("completed_at"))
+                or datetime.min.replace(tzinfo=UTC)
+            )
+            > freeze
         ]
-        fresh_done = [(day, row) for day, row in fresh_done if row and row.get("state") == "DONE"]
+        fresh_done = [
+            (day, row)
+            for day, row in fresh_done
+            if row and row.get("state") == "DONE"
+        ]
         if fresh_done:
             return _verify_existing_done(fresh_done[-1][1])
         raise RuntimeError("V4_X1_NO_PENDING_FRESH_SESSION")
@@ -581,10 +639,16 @@ def score_v4_x1_session(
         candidate_ohlcv: pd.DataFrame | None = None
         for day in required_sessions:
             day = _normal_date(day)
-            snapshot, ohlcv, evidence = _verify_snapshot(paths, ready_by_date[day])
+            snapshot, ohlcv, evidence = _verify_snapshot(
+                paths,
+                ready_by_date[day],
+                require_ohlcv_exact=day == candidate,
+            )
             verified.append(evidence)
             forward_frames.append(snapshot)
             if day == candidate:
+                if ohlcv is None:
+                    raise RuntimeError("V4_X1_CANDIDATE_OHLCV_NOT_VERIFIED")
                 candidate_ohlcv = ohlcv.copy()
         if candidate_ohlcv is None:
             raise RuntimeError("V4_X1_CANDIDATE_OHLCV_NOT_VERIFIED")
@@ -617,7 +681,9 @@ def score_v4_x1_session(
         if scoring.empty:
             raise RuntimeError("V4_X1_NO_PRIMARY_LIQUID_SCORING_ROWS")
 
-        geometry_input = candidate_ohlcv.loc[:, ["ticker", "session_date", "open", "high", "low", "close"]].copy()
+        geometry_input = candidate_ohlcv.loc[
+            :, ["ticker", "session_date", "open", "high", "low", "close"]
+        ].copy()
         geometry_input = geometry_input.rename(columns={"session_date": "date"})
         geometry_input["ticker"] = geometry_input["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
         geometry_input["date"] = pd.to_datetime(geometry_input["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
@@ -629,9 +695,6 @@ def score_v4_x1_session(
             validate="one_to_one",
         )
         missing_geometry_identity = scoring[list(SESSION_GEOMETRY_FEATURE_COLUMNS)].isna().all(axis=1)
-        # All three geometry values may legitimately be NaN only for a fully
-        # unusable bar, but canonical OHLCV validation should make that rare;
-        # the frozen challenger imputer owns the numeric missing-value policy.
         if int(missing_geometry_identity.sum()) == len(scoring):
             raise RuntimeError("V4_X1_ALL_GEOMETRY_FEATURES_MISSING")
 
@@ -658,13 +721,16 @@ def score_v4_x1_session(
         artifact["raw_control_h10"] = raw_control_h10
         artifact["alpha_control_h10"] = alpha_control_h10.to_numpy(dtype=float)
         artifact["alpha_control_consensus"] = (
-            0.5 * artifact["alpha_control_h5"] + 0.5 * artifact["alpha_control_h10"]
+            0.5 * artifact["alpha_control_h5"]
+            + 0.5 * artifact["alpha_control_h10"]
         )
         artifact["raw_challenger_h5"] = raw_challenger_h5
         artifact["alpha_h5"] = alpha_challenger_h5.to_numpy(dtype=float)
         artifact["raw_challenger_h10"] = raw_challenger_h10
         artifact["alpha_h10"] = alpha_challenger_h10.to_numpy(dtype=float)
-        artifact["alpha_consensus"] = 0.5 * artifact["alpha_h5"] + 0.5 * artifact["alpha_h10"]
+        artifact["alpha_consensus"] = (
+            0.5 * artifact["alpha_h5"] + 0.5 * artifact["alpha_h10"]
+        )
         artifact = artifact.sort_values(
             ["alpha_consensus", "ticker"],
             ascending=[False, True],
@@ -676,7 +742,10 @@ def score_v4_x1_session(
             ascending=[False, True],
             kind="mergesort",
         ).index
-        control_ranks = pd.Series(np.arange(1, len(artifact) + 1, dtype=np.int64), index=control_order)
+        control_ranks = pd.Series(
+            np.arange(1, len(artifact) + 1, dtype=np.int64),
+            index=control_order,
+        )
         artifact["rank_control_consensus"] = control_ranks.reindex(artifact.index).to_numpy(dtype=np.int64)
 
         if artifact[["alpha_h5", "alpha_h10", "alpha_consensus"]].isna().any().any():
@@ -690,9 +759,11 @@ def score_v4_x1_session(
         artifact_bytes = artifact.to_parquet(index=False)
         artifact_sha = hashlib.sha256(artifact_bytes).hexdigest()
 
-        candidate_evidence = next(row for row in verified if row["session_date"] == session_key)
+        candidate_evidence = next(
+            row for row in verified if row["session_date"] == session_key
+        )
         manifest = {
-            "schema_version": "v4_x1_prospective_score_manifest_v1",
+            "schema_version": "v4_x1_prospective_score_manifest_v2",
             "model_id": MODEL_ID,
             "generation": GENERATION,
             "model_fingerprint": fingerprint,
@@ -726,6 +797,8 @@ def score_v4_x1_session(
                 "security_master_path": str(security_path),
                 "security_master_sha256": sha256_file(security_path),
                 "calendar_sources": calendar_sources,
+                "forward_history_rule": "CANONICAL_DATA_READY_SNAPSHOT_ONLY;LEGACY_OPEN_ENRICHMENT_NOT_REQUIRED",
+                "candidate_open_rule": "IMMUTABLE_SESSION_OHLCV_EXACT_HLCV_MATCH_REQUIRED",
                 "verified_forward_history": verified,
                 "candidate_snapshot_sha256": candidate_evidence["snapshot_sha256"],
                 "candidate_session_ohlcv_sha256": candidate_evidence["session_ohlcv_sha256"],
