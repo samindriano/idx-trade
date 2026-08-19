@@ -123,7 +123,6 @@ export default function ModelDetailPage() {
   const scoredRuns = modelRuns.filter((run) => run.state === "DONE" && Boolean(run.artifact_sha256));
   const failedRuns = modelRuns.filter((run) => run.state === "FAILED" || run.error_code);
   const latestScored = scoredRuns[0] ?? null;
-  const latestRun = modelRuns[0] ?? null;
   const coverage = Math.min(100, (scoredRuns.length / model.forwardTargetSessions) * 100);
 
   return (
@@ -151,7 +150,7 @@ export default function ModelDetailPage() {
         <section className="modelDetailMetrics" aria-label="Forward model summary">
           <article><span>SCORE COVERAGE</span><strong>{loading ? "—" : scoredRuns.length}<em>{!loading && `/ ${model.forwardTargetSessions}`}</em></strong><small>verified forward artifacts</small></article>
           <article className="latestScoredMetric"><span>LATEST SCORED</span><strong>{loading ? "Reading..." : shortDate(latestScored?.session_date)}</strong><small>most recent forward session</small></article>
-          <article><span>{isV2 ? "HISTORICAL MEDIAN ΔPR" : "HISTORICAL CONSENSUS IC"}</span><strong>{isV2 ? "+2.39%" : V4X_ALPHA.historicalConsensusIc.toFixed(3)}</strong><small>{isV2 ? "six V2 development folds" : "V4-3R Geometry3 evidence"}</small></article>
+          <article><span>{isV2 ? "HISTORICAL MEDIAN ΔPR" : "AUDITED HISTORICAL RANKIC"}</span><strong>{isV2 ? "+2.39%" : V4X_ALPHA.auditedCommonSupportConsensusIc.toFixed(3)}</strong><small>{isV2 ? "six V2 development folds" : `${V4X_ALPHA.historicalValidationSessions} walk-forward sessions`}</small></article>
           <article><span>RUN ISSUES</span><strong>{loading ? "—" : failedRuns.length}</strong><small>failed or incomplete runs</small></article>
         </section>
 
@@ -163,13 +162,14 @@ export default function ModelDetailPage() {
               <div><dt>Model ID</dt><dd>{model.id}</dd></div>
               <div><dt>Feature contract</dt><dd>{model.featureCount} features</dd></div>
               <div><dt>{isV2 ? "Model SHA" : "Bundle manifest"}</dt><dd>{model.fingerprint.slice(0, 14)}...</dd></div>
-              {!isV2 && <div><dt>Historical parent IC</dt><dd>{V4X_ALPHA.historicalConsensusIc.toFixed(3)}</dd></div>}
+              {!isV2 && <div><dt>Common-support RankIC</dt><dd>{V4X_ALPHA.auditedCommonSupportConsensusIc.toFixed(3)}</dd></div>}
+              {!isV2 && <div><dt>Strict-support RankIC</dt><dd>{V4X_ALPHA.auditedStrictSupportConsensusIc.toFixed(3)}</dd></div>}
             </dl>
           </article>
 
           <article className="modelDetailCard modelDetailNoteCard">
-            <span>{isV2 ? "HISTORICAL V2 EVIDENCE" : "READING THE RESULT"}</span>
-            <h2>{isV2 ? "HGB XS + Market historical champion" : "Confirmation, not retraining"}</h2>
+            <span>{isV2 ? "HISTORICAL V2 EVIDENCE" : "HISTORICAL AUDIT"}</span>
+            <h2>{isV2 ? "HGB XS + Market historical champion" : "Red-team audit passed"}</h2>
             {isV2 ? (
               <>
                 <p>Historical V2 summary: median PR-AUC delta +2.39%, median ROC-AUC 0.5244, and median Q5−Q1 +5.12% across six development folds.</p>
@@ -177,8 +177,9 @@ export default function ModelDetailPage() {
               </>
             ) : (
               <>
-                <p>V4-X is frozen. New sessions only create scores; the model is not retrained, retuned, or historically re-evaluated during X1.</p>
-                <p>Realized forward performance remains hidden until the frozen outcome gate opens.</p>
+                <p>Preferred historical metric: mean daily common-support Spearman RankIC {V4X_ALPHA.auditedCommonSupportConsensusIc.toFixed(4)} across {V4X_ALPHA.historicalValidationSessions} chronological validation sessions. The stricter exact-feature-window support audit retained {(V4X_ALPHA.auditedStrictSupportRetainedFraction * 100).toFixed(1)}% of observable rows and still produced RankIC {V4X_ALPHA.auditedStrictSupportConsensusIc.toFixed(4)}.</p>
+                <p>Geometry3 added about +{V4X_ALPHA.auditedCommonSupportIncrementalIc.toFixed(4)} mean daily consensus RankIC versus the same 25-feature V4 control; paired fold delta was positive in {V4X_ALPHA.auditedPositivePairedConsensusDeltaFolds}/{V4X_ALPHA.foldCount} folds. No critical historical leakage or metric error was found. These remain historical-development results, not X1 prospective performance.</p>
+                <p>V4-X is frozen. New sessions only create scores; the model is not retrained, retuned, or historically re-evaluated during X1, and realized forward performance stays hidden until the frozen outcome gate opens.</p>
               </>
             )}
           </article>
