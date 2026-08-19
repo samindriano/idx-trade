@@ -14,6 +14,11 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = REPO_ROOT / "config" / "ranking_v4_3r_execution_freeze_v1.json"
+SELF_PATH = "scripts/capture_v4_3r_execution_freeze.py"
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def sha256_file(path: Path) -> str:
@@ -35,14 +40,25 @@ def read_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def git_output(repo_root: Path, *args: str) -> str:
+def read_json_bytes(data: bytes, label: str) -> dict[str, Any]:
+    value = json.loads(data.decode("utf-8"))
+    if not isinstance(value, dict):
+        raise RuntimeError(f"{label}_NOT_OBJECT")
+    return value
+
+
+def git_output(repo_root: Path, *args: str, text: bool = True):
     completed = subprocess.run(
         ["git", "-C", str(repo_root), *args],
         check=True,
         capture_output=True,
-        text=True,
+        text=text,
     )
-    return completed.stdout.strip()
+    return completed.stdout.strip() if text else completed.stdout
+
+
+def git_bytes(repo_root: Path, relative: str) -> bytes:
+    return git_output(repo_root, "show", f"HEAD:{relative}", text=False)
 
 
 def package_version(name: str) -> str:
@@ -103,11 +119,11 @@ def verify_git_blobs(repo_root: Path, mapping: dict[str, str], label: str) -> di
 
 def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     ref = cfg["runtime_manifest"]
-    runtime_path = repo_root / ref["path"]
-    actual_sha = sha256_file(runtime_path)
+    runtime_bytes = git_bytes(repo_root, ref["path"])
+    actual_sha = sha256_bytes(runtime_bytes)
     if actual_sha != ref["sha256"]:
         raise RuntimeError(f"RUNTIME_MANIFEST_SHA_MISMATCH:{actual_sha}!={ref['sha256']}")
-    runtime = read_json(runtime_path, "RUNTIME_MANIFEST")
+    runtime = read_json_bytes(runtime_bytes, "RUNTIME_MANIFEST")
 
     expected_python = tuple(runtime["python"]["version_info"][:3])
     actual_python = tuple(sys.version_info[:3])
@@ -134,6 +150,7 @@ def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         "python_version": list(actual_python),
         "package_versions": actual_packages,
         "exact_match": True,
+        "hash_semantics": "canonical Git bytes",
     }
 
 
@@ -215,6 +232,7 @@ def main() -> int:
             "head": git_output(repo_root, "rev-parse", "HEAD"),
             "branch": git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD"),
             "worktree_clean": True,
+            "capture_script_blob": git_output(repo_root, "rev-parse", f"HEAD:{SELF_PATH}"),
         },
         "v4_3r_contract_git_blobs": v4_3r_blobs,
         "inherited_v4_3_scientific_git_blobs": inherited_blobs,
