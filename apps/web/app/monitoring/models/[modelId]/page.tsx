@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { FINAL_RANKER, O2_CHALLENGER, V2_CHAMPION } from "@/lib/model-catalog";
+import { V2_CHAMPION } from "@/lib/model-catalog";
+import { V4X_ALPHA } from "@/lib/v4x-catalog";
 
 type RuntimeModelRun = {
   session_date: string;
@@ -25,7 +26,39 @@ type StatusResponse = {
   configured: boolean;
   status?: MonitorRuntimeStatus;
   error?: string;
-  detail?: string | null;
+};
+
+type DetailModel = {
+  id: string;
+  shortName: string;
+  generation: string;
+  featureCount: number;
+  forwardTargetSessions: number;
+  fingerprint: string;
+  role: string;
+  description: string;
+};
+
+const V4X_DETAIL: DetailModel = {
+  id: V4X_ALPHA.id,
+  shortName: V4X_ALPHA.shortName,
+  generation: V4X_ALPHA.generation,
+  featureCount: V4X_ALPHA.featureCount,
+  forwardTargetSessions: V4X_ALPHA.forwardTargetSessions,
+  fingerprint: V4X_ALPHA.modelBundleManifestSha256,
+  role: "Current alpha candidate",
+  description: "Frozen Geometry3 final refit. Historical evidence comes from V4-3R; exact X1 prospective performance is intentionally unknown until the forward vault opens.",
+};
+
+const V2_DETAIL: DetailModel = {
+  id: V2_CHAMPION.id,
+  shortName: V2_CHAMPION.shortName,
+  generation: V2_CHAMPION.generation,
+  featureCount: V2_CHAMPION.featureCount,
+  forwardTargetSessions: V2_CHAMPION.forwardTargetSessions,
+  fingerprint: V2_CHAMPION.modelSha256,
+  role: "Reference model",
+  description: "Original V2 champion retained as the stable forward reference while V4-X is confirmed prospectively.",
 };
 
 function Logo() {
@@ -56,9 +89,8 @@ function formatTimestamp(value: string | null | undefined) {
 
 export default function ModelDetailPage() {
   const params = useParams<{ modelId: string }>();
-  const model = params.modelId === "o2" ? O2_CHALLENGER : params.modelId === "v2" ? V2_CHAMPION : FINAL_RANKER;
+  const model = params.modelId === "v2" ? V2_DETAIL : V4X_DETAIL;
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
-  const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,15 +98,11 @@ export default function ModelDetailPage() {
     try {
       const response = await fetch("/api/monitor/status", { cache: "no-store" });
       const payload = (await response.json()) as StatusResponse;
-      setConnected(Boolean(payload.connected));
       if (payload.status) {
         setStatus(payload.status);
         setError(null);
-      } else {
-        setError(payload.error ?? "Runtime unavailable");
-      }
+      } else setError(payload.error ?? "Runtime unavailable");
     } catch (reason) {
-      setConnected(false);
       setError(reason instanceof Error ? reason.message : "Runtime unavailable");
     } finally {
       setLoading(false);
@@ -88,16 +116,14 @@ export default function ModelDetailPage() {
   }, [refresh]);
 
   const modelRuns = useMemo(
-    () => (status?.model_runs ?? [])
-      .filter((run) => run.model_id === model.id)
-      .sort((a, b) => b.session_date.localeCompare(a.session_date)),
+    () => (status?.model_runs ?? []).filter((run) => run.model_id === model.id).sort((a, b) => b.session_date.localeCompare(a.session_date)),
     [model.id, status],
   );
   const scoredRuns = modelRuns.filter((run) => run.state === "DONE" && Boolean(run.artifact_sha256));
   const failedRuns = modelRuns.filter((run) => run.state === "FAILED" || run.error_code);
   const latestScored = scoredRuns[0] ?? null;
   const latestRun = modelRuns[0] ?? null;
-  const coverage = Math.min(100, scoredRuns.length);
+  const coverage = Math.min(100, (scoredRuns.length / model.forwardTargetSessions) * 100);
 
   return (
     <main className="appShell monitorShell">
@@ -107,45 +133,44 @@ export default function ModelDetailPage() {
           <nav className="primaryNav" aria-label="Primary navigation">
             <a href="/#overview">Overview</a>
             <a className="active" href="/monitoring">Forward Monitoring</a>
-            <a href="/compare">Compare</a>
           </nav>
         </div>
       </header>
 
       <div className="page modelDetailPage">
-        <a className="modelDetailBack" href="/monitoring">Back to Forward Monitoring</a>
-
+        <a className="modelDetailBack" href="/monitoring">← Back to Forward Monitoring</a>
         <section className="modelDetailHero">
           <div>
-            <p className="overviewKicker">FORWARD PERFORMANCE</p>
+            <p className="overviewKicker">{model.role.toUpperCase()}</p>
             <h1>{model.shortName}</h1>
-            <p>{params.modelId === "o2" ? "Primary challenger detail, paired against the V3-B incumbent. This view reports score-artifact progress only." : "Detailed forward-session evidence for this model. This view reports score-artifact progress only."}</p>
+            <p>{model.description}</p>
           </div>
         </section>
 
-        <section className="modelDetailMetrics" aria-label="Forward model performance summary">
+        <section className="modelDetailMetrics" aria-label="Forward model summary">
           <article><span>SCORE COVERAGE</span><strong>{loading ? "—" : scoredRuns.length}<em>{!loading && `/ ${model.forwardTargetSessions}`}</em></strong><small>verified score artifacts</small></article>
           <article className="latestScoredMetric"><span>LATEST SCORED</span><strong>{loading ? "Reading..." : shortDate(latestScored?.session_date)}</strong><small>most recent forward session</small></article>
-          <article><span>LATEST RUN</span><strong>{loading ? "Reading..." : latestRun?.state ?? "Not started"}</strong><small>{loading ? "Waiting for status" : formatTimestamp(latestRun?.completed_at)}</small></article>
+          <article><span>OUTCOME VAULT</span><strong>Locked</strong><small>no prospective IC / returns yet</small></article>
           <article><span>RUN ISSUES</span><strong>{loading ? "—" : failedRuns.length}</strong><small>failed or incomplete runs</small></article>
         </section>
 
         <section className="modelDetailGrid">
           <article className="modelDetailCard modelDetailProgressCard">
-            <div className="modelDetailCardHead"><div><span>FORWARD ACCUMULATION</span><h2>Score artifact progress</h2></div><strong>{loading ? "—" : `${coverage}%`}</strong></div>
+            <div className="modelDetailCardHead"><div><span>FORWARD ACCUMULATION</span><h2>Score artifact progress</h2></div><strong>{loading ? "—" : `${coverage.toFixed(0)}%`}</strong></div>
             <div className={`modelDetailProgress ${loading ? "isLoading" : ""}`}><span style={{ width: `${loading ? 0 : coverage}%` }} /></div>
             <dl className="modelDetailFacts">
               <div><dt>Model ID</dt><dd>{model.id}</dd></div>
               <div><dt>Feature contract</dt><dd>{model.featureCount} features</dd></div>
-              <div><dt>Model SHA</dt><dd>{model.modelSha256.slice(0, 14)}...</dd></div>
+              <div><dt>{params.modelId === "v2" ? "Model SHA" : "Bundle manifest"}</dt><dd>{model.fingerprint.slice(0, 14)}...</dd></div>
+              {params.modelId !== "v2" && <div><dt>Historical parent IC</dt><dd>{V4X_ALPHA.historicalConsensusIc.toFixed(3)}</dd></div>}
             </dl>
           </article>
 
           <article className="modelDetailCard modelDetailNoteCard">
             <span>READING THE RESULT</span>
-            <h2>What this page measures</h2>
-            <p>This page confirms whether the model has produced a valid forward score artifact for each captured session.</p>
-            <p>It reports forward score evidence only; realized returns and other outcome metrics are not shown here.</p>
+            <h2>{params.modelId === "v2" ? "Stable reference lane" : "Confirmation, not retraining"}</h2>
+            <p>{params.modelId === "v2" ? "V2 stays visible so future V4-X score coverage has a durable reference on the canonical EOD archive." : "V4-X is frozen. New sessions only create scores; the model is not retrained, retuned, or historically re-evaluated during X1."}</p>
+            <p>Realized forward performance remains hidden until the frozen outcome gate opens.</p>
           </article>
         </section>
 
@@ -163,9 +188,7 @@ export default function ModelDetailPage() {
                 </article>
               ))}
             </div>
-          ) : (
-            <div className="modelDetailEmpty">No forward score artifact has been produced for this model yet.</div>
-          )}
+          ) : <div className="modelDetailEmpty">No forward score artifact has been produced for this model yet.</div>}
           {error && <div className="modelDetailError">{error}</div>}
         </section>
       </div>
