@@ -202,7 +202,8 @@ def main() -> int:
     d = pd.to_numeric(both["derivative_open"], errors="coerce")
     o = pd.to_numeric(both["overlay_open"], errors="coerce")
     both_finite = np.isfinite(d) & np.isfinite(o)
-    conflicts = both_finite & ~np.isclose(d, o, rtol=0.0, atol=0.0)
+    # Match the frozen historical runner's overlap consistency tolerance exactly.
+    conflicts = both_finite & ~np.isclose(d, o, rtol=0.0, atol=1e-9)
 
     status = "V4X_FROZEN_MARKET_INPUT_AUDIT_PASS"
     critical_counts = {
