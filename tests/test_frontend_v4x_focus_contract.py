@@ -56,11 +56,18 @@ def test_v4_control_has_user_facing_label_not_internal_context25_name() -> None:
     assert "CONTEXT25 CONTROL" not in home
 
 
-def test_v4x_catalog_pins_current_historical_evidence() -> None:
+def test_v4x_catalog_preserves_frozen_folds_and_pins_audited_evidence() -> None:
     catalog = text(CATALOG)
     assert 'id: "V4_X1_GEOMETRY3_PROSPECTIVE"' in catalog
     assert "historicalConsensusIc: 0.09775243938276076" in catalog
     assert "historicalControlConsensusIc: 0.08415844149089491" in catalog
+    assert "auditedCommonSupportConsensusIc: 0.09545975125676774" in catalog
+    assert "auditedCommonSupportControlConsensusIc: 0.08979323509925058" in catalog
+    assert "auditedStrictSupportConsensusIc: 0.08327323251280924" in catalog
+    assert "auditedCommonSupportIncrementalIc: 0.00566651615751716" in catalog
+    assert "auditedPositivePairedConsensusDeltaFolds: 5" in catalog
+    assert 'auditStatus: "PASS_NO_CRITICAL_ERROR_FOUND"' in catalog
+    assert "historicalValidationSessions: 600" in catalog
     assert "modelBundleManifestSha256: \"3d5420dd69f348b7e712b6cca3b11f4673f02581c493e04be6ce9da693125094\"" in catalog
     for value in (
         "0.09227078711981862",
@@ -71,6 +78,17 @@ def test_v4x_catalog_pins_current_historical_evidence() -> None:
         "0.16348225628388718",
     ):
         assert value in catalog
+
+
+def test_v4x_detail_uses_defensible_audited_rankic_without_claiming_forward_result() -> None:
+    detail = text(DETAIL)
+    assert "AUDITED HISTORICAL RANKIC" in detail
+    assert "auditedCommonSupportConsensusIc" in detail
+    assert "auditedStrictSupportConsensusIc" in detail
+    assert "auditedCommonSupportIncrementalIc" in detail
+    assert "Red-team audit passed" in detail
+    assert "historical-development results, not X1 prospective performance" in detail
+    assert "realized forward performance stays hidden" in detail
 
 
 def test_monitoring_routes_only_active_primary_models_and_names_v2() -> None:
