@@ -1,0 +1,67 @@
+{
+  "schema_version": "v4_3_ca_training_domain_residual47_idx_digital_split_v1",
+  "policy_id": "V4_3_CA_RESIDUAL47_IDX_DIGITAL_SPLIT_V1",
+  "outcome_blind": true,
+  "parent_combined_replay": {
+    "manifest_sha256": "12d60b703d9617db95e89374485abb335a4024c4c6642a5cbee0d72e1eeb2f43",
+    "status": "V4_3_CA_IDX_COMBINED_REPLAY_BLOCKED_REVIEW_REQUIRED",
+    "remaining_schedule_events": 47,
+    "combined_resolved_from_original_80": 33
+  },
+  "provider": {
+    "name": "IDX_OFFICIAL_DIGITAL_STATISTIC_STOCK_SPLIT",
+    "base_url": "https://www.idx.co.id",
+    "endpoint": "/primary/DigitalStatistic/GetApiDataPaginated",
+    "url_name": "LINK_STOCK_SPLIT",
+    "period_type": "monthly",
+    "page_size": 100,
+    "max_pages_per_month": 3,
+    "month_radius": 2,
+    "max_attempts": 3,
+    "backoff_seconds": [1.0, 3.0],
+    "timeout_seconds": 40.0,
+    "inter_request_sleep_seconds": 0.5,
+    "impersonate": "chrome",
+    "warmup_urls": [
+      "https://www.idx.co.id/",
+      "https://www.idx.co.id/id/data-pasar/laporan-statistik/digital-statistic/monthly/"
+    ]
+  },
+  "adjudication": {
+    "eligible_source_types": [
+      "stock split",
+      "reverse stock",
+      "reverse stock split",
+      "reverse split"
+    ],
+    "max_listing_date_distance_days": 180,
+    "accepted_transition_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
+    "require_exact_ticker": true,
+    "require_single_distinct_listing_date": true,
+    "require_listing_date_official_session": true,
+    "non_split_families_remain_unresolved": true,
+    "source_date_is_linkage_only": true
+  },
+  "official_calendar": {
+    "filename": "official_idx_session_calendar.csv",
+    "sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "hard_boundaries": {
+    "pass_preserving_subset_selection": false,
+    "event_impact_ranking_for_discovery": false,
+    "price_inference": false,
+    "record_or_distribution_date_as_transition": false,
+    "source_date_as_transition": false,
+    "source_substitution": false,
+    "external_search_engine": false,
+    "issuer_web_crawl": false,
+    "semantic_admission_during_acquisition": false,
+    "parser_or_semantic_relaxation_after_provider_result": false,
+    "target_or_rank_materialization": false,
+    "historical_target_loaded": false,
+    "model_fit": false,
+    "prediction": false,
+    "performance": false,
+    "protected_forward_access": false
+  }
+}
