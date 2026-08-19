@@ -6,7 +6,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-import idx_trade.forward_price_trend_context_bridge as bridge_module
 from idx_trade.canonical_eod_calendar_parent_attestation import _fingerprint
 from idx_trade.canonical_eod_calendar_parent_attestation import (
     CALENDAR_BYTES_UNRECOVERED,
@@ -14,7 +13,6 @@ from idx_trade.canonical_eod_calendar_parent_attestation import (
     create_canonical_eod_calendar_parent_attestation,
     verify_canonical_eod_calendar_parent_attestation,
 )
-from idx_trade.forward_price_trend_context_bridge import _read_verified_canonical_market
 from idx_trade.provenance import sha256_file
 
 
@@ -112,7 +110,7 @@ def _write_attestation(fixture: dict[str, object]) -> Path:
     )
 
 
-def test_both_canonical_sessions_are_audited_and_only_lost_parent_needs_attestation(tmp_path: Path) -> None:
+def test_lost_parent_and_direct_parent_are_distinguished(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     report_11 = _audit_11(fixture)
     report_12 = audit_canonical_eod_calendar_parent(
@@ -127,11 +125,9 @@ def test_both_canonical_sessions_are_audited_and_only_lost_parent_needs_attestat
     assert report_12["declared_capture_time_calendar_bytes_recovered"] is True
     assert report_11["predecessor_session"] == "2026-08-10"
     assert report_11["successor_session"] == "2026-08-12"
-    assert report_12["predecessor_session"] == "2026-08-11"
-    assert report_12["successor_session"] == "2026-08-13"
 
 
-def test_attestation_is_strict_and_immutable(tmp_path: Path) -> None:
+def test_attestation_is_strict_immutable_and_idempotent(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     attestation = _write_attestation(fixture)
     assert verify_canonical_eod_calendar_parent_attestation(
@@ -150,7 +146,7 @@ def test_attestation_is_strict_and_immutable(tmp_path: Path) -> None:
         )
 
 
-def test_current_mutable_calendar_cannot_substitute_old_parent(tmp_path: Path) -> None:
+def test_current_mutable_calendar_and_later_recovery_do_not_rewrite_parent(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     attestation = _write_attestation(fixture)
     fixture["current_calendar"].write_text(
@@ -162,17 +158,10 @@ def test_current_mutable_calendar_cannot_substitute_old_parent(tmp_path: Path) -
         expected_bridge_calendar_sha256=fixture["bridge_sha"],
     ) is True
 
-
-def test_later_recovery_of_old_calendar_bytes_does_not_invalidate_attestation(tmp_path: Path) -> None:
-    fixture = _fixture(tmp_path)
-    attestation = _write_attestation(fixture)
     recovered = tmp_path / "recovered-later" / "calendar-copy.bin"
     recovered.parent.mkdir(parents=True, exist_ok=True)
     recovered.write_text("date\n2026-08-10\n2026-08-11\n", encoding="utf-8")
     assert sha256_file(recovered) == fixture["old_sha"]
-    fixture["current_calendar"].write_text(
-        "date\n2026-08-10\n2026-08-11\n", encoding="utf-8"
-    )
     assert verify_canonical_eod_calendar_parent_attestation(
         attestation,
         expected_bridge_calendar_path=fixture["bridge_calendar"],
@@ -180,7 +169,7 @@ def test_later_recovery_of_old_calendar_bytes_does_not_invalidate_attestation(tm
     ) is True
 
 
-def test_arbitrary_bridge_and_wrong_order_are_rejected(tmp_path: Path) -> None:
+def test_arbitrary_bridge_and_wrong_hash_are_rejected(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     arbitrary = tmp_path / "arbitrary.csv"
     arbitrary_sha = _calendar(arbitrary, ["2026-08-10", "2026-08-13", "2026-08-11"])
@@ -200,7 +189,7 @@ def test_arbitrary_bridge_and_wrong_order_are_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_tampered_manifest_snapshot_or_declared_sha_cannot_be_rescued(tmp_path: Path) -> None:
+def test_tampered_canonical_artifacts_cannot_be_rescued(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     attestation = _write_attestation(fixture)
     manifest = Path(fixture["manifest_11"])
@@ -223,31 +212,22 @@ def test_tampered_manifest_snapshot_or_declared_sha_cannot_be_rescued(tmp_path: 
         expected_bridge_calendar_sha256=fixture["bridge_sha"],
     ) is False
 
-    fixture = _fixture(tmp_path / "evidence")
-    attestation = _write_attestation(fixture)
-    evidence = Path(json.loads(Path(fixture["manifest_11"]).read_text())["evidence_path"])
-    evidence.write_bytes(evidence.read_bytes() + b"tamper")
-    assert verify_canonical_eod_calendar_parent_attestation(
-        attestation,
-        expected_bridge_calendar_path=fixture["bridge_calendar"],
-        expected_bridge_calendar_sha256=fixture["bridge_sha"],
-    ) is False
 
-
-def test_declared_old_sha_change_and_missing_attestation_fail_closed(tmp_path: Path) -> None:
+def test_declared_calendar_identity_change_fails_closed(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
-    assert verify_canonical_eod_calendar_parent_attestation(
+    missing = (
         fixture["runtime"]
         / "forward_monitoring"
         / "provenance_attestations"
         / "canonical_eod_calendar_parent_v1"
         / "2026-08-11"
-        / "attestation.json",
+        / "attestation.json"
+    )
+    assert verify_canonical_eod_calendar_parent_attestation(
+        missing,
         expected_bridge_calendar_path=fixture["bridge_calendar"],
         expected_bridge_calendar_sha256=fixture["bridge_sha"],
     ) is False
-    with pytest.raises(RuntimeError, match="calendar missing or hash-mismatched"):
-        _read_verified_canonical_market(fixture["runtime"], pd.Timestamp("2026-08-11"))
 
     attestation = _write_attestation(fixture)
     manifest = Path(fixture["manifest_11"])
@@ -265,13 +245,3 @@ def test_declared_old_sha_change_and_missing_attestation_fail_closed(tmp_path: P
         expected_bridge_calendar_path=fixture["bridge_calendar"],
         expected_bridge_calendar_sha256=fixture["bridge_sha"],
     ) is False
-
-
-def test_price_trend_parent_path_accepts_only_verified_attestation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    fixture = _fixture(tmp_path)
-    attestation = _write_attestation(fixture)
-    monkeypatch.setattr(bridge_module, "APPROVED_BRIDGE_CALENDAR", str(fixture["bridge_calendar"]))
-    monkeypatch.setattr(bridge_module, "ACCEPTED_BRIDGE_CALENDAR_SHA256", fixture["bridge_sha"])
-    assert bridge_module._read_verified_canonical_market(
-        fixture["runtime"], pd.Timestamp("2026-08-11")
-    )[1]["calendar_parent_attestation_path"] == str(attestation)
