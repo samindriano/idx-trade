@@ -6,6 +6,13 @@ the frozen V4-X1 model bundle and inspects the existing IDXTrade-ForwardEOD
 runtime for the first canonical DATA_READY session that is genuinely fresh:
 its canonical EOD availability and its actual DATA_READY completion must both
 be strictly after the conservative model-freeze observed-by timestamp.
+
+Forward-history sessions are needed only as canonical model-input snapshots for
+causal feature construction. Their separately enriched legacy Open artifacts are
+not model inputs for V4-X1 and therefore are not required to reconcile volume.
+The genuinely fresh candidate session is different: its immutable sibling OHLCV
+is the source of Geometry3 Open and must agree exactly with the canonical model
+input, including volume.
 """
 
 from __future__ import annotations
@@ -150,7 +157,20 @@ def _snapshot_rows(paths) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def _verify_snapshot_row(paths, row: dict[str, Any]) -> dict[str, Any]:
+def _verify_snapshot_row(
+    paths,
+    row: dict[str, Any],
+    *,
+    require_ohlcv_exact: bool,
+) -> dict[str, Any]:
+    """Verify one DATA_READY snapshot; require sibling OHLCV only for candidate.
+
+    Older forward-history rows feed only the frozen H/L/C/V/value feature
+    builder. Some of those rows have a later legacy Open enrichment whose
+    provider volume can legitimately differ from the already-frozen model-input
+    volume; that enrichment must not become a prerequisite for history.
+    """
+
     if row.get("state") != "DATA_READY":
         raise RuntimeError("V4_X1_INTERNAL_NON_READY_ROW")
     session = pd.Timestamp(row["session_date"]).normalize()
@@ -173,26 +193,45 @@ def _verify_snapshot_row(paths, row: dict[str, Any]) -> dict[str, Any]:
     if snapshot_dates.isna().any() or not snapshot_dates.eq(session).all():
         raise RuntimeError(f"V4_X1_DATA_READY_SNAPSHOT_DATE_MISMATCH:{session.date()}")
 
+    evidence: dict[str, Any] = {
+        "session_date": session.date().isoformat(),
+        "snapshot_path": str(snapshot_path),
+        "snapshot_sha256": actual_snapshot_sha,
+        "rows": int(len(snapshot)),
+        "completed_at": row.get("completed_at"),
+        "canonical_eod_available_at": _session_eod_available_at_utc(session).astimezone(JAKARTA).isoformat(),
+        "ohlcv_requirement": (
+            "EXACT_HLCV_REQUIRED_FOR_FRESH_GEOMETRY3_CANDIDATE"
+            if require_ohlcv_exact
+            else "NOT_REQUIRED_FOR_FORWARD_FEATURE_HISTORY"
+        ),
+    }
+    if not require_ohlcv_exact:
+        return evidence
+
     ohlcv_path = paths.session_root / session.date().isoformat() / "session_ohlcv.parquet"
     if not ohlcv_path.is_file():
-        raise RuntimeError(f"V4_X1_SESSION_OHLCV_MISSING:{ohlcv_path}")
+        raise RuntimeError(f"V4_X1_CANDIDATE_SESSION_OHLCV_MISSING:{ohlcv_path}")
     ohlcv = pd.read_parquet(ohlcv_path)
     missing_ohlcv = set(SESSION_OHLCV_COLUMNS) - set(ohlcv.columns)
     if missing_ohlcv:
         raise RuntimeError(
-            f"V4_X1_SESSION_OHLCV_COLUMNS_MISSING:{session.date()}:{sorted(missing_ohlcv)}"
+            f"V4_X1_CANDIDATE_SESSION_OHLCV_COLUMNS_MISSING:{session.date()}:{sorted(missing_ohlcv)}"
         )
-    validate_ohlcv_against_model_input(ohlcv, snapshot, session.date().isoformat())
-    return {
-        "session_date": session.date().isoformat(),
-        "snapshot_path": str(snapshot_path),
-        "snapshot_sha256": actual_snapshot_sha,
-        "session_ohlcv_path": str(ohlcv_path),
-        "session_ohlcv_sha256": sha256_file(ohlcv_path),
-        "rows": int(len(snapshot)),
-        "completed_at": row.get("completed_at"),
-        "canonical_eod_available_at": _session_eod_available_at_utc(session).astimezone(JAKARTA).isoformat(),
-    }
+    validate_ohlcv_against_model_input(
+        ohlcv,
+        snapshot,
+        session.date().isoformat(),
+        compare_volume=True,
+    )
+    evidence.update(
+        {
+            "session_ohlcv_path": str(ohlcv_path),
+            "session_ohlcv_sha256": sha256_file(ohlcv_path),
+            "candidate_ohlcv_exact_hlcv_match": True,
+        }
+    )
+    return evidence
 
 
 def parse_args() -> argparse.Namespace:
@@ -246,12 +285,14 @@ def main() -> int:
         post_freeze.append((session, row))
 
     base = {
-        "schema_version": "v4_x1_forward_readiness_v2",
+        "schema_version": "v4_x1_forward_readiness_v3",
         "generation_id": "V4_X1_GEOMETRY3_PROSPECTIVE",
         "model_manifest_sha256": model_bundle["manifest_sha256"],
         "model_freeze_observed_by": args.observed_by,
         "canonical_eod_capture_hour_jakarta": CANONICAL_EOD_CAPTURE_HOUR_JAKARTA,
         "fresh_session_rule": "CANONICAL_SESSION_EOD_AND_DATA_READY_COMPLETION_BOTH_STRICTLY_AFTER_MODEL_FREEZE",
+        "history_input_rule": "CANONICAL_DATA_READY_SNAPSHOT_ONLY;LEGACY_OPEN_ENRICHMENT_NOT_REQUIRED",
+        "candidate_open_rule": "IMMUTABLE_SESSION_OHLCV_MUST_MATCH_CANDIDATE_MODEL_INPUT_IN_HLCV",
         "ignored_post_freeze_backfills": ignored_post_freeze_backfills,
         "runtime_root": str(paths.runtime_root),
         "registry_path": str(paths.registry_path),
@@ -297,10 +338,16 @@ def main() -> int:
         }, indent=2, sort_keys=True))
         return 2
 
-    verified_history = [
-        _verify_snapshot_row(paths, ready_by_date[pd.Timestamp(day).normalize()])
-        for day in required_sessions
-    ]
+    verified_history = []
+    for day in required_sessions:
+        normalized = pd.Timestamp(day).normalize()
+        verified_history.append(
+            _verify_snapshot_row(
+                paths,
+                ready_by_date[normalized],
+                require_ohlcv_exact=normalized == candidate,
+            )
+        )
     candidate_verified = next(
         row for row in verified_history if row["session_date"] == candidate.date().isoformat()
     )
