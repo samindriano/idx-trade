@@ -2,8 +2,8 @@
 
 This runner may use the already-consumed V4-3R historical target corpus for
 training, but it must not generate historical predictions or recompute any
-historical performance.  A successful run fits exactly four models:
-CONTROL/CHALLENGER x H5/H10.  The resulting model bytes are immutable inputs
+historical performance. A successful run fits exactly four models:
+CONTROL/CHALLENGER x H5/H10. The resulting model bytes are immutable inputs
 to the future V4-X1 prospective score-capture lane.
 """
 
@@ -75,7 +75,21 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def verify_config(cfg: dict[str, Any]) -> None:
+def strict_bool(series: pd.Series, *, label: str) -> pd.Series:
+    if pd.api.types.is_bool_dtype(series.dtype):
+        return series.astype(bool)
+    normalized = series.astype(str).str.strip().str.lower()
+    allowed = {"true", "false"}
+    seen = set(normalized.dropna().unique())
+    if not seen.issubset(allowed):
+        raise RuntimeError(f"V4_X1_INVALID_BOOLEAN:{label}:{sorted(seen)}")
+    return normalized.eq("true")
+
+
+def verify_config(repo_root: Path, config_path: Path, cfg: dict[str, Any]) -> None:
+    expected_path = (repo_root / "config" / "ranking_v4_x1_final_refit_v1.json").resolve()
+    if config_path.resolve() != expected_path:
+        raise RuntimeError("V4_X1_REFIT_NONCANONICAL_CONFIG_PATH")
     if cfg.get("schema_version") != "ranking_v4_x1_final_refit_v1":
         raise RuntimeError("V4_X1_REFIT_CONFIG_SCHEMA_INVALID")
     if cfg.get("generation_id") != "V4_X1_GEOMETRY3_PROSPECTIVE":
@@ -103,6 +117,13 @@ def verify_scientific_blobs(repo_root: Path, cfg: dict[str, Any]) -> dict[str, s
                 f"V4_X1_SCIENTIFIC_BLOB_CHANGED:{relative}:{blob}!={expected}"
             )
         actual[relative] = blob
+    prereg = cfg["x1_preregistration"]
+    prereg_blob = hist.git_output(repo_root, "rev-parse", f"HEAD:{prereg['path']}")
+    if prereg_blob != prereg["git_blob_sha1"]:
+        raise RuntimeError(
+            f"V4_X1_PREREGISTRATION_BLOB_CHANGED:{prereg_blob}!={prereg['git_blob_sha1']}"
+        )
+    actual[prereg["path"]] = prereg_blob
     return actual
 
 
@@ -114,6 +135,15 @@ def verify_historical_parent(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     if actual_manifest != expected["manifest_sha256"]:
         raise RuntimeError(
             f"V4_X1_HISTORICAL_PARENT_MANIFEST_MISMATCH:{actual_manifest}!={expected['manifest_sha256']}"
+        )
+    manifest = hist.read_json(manifest_path, "V4_X1_HISTORICAL_PARENT_MANIFEST")
+    if manifest.get("status") != expected["status"]:
+        raise RuntimeError("V4_X1_HISTORICAL_PARENT_MANIFEST_STATUS_CHANGED")
+    actual_summary = hist.sha256_file(summary_path)
+    expected_summary = str((manifest.get("output_hashes") or {}).get("summary") or "")
+    if not expected_summary or actual_summary != expected_summary:
+        raise RuntimeError(
+            f"V4_X1_HISTORICAL_PARENT_SUMMARY_SHA_MISMATCH:{actual_summary}!={expected_summary}"
         )
     summary = hist.read_json(summary_path, "V4_X1_HISTORICAL_PARENT_SUMMARY")
     if summary.get("status") != expected["status"]:
@@ -132,7 +162,7 @@ def verify_historical_parent(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(f"V4_X1_HISTORICAL_PARENT_PARITY_CHANGED:{parity}")
     return {
         "manifest_sha256": actual_manifest,
-        "summary_sha256": hist.sha256_file(summary_path),
+        "summary_sha256": actual_summary,
         "status": summary["status"],
     }
 
@@ -152,7 +182,9 @@ def load_prefit_per_date(root: Path) -> tuple[pd.DataFrame, str]:
     ).astype(int)
     frame["date"] = pd.to_datetime(frame["date"], errors="raise").dt.normalize()
     for head in ("h5", "h10", "consensus"):
-        frame[f"{head}_eligible"] = frame[f"{head}_eligible"].astype(bool)
+        frame[f"{head}_eligible"] = strict_bool(
+            frame[f"{head}_eligible"], label=f"{head}_eligible"
+        )
     if frame.duplicated(["session_index", "date"]).any():
         raise RuntimeError("V4_X1_PREFIT_PER_DATE_DUPLICATE_IDENTITY")
     return frame, actual
@@ -179,7 +211,7 @@ def final_training_frame(
         raise ValueError(f"V4_X1_UNSUPPORTED_HEAD:{head}")
 
     dates = per_date.loc[
-        per_date[eligible_col].astype(bool), ["session_index", "date"]
+        per_date[eligible_col], ["session_index", "date"]
     ].copy()
     if dates.empty:
         raise RuntimeError(f"V4_X1_NO_ELIGIBLE_DATES:{head}")
@@ -219,7 +251,7 @@ def main() -> int:
         raise RuntimeError("V4_X1_GIT_WORKTREE_NOT_CLEAN")
 
     cfg = hist.read_json(config_path, "V4_X1_REFIT_CONFIG")
-    verify_config(cfg)
+    verify_config(repo_root, config_path, cfg)
     scientific_blobs = verify_scientific_blobs(repo_root, cfg)
     historical_parent = verify_historical_parent(
         args.historical_result_root.resolve(), cfg
@@ -236,13 +268,13 @@ def main() -> int:
     folds, folds_sha = hist.load_validation_folds(repo_root, cfg)
 
     frozen_end_index = int(folds["session_index"].max())
-    frozen_end_date = pd.Timestamp(folds.loc[
-        folds["session_index"].idxmax(), "date"
-    ]).normalize()
+    frozen_end_date = pd.Timestamp(
+        folds.loc[folds["session_index"].idxmax(), "date"]
+    ).normalize()
     eligible_after = {
         head: int(
             (
-                per_date[f"{head}_eligible"].astype(bool)
+                per_date[f"{head}_eligible"]
                 & per_date["session_index"].gt(frozen_end_index)
             ).sum()
         )
@@ -254,8 +286,8 @@ def main() -> int:
         )
     expected_eligible = cfg["expected_head_eligible_dates"]
     actual_eligible = {
-        "H5": int(per_date["h5_eligible"].astype(bool).sum()),
-        "H10": int(per_date["h10_eligible"].astype(bool).sum()),
+        "H5": int(per_date["h5_eligible"].sum()),
+        "H10": int(per_date["h10_eligible"].sum()),
     }
     if actual_eligible != {
         "H5": int(expected_eligible["H5"]),
@@ -301,7 +333,7 @@ def main() -> int:
         parent_manifest_sha256=parent_hashes["manifest"],
     )
 
-    # Historical labels are used for final training only.  X1 does not score
+    # Historical labels are used for final training only. X1 does not score
     # any historical date and does not compute any historical performance.
     target_ledger = materialize_v4_target_ledger(
         combined[["ticker", "date"]],
@@ -326,8 +358,8 @@ def main() -> int:
         training_dates_parts, ignore_index=True
     ).sort_values(["head", "session_index"], kind="mergesort")
 
-    # Freeze boundary precedes fitting.  No prospective scoring is authorized
-    # unless this run reaches a complete manifest with exactly four model files.
+    # No prospective scoring is authorized unless this run reaches a complete
+    # manifest with exactly four model files.
     output_dir.mkdir(parents=True)
     boundary_path = output_dir / "FINAL_REFIT_BOUNDARY.json"
     boundary = {
@@ -436,6 +468,11 @@ def main() -> int:
             "branch": hist.git_output(repo_root, "rev-parse", "--abbrev-ref", "HEAD"),
             "worktree_clean_before_run": True,
             "runner_blob": hist.git_output(repo_root, "rev-parse", f"HEAD:{SELF_PATH}"),
+            "config_blob": hist.git_output(
+                repo_root,
+                "rev-parse",
+                "HEAD:config/ranking_v4_x1_final_refit_v1.json",
+            ),
         },
         "runtime": runtime,
         "scientific_git_blobs": scientific_blobs,
