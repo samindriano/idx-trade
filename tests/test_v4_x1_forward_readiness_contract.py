@@ -38,7 +38,7 @@ def test_readiness_requires_exact_four_model_hashes() -> None:
     assert "V4_X1_MODEL_FILE_SHA_MISMATCH" in source
 
 
-def test_readiness_checks_canonical_data_ready_history_and_ohlcv() -> None:
+def test_readiness_checks_canonical_data_ready_history_and_candidate_ohlcv() -> None:
     source = _source()
     assert "FROM session_snapshots" in source
     assert 'row.get("state") == "DATA_READY"' in source
@@ -46,6 +46,23 @@ def test_readiness_checks_canonical_data_ready_history_and_ohlcv() -> None:
     assert '"session_ohlcv.parquet"' in source
     assert "validate_ohlcv_against_model_input" in source
     assert "completed <= observed_by" in source
+
+
+def test_readiness_does_not_require_legacy_open_for_feature_history() -> None:
+    source = _source()
+    assert "require_ohlcv_exact=normalized == candidate" in source
+    assert "NOT_REQUIRED_FOR_FORWARD_FEATURE_HISTORY" in source
+    assert "LEGACY_OPEN_ENRICHMENT_NOT_REQUIRED" in source
+    assert "if not require_ohlcv_exact:" in source
+    assert "return evidence" in source
+
+
+def test_readiness_requires_exact_hlcv_for_fresh_candidate() -> None:
+    source = _source()
+    assert "EXACT_HLCV_REQUIRED_FOR_FRESH_GEOMETRY3_CANDIDATE" in source
+    assert "compare_volume=True" in source
+    assert "candidate_ohlcv_exact_hlcv_match" in source
+    assert "V4_X1_CANDIDATE_SESSION_OHLCV_MISSING" in source
 
 
 def test_readiness_rejects_old_sessions_backfilled_after_freeze() -> None:
