@@ -1,0 +1,1 @@
+This commit marks the completed pre-run offline adjudication implementation on the provider branch lineage. A dedicated adjudication branch should be created from this exact commit before runtime use.
