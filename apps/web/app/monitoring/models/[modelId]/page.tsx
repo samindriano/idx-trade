@@ -52,13 +52,13 @@ const V4X_DETAIL: DetailModel = {
 
 const V2_DETAIL: DetailModel = {
   id: V2_CHAMPION.id,
-  shortName: V2_CHAMPION.shortName,
+  shortName: `V2 ${V2_CHAMPION.shortName}`,
   generation: V2_CHAMPION.generation,
   featureCount: V2_CHAMPION.featureCount,
   forwardTargetSessions: V2_CHAMPION.forwardTargetSessions,
   fingerprint: V2_CHAMPION.modelSha256,
   role: "Reference model",
-  description: "Original V2 champion retained as the stable forward reference while V4-X is confirmed prospectively.",
+  description: "V2 HGB XS + Market is the original historical champion retained as the stable forward reference while V4-X is confirmed prospectively.",
 };
 
 function Logo() {
@@ -89,7 +89,8 @@ function formatTimestamp(value: string | null | undefined) {
 
 export default function ModelDetailPage() {
   const params = useParams<{ modelId: string }>();
-  const model = params.modelId === "v2" ? V2_DETAIL : V4X_DETAIL;
+  const isV2 = params.modelId === "v2";
+  const model = isV2 ? V2_DETAIL : V4X_DETAIL;
   const [status, setStatus] = useState<MonitorRuntimeStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,9 +149,9 @@ export default function ModelDetailPage() {
         </section>
 
         <section className="modelDetailMetrics" aria-label="Forward model summary">
-          <article><span>SCORE COVERAGE</span><strong>{loading ? "—" : scoredRuns.length}<em>{!loading && `/ ${model.forwardTargetSessions}`}</em></strong><small>verified score artifacts</small></article>
+          <article><span>SCORE COVERAGE</span><strong>{loading ? "—" : scoredRuns.length}<em>{!loading && `/ ${model.forwardTargetSessions}`}</em></strong><small>verified forward artifacts</small></article>
           <article className="latestScoredMetric"><span>LATEST SCORED</span><strong>{loading ? "Reading..." : shortDate(latestScored?.session_date)}</strong><small>most recent forward session</small></article>
-          <article><span>OUTCOME VAULT</span><strong>Locked</strong><small>no prospective IC / returns yet</small></article>
+          <article><span>{isV2 ? "HISTORICAL MEDIAN ΔPR" : "HISTORICAL CONSENSUS IC"}</span><strong>{isV2 ? "+2.39%" : V4X_ALPHA.historicalConsensusIc.toFixed(3)}</strong><small>{isV2 ? "six V2 development folds" : "V4-3R Geometry3 evidence"}</small></article>
           <article><span>RUN ISSUES</span><strong>{loading ? "—" : failedRuns.length}</strong><small>failed or incomplete runs</small></article>
         </section>
 
@@ -161,16 +162,25 @@ export default function ModelDetailPage() {
             <dl className="modelDetailFacts">
               <div><dt>Model ID</dt><dd>{model.id}</dd></div>
               <div><dt>Feature contract</dt><dd>{model.featureCount} features</dd></div>
-              <div><dt>{params.modelId === "v2" ? "Model SHA" : "Bundle manifest"}</dt><dd>{model.fingerprint.slice(0, 14)}...</dd></div>
-              {params.modelId !== "v2" && <div><dt>Historical parent IC</dt><dd>{V4X_ALPHA.historicalConsensusIc.toFixed(3)}</dd></div>}
+              <div><dt>{isV2 ? "Model SHA" : "Bundle manifest"}</dt><dd>{model.fingerprint.slice(0, 14)}...</dd></div>
+              {!isV2 && <div><dt>Historical parent IC</dt><dd>{V4X_ALPHA.historicalConsensusIc.toFixed(3)}</dd></div>}
             </dl>
           </article>
 
           <article className="modelDetailCard modelDetailNoteCard">
-            <span>READING THE RESULT</span>
-            <h2>{params.modelId === "v2" ? "Stable reference lane" : "Confirmation, not retraining"}</h2>
-            <p>{params.modelId === "v2" ? "V2 stays visible so future V4-X score coverage has a durable reference on the canonical EOD archive." : "V4-X is frozen. New sessions only create scores; the model is not retrained, retuned, or historically re-evaluated during X1."}</p>
-            <p>Realized forward performance remains hidden until the frozen outcome gate opens.</p>
+            <span>{isV2 ? "HISTORICAL V2 EVIDENCE" : "READING THE RESULT"}</span>
+            <h2>{isV2 ? "HGB XS + Market historical champion" : "Confirmation, not retraining"}</h2>
+            {isV2 ? (
+              <>
+                <p>Historical V2 summary: median PR-AUC delta +2.39%, median ROC-AUC 0.5244, and median Q5−Q1 +5.12% across six development folds.</p>
+                <p>The full interactive V2 fold chart remains available on Overview under Past Model Evidence.</p>
+              </>
+            ) : (
+              <>
+                <p>V4-X is frozen. New sessions only create scores; the model is not retrained, retuned, or historically re-evaluated during X1.</p>
+                <p>Realized forward performance remains hidden until the frozen outcome gate opens.</p>
+              </>
+            )}
           </article>
         </section>
 
