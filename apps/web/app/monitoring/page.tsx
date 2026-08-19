@@ -70,7 +70,7 @@ const MONITORED_MODELS: readonly MonitoredModel[] = [
   {
     id: V2_CHAMPION.id,
     route: "v2",
-    shortName: V2_CHAMPION.shortName,
+    shortName: `V2 ${V2_CHAMPION.shortName}`,
     generation: V2_CHAMPION.generation,
     featureCount: V2_CHAMPION.featureCount,
     fingerprint: V2_CHAMPION.modelSha256,
@@ -208,14 +208,14 @@ export default function MonitoringPage() {
           <div>
             <p className="eyebrow">V4-X · OUTCOME-BLIND</p>
             <h1>Forward Monitoring</h1>
-            <p className="heroCopy">One canonical EOD archive. V4-X is the current alpha candidate; V2 stays as the forward reference.</p>
+            <p className="heroCopy">One canonical EOD archive. V4-X is the current alpha candidate; V2 HGB XS + Market stays as the forward reference.</p>
           </div>
         </section>
 
         <section className="monitorSummaryGrid monitorSummaryGridThree" aria-label="Monitoring summary">
           <article className="summaryBlock prominent"><span>V4-X forward</span><strong>{statusLoading ? "—" : modelDates[V4X_ALPHA.id]?.size ?? 0}</strong><small>/ {V4X_ALPHA.forwardTargetSessions} sessions · vault locked</small></article>
           <article className="summaryBlock"><span>Latest session</span><strong>{statusLoading ? "—" : shortDate(latestReadySession?.session_date ?? null)}</strong><small>{status?.data_ready_sessions ?? 0} data-ready session(s)</small></article>
-          <article className="summaryBlock"><span>Active model artifacts</span><strong>{statusLoading ? "—" : latestArtifactModelCount}</strong><small>V4-X + V2 on latest session</small></article>
+          <article className="summaryBlock"><span>Active model artifacts</span><strong>{statusLoading ? "—" : latestArtifactModelCount}</strong><small>V4-X + V2 HGB XS + Market</small></article>
         </section>
 
         <section className="surface autoArchivePanel" aria-labelledby="archive-title">
@@ -249,7 +249,7 @@ export default function MonitoringPage() {
 
         <section className="monitoringModelsSection" aria-labelledby="models-title">
           <div className="monitoringSectionHead">
-            <div><span className="panelKicker">ACTIVE MODELS · V4-X · V2</span><h2 id="models-title">Prospective score coverage</h2></div>
+            <div><span className="panelKicker">ACTIVE MODELS · V4-X · V2 HGB XS + MARKET</span><h2 id="models-title">Prospective score coverage</h2></div>
             <p>Current alpha plus one durable reference. Retired research lanes are no longer promoted in the primary monitor.</p>
           </div>
           <div className="monitoredModelGrid">
@@ -272,7 +272,7 @@ export default function MonitoringPage() {
         </section>
 
         <section className="sharedSessionLine" aria-label="Shared session record">
-          <div><span className="panelKicker">V4-X / V2 SHARED RECORD</span><strong>{statusLoading ? "—" : sharedScoredDates.size} shared session(s)</strong><small>verified score artifacts for both active lanes</small></div>
+          <div><span className="panelKicker">V4-X / V2 HGB XS + MARKET</span><strong>{statusLoading ? "—" : sharedScoredDates.size} shared session(s)</strong><small>verified score artifacts for both active lanes</small></div>
           <p>Historical V4-X IC is shown on Overview. Forward performance remains intentionally hidden until the X1 gate opens.</p>
         </section>
       </div>
