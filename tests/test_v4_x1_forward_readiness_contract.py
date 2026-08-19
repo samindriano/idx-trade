@@ -45,7 +45,17 @@ def test_readiness_checks_canonical_data_ready_history_and_ohlcv() -> None:
     assert "V4_X1_FORWARD_READYNESS_BLOCKED_CANONICAL_HISTORY_GAP" in source
     assert '"session_ohlcv.parquet"' in source
     assert "validate_ohlcv_against_model_input" in source
-    assert "completed > observed_by" in source
+    assert "completed <= observed_by" in source
+
+
+def test_readiness_rejects_old_sessions_backfilled_after_freeze() -> None:
+    source = _source()
+    assert "CANONICAL_EOD_CAPTURE_HOUR_JAKARTA = 18" in source
+    assert "_session_eod_available_at_utc" in source
+    assert "session_eod <= observed_by" in source
+    assert "SESSION_EOD_PREDATES_MODEL_FREEZE" in source
+    assert "ignored_post_freeze_backfills" in source
+    assert "CANONICAL_SESSION_EOD_AND_DATA_READY_COMPLETION_BOTH_STRICTLY_AFTER_MODEL_FREEZE" in source
 
 
 def test_script_parses() -> None:
