@@ -46,7 +46,12 @@
     "prospective_window_sessions": 100,
     "minimum_admitted_dates_per_primary_metric": 80,
     "minimum_admitted_dates_derivation": "ceil(0.80 * 100) = 80",
-    "rationale": "X1 uses one coherent 80% observability policy at the date, fixed extreme-basket, and 100-session metric-window levels. These values are derived mechanically from the preregistered support rate, not from the historical Top30 admitted-date counts."
+    "robustness_block_sessions": 20,
+    "minimum_admitted_dates_per_robustness_block": 16,
+    "minimum_admitted_dates_per_robustness_block_derivation": "ceil(0.80 * 20) = 16",
+    "minimum_valid_robustness_blocks": 4,
+    "minimum_valid_robustness_blocks_derivation": "ceil(0.80 * 5) = 4",
+    "rationale": "X1 uses one coherent 80% observability policy at the date, fixed extreme-basket, 100-session metric-window, and 20-session robustness-block levels. These values are derived mechanically from the preregistered support rate, not from the historical Top30 admitted-date counts."
   },
   "prospective_boundary": {
     "fresh_only": true,
