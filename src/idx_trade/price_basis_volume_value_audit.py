@@ -11,6 +11,8 @@ import pandas as pd
 
 FACTOR_RTOL = 1e-6
 FACTOR_ATOL = 1e-6
+REPEATED_RATIO_DECIMALS = 8
+MIN_REPEATED_RATIO_ROWS = 3
 
 
 def normalize_ticker(s: pd.Series) -> pd.Series:
@@ -99,7 +101,7 @@ def ticker_factor_evidence(
     frame: pd.DataFrame,
     *,
     class_column: str,
-    minimum_rows: int = 3,
+    minimum_rows: int = MIN_REPEATED_RATIO_ROWS,
 ) -> pd.DataFrame:
     """Summarize tickers with repeated CA-factor-consistent field ratios."""
     if minimum_rows < 1:
@@ -116,3 +118,35 @@ def ticker_factor_evidence(
             "requires_basis_remediation": bool(len(block) >= minimum_rows),
         })
     return pd.DataFrame(rows).sort_values("ticker", kind="mergesort").reset_index(drop=True)
+
+
+def repeated_nonunit_ratio_evidence(
+    frame: pd.DataFrame,
+    *,
+    ratio_column: str,
+    minimum_rows: int = MIN_REPEATED_RATIO_ROWS,
+    decimals: int = REPEATED_RATIO_DECIMALS,
+) -> pd.DataFrame:
+    """Detect persistent non-1 unit/scale ratios even when unrelated to the CA factor."""
+    if minimum_rows < 1:
+        raise ValueError("minimum_rows must be positive")
+    required = {"ticker", ratio_column}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"repeated-ratio evidence missing columns: {sorted(missing)}")
+    work = frame[["ticker", ratio_column]].copy()
+    work["ticker"] = normalize_ticker(work["ticker"])
+    ratio = numeric_series(work[ratio_column])
+    valid = np.isfinite(ratio) & ratio.gt(0.0) & ~np.isclose(ratio, 1.0, rtol=FACTOR_RTOL, atol=FACTOR_ATOL)
+    work = work.loc[valid].copy()
+    work["ratio_key"] = ratio.loc[valid].round(decimals)
+    if work.empty:
+        return pd.DataFrame(columns=["ticker", "ratio_key", "rows", "requires_basis_review"])
+    grouped = (
+        work.groupby(["ticker", "ratio_key"], sort=True)
+        .size()
+        .rename("rows")
+        .reset_index()
+    )
+    grouped["requires_basis_review"] = grouped["rows"].ge(minimum_rows)
+    return grouped.sort_values(["ticker", "rows", "ratio_key"], ascending=[True, False, True], kind="mergesort").reset_index(drop=True)
