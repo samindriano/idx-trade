@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { V2_CHAMPION } from "@/lib/model-catalog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import styles from "./model-monitor.module.css";
+import {
+  RESEARCH_EXPERIMENTS,
+  V2_CHAMPION,
+  type ResearchEvidenceSeries,
+  type ResearchFoldMetric,
+  type ResearchStatus,
+} from "@/lib/model-catalog";
 import { V4X_ALPHA, V4X_CONSENSUS_FOLDS } from "@/lib/v4x-catalog";
 
 type OverviewRuntimeStatus = {
@@ -16,9 +23,28 @@ type OverviewRuntimeStatus = {
   outcome_access: "LOCKED";
 };
 
-type OverviewStatusResponse = {
-  status?: OverviewRuntimeStatus;
+type OverviewStatusResponse = { status?: OverviewRuntimeStatus };
+type ArchiveSort = "best" | "latest" | "name";
+type ArchiveStatusFilter = "all" | "passed" | "not-passed";
+type ArchiveModelFilter = "all" | string;
+
+const archiveStatusPriority: Record<ResearchStatus, number> = {
+  FINAL: 0,
+  BASELINE: 1,
+  RESEARCH: 2,
+  BLOCKED: 3,
+  FAIL: 4,
 };
+
+const SERIES_TONES = ["#216b8c", "#a56812", "#7353a6", "#007c70"];
+const FOLD_GUIDE = [
+  { fold: "F1", train: "1–504", gap: "505–524", validation: "525–624" },
+  { fold: "F2", train: "1–624", gap: "625–644", validation: "645–744" },
+  { fold: "F3", train: "1–744", gap: "745–764", validation: "765–864" },
+  { fold: "F4", train: "1–864", gap: "865–884", validation: "885–984" },
+  { fold: "F5", train: "1–984", gap: "985–1004", validation: "1005–1104" },
+  { fold: "F6", train: "1–1104", gap: "1105–1124", validation: "1125–1224" },
+] as const;
 
 function Logo() {
   return <div className="brandMark" aria-hidden="true"><span /><span /><span /><span /></div>;
@@ -28,21 +54,39 @@ function pct(value: number, digits = 1) {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
+function signedPct(value: number) {
+  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
+}
+
 function ic(value: number) {
   return value.toFixed(3);
 }
 
 function shortDate(value: string | null) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function statusLabel(status: ResearchStatus) {
+  if (status === "FINAL") return "FINAL";
+  if (status === "BASELINE") return "BASELINE";
+  if (status === "FAIL") return "FAILED";
+  if (status === "BLOCKED") return "BLOCKED";
+  return "RESEARCH";
+}
+
+function experimentKey(item: (typeof RESEARCH_EXPERIMENTS)[number]) {
+  return `${item.generation}:${item.candidate}`;
+}
+
+function seriesTone(index: number) {
+  return SERIES_TONES[index % SERIES_TONES.length];
 }
 
 function HistoricalIcChart() {
+  const [hovered, setHovered] = useState<{ fold: number; series: "geometry3" | "control" } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement>(null);
   const width = 760;
   const height = 300;
   const left = 58;
@@ -52,174 +96,188 @@ function HistoricalIcChart() {
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
   const maxIc = 0.18;
-  const minIc = 0;
   const x = (index: number) => left + (index / (V4X_CONSENSUS_FOLDS.length - 1)) * chartWidth;
-  const y = (value: number) => top + ((maxIc - value) / (maxIc - minIc)) * chartHeight;
+  const y = (value: number) => top + ((maxIc - value) / maxIc) * chartHeight;
   const geometryPath = V4X_CONSENSUS_FOLDS.map((point, index) => `${index === 0 ? "M" : "L"}${x(index)},${y(point.geometry3)}`).join(" ");
   const controlPath = V4X_CONSENSUS_FOLDS.map((point, index) => `${index === 0 ? "M" : "L"}${x(index)},${y(point.control)}`).join(" ");
   const guides = [0, 0.05, 0.10, 0.15];
+  const activePoint = hovered ? V4X_CONSENSUS_FOLDS[hovered.fold] : null;
+  const activeValue = activePoint && hovered ? activePoint[hovered.series] : null;
+  const activeX = hovered ? x(hovered.fold) : 0;
+  const activeY = activeValue !== null ? y(activeValue) : 0;
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    const close = (event: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(event.target as Node)) setHelpOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [helpOpen]);
 
   return (
-    <div className="chartWrap editorialChart">
+    <div className={`chartWrap editorialChart ${styles.chartStage}`} onMouseLeave={() => setHovered(null)}>
       <div className="evidenceChartMeta">
-        <div className="evidenceChartLabel"><span>Consensus daily rank IC</span></div>
+        <div className="evidenceChartLabel">
+          <span>Consensus daily rank IC</span>
+          <div className="evidenceHelp" ref={helpRef}>
+            <button className="evidenceHelpButton" type="button" aria-label="Explain V4 historical folds" aria-expanded={helpOpen} onClick={() => setHelpOpen((value) => !value)}>?</button>
+            {helpOpen && (
+              <div className="evidenceHelpPopover" role="dialog">
+                <strong>V4 historical walk-forward folds</strong>
+                <p>Each point is a chronological out-of-sample fold. V4-X Geometry3 adds three completed-session geometry features to the same 25-feature V4 control.</p>
+                <div className="evidenceHelpTable">
+                  {FOLD_GUIDE.map((fold) => <div key={fold.fold}><b>{fold.fold}</b><span>train {fold.train}</span><span>gap {fold.gap}</span><span>validation {fold.validation}</span></div>)}
+                </div>
+                <small>These are historical V4-3R results. X1 forward performance remains unknown and locked.</small>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="evidenceChartLegend">
           <small><i className="seriesMarker" style={{ background: "#216b8c" }} />V4-X Geometry3</small>
-          <small><i className="seriesMarker" style={{ background: "#a56812" }} />Context25 control</small>
+          <small><i className="seriesMarker" style={{ background: "#a56812" }} />V4 control · 25 features</small>
         </div>
       </div>
-      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Historical consensus rank IC by fold for V4-X Geometry3 and Context25 control">
-        {guides.map((value) => (
-          <g key={value}>
-            <line className={`gridLine ${value === 0 ? "zeroLine" : ""}`} x1={left} x2={width - right} y1={y(value)} y2={y(value)} />
-            <text className="axisLabel" x={left - 12} y={y(value) + 4} textAnchor="end">{value.toFixed(2)}</text>
-          </g>
-        ))}
+      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Historical consensus rank IC by fold">
+        {guides.map((value) => <g key={value}><line className={`gridLine ${value === 0 ? "zeroLine" : ""}`} x1={left} x2={width - right} y1={y(value)} y2={y(value)} /><text className="axisLabel" x={left - 12} y={y(value) + 4} textAnchor="end">{value.toFixed(2)}</text></g>)}
         <path className="linePath" d={controlPath} style={{ stroke: "#a56812" }} />
         <path className="linePath" d={geometryPath} style={{ stroke: "#216b8c" }} />
         {V4X_CONSENSUS_FOLDS.map((point, index) => (
           <g key={point.fold}>
-            <circle cx={x(index)} cy={y(point.control)} r="4.5" fill="white" stroke="#a56812" strokeWidth="2" />
-            <circle cx={x(index)} cy={y(point.geometry3)} r="5" fill="white" stroke="#216b8c" strokeWidth="2" />
+            <circle className="chartPoint" cx={x(index)} cy={y(point.control)} r={hovered?.fold === index && hovered.series === "control" ? 7 : 4.5} fill="white" stroke="#a56812" strokeWidth="2" onMouseEnter={() => setHovered({ fold: index, series: "control" })} />
+            <circle className="chartPoint" cx={x(index)} cy={y(point.geometry3)} r={hovered?.fold === index && hovered.series === "geometry3" ? 7 : 5} fill="white" stroke="#216b8c" strokeWidth="2" onMouseEnter={() => setHovered({ fold: index, series: "geometry3" })} />
             <text className="foldAxis" x={x(index)} y={height - 14} textAnchor="middle">{point.fold}</text>
           </g>
         ))}
       </svg>
+      {hovered && activePoint && activeValue !== null && (
+        <div className={`${styles.tooltip} ${activeX > width * 0.7 ? styles.tooltipLeft : ""}`} style={{ left: `${(activeX / width) * 100}%`, top: `${(activeY / height) * 100}%` }}>
+          <div className={styles.tooltipHead}><strong>{activePoint.fold}</strong><span>{hovered.series === "geometry3" ? "V4-X Geometry3" : "V4 control · 25 features"}</span></div>
+          <div className={styles.tooltipRows}>
+            <div><span>Rank IC</span><strong>{activeValue.toFixed(4)}</strong></div>
+            <div><span>Geometry3 − control</span><strong className={activePoint.geometry3 - activePoint.control >= 0 ? styles.positive : styles.negative}>{(activePoint.geometry3 - activePoint.control).toFixed(4)}</strong></div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+type PlottedPoint = ResearchFoldMetric & { x: number; y: number };
+
+function lineSegments(points: readonly PlottedPoint[], zeroY: number, color: string) {
+  return points.slice(0, -1).flatMap((start, index) => {
+    const end = points[index + 1];
+    const sameSide = (start.deltaPr >= 0) === (end.deltaPr >= 0);
+    if (sameSide || start.deltaPr === 0 || end.deltaPr === 0) return [{ d: `M${start.x},${start.y} L${end.x},${end.y}`, color }];
+    const ratio = -start.deltaPr / (end.deltaPr - start.deltaPr);
+    const zeroX = start.x + ratio * (end.x - start.x);
+    return [{ d: `M${start.x},${start.y} L${zeroX},${zeroY}`, color }, { d: `M${zeroX},${zeroY} L${end.x},${end.y}`, color }];
+  });
+}
+
+function EvidenceChart({ series, metricLabel }: { series: readonly ResearchEvidenceSeries[]; metricLabel: string }) {
+  const [hovered, setHovered] = useState<{ series: number; point: number } | null>(null);
+  const width = 760;
+  const height = 300;
+  const left = 58;
+  const right = 22;
+  const top = 34;
+  const bottom = 44;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const values = series.flatMap((line) => line.points.map((point) => point.deltaPr));
+  const extent = Math.max(0.005, ...values.map((value) => Math.abs(value))) * 1.15;
+  const zeroY = top + chartHeight / 2;
+  const plottedSeries = series.map((line) => ({ ...line, points: line.points.map((point, index) => ({ ...point, x: left + (index / Math.max(1, line.points.length - 1)) * chartWidth, y: top + chartHeight / 2 - (point.deltaPr / extent) * (chartHeight / 2) })) }));
+  const activePoint = hovered ? plottedSeries[hovered.series]?.points[hovered.point] : null;
+  const activeSeries = hovered ? plottedSeries[hovered.series] : null;
+
+  return (
+    <div className={`chartWrap editorialChart ${styles.chartStage}`} onMouseLeave={() => setHovered(null)}>
+      <div className="evidenceChartMeta"><div className="evidenceChartLabel"><span>{metricLabel}</span></div><div className="evidenceChartLegend">{series.map((line, index) => <small key={line.label}><i className="seriesMarker" style={{ background: seriesTone(index) }} />{line.label}</small>)}</div></div>
+      <svg className="foldSvg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel} across evaluation folds`}>
+        {[extent, extent / 2, 0, -extent / 2, -extent].map((value) => {
+          const yy = top + chartHeight / 2 - (value / extent) * (chartHeight / 2);
+          return <g key={value}><line className={`gridLine ${value === 0 ? "zeroLine" : ""}`} x1={left} x2={width - right} y1={yy} y2={yy} /><text className="axisLabel" x={left - 12} y={yy + 4} textAnchor="end">{signedPct(value)}</text></g>;
+        })}
+        {plottedSeries.map((line, seriesIndex) => {
+          const color = seriesTone(seriesIndex);
+          return <g key={line.label}>{lineSegments(line.points, zeroY, color).map((segment, index) => <path className="linePath" key={index} d={segment.d} style={{ stroke: color }} />)}{line.points.map((point, pointIndex) => <g key={point.fold} onMouseEnter={() => setHovered({ series: seriesIndex, point: pointIndex })}><circle cx={point.x} cy={point.y} r={hovered?.series === seriesIndex && hovered.point === pointIndex ? 7 : 5} fill="white" stroke={color} strokeWidth="2" />{seriesIndex === 0 && <text className="foldAxis" x={point.x} y={height - 14} textAnchor="middle">{point.fold}</text>}</g>)}</g>;
+        })}
+      </svg>
+      {activePoint && activeSeries && <div className={`${styles.tooltip} ${activePoint.x > width * 0.7 ? styles.tooltipLeft : ""}`} style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}><div className={styles.tooltipHead}><strong>{activePoint.fold}</strong><span>{activeSeries.label}</span></div><div className={styles.tooltipRows}><div><span>Delta PR-AUC</span><strong className={activePoint.deltaPr >= 0 ? styles.positive : styles.negative}>{signedPct(activePoint.deltaPr)}</strong></div>{activePoint.roc !== undefined && <div><span>Delta ROC</span><strong>{signedPct(activePoint.roc)}</strong></div>}{activePoint.qSpread !== undefined && <div><span>Delta Q5-Q1</span><strong>{signedPct(activePoint.qSpread)}</strong></div>}</div></div>}
+    </div>
+  );
+}
+
+function ModelEvidencePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = RESEARCH_EXPERIMENTS.find((item) => experimentKey(item) === value) ?? RESEARCH_EXPERIMENTS[0];
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const versionOrder = ["V1", "V2", "V3", "V4", "O1", "O2", "Risk"];
+  const versions = versionOrder.filter((version) => RESEARCH_EXPERIMENTS.some((item) => (item.generation.startsWith("V") ? item.generation.split("-")[0] : item.generation) === version));
+  return <div className="modelEvidencePicker" ref={rootRef}><button className="modelEvidencePickerTrigger" type="button" aria-expanded={open} onClick={() => setOpen((current) => !current)}><span>{selected.generation} · {selected.name}</span><b>⌄</b></button>{open && <div className="modelEvidencePickerMenu" role="listbox">{versions.map((version) => <div className="modelPickerGroup" key={version}><div className="modelPickerGroupLabel">{version}</div>{RESEARCH_EXPERIMENTS.filter((item) => (item.generation.startsWith("V") ? item.generation.split("-")[0] : item.generation) === version).map((item) => { const key = experimentKey(item); return <button className={`modelPickerOption ${key === value ? "isSelected" : ""}`} type="button" key={key} onClick={() => { onChange(key); setOpen(false); }}><i className={`modelPickerDot ${item.status.toLowerCase()}`} /><span>{item.name}</span><small>{statusLabel(item.status)}</small></button>; })}</div>)}</div>}</div>;
 }
 
 export default function Home() {
   const [forwardStatus, setForwardStatus] = useState<OverviewRuntimeStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedModelKey, setSelectedModelKey] = useState(() => experimentKey(RESEARCH_EXPERIMENTS.find((item) => item.generation === "V2") ?? RESEARCH_EXPERIMENTS[0]));
+  const [archiveSort, setArchiveSort] = useState<ArchiveSort>("best");
+  const [archiveStatusFilter, setArchiveStatusFilter] = useState<ArchiveStatusFilter>("all");
+  const [archiveModelFilter, setArchiveModelFilter] = useState<ArchiveModelFilter>("all");
+  const [expandedArchiveKey, setExpandedArchiveKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      fetch("/api/monitor/status", { cache: "no-store" })
-        .then((response) => response.json() as Promise<OverviewStatusResponse>)
-        .then((payload) => { if (!cancelled) setForwardStatus(payload.status ?? null); })
-        .catch(() => { if (!cancelled) setForwardStatus(null); })
-        .finally(() => { if (!cancelled) setLoading(false); });
+      fetch("/api/monitor/status", { cache: "no-store" }).then((response) => response.json() as Promise<OverviewStatusResponse>).then((payload) => { if (!cancelled) setForwardStatus(payload.status ?? null); }).catch(() => { if (!cancelled) setForwardStatus(null); }).finally(() => { if (!cancelled) setLoading(false); });
     };
     load();
     const timer = window.setInterval(load, 5_000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, []);
 
-  const v4xSessions = useMemo(() => new Set(
-    (forwardStatus?.model_runs ?? [])
-      .filter((run) => run.model_id === V4X_ALPHA.id && run.state === "DONE" && Boolean(run.artifact_sha256))
-      .map((run) => run.session_date),
-  ), [forwardStatus]);
-
-  const v2Sessions = useMemo(() => new Set(
-    (forwardStatus?.model_runs ?? [])
-      .filter((run) => run.model_id === V2_CHAMPION.id && run.state === "DONE" && Boolean(run.artifact_sha256))
-      .map((run) => run.session_date),
-  ), [forwardStatus]);
-
+  const v4xSessions = useMemo(() => new Set((forwardStatus?.model_runs ?? []).filter((run) => run.model_id === V4X_ALPHA.id && run.state === "DONE" && Boolean(run.artifact_sha256)).map((run) => run.session_date)), [forwardStatus]);
+  const v2Sessions = useMemo(() => new Set((forwardStatus?.model_runs ?? []).filter((run) => run.model_id === V2_CHAMPION.id && run.state === "DONE" && Boolean(run.artifact_sha256)).map((run) => run.session_date)), [forwardStatus]);
   const sharedSessions = [...v4xSessions].filter((date) => v2Sessions.has(date)).length;
+  const selectedExperiment = RESEARCH_EXPERIMENTS.find((item) => experimentKey(item) === selectedModelKey) ?? RESEARCH_EXPERIMENTS[0];
+  const visibleExperiments = [...RESEARCH_EXPERIMENTS].filter((item) => {
+    const passed = item.status === "FINAL" || item.status === "BASELINE";
+    const statusMatch = archiveStatusFilter === "all" || (archiveStatusFilter === "passed" && passed) || (archiveStatusFilter === "not-passed" && !passed);
+    return statusMatch && (archiveModelFilter === "all" || archiveModelFilter === experimentKey(item));
+  }).sort((a, b) => archiveSort === "name" ? a.name.localeCompare(b.name) : archiveSort === "latest" ? RESEARCH_EXPERIMENTS.indexOf(b) - RESEARCH_EXPERIMENTS.indexOf(a) : (a.historicalRank ?? 999) - (b.historicalRank ?? 999) || archiveStatusPriority[a.status] - archiveStatusPriority[b.status]);
 
   return (
     <main className="appShell editorialShell">
-      <header className="topNav editorialNav">
-        <div className="navInner">
-          <a className="brand" href="/" aria-label="IDX Trade home"><Logo /><span>IDX Trade</span></a>
-          <nav className="primaryNav" aria-label="Primary navigation">
-            <a className="active" href="/#overview">Overview</a>
-            <a href="/monitoring">Forward Monitoring</a>
-          </nav>
-        </div>
-      </header>
-
+      <header className="topNav editorialNav"><div className="navInner"><a className="brand" href="/" aria-label="IDX Trade home"><Logo /><span>IDX Trade</span></a><nav className="primaryNav" aria-label="Primary navigation"><a className="active" href="/#overview">Overview</a><a href="/monitoring">Forward Monitoring</a></nav></div></header>
       <div className="page overviewPage" id="top">
-        <section className="overviewHero" id="overview">
-          <div>
-            <p className="overviewKicker">CURRENT ALPHA</p>
-            <h1>V4-X Geometry3</h1>
-            <p className="overviewLead">Historical rank-alpha evidence is strong. The model family is frozen and now moves into a clean 100-session forward confirmation, with V2 retained as the long-running reference.</p>
-          </div>
-          <div className="overviewStatus">
-            <span className="overviewStatusDot" />
-            <span>V4-X1 / FROZEN</span>
-            <strong>Forward confirmation</strong>
-          </div>
-        </section>
-
-        <section className="overviewStats" aria-label="Current alpha summary">
-          <article><span>HISTORICAL CONSENSUS IC</span><strong className="positiveText">{ic(V4X_ALPHA.historicalConsensusIc)}</strong><small>Geometry3 · V4-3R evidence</small></article>
-          <article><span>CONTEXT25 CONTROL</span><strong>{ic(V4X_ALPHA.historicalControlConsensusIc)}</strong><small>same historical evaluation</small></article>
-          <article><span>RELATIVE IC LIFT</span><strong className="positiveText">+{pct(V4X_ALPHA.historicalConsensusRelativeLift)}</strong><small>Geometry3 vs control</small></article>
-          <article><span>FORWARD V4-X</span><strong>{loading ? "—" : `${v4xSessions.size} / ${V4X_ALPHA.forwardTargetSessions}`}</strong><small>outcome vault locked</small></article>
-        </section>
+        <section className="overviewHero" id="overview"><div><p className="overviewKicker">CURRENT ALPHA</p><h1>V4-X Geometry3</h1><p className="overviewLead">Historical rank-alpha evidence is strong. V4-X is frozen for a clean 100-session forward confirmation; V2 HGB XS + Market remains the durable reference.</p></div><div className="overviewStatus"><span className="overviewStatusDot" /><span>V4-X1 / FROZEN</span><strong>Forward confirmation</strong></div></section>
+        <section className="overviewStats" aria-label="Current alpha summary"><article><span>HISTORICAL CONSENSUS IC</span><strong className="positiveText">{ic(V4X_ALPHA.historicalConsensusIc)}</strong><small>Geometry3 · V4-3R evidence</small></article><article><span>V4 CONTROL · 25 FEATURES</span><strong>{ic(V4X_ALPHA.historicalControlConsensusIc)}</strong><small>same folds, before Geometry3</small></article><article><span>RELATIVE IC LIFT</span><strong className="positiveText">+{pct(V4X_ALPHA.historicalConsensusRelativeLift)}</strong><small>Geometry3 vs V4 control</small></article><article><span>FORWARD V4-X</span><strong>{loading ? "—" : `${v4xSessions.size} / ${V4X_ALPHA.forwardTargetSessions}`}</strong><small>outcome vault locked</small></article></section>
 
         <section className="overviewGrid">
-          <article className="overviewCard overviewEvidenceCard">
-            <div className="overviewCardHead">
-              <div><span>HISTORICAL RANK SIGNAL</span><h2>Geometry3 improved the control</h2></div>
-              <strong className="overviewEvidenceStatus status-final">6 / 6 POSITIVE</strong>
-            </div>
-            <p className="overviewCardLead">Consensus rank IC by frozen historical fold. The chart shows the V4-X Geometry3 architecture against its Context25 control; it is historical development evidence, not X1 forward performance.</p>
-            <HistoricalIcChart />
-            <div className="overviewEvidenceFindings">
-              <span>Key evidence</span>
-              <ul>
-                <li>Median consensus IC: {ic(V4X_ALPHA.historicalControlConsensusIc)} → {ic(V4X_ALPHA.historicalConsensusIc)} ({`+${pct(V4X_ALPHA.historicalConsensusRelativeLift)}`}).</li>
-                <li>H5 median IC {ic(V4X_ALPHA.historicalH5Ic)} and H10 median IC {ic(V4X_ALPHA.historicalH10Ic)} for Geometry3.</li>
-                <li>Incremental bootstrap IC-delta interval remained positive: {V4X_ALPHA.incrementalBootstrapLow.toFixed(4)} to {V4X_ALPHA.incrementalBootstrapHigh.toFixed(4)}.</li>
-              </ul>
-            </div>
-          </article>
-
-          <article className="overviewCard overviewModelCard">
-            <div className="overviewCardHead">
-              <div><span>FINAL ALPHA CANDIDATE</span><h2>{V4X_ALPHA.shortName}</h2></div>
-              <span className="overviewBadge challengerBadge">V4-X</span>
-            </div>
-            <div className="overviewModelIdentity"><strong>{V4X_ALPHA.id}</strong><span>Frozen final refit · prospective performance unknown</span></div>
-            <dl className="overviewFacts">
-              <div><dt>Features</dt><dd>{V4X_ALPHA.featureCount}</dd></div>
-              <div><dt>Added geometry</dt><dd>3 completed-session features</dd></div>
-              <div><dt>Model bundle</dt><dd>{V4X_ALPHA.modelBundleManifestSha256.slice(0, 12)}...</dd></div>
-              <div><dt>Forward gate</dt><dd>{V4X_ALPHA.forwardTargetSessions} sessions</dd></div>
-            </dl>
-            <a className="overviewLink" href="/monitoring">Open forward monitoring →</a>
-          </article>
+          <article className="overviewCard overviewEvidenceCard"><div className="overviewCardHead"><div><span>HISTORICAL RANK SIGNAL</span><h2>Geometry3 improved the V4 control</h2></div><strong className="overviewEvidenceStatus status-final">6 / 6 POSITIVE</strong></div><p className="overviewCardLead">Hover each fold for exact IC. The V4 control is the same 25-feature architecture before the three completed-session Geometry3 features were added.</p><HistoricalIcChart /><div className="overviewEvidenceFindings"><span>Key evidence</span><ul><li>Median consensus IC: {ic(V4X_ALPHA.historicalControlConsensusIc)} → {ic(V4X_ALPHA.historicalConsensusIc)} (+{pct(V4X_ALPHA.historicalConsensusRelativeLift)}).</li><li>H5 median IC {ic(V4X_ALPHA.historicalH5Ic)} and H10 median IC {ic(V4X_ALPHA.historicalH10Ic)} for Geometry3.</li><li>Incremental bootstrap IC-delta interval: {V4X_ALPHA.incrementalBootstrapLow.toFixed(4)} to {V4X_ALPHA.incrementalBootstrapHigh.toFixed(4)}.</li></ul></div></article>
+          <article className="overviewCard overviewModelCard"><div className="overviewCardHead"><div><span>FINAL ALPHA CANDIDATE</span><h2>{V4X_ALPHA.shortName}</h2></div><span className="overviewBadge challengerBadge">V4-X</span></div><div className="overviewModelIdentity"><strong>{V4X_ALPHA.id}</strong><span>Frozen final refit · prospective performance unknown</span></div><dl className="overviewFacts"><div><dt>Features</dt><dd>{V4X_ALPHA.featureCount}</dd></div><div><dt>Added geometry</dt><dd>3 completed-session features</dd></div><div><dt>Model bundle</dt><dd>{V4X_ALPHA.modelBundleManifestSha256.slice(0, 12)}...</dd></div><div><dt>Forward gate</dt><dd>{V4X_ALPHA.forwardTargetSessions} sessions</dd></div></dl><a className="overviewLink" href="/monitoring">Open forward monitoring →</a></article>
         </section>
 
-        <section className="overviewCard overviewArchiveCard">
-          <div className="overviewCardHead">
-            <div><span>ACTIVE MONITORING</span><h2>V4-X + V2</h2></div>
-            <p>The main dashboard now tracks only the current alpha candidate and the durable V2 reference.</p>
-          </div>
-          <div className="overviewArchive">
-            <article className="overviewArchiveItem status-final">
-              <div className="overviewArchiveRow">
-                <span className="overviewArchiveIndex">01</span><span className="overviewArchiveGeneration">V4-X</span>
-                <div><strong>Geometry3</strong><small>{V4X_ALPHA.id}</small></div>
-                <span className="overviewArchiveResult">{loading ? "Reading runtime" : `${v4xSessions.size} / ${V4X_ALPHA.forwardTargetSessions} forward`}</span>
-                <span className="overviewArchiveStatus">CURRENT</span><span />
-              </div>
-            </article>
-            <article className="overviewArchiveItem status-baseline">
-              <div className="overviewArchiveRow">
-                <span className="overviewArchiveIndex">02</span><span className="overviewArchiveGeneration">V2</span>
-                <div><strong>{V2_CHAMPION.shortName}</strong><small>{V2_CHAMPION.id}</small></div>
-                <span className="overviewArchiveResult">{loading ? "Reading runtime" : `${v2Sessions.size} / ${V2_CHAMPION.forwardTargetSessions} forward`}</span>
-                <span className="overviewArchiveStatus">REFERENCE</span><span />
-              </div>
-            </article>
-          </div>
-          <div className="overviewEvidenceFindings">
-            <span>Forward state</span>
-            <ul>
-              <li>{loading ? "Reading canonical EOD runtime." : `${forwardStatus?.data_ready_sessions ?? 0} canonical EOD session(s) archived.`}</li>
-              <li>{sharedSessions} session(s) currently have both V4-X and V2 score artifacts.</li>
-              <li>Next canonical session: {loading ? "—" : shortDate(forwardStatus?.next_missing_session ?? null)}.</li>
-            </ul>
-          </div>
+        <section className="overviewCard overviewEvidenceCard">
+          <div className="overviewCardHead"><div><span>PAST MODEL EVIDENCE</span><h2>Inspect historical model scores</h2></div><strong className={`overviewEvidenceStatus status-${selectedExperiment.status.toLowerCase()}`}>{statusLabel(selectedExperiment.status)}</strong></div>
+          <div className="overviewEvidenceSelector"><span>Inspect model</span><ModelEvidencePicker value={selectedModelKey} onChange={setSelectedModelKey} /></div>
+          {selectedExperiment.evidence ? <><p className="overviewCardLead">{selectedExperiment.evidence.caption}</p><EvidenceChart metricLabel={selectedExperiment.evidence.metricLabel} series={selectedExperiment.evidence.series} /></> : <div className={`overviewDiagnosticGraphic status-${selectedExperiment.status.toLowerCase()}`}><div className="overviewDiagnosticMark">!</div><div><span>Diagnostic view</span><strong>{selectedExperiment.result}</strong><p>{selectedExperiment.note}</p></div></div>}
+          <div className="overviewEvidenceFindings"><span>Key findings</span><ul>{selectedExperiment.keyFindings.slice(0, 3).map((finding) => <li key={finding}>{finding}</li>)}</ul></div>
         </section>
+
+        <section className="overviewCard overviewArchiveCard" id="research-lineage"><div className="overviewCardHead"><div><span>RESEARCH ARCHIVE</span><h2>What we tested</h2></div><p>Past models stay available here; they are simply no longer primary monitoring lanes.</p></div><div className="overviewArchiveToolbar" aria-label="Research archive filters"><label><span>Ranking</span><select value={archiveSort} onChange={(event) => setArchiveSort(event.target.value as ArchiveSort)}><option value="best">Best → worst</option><option value="latest">Latest tested</option><option value="name">Name A-Z</option></select></label><label><span>Result</span><select value={archiveStatusFilter} onChange={(event) => setArchiveStatusFilter(event.target.value as ArchiveStatusFilter)}><option value="all">All results</option><option value="passed">Passed</option><option value="not-passed">Not passed</option></select></label><label><span>Model</span><select value={archiveModelFilter} onChange={(event) => setArchiveModelFilter(event.target.value)}><option value="all">All models</option>{RESEARCH_EXPERIMENTS.map((item) => <option key={experimentKey(item)} value={experimentKey(item)}>{item.generation} · {item.name}</option>)}</select></label><span className="overviewArchiveCount">{visibleExperiments.length} / {RESEARCH_EXPERIMENTS.length} tested</span></div><div className="overviewArchive">{visibleExperiments.map((item, index) => { const key = experimentKey(item); const expanded = expandedArchiveKey === key; return <article className={`overviewArchiveItem status-${item.status.toLowerCase()}`} key={key}><button type="button" className="overviewArchiveRow" aria-expanded={expanded} onClick={() => { setSelectedModelKey(key); setExpandedArchiveKey(expanded ? null : key); }}><span className="overviewArchiveIndex">{String(index + 1).padStart(2, "0")}</span><span className="overviewArchiveGeneration">{item.generation}</span><div><strong>{item.name}</strong><small>{item.candidate}</small></div><span className="overviewArchiveResult">{item.result}</span><span className="overviewArchiveStatus">{statusLabel(item.status)}</span><span className={`overviewArchiveChevron ${expanded ? "isExpanded" : ""}`} /></button><div className={`overviewArchiveDetailWrap ${expanded ? "isOpen" : ""}`} aria-hidden={!expanded}><div className="overviewArchiveDetail"><div><span>Decision</span><strong>{item.result}</strong></div><div><span>Why</span><p>{item.note}</p></div></div></div></article>; })}</div></section>
+
+        <section className="overviewCard overviewArchiveCard"><div className="overviewCardHead"><div><span>ACTIVE MONITORING</span><h2>V4-X + V2 HGB XS + Market</h2></div><p>Only the monitoring priority changed; historical model evidence stays accessible above.</p></div><div className="overviewEvidenceFindings"><span>Forward state</span><ul><li>V4-X: {loading ? "reading" : `${v4xSessions.size} / ${V4X_ALPHA.forwardTargetSessions}`} sessions.</li><li>V2 HGB XS + Market: {loading ? "reading" : `${v2Sessions.size} / ${V2_CHAMPION.forwardTargetSessions}`} sessions.</li><li>{sharedSessions} shared V4-X/V2 score session(s); next canonical session {loading ? "—" : shortDate(forwardStatus?.next_missing_session ?? null)}.</li></ul></div></section>
       </div>
     </main>
   );
