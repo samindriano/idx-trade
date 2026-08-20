@@ -60,6 +60,10 @@ def git_bytes_at_ref(repo_root: Path, git_ref: str, relative: str) -> bytes:
     return git_output(repo_root, "show", f"{git_ref}:{relative}", text=False)
 
 
+def git_blob_at_ref(repo_root: Path, git_ref: str, relative: str) -> str:
+    return git_output(repo_root, "rev-parse", f"{git_ref}:{relative}")
+
+
 def package_version(name: str) -> str:
     return importlib.metadata.version(name)
 
@@ -118,9 +122,28 @@ def verify_git_blobs(repo_root: Path, mapping: dict[str, str]) -> dict[str, str]
     return actual
 
 
+def verify_cross_ref_blob(repo_root: Path, cfg: dict[str, Any]) -> dict[str, str]:
+    git_ref = str(cfg["clean_contract_git_ref"])
+    relative = str(cfg["clean_contract_path"])
+    expected = str(cfg["clean_contract_git_blob_sha1"])
+    actual = git_blob_at_ref(repo_root, git_ref, relative)
+    if actual != expected:
+        raise RuntimeError(
+            f"V4_X1_CLEAN_LOCK_CONTRACT_BLOB_MISMATCH:{actual}!={expected}"
+        )
+    return {"git_ref": git_ref, "path": relative, "git_blob_sha1": actual}
+
+
 def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     ref = cfg["runtime_manifest"]
-    raw = git_bytes_at_ref(repo_root, str(ref["git_ref"]), str(ref["path"]))
+    git_ref = str(ref["git_ref"])
+    relative = str(ref["path"])
+    actual_blob = git_blob_at_ref(repo_root, git_ref, relative)
+    if actual_blob != str(ref["git_blob_sha1"]):
+        raise RuntimeError(
+            f"V4_X1_CLEAN_LOCK_RUNTIME_BLOB_MISMATCH:{actual_blob}!={ref['git_blob_sha1']}"
+        )
+    raw = git_bytes_at_ref(repo_root, git_ref, relative)
     actual_sha = sha256_bytes(raw)
     if actual_sha != str(ref["sha256"]):
         raise RuntimeError(
@@ -149,8 +172,8 @@ def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             + json.dumps({"actual": actual_packages, "expected": expected_packages}, sort_keys=True)
         )
     return {
-        "manifest_git_ref": str(ref["git_ref"]),
-        "manifest_git_blob_sha1": str(ref["git_blob_sha1"]),
+        "manifest_git_ref": git_ref,
+        "manifest_git_blob_sha1": actual_blob,
         "manifest_sha256": actual_sha,
         "python_version": list(actual_python),
         "package_versions": actual_packages,
@@ -191,6 +214,7 @@ def main() -> int:
 
     cfg = read_json(config_path, "V4_X1_CLEAN_LOCK_CONFIG")
     verify_config(repo_root, config_path, cfg)
+    clean_contract = verify_cross_ref_blob(repo_root, cfg)
     git_blobs = verify_git_blobs(repo_root, cfg["pinned_git_blobs"])
     runtime = verify_runtime(repo_root, cfg)
     external_hashes = verify_external_inputs(args, cfg)
@@ -201,8 +225,7 @@ def main() -> int:
         "status": "V4_X1_CLEAN_PHASE_A_EXECUTION_LOCK_CAPTURED_REPLAY_NOT_RUN",
         "generation_id": cfg["generation_id"],
         "phase": cfg["phase"],
-        "clean_contract_git_ref": cfg["clean_contract_git_ref"],
-        "clean_contract_git_blob_sha1": cfg["clean_contract_git_blob_sha1"],
+        "clean_contract": clean_contract,
         "pinned_git_blobs": git_blobs,
         "runtime": runtime,
         "external_input_sha256": external_hashes,
