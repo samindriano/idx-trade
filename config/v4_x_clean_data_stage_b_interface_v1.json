@@ -12,6 +12,10 @@
       "summary": "28c61dfa6ae6c145a2186e8b8f197038e019d48fad469e958a18cbd74ee8c7fc"
     }
   },
+  "frozen_code_blobs": {
+    "stage_b_helper": "26458824c55a2a264ed04b6bc869ef71b1ab5adb",
+    "stage_b_runner": "4ff0e726027eed7a3177a79841ab9cbde71964c9"
+  },
   "frozen_security_master_sha256": "c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240",
   "identity_acceptance_contract": {
     "schema_version": "v4_x_clean_identity_acceptance_v1",
