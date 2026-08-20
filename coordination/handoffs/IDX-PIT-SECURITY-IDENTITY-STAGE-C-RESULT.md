@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 994da22
 branch: audit/pit-security-identity-stage-c-v1
-head_commit: pending result-document commit
+head_commit: 19bd445e2aaf28335c2f0315c25eabfffe6c3f66
 scope: exact outcome-blind V4-X H5/H10 training-support intersection
 files_changed:
   - src/idx_trade/pit_security_identity_audit.py
@@ -44,4 +44,3 @@ validation_run:
   - git diff --check: passed
   - Stage C: one completed outcome-blind run after two preflight-only path/status/type corrections
 recommended_next_action: independent ChatGPT review; no model or forward work in this lane
-
