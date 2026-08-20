@@ -263,10 +263,17 @@ def main() -> int:
         "changed_dates": len({str(pd.Timestamp(key[1]).date()) for key in changed_keys}),
         "changed_tickers": len({str(key[0]) for key in changed_keys}),
     }
+    stage_b_counts = {
+        "direct_new_rows": int(stage_b_diff.get("direct_new_rows", -1)),
+        "changed_rows": int(stage_b_diff.get("changed_rows", -1)),
+        "spillover_changed_rows": int(stage_b_diff.get("spillover_changed_rows", -1)),
+        "changed_dates": len(stage_b_diff.get("changed_dates", [])),
+        "changed_tickers": len(stage_b_diff.get("changed_tickers", [])),
+    }
     for key, expected in EXPECTED_STAGE_B_COUNTS.items():
-        if observed_counts[key] != expected or int(stage_b_diff.get(key, -1)) != expected:
+        if observed_counts[key] != expected or stage_b_counts[key] != expected:
             raise RuntimeError(
-                f"STAGE_B_REDERIVE_MISMATCH:{key}:{observed_counts[key]}:{stage_b_diff.get(key)}:{expected}"
+                f"STAGE_B_REDERIVE_MISMATCH:{key}:{observed_counts[key]}:{stage_b_counts[key]}:{expected}"
             )
 
     base_primary = base_features.loc[base_features["universe_primary_liquid"].astype(bool)]
