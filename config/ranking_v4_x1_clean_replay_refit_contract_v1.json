@@ -1,6 +1,6 @@
 {
   "schema_version": "ranking_v4_x1_clean_replay_refit_contract_v1",
-  "status": "V4_X1_CLEAN_REPLAY_REFIT_CONTRACT_FROZEN_EXECUTION_LOCK_NEXT",
+  "status": "V4_X1_CLEAN_REPLAY_REFIT_CONTRACT_FROZEN_EXECUTION_LOCK_LOCAL_CAPTURE_PENDING",
   "generation_id": "V4_X1_CLEAN_REMEDIATED_PROSPECTIVE_V1",
   "purpose": "Remediate the existing V4-X1 Geometry3 training lineage using one independently accepted final clean-data bundle while preserving the pre-existing V4-X1 scientific model contract and preventing post-result tuning.",
   "coordination_base_main": "eb82b00324b923e5630c6e97a0082f4a57703a17",
@@ -81,7 +81,7 @@
       "input_and_code_hash_manifest"
     ],
     "old_support_identity_must_match": false,
-    "rule_if_support_changes": "REPORT_DETERMINISTIC_DELTA_AND_CONTINUE_ONLY_IF_CHANGE_IS_EXPLAINED_BY_ACCEPTED_CLEAN_INPUT_LINEAGE; DO_NOT_TUNE_OR_REPAIR_IN_THIS_PHASE"
+    "rule_if_support_changes": "REPORT_DETERMINISTIC_DELTA_AND_CONTINUE_ONLY_IF CHANGE IS EXPLAINED BY ACCEPTED CLEAN INPUT LINEAGE; DO NOT TUNE OR REPAIR IN THIS PHASE"
   },
   "phase_b_clean_final_refit": {
     "authorized_by_this_contract": false,
@@ -124,8 +124,12 @@
     },
     "runtime_environment": {
       "required": true,
-      "manifest_sha256": null,
-      "status": "TO_BE_PINNED_AT_EXECUTION_LOCK"
+      "manifest_sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6",
+      "execution_lock_branch": "research/idx-v4-x-clean-phase-a-execution-lock-v1",
+      "execution_lock_config_path": "config/ranking_v4_x1_clean_phase_a_execution_lock_v1.json",
+      "execution_lock_config_git_blob_sha1": "36cd50eb130f648b5f00e47699f19a236b2b0064",
+      "capture_runner_git_blob_sha1": "32286b8af6927a47aa47349b8c52f53f7f5a637f",
+      "status": "EXECUTION_LOCK_FROZEN_LOCAL_CAPTURE_PENDING"
     }
   },
   "execution_lock_rule": {
@@ -163,5 +167,5 @@
     "access protected or fresh-forward outcomes before the new generation vault gate",
     "reset or mutate the current forward counter before the clean generation is successfully frozen and separately activated"
   ],
-  "next": "CREATE_HASH_ONLY_PHASE_A_EXECUTION_LOCK_AND_PIN_RUNTIME_ENVIRONMENT; DO_NOT_RUN REPLAY OR REFIT YET"
+  "next": "RUN_ONE_LOCAL_HASH_ONLY_EXECUTION_LOCK_CAPTURE; DO NOT RUN PHASE-A REPLAY OR REFIT BEFORE CAPTURE REVIEW"
 }
