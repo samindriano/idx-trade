@@ -1,0 +1,85 @@
+{
+  "schema_version": "ranking_v4_x1_clean_phase_a_execution_lock_v1",
+  "status": "V4_X1_CLEAN_PHASE_A_EXECUTION_LOCK_FROZEN_LOCAL_CAPTURE_REQUIRED",
+  "generation_id": "V4_X1_CLEAN_REMEDIATED_PROSPECTIVE_V1",
+  "phase": "PHASE_A_OUTCOME_BLIND_STRUCTURAL_REPLAY",
+  "purpose": "Hash-only execution lock before any clean V4-X1 structural replay. This lock freezes code, runtime, and already accepted clean/CA inputs without authorizing model or outcome work.",
+  "scientific_execution_branch": "research/idx-v4-x1-clean-phase-a-execution-lock-v1",
+  "scientific_base_branch": "research/price-basis-clean-refit-v1",
+  "clean_contract_git_ref": "2bc38c4d4a966dd57be0cb62211ed47c32ce7be9",
+  "clean_contract_path": "config/ranking_v4_x1_clean_replay_refit_contract_v1.json",
+  "clean_contract_git_blob_sha1": "6b46c622d2c620cc8c89ea42ca979e52080f8ed7",
+  "runtime_manifest": {
+    "git_ref": "ffa79256c4c8f2e202047bab5a9c8a4f3ddd3218",
+    "path": "docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json",
+    "git_blob_sha1": "20f971be7d16c8b64def6829448b9a6a6091ba3b",
+    "sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6",
+    "required_exact_runtime": true
+  },
+  "external_input_sha256": {
+    "final_bundle_manifest": "561b1d72168debae319829faa549cb9b6fab662d989c5e7ab8b6b64f9bd01358",
+    "clean_panel": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "security_master": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "field_provenance": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28",
+    "ca80_prefit_manifest": "0c222a10d8c48852f53451f0ce0bdec44b1156b8b9050c536f51b416ff18cfcc"
+  },
+  "accepted_lineage": {
+    "clean_bundle_status": "ACCEPTED_FINAL_CLEAN_INPUT_BUNDLE_HASH_PINNED",
+    "ca_disposition": "ACCEPTED_REUSE_PARENT_V4_3R_CA80_RECOMPUTE_SUPPORT_ON_CLEAN_INPUT",
+    "ca80_gate": 0.80,
+    "observed_bar_feature_semantics_preserved": true,
+    "v4_x2_session_aligned_semantics_allowed": false
+  },
+  "pinned_git_blobs": {
+    "scripts/capture_v4_x1_clean_phase_a_execution_lock.py": "79869fe57d931405b19efc680ec7cce32bbb0890",
+    "tests/test_v4_x1_clean_phase_a_execution_lock.py": "84dd5497a8ae87f18cc6b32295e188e8771931bb",
+    "scripts/run_v4_x1_final_refit_freeze.py": "2d538c1c99fb348b87d6c268e2df821b9099d203",
+    "scripts/run_v4_3r_historical_one_shot.py": "4d6141987351a9c233a393acf1d16319ba158d67",
+    "config/ranking_v4_x1_final_refit_v1.json": "7bfca6b0805e680092c7f8baa6efcd39998482d6",
+    "config/ranking_v4_x1_prospective_preregistration_v1.json": "f33663bc7e4d14941a12974cc453ab90ac5b85ba",
+    "config/ranking_v4_3r_ca80_preregistration_v1.json": "bbdbd28dc642f9af78fdce1e3a164ac8631eb376",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "8aba40c32e6069d1f8bdf5b8b19bf41d2065c422",
+    "src/idx_trade/ranking_v4_3r_model_eval.py": "85608550d14f1b994e80f7f9dca5e774b1e871f5",
+    "src/idx_trade/ranking_v4_3r_support.py": "eb7595d81042afb2d2e0e61180659537a10e92c1",
+    "src/idx_trade/ranking_v4_3_ca_training_domain.py": "dd1fb5ac7f32451038abde63eb7bf2eb1c0833eb",
+    "src/idx_trade/ranking_v4_x1_eval.py": "d926a3084f0357a4015e4ad701c7324c40eadaef",
+    "src/idx_trade/ranking_v4_x1_decision.py": "9f71ffa203bea4c8bc641880590d7eeffcff1c26"
+  },
+  "phase_a_allowed_operations": [
+    "read_and_hash_pinned_inputs",
+    "verify_exact_runtime_and_git_blobs",
+    "rebuild_listing_filtered_observed_bar_feature_representation",
+    "recompute_primary_liquid_context_under_unchanged_rule",
+    "recompute_target_support_state_or_availability_only_without_numeric_returns",
+    "rethreshold_date_support_under_frozen_CA80_rule",
+    "compare_old_vs_clean_support_identities",
+    "compare_old_vs_clean_feature_representation_and_missingness",
+    "write_outcome_blind_structural_summaries_and_hash_manifest"
+  ],
+  "hard_guards": {
+    "provider_calls_authorized": false,
+    "network_calls_authorized": false,
+    "numeric_target_access_authorized": false,
+    "model_fit_authorized": false,
+    "model_scoring_authorized": false,
+    "historical_prediction_authorized": false,
+    "historical_performance_authorized": false,
+    "protected_forward_outcome_access_authorized": false,
+    "forward_counter_mutation_authorized": false,
+    "session_semantics_change_authorized": false,
+    "data_repair_authorized": false
+  },
+  "capture_requirements": {
+    "git_worktree_clean": true,
+    "exact_runtime_match": true,
+    "all_pinned_git_blobs_match": true,
+    "all_external_input_hashes_match": true,
+    "output_directory_must_not_exist": true,
+    "capture_manifest_status": "V4_X1_CLEAN_PHASE_A_EXECUTION_LOCK_CAPTURED_REPLAY_NOT_RUN"
+  },
+  "post_capture_rule": "STOP_FOR_INDEPENDENT_REVIEW_BEFORE_PHASE_A_STRUCTURAL_REPLAY",
+  "phase_b_model_refit_authorized": false,
+  "forward_counter_reset_authorized": false
+}
