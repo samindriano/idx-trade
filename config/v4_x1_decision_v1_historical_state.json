@@ -1,0 +1,22 @@
+{
+  "schema_version": "v4_x1_decision_v1_historical_state_v1",
+  "status": "FROZEN_PRE_SIZING_AND_HISTORICAL_PNL",
+  "decision_rule": "V4_X1_DECISION_V1",
+  "historical_alpha_evidence": "EXACT_FROZEN_V4_3R_6X100_PURGE10",
+  "validation_dates": 600,
+  "initial_state": "EMPTY_POSITIONS_ALL_CASH",
+  "pre_roll": false,
+  "first_decision": "SELECT_DECISION_V1_TARGET_FROM_FIRST_OOS_SCORE_DATE",
+  "first_execution_reference": "OFFICIAL_OPEN_T_PLUS_1",
+  "carry_state_across_validation_dates": true,
+  "carry_state_across_fold_boundaries": true,
+  "fold_boundary_reset": false,
+  "fold_boundary_forced_liquidation": false,
+  "decision_target_positions": 10,
+  "discretionary_market_timing_cash": false,
+  "full_nav_investment_required": false,
+  "residual_cash_allowed": true,
+  "residual_cash_reason": "LOT_ROUNDING_FEES_OR_EXECUTION_RESIDUAL",
+  "cash_and_position_quantities": "DEFERRED_TO_FROZEN_SIZING_AND_EXECUTION_CONTRACT",
+  "historical_pnl_authorized": false
+}
