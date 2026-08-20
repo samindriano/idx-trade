@@ -1,6 +1,6 @@
 {
   "schema_version": "ranking_v4_x1_clean_replay_refit_contract_v1",
-  "status": "V4_X1_CLEAN_REPLAY_REFIT_CONTRACT_FROZEN_EXECUTION_BLOCKED_PENDING_FINAL_INPUT_LOCK",
+  "status": "V4_X1_CLEAN_REPLAY_REFIT_CONTRACT_FROZEN_EXECUTION_LOCK_NEXT",
   "generation_id": "V4_X1_CLEAN_REMEDIATED_PROSPECTIVE_V1",
   "purpose": "Remediate the existing V4-X1 Geometry3 training lineage using one independently accepted final clean-data bundle while preserving the pre-existing V4-X1 scientific model contract and preventing post-result tuning.",
   "coordination_base_main": "eb82b00324b923e5630c6e97a0082f4a57703a17",
@@ -103,12 +103,18 @@
   "execution_dependency_slots": {
     "final_clean_data_bundle": {
       "required": true,
-      "accepted_review_anchor": null,
-      "manifest_sha256": null,
-      "panel_sha256": null,
-      "security_master_sha256": null,
-      "field_level_provenance_sha256": null,
-      "status": "WAITING_FOR_CONCURRENT_CONSOLIDATION_LANE"
+      "accepted_review_anchor": "research/idx-v4-x-clean-replay-refit-contract-v1@175210d8193e1d9ded6a988d1df26e517a378260:docs/checkpoints/2026-08-20_V4_X1_CLEAN_FINAL_INPUT_BUNDLE_ACCEPTANCE_PIN.md",
+      "consolidation_branch_head": "data/v4-x-clean-data-consolidation-v1@d134d48db635bbbae712b4d40c2b08f6f3630cee",
+      "manifest_sha256": "561b1d72168debae319829faa549cb9b6fab662d989c5e7ab8b6b64f9bd01358",
+      "stage_a_manifest_sha256": "eaeabad3c2050142d973d3f8ec350934b995b4e890ea4a12588304d325073969",
+      "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+      "security_master_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+      "field_level_provenance_sha256": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28",
+      "field_level_provenance_csv_sha256": "91cf615a9ab533a1478fbc1aecc5084341647070d091d85d5a7ee53a2ad4ccf3",
+      "correction_ledger_sha256": "6f883aaae54b3180bc3c38a2836b88b9cb983ed215dbb61246329a869138e125",
+      "identity_correction_ledger_sha256": "4d5444308534e2bfdb557292394db444fafb2d7310f9db5f45807961ba15c2ee",
+      "identity_overlay_sha256": "eb4050dffccfe3beb649f5f9d13eb9631be8ccfcf85751f942e936a72ce2ede8",
+      "status": "ACCEPTED_FINAL_CLEAN_INPUT_BUNDLE_HASH_PINNED"
     },
     "corporate_action_disposition": {
       "required": true,
@@ -157,5 +163,5 @@
     "access protected or fresh-forward outcomes before the new generation vault gate",
     "reset or mutate the current forward counter before the clean generation is successfully frozen and separately activated"
   ],
-  "next": "WAIT_FOR_FINAL_CLEAN_BUNDLE_ACCEPTANCE_THEN_CREATE_HASH_ONLY_EXECUTION_LOCK; DO_NOT_RUN_REPLAY_OR_REFIT YET"
+  "next": "CREATE_HASH_ONLY_PHASE_A_EXECUTION_LOCK_AND_PIN_RUNTIME_ENVIRONMENT; DO_NOT_RUN REPLAY OR REFIT YET"
 }
