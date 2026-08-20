@@ -1,0 +1,109 @@
+{
+  "schema_version": "ranking_v4_x1_clean_phase_a_structural_replay_v1",
+  "status": "V4_X1_CLEAN_PHASE_A_STRUCTURAL_REPLAY_PREPARED_NOT_RUN",
+  "generation_id": "V4_X1_CLEAN_REMEDIATED_PROSPECTIVE_V1",
+  "purpose": "Outcome-blind deterministic old-vs-clean structural replay before any clean V4-X1 refit.",
+  "ca80_gate_rate": 0.8,
+  "accepted_execution_lock": {
+    "acceptance_commit": "30885d3a7c37511ef9cdedd6cb1f599f3350dea1",
+    "manifest_sha256": "1846c94a74de8132672777c96f46580d298f942d87584e12b5e99e78e83a77f3",
+    "status": "V4_X1_CLEAN_PHASE_A_EXECUTION_LOCK_CAPTURED_REPLAY_NOT_RUN"
+  },
+  "stage_c_oracle": {
+    "branch_head": "a8c30b2076530c8777b4e7350f4452f51f1f0575",
+    "manifest_sha256": "5d3bce5ce8776d68a356ea814aa2dcd8909cb26b8d3334ea5e3f68f089a5fe61",
+    "h5_support_sha256": "2c2874bde129f8cefb68af1aae01ab88203dfe74c2bc8cf4cf3e5bab61e76ede",
+    "h10_support_sha256": "606eae2a431d0b924f7dbe574cbca493f1b857bf55aeb0d1af74db3d01c03386",
+    "expected_h5_rows": 241487,
+    "expected_h10_rows": 239836,
+    "required_decision": "V4_X_EXACT_TRAINING_REPRESENTATION_AFFECTED_BY_SECURITY_IDENTITY_OMISSION"
+  },
+  "corporate_action_parent": {
+    "generation": "V4_3R_CA80",
+    "manifest_sha256": "12d60b703d9617db95e89374485abb335a4024c4c6642a5cbee0d72e1eeb2f43",
+    "missing_continuity_policy": "FAIL_CLOSED",
+    "date_level_gate": 0.8
+  },
+  "validation_folds": {
+    "path": "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv",
+    "sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "rows": 600,
+    "folds": 6,
+    "dates_per_fold": 100
+  },
+  "input_sha256": {
+    "calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "old_panel": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76",
+    "anchors": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e",
+    "intervals": "fd255f21a3accd763286fbd0b0c6d9d501d618ae611cc0681017e001bdba83cc",
+    "old_open_derivative": "a1dae0714971904b266a380be6bb96a2a4976068c9d60c54c8c43746826f7cab",
+    "old_open_derivative_manifest": "1a6bcc9c7fbbd967cdc69f8876fe1d4aa94b46c0e466469a9643da59251deb14",
+    "old_open_overlay": "2aeab3906434f48c15d9ed7a8fb073fdd3bafff362cedcc7b46f9bf16482ca41",
+    "old_open_overlay_manifest": "dfb7219bddec77ced3e3aadfaa2d85d04c19e1d9fd9a8af1badba523ecf91977",
+    "old_security_master": "c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240",
+    "clean_bundle_manifest": "561b1d72168debae319829faa549cb9b6fab662d989c5e7ab8b6b64f9bd01358",
+    "clean_panel": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "field_provenance": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28"
+  },
+  "pinned_git_blobs": {
+    "scripts/run_v4_x1_clean_phase_a_structural_replay.py": "352e331439dd89c8d66d6b36f98997d3b667e2c0",
+    "scripts/run_v4_3_pit_support_refresh.py": "4545d0c680219c288d5f4e3573b0766ec2754ee1",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "cc1308feb51bbed16606bf7bded1ca0111644326",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "src/idx_trade/ranking_v4_3_ca_training_domain.py": "dd1fb5ac7f32451038abde63eb7bf2eb1c0833eb",
+    "src/idx_trade/ranking_v4_3r_support.py": "eb7595d81042afb2d2e0e61180659537a10e92c1"
+  },
+  "old_training_date_counts": {
+    "F1_H5": 376,
+    "F1_H10": 372,
+    "F2_H5": 476,
+    "F2_H10": 472,
+    "F3_H5": 576,
+    "F3_H10": 572,
+    "F4_H5": 676,
+    "F4_H10": 672,
+    "F5_H5": 776,
+    "F5_H10": 772,
+    "F6_H5": 876,
+    "F6_H10": 872
+  },
+  "required_outputs": [
+    "clean_h5_support_identities.csv",
+    "clean_h10_support_identities.csv",
+    "old_vs_clean_support_delta.csv",
+    "old_vs_clean_primary_identity_delta.csv",
+    "old_vs_clean_feature_delta_summary.csv",
+    "old_vs_clean_missingness_transition_summary.csv",
+    "clean_ca80_support_per_date.csv",
+    "clean_training_date_counts.csv",
+    "summary.json",
+    "MANIFEST.json"
+  ],
+  "hard_guards": {
+    "old_support_must_exactly_match_stage_c_oracle": true,
+    "all_frozen_600_clean_dates_must_pass_ca80_before_phase_b_review": true,
+    "tail_600_identity_must_remain_frozen": true,
+    "all_12_clean_training_sets_must_be_nonempty": true,
+    "provider_calls_authorized": false,
+    "network_calls_authorized": false,
+    "numeric_target_access_authorized": false,
+    "target_return_access_authorized": false,
+    "target_rank_access_authorized": false,
+    "model_fit_authorized": false,
+    "model_scoring_authorized": false,
+    "historical_prediction_authorized": false,
+    "historical_performance_authorized": false,
+    "protected_forward_access_authorized": false,
+    "fresh_forward_access_authorized": false,
+    "forward_counter_mutation_authorized": false,
+    "data_mutation_authorized": false,
+    "ca_semantics_change_authorized": false,
+    "session_semantics_change_authorized": false,
+    "v4_x2_reuse_authorized": false,
+    "tuning_or_rescue_authorized": false,
+    "phase_b_refit_authorized": false
+  },
+  "next": "FOCUSED_SYNTHETIC_VALIDATION_AND_LOCAL_RUNTIME_HANDOFF_ONLY; DO_NOT RUN PHASE B"
+}
