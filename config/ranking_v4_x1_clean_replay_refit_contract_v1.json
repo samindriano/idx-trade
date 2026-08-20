@@ -1,0 +1,161 @@
+{
+  "schema_version": "ranking_v4_x1_clean_replay_refit_contract_v1",
+  "status": "V4_X1_CLEAN_REPLAY_REFIT_CONTRACT_FROZEN_EXECUTION_BLOCKED_PENDING_FINAL_INPUT_LOCK",
+  "generation_id": "V4_X1_CLEAN_REMEDIATED_PROSPECTIVE_V1",
+  "purpose": "Remediate the existing V4-X1 Geometry3 training lineage using one independently accepted final clean-data bundle while preserving the pre-existing V4-X1 scientific model contract and preventing post-result tuning.",
+  "coordination_base_main": "eb82b00324b923e5630c6e97a0082f4a57703a17",
+  "scientific_parent": {
+    "generation_id": "V4_X1_GEOMETRY3_PROSPECTIVE",
+    "final_model_manifest_sha256": "3d5420dd69f348b7e712b6cca3b11f4673f02581c493e04be6ce9da693125094",
+    "final_model_status": "V4_X1_FINAL_REFIT_FROZEN_READY_FOR_FRESH_PROSPECTIVE_SCORING",
+    "final_refit_config_path": "config/ranking_v4_x1_final_refit_v1.json",
+    "final_refit_config_git_blob_sha1": "7bfca6b0805e680092c7f8baa6efcd39998482d6",
+    "prospective_preregistration_path": "config/ranking_v4_x1_prospective_preregistration_v1.json",
+    "prospective_preregistration_git_blob_sha1": "f33663bc7e4d14941a12974cc453ab90ac5b85ba",
+    "historical_verdict_remains_immutable": "V4_3R_GENERATION_NO_SURVIVOR"
+  },
+  "accepted_identity_evidence": {
+    "stage_c_manifest_sha256": "5d3bce5ce8776d68a356ea814aa2dcd8909cb26b8d3334ea5e3f68f089a5fe61",
+    "stage_c_verdict": "V4_X_EXACT_TRAINING_REPRESENTATION_AFFECTED_BY_SECURITY_IDENTITY_OMISSION",
+    "required_clean_identity_lineage": "RECONCILED_HISTORICAL_SECURITY_MASTER_WITH_ACCEPTED_GENERIC_FINN_PLUS_FREN_RIGHT_ONLY_RESTORATION"
+  },
+  "scientific_git_blobs": {
+    "scripts/run_v4_x1_final_refit_freeze.py": "2d538c1c99fb348b87d6c268e2df821b9099d203",
+    "scripts/run_v4_3r_historical_one_shot.py": "4d6141987351a9c233a393acf1d16319ba158d67",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "8aba40c32e6069d1f8bdf5b8b19bf41d2065c422",
+    "src/idx_trade/ranking_v4_3r_model_eval.py": "85608550d14f1b994e80f7f9dca5e774b1e871f5",
+    "src/idx_trade/ranking_v4_3r_support.py": "eb7595d81042afb2d2e0e61180659537a10e92c1",
+    "src/idx_trade/ranking_v4_3_ca_training_domain.py": "dd1fb5ac7f32451038abde63eb7bf2eb1c0833eb",
+    "src/idx_trade/ranking_v4_x1_eval.py": "d926a3084f0357a4015e4ad701c7324c40eadaef",
+    "src/idx_trade/ranking_v4_x1_decision.py": "9f71ffa203bea4c8bc641880590d7eeffcff1c26"
+  },
+  "immutable_scientific_contract": {
+    "model_family": "V4_X1_GEOMETRY3",
+    "control_id": "V4_CONTROL_CONTEXT25_HGBR",
+    "challenger_id": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "control_feature_count": 25,
+    "challenger_feature_count": 28,
+    "challenger_added_features": [
+      "session_open_position_range",
+      "session_body_signed_range",
+      "session_log_high_low_range"
+    ],
+    "feature_window_semantics": "OBSERVED_TICKER_ROWS_AS_FROZEN_IN_V4_X1",
+    "strict_official_session_rewrite": false,
+    "v4_x2_session_aligned_semantics_allowed": false,
+    "target_h5": "Close_(t+5) / Open_(t+1) - 1",
+    "target_h10": "Close_(t+10) / Open_(t+1) - 1",
+    "alpha_consensus": "0.5 * alpha_h5 + 0.5 * alpha_h10",
+    "decision_universe_rule": "V4_PRIMARY_LIQUID_CAUSAL_V1",
+    "learner": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "preprocessing_unchanged_from_parent": true,
+    "target_rank_transform_unchanged_from_parent": true,
+    "learner_parameters_unchanged_from_parent": true,
+    "hyperparameter_search": false,
+    "feature_add_remove_subset_search": false,
+    "training_date_boundary": "EXACT_FROZEN_V4_3R_HISTORICAL_END_NO_FORWARD_EXTENSION",
+    "eligible_date_logic_unchanged_from_parent": true,
+    "corporate_action_training_domain_semantics_unchanged_from_parent": true,
+    "required_final_fit_count": 4
+  },
+  "phase_a_clean_representation_replay": {
+    "authorized_after_execution_lock": true,
+    "outcome_blind": true,
+    "provider_calls": false,
+    "model_fit": false,
+    "model_scoring": false,
+    "numeric_target_values": false,
+    "historical_predictions": false,
+    "historical_performance": false,
+    "protected_forward_outcomes": false,
+    "allowed_target_information": "STATE_OR_AVAILABILITY_ONLY_WHERE_NEEDED_TO_RECONSTRUCT_FROZEN_TRAINING_SUPPORT",
+    "required_outputs": [
+      "clean_feature_and_model_frame_identity_summary",
+      "H5_clean_training_support_identities",
+      "H10_clean_training_support_identities",
+      "old_vs_clean_support_add_drop_counts",
+      "old_vs_clean_feature_representation_delta_summary",
+      "missingness_transition_summary",
+      "input_and_code_hash_manifest"
+    ],
+    "old_support_identity_must_match": false,
+    "rule_if_support_changes": "REPORT_DETERMINISTIC_DELTA_AND_CONTINUE_ONLY_IF_CHANGE_IS_EXPLAINED_BY_ACCEPTED_CLEAN_INPUT_LINEAGE; DO_NOT_TUNE_OR_REPAIR_IN_THIS_PHASE"
+  },
+  "phase_b_clean_final_refit": {
+    "authorized_by_this_contract": false,
+    "authorization_requirement": "SEPARATE_EXECUTION_LOCK_AND_INDEPENDENT_REVIEW_OF_PHASE_A",
+    "fit_exactly": [
+      "CONTROL_H5",
+      "CONTROL_H10",
+      "CHALLENGER_H5",
+      "CHALLENGER_H10"
+    ],
+    "historical_rows_use": "TRAINING_ONLY",
+    "historical_prediction_generation": false,
+    "historical_performance_recomputation": false,
+    "historical_model_selection": false,
+    "candidate_rescue": false,
+    "post_result_tuning": false,
+    "successful_output": "IMMUTABLE_FOUR_MODEL_CLEAN_REFIT_MANIFEST_WITH_ALL_INPUT_AND_CODE_HASHES"
+  },
+  "execution_dependency_slots": {
+    "final_clean_data_bundle": {
+      "required": true,
+      "accepted_review_anchor": null,
+      "manifest_sha256": null,
+      "panel_sha256": null,
+      "security_master_sha256": null,
+      "field_level_provenance_sha256": null,
+      "status": "WAITING_FOR_CONCURRENT_CONSOLIDATION_LANE"
+    },
+    "corporate_action_disposition": {
+      "required": true,
+      "accepted_review_anchor": null,
+      "manifest_sha256": null,
+      "status": "WAITING_FOR_FINAL_CA_CONTINUITY_ADJUDICATION_OR_EXPLICIT_ACCEPTED_NO_CHANGE_DISPOSITION"
+    },
+    "runtime_environment": {
+      "required": true,
+      "manifest_sha256": null,
+      "status": "TO_BE_PINNED_AT_EXECUTION_LOCK"
+    }
+  },
+  "execution_lock_rule": {
+    "separate_lock_required": true,
+    "may_populate_only_dependency_hashes_paths_and_review_anchors": true,
+    "may_change_scientific_contract": false,
+    "may_change_features_targets_model_or_hyperparameters": false,
+    "may_change_training_date_boundary": false,
+    "may_change_observed_bar_session_semantics": false,
+    "may_reuse_v4_x2_changes": false,
+    "fail_closed_if_dependency_not_independently_accepted": true
+  },
+  "prospective_transition": {
+    "parent_v4_x1_models_remain_archival": true,
+    "parent_forward_scores_remain_archival": true,
+    "parent_forward_scores_count_toward_clean_generation": false,
+    "forward_counter_mutation_now": false,
+    "clean_generation_counter_starts_at_zero_only_after_successful_clean_model_manifest_and_activation": true,
+    "first_eligible_clean_score_session": "FIRST_SOURCE_CERTIFIED_OFFICIAL_IDX_SESSION_STRICTLY_AFTER_SUCCESSFUL_IMMUTABLE_CLEAN_REFIT_MANIFEST_FREEZE",
+    "do_not_infer_calendar_date": true,
+    "prospective_window_sessions": 100,
+    "outcome_vault_rule": "100_OF_100_CLEAN_GENERATION_SCORE_SESSIONS_CAPTURED_AND_H10_FOR_SESSION_100_MATURE",
+    "old_or_pre_freeze_scores_must_not_be_reused": true
+  },
+  "forbidden": [
+    "run Phase A before the final clean-data bundle and CA disposition are independently accepted and hash-pinned",
+    "fit any model before separate Phase-B authorization",
+    "generate historical predictions or recompute historical performance",
+    "change observed-bar windows to strict official-session windows inside clean V4-X1",
+    "reuse any V4-X2 session-aligned feature implementation",
+    "change feature set, target definitions, learner family, preprocessing, target-rank transform, or hyperparameters",
+    "extend the historical training date boundary into prospective sessions",
+    "use clean replay/refit outputs to launch rescue variants or threshold tuning",
+    "reuse parent V4-X1 forward sessions toward the clean generation 100-session counter",
+    "access protected or fresh-forward outcomes before the new generation vault gate",
+    "reset or mutate the current forward counter before the clean generation is successfully frozen and separately activated"
+  ],
+  "next": "WAIT_FOR_FINAL_CLEAN_BUNDLE_AND_CA_DISPOSITION_THEN_CREATE_HASH_ONLY_EXECUTION_LOCK; DO_NOT_RUN_REPLAY_OR_REFIT YET"
+}
