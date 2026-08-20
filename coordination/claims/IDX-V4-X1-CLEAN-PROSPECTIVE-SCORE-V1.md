@@ -1,7 +1,7 @@
 # Claim — V4-X1 Clean Prospective Score V1
 
 Date: 2026-08-20 (Asia/Jakarta)
-Status: `ACTIVE_PREPARATION`
+Status: `WAITING_LOCAL_READONLY_READINESS`
 Owner: `ChatGPT/V4-X1-Clean-Prospective-Score`
 Branch: `integration/v4-x1-clean-prospective-score-v1`
 Base operational lineage: `integration/v4-x1-eod-auto-score-v1`
@@ -15,6 +15,16 @@ Controlling scientific acceptance:
 - accepted clean model manifest SHA-256: `30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf`
 - prospective preregistration blob: `f33663bc7e4d14941a12974cc453ab90ac5b85ba`
 - acceptance timestamp used as conservative prospective freeze boundary: `2026-08-20T12:08:44Z` (`2026-08-20T19:08:44+07:00`)
+
+Preparation freeze:
+- checkpoint `docs/checkpoints/2026-08-20_V4_X1_CLEAN_PROSPECTIVE_SCORE_PREPARED.md`
+- checkpoint blob `690e5eb2a3e903b2e1165523c2c363b8bfbfd5ec`
+- decision `V4_X1_CLEAN_PROSPECTIVE_SCORE_PREPARED_READONLY_LOCAL_READINESS_AUTHORIZED`
+- machine contract `config/ranking_v4_x1_clean_prospective_score_v1.json`
+- contract blob `38a0357d9b039c651003354f4894add3f82d156a`
+- local handoff `coordination/handoffs/IDX-V4-X1-CLEAN-PROSPECTIVE-READINESS.md`
+
+The preparation contract explicitly keeps `deployment_authorized=false` and `score_capture_authorized=false`. The next local action is validation + read-only readiness only.
 
 ## Required scientific invariants
 
@@ -38,4 +48,4 @@ Controlling scientific acceptance:
 - forward security-master additions are allowed only for genuinely post-freeze new listings (`listed_from` strictly after 2026-08-20); existing baseline identities are never rewritten by mutable runtime files;
 - candidate-session Geometry3 Open continues to come only from the immutable canonical sibling OHLCV after exact H/L/C/V reconciliation with the model-input snapshot.
 
-Canonical `main:coordination/TEAM_STATUS.md` was read before preparation. No duplicate `ACTIVE` owner for this clean successor scope was present. The canonical shared ledger is too large to safely replace from a truncated connector read; local deployment must update only this lane before any runtime mutation.
+Canonical `main:coordination/TEAM_STATUS.md` was read before preparation and again before freezing readiness. No duplicate `ACTIVE` owner for this clean successor scope was present. The canonical shared ledger is too large to safely replace from a truncated connector read; the local readiness agent must update only this lane to `ACTIVE` before the local pass and `REVIEW` afterward.
