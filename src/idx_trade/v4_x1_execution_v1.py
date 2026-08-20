@@ -198,7 +198,7 @@ def prepare_execution_v1(
         target_positions=decision_plan.target_positions,
         regular_market_values_t={
             t: float(eod_inputs.regular_market_values.get(t, 0.0))
-            for t in {x.ticker for x in effective_buys}
+            for t in involved
         },
         eod_ohlcv_sha256=eod_inputs.ohlcv_artifact_sha256,
         eod_model_input_sha256=eod_inputs.model_input_sha256,
@@ -271,15 +271,43 @@ def execute_open_v1(
             ))
             continue
         effective = sell_effective_price(float(raw))
-        gross = shares * effective
+        capacity_notional = (
+            MAX_ORDER_NOTIONAL_SHARE_REFERENCE_VALUE
+            * max(0.0, order_plan.regular_market_values_t.get(ticker, 0.0))
+        )
+        max_capacity_lots = int(capacity_notional // (effective * LOT_SIZE_SHARES))
+        fill_shares = min(shares, max_capacity_lots * LOT_SIZE_SHARES)
+        if fill_shares <= 0:
+            sell_resolution[ticker] = False
+            pending_sells[ticker] = PendingPaperIntent(
+                "SELL", ticker, order.rank_consensus,
+                "REFERENCE_DAY_EXIT_CAPACITY_ZERO", order.replacement_peer,
+            )
+            fills.append(FillRecord(
+                "SELL", ticker, shares, 0, float(raw), effective, 0.0, 0.0, 0.0,
+                "REFERENCE_DAY_EXIT_CAPACITY_ZERO_PENDING", order.replacement_peer,
+            ))
+            continue
+        gross = fill_shares * effective
         sell_fee = fee(gross, SELL_FEE_BPS)
         proceeds = gross - sell_fee
         cash += proceeds
-        del positions[ticker]
-        sell_resolution[ticker] = True
+        remaining = shares - fill_shares
+        if remaining > 0:
+            positions[ticker] = remaining
+            sell_resolution[ticker] = False
+            pending_sells[ticker] = PendingPaperIntent(
+                "SELL", ticker, order.rank_consensus,
+                "PARTIAL_EXIT_CAPACITY", order.replacement_peer,
+            )
+            status = "SIMULATED_PARTIAL_EXIT_CAPACITY_FILL_PENDING"
+        else:
+            del positions[ticker]
+            sell_resolution[ticker] = True
+            status = "SIMULATED_FILLED_EXIT_CAPACITY_GUARDED"
         fills.append(FillRecord(
-            "SELL", ticker, shares, shares, float(raw), effective, gross, sell_fee, proceeds,
-            "SIMULATED_FILLED_CAPACITY_NOT_APPLICABLE_EXIT", order.replacement_peer,
+            "SELL", ticker, shares, fill_shares, float(raw), effective, gross, sell_fee, proceeds,
+            status, order.replacement_peer,
         ))
 
     intent_by_ticker = {x.ticker: x for x in order_plan.effective_buy_intents}
