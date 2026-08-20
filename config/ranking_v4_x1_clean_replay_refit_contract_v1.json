@@ -112,9 +112,9 @@
     },
     "corporate_action_disposition": {
       "required": true,
-      "accepted_review_anchor": null,
-      "manifest_sha256": null,
-      "status": "WAITING_FOR_FINAL_CA_CONTINUITY_ADJUDICATION_OR_EXPLICIT_ACCEPTED_NO_CHANGE_DISPOSITION"
+      "accepted_review_anchor": "research/idx-v4-x-clean-replay-refit-contract-v1@ee9db46c7b55af7b961612c7264a302d0a9f0a0d:docs/checkpoints/2026-08-20_V4_X1_CLEAN_CA_DISPOSITION_ACCEPTED.md",
+      "manifest_sha256": "0c222a10d8c48852f53451f0ce0bdec44b1156b8b9050c536f51b416ff18cfcc",
+      "status": "ACCEPTED_REUSE_PARENT_V4_3R_CA80_RECOMPUTE_SUPPORT_ON_CLEAN_INPUT"
     },
     "runtime_environment": {
       "required": true,
@@ -157,5 +157,5 @@
     "access protected or fresh-forward outcomes before the new generation vault gate",
     "reset or mutate the current forward counter before the clean generation is successfully frozen and separately activated"
   ],
-  "next": "WAIT_FOR_FINAL_CLEAN_BUNDLE_AND_CA_DISPOSITION_THEN_CREATE_HASH_ONLY_EXECUTION_LOCK; DO_NOT_RUN_REPLAY_OR_REFIT YET"
+  "next": "WAIT_FOR_FINAL_CLEAN_BUNDLE_ACCEPTANCE_THEN_CREATE_HASH_ONLY_EXECUTION_LOCK; DO_NOT_RUN_REPLAY_OR_REFIT YET"
 }
