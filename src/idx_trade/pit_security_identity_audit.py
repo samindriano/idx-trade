@@ -204,33 +204,12 @@ def compare_representation_tables(
     *,
     tolerance: float = 1e-12,
 ) -> RepresentationDiff:
-    for label, frame in (("base", base), ("counterfactual", counterfactual)):
-        missing = set(KEY_COLUMNS) - set(frame.columns)
-        if missing:
-            raise ValueError(f"{label} representation missing columns: {sorted(missing)}")
-        if frame.duplicated(list(KEY_COLUMNS)).any():
-            raise ValueError(f"{label} representation has duplicate ticker/date keys")
+    direct_keys, changed_keys, changed_by_column = representation_change_sets(
+        base, counterfactual, tolerance=tolerance
+    )
     base_key = pd.MultiIndex.from_frame(base.loc[:, KEY_COLUMNS])
     counter_key = pd.MultiIndex.from_frame(counterfactual.loc[:, KEY_COLUMNS])
-    direct_keys = counter_key.difference(base_key)
-    shared_keys = base_key.intersection(counter_key)
-    base_indexed = base.set_index(list(KEY_COLUMNS))
-    counter_indexed = counterfactual.set_index(list(KEY_COLUMNS))
-    columns = tuple(
-        column
-        for column in REPRESENTATION_COLUMNS
-        if column in base_indexed.columns and column in counter_indexed.columns
-    )
-    changed_keys: set[tuple[object, object]] = set()
-    changed_by_column: dict[str, int] = {}
-    for column in columns:
-        changed = []
-        for key in shared_keys:
-            if not _same_value(base_indexed.at[key, column], counter_indexed.at[key, column], tolerance):
-                changed.append(key)
-                changed_keys.add(key)
-        if changed:
-            changed_by_column[column] = len(changed)
+    shared_keys = set(base_key.intersection(counter_key).tolist())
 
     def key_values(keys: Iterable[tuple[object, object]]) -> tuple[tuple[str, ...], tuple[str, ...]]:
         pairs = sorted((str(key[0]), str(pd.Timestamp(key[1]).date())) for key in keys)
@@ -242,6 +221,8 @@ def compare_representation_tables(
     spill_tickers, spill_dates = key_values(spillover_keys)
 
     primary_changes: set[tuple[object, object]] = set()
+    base_indexed = base.set_index(list(KEY_COLUMNS))
+    counter_indexed = counterfactual.set_index(list(KEY_COLUMNS))
     if "universe_primary_liquid" in base_indexed and "universe_primary_liquid" in counter_indexed:
         for key in shared_keys:
             if bool(base_indexed.at[key, "universe_primary_liquid"]) != bool(
@@ -267,6 +248,44 @@ def compare_representation_tables(
         primary_membership_changed_tickers=primary_tickers,
         primary_membership_changed_dates=primary_dates,
     )
+
+
+def representation_change_sets(
+    base: pd.DataFrame,
+    counterfactual: pd.DataFrame,
+    *,
+    tolerance: float = 1e-12,
+) -> tuple[set[tuple[object, object]], set[tuple[object, object]], dict[str, int]]:
+    """Return exact direct/shared changed keys using the frozen comparison rule."""
+
+    for label, frame in (("base", base), ("counterfactual", counterfactual)):
+        missing = set(KEY_COLUMNS) - set(frame.columns)
+        if missing:
+            raise ValueError(f"{label} representation missing columns: {sorted(missing)}")
+        if frame.duplicated(list(KEY_COLUMNS)).any():
+            raise ValueError(f"{label} representation has duplicate ticker/date keys")
+    base_key = pd.MultiIndex.from_frame(base.loc[:, KEY_COLUMNS])
+    counter_key = pd.MultiIndex.from_frame(counterfactual.loc[:, KEY_COLUMNS])
+    direct_keys = set(counter_key.difference(base_key).tolist())
+    shared_keys = base_key.intersection(counter_key)
+    base_indexed = base.set_index(list(KEY_COLUMNS))
+    counter_indexed = counterfactual.set_index(list(KEY_COLUMNS))
+    columns = tuple(
+        column
+        for column in REPRESENTATION_COLUMNS
+        if column in base_indexed.columns and column in counter_indexed.columns
+    )
+    changed_keys: set[tuple[object, object]] = set()
+    changed_by_column: dict[str, int] = {}
+    for column in columns:
+        changed = []
+        for key in shared_keys:
+            if not _same_value(base_indexed.at[key, column], counter_indexed.at[key, column], tolerance):
+                changed.append(key)
+                changed_keys.add(key)
+        if changed:
+            changed_by_column[column] = len(changed)
+    return direct_keys, changed_keys, changed_by_column
 
 
 def json_safe(value: object) -> object:
