@@ -1,0 +1,70 @@
+{
+  "schema_version": "ranking_v4_x1_clean_prospective_deployment_privilege_retry_v1",
+  "generation_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+  "status": "V4_X1_CLEAN_PROSPECTIVE_DEPLOYMENT_PRIVILEGE_RETRY_AUTHORIZED_NOT_RUN",
+  "parent_deployment_contract": {
+    "path": "config/ranking_v4_x1_clean_prospective_deployment_v1.json",
+    "git_blob_sha1": "7919b21f3bf5451cc68687ee2fc2cf25b341fca2"
+  },
+  "first_deployment_attempt": {
+    "branch_head": "3e20bc32ecb5ec26860a3a0f4974bd55b223e689",
+    "canonical_team_status_review_commit": "0eb7684fe31d59fc79be482c7ab82637af6e501f",
+    "attempt_time_jakarta": "2026-08-20T20:37:50+07:00",
+    "timing_gate_pass": true,
+    "frozen_blobs": "6/6 PASS",
+    "task_state_pre": "Ready",
+    "task_last_run_time_pre": "2026-08-20T20:30:01+07:00",
+    "task_xml_sha256_pre": "15e07c4b7d8cfb64f1b10972b0c79cd6bd1b17a4cbe2b6947020c2342d6ef4eb",
+    "updater_invocations": 1,
+    "failure_stage": "ADMINISTRATOR_PRECHECK_BEFORE_SET_SCHEDULED_TASK",
+    "failure_reason": "Administrator PowerShell is required to update scheduled task: IDXTrade-ForwardEOD",
+    "set_scheduled_task_reached": false,
+    "scheduled_task_mutated": false,
+    "manual_task_start": false,
+    "manual_pipeline_run": false,
+    "score_capture_performed": false,
+    "outcome_accessed": false
+  },
+  "retry_authorization": {
+    "authorized": true,
+    "reason": "FIRST_ATTEMPT_EXITED_BEFORE_ANY_MUTATION_DUE_ONLY_TO_WINDOWS_PRIVILEGE_PRECHECK",
+    "new_handoff_required": true,
+    "exactly_one_retry_attempt": true,
+    "administrator_process_required_before_invocation": true,
+    "do_not_modify_updater_script": true,
+    "do_not_modify_pipeline_or_score_code": true,
+    "require_task_state_before_mutation": "Ready",
+    "require_current_task_action_still_points_to_old_v4_x1_pipeline": true,
+    "require_current_task_model_root_before_mutation": "D:\\Documents\\Project\\idx-v4-x1-final-refit-20260819-v1",
+    "require_readonly_clean_counter_before_mutation": 0,
+    "run_pipeline_manually": false,
+    "run_score_cli_manually": false,
+    "start_scheduled_task_manually": false
+  },
+  "accepted_inputs": {
+    "canonical_runtime_root": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v",
+    "clean_model_root": "D:\\Documents\\Project\\idx-v4-x1-clean-phase-b-final-refit-20260820-v1",
+    "clean_model_manifest_sha256": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "clean_panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "freeze_boundary_utc": "2026-08-20T12:08:44+00:00"
+  },
+  "post_retry_required_verification": {
+    "task_state": "Ready",
+    "task_action_points_to_clean_pipeline": true,
+    "task_action_points_to_clean_model_root": true,
+    "triggers_unchanged": true,
+    "last_run_time_unchanged_during_mutation": true,
+    "clean_counter_immediately_after_mutation": 0,
+    "score_capture_performed_during_retry": false,
+    "outcome_accessed": false
+  },
+  "failure_policy": {
+    "if_not_administrator": "STOP_BEFORE_UPDATER_INVOCATION",
+    "if_any_precondition_fails": "STOP_BEFORE_MUTATION",
+    "if_retry_updater_fails": "STOP_AND_REPORT_NO_FURTHER_RETRY",
+    "if_post_update_verification_fails": "STOP_AND_REPORT_NO_PIPELINE_RUN",
+    "no_patch_or_second_retry_in_same_handoff": true
+  },
+  "next": "RUN ONE ADMINISTRATOR-PRIVILEGED DEPLOYMENT RETRY UNDER NEW HANDOFF; VERIFY ONLY; DO NOT MANUALLY SCORE"
+}
