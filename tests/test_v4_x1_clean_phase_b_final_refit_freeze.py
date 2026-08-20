@@ -51,7 +51,7 @@ def test_core_and_config_remain_exact_four_fit_contract() -> None:
     assert "len(fit_log) != 4" in source
 
 
-def test_execution_is_disabled_during_preparation() -> None:
+def test_execution_freeze_is_authorized_after_review() -> None:
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
-    assert cfg["status"] == "V4_X1_CLEAN_PHASE_B_FINAL_REFIT_PREPARED_EXECUTION_NOT_AUTHORIZED"
-    assert cfg["phase_b_refit_execution_authorized"] is False
+    assert cfg["status"] == "V4_X1_CLEAN_PHASE_B_FINAL_REFIT_FROZEN_LOCAL_EXECUTION_AUTHORIZED"
+    assert cfg["phase_b_refit_execution_authorized"] is True
