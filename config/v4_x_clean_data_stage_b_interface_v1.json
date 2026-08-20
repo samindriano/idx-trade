@@ -1,0 +1,56 @@
+{
+  "schema_version": "v4_x_clean_data_stage_b_interface_v1",
+  "status": "STAGE_B_INTERFACE_FROZEN_WAITING_FOR_IDENTITY_ACCEPTANCE",
+  "stage_a": {
+    "manifest_sha256": "eaeabad3c2050142d973d3f8ec350934b995b4e890ea4a12588304d325073969",
+    "status": "STAGE_A_CONSOLIDATION_MATERIALIZED_WAITING_FOR_IDENTITY_ADJUDICATION",
+    "output_hashes": {
+      "clean_candidate_panel": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+      "field_level_provenance_parquet": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28",
+      "field_level_provenance_csv": "91cf615a9ab533a1478fbc1aecc5084341647070d091d85d5a7ee53a2ad4ccf3",
+      "correction_ledger": "6f883aaae54b3180bc3c38a2836b88b9cb983ed215dbb61246329a869138e125",
+      "summary": "28c61dfa6ae6c145a2186e8b8f197038e019d48fad469e958a18cbd74ee8c7fc"
+    }
+  },
+  "frozen_security_master_sha256": "c8efa462c5fee94a92aca7e5915513fdb8be6d04c2264021bab47bf1cc50a240",
+  "identity_acceptance_contract": {
+    "schema_version": "v4_x_clean_identity_acceptance_v1",
+    "required_status": "IDENTITY_ADJUDICATION_ACCEPTED_FOR_CLEAN_CONSOLIDATION",
+    "allowed_actions": [
+      "APPLY_CERTIFIED_IDENTITY_OVERLAY",
+      "PRESERVE_FROZEN_SECURITY_MASTER"
+    ],
+    "required_stage_c_status": "PIT_SECURITY_IDENTITY_STAGE_C_COMPLETE",
+    "disallowed_stage_c_decisions": [
+      "STAGE_C_BLOCKED_EXACT_SUPPORT_NOT_PRESENT_IN_PRIMARY_MODEL_FRAME"
+    ],
+    "independent_review_accepted": true
+  },
+  "identity_columns": [
+    "security_id",
+    "ticker",
+    "company_name",
+    "listed_from",
+    "listed_to",
+    "source"
+  ],
+  "materialization_policy": "REFERENCE_STAGE_A_BYTES_PLUS_ACCEPTED_SECURITY_MASTER_V1",
+  "stage_b_does_not_rewrite_stage_a_panel": true,
+  "model_refit_authorized": false,
+  "guardrails": {
+    "provider_calls": false,
+    "target_numeric_values_accessed": false,
+    "returns_or_ranks_accessed": false,
+    "protected_forward_accessed": false,
+    "fresh_forward_accessed": false,
+    "model_fit": false,
+    "model_scoring": false,
+    "model_tuning": false,
+    "stage_a_panel_rewritten": false,
+    "stage_a_hlc_open_changed": false,
+    "session_semantics_changed": false,
+    "primary_liquidity_definition_changed": false,
+    "forward_counter_mutated": false,
+    "identity_decision_inferred_by_this_lane": false
+  }
+}
