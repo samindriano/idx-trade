@@ -1,0 +1,53 @@
+{
+  "schema_version": "v4_x_clean_data_consolidation_v1",
+  "status": "STAGE_A_PROTOCOL_FROZEN_WAITING_FOR_OFFLINE_RUNTIME",
+  "base_main_sha": "79d4d6c2a02eb3677aa8e1d90fa22eacbf2451b9",
+  "frozen_inputs": {
+    "panel_sha256": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76",
+    "calendar_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "hlc_remediation_manifest_sha256": "2eaba67111783c6dc690f56254d949bc1ad8a897053a0db18a2918e1122c8278",
+    "open_remediation_manifest_sha256": "753d5470bd240bbf6158142bc5a2b339cea96f83cfb7451c5e18fc10cf5f060f",
+    "official_integrity_manifest_sha256": "bf87e0c8ce49468113eec32cb7df931ff0df887444de727a57c65b495d87c016",
+    "regular_market_value_audit_manifest_sha256": "e7147f9f378d8c05ed5307e9c0fd92c29a8465221207e2484001a7772c8d8f37"
+  },
+  "expected_population": {
+    "parent_rows": 981940,
+    "parent_tickers": 945,
+    "hlc_overlay_rows": 1657,
+    "hlc_overlay_tickers": 12,
+    "open_overlay_rows": 1655,
+    "open_official_primary_rows": 1216,
+    "open_factor_fallback_rows": 439,
+    "open_fail_closed_rows": 2
+  },
+  "policies": {
+    "hlc": "STABLE_SCALE_YAHOO_RAW_KSEI_FACTOR_PRE_RECORD_V1",
+    "open": "IDX_OPENPRICE_PRIMARY_CA_FACTOR_FALLBACK_FAIL_CLOSED_V1",
+    "stage_a": "FROZEN_PARENT_PLUS_ACCEPTED_HLC_OPEN_OVERLAYS_NO_UNIVERSE_MUTATION_V1"
+  },
+  "immutable_parent_fields": [
+    "volume",
+    "regular_market_value"
+  ],
+  "concurrent_dependency": {
+    "lane": "PIT Security Identity / Listing-Domain V1 adversarial audit",
+    "branch": "audit/pit-security-identity-stage-c-v1",
+    "stage_a_universe_mutation_allowed": false,
+    "stage_b_requires_independent_acceptance": true
+  },
+  "guardrails": {
+    "provider_calls": false,
+    "model_fit": false,
+    "model_scoring": false,
+    "model_tuning": false,
+    "target_values_accessed": false,
+    "protected_forward_accessed": false,
+    "parent_panel_overwritten": false,
+    "calendar_changed": false,
+    "volume_or_value_repaired": false,
+    "universe_repaired": false,
+    "session_semantics_changed": false,
+    "primary_liquidity_definition_changed": false,
+    "forward_counter_mutated": false
+  }
+}
