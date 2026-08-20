@@ -42,5 +42,7 @@ validation_run:
   - focused support/identity/features tests: passed before outcome-blind run
   - py_compile: passed
   - git diff --check: passed
-  - Stage C: one completed outcome-blind run after two preflight-only path/status/type corrections
+  - two preflight-only corrections resolved the missing calendar path and exact prefit status/hash field
+  - one additional engineering-only parser correction normalized immutable Stage-B list-valued date/ticker fields; the failed attempt produced no output directory and no model/outcome access
+  - Stage C: one completed outcome-blind run after the corrections
 recommended_next_action: independent ChatGPT review; no model or forward work in this lane
