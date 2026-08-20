@@ -190,10 +190,10 @@ def main() -> int:
         raise RuntimeError("STAGE_B_DIFF_HASH_NOT_PINNED_IN_MANIFEST")
 
     prefit_manifest = read_json(args.prefit_manifest, "PREFIT_MANIFEST")
-    if prefit_manifest.get("status") != "V4_3R_CA80_PREFIT_SUPPORT_PASS_READY_TO_FREEZE":
+    if prefit_manifest.get("status") != "V4_3R_CA80_PREFIT_SUPPORT_PASS_READY_TO_FREEZE_EXECUTION":
         raise RuntimeError("PREFIT_STATUS_CHANGED")
-    prefit_outputs = prefit_manifest.get("outputs", {})
-    if prefit_outputs and prefit_outputs.get("per_date_support", {}).get("sha256") not in {None, EXPECTED["per_date_support"]}:
+    prefit_outputs = prefit_manifest.get("output_hashes", {})
+    if prefit_outputs.get("per_date") != EXPECTED["per_date_support"]:
         raise RuntimeError("PREFIT_SUPPORT_HASH_NOT_PINNED")
 
     # Inspect only the parquet schema first; never ask the parquet reader for
