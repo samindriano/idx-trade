@@ -1,0 +1,29 @@
+{
+  "schema_version": "v4_x_clean_identity_acceptance_v1",
+  "status": "IDENTITY_ADJUDICATION_ACCEPTED_FOR_CLEAN_CONSOLIDATION",
+  "stage_c_status": "PIT_SECURITY_IDENTITY_STAGE_C_COMPLETE",
+  "stage_c_decision": "V4_X_EXACT_TRAINING_REPRESENTATION_AFFECTED_BY_SECURITY_IDENTITY_OMISSION",
+  "stage_c_manifest_sha256": "5d3bce5ce8776d68a356ea814aa2dcd8909cb26b8d3334ea5e3f68f089a5fe61",
+  "independent_review_accepted": true,
+  "clean_consolidation_action": "APPLY_CERTIFIED_IDENTITY_OVERLAY",
+  "accepted_identity_policy": "RESTORE_AUTHORITATIVE_HISTORICAL_MASTER_RIGHT_ONLY_IDENTITIES_V1",
+  "identity_overlay_sha256": "eb4050dffccfe3beb649f5f9d13eb9631be8ccfcf85751f942e936a72ce2ede8",
+  "expected_identity_overlay_rows": 2,
+  "expected_identity_overlay_tickers": 2,
+  "guardrails": {
+    "provider_calls": false,
+    "target_numeric_values_accessed": false,
+    "returns_or_ranks_accessed": false,
+    "protected_forward_accessed": false,
+    "fresh_forward_accessed": false,
+    "model_fit": false,
+    "model_scoring": false,
+    "model_tuning": false,
+    "stage_a_panel_rewritten": false,
+    "stage_a_hlc_open_changed": false,
+    "session_semantics_changed": false,
+    "primary_liquidity_definition_changed": false,
+    "forward_counter_mutated": false,
+    "identity_decision_inferred_by_this_lane": false
+  }
+}
