@@ -1,0 +1,59 @@
+{
+  "schema_version": "ranking_v4_x1_clean_phase_a_open_lineage_remediation_v1",
+  "status": "V4_X1_CLEAN_PHASE_A_OPEN_LINEAGE_REMEDIATION_FROZEN_NOT_RUN",
+  "reason": "FIRST_PHASE_A_RUN_MIXED_PARENT_EXECUTABLE_OPEN_WITH_INCOMPLETE_STAGE_A_PANEL_OPEN",
+  "first_failed_replay": {
+    "manifest_sha256": "1dedb76db7c1fc620e4feb286e409d0266bf367581cbf7dab28bc862f298787c",
+    "status": "V4_X1_CLEAN_PHASE_A_CA80_SUPPORT_FAIL_REVIEW_REQUIRED",
+    "scientific_ca80_failure_accepted": false,
+    "preserve_as_forensic_evidence": true
+  },
+  "open_lineage_policy": {
+    "policy_id": "PRESERVE_PARENT_EXECUTABLE_OPEN_EXCEPT_ACCEPTED_STAGE_A_CANDIDATES_V1",
+    "non_candidate_behavior": "EXACT_PARENT_EXECUTABLE_OPEN_VALUE_AND_ADMISSION_PARITY",
+    "candidate_rows": 1657,
+    "admitted_clean_open_rows": 1655,
+    "fail_closed_unavailable_rows": 2,
+    "candidate_identity_source": "FIELD_PROVENANCE_OPEN_REPAIRED_OR_OPEN_FAIL_CLOSED_CANDIDATE",
+    "candidate_must_equal_hlc_repaired_identity": true,
+    "admitted_sources": [
+      "IDX_OFFICIAL_OPENPRICE",
+      "CA_FACTOR_RECONSTRUCTION"
+    ],
+    "fail_closed_source": "FAIL_CLOSED_UNAVAILABLE",
+    "market_state_behavior": "REUSE_PARENT_EXECUTABLE_EVIDENCE_EXACTLY",
+    "close_behavior": "USE_ACCEPTED_CLEAN_PANEL_CLOSE"
+  },
+  "pinned_inputs": {
+    "field_provenance_sha256": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28",
+    "clean_panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "clean_bundle_manifest_sha256": "561b1d72168debae319829faa549cb9b6fab662d989c5e7ab8b6b64f9bd01358"
+  },
+  "pinned_git_blobs": {
+    "parent_phase_a_runner": "352e331439dd89c8d66d6b36f98997d3b667e2c0",
+    "parent_phase_a_config": "c1dc1706b2dfc0c68b925988a03f1cbca83070c9",
+    "remediation_wrapper": "91ecfd719c04fbd2749d2e1cf0d0f3bc0c2bec9a",
+    "remediation_tests": "23268a37c5154895e1ed5a11ac15bb17131697f4"
+  },
+  "unchanged_scientific_contract": {
+    "ca80_gate": 0.8,
+    "observed_bar_session_semantics": true,
+    "primary_liquidity_rule_changed": false,
+    "feature_definition_changed": false,
+    "corporate_action_semantics_changed": false,
+    "validation_folds_changed": false,
+    "model_or_hyperparameter_changed": false
+  },
+  "hard_guards": {
+    "provider_or_network_calls_authorized": false,
+    "numeric_target_return_or_rank_access_authorized": false,
+    "model_fit_or_scoring_authorized": false,
+    "historical_performance_access_authorized": false,
+    "protected_or_fresh_forward_outcome_access_authorized": false,
+    "forward_counter_mutation_authorized": false,
+    "phase_b_refit_authorized": false,
+    "tuning_or_rescue_authorized": false
+  },
+  "next": "LOCAL VALIDATION THEN EXACTLY ONE REMEDIATED PHASE-A REPLAY ON A NEW OUTPUT ROOT; STOP FOR INDEPENDENT REVIEW"
+}
