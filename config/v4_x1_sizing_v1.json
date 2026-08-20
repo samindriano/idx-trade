@@ -1,6 +1,6 @@
 {
-  "schema_version": "v4_x1_sizing_v1",
-  "status": "FROZEN_PRE_EXECUTION_AND_HISTORICAL_PNL",
+  "schema_version": "v4_x1_sizing_v1_remediated",
+  "status": "FROZEN_PRE_FIRST_PAPER_OUTCOME_REMEDIATED",
   "decision_rule": "V4_X1_DECISION_V1",
   "lot_size_shares": 100,
   "target_weight_per_name": 0.1,
@@ -13,10 +13,10 @@
   "feasibility_only_nav_idr": [
     10000000
   ],
-  "allocation_method": "EQUAL_QUOTA_FLOOR_PLUS_ONE_LOT_RESIDUAL_EXACT_ENUMERATION",
+  "allocation_method": "EQUAL_QUOTA_FLOOR_PLUS_ONE_LOT_RESIDUAL_ENUMERATION",
   "batch_budget_rule": "MIN_10PCT_NAV_PER_ENTRY_OR_EQUAL_SHARE_OF_AVAILABLE_CASH",
   "hold_rebalance": "NONE",
-  "size_only_new_buy_intents": true,
+  "size_only_new_or_pending_buy_intents": true,
   "sell_sizing": "FULL_EXISTING_QUANTITY_BY_EXECUTION_LAYER",
   "current_nav_reference": true,
   "rank_weighting": false,
@@ -25,10 +25,11 @@
   "strategic_cash_overlay_future_lane": "MARKET_EXPOSURE_OVERLAY_V1",
   "residual_cash_allowed": true,
   "residual_cash_reason": "LOT_ROUNDING_INFEASIBILITY_FEES_OR_EXECUTION_ONLY",
-  "reference_price_timing": "DEFERRED_TO_EXECUTION_V1_CONTRACT",
-  "fees": "DEFERRED_TO_EXECUTION_V1_CONTRACT",
-  "slippage": "DEFERRED_TO_EXECUTION_V1_CONTRACT",
+  "reference_price_timing": "VERIFIED_RAW_CLOSE_T_FROM_EXECUTION_EVIDENCE",
+  "fees": "EXECUTION_V1",
+  "slippage": "EXECUTION_V1",
   "historical_pnl_authorized": false,
   "allocation_guard": "NEVER_REDUCE_A_FEASIBLE_NAME_BELOW_EQUAL_QUOTA_FLOOR_TO_FUND_ANOTHER_NAME",
-  "allocation_tie_breaker": "TICKER_ASC_NOT_RANK"
+  "allocation_tie_breaker": "BETTER_DECISION_RANK_THEN_TICKER_ASC_ONLY_ON_EXACT_OBJECTIVE_TIE",
+  "decision_plan_provenance_required": true
 }
