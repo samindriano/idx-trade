@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import math
 
 from .v4_x1_decision_v1_contract import TradeIntent
@@ -27,86 +26,121 @@ def buy_effective_price(raw_price: float) -> float:
     return raw_price * (1.0 + SLIPPAGE_BPS / 10_000.0)
 
 
-def buy_candidate_sets(*, entries, raw_open_prices: dict[str, float], regular_values: dict[str, float],
-                       eod_nav: float, actual_cash: float):
-    tickers = [entry.ticker for entry in entries]
-    desired = min(0.10 * eod_nav, actual_cash / len(tickers)) if tickers else 0.0
-    effective_prices: dict[str, float] = {}
-    sets: list[tuple[int, ...]] = []
+def _stamp_for_turnover(turnover: float) -> float:
+    return STAMP_DUTY_IDR if turnover > STAMP_DUTY_THRESHOLD_IDR else 0.0
+
+
+def joint_open_allocation(*, entries, intents: dict[str, TradeIntent],
+                          raw_open_prices: dict[str, float], regular_values: dict[str, float],
+                          eod_nav: float, cash: float, sell_gross: float) -> dict[str, int]:
+    """Allocate executable BUY lots jointly without independent per-name cash slices.
+
+    V1 uses a fee-aware equal-target water fill. Each name first receives the
+    whole-lot floor that fits inside its equal cash quota including buy fee.
+    Residual cash is then spent one lot at a time on the most under-target name,
+    but only when that additional lot moves the name closer to its equal-notional
+    target. Entry-cap, Sizing-V1 upper-bound, reference-day capacity, fees and
+    the account-level stamp duty are enforced on every candidate addition.
+
+    Decision rank is never a weight signal; it is used only after equal-target
+    distance ties, followed by ticker ASC for deterministic identity.
+    """
+    if not entries:
+        return {}
+
+    entries = tuple(entries)
+    n = len(entries)
+    desired = min(0.10 * eod_nav, cash / n)
+    gross_per_lot: dict[str, float] = {}
+    debit_per_lot: dict[str, float] = {}
+    upper_lots: dict[str, int] = {}
+    ranks: dict[str, int] = {}
+
     for entry in entries:
         ticker = entry.ticker
-        effective = buy_effective_price(raw_open_prices[ticker])
-        effective_prices[ticker] = effective
+        effective = buy_effective_price(float(raw_open_prices[ticker]))
+        gross_lot = effective * LOT_SIZE_SHARES
+        debit_lot = gross_lot * (1.0 + BUY_FEE_BPS / 10_000.0)
         upper = entry.shares // LOT_SIZE_SHARES
         upper = min(
             upper,
-            int(math.floor((MAX_ENTRY_WEIGHT * eod_nav) / (effective * LOT_SIZE_SHARES) + 1e-12)),
+            int(math.floor((MAX_ENTRY_WEIGHT * eod_nav) / gross_lot + 1e-12)),
         )
         capacity_notional = MAX_ORDER_NOTIONAL_SHARE_REFERENCE_VALUE * max(
             0.0, float(regular_values.get(ticker, 0.0))
         )
         upper = min(
             upper,
-            int(math.floor(capacity_notional / (effective * LOT_SIZE_SHARES) + 1e-12)),
+            int(math.floor(capacity_notional / gross_lot + 1e-12)),
         )
-        if upper <= 0:
-            sets.append((0,))
-            continue
-        raw = desired / (effective * LOT_SIZE_SHARES)
-        floor_lots = min(int(math.floor(raw + 1e-12)), upper)
-        ceil_lots = min(int(math.ceil(raw - 1e-12)), upper)
-        sets.append(tuple(sorted({
-            max(0, floor_lots - 1),
-            max(0, floor_lots),
-            max(0, ceil_lots),
-        })))
-    return tickers, sets, effective_prices, desired
+        gross_per_lot[ticker] = gross_lot
+        debit_per_lot[ticker] = debit_lot
+        upper_lots[ticker] = max(0, upper)
+        ranks[ticker] = int(intents[ticker].rank_consensus or 10**9)
 
+    lots = {
+        entry.ticker: min(
+            upper_lots[entry.ticker],
+            int(math.floor(desired / debit_per_lot[entry.ticker] + 1e-12)),
+        ) if upper_lots[entry.ticker] > 0 else 0
+        for entry in entries
+    }
 
-def joint_open_allocation(*, entries, intents: dict[str, TradeIntent],
-                          raw_open_prices: dict[str, float], regular_values: dict[str, float],
-                          eod_nav: float, cash: float, sell_gross: float) -> dict[str, int]:
-    if not entries:
-        return {}
-    tickers, candidate_sets, effective_prices, desired = buy_candidate_sets(
-        entries=entries,
-        raw_open_prices=raw_open_prices,
-        regular_values=regular_values,
-        eod_nav=eod_nav,
-        actual_cash=cash,
-    )
-    ranks = {t: int(intents[t].rank_consensus or 10**9) for t in tickers}
-    rank_order = sorted(range(len(tickers)), key=lambda i: (ranks[tickers[i]], tickers[i]))
-    ticker_order = sorted(range(len(tickers)), key=lambda i: tickers[i])
-    best_key = None
-    best_lots = None
-    for lots_raw in itertools.product(*candidate_sets):
-        lots = tuple(int(x) for x in lots_raw)
-        gross = sum(
-            lots[i] * LOT_SIZE_SHARES * effective_prices[tickers[i]]
-            for i in range(len(tickers))
-        )
-        fees = fee(gross, BUY_FEE_BPS)
-        turnover = sell_gross + gross
-        stamp = STAMP_DUTY_IDR if turnover > STAMP_DUTY_THRESHOLD_IDR else 0.0
-        if gross + fees + stamp > cash + 1e-6:
-            continue
-        objective = sum(
-            (
-                (lots[i] * LOT_SIZE_SHARES * effective_prices[tickers[i]] - desired)
-                / max(desired, 1.0)
-            ) ** 2
-            for i in range(len(tickers))
-        )
-        key = (
-            round(objective, 15),
-            -round(gross, 6),
-            tuple(-lots[i] for i in rank_order),
-            tuple(-lots[i] for i in ticker_order),
-        )
-        if best_key is None or key < best_key:
-            best_key = key
-            best_lots = lots
-    if best_lots is None:
-        return {ticker: 0 for ticker in tickers}
-    return {ticker: best_lots[i] for i, ticker in enumerate(tickers)}
+    def gross_total(candidate: dict[str, int]) -> float:
+        return sum(candidate[t] * gross_per_lot[t] for t in candidate)
+
+    def debit_total(candidate: dict[str, int]) -> float:
+        gross = gross_total(candidate)
+        return gross + fee(gross, BUY_FEE_BPS) + _stamp_for_turnover(sell_gross + gross)
+
+    # The account-level stamp can rarely make the fee-aware floors exceed cash.
+    # Remove the least damaging lots rather than zeroing the entire buy batch.
+    while debit_total(lots) > cash + 1e-6:
+        removable = []
+        for ticker, count in lots.items():
+            if count <= 0:
+                continue
+            gross_lot = gross_per_lot[ticker]
+            current = count * gross_lot
+            after = (count - 1) * gross_lot
+            penalty = abs(after - desired) - abs(current - desired)
+            # If economic penalty ties, remove from the worse rank first.
+            removable.append((round(penalty, 15), -ranks[ticker], ticker))
+        if not removable:
+            return {entry.ticker: 0 for entry in entries}
+        _, _, chosen = min(removable)
+        lots[chosen] -= 1
+
+    # Joint residual water-fill. This avoids the prior implementation's
+    # artificial cash drag while remaining equal-target rather than rank-weighted.
+    while True:
+        current_gross = gross_total(lots)
+        candidates = []
+        for entry in entries:
+            ticker = entry.ticker
+            count = lots[ticker]
+            if count >= upper_lots[ticker]:
+                continue
+            lot_gross = gross_per_lot[ticker]
+            current_notional = count * lot_gross
+            next_notional = (count + 1) * lot_gross
+            current_error = abs(current_notional - desired) / max(desired, 1.0)
+            next_error = abs(next_notional - desired) / max(desired, 1.0)
+            improvement = current_error - next_error
+            if improvement < -1e-15:
+                continue
+            next_gross = current_gross + lot_gross
+            next_debit = (
+                next_gross
+                + fee(next_gross, BUY_FEE_BPS)
+                + _stamp_for_turnover(sell_gross + next_gross)
+            )
+            if next_debit > cash + 1e-6:
+                continue
+            candidates.append((-round(improvement, 15), ranks[ticker], ticker))
+        if not candidates:
+            break
+        _, _, chosen = min(candidates)
+        lots[chosen] += 1
+
+    return {entry.ticker: int(lots[entry.ticker]) for entry in entries}
