@@ -1,0 +1,80 @@
+{
+  "schema_version": "ranking_v4_x1_clean_prospective_deployment_v1",
+  "generation_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+  "status": "V4_X1_CLEAN_PROSPECTIVE_DEPLOYMENT_AUTHORIZED_NOT_YET_EXECUTED",
+  "parent_preparation_config": {
+    "path": "config/ranking_v4_x1_clean_prospective_score_v1.json",
+    "git_blob_sha1": "fbdbed664259cf685a71dbbfebcc38ba7e558c92"
+  },
+  "readiness_acceptance": {
+    "branch_head": "4bd588f7e7d862dd148328efc3aba544f8b47433",
+    "focused_pytest": "54 passed",
+    "git_blob_verification": "13/13 PASS",
+    "py_compile": "PASS",
+    "git_diff_check": "PASS",
+    "readiness_status": "V4_X1_CLEAN_FORWARD_READYNESS_WAITING_FIRST_POST_FREEZE_SESSION",
+    "clean_counter_completed": 0,
+    "clean_counter_target": 100,
+    "candidate_session": null,
+    "missing_canonical_history": [],
+    "ignored_backfills": [],
+    "historical_panel_last_date": "2026-07-31",
+    "canonical_team_status_review_commit": "b90c2501c5c75837ead2472a982c063b6af4d34e"
+  },
+  "accepted_inputs": {
+    "canonical_runtime_root": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v",
+    "clean_model_root": "D:\\Documents\\Project\\idx-v4-x1-clean-phase-b-final-refit-20260820-v1",
+    "clean_model_manifest_sha256": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "clean_panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e"
+  },
+  "prospective_contract": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "freeze_boundary_utc": "2026-08-20T12:08:44+00:00",
+    "forward_counter_target": 100,
+    "fresh_only": true,
+    "same_jakarta_date_score_required": true,
+    "canonical_eod_and_data_ready_strictly_after_freeze": true,
+    "late_backfill_counter_credit": false,
+    "manual_score_capture_authorized": false,
+    "automatic_score_capture_after_successful_scheduler_migration": true,
+    "outcome_access_before_100_plus_h10_maturity": false,
+    "v4_x2_session_alignment": false
+  },
+  "scheduler_migration": {
+    "task_name": "IDXTrade-ForwardEOD",
+    "deployment_authorized": true,
+    "exactly_one_task_mutation_attempt": true,
+    "deployment_not_before_jakarta": "2026-08-20T20:35:00+07:00",
+    "require_task_state_before_mutation": "Ready",
+    "require_old_task_model_root_before_mutation": "D:\\Documents\\Project\\idx-v4-x1-final-refit-20260819-v1",
+    "new_pipeline_script": "scripts/run_forward_eod_v4_x1_clean_pipeline.ps1",
+    "updater_script": "scripts/update_forward_eod_task_v4_x1_clean.ps1",
+    "updater_git_blob_sha1": "7b06fa4914c090a5aa76f767347de71bd9dd95a1",
+    "pipeline_git_blob_sha1": "5b3c3939ae87ce666bb9b1cd02ae4689d743122d",
+    "daily_triggers_jakarta": ["18:30", "19:30", "20:30"],
+    "at_logon_trigger": true,
+    "run_pipeline_manually_during_deployment": false,
+    "run_score_cli_manually_during_deployment": false,
+    "start_scheduled_task_manually_after_update": false
+  },
+  "post_migration_required_verification": {
+    "task_state": "Ready",
+    "action_contains_clean_pipeline": true,
+    "action_contains_clean_model_root": true,
+    "action_contains_clean_panel": true,
+    "action_contains_clean_security_master": true,
+    "action_contains_freeze_boundary": true,
+    "triggers_unchanged": true,
+    "clean_counter_must_remain_zero_immediately_after_task_update": true,
+    "score_capture_performed_during_deployment": false,
+    "outcome_accessed": false
+  },
+  "failure_policy": {
+    "if_precondition_fails": "STOP_BEFORE_MUTATION",
+    "if_task_update_fails": "STOP_AND_REPORT_NO_AUTOMATIC_RETRY",
+    "if_post_update_verification_fails": "STOP_AND_REPORT_NO_PIPELINE_RUN",
+    "do_not_patch_or_retry_in_same_handoff": true
+  },
+  "next": "AFTER 20:35 JAKARTA, PERFORM EXACTLY ONE SCHEDULED-TASK MIGRATION; VERIFY READ-ONLY; DO NOT RUN PIPELINE OR SCORE MANUALLY"
+}
