@@ -8,7 +8,7 @@ reasoning_level: Luna xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `accd3b31a82a9181d072652d73bd5486dbb1d9c5`
 branch: `data/v4-x-clean-data-consolidation-v1`
-head_commit: pending result commit
+head_commit: `ec76b19`
 
 ## Scope
 
