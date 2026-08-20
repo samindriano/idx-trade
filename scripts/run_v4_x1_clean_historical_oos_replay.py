@@ -258,7 +258,7 @@ def main() -> int:
     scores, fit_log = hist.run_models(model_frame, target_ledger, training_dates, folds)
     _require(len(fit_log) == 24, f"CLEAN_HIST_FIT_COUNT_NOT_24:{len(fit_log)}")
 
-    prereg = json.loads(hist.git_bytes(repo_root, "config/ranking_v4_3r_ca80_preregistration_v1.json").decode("utf-8"))
+    prereg = json.loads(hist.git_bytes(repo_root, "config/ranking_v4_3_preregistration.json").decode("utf-8"))
     fold_metrics, model_summaries, paired_tables, legacy_decision = hist.evaluate_models(scores, target_ledger, folds, prereg)
 
     challenger_consensus = model_summaries[CHALLENGER]["CONSENSUS"]["aggregate"]
