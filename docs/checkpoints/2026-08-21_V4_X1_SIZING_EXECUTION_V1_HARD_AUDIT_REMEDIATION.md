@@ -37,7 +37,7 @@ The original implementation could produce zero executable quantity while Decisio
 Remediation:
 
 - paper state now persists explicit `pending_buys` and `pending_sells`;
-- zero-lot, missing-Open, capacity-constrained entry, unavailable exit, and blocked paired replacement become pending transitions;
+- zero-lot, missing-Open, capacity-constrained entry, unavailable/partial exit, and blocked paired replacement become pending transitions;
 - pending transitions retry only while still consistent with the latest Decision V1 target;
 - if the shadow/paper mismatch is not explained by a current intent or an explicit pending transition, execution fails closed with `UNEXPLAINED_SHADOW_PAPER_DIVERGENCE`;
 - Decision V1 shadow state is never rewritten to auto-heal paper non-fills.
@@ -90,13 +90,15 @@ Remediation:
 
 ### P1 — no causal execution-capacity guard
 
-The original simulated full Open fill had no liquidity/capacity ceiling.
+The original simulator assumed full Open fills without a liquidity/capacity ceiling.
 
 Remediation:
 
-- a new BUY may simulate at most `1%` of verified prior-session regular-market value (`regular_market_value(t)`);
+- simulated BUY and SELL gross notional are each bounded by `1%` of verified prior-session regular-market value (`regular_market_value(t)`);
 - this is causal EOD information, not Open(t+1) look-ahead;
-- capacity can reduce an entry to zero, in which case it becomes a pending paper transition;
+- a BUY can be reduced to zero and persist as a pending entry;
+- an EXIT can partial-fill in whole lots and the remaining shares persist as a pending sell;
+- a paired replacement BUY remains blocked until its paired exit is completely resolved;
 - the simulator explicitly labels fills as paper-simulated Open-plus-slippage fills, not broker-fill claims.
 
 This is a conservative V1 feasibility guard, not a calibrated market-impact model. Existing intraday capture infrastructure may support a separately preregistered future calibration; no duplicate capture system is authorized here.
@@ -122,13 +124,14 @@ The remediation does **not** change these accepted design choices:
 
 ## Validation evidence
 
-Pre-publication local remediation harness using the same remediated modules:
+Local remediation harness using the same final remediated modules:
 
-- core hostile-audit focused suite: `11 / 11 PASS`;
-- verifier-specific regression suite added: calendar identity, EOD Close provenance mismatch, Open exact date/availability, valid CA no-event attestation, relevant-event rejection, incomplete coverage rejection, source-SHA mismatch rejection;
-- combined final local focused suites after the low-price allocator remediation: `19 / 19 PASS`;
-- `py_compile`: PASS for sizing, execution contract, execution allocator, execution verifier, and execution orchestrator modules;
-- randomized integrated stress: `20,000 / 20,000 PASS` across NAV Rp25m/Rp50m/Rp100m, 1–10 names, price range including low nominal prices, ±20% Open gaps, and broad reference-day liquidity values.
+- core hostile-audit focused suite initially: `11 / 11 PASS`;
+- verifier-specific regression coverage: calendar identity, EOD Close provenance mismatch, Open exact date/availability, valid CA no-event attestation, relevant-event rejection, incomplete coverage rejection, source-SHA mismatch rejection;
+- final combined focused suites after low-price allocator and partial-exit capacity remediation: `20 / 20 PASS`;
+- `py_compile`: PASS for sizing, execution contract, execution allocator, execution verifier, and execution core modules;
+- BUY/bootstrap randomized integrated stress: `20,000 / 20,000 PASS` across NAV Rp25m/Rp50m/Rp100m, 1–10 names, price range including low nominal prices, ±20% Open gaps, and broad reference-day liquidity values;
+- replacement/exit randomized stress: `10,000 / 10,000 PASS` across changing exit liquidity, Open gaps, partial exits, unavailable exits, pending-sell persistence, and paired-buy blocking.
 
 Stress invariants checked:
 
@@ -136,12 +139,15 @@ Stress invariants checked:
 - whole-lot positive holdings only;
 - actual BUY quantity never exceeds Sizing V1 planned quantity;
 - actual new-entry gross notional never exceeds 15% EOD NAV;
-- actual new-entry gross notional never exceeds 1% verified reference-day regular-market value;
+- simulated BUY gross notional never exceeds 1% verified reference-day regular-market value;
+- simulated SELL gross notional never exceeds 1% verified reference-day regular-market value;
+- partial/unavailable exits persist as pending sells;
+- a paired replacement BUY cannot fill while its paired exit remains pending;
 - missing target names exactly equal persisted pending BUY transitions;
 - extra actual names exactly equal persisted pending SELL transitions;
 - no unexplained scientific-shadow / executable-paper divergence.
 
-Repository regression files include dedicated tests for the original cash-drag failure, pending retry semantics, paired sell dependency, CA boolean rejection, capacity guard, low-price fee pressure, forged DecisionPlan rejection, official-session / price provenance, and CA evidence integrity.
+Repository regression files include dedicated tests for the original cash-drag failure, low-price fee pressure, pending retry semantics, partial exit capacity, paired sell dependency, CA boolean rejection, forged DecisionPlan rejection, official-session / price provenance, capacity guards, and CA evidence integrity.
 
 ## Remaining intentional blockers
 
@@ -152,6 +158,8 @@ Still blocked. The accepted repository evidence remains `corporate_action_contin
 ### Forward executable paper
 
 The core engine is remediated, but an actual forward paper execution must not run until the sidecar can produce a file-backed `v4_x1_paper_ca_attestation_v1` covering every involved ticker and exact decision-to-execution interval. V1 only accepts an attested no-relevant-event interval. A real corporate action requires a separately reviewed quantity/cash transformation contract before execution may continue.
+
+The Open(t+1) paper fill is an outcome-blind **simulation record** that may be materialized after the execution-session Open is observed; it is not a claim that a live broker order was actually filled at that price. Live broker execution remains a later separate integration problem.
 
 ### Market-risk / concentration overlays
 
