@@ -7,6 +7,10 @@
   "required_fit_count": 4,
   "final_training_policy": "ALL_CA80_HEAD_ELIGIBLE_DATES_THROUGH_FROZEN_V4_3R_END",
   "ca80_gate_rate": 0.8,
+  "expected_head_eligible_dates": {
+    "H5": 986,
+    "H10": 982
+  },
   "phase_a_acceptance": {
     "git_ref": "790051c1e080678986aa174814ab6ba7440eb477",
     "path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_PHASE_A_OPEN_LINEAGE_REMEDIATION_ACCEPTED.md",
@@ -47,6 +51,13 @@
     "path": "docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json",
     "sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
   },
+  "validation_folds": {
+    "path": "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv",
+    "sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "dates": 600,
+    "folds": 6,
+    "dates_per_fold": 100
+  },
   "input_sha256": {
     "calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
     "old_panel": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76",
@@ -64,7 +75,9 @@
   },
   "pinned_git_blobs": {
     "scripts/run_v4_x1_clean_phase_b_final_refit.py": "d18e23375076ca56d4a236217a2481c6f1c62f98",
+    "scripts/run_v4_x1_clean_phase_b_final_refit_freeze.py": "509a735cff8bb92e1be6ea3ff0a24724d0a62c7b",
     "tests/test_v4_x1_clean_phase_b_final_refit.py": "7fc2d341dbcfd9cde256e697c59875437eca92bc",
+    "tests/test_v4_x1_clean_phase_b_final_refit_freeze.py": "b8681b5650c7960a86062b9b15a3665b67838bdf",
     "scripts/run_v4_x1_final_refit_freeze.py": "2d538c1c99fb348b87d6c268e2df821b9099d203",
     "config/ranking_v4_x1_final_refit_v1.json": "7bfca6b0805e680092c7f8baa6efcd39998482d6",
     "scripts/run_v4_x1_clean_phase_a_structural_replay.py": "352e331439dd89c8d66d6b36f98997d3b667e2c0",
