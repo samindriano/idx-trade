@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `04b295a9443c2926782d4cebff532ee6e81238c3`
 branch: `data/v4-x-clean-data-consolidation-v1`
-head_commit: `TBD_AFTER_RESULT_DOCUMENTATION`
+head_commit: `82dcfbe26861a244f8b498da86e25d1ed73a663a` (result documentation baseline; final branch HEAD is reported below)
 scope: One execution-only offline Stage-A HLC/Open/provenance consolidation; no Stage B, identity adjudication, refit, or outcome access.
 
 ## Required return
