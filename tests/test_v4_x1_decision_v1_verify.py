@@ -5,6 +5,9 @@ def test_frozen_config_hash_matches_patch():
     assert hashlib.sha256(path.read_bytes()).hexdigest() == EXPECTED_CONFIG_SHA256
     payload = verify_frozen_config(path)
     assert payload["replacement_rank_gap_min"] == 5
+    assert payload["investment_policy"] == "NO_DISCRETIONARY_CASH_OR_MARKET_TIMING"
+    assert payload["full_nav_investment_required"] is False
+    assert payload["residual_cash_allowed"] is True
 
 
 def test_config_mutation_fails(tmp_path):
