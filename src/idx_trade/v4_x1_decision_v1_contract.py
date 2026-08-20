@@ -8,7 +8,7 @@ from typing import Literal
 
 import pandas as pd
 
-EXPECTED_CONFIG_SHA256 = "980f93ab362017acad4b90ffc83ba522b85786099905f6080d4ba7fc56de673e"
+EXPECTED_CONFIG_SHA256 = "f464f51bc6ffc3e0d9b513850ca20d638ebddd33e4b737ec5582a55c2811b0b8"
 EXPECTED_ALPHA_MODEL_ID = "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1"
 EXPECTED_ALPHA_MODEL_FINGERPRINT = "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf"
 EXPECTED_GENERATION = "V4-X1-CLEAN"
@@ -109,7 +109,10 @@ def verify_frozen_config(config_path: str | Path) -> dict[str, object]:
         "entry_rank_max": ENTRY_RANK_MAX,
         "hard_exit_rank_gt": HARD_EXIT_RANK_GT,
         "replacement_rank_gap_min": REPLACEMENT_RANK_GAP_MIN,
-        "always_invested": True,
+        "investment_policy": "NO_DISCRETIONARY_CASH_OR_MARKET_TIMING",
+        "full_nav_investment_required": False,
+        "residual_cash_allowed": True,
+        "residual_cash_reason": "LOT_ROUNDING_OR_EXECUTION_RESIDUAL_ONLY",
         "state_source": SHADOW_STATE_SOURCE,
         "output_semantics": "INTENTS_NOT_FILLS",
     }
