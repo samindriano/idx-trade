@@ -16,6 +16,7 @@ $ObservedBy = "2026-08-20T12:08:44+00:00"
 $ExpectedModelManifest = "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf"
 $ExpectedPanel = "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e"
 $ExpectedMaster = "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e"
+$EvidenceRoot = "D:\Documents\Project\idx-v4-x1-clean-prospective-deployment-privilege-retry-20260820-v1"
 
 $ScriptPath = $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path (Split-Path -Parent $ScriptPath) "..")).Path
@@ -35,6 +36,13 @@ if (-not (Test-IsAdministrator)) {
     "-Elevated"
   )
   $child = Start-Process -FilePath "powershell.exe" -ArgumentList $args -Verb RunAs -Wait -PassThru
+  $summaryPath = Join-Path $EvidenceRoot "deployment_summary.json"
+  if (Test-Path -LiteralPath $summaryPath -PathType Leaf) {
+    Write-Host "`nDEPLOYMENT RESULT"
+    Get-Content -LiteralPath $summaryPath -Raw
+  } else {
+    Write-Host "Elevated deployment process exited with code $($child.ExitCode). No deployment summary was produced."
+  }
   exit $child.ExitCode
 }
 
@@ -57,7 +65,7 @@ function Resolve-UniqueOrIdenticalHash {
       Where-Object { (Get-Sha256 $_.FullName) -eq $ExpectedSha.ToLowerInvariant() } |
       Sort-Object FullName
   )
-  if ($hits.Count -lt 1) { throw "HASH_NOT_FOUND:$ExpectedSha:$Root" }
+  if ($hits.Count -lt 1) { throw "HASH_NOT_FOUND:${ExpectedSha}:${Root}" }
   return $hits[0].FullName
 }
 
@@ -106,7 +114,6 @@ if ($preAction.Arguments -like "*run_forward_eod_v4_x1_clean_pipeline.ps1*") {
   throw "TASK_ALREADY_POINTS_TO_CLEAN_PIPELINE"
 }
 
-$EvidenceRoot = "D:\Documents\Project\idx-v4-x1-clean-prospective-deployment-privilege-retry-20260820-v1"
 if (Test-Path -LiteralPath $EvidenceRoot) { throw "EVIDENCE_ROOT_ALREADY_EXISTS:$EvidenceRoot" }
 New-Item -ItemType Directory -Path $EvidenceRoot | Out-Null
 $preXml = Export-ScheduledTask -TaskName $TaskName
