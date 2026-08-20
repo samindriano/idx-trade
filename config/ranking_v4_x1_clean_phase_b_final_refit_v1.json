@@ -1,0 +1,117 @@
+{
+  "schema_version": "ranking_v4_x1_clean_phase_b_final_refit_v1",
+  "generation_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+  "parent_generation_id": "V4_X1_GEOMETRY3_PROSPECTIVE",
+  "status": "V4_X1_CLEAN_PHASE_B_FINAL_REFIT_PREPARED_EXECUTION_NOT_AUTHORIZED",
+  "phase_b_refit_execution_authorized": false,
+  "required_fit_count": 4,
+  "final_training_policy": "ALL_CA80_HEAD_ELIGIBLE_DATES_THROUGH_FROZEN_V4_3R_END",
+  "ca80_gate_rate": 0.8,
+  "phase_a_acceptance": {
+    "git_ref": "790051c1e080678986aa174814ab6ba7440eb477",
+    "path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_PHASE_A_OPEN_LINEAGE_REMEDIATION_ACCEPTED.md",
+    "git_blob_sha1": "e4412896ab2fcdee50a18fbb6981f2bddee28dc5",
+    "decision": "V4_X1_CLEAN_PHASE_A_REMEDIATION_ACCEPTED_PHASE_B_PREPARATION_AUTHORIZED_REFIT_NOT_RUN"
+  },
+  "accepted_phase_a_runtime": {
+    "manifest_sha256": "f6b73ebc9f092d1869166de125bbb7afd24a02d3597fa5fa9d6fea8853a70dda",
+    "status": "V4_X1_CLEAN_PHASE_A_STRUCTURAL_REPLAY_COMPLETE_INDEPENDENT_REVIEW_REQUIRED",
+    "open_lineage_policy": "PRESERVE_PARENT_EXECUTABLE_OPEN_EXCEPT_ACCEPTED_STAGE_A_CANDIDATES_V1"
+  },
+  "accepted_clean_support_rows": {
+    "H5": 239648,
+    "H10": 237976
+  },
+  "accepted_clean_primary_rows": 348762,
+  "accepted_clean_training_date_counts": {
+    "F1_H5": 368,
+    "F1_H10": 364,
+    "F2_H5": 468,
+    "F2_H10": 464,
+    "F3_H5": 568,
+    "F3_H10": 564,
+    "F4_H5": 668,
+    "F4_H10": 664,
+    "F5_H5": 768,
+    "F5_H10": 764,
+    "F6_H5": 868,
+    "F6_H10": 864
+  },
+  "corporate_action_parent": {
+    "generation": "V4_3R_CA80",
+    "manifest_sha256": "12d60b703d9617db95e89374485abb335a4024c4c6642a5cbee0d72e1eeb2f43",
+    "missing_continuity_policy": "FAIL_CLOSED",
+    "date_level_gate": 0.8
+  },
+  "runtime_manifest": {
+    "path": "docs/artifacts/ranking_v4_3_prefit_runtime_v1/v4_3_prefit_environment_manifest.json",
+    "sha256": "cf6f1b0c859dd21b1c0f377f45d62ecdc98165ff6e0975b852a85b11cfbcaac6"
+  },
+  "input_sha256": {
+    "calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "old_panel": "67d3d2b528c362137e3036ddddcdbc414b09dc15c392af67c2f4ff796c459b76",
+    "anchors": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e",
+    "intervals": "fd255f21a3accd763286fbd0b0c6d9d501d618ae611cc0681017e001bdba83cc",
+    "old_open_derivative": "a1dae0714971904b266a380be6bb96a2a4976068c9d60c54c8c43746826f7cab",
+    "old_open_derivative_manifest": "1a6bcc9c7fbbd967cdc69f8876fe1d4aa94b46c0e466469a9643da59251deb14",
+    "old_open_overlay": "2aeab3906434f48c15d9ed7a8fb073fdd3bafff362cedcc7b46f9bf16482ca41",
+    "old_open_overlay_manifest": "dfb7219bddec77ced3e3aadfaa2d85d04c19e1d9fd9a8af1badba523ecf91977",
+    "clean_bundle_manifest": "561b1d72168debae319829faa549cb9b6fab662d989c5e7ab8b6b64f9bd01358",
+    "clean_panel": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "field_provenance": "cc6d66b3429c3b9f4c66d7120706bfd96c22b6d1d3ed7c2da567899cccf95c28",
+    "execution_lock_manifest": "1846c94a74de8132672777c96f46580d298f942d87584e12b5e99e78e83a77f3"
+  },
+  "pinned_git_blobs": {
+    "scripts/run_v4_x1_clean_phase_b_final_refit.py": "d18e23375076ca56d4a236217a2481c6f1c62f98",
+    "tests/test_v4_x1_clean_phase_b_final_refit.py": "7fc2d341dbcfd9cde256e697c59875437eca92bc",
+    "scripts/run_v4_x1_final_refit_freeze.py": "2d538c1c99fb348b87d6c268e2df821b9099d203",
+    "config/ranking_v4_x1_final_refit_v1.json": "7bfca6b0805e680092c7f8baa6efcd39998482d6",
+    "scripts/run_v4_x1_clean_phase_a_structural_replay.py": "352e331439dd89c8d66d6b36f98997d3b667e2c0",
+    "scripts/run_v4_x1_clean_phase_a_open_lineage_remediation.py": "91ecfd719c04fbd2749d2e1cf0d0f3bc0c2bec9a",
+    "scripts/run_v4_3r_historical_one_shot.py": "4d6141987351a9c233a393acf1d16319ba158d67",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "cc1308feb51bbed16606bf7bded1ca0111644326",
+    "src/idx_trade/ranking_v4_3_target_execution.py": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+    "src/idx_trade/ranking_v4_3_model_eval.py": "8aba40c32e6069d1f8bdf5b8b19bf41d2065c422",
+    "config/ranking_v4_x1_prospective_preregistration_v1.json": "f33663bc7e4d14941a12974cc453ab90ac5b85ba",
+    "config/ranking_v4_3r_ca80_preregistration_v1.json": "bbdbd28dc642f9af78fdce1e3a164ac8631eb376",
+    "docs/checkpoints/2026-08-20_V4_X1_CLEAN_PHASE_A_OPEN_LINEAGE_REMEDIATION_ACCEPTED.md": "e4412896ab2fcdee50a18fbb6981f2bddee28dc5"
+  },
+  "model_contract": {
+    "control": "V4_CONTROL_CONTEXT25_HGBR",
+    "challenger": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "control_features": 25,
+    "challenger_features": 28,
+    "heads": ["H5", "H10"],
+    "learner": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "hyperparameter_search": false,
+    "historical_refit_performance_evaluation": false
+  },
+  "hard_guards": {
+    "historical_training_target_access_authorized": true,
+    "model_fit_authorized": true,
+    "provider_calls_authorized": false,
+    "network_calls_authorized": false,
+    "historical_prediction_generation_authorized": false,
+    "historical_performance_recomputation_authorized": false,
+    "model_scoring_authorized": false,
+    "protected_forward_access_authorized": false,
+    "fresh_forward_access_authorized": false,
+    "forward_counter_mutation_authorized": false,
+    "prospective_scoring_authorized": false,
+    "v4_x2_session_semantics_authorized": false,
+    "ca80_threshold_change_authorized": false,
+    "hyperparameter_search_authorized": false,
+    "data_repair_or_rescue_authorized": false
+  },
+  "post_refit_boundary": {
+    "independent_review_required_before_prospective_scoring": true,
+    "historical_scores_must_not_be_generated": true,
+    "historical_performance_must_not_be_recomputed": true,
+    "forward_counter_must_not_be_mutated_in_refit_run": true,
+    "once_first_accepted_prospective_score_is_captured_model_bytes_are_immutable": true,
+    "any_model_or_evaluation_contract_change_after_first_score_requires_new_generation": true
+  },
+  "next": "INDEPENDENTLY REVIEW PREPARATION; EXECUTION REMAINS DISABLED UNTIL A SEPARATE FREEZE CHECKPOINT"
+}
