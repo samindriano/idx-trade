@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 from typing import Any
 
@@ -62,6 +63,16 @@ def read_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
+def git_blob(path: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", f"HEAD:{path}"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -94,6 +105,16 @@ def main() -> int:
     if not config_guardrails or any(value is not False for value in config_guardrails.values()):
         raise RuntimeError("STAGE_B_CONFIG_GUARDRAIL_CHANGED")
 
+    frozen_code = cfg.get("frozen_code_blobs") or {}
+    required_code = {
+        "stage_b_helper": "src/idx_trade/v4_x_clean_data_stage_b.py",
+        "stage_b_runner": "scripts/run_v4_x_clean_data_stage_b_v1.py",
+    }
+    for key, path in required_code.items():
+        expected_blob = str(frozen_code.get(key) or "")
+        if not expected_blob or git_blob(path) != expected_blob:
+            raise RuntimeError(f"STAGE_B_CODE_BLOB_MISMATCH:{key}")
+
     stage_a_cfg = cfg.get("stage_a") or {}
     stage_a_root = args.stage_a_root.resolve()
     stage_a_manifest_path = stage_a_root / "MANIFEST.json"
@@ -105,6 +126,9 @@ def main() -> int:
         raise RuntimeError("STAGE_A_FINAL_INPUT_GUARD_CHANGED")
     if stage_a_manifest.get("model_refit_authorized") is not False:
         raise RuntimeError("STAGE_A_REFIT_GUARD_CHANGED")
+    stage_a_guardrails = stage_a_manifest.get("guardrails") or {}
+    if not stage_a_guardrails or any(value is not False for value in stage_a_guardrails.values()):
+        raise RuntimeError("STAGE_A_MANIFEST_GUARDRAIL_CHANGED")
 
     output_hashes = stage_a_manifest.get("output_hashes") or {}
     expected_outputs = stage_a_cfg.get("output_hashes") or {}
@@ -176,6 +200,7 @@ def main() -> int:
             for key, path in stage_a_files.items()
         },
         "stage_a_frozen_inputs": stage_a_inputs,
+        "frozen_code_blobs": frozen_code,
         "frozen_security_master": {
             "path": str(frozen_master_path),
             "sha256": sha256_file(frozen_master_path),
@@ -214,6 +239,7 @@ def main() -> int:
             key: value["sha256"] for key, value in summary["stage_a_referenced_outputs"].items()
         },
         "stage_a_input_hashes": stage_a_inputs,
+        "frozen_code_blobs": frozen_code,
         "frozen_security_master_sha256": summary["frozen_security_master"]["sha256"],
         "identity_acceptance_sha256": summary["identity_acceptance"]["sha256"],
         "stage_c_manifest_sha256": stage_c_manifest_sha,
