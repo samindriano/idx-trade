@@ -57,8 +57,8 @@ def git_output(repo_root: Path, *args: str, text: bool = True):
     return completed.stdout.strip() if text else completed.stdout
 
 
-def git_bytes(repo_root: Path, relative: str) -> bytes:
-    return git_output(repo_root, "show", f"HEAD:{relative}", text=False)
+def git_bytes_at_ref(repo_root: Path, git_ref: str, relative: str) -> bytes:
+    return git_output(repo_root, "show", f"{git_ref}:{relative}", text=False)
 
 
 def package_version(name: str) -> str:
@@ -121,7 +121,7 @@ def verify_git_blobs(repo_root: Path, mapping: dict[str, str]) -> dict[str, str]
 
 def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     ref = cfg["runtime_manifest"]
-    raw = git_bytes(repo_root, str(ref["path"]))
+    raw = git_bytes_at_ref(repo_root, str(ref["git_ref"]), str(ref["path"]))
     actual_sha = sha256_bytes(raw)
     if actual_sha != str(ref["sha256"]):
         raise RuntimeError(
@@ -153,6 +153,8 @@ def verify_runtime(repo_root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             )
         )
     return {
+        "manifest_git_ref": str(ref["git_ref"]),
+        "manifest_git_blob_sha1": str(ref["git_blob_sha1"]),
         "manifest_sha256": actual_sha,
         "python_version": list(actual_python),
         "package_versions": actual_packages,
