@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: a56265e452541e4d205376bbe8194f4887a920b4
 branch: audit/pit-security-identity-v1
-head_commit: pending-result-commit
+head_commit: 894a377576f6ff10e02003dd1fd0214152f18459
 scope: outcome-blind generic historical security-identity restoration and exact frozen V4 representation audit
 files_changed:
   - src/idx_trade/pit_security_identity_audit.py
