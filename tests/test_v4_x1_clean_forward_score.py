@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -93,9 +94,45 @@ def test_security_master_rejects_pre_freeze_extra_identity(
         clean._merged_security_master_path(paths)
 
 
-def test_clean_layer_contains_no_fit_or_target_materialization_path() -> None:
+def test_clean_layer_contains_no_fit_target_or_performance_code_path() -> None:
     source = Path(clean.__file__).read_text(encoding="utf-8")
-    assert "fit_v4_head" not in source
-    assert "materialize_v4_target_ledger" not in source
-    assert "evaluate_head_by_date" not in source
-    assert "historical_performance_computed" not in source
+    tree = ast.parse(source)
+    forbidden_symbols = {
+        "fit_v4_head",
+        "materialize_v4_target_ledger",
+        "evaluate_head_by_date",
+        "historical_performance_computed",
+    }
+
+    imported: set[str] = set()
+    referenced_names: set[str] = set()
+    referenced_attributes: set[str] = set()
+    called_symbols: set[str] = set()
+    string_literals: set[str] = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.asname or alias.name.rsplit(".", 1)[-1] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            imported.update(alias.asname or alias.name for alias in node.names)
+        elif isinstance(node, ast.Name):
+            referenced_names.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            referenced_attributes.add(node.attr)
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                called_symbols.add(node.func.id)
+            elif isinstance(node.func, ast.Attribute):
+                called_symbols.add(node.func.attr)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            string_literals.add(node.value)
+
+    # Literal manifest guard names are allowed and desirable: the clean adapter
+    # reads the accepted refit manifest and requires these safety flags to stay
+    # false. What is forbidden is importing/referencing/calling an executable
+    # fit, target-materialization, evaluator, or performance-computation symbol.
+    assert forbidden_symbols.isdisjoint(imported)
+    assert forbidden_symbols.isdisjoint(referenced_names)
+    assert forbidden_symbols.isdisjoint(referenced_attributes)
+    assert forbidden_symbols.isdisjoint(called_symbols)
+    assert "historical_performance_computed" in string_literals
