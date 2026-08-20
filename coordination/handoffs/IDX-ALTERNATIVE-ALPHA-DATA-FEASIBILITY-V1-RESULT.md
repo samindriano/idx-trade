@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade  
 source_commit: f8686af8e0d1f89c2288d77fc9ec47f0c2db360a  
 branch: research/idx-alternative-alpha-data-feasibility-v1  
-head_commit: filled after final commit
+head_commit: 900dfeced4a6f7a3cf6ee4183f8e5cc6f32cb8f7
 
 ## Scope
 
