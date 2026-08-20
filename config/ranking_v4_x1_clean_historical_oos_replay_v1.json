@@ -1,0 +1,86 @@
+{
+  "schema_version": "ranking_v4_x1_clean_historical_oos_replay_v1",
+  "generation_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+  "status": "V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_FROZEN_LOCAL_EXECUTION_AUTHORIZED",
+  "measurement_only": true,
+  "post_selection_diagnostic": true,
+  "model_change_authorized": false,
+  "canonical_historical_score_update_authorized_if_execution_valid": true,
+  "required_fit_count": 24,
+  "fold_contract": "EXACT_FROZEN_V4_3R_6X100_PURGE10",
+  "parent_phase_b_contract_blob": "11d9fe1e0955d6f1ef11cc094332065aebe521dc",
+  "runner_blob": "273ec17f8d2da0d23ac5d2e9f08661b6ff6a35d7",
+  "validation_folds": {
+    "path": "docs/artifacts/ranking_v4_3_primary_liquid_support_v1/v4_3_validation_folds.csv",
+    "sha256": "91fe0e5a1c2489d5397f9f8bef7fc999d3f83a3f0cb94b6cdb5852c1e07cd915",
+    "dates": 600,
+    "folds": 6,
+    "dates_per_fold": 100,
+    "purge_official_sessions": 10
+  },
+  "frozen_validation_end": {
+    "session_index": 1249,
+    "date": "2026-07-17"
+  },
+  "clean_representation": {
+    "phase_a_manifest_sha256": "f6b73ebc9f092d1869166de125bbb7afd24a02d3597fa5fa9d6fea8853a70dda",
+    "clean_panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "clean_primary_rows": 348762,
+    "clean_h5_support_rows": 239648,
+    "clean_h10_support_rows": 237976,
+    "open_lineage_policy": "PRESERVE_PARENT_EXECUTABLE_OPEN_EXCEPT_ACCEPTED_STAGE_A_CANDIDATES_V1"
+  },
+  "model_contract": {
+    "control": "V4_CONTROL_CONTEXT25_HGBR",
+    "challenger": "V4_CHALLENGER_SESSION_GEOMETRY3",
+    "control_features": 25,
+    "challenger_features": 28,
+    "heads": ["H5", "H10"],
+    "consensus": "0.5*H5_WITHIN_DATE_PERCENTILE_RANK+0.5*H10_WITHIN_DATE_PERCENTILE_RANK",
+    "learner": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "hyperparameter_search": false
+  },
+  "parent_preclean_benchmark": {
+    "source": "docs/checkpoints/2026-08-19_V4_3R_HISTORICAL_POSTMORTEM.md",
+    "generation": "V4_3R_CA80",
+    "control_consensus_median_fold_mean_daily_ic": 0.08415844149089491,
+    "control_consensus_q25_fold_mean_daily_ic": 0.0642562654582539,
+    "control_h5_median_fold_mean_daily_ic": 0.06307281127949277,
+    "control_h10_median_fold_mean_daily_ic": 0.07818608378224626,
+    "challenger_consensus_median_fold_mean_daily_ic": 0.09775243938276076,
+    "challenger_consensus_q25_fold_mean_daily_ic": 0.07275787380618584,
+    "challenger_h5_median_fold_mean_daily_ic": 0.07891122009359626,
+    "challenger_h10_median_fold_mean_daily_ic": 0.09095594288451861,
+    "challenger_minus_control_consensus_median_delta": 0.013593997891865855,
+    "challenger_minus_control_h5_median_delta": 0.01583840881410349,
+    "challenger_minus_control_h10_median_delta": 0.012769859102272352
+  },
+  "hard_guards": {
+    "historical_training_target_access_authorized": true,
+    "historical_validation_target_access_authorized": true,
+    "historical_model_fit_authorized": true,
+    "historical_oos_scoring_authorized": true,
+    "historical_performance_computation_authorized": true,
+    "provider_calls_authorized": false,
+    "network_calls_authorized": false,
+    "hyperparameter_search_authorized": false,
+    "retune_authorized": false,
+    "feature_change_authorized": false,
+    "universe_change_authorized": false,
+    "ca80_change_authorized": false,
+    "session_semantics_change_authorized": false,
+    "prospective_score_authorized": false,
+    "forward_counter_mutation_authorized": false,
+    "protected_forward_access_authorized": false,
+    "fresh_forward_access_authorized": false,
+    "deployed_model_replacement_authorized": false
+  },
+  "interpretation": {
+    "if_valid_clean_score_becomes_canonical_historical_score_for_deployed_clean_model": true,
+    "parent_score_remains_preclean_benchmark_only": true,
+    "result_does_not_reopen_model_selection": true,
+    "prospective_100_session_evidence_remains_primary_fresh_validation": true
+  },
+  "next": "RUN EXACTLY ONE CLEAN HISTORICAL OOS REPLAY; REVIEW RESULT; DO NOT RETUNE OR TOUCH PROSPECTIVE COUNTER"
+}
