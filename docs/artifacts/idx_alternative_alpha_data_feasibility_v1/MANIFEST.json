@@ -8,12 +8,12 @@
   "credentials_committed": false,
   "protected_outcomes_accessed": false,
   "files": {
-    "source_inventory.csv": "f3116949a3e9faa1e88828392811aafae4048bff4a63cd3e3b09985643aed4304",
+    "source_inventory.csv": "f3116949a3e9faa1e88828392811faae4048bff4a63cd3e3b09985643aed4304",
     "github_repo_inventory.csv": "398c11e709a0e5940309c6b768db217654cf3bccf6c18961aedf3a098a1334dd",
     "bounded_probe_results.csv": "ff6a64b291faa9707cadd5cfb56444e9efc25730745f4c3b97a733b81d0ccbbd",
-    "research/2026-08-21_IDX_ALTERNATIVE_ALPHA_DATA_FEASIBILITY_V1.md": "3c3ec641f0d36e5e300fe58537beea80f1f84cd31aba0e3e8afef10da124fbe3e",
-    "checkpoint": "d6c6e13df20442b7496c91190ee9841484e30dd4f93085e488a1c80a9c0216d3",
-    "handoff": "755079bf1ef335e79aa7765d4a61a341704577d8cb010a3e2a317248e7f086ed"
+    "research/2026-08-21_IDX_ALTERNATIVE_ALPHA_DATA_FEASIBILITY_V1.md": "296561f192d91fc1f01845df5cd6396aeea0ca303b1bfce087e1a09faf5f698c",
+    "checkpoint": "65d1f86384856dbe55511a21719c4871ea7001db8e43b8a35af202e9b6ed9bea",
+    "handoff": "2afa80d9963f1c240dbd91b0b8047ab67cb1934200d5307fb766262e0179de89"
   },
   "notes": [
     "The bounded probe CSV contains sanitized counts/schema observations only.",

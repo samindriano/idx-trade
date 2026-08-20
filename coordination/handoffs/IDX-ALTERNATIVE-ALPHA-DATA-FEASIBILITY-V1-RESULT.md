@@ -1,13 +1,13 @@
 # Handoff
 
-from: Codex  
-to: ChatGPT independent review  
-task_id: IDX-ALTERNATIVE-ALPHA-DATA-FEASIBILITY-V1  
-model_used: Orchestra with Luna xhigh read-only explorers  
-reasoning_level: xhigh  
-source_repository: samindriano/idx-trade  
-source_commit: f8686af8e0d1f89c2288d77fc9ec47f0c2db360a  
-branch: research/idx-alternative-alpha-data-feasibility-v1  
+from: Codex
+to: ChatGPT independent review
+task_id: IDX-ALTERNATIVE-ALPHA-DATA-FEASIBILITY-V1
+model_used: Orchestra with Luna xhigh read-only explorers
+reasoning_level: xhigh
+source_repository: samindriano/idx-trade
+source_commit: f8686af8e0d1f89c2288d77fc9ec47f0c2db360a
+branch: research/idx-alternative-alpha-data-feasibility-v1
 head_commit: 900dfeced4a6f7a3cf6ee4183f8e5cc6f32cb8f7
 
 ## Scope

@@ -1,7 +1,7 @@
 # IDX Alternative Alpha Data Feasibility V1 — Checkpoint
 
-Status: `CONDITIONAL_SOURCE_READY_NO_HISTORICAL_ALPHA_YET`  
-Branch: `research/idx-alternative-alpha-data-feasibility-v1`  
+Status: `CONDITIONAL_SOURCE_READY_NO_HISTORICAL_ALPHA_YET`
+Branch: `research/idx-alternative-alpha-data-feasibility-v1`
 Scope: one-shot source census; no model/outcome access
 
 ## Exact evidence

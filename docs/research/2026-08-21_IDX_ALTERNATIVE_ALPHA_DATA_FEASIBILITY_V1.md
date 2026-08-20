@@ -1,7 +1,7 @@
 # IDX Alternative Alpha Data Feasibility V1
 
-Date: 2026-08-21 (Asia/Jakarta)  
-Branch: `research/idx-alternative-alpha-data-feasibility-v1`  
+Date: 2026-08-21 (Asia/Jakarta)
+Branch: `research/idx-alternative-alpha-data-feasibility-v1`
 Scope: one-shot source discovery only; no model, target, outcome, score, or counter access
 
 ## Executive verdict
