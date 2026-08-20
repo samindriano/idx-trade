@@ -1,7 +1,7 @@
 # Claim — V4-X1 Clean Prospective Score V1
 
 Date: 2026-08-20 (Asia/Jakarta)
-Status: `ACTIVE_STATIC_GUARD_REMEDIATION`
+Status: `WAITING_LOCAL_READONLY_READINESS_R2`
 Owner: `ChatGPT/V4-X1-Clean-Prospective-Score`
 Branch: `integration/v4-x1-clean-prospective-score-v1`
 Base operational lineage: `integration/v4-x1-eod-auto-score-v1`
@@ -16,16 +16,20 @@ Controlling scientific acceptance:
 - prospective preregistration blob: `f33663bc7e4d14941a12974cc453ab90ac5b85ba`
 - acceptance timestamp used as conservative prospective freeze boundary: `2026-08-20T12:08:44Z` (`2026-08-20T19:08:44+07:00`)
 
-Preparation freeze:
+Preparation parent:
 - checkpoint `docs/checkpoints/2026-08-20_V4_X1_CLEAN_PROSPECTIVE_SCORE_PREPARED.md`
-- checkpoint blob `690e5eb2a3e903b2e1165523c2c363b8bfbfd5ec`
-- decision `V4_X1_CLEAN_PROSPECTIVE_SCORE_PREPARED_READONLY_LOCAL_READINESS_AUTHORIZED`
-- machine contract `config/ranking_v4_x1_clean_prospective_score_v1.json`
-- local handoff `coordination/handoffs/IDX-V4-X1-CLEAN-PROSPECTIVE-READINESS.md`
+- blob `690e5eb2a3e903b2e1165523c2c363b8bfbfd5ec`
 
-The first local preflight correctly stopped fail-closed before any runtime inspection because a substring-based static test rejected the literal manifest guard key `historical_performance_computed`. Independent inspection confirms the clean scorer only reads that manifest field and requires it to be `false`; it does not import or call a historical-performance evaluator. The current remediation is limited to replacing the brittle substring guard with an AST/code-symbol guard and repinning that test blob. No scientific/runtime source semantics are changed.
+Static-guard remediation:
+- first local preflight stopped fail-closed before runtime inspection because a raw substring test rejected the literal manifest safety key `historical_performance_computed`;
+- source inspection confirmed the clean scorer only reads that accepted manifest field and requires it to be false; it does not import/reference/call a historical performance evaluator;
+- clean scorer blob stayed exactly `f00528422a42835e5a969bfe503e29f91e0bf957`;
+- only the static test was changed to an AST/code-symbol guard: `tests/test_v4_x1_clean_forward_score.py` blob `53f2d6648dcde43c765ac754b10c09eeb2f1643d`;
+- remediation checkpoint `docs/checkpoints/2026-08-20_V4_X1_CLEAN_PROSPECTIVE_STATIC_GUARD_REMEDIATED.md`, blob `177b95214c49f0c44748389aaef5ef20d3881267`;
+- repinned machine contract blob `fbdbed664259cf685a71dbbfebcc38ba7e558c92`;
+- R2 handoff `coordination/handoffs/IDX-V4-X1-CLEAN-PROSPECTIVE-READINESS-R2.md`, blob `d734fb4e411d161ae1225311c0ac89e37289096d`.
 
-The preparation contract explicitly keeps `deployment_authorized=false` and `score_capture_authorized=false`. The next local action remains validation + read-only readiness only.
+The machine contract remains `deployment_authorized=false` and `score_capture_authorized=false`. Expected clean counter before deployment remains `0/100`.
 
 ## Required scientific invariants
 
@@ -49,4 +53,4 @@ The preparation contract explicitly keeps `deployment_authorized=false` and `sco
 - forward security-master additions are allowed only for genuinely post-freeze new listings (`listed_from` strictly after 2026-08-20); existing baseline identities are never rewritten by mutable runtime files;
 - candidate-session Geometry3 Open continues to come only from the immutable canonical sibling OHLCV after exact H/L/C/V reconciliation with the model-input snapshot.
 
-Canonical `main:coordination/TEAM_STATUS.md` was read before this remediation. The lane is currently recorded there as `REVIEW` after the fail-closed preflight. The canonical shared ledger is too large to safely replace from a truncated connector read; this branch-local claim records the bounded remediation until the next local agent performs the required minimal canonical row update.
+Canonical `main:coordination/TEAM_STATUS.md` was read before remediation. Its lane currently records the first fail-closed attempt as `REVIEW`. The next local agent must make the minimal canonical row transition to `ACTIVE` for R2 and back to `REVIEW` afterward, preserving every other row. No canonical overwrite is attempted from this connector because the shared ledger is too large to safely replace from a truncated read.
