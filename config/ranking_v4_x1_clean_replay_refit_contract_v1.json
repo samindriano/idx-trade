@@ -81,7 +81,7 @@
       "input_and_code_hash_manifest"
     ],
     "old_support_identity_must_match": false,
-    "rule_if_support_changes": "REPORT_DETERMINISTIC_DELTA_AND_CONTINUE_ONLY_IF CHANGE IS EXPLAINED BY ACCEPTED CLEAN INPUT LINEAGE; DO NOT TUNE OR REPAIR IN THIS PHASE"
+    "rule_if_support_changes": "REPORT_DETERMINISTIC_DELTA_AND_CONTINUE_ONLY_IF_CHANGE_IS_EXPLAINED_BY_ACCEPTED_CLEAN_INPUT_LINEAGE; DO NOT TUNE OR REPAIR IN THIS PHASE"
   },
   "phase_b_clean_final_refit": {
     "authorized_by_this_contract": false,
