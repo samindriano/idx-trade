@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: f8686af8e0d1f89c2288d77fc9ec47f0c2db360a
 branch: research/idx-alternative-alpha-data-feasibility-v1
-head_commit: 900dfeced4a6f7a3cf6ee4183f8e5cc6f32cb8f7
+head_commit: 52f5d032091383d9d265ab18aa8c09ee804c5498
 
 ## Scope
 
@@ -65,9 +65,11 @@ Yahoo publication/revision timestamps and issuer coverage.
 
 ## Validation
 
-This lane changed documentation and sanitized CSV artifacts only. Before push:
-run `git diff --check`; no pytest is required because no executable source or
-runtime contract changed. Raw provider responses remain external.
+This lane changed documentation and sanitized CSV artifacts only. The final
+integrity remediation recomputed the manifest against the actual committed
+bytes and removed accidental trailing whitespace. `git diff --check` passes;
+no pytest is required because no executable source or runtime contract
+changed. Raw provider responses remain external.
 
 ## Recommended next action
 

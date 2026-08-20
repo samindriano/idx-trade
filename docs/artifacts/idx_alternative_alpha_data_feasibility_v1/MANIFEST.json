@@ -13,7 +13,7 @@
     "bounded_probe_results.csv": "ff6a64b291faa9707cadd5cfb56444e9efc25730745f4c3b97a733b81d0ccbbd",
     "research/2026-08-21_IDX_ALTERNATIVE_ALPHA_DATA_FEASIBILITY_V1.md": "296561f192d91fc1f01845df5cd6396aeea0ca303b1bfce087e1a09faf5f698c",
     "checkpoint": "65d1f86384856dbe55511a21719c4871ea7001db8e43b8a35af202e9b6ed9bea",
-    "handoff": "2afa80d9963f1c240dbd91b0b8047ab67cb1934200d5307fb766262e0179de89"
+    "handoff": "92d56cf25f404ad5feef5943b01cffff1bf0118c3955d0fce65d861327e3b75c"
   },
   "notes": [
     "The bounded probe CSV contains sanitized counts/schema observations only.",
