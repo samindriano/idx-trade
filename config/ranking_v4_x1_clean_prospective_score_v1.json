@@ -1,0 +1,104 @@
+{
+  "schema_version": "ranking_v4_x1_clean_prospective_score_v1",
+  "generation_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+  "status": "V4_X1_CLEAN_PROSPECTIVE_SCORE_PREPARED_LOCAL_VALIDATION_REQUIRED",
+  "deployment_authorized": false,
+  "score_capture_authorized": false,
+  "forward_counter_target": 100,
+  "forward_counter_initial_expected": 0,
+  "phase_b_acceptance": {
+    "commit": "ec9e8dc55ccdf458a67b63f612c8eb06660cf829",
+    "checkpoint_blob": "666ca21ce26248b17328d56e0505e362b2814db5",
+    "accepted_model_manifest_sha256": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "acceptance_timestamp_utc": "2026-08-20T12:08:44Z",
+    "conservative_forward_freeze_boundary": "2026-08-20T12:08:44+00:00"
+  },
+  "prospective_preregistration": {
+    "git_blob_sha1": "f33663bc7e4d14941a12974cc453ab90ac5b85ba",
+    "prospective_window_sessions": 100,
+    "fresh_only": true,
+    "store_full_decision_population_scores": true,
+    "outcome_vault_open_condition": "100/100 prospective score sessions captured and the H10 target for session 100 is mature under official-session semantics",
+    "protected_outcome_access_before_open_condition": false
+  },
+  "accepted_models": {
+    "control_h5": "f727b10c6ea72c9ca7b447977ed4fa9cd3b5b32adb81793921c425d9085665b2",
+    "control_h10": "737be8c47fe2d689dab09950a931c1339039ed8ae379b79f0bfd5a8c2e7605db",
+    "challenger_h5": "d8a73d03ff72ab82826ef4e1be5e2073f6a61a5bb01b4e4268428436dc5eb082",
+    "challenger_h10": "935a6f9aeaa2ca30a4016819e3848d284eb677e38153a7bd3126da0c33a9f95d"
+  },
+  "representation": {
+    "clean_historical_panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "clean_security_master_baseline_sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "forward_security_master_policy": "ACCEPTED_CLEAN_BASELINE_PLUS_RUNTIME_IDENTITIES_WITH_LISTED_FROM_STRICTLY_AFTER_2026_08_20_ONLY",
+    "shared_baseline_identity_policy": "ACCEPTED_CLEAN_BASELINE_ALWAYS_AUTHORITATIVE",
+    "candidate_open_policy": "IMMUTABLE_CANONICAL_SESSION_OHLCV_EXACT_HLCV_MATCH_REQUIRED",
+    "historical_forward_feature_policy": "CANONICAL_DATA_READY_MODEL_INPUT_SNAPSHOTS_ONLY",
+    "session_semantics": "OBSERVED_BAR_UNCHANGED_V4_X1",
+    "v4_x2_session_alignment": false
+  },
+  "prospective_boundary": {
+    "freeze_timestamp_utc": "2026-08-20T12:08:44+00:00",
+    "canonical_eod_and_data_ready_must_both_be_strictly_after_freeze": true,
+    "same_jakarta_date_score_required": true,
+    "late_catchup_allowed_for_causal_history_only": true,
+    "late_catchup_counter_eligible": false,
+    "pre_freeze_backscore_authorized": false,
+    "historical_backscore_authorized": false,
+    "do_not_infer_first_calendar_date": true
+  },
+  "score_contract": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "generation": "V4-X1-CLEAN",
+    "control_feature_count": 25,
+    "challenger_feature_count": 28,
+    "consensus_formula": "0.5*H5_WITHIN_DATE_PERCENTILE_RANK+0.5*H10_WITHIN_DATE_PERCENTILE_RANK",
+    "full_decision_population": true,
+    "new_counter_namespace_from_clean_model_fingerprint": true,
+    "score_exactly_one_next_eligible_session_per_attempt": true,
+    "immutable_artifact_and_manifest": true,
+    "idempotent_done_verification": true
+  },
+  "operational_reuse": {
+    "canonical_eod_is_only_capture_path": true,
+    "existing_scheduled_task_name": "IDXTrade-ForwardEOD",
+    "daily_triggers_jakarta": ["18:30", "19:30", "20:30"],
+    "at_logon_trigger": true,
+    "no_second_provider_path": true
+  },
+  "pinned_git_blobs": {
+    "src/idx_trade/v4_x1_clean_forward_score.py": "f00528422a42835e5a969bfe503e29f91e0bf957",
+    "src/idx_trade/v4_x1_clean_eod_pipeline.py": "2ce4fbcb9baec5c39ced4fadaaf58dc4d73a6216",
+    "src/idx_trade/v4_x1_clean_eod_legacy_compat.py": "b78f020992e36fd1ba68027911e79bdb07e4da08",
+    "scripts/run_v4_x1_clean_forward_score.py": "c63e1a3e36f34dd4210e9dbb951dda9ae90a64ec",
+    "scripts/run_v4_x1_clean_forward_readiness.py": "07c38a0e27a0acfb7f5af49a7ea9b8b8fb822e1d",
+    "scripts/run_forward_eod_v4_x1_clean_pipeline.ps1": "5b3c3939ae87ce666bb9b1cd02ae4689d743122d",
+    "scripts/update_forward_eod_task_v4_x1_clean.ps1": "7b06fa4914c090a5aa76f767347de71bd9dd95a1",
+    "tests/test_v4_x1_clean_forward_score.py": "c89bfab7173cd0355739cb3ec7960d5d3ea58f8a",
+    "tests/test_v4_x1_clean_eod_pipeline.py": "778fb2d2b2027b84510a3d1db608e0c09c29ae51",
+    "src/idx_trade/v4_x1_forward_score.py": "eecb2bb09dadb1cb33922450289671130401893b",
+    "src/idx_trade/v4_x1_eod_pipeline.py": "a35c9990be1c7f619795db313bb341f05fa7170a",
+    "src/idx_trade/v4_x1_eod_legacy_compat.py": "6bcf09e58ac8deb0e7e1bec923bc732ab164f80b",
+    "src/idx_trade/forward_monitoring.py": "972d86e31f4c163ea64383c63a708da6fb39b0e4",
+    "src/idx_trade/forward_eod_runner.py": "5d189bc73a901a3abe0a2f94e54a88b71897765d",
+    "src/idx_trade/forward_ohlcv.py": "31b250973cdea5378b88e07575dbad9ea37acd57",
+    "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "src/idx_trade/ranking_v4_3_preregistration.py": "cc1308feb51bbed16606bf7bded1ca0111644326"
+  },
+  "hard_guards": {
+    "provider_calls_from_score_layer": false,
+    "network_calls_from_score_layer": false,
+    "model_fit": false,
+    "model_retune": false,
+    "historical_model_scoring": false,
+    "historical_performance_recomputation": false,
+    "realized_forward_outcome_access": false,
+    "protected_forward_outcome_access": false,
+    "target_materialization": false,
+    "forward_counter_manual_mutation": false,
+    "pre_freeze_score_capture": false,
+    "late_backfill_counter_credit": false,
+    "v4_x2_semantics": false
+  },
+  "next": "RUN LOCAL FOCUSED VALIDATION AND READ-ONLY READINESS; STOP FOR REVIEW BEFORE SCHEDULED-TASK DEPLOYMENT OR SCORE CAPTURE"
+}
