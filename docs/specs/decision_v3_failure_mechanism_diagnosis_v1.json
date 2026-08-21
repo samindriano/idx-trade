@@ -1,0 +1,81 @@
+{
+  "allowed_inputs": [
+    "MANIFEST.json",
+    "summary.json",
+    "decision_session_ledger.csv",
+    "decision_membership_ledger.csv",
+    "decision_intent_ledger.csv",
+    "decision_state_ledger.csv",
+    "holding_spells.csv",
+    "fold_boundary_transitions.csv"
+  ],
+  "execution_authorized": false,
+  "forbidden": {
+    "alternative_decision_rule_simulation": true,
+    "alternative_threshold_test": true,
+    "counterfactual_policy_simulation": true,
+    "decision_parameter_sweep": true,
+    "decision_v3_structural_replay_rerun": true,
+    "historical_alpha_source_access": true,
+    "historical_pnl": true,
+    "model_refit_or_retune": true,
+    "paper_or_live_activation": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "provider_or_network_calls": true,
+    "realized_returns": true,
+    "successor_decision_implementation": true
+  },
+  "interpretation_boundary": "DESCRIPTIVE_MECHANISM_DIAGNOSIS_ONLY_NO_POSTHOC_TUNING_GATE_NO_AUTOMATIC_SUCCESSOR_AUTHORIZATION",
+  "parent_result": {
+    "artifact_sha256": {
+      "decision_intent_ledger.csv": "e3f45b9881ef1bd3ca750e18150de7b4f2d3c22e86257f0b6ab12c0175b4d82a",
+      "decision_membership_ledger.csv": "710b1b5a6bb77deaff6d3de4d09f83d655065050ddeda651d616732224a7198f",
+      "decision_session_ledger.csv": "9d4c5f1d62d15701c1491631a90eba48b8dfba04e5d1d14bd871db819a015cba",
+      "decision_state_ledger.csv": "44dd3bd39815fb0c02fe3987a73f71531212dc8a8a6aedbff73d57e624ae9e73",
+      "fold_boundary_transitions.csv": "1e711a3a7d55903bf224c203db13437b475b165a78e29c970e9bbcb5506918fa",
+      "holding_spells.csv": "20e358e0b9b4a95359bd89157b67cb41a5fe43602576c789a8eb954d49854552",
+      "summary.json": "62259398f18d5e92fce9160b32ec4697a852fbfe49fbafbdd25cdd92d9524bda"
+    },
+    "plan_digest": "1759d1b21849197257c638f6ac23ae0d3cdd320e34da820b4cc188d533931579",
+    "sessions": 600,
+    "source_manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "source_score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "status": "DECISION_V3_GRADED_EVIDENCE_V2_STRUCTURAL_REJECT"
+  },
+  "questions": [
+    "SEVERE_EXIT_CLUSTERING",
+    "EXIT_REFILL_COUPLING",
+    "ENTRY_TIER_LIFECYCLE_RELATIVE_RISK",
+    "BLOCK_3_6_MECHANISM_CONSISTENCY"
+  ],
+  "reporting_definitions": {
+    "entry_tiers": {
+      "SOFT_RANK_GAP_REPLACEMENT": "A_SOFT",
+      "TIER_A_VACANCY_FILL": "A",
+      "TIER_B_VACANCY_FILL": "B",
+      "TIER_C_RESIDUAL_VACANCY_FILL": "C"
+    },
+    "fixed_block": "SESSION_INDEX_FLOOR_DIV_100_PLUS_1",
+    "high_churn_transition": "NONBOOTSTRAP_REPLACEMENT_COUNT_GE3_INHERITED_FROM_FROZEN_V3_GATE",
+    "mandatory_exit_reasons": [
+      "SEVERE_DETERIORATION_EXIT",
+      "CONFIRMED_MILD_DETERIORATION_EXIT",
+      "UNIVERSE_EXIT"
+    ],
+    "tier_next_session_severe": "ENTRY_AT_INDEX_T_AND_SAME_TICKER_INCUMBENT_STATE_SEVERE_DETERIORATION_EXIT_AT_T_PLUS_1",
+    "vacancy_fill_reasons": [
+      "TIER_A_VACANCY_FILL",
+      "TIER_B_VACANCY_FILL",
+      "TIER_C_RESIDUAL_VACANCY_FILL"
+    ]
+  },
+  "required_outputs": [
+    "summary.json",
+    "severe_exit_session_diagnosis.csv",
+    "entry_tier_lifecycle_diagnosis.csv",
+    "block_mechanism_summary.csv",
+    "MANIFEST.json"
+  ],
+  "schema_version": "decision_v3_failure_mechanism_diagnosis_v1",
+  "status": "FROZEN_BEFORE_DIAGNOSIS_IMPLEMENTATION"
+}
