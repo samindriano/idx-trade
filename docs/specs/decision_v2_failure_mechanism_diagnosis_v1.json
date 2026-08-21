@@ -1,0 +1,47 @@
+{
+  "schema_version": "decision_v2_failure_mechanism_diagnosis_v1",
+  "status": "FROZEN_BEFORE_DIAGNOSIS_EXECUTION",
+  "structural_result": {
+    "manifest_sha256": "a555368181dff5084be342dbf13b79993252767ae7e00804f7601477b29995ba",
+    "status": "DECISION_V2_MINIMAL_STRUCTURAL_REJECT",
+    "plan_digest": "51adba87f6ab714044e5064cd7a1c6c72c7327d0e04acf82ab39ff98f876c3e4"
+  },
+  "historical_source": {
+    "manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "score_sessions": 600,
+    "score_rows": 172697
+  },
+  "questions": [
+    "exit_grace_severity_and_recovery",
+    "candidate_scarcity_and_rejected_fresh_persistence",
+    "residual_churn_attribution",
+    "mechanism_consistency_across_six_100_session_blocks"
+  ],
+  "descriptive_rank_bins": [
+    "21_30",
+    "31_50",
+    "51_100",
+    "101_200",
+    "GT200",
+    "ABSENT"
+  ],
+  "diagnostic_outputs": [
+    "exit_pending_diagnosis.csv",
+    "rejected_fresh_top10_diagnosis.csv",
+    "churn_transition_attribution.csv",
+    "block_mechanism_summary.csv",
+    "summary.json"
+  ],
+  "forbidden": {
+    "alternative_decision_rule_simulation": true,
+    "alternative_threshold_test": true,
+    "decision_parameter_sweep": true,
+    "realized_returns": true,
+    "historical_pnl": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "model_refit_or_retune": true,
+    "provider_or_network_calls": true,
+    "decision_v2_structural_replay_rerun": true
+  }
+}
