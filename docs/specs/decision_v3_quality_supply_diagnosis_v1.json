@@ -1,0 +1,54 @@
+{
+  "status": "FROZEN_BEFORE_EXECUTION",
+  "execution_authorized": false,
+  "parent": {
+    "structural_status": "DECISION_V3_GRADED_EVIDENCE_V2_STRUCTURAL_REJECT",
+    "plan_digest": "1759d1b21849197257c638f6ac23ae0d3cdd320e34da820b4cc188d533931579",
+    "failure_diagnosis_manifest_sha256": "73350606e408f987602575797f67474f83839256debee7e7b74496255beb0cab",
+    "source_manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "source_score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "sessions": 600,
+    "rows": 172697
+  },
+  "questions": [
+    "severe_session_refill_composition",
+    "actual_tier_b_c_entrant_rank_and_quality_path_t_plus_1_to_3",
+    "observed_unheld_tier_a_equivalent_supply_t_to_t_plus_3",
+    "stress_blocks_3_6_vs_reference"
+  ],
+  "definitions": {
+    "tier_a_equivalent": "current rank <=10 and previous observed rank <=20",
+    "tier_b_equivalent": "current rank <=10 and previous observed rank 21..50",
+    "tier_c_equivalent": "current rank <=10 and previous observed rank >50",
+    "quality_conversion": "at a later observed session, current rank <=10 and immediately previous observed rank <=20"
+  },
+  "allowed_inputs": [
+    "V3 structural MANIFEST.json",
+    "decision_session_ledger.csv",
+    "decision_membership_ledger.csv",
+    "decision_intent_ledger.csv",
+    "holding_spells.csv",
+    "historical MANIFEST.json",
+    "clean_challenger_validation_scores.parquet projected to ticker/date/fold/mode/alpha_consensus only"
+  ],
+  "forbidden": {
+    "decision_v4_implementation": true,
+    "decision_v4_replay": true,
+    "counterfactual_wait_policy_simulation": true,
+    "hypothetical_portfolio_or_pnl": true,
+    "returns_or_outcomes": true,
+    "threshold_sweep": true,
+    "protected_or_fresh_forward": true,
+    "model_refit_or_retune": true,
+    "provider_or_network": true,
+    "paper_or_live_activation": true
+  },
+  "output": {
+    "summary_json": true,
+    "severe_session_supply_csv": true,
+    "bc_entrant_path_csv": true,
+    "block_summary_csv": true,
+    "manifest_json": true,
+    "fresh_output_dir_required": true
+  }
+}
