@@ -4,7 +4,9 @@ import pandas as pd
 
 from idx_trade.decision_v2_structural_replay import ReplayPass, StructuralReplayResult
 from idx_trade.decision_v2_structural_reporting import enrich_structural_replay_reporting
-from idx_trade.decision_v2_structural_source import EXPECTED_REPLAY_CONTRACT_SHA256
+from idx_trade.decision_v2_structural_source import (
+    EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256,
+)
 
 
 def test_reporting_adds_required_gt20_distribution_without_changing_gate_verdict() -> None:
@@ -58,7 +60,7 @@ def test_reporting_adds_required_gt20_distribution_without_changing_gate_verdict
         == 2.0
     )
     assert (
-        enriched.summary["source"]["replay_contract_sha256"]
-        == EXPECTED_REPLAY_CONTRACT_SHA256
+        enriched.summary["source"]["replay_contract_canonical_sha256"]
+        == EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256
     )
     assert enriched.summary["reporting"]["gate_values_changed"] is False
