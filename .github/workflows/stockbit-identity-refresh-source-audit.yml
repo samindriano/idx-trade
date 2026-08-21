@@ -3,8 +3,11 @@ name: Stockbit identity refresh source audit
 on:
   pull_request:
     paths:
+      - "src/idx_trade/stockbit_identity_refresh.py"
+      - "tests/test_stockbit_identity_refresh.py"
       - "scripts/audit_stockbit_identity_refresh_source.py"
       - "scripts/audit_stockbit_identity_delta_followup.py"
+      - "scripts/audit_stockbit_identity_refresh_candidate.py"
       - "docs/checkpoints/2026-08-21_STOCKBIT_IDENTITY_REFRESH_SOURCE_AUDIT.md"
       - "config/stockbit_stream_universe_v1.csv"
       - "config/stockbit_stream_universe_v1.json"
@@ -16,7 +19,7 @@ permissions:
 jobs:
   live-identity-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -24,13 +27,20 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
-      - name: Install minimal audit dependency
-        run: python -m pip install requests==2.34.2
+      - name: Install minimal audit dependencies
+        run: python -m pip install requests==2.34.2 pytest==9.0.2
+      - name: Run frozen identity refresh adversarial tests
+        run: python -m pytest tests/test_stockbit_identity_refresh.py -q
       - name: Audit live IDX identity sources against pinned roster
         env:
           ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
         run: python scripts/audit_stockbit_identity_refresh_source.py
-      - name: Probe exact CNTX/CNTB/GOTOM identity semantics
+      - name: Probe listing-event endpoint contracts
         env:
           ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
         run: python scripts/audit_stockbit_identity_delta_followup.py
+      - name: Build activation-safe live identity candidate without mutating roster
+        env:
+          ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+          PYTHONPATH: src
+        run: python scripts/audit_stockbit_identity_refresh_candidate.py
