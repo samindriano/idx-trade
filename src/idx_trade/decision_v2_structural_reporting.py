@@ -9,7 +9,9 @@ from .decision_v2_structural_replay import (
     StructuralReplayResult,
     _quantiles,
 )
-from .decision_v2_structural_source import EXPECTED_REPLAY_CONTRACT_SHA256
+from .decision_v2_structural_source import (
+    EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256,
+)
 
 
 def enrich_structural_replay_reporting(
@@ -66,8 +68,8 @@ def enrich_structural_replay_reporting(
     summary["metrics"]["rank_quality"] = rank_quality
 
     summary["source"] = dict(summary["source"])
-    summary["source"]["replay_contract_sha256"] = (
-        EXPECTED_REPLAY_CONTRACT_SHA256
+    summary["source"]["replay_contract_canonical_sha256"] = (
+        EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256
     )
     summary["reporting"] = {
         "post_gate_descriptive_enrichment_only": True,
