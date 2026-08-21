@@ -1,6 +1,6 @@
 {
   "schema_version": "forward_ca_attestation_v1",
-  "status": "CALENDAR_SCHEMA_FROZEN_FORWARD_CA_ATTESTATION_READY_FOR_INTEGRATION",
+  "status": "CALENDAR_SCHEMA_FROZEN_ZAPI_DIVIDENDS_AUDIT_PREPARED",
   "primary_source": "DIRECT_IDX_VIA_PINNED_IDX_BEI",
   "provider_repository": "nichsedge/idx-bei",
   "provider_commit": "75d6c0f74fa360d225794c70c383348977de6798",
@@ -90,6 +90,19 @@
     "delistings"
   ],
   "zapi_dividends_candidate_role": "STRUCTURED_EXTRACTION_OR_PARITY_ONLY_AFTER_BOUNDED_AUDIT_OFFICIAL_IDX_REMAINS_AUTHORITY",
+  "zapi_dividends_audit_status": "AUDIT_PREPARED_LIVE_PROBE_REQUIRED",
+  "zapi_dividends_probe_endpoint": "https://api.zpi.web.id/v1/finance:idx/dividends",
+  "zapi_dividends_public_schema_endpoint": "https://api.zpi.web.id/api/public/scrapers/idx/endpoints/dividends/schema",
+  "zapi_dividends_required_semantics": [
+    "ticker_scope",
+    "positive_gross_dividend_per_share",
+    "cum_date",
+    "ex_date",
+    "recording_date",
+    "payment_date"
+  ],
+  "zapi_dividends_required_pass_status": "PASS_ELIGIBLE_FOR_V1_1_STRUCTURED_HELPER",
+  "forward_ca_v1_1_authorized": false,
   "historical_backfill_authorized": false,
   "historical_pnl_authorized": false,
   "paper_mutation_authorized_by_schema_freeze_alone": false,
