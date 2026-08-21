@@ -8,19 +8,15 @@ from pathlib import Path
 
 import pytest
 
-import idx_trade.stockbit_stream_archive as archive_module
-from idx_trade.stockbit_stream_archive import (
-    QuotaSnapshot,
-    StreamArchiveError,
-    ZapiClient,
-    parse_stream_payload,
-)
+import idx_trade.stockbit_stream_v2_primitives as v2_primitives
+from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
 from idx_trade.stockbit_stream_capture_v2 import (
     LocalLeanArchive,
     RuntimeUniverse,
     build_runtime_universe,
     capture_stream_v2,
 )
+from idx_trade.stockbit_stream_v2_primitives import V2ZapiClient, parse_stream_payload_v2
 
 
 def test_stream_parser_rejects_wrong_or_missing_provider() -> None:
@@ -31,8 +27,8 @@ def test_stream_parser_rejects_wrong_or_missing_provider() -> None:
     missing = json.dumps(
         {"data": {"count": 1, "items": [item], "symbol": "BBCA"}}
     ).encode()
-    assert parse_stream_payload(wrong, 200, "BBCA")[0] != "OK"
-    assert parse_stream_payload(missing, 200, "BBCA")[0] != "OK"
+    assert parse_stream_payload_v2(wrong, 200, "BBCA")[0] != "OK"
+    assert parse_stream_payload_v2(missing, 200, "BBCA")[0] != "OK"
 
 
 def test_observed_available_timestamp_is_taken_after_response_receipt(monkeypatch) -> None:
@@ -55,8 +51,8 @@ def test_observed_available_timestamp_is_taken_after_response_receipt(monkeypatc
             events.append("response")
             return Response()
 
-    monkeypatch.setattr(archive_module, "datetime", FakeDateTime)
-    client = ZapiClient("x", session=Session())
+    monkeypatch.setattr(v2_primitives, "datetime", FakeDateTime)
+    client = V2ZapiClient("x", session=Session())
     client.stream("BBCA")
     assert events == ["response", "timestamp"]
 
