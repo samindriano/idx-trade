@@ -2,11 +2,13 @@
 
 Date: 2026-08-21 Asia/Jakarta
 
-Status: `IMPLEMENTED_NOT_REPLAYED_REVIEW_REQUIRED`
+Status: `IMPLEMENTED_TESTED_NOT_REPLAYED_INDEPENDENT_REVIEW_REQUIRED`
 
 Branch: `research/idx-decision-v2-minimal-structural-replay-runner-v1`
 
 Parent implementation: `research/idx-decision-v2-minimal-implementation-v1`
+
+Validated code HEAD: `f211e604adf697b6a044f21fee7005f39f659848`
 
 ## Scope completed
 
@@ -15,16 +17,20 @@ Implemented the outcome-blind structural replay orchestration for the already-pr
 Components:
 
 - machine-readable frozen replay contract at `docs/specs/decision_v2_minimal_structural_replay_contract_v1.json`;
-- pinned source loader with exact source hashes, 600-session / 172,697-row identity, source guard checks, deterministic rank reconstruction, and frozen naive Top-10 comparator verification;
+- cross-platform canonical JSON contract identity SHA-256 `2f4e04fe060b43da6d555717a5aab687c10f40fa114ee954ae24082f912d455f`;
+- strict source loader with exact source hashes, 600-session / 172,697-row identity, source guard checks, deterministic rank reconstruction, and frozen naive Top-10 comparator verification;
+- parquet schema/row-count inspection through metadata before data load;
+- projected score-only parquet read restricted to `ticker`, `date`, `fold`, `mode`, `alpha_h5`, `alpha_h10`, and `alpha_consensus`; extra target/return columns, if present, remain unread;
 - exact adjacent `(t-1,t)` score-session iteration across the complete ledger;
 - bootstrap only at ledger index 0, with no pre-roll and no fold reset;
 - Decision shadow state advanced only through `DecisionV2ShadowState.from_plan(...)` and required to remain bound to the frozen rule ID;
 - deterministic second in-memory pass solely for the preregistered determinism gate;
 - structural ledgers for sessions, target membership, intents, Decision states, holding spells, and fold-boundary transitions;
 - preregistered churn, holding, rank-quality, state-behavior, capacity, 100-date block, fold-segment, and fold-boundary metrics;
+- explicit descriptive distribution of target ranks >20 and per-session stale-name counts, added downstream of the gate calculation without changing any gate value;
 - hard-gate evaluator emitting only `DECISION_V2_MINIMAL_STRUCTURAL_ACCEPT` or `DECISION_V2_MINIMAL_STRUCTURAL_REJECT`;
-- fail-closed atomic output directory creation and SHA-pinned output manifest;
-- CLI execution lock requiring post-review authorization token before any local source is loaded.
+- fail-closed output directory creation and SHA-pinned output manifest;
+- CLI execution lock requiring post-review authorization token before contract/source loading.
 
 ## Frozen replacement metric interpretation
 
@@ -54,27 +60,41 @@ The second in-memory Decision pass is not an alternative replay or policy varian
 
 ## Execution lock
 
-The CLI refuses to load the historical source unless the exact post-review token is supplied:
+The CLI refuses execution unless the exact post-review token is supplied:
 
 `DECISION_V2_MINIMAL_STRUCTURAL_REPLAY_REVIEW_ACCEPTED_V1`
 
-That token is an engineering interlock only. This checkpoint does not authorize using it yet.
+The authorization check occurs before the replay contract and historical source are loaded. This token is an engineering process interlock, not a secret. This checkpoint does not authorize using it yet.
 
-## Validation boundary
+## Validation
 
-Tests cover:
+GitHub Actions on code HEAD `f211e604adf697b6a044f21fee7005f39f659848`:
+
+- `443 passed`;
+- `26 warnings`;
+- `0 failed`.
+
+The warnings are pre-existing pandas/NumPy deprecation/future warnings unrelated to Decision V2.
+
+Focused coverage includes:
 
 - machine contract vs frozen runner constants;
 - conservative replacement counting under underfill;
 - continuous state across a fold boundary with no bootstrap/reset;
 - exact 600-session requirement;
-- all-hard-gates semantics where a single miss fails the relevant gate group.
+- all-hard-gates semantics where a single miss fails the relevant gate group;
+- source column projection proving extra label/return columns remain unread;
+- parquet metadata row-count guard;
+- canonical contract hash invariance to LF/CRLF line endings;
+- explicit rank>20 descriptive reporting without changing the gate verdict;
+- CLI authorization failure before any historical source read.
 
-The runner must receive independent/adversarial review and CI validation before the first exact 600-OOS execution.
+## Known implementation boundary
+
+`decision_v2_structural_replay.py` contains an earlier general loader helper that is not the authorized execution path. The guarded CLI imports and uses only `load_pinned_v4_x1_source_strict(...)` from `decision_v2_structural_source.py`. Independent review must verify this routing before replay authorization.
 
 ## Next action
 
-1. open draft PR against the audited Decision V2 implementation branch;
-2. run full repository CI;
-3. independently audit source guards, adjacency/state chaining, metrics, acceptance-gate mappings, output atomicity, and the execution lock;
-4. only after review acceptance may the user run the single exact 600-OOS structural evaluation locally.
+1. independently audit PR #43 against the frozen preregistration and machine contract;
+2. review source projection, contract/source identity, exact adjacency/state chaining, metric definitions, acceptance-gate mapping, output fail-closed behavior, and CLI lock ordering;
+3. only after audit acceptance may the single exact 600-OOS structural evaluation be run locally.
