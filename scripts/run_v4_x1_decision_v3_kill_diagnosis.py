@@ -12,9 +12,11 @@ if str(SRC_ROOT) not in sys.path:
 
 from idx_trade.decision_v3_kill_diagnosis import (  # noqa: E402
     DecisionV3KillDiagnosisError,
-    run_kill_diagnosis,
     verify_kill_diagnosis_prereg,
     write_kill_diagnosis_artifacts,
+)
+from idx_trade.decision_v3_kill_runner import (  # noqa: E402
+    run_kill_diagnosis_safe,
 )
 from idx_trade.decision_v2_structural_replay import sha256_file  # noqa: E402
 
@@ -53,7 +55,7 @@ def main() -> int:
             "DECISION_V3_KILL_DIAGNOSIS_NOT_REVIEW_AUTHORIZED"
         )
     verify_kill_diagnosis_prereg(REPO_ROOT)
-    result = run_kill_diagnosis(
+    result = run_kill_diagnosis_safe(
         structural_root=args.structural_root,
         historical_root=args.historical_root,
     )
