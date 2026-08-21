@@ -44,7 +44,6 @@
     "How do their entry sessions differ in pre-fill mandatory-exit stress and cross-sectional Top10/Top20 overlap?",
     "Does the next-session severe-exit gap persist within fixed current-rank, previous-rank, persistence, and session-stress reporting strata?",
     "Does the gap persist when restricted to severe-exit sessions only?",
-    "On sessions where both A_SOFT and A_VACANCY entries occur, does the durability gap persist within the identical session context?",
     "Is eventual severe-exit incidence directionally consistent with the next-session structural result?"
   ],
   "fixed_reporting_strata": {
