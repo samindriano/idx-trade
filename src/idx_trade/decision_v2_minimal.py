@@ -65,10 +65,21 @@ class DecisionV2ShadowState:
     as_of_session_date: str | None
     positions: tuple[str, ...]
     source: str = SHADOW_STATE_SOURCE
+    rule_id: str | None = None
 
     @classmethod
     def empty(cls) -> "DecisionV2ShadowState":
         return cls(as_of_session_date=None, positions=())
+
+    @classmethod
+    def from_plan(cls, plan: "DecisionV2Plan") -> "DecisionV2ShadowState":
+        if not isinstance(plan, DecisionV2Plan):
+            raise DecisionV2Error("DECISION_V2_PLAN_TYPE_REQUIRED_FOR_SHADOW_STATE")
+        return cls(
+            as_of_session_date=plan.decision_session_date,
+            positions=plan.target_positions,
+            rule_id=plan.rule_id,
+        )
 
 
 @dataclass(frozen=True)
@@ -116,6 +127,12 @@ class ChallengerObservation:
         return self.state == "QUALIFIED_CHALLENGER"
 
 
+CapacityState = Literal[
+    "FULL",
+    "UNFILLED_NO_QUALIFIED_CHALLENGER",
+]
+
+
 @dataclass(frozen=True)
 class DecisionV2Plan:
     decision_session_date: str
@@ -127,6 +144,7 @@ class DecisionV2Plan:
     incumbent_observations: tuple[IncumbentObservation, ...]
     challenger_observations: tuple[ChallengerObservation, ...]
     unfilled_slots: int
+    capacity_state: CapacityState
     rule_id: str
     bootstrap: bool = False
 
@@ -194,8 +212,12 @@ def _validate_shadow_state(
     if state.as_of_session_date is None:
         if state.positions:
             raise DecisionV2Error("DECISION_V2_INITIAL_STATE_MUST_BE_EMPTY")
+        if state.rule_id not in {None, profile.rule_id}:
+            raise DecisionV2Error("DECISION_V2_BOOTSTRAP_RULE_ID_MISMATCH")
     else:
         _parse_date(state.as_of_session_date, "DECISION_V2_SHADOW_DATE_INVALID")
+        if state.rule_id != profile.rule_id:
+            raise DecisionV2Error("DECISION_V2_SHADOW_RULE_ID_MISMATCH")
     return tuple(sorted(state.positions))
 
 
@@ -256,6 +278,7 @@ def plan_decision_v2_minimal(
             )
             for ticker in selected
         )
+        unfilled_slots = profile.target_count_max - len(selected)
         return DecisionV2Plan(
             decision_session_date=current.session_date,
             current_shadow_positions=(),
@@ -265,7 +288,12 @@ def plan_decision_v2_minimal(
             hold_tickers=(),
             incumbent_observations=(),
             challenger_observations=(),
-            unfilled_slots=profile.target_count_max - len(selected),
+            unfilled_slots=unfilled_slots,
+            capacity_state=(
+                "FULL"
+                if unfilled_slots == 0
+                else "UNFILLED_NO_QUALIFIED_CHALLENGER"
+            ),
             rule_id=profile.rule_id,
             bootstrap=True,
         )
@@ -457,6 +485,11 @@ def plan_decision_v2_minimal(
     )
     buy_intents.sort(key=lambda intent: ((intent.rank_consensus or 10**9), intent.ticker))
 
+    unfilled_slots = profile.target_count_max - len(target)
+    capacity_state: CapacityState = (
+        "FULL" if unfilled_slots == 0 else "UNFILLED_NO_QUALIFIED_CHALLENGER"
+    )
+
     return DecisionV2Plan(
         decision_session_date=current.session_date,
         current_shadow_positions=current_positions,
@@ -466,7 +499,8 @@ def plan_decision_v2_minimal(
         hold_tickers=hold,
         incumbent_observations=tuple(incumbent_observations),
         challenger_observations=challenger_observations,
-        unfilled_slots=profile.target_count_max - len(target),
+        unfilled_slots=unfilled_slots,
+        capacity_state=capacity_state,
         rule_id=profile.rule_id,
         bootstrap=False,
     )
