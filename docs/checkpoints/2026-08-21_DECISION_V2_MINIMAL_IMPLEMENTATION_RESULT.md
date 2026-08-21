@@ -47,7 +47,7 @@ The separate exact-adjacent-session requirement remains a replay-runner invarian
 
 Draft implementation PR: `#41` — `Implement Decision V2 minimal state machine`.
 
-Remediated implementation HEAD validated by GitHub Actions: `32af46172a686fdf407e1026ad4acdab12edc355`.
+Remediated implementation code HEAD validated by GitHub Actions: `32af46172a686fdf407e1026ad4acdab12edc355`.
 
 Full repository pytest result:
 
@@ -76,9 +76,11 @@ The implementation remains locked to the preregistered V4-X1 profile:
 
 ## Next boundary
 
-The implementation/audit-remediation code is ready for a final small-diff re-audit. If that passes, the next separately gated work is preparation of the outcome-blind exact 600-OOS structural replay runner with:
+Audit remediation is accepted. The next separately gated work is preparation of the outcome-blind exact 600-OOS structural replay runner with:
 
 - pinned source manifest/score hashes;
 - exact adjacent score-session ledger enforcement;
 - bound shadow-state lineage;
 - all preregistered mechanical acceptance gates encoded before the first replay.
+
+The replay itself remains unexecuted and should not be run until that runner is implemented and reviewed.
