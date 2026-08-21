@@ -6,6 +6,13 @@ on:
       - integration/forward-ca-attestation-v1
     paths:
       - '.github/workflows/zapi-dividends-audit-v1.yml'
+  pull_request:
+    branches:
+      - research/idx-v4-x1-decision-v1
+    paths:
+      - '.github/workflows/zapi-dividends-audit-v1.yml'
+      - 'scripts/probe_zapi_idx_dividends_v1.py'
+      - 'scripts/review_zapi_idx_dividends_probe_v1.py'
   workflow_dispatch:
 
 permissions:
