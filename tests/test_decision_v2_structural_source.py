@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -8,16 +9,31 @@ import pytest
 from idx_trade.decision_v2_structural_replay import DecisionV2StructuralReplayError
 from idx_trade.decision_v2_structural_source import (
     ALLOWED_SCORE_COLUMNS,
-    EXPECTED_REPLAY_CONTRACT_SHA256,
+    EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256,
+    REPLAY_CONTRACT_RELATIVE_PATH,
     _read_projected_score_frame,
     verify_frozen_replay_contract,
 )
 
 
-def test_replay_contract_file_is_sha_pinned() -> None:
+def test_replay_contract_file_is_canonical_sha_pinned() -> None:
     path = verify_frozen_replay_contract(Path("."))
     assert path.name == "decision_v2_minimal_structural_replay_contract_v1.json"
-    assert len(EXPECTED_REPLAY_CONTRACT_SHA256) == 64
+    assert len(EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256) == 64
+
+
+def test_contract_pin_is_cross_platform_line_ending_invariant(tmp_path: Path) -> None:
+    payload = json.loads(
+        Path(REPLAY_CONTRACT_RELATIVE_PATH).read_text(encoding="utf-8")
+    )
+    target = tmp_path / REPLAY_CONTRACT_RELATIVE_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(payload, indent=2, sort_keys=False) + "\n"
+    target.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+
+    verified = verify_frozen_replay_contract(tmp_path)
+
+    assert verified == target.resolve()
 
 
 def test_projected_parquet_reader_never_loads_extra_label_or_return_columns(
