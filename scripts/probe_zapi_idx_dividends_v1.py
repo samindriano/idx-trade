@@ -91,13 +91,18 @@ def _field_map(fields: list[dict[str, Any]]) -> dict[str, str]:
     return out
 
 
-def _select_params(fields: list[dict[str, Any]], code: str) -> tuple[dict[str, Any], str]:
-    """Build a bounded request from the live public catalog.
+def _select_params(
+    fields: list[dict[str, Any]],
+    code: str,
+    *,
+    year: int | None = None,
+    month: int | None = None,
+) -> tuple[dict[str, Any], str]:
+    """Build one bounded request from the live public catalog.
 
-    Dedicated corporate-action feeds are allowed to be global feeds. A ticker
-    filter is preferred but is not required. In global-feed mode the response
-    must be bounded by pagination and rows must carry ticker identity; the
-    offline reviewer enforces that before V1.1 can pass.
+    A known-positive year/month can be supplied for audit certification. When
+    supplied, both values are required and the live catalog must expose both
+    fields; the probe never silently drops an explicitly requested period.
     """
     names = _field_map(fields)
     params: dict[str, Any] = {}
@@ -109,9 +114,6 @@ def _select_params(fields: list[dict[str, Any]], code: str) -> tuple[dict[str, A
             scope_mode = "SERVER_TICKER_FILTER"
             break
     else:
-        # The public catalog uses `search` for an upstream code/company-name
-        # filter. Treat it as server-side scoping; otherwise a bounded empty
-        # global page cannot establish endpoint semantics for the target.
         if "search" in names:
             params[names["search"]] = code
             scope_mode = "SERVER_TICKER_FILTER"
@@ -135,8 +137,21 @@ def _select_params(fields: list[dict[str, Any]], code: str) -> tuple[dict[str, A
     elif "pagenumber" in names:
         params[names["pagenumber"]] = 1
 
-    # If the endpoint exposes a date range, keep the audit narrow and current.
-    # This is not a semantic requirement; it is only a request-volume bound.
+    if (year is None) != (month is None):
+        raise RuntimeError("ZAPI_DIVIDENDS_EXPLICIT_PERIOD_REQUIRES_YEAR_AND_MONTH")
+    if year is not None and month is not None:
+        if "year" not in names or "month" not in names:
+            raise RuntimeError("ZAPI_DIVIDENDS_CATALOG_MISSING_EXPLICIT_PERIOD_FIELDS")
+        if not (1990 <= int(year) <= 2100):
+            raise RuntimeError("ZAPI_DIVIDENDS_YEAR_OUT_OF_RANGE")
+        if not (1 <= int(month) <= 12):
+            raise RuntimeError("ZAPI_DIVIDENDS_MONTH_OUT_OF_RANGE")
+        params[names["year"]] = int(year)
+        params[names["month"]] = int(month)
+        return params, scope_mode
+
+    # Generic exploratory mode only. Production admission should prefer an
+    # independently pinned known-positive period when validating semantics.
     today = datetime.now(timezone.utc).date()
     start_date = today - timedelta(days=730)
     if "datefrom" in names:
@@ -163,12 +178,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Bounded audit probe for Zapi IDX /dividends.")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--code", default="BBCA", help="Preferred ticker when the endpoint exposes a server-side ticker filter")
+    parser.add_argument("--year", type=int, default=None, help="Explicit known-positive dividend year; must be paired with --month")
+    parser.add_argument("--month", type=int, default=None, help="Explicit known-positive dividend month; must be paired with --year")
     parser.add_argument("--timeout", type=int, default=30)
     args = parser.parse_args()
 
     code = str(args.code).strip().upper()
     if not code or not code.isalnum() or len(code) > 12:
         raise SystemExit("ZAPI_DIVIDENDS_PROBE_CODE_INVALID")
+    if (args.year is None) != (args.month is None):
+        raise SystemExit("ZAPI_DIVIDENDS_EXPLICIT_PERIOD_REQUIRES_YEAR_AND_MONTH")
     api_key = os.environ.get("ZAPI_API_KEY", "").strip()
     if not api_key:
         raise SystemExit("ZAPI_DIVIDENDS_PROBE_API_KEY_MISSING")
@@ -186,13 +205,13 @@ def main() -> int:
         "catalog_schema_url": CATALOG_SCHEMA_URL,
         "endpoint_url": ENDPOINT_URL,
         "preferred_target_code": code,
+        "requested_year": args.year,
+        "requested_month": args.month,
         "authenticated_request_count": 0,
         "retry_count": 0,
         "api_key_persisted": False,
     }
 
-    # Public no-auth discovery first. Stop before spending an authenticated
-    # request if the live endpoint cannot be bounded by page size.
     try:
         cat_status, cat_headers, cat_body = _fetch(CATALOG_SCHEMA_URL, timeout=args.timeout)
     except URLError as exc:
@@ -210,7 +229,7 @@ def main() -> int:
         catalog_payload = _parse_json(cat_body, "ZAPI_DIVIDENDS_CATALOG_JSON_INVALID")
         fields = _catalog_fields(catalog_payload)
         manifest["catalog_field_names"] = [str(x.get("name") or "") for x in fields]
-        params, scope_mode = _select_params(fields, code)
+        params, scope_mode = _select_params(fields, code, year=args.year, month=args.month)
     except Exception as exc:
         manifest["status"] = "CATALOG_SCHEMA_UNUSABLE_NO_AUTH_REQUEST_MADE"
         manifest["error"] = str(exc)
@@ -242,6 +261,7 @@ def main() -> int:
 
     print(root / "PROBE_MANIFEST.json")
     print(f"scope_mode={scope_mode}")
+    print(f"params={json.dumps(params, sort_keys=True)}")
     print(f"http_status={status}")
     print(f"raw_sha256={manifest['raw_sha256']}")
     print("API key was used only from process memory and was not written to the probe artifacts.")
