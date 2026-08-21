@@ -1,12 +1,6 @@
 name: Stockbit Stream prospective archive
 
 on:
-  # Temporary one-shot validation trigger. Remove after the first successful V2 smoke.
-  push:
-    branches: [main]
-    paths:
-      - "src/idx_trade/stockbit_stream_capture_v2.py"
-      - "scripts/run_stockbit_stream_capture_v2.py"
   schedule:
     - cron: "47 1 * * 1-5"  # 08:47 WIB
     - cron: "7 5 * * 1-5"   # 12:07 WIB
@@ -19,16 +13,16 @@ on:
         type: choice
         options: [pre_open, midday, after_close]
       top_n:
-        description: Routine universe size
+        description: Manual universe size; routine schedule is frozen at 200
         required: false
         default: "200"
 
 permissions:
-  contents: write  # temporary: writes only sanitized smoke evidence on the one-shot push run
+  contents: read
 
 concurrency:
   group: stockbit-stream-prospective-capture
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   capture:
@@ -59,10 +53,7 @@ jobs:
       - name: Resolve capture parameters
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            slot="validation"
-            top_n="5"
-          elif [[ -n "$DISPATCH_SLOT" ]]; then
+          if [[ -n "$DISPATCH_SLOT" ]]; then
             slot="$DISPATCH_SLOT"
             top_n="${DISPATCH_TOP_N:-200}"
           else
@@ -83,15 +74,4 @@ jobs:
           python scripts/run_stockbit_stream_capture_v2.py \
             --identity-csv config/stockbit_stream_universe_v1.csv \
             --slot "$STOCKBIT_STREAM_SLOT" \
-            --top-n "$STOCKBIT_STREAM_TOP_N" | tee /tmp/stockbit-stream-result.json
-      - name: Record sanitized one-shot smoke evidence
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          mkdir -p docs/runtime
-          cp /tmp/stockbit-stream-result.json docs/runtime/stockbit_stream_v2_smoke_last.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/runtime/stockbit_stream_v2_smoke_last.json
-          git commit -m "chore(stream): record V2 cloud smoke evidence"
-          git push
+            --top-n "$STOCKBIT_STREAM_TOP_N"
