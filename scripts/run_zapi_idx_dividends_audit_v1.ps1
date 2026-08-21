@@ -1,5 +1,7 @@
 param(
     [string]$Code = "BBCA",
+    [int]$Year = 0,
+    [int]$Month = 0,
     [string]$OutputDir = ""
 )
 
@@ -29,9 +31,20 @@ function Resolve-Python {
     throw "Python 3 not found. The previous Forward-CA setup normally installs uv/Python; rerun setup_idx_bei_forward_ca_provider.ps1 if needed."
 }
 
+if (($Year -eq 0) -xor ($Month -eq 0)) {
+    throw "Year and Month must be supplied together, or both omitted."
+}
+if ($Year -ne 0 -and ($Year -lt 1990 -or $Year -gt 2100)) {
+    throw "Year out of supported range: $Year"
+}
+if ($Month -ne 0 -and ($Month -lt 1 -or $Month -gt 12)) {
+    throw "Month out of supported range: $Month"
+}
+
 $explicitOutput = -not [string]::IsNullOrWhiteSpace($OutputDir)
 if (-not $explicitOutput) {
-    $baseOutput = "D:\Documents\Project\idx-zapi-dividends-probe-$anchor-v1"
+    $periodSuffix = if ($Year -ne 0) { "-$Year-$('{0:D2}' -f $Month)" } else { "" }
+    $baseOutput = "D:\Documents\Project\idx-zapi-dividends-probe-$anchor$periodSuffix-v1"
     $OutputDir = $baseOutput
     $revision = 2
     while (Test-Path -LiteralPath $OutputDir) {
@@ -39,7 +52,7 @@ if (-not $explicitOutput) {
         $revision += 1
     }
 }
-elseif (Test-Path -LiteralPath $OutputDir) {
+elif (Test-Path -LiteralPath $OutputDir) {
     throw "Explicit audit output already exists and will not be overwritten: $OutputDir"
 }
 
@@ -49,10 +62,16 @@ if (-not (Test-Path -LiteralPath $review)) { throw "Reviewer script missing: $re
 Write-Host "=== Zapi IDX /dividends bounded audit V1 ==="
 Write-Host "Repo root:         $repoRoot"
 Write-Host "Preferred ticker:  $Code"
+if ($Year -ne 0) {
+    Write-Host "Known-positive:     $Year-$('{0:D2}' -f $Month)"
+}
+else {
+    Write-Host "Known-positive:     not explicitly pinned"
+}
 Write-Host "Output:            $OutputDir"
 Write-Host ""
 Write-Host "Audit only: no V1.1 promotion, no paper-state mutation, no retries."
-Write-Host "Ticker filtering is used when the live catalog exposes it; otherwise a small paginated global feed is audited and ticker identity is verified in the rows."
+Write-Host "Ticker filtering uses the live catalog search/code field. A supplied Year/Month is forwarded exactly and recorded in the manifest."
 Write-Host "The runner performs one public catalog-schema request and at most one authenticated /dividends request."
 Write-Host ""
 
@@ -80,9 +99,14 @@ $exe = [string]$python[0]
 $prefix = @()
 if ($python.Count -gt 1) { $prefix = @($python[1..($python.Count - 1)]) }
 
+$probeArgs = @($probe, "--output-dir", $OutputDir, "--code", $Code)
+if ($Year -ne 0) {
+    $probeArgs += @("--year", [string]$Year, "--month", [string]$Month)
+}
+
 try {
     Write-Host "Running bounded live probe..."
-    & $exe @prefix $probe --output-dir $OutputDir --code $Code
+    & $exe @prefix @probeArgs
     $probeExit = $LASTEXITCODE
 
     $manifest = Join-Path $OutputDir "PROBE_MANIFEST.json"
