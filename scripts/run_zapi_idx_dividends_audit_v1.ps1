@@ -52,7 +52,7 @@ if (-not $explicitOutput) {
         $revision += 1
     }
 }
-elif (Test-Path -LiteralPath $OutputDir) {
+elseif (Test-Path -LiteralPath $OutputDir) {
     throw "Explicit audit output already exists and will not be overwritten: $OutputDir"
 }
 
