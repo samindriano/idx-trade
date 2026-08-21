@@ -77,7 +77,8 @@ def test_capture_v2_avoids_per_post_hot_path_objects(tmp_path: Path):
     client = Client()
     result = capture_stream_v2(client=client, archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
     assert result["status"] == "DATA_READY"
-    assert client.calls == ["BBRI", "BBCA"]
+    assert sorted(client.calls) == ["BBCA", "BBRI"]
+    assert result["capture_order_rule"] == "SHA256_DATE_SLOT_UNIVERSE_TICKER"
     assert result["normalized_post_rows"] == 2
     assert not (tmp_path / "posts").exists()
     assert len(list((tmp_path / "raw").rglob("*.json"))) == 2
