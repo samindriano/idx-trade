@@ -66,6 +66,7 @@
   "refill_decoupling": {
     "severe_exit_session_definition": "at_least_one_start_of_session_incumbent_is_classified_SEVERE_DETERIORATION_EXIT_before_any_refill_or_soft_replacement",
     "severe_exit_session_flag_is_circular": false,
+    "restriction_applies_to_all_vacancies_on_flagged_session_regardless_of_vacancy_origin": true,
     "on_severe_exit_session_vacancy_priority": ["A_CORE"],
     "on_nonsevere_session_vacancy_priority": ["A_CORE", "B_NEAR", "C_DISTANT"],
     "allow_temporary_underfill": true,
