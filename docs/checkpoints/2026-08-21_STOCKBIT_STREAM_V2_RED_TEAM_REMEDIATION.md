@@ -10,7 +10,7 @@ Scope is acquisition/archive infrastructure only. No model, sentiment fit, targe
 
 The initial live GitHub Actions → Zapi → private R2 smoke proved only the happy path. Before promotion, an independent adversarial review attempted to falsify the data-integrity, PIT, retry, quota, storage, workflow-security, and capture-design assumptions.
 
-PR #35 must not be promoted in its original form. The hardened implementation in this audit branch supersedes its unsafe assumptions pending review/promotion.
+PR #35 must not be promoted in its original form. The hardened implementation in this audit branch supersedes its unsafe assumptions pending review/promotion. Earlier V2 handoff/checkpoint text that said `READY_FOR_ROUTINE_PROMOTION` has been explicitly rewritten as superseded so future handoffs cannot accidentally reactivate the pre-audit design.
 
 ## Confirmed failures found and remediated
 
@@ -36,6 +36,7 @@ PR #35 must not be promoted in its original form. The hardened implementation in
 20. Identity-roster age was not explicit. Runtime universe now records identity source SHA, roster as-of date, age, and status.
 21. Production runner initially did not wire the manifest roster as-of date into the runtime. It now consumes `derivation.as_of_panel_date` from the hash-verified universe manifest.
 22. A stale identity roster could otherwise run indefinitely. Production runner now fails closed once roster age exceeds the frozen 35-day maximum.
+23. Legacy documentation still authorized unsafe promotion and metadata-only collision checking after code was hardened. Those handoff/checkpoint documents are now explicitly superseded and point to this red-team lineage.
 
 ## Additional hardening
 
@@ -48,11 +49,11 @@ PR #35 must not be promoted in its original form. The hardened implementation in
 
 ## Verification
 
-Code/CI checkpoint: `54b4ed8d72a7f2f03f8cc3521e99be0b90c14441` plus subsequent documentation-only trigger updates.
+Code/CI checkpoint: `54b9c31f71315267a00ca393c776bbdbddb9e7b0` plus subsequent documentation-only lineage corrections.
 
 Dedicated GitHub Actions red-team run:
 
-- Run: `32453755923`
+- Run: `32453947316`
 - Result: SUCCESS
 - Adversarial suite: **26 passed / 26 total**
 
