@@ -82,5 +82,6 @@ jobs:
           set -o pipefail
           python scripts/run_stockbit_stream_capture_v2.py \
             --identity-csv config/stockbit_stream_universe_v1.csv \
+            --identity-manifest config/stockbit_stream_universe_v1.json \
             --slot "$STOCKBIT_STREAM_SLOT" \
             --top-n "$STOCKBIT_STREAM_TOP_N"
