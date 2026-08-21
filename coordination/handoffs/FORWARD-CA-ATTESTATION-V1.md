@@ -5,7 +5,7 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `ZAPI_DIVIDENDS_NO_GO_COMPANY_PROFILE_PARITY_AUDIT_PREPARED_V1_1_BLOCKED`
+status: `DIRECT_IDX_DIVIDEND_PROBE_PREPARED_V1_1_BLOCKED_PENDING_LIVE_PARITY`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope
@@ -18,6 +18,8 @@ Prospective, outcome-blind corporate-action attestation for paper Execution V1. 
 - pinned commit: `75d6c0f74fa360d225794c70c383348977de6798`
 - upstream: direct `https://www.idx.co.id/primary`
 - isolated provider environment managed by `uv` / Python 3.13
+
+Do not fork or modify `idx-bei` for dividend business logic. It remains a pinned transport/Cloudflare layer. Dividend normalization, state, reconciliation, hashing and accounting belong in `idx-trade`.
 
 ## Frozen live calendar schema
 
@@ -38,12 +40,9 @@ Production `EXPECTED_CALENDAR_SCHEMA_FINGERPRINT` is pinned to that value. Futur
 2. `/NewsAnnouncement/GetAllAnnouncement`
 3. `/Home/GetCalendar`
 
-Both `POST_EOD` and `PREOPEN` captures are required with identical ticker/date scope. Raw bytes and source-chain hashes are verified before the final attestation.
+Both `POST_EOD` and `PREOPEN` captures are required with identical ticker/date scope. Raw bytes and source-chain hashes are verified before final attestation.
 
-Execution admission remains only:
-`NO_RELEVANT_EVENTS`
-
-Any relevant event, source incompleteness, hash mismatch, provider-pin mismatch or schema drift blocks normal execution and requires reconciliation.
+Execution admission remains only `NO_RELEVANT_EVENTS`. Any relevant event, incomplete source, hash/provider mismatch or schema drift blocks blind execution until reconciled.
 
 ## Cash dividend accounting
 
@@ -53,88 +52,97 @@ Preregistered contract:
 Required semantics:
 
 - entitlement snapshot = paper shares at EOD cum date after same-session execution;
-- on ex date create a gross dividend receivable asset;
+- on ex date create gross dividend receivable;
 - receivable contributes to total-return NAV but is not spendable cash;
-- selling on ex date does not erase already-earned receivable;
-- buying first on ex date does not receive that dividend;
-- on payment date transfer receivable to cash without recognizing PnL twice;
+- sell on ex date preserves already-earned receivable;
+- buy first on ex date gets no prior entitlement;
+- payment date moves receivable to cash without double-counting PnL;
 - dividend tax/withholding remains explicit/unresolved.
 
 Automatic dividend reconciliation remains `NOT_IMPLEMENTED_FAIL_CLOSED`.
 
-## Alpha boundary
+## Dividend terms source — direct IDX pivot
 
-Do not adjust V4-X1 price inputs/ranks for dividends through this lane. V4-X1 is frozen. Ex-date normalization, dividend-yield features, days-to-cum/ex or event-aware entry rules require a separately preregistered alpha/overlay challenger.
+A first-party structured IDX dividend feed was identified:
 
-## Zapi dedicated `/dividends` — final NO-GO
+`GET /DigitalStatistic/GetApiDataPaginated?urlName=LINK_DIVIDEND`
 
-The corrected, decision-complete known-positive request was:
+with monthly parameters `periodYear`, `periodMonth`, `periodType=monthly`, bounded `pageSize/pageNumber`, and structured rows containing at minimum:
 
-`GET /v1/finance:idx/dividends?search=BBCA&year=2026&month=3&page=1&length=20`
+- `code`
+- `cashDividend`
+- `cumDividend`
+- `exDividend`
+- `recordDate`
+- `paymentDate`
 
-Observed 2026-08-21:
+Independent implementations reviewed before admission:
 
-- HTTP 200;
-- server ticker filter active;
-- provider/dataset = `idx` / `dividends`;
-- `count=0`, `total=0`, `hasMore=false`, `items=[]`;
-- raw SHA-256 `d65efaeb59ba9803e232cc04717c7bb795765f1a4b2c4db931b0c54b66aab1ab`;
-- review `FAIL_NOT_ELIGIBLE_FOR_V1_1`;
-- no warnings.
+- `NeaByteLab/IDX-API` commit `910b8db70893b93920a1bba331d00a1a245907c6`;
+- `rakasatriaefendi/Si-Cuan-Apps` commit `0b78bcaf04705f8eeea34cde05a7a394478c20c8`.
 
-The period was independently known positive: BCA official history shows final FY2025 dividend Rp281/share with regular-market cum 2026-03-27, ex 2026-03-30, record 2026-03-31, payment 2026-04-08.
+The second implementation additionally demonstrates currency/type normalization, source fingerprinting, duplicate handling and validation warnings.
 
-Decision:
+Prepared direct-IDX admission probe:
 
-`ZAPI_DIVIDENDS_ENDPOINT_NO_GO_FOR_FORWARD_CA_V1_1`
+- `scripts/probe_forward_ca_idx_dividend_v1.py`
+- `scripts/review_forward_ca_idx_dividend_probe_v1.py`
+- `scripts/run_forward_ca_idx_dividend_probe_v1.ps1`
+- checkpoint: `docs/checkpoints/2026-08-21_FORWARD_CA_DIRECT_IDX_DIVIDEND_ENGINE_PREP.md`
 
-Do not spend more requests trying to rescue this endpoint unless Zapi materially changes the contract/data and a new versioned audit is authorized.
+Known-positive preregistered parity event:
 
-Checkpoint:
-`docs/checkpoints/2026-08-21_ZAPI_DIVIDENDS_NO_GO_COMPANY_PROFILE_PIVOT.md`
-
-## Zapi `company-profile` pivot
-
-Current public Zapi reference documents:
-
-`GET /v1/finance:idx/company-profile?code=BBCA`
-
-with `dividends[]` fields including `cashPerShare`, `cumDate`, `exDate`, `recordDate`, `paymentDate`, `bookYear`, and `type`.
-
-A strong exact parity target is preregistered from BCA's official June 2026 interim-dividend announcement:
-
-- ticker BBCA;
-- Rp20/share;
-- cum 2026-06-15;
-- ex 2026-06-17;
-- record 2026-06-18;
-- payment 2026-06-26.
-
-Prepared audit-only entry points:
-
-- `scripts/probe_zapi_idx_company_profile_dividends_v1.py`
-- `scripts/review_zapi_idx_company_profile_dividends_v1.py`
-- `scripts/run_zapi_idx_company_profile_dividend_audit_v1.ps1`
-- `tests/test_zapi_idx_company_profile_dividends_harness.py`
+- BBCA
+- period 2026-03
+- Rp281/share
+- cum 2026-03-27
+- ex 2026-03-30
+- record 2026-03-31
+- payment 2026-04-08
 
 Hard PASS:
-`PASS_ELIGIBLE_FOR_V1_1_COMPANY_PROFILE_HELPER`
+`PASS_DIRECT_IDX_DIVIDEND_SOURCE_ELIGIBLE_FOR_V1_1`
 
-The audit performs exactly one authenticated BBCA request, zero retries, hashes raw bytes, verifies provider/dataset, requires complete dividend semantics, and requires exact match to the official June 2026 BCA event.
+The probe performs exactly one direct official IDX request through the pinned provider, zero retries, immutable raw capture + SHA, then offline exact parity review. It does not mutate paper state or promote V1.1 itself.
 
-Even on PASS, direct IDX remains authority. Zapi is structured extraction/parity only; disagreement fails closed.
+## Announcement/publication evidence remains mandatory
 
-## Forward CA V1.1
+`LINK_DIVIDEND` certifies structured terms but does not replace disclosure-time evidence. Existing direct IDX announcement capture remains the source for publication timestamp, early announcement detection, attachments, revisions and cancellation evidence.
 
-Current status:
-`NOT_AUTHORIZED`
+Target dividend state machine after source admission:
 
-Promotion sequence:
+1. `ANNOUNCED_PENDING_TERMS`
+2. `TERMS_CERTIFIED`
+3. `ENTITLED`
+4. `RECEIVABLE`
+5. `PAID`
+6. `REVISED_OR_CONFLICTED`
 
-1. run the prepared company-profile parity audit;
-2. only on PASS, implement V1.1 structured helper + cash-dividend event certification;
-3. implement/test dividend receivable lifecycle and idempotency;
-4. then split/reverse-split quantity transforms;
-5. then wire recurring POST_EOD/PREOPEN Forward CA capture into Forward Paper orchestration.
+Any missing/conflicting official evidence fails closed.
 
-Until an event-specific transformation is implemented, detected CA continues to block blind execution.
+## Alpha boundary and prospective research archive
+
+Dividend announcement information may be valuable alpha data: amount/yield surprise, sessions to cum/ex, pre-cum run-up and post-ex behavior. Archive it prospectively with publication timestamps and immutable source hashes, but **do not modify frozen V4-X1**.
+
+Any dividend-aware entry rule, price normalization, indicated-yield feature or event overlay must be a separately preregistered V4-X2/successor experiment.
+
+## Zapi status
+
+Dedicated Zapi `/dividends` is final `NO_GO` for V1.1 after a corrected known-positive BBCA March 2026 request returned HTTP 200 but `total=0/items=[]`.
+
+Do not spend further requests trying to rescue that endpoint absent a material Zapi version change.
+
+Zapi `company-profile` audit tooling remains available but is now **optional parity only** and is not required to unblock Direct IDX Dividend V1.1.
+
+## Forward CA V1.1 promotion sequence
+
+Current status: `NOT_AUTHORIZED`.
+
+1. run the direct IDX `LINK_DIVIDEND` known-positive probe;
+2. only on PASS, add `dividend_terms` as an official Forward CA capture/evidence leg;
+3. normalize deterministic dividend event IDs/source fingerprints and reconcile announcement + calendar evidence;
+4. implement/test entitlement → receivable → payment lifecycle, restart/idempotency and revisions;
+5. include receivables in NAV/state hash but exclude from spendable cash before payment;
+6. then implement split/reverse-split transforms and recurring Forward Paper orchestration.
+
+Until event-specific reconciliation is implemented, detected CA continues to block blind execution.
