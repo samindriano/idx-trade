@@ -8,6 +8,6 @@ Purpose: outcome-blind descriptive diagnosis restricted to V3 sessions containin
 
 Frozen parent manifest: `d17f009df762678734d3f073419d44b707d55ba6dd3f25627e332438c9a7c224`.
 
-Contract canonical SHA-256: `a7583517a6394d03a0aeae52692dbfc6ec5db56f87f846d761633dfdc6bb961f`.
+Contract canonical SHA-256: `6089bc20592a494820fdf9e63627536b4443577a22aeea13eaa2fd6fa7070953`.
 
 Boundaries: no returns/PnL, no fresh/protected outcomes, no provider/network, no refit, no policy simulation, no threshold sweep, no causal claim, no paper/live activation.
