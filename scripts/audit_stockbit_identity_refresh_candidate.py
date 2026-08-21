@@ -182,7 +182,7 @@ def main() -> int:
         raise IdentityRefreshError("current Jakarta date precedes pinned as-of")
 
     securities, securities_prov = fetch_offset_dataset(api_key, "securities", "securities")
-    companies, companies_prov = fetch_offset_dataset(api_key, "companies", "companies")
+    companies, companies_prov = fetch_offset_dataset(api_key, "companies", "listed-companies")
 
     # Inclusive start month is deliberate: it catches a listing-status event that
     # was already effective by the prior snapshot but was missing from that snapshot.
