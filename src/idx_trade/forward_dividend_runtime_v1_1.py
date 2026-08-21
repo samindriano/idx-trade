@@ -409,6 +409,110 @@ def registered_certified_events(
     return tuple(row.event for row in normalized)
 
 
+def _verify_registry_append_only(
+    parent_rows: Sequence[RegisteredDividendEvidence],
+    current_rows: Sequence[RegisteredDividendEvidence],
+) -> None:
+    parent = {
+        row.event.event_id: row
+        for row in normalize_certified_dividend_registry(parent_rows)
+    }
+    current = {
+        row.event.event_id: row
+        for row in normalize_certified_dividend_registry(current_rows)
+    }
+    missing = sorted(set(parent) - set(current))
+    if missing:
+        raise DecisionV1Error(
+            f"DIVIDEND_V1_1_RUNTIME_REGISTRY_NOT_APPEND_ONLY:{missing}"
+        )
+    for event_id, row in parent.items():
+        if current[event_id] != row:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_REGISTRY_HISTORY_CHANGED:{event_id}"
+            )
+
+
+def _verify_ledger_registry_binding(
+    ledger: dividend.DividendLedger,
+    registry: Sequence[RegisteredDividendEvidence],
+) -> None:
+    normalized_ledger = dividend.normalize_dividend_ledger(ledger)
+    events = {
+        row.event.event_id: row.event
+        for row in normalize_certified_dividend_registry(registry)
+    }
+    for entitlement in normalized_ledger.entitlements:
+        event = events.get(entitlement.event_id)
+        if event is None:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_LEDGER_EVENT_NOT_REGISTERED:{entitlement.event_id}"
+            )
+        expected = dividend.PaperDividendEntitlement(
+            event_id=event.event_id,
+            ticker=event.ticker,
+            entitled_shares=entitlement.entitled_shares,
+            gross_dividend_per_share_idr=event.gross_dividend_per_share_idr,
+            cum_date=event.cum_date,
+            ex_date=event.ex_date,
+            record_date=event.record_date,
+            payment_date=event.payment_date,
+            source_evidence_sha256=event.source_evidence_sha256,
+        )
+        if dividend._validate_entitlement(expected) != entitlement:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_LEDGER_EVENT_MISMATCH:{entitlement.event_id}"
+            )
+
+
+def _verify_ledger_progression(
+    parent_ledger: dividend.DividendLedger,
+    current_ledger: dividend.DividendLedger,
+) -> None:
+    parent = dividend.normalize_dividend_ledger(parent_ledger)
+    current = dividend.normalize_dividend_ledger(current_ledger)
+    parent_ent = {row.event_id: row for row in parent.entitlements}
+    current_ent = {row.event_id: row for row in current.entitlements}
+    parent_recv = {row.event_id: row for row in parent.receivables}
+    current_recv = {row.event_id: row for row in current.receivables}
+    parent_set = {row.event_id: row for row in parent.settlements}
+    current_set = {row.event_id: row for row in current.settlements}
+
+    for event_id, row in parent_ent.items():
+        if current_ent.get(event_id) != row:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_ENTITLEMENT_HISTORY_CHANGED:{event_id}"
+            )
+    for event_id, row in parent_set.items():
+        if current_set.get(event_id) != row:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_SETTLEMENT_HISTORY_CHANGED:{event_id}"
+            )
+    for event_id, row in parent_recv.items():
+        if current_recv.get(event_id) == row:
+            continue
+        settlement = current_set.get(event_id)
+        if settlement is None:
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_RECEIVABLE_DISAPPEARED:{event_id}"
+            )
+        if (
+            settlement.ticker != row.ticker
+            or settlement.entitled_shares != row.entitled_shares
+            or not math.isclose(
+                settlement.gross_amount_idr,
+                row.gross_amount_idr,
+                rel_tol=0.0,
+                abs_tol=1e-6,
+            )
+            or settlement.payment_date != row.payment_date
+            or settlement.source_evidence_sha256 != row.source_evidence_sha256
+        ):
+            raise DecisionV1Error(
+                f"DIVIDEND_V1_1_RUNTIME_RECEIVABLE_SETTLEMENT_MISMATCH:{event_id}"
+            )
+
+
 def runtime_state_hash(
     state: dividend.DividendAwarePaperState,
     registry: Sequence[RegisteredDividendEvidence],
@@ -456,6 +560,7 @@ def _snapshot_payload(
     base_payload = _paper_state_payload(state.base_state)
     ledger_payload = _ledger_payload(state.dividend_ledger)
     normalized_registry = normalize_certified_dividend_registry(registry)
+    _verify_ledger_registry_binding(state.dividend_ledger, normalized_registry)
 
     previous: dict[str, Any] | None = None
     if previous_snapshot is not None:
@@ -474,6 +579,14 @@ def _snapshot_payload(
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_MISSING")
         if _sha256_file(previous_snapshot.path) != previous_snapshot.file_sha256:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_SHA_CHANGED")
+        _verify_registry_append_only(
+            previous_snapshot.certified_dividend_registry,
+            normalized_registry,
+        )
+        _verify_ledger_progression(
+            previous_snapshot.state.dividend_ledger,
+            state.dividend_ledger,
+        )
         previous = {
             "path": str(previous_snapshot.path),
             "sha256": previous_snapshot.file_sha256,
@@ -612,6 +725,7 @@ def _load_runtime_snapshot(
     registry = normalize_certified_dividend_registry(
         tuple(_registered_from_payload(row) for row in registry_raw)
     )
+    _verify_ledger_registry_binding(ledger, registry)
 
     hashes = payload.get("hashes")
     if not isinstance(hashes, dict):
@@ -649,6 +763,14 @@ def _load_runtime_snapshot(
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_MISMATCH")
         if date.fromisoformat(parent.state.base_state.as_of_session_date) >= date.fromisoformat(session):
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_NOT_PRIOR")
+        _verify_registry_append_only(
+            parent.certified_dividend_registry,
+            registry,
+        )
+        _verify_ledger_progression(
+            parent.state.dividend_ledger,
+            ledger,
+        )
 
     return VerifiedDividendRuntimeSnapshot(
         path=resolved,
