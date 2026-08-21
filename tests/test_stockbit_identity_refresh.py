@@ -123,10 +123,14 @@ def test_base_requires_exact_securities_company_stock_ticker_equality() -> None:
 
 
 def test_non_stock_company_row_cannot_make_base_eligible() -> None:
-    row = comp("GOTOM")
-    row["EfekEmiten_Saham"] = False
+    gotom = comp("GOTOM")
+    gotom["EfekEmiten_Saham"] = False
     with pytest.raises(IdentityRefreshError, match="base ticker mismatch"):
-        build([sec("GOTOM")], [row], previous=set())
+        build(
+            [sec("BBCA"), sec("GOTOM")],
+            [comp("BBCA"), gotom],
+            previous={"BBCA"},
+        )
 
 
 def test_event_only_ticker_cannot_enter_without_both_base_sources() -> None:
@@ -179,6 +183,27 @@ def test_ipo_stock_event_can_explain_base_addition_but_non_stock_cannot() -> Non
     )
     assert blocked.unexplained_additions == ("NEWX",)
     assert blocked.activation_safe is False
+
+
+def test_later_stock_relisting_supersedes_older_delisting() -> None:
+    delisting = event_page(
+        "delistings",
+        [{"code": "RELI", "delistingDate": "2026-07-05"}],
+        month=7,
+    )
+    relisting = ipo_payload(
+        [{"code": "RELI", "listingDate": "2026-08-01", "securityType": "saham", "listingType": "relisting", "name": "RELI"}]
+    )
+    result = build(
+        [sec("RELI", "2026-08-01")],
+        [comp("RELI", "2026-08-01")],
+        previous=set(),
+        delistings=[delisting],
+        ipos=[relisting],
+    )
+    assert result.tickers == ("RELI",)
+    assert result.explained_additions == ("RELI",)
+    assert result.activation_safe is True
 
 
 def test_base_removal_requires_delisting_evidence_even_when_provider_drops_ticker() -> None:
