@@ -5,7 +5,7 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `ZAPI_DIVIDENDS_AUDIT_PREPARED_LIVE_PROBE_REQUIRED_V1_1_BLOCKED`
+status: `ZAPI_DIVIDENDS_AUDIT_HARNESS_FIXED_EXISTING_ARTIFACT_INCONCLUSIVE_V1_1_BLOCKED`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope
@@ -100,6 +100,26 @@ If the audit fails, do not create V1.1 from this endpoint. If it passes, V1.1 ma
 - Execution CA verifier: `src/idx_trade/v4_x1_execution_v1_verify.py`
 - config: `config/forward_ca_attestation_v1.json`
 - schema freeze checkpoint: `docs/checkpoints/2026-08-21_FORWARD_CA_ATTESTATION_V1_SCHEMA_FREEZE.md`
+
+## Audit result — 2026-08-21
+
+The existing external probe was reviewed offline. Its raw response is a valid
+nested `data` envelope with `provider=idx`, `dataset=dividends`, and explicit
+empty pagination (`page=1`, `nextPage=null`, `count=0`, `total=0`,
+`hasMore=false`, `items=[]`). However, the catalog exposes `search` as an
+upstream code/company filter and the existing request used only
+`page=1&length=20`. The request therefore does not establish the endpoint's
+ticker-scoped semantics for BBCA.
+
+The minimal harness remediation and offline result are recorded in:
+`docs/checkpoints/2026-08-21_ZAPI_IDX_DIVIDENDS_BOUNDED_AUDIT_RESULT.md`.
+Result handoff:
+`coordination/handoffs/FORWARD-CA-ATTESTATION-V1-ZAPI-DIVIDENDS-AUDIT-RESULT.md`.
+
+Final procedural verdict:
+`AUDIT_HARNESS_BUG_FIXED_REVIEW_EXISTING_ARTIFACT_AGAIN`.
+The endpoint remains unadmitted; Forward CA V1.1 remains blocked. No second
+authenticated request was made.
 
 ## Next lane action
 

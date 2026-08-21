@@ -64,8 +64,10 @@ def _shape_fingerprint(value: Any) -> str:
 
 
 def _unwrap(value: Any) -> Any:
-    if isinstance(value, dict) and "content" in value and value.get("content") is not None:
-        return value["content"]
+    if isinstance(value, dict):
+        for key in ("content", "data"):
+            if key in value and value.get(key) is not None:
+                return value[key]
     return value
 
 
@@ -190,7 +192,13 @@ def main() -> int:
         failures.append("REQUEST_NOT_BOUNDED_BY_SMALL_PAGE_SIZE")
 
     if scope_mode == "SERVER_TICKER_FILTER":
-        scoped = str(lower_params.get("code") or lower_params.get("ticker") or lower_params.get("symbol") or "").strip().upper()
+        scoped = str(
+            lower_params.get("code")
+            or lower_params.get("ticker")
+            or lower_params.get("symbol")
+            or lower_params.get("search")
+            or ""
+        ).strip().upper()
         if not preferred_target or scoped != preferred_target:
             failures.append("SERVER_TICKER_SCOPE_MISMATCH")
 
@@ -220,8 +228,10 @@ def main() -> int:
         catalog_field_names = {str(x).lower() for x in manifest.get("catalog_field_names", [])}
         if not ({"length", "limit", "pagesize"} & catalog_field_names):
             failures.append("CATALOG_HAS_NO_BOUNDED_PAGE_SIZE")
-        if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and ({"code", "ticker", "symbol"} & catalog_field_names):
+        if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and ({"code", "ticker", "symbol", "search"} & catalog_field_names):
             warnings.append("GLOBAL_MODE_USED_DESPITE_AVAILABLE_TICKER_FILTER")
+        if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and "search" in catalog_field_names:
+            failures.append("REQUEST_DID_NOT_USE_AVAILABLE_SEARCH_FILTER")
 
     response_headers = manifest.get("response_headers") if isinstance(manifest.get("response_headers"), dict) else {}
     content_type = str(response_headers.get("content-type") or "").lower()
@@ -302,7 +312,10 @@ def main() -> int:
     pagination_metadata: dict[str, Any] = {}
     for obj in (raw_payload, core):
         if isinstance(obj, dict):
-            for key in ("start", "length", "limit", "page", "total", "recordsTotal", "recordsFiltered", "count"):
+            for key in (
+                "start", "length", "limit", "page", "pageSize", "nextPage",
+                "hasMore", "total", "recordsTotal", "recordsFiltered", "count",
+            ):
                 if key in obj and key not in pagination_metadata:
                     pagination_metadata[key] = obj[key]
     if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and not pagination_metadata:

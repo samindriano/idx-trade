@@ -108,6 +108,13 @@ def _select_params(fields: list[dict[str, Any]], code: str) -> tuple[dict[str, A
             params[names[alias]] = code
             scope_mode = "SERVER_TICKER_FILTER"
             break
+    else:
+        # The public catalog uses `search` for an upstream code/company-name
+        # filter. Treat it as server-side scoping; otherwise a bounded empty
+        # global page cannot establish endpoint semantics for the target.
+        if "search" in names:
+            params[names["search"]] = code
+            scope_mode = "SERVER_TICKER_FILTER"
 
     # Hard bound: require a pagination control exposed by the live catalog.
     if "length" in names:
