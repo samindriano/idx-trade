@@ -3,6 +3,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from idx_trade.decision_v3_structural_integrity import (
+    validate_post_replay_integrity,
+)
 from idx_trade.decision_v3_structural_replay import (
     run_structural_replay,
     write_structural_replay_artifacts,
@@ -71,6 +74,7 @@ def main() -> int:
     contract_path = verify_frozen_replay_contract(args.repo_root)
     source = load_pinned_v4_x1_source_strict(args.historical_root)
     result = run_structural_replay(source)
+    result = validate_post_replay_integrity(result, source)
     result = enrich_structural_replay_reporting(result, contract_path)
     manifest_path = write_structural_replay_artifacts(result, args.output_dir)
     print(manifest_path)
