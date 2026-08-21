@@ -8,44 +8,15 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import requests
-
-from idx_trade.stockbit_stream_archive import StreamArchiveError, ZapiClient
+from idx_trade.stockbit_stream_archive import StreamArchiveError, verify_universe_manifest
 from idx_trade.stockbit_stream_capture_v2 import archive_from_env, build_runtime_universe, capture_stream_v2
-
-
-class _EnvelopeAwareResponse:
-    """Preserve exact response bytes while exposing the nested finance payload to the parser."""
-
-    def __init__(self, response: requests.Response):
-        self._response = response
-        self.status_code = response.status_code
-        self.content = response.content
-        self.headers = response.headers
-
-    def json(self):
-        payload = self._response.json()
-        if (
-            isinstance(payload, dict)
-            and isinstance(payload.get("data"), dict)
-            and "project" in payload
-            and "timestamp" in payload
-        ):
-            return payload["data"]
-        return payload
-
-
-class _EnvelopeAwareSession:
-    def __init__(self):
-        self._session = requests.Session()
-
-    def get(self, *args, **kwargs):
-        return _EnvelopeAwareResponse(self._session.get(*args, **kwargs))
+from idx_trade.stockbit_stream_v2_primitives import V2ZapiClient
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--identity-csv", type=Path, required=True)
+    parser.add_argument("--identity-manifest", type=Path, required=True)
     parser.add_argument("--slot", required=True)
     parser.add_argument("--top-n", type=int, default=200)
     parser.add_argument("--capture-date")
@@ -57,15 +28,15 @@ def main() -> int:
         print(json.dumps({"status": "BLOCKED", "detail": "ZAPI_API_KEY missing"}))
         return 2
     try:
+        identity_manifest = verify_universe_manifest(args.identity_csv, args.identity_manifest)
         universe = build_runtime_universe(
             api_key=api_key,
             identity_csv=args.identity_csv,
             capture_date=capture_date,
             top_n=args.top_n,
-            session=_EnvelopeAwareSession(),
         )
         result = capture_stream_v2(
-            client=ZapiClient(api_key),
+            client=V2ZapiClient(api_key),
             archive=archive_from_env(),
             universe=universe,
             slot=args.slot,
@@ -73,16 +44,21 @@ def main() -> int:
         )
         summary = {
             "status": result["status"],
+            "logical_slot_id": result.get("logical_slot_id"),
+            "attempt_id": result.get("attempt_id"),
             "run_id": result["run_id"],
             "slot": args.slot,
             "top_n": args.top_n,
             "source_session": universe.source_session,
+            "identity_manifest_status": identity_manifest.get("status"),
+            "identity_source_sha256": universe.identity_source_sha256,
             "universe_sha256": universe.universe_sha256,
             "planned_calls": result.get("planned_calls"),
             "completed_calls": result.get("completed_calls"),
             "successful_responses": result.get("successful_responses"),
             "normalized_post_rows": result.get("normalized_post_rows"),
             "response_classification_counts": result.get("response_classification_counts"),
+            "quota_after_error": result.get("quota_after_error"),
             "manifest_sha256": result.get("manifest_sha256"),
             "model_accessed": False,
             "outcome_accessed": False,
