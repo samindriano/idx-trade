@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -31,6 +32,7 @@ EXPECTED_SEVERE_SESSIONS = 373
 
 B_REASON = "TIER_B_VACANCY_FILL"
 C_REASON = "TIER_C_RESIDUAL_VACANCY_FILL"
+A_REASON = "TIER_A_VACANCY_FILL"
 
 
 @dataclass(frozen=True)
@@ -197,13 +199,15 @@ def run_quality_supply_diagnosis(
         entry_index = int(intent.session_index)
         ticker = str(intent.ticker)
         tier = "B" if str(intent.reason) == B_REASON else "C"
-        record: dict[str, Any] = {
+        record = {
             "ticker": ticker,
             "entry_index": entry_index,
             "entry_date": str(intent.date),
             "entry_block": entry_index // 100 + 1,
             "entry_tier": tier,
             "entry_rank": int(intent.rank_consensus),
+            "entry_severe_session": bool(int(sessions.loc[entry_index]["severe_exit_count"]) > 0),
+            "full_horizon_3_available": bool(entry_index + 3 < EXPECTED_SESSIONS),
         }
         first_conversion: int | None = None
         for horizon in (1, 2, 3):
@@ -241,18 +245,28 @@ def run_quality_supply_diagnosis(
 
     entrant_summary: dict[str, Any] = {}
     for tier in ("B", "C"):
-        block = bc_path.loc[bc_path["entry_tier"].eq(tier)]
-        tier_summary: dict[str, Any] = {"entries": int(len(block))}
-        for horizon in (1, 2, 3):
-            tier_summary[f"tier_a_equivalent_at_t_plus_{horizon}_rate"] = _rate(
-                block[f"t_plus_{horizon}_tier_a_equivalent"]
+        tier_block = bc_path.loc[bc_path["entry_tier"].eq(tier)]
+        scopes = {
+            "all": tier_block,
+            "severe_session_only": tier_block.loc[tier_block["entry_severe_session"].astype(bool)],
+            "nonsevere_session_only": tier_block.loc[~tier_block["entry_severe_session"].astype(bool)],
+        }
+        tier_summary: dict[str, Any] = {}
+        for scope_name, block in scopes.items():
+            scope_summary: dict[str, Any] = {"entries": int(len(block))}
+            for horizon in (1, 2, 3):
+                scope_summary[f"tier_a_equivalent_at_t_plus_{horizon}_rate"] = _rate(
+                    block[f"t_plus_{horizon}_tier_a_equivalent"]
+                )
+            eligible = block.loc[block["full_horizon_3_available"].astype(bool)]
+            first = pd.to_numeric(
+                eligible["first_tier_a_equivalent_horizon_1_to_3"], errors="coerce"
             )
-        first = pd.to_numeric(
-            block["first_tier_a_equivalent_horizon_1_to_3"], errors="coerce"
-        )
-        tier_summary["converted_within_3_sessions_rate"] = (
-            None if len(block) == 0 else float(first.notna().mean())
-        )
+            scope_summary["full_3_session_window_entries"] = int(len(eligible))
+            scope_summary["converted_within_3_sessions_rate"] = (
+                None if len(eligible) == 0 else float(first.notna().mean())
+            )
+            tier_summary[scope_name] = scope_summary
         entrant_summary[tier] = tier_summary
 
     block_rows: list[dict[str, Any]] = []
@@ -280,13 +294,18 @@ def run_quality_supply_diagnosis(
                 ss[f"t_plus_{horizon}_a_supply_ge_initial_severe_exits"]
             )
         for tier in ("B", "C"):
-            tb = bp.loc[bp["entry_tier"].eq(tier)]
+            tb = bp.loc[
+                bp["entry_tier"].eq(tier)
+                & bp["entry_severe_session"].astype(bool)
+            ]
+            eligible = tb.loc[tb["full_horizon_3_available"].astype(bool)]
             first = pd.to_numeric(
-                tb["first_tier_a_equivalent_horizon_1_to_3"], errors="coerce"
+                eligible["first_tier_a_equivalent_horizon_1_to_3"], errors="coerce"
             )
-            rec[f"{tier.lower()}_entries"] = int(len(tb))
-            rec[f"{tier.lower()}_converted_within_3_rate"] = (
-                None if len(tb) == 0 else float(first.notna().mean())
+            rec[f"{tier.lower()}_severe_session_entries"] = int(len(tb))
+            rec[f"{tier.lower()}_severe_session_full_3_window_entries"] = int(len(eligible))
+            rec[f"{tier.lower()}_severe_session_converted_within_3_rate"] = (
+                None if len(eligible) == 0 else float(first.notna().mean())
             )
         block_rows.append(rec)
     block_summary = pd.DataFrame(block_rows)
@@ -323,7 +342,9 @@ def run_quality_supply_diagnosis(
         "actual_v3_b_c_entrant_quality_path": entrant_summary,
         "interpretation_guard": (
             "Supply coverage and later Tier-A-equivalent conversion are descriptive rank-stream "
-            "statistics only. They are not a simulation of holding cash or waiting N sessions."
+            "statistics on the already-observed V3 trajectory only. They do not add back B/C names "
+            "that a hypothetical wait-policy would have left unheld, and they are not a simulation "
+            "of holding cash or waiting N sessions."
         ),
     }
     return QualitySupplyDiagnosisResult(
