@@ -29,21 +29,30 @@ function Resolve-Python {
     throw "Python 3 not found. The previous Forward-CA setup normally installs uv/Python; rerun setup_idx_bei_forward_ca_provider.ps1 if needed."
 }
 
-if (-not $OutputDir) {
-    $OutputDir = "D:\Documents\Project\idx-zapi-dividends-probe-$anchor-v1"
+$explicitOutput = -not [string]::IsNullOrWhiteSpace($OutputDir)
+if (-not $explicitOutput) {
+    $baseOutput = "D:\Documents\Project\idx-zapi-dividends-probe-$anchor-v1"
+    $OutputDir = $baseOutput
+    $revision = 2
+    while (Test-Path -LiteralPath $OutputDir) {
+        $OutputDir = "$baseOutput-r$revision"
+        $revision += 1
+    }
 }
-if (Test-Path -LiteralPath $OutputDir) {
-    throw "Audit output already exists and will not be overwritten: $OutputDir"
+elseif (Test-Path -LiteralPath $OutputDir) {
+    throw "Explicit audit output already exists and will not be overwritten: $OutputDir"
 }
+
 if (-not (Test-Path -LiteralPath $probe)) { throw "Probe script missing: $probe" }
 if (-not (Test-Path -LiteralPath $review)) { throw "Reviewer script missing: $review" }
 
 Write-Host "=== Zapi IDX /dividends bounded audit V1 ==="
-Write-Host "Repo root:  $repoRoot"
-Write-Host "Ticker:     $Code"
-Write-Host "Output:     $OutputDir"
+Write-Host "Repo root:         $repoRoot"
+Write-Host "Preferred ticker:  $Code"
+Write-Host "Output:            $OutputDir"
 Write-Host ""
 Write-Host "Audit only: no V1.1 promotion, no paper-state mutation, no retries."
+Write-Host "Ticker filtering is used when the live catalog exposes it; otherwise a small paginated global feed is audited and ticker identity is verified in the rows."
 Write-Host "The runner performs one public catalog-schema request and at most one authenticated /dividends request."
 Write-Host ""
 
@@ -51,7 +60,6 @@ $hadKey = Test-Path Env:ZAPI_API_KEY
 $temporaryKey = $false
 if (-not $hadKey -or [string]::IsNullOrWhiteSpace($env:ZAPI_API_KEY)) {
     Write-Host "ZAPI_API_KEY is not set in this local shell. GitHub Actions secrets are not exposed to local PowerShell."
-    Write-Host "You may enter the key locally, or run the GitHub Actions audit workflow instead."
     $secure = Read-Host "Zapi API key" -AsSecureString
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
