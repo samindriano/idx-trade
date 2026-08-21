@@ -5,77 +5,84 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `CALENDAR_SCHEMA_PROBE_EVIDENCE_REQUIRED_EXECUTION_ADMISSION_BLOCKED`
+status: `CALENDAR_SCHEMA_FROZEN_READY_FOR_FORWARD_PAPER_INTEGRATION`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope
 
-Prepare prospective, outcome-blind, direct-IDX corporate-action attestation required by paper Execution V1.
+Prospective, outcome-blind corporate-action attestation for paper Execution V1. This protects execution/portfolio accounting continuity; it is not the historical CA training-data lane and does not modify V4-X1 alpha.
 
-Primary acquisition transport is pinned `nichsedge/idx-bei@75d6c0f74fa360d225794c70c383348977de6798`. The provider runs in its own uv/Python environment. IDX-Trade consumes only immutable raw response artifacts/manifests and performs offline attestation logic.
+## Primary provider
 
-## Hard boundaries
+- repository: `nichsedge/idx-bei`
+- pinned commit: `75d6c0f74fa360d225794c70c383348977de6798`
+- upstream: direct `https://www.idx.co.id/primary`
+- isolated provider environment managed by `uv` / Python 3.13
 
-- no V4-X1 alpha/model changes;
-- no Decision V1 changes;
-- no historical CA backfill;
-- no historical PnL;
-- no protected/prospective outcome access;
-- no paper fill/state mutation before promotion;
-- no automatic Zapi fallback;
-- no corporate-action quantity/cash transformation yet.
+## Frozen live calendar schema
 
-## Current gate before promotion
+The user performed the exact bounded direct-IDX `/Home/GetCalendar` probe on 2026-08-21 and then ran the offline reviewer.
 
-`Home/GetCalendar` direct-IDX response schema must have retrievable immutable evidence and its structural fingerprint must be independently reviewed/frozen. Until that happens, `EXPECTED_CALENDAR_SCHEMA_FINGERPRINT=None` intentionally blocks both final attestation promotion and the Execution V1 CA verifier.
+Accepted evidence:
 
-The direct calendar parameter contract is independently corroborated as:
-`range/date/start/length/code/language/search`, with `d/w/m` range values and response top-level `Results`.
+- HTTP 200
+- 260 `Results`
+- raw SHA-256 `7ad2aeab850ea23a4df9f6aee91f1523b2a4110a30f48d6ecf51e8376be88c1c`
+- structural fingerprint `09a2f81aaa291b27232ca610b228a28470cbe11d5599fa66f55a3b75030060f3`
+- review status `PASS_ELIGIBLE_FOR_SCHEMA_FREEZE`
+- no warnings or failures
+
+Production `EXPECTED_CALENDAR_SCHEMA_FINGERPRINT` is now pinned to that value. Future raw calendar payload schema drift fails closed.
+
+## Required Forward CA V1 legs
+
+1. `/ListingActivity/GetIssuedHistory`
+2. `/NewsAnnouncement/GetAllAnnouncement`
+3. `/Home/GetCalendar`
+
+Both `POST_EOD` and `PREOPEN` captures are required with identical ticker/date scope. Raw response bytes and source-chain hashes are verified before the final attestation.
+
+Execution admission remains only:
+`NO_RELEVANT_EVENTS`
+
+Any relevant event, source incompleteness, hash mismatch, provider-pin mismatch or schema drift blocks normal execution and requires reconciliation.
+
+## What Forward CA is for
+
+Forward CA is an operational safety gate between Decision EOD and execution/holding state. It prevents normal-continuity accounting when splits, dividends, rights/HMETD, bonus shares, conversions, additional listings, delistings or similar events could change shares/cash/reference-price semantics.
+
+It is separate from historical CA completeness (~88%) and possible V4-X2 data remediation.
+
+## Zapi status
+
+User-supplied 2026-08-20/21 Zapi changelog added dedicated IDX endpoints such as `dividends`, `rights-offerings`, `stock-splits`, `issued-history`, `additional-listings`, `delistings` and updated `calendar`.
+
+Decision:
+
+- do not replace direct IDX V1;
+- do not silently fallback in V1;
+- record Zapi as high-value `V1.1_PARITY_FAILOVER_CANDIDATE`;
+- if pursued later, bounded-audit the new endpoint response/provenance contract and define disagreement behavior first.
 
 ## Prepared entry points
 
 - provider setup: `scripts/setup_idx_bei_forward_ca_provider.ps1`
-- one-request calendar probe: `scripts/probe_forward_ca_calendar_schema_v1.py`
-- one-command Windows runner: `scripts/run_forward_ca_calendar_probe_v1.ps1`
-- direct prospective capture: `scripts/capture_forward_ca_idx_bei.py`
-- offline merge/attestation CLI: `scripts/build_forward_ca_attestation_v1.py`
+- direct capture: `scripts/capture_forward_ca_idx_bei.py`
+- offline merge/attestation: `scripts/build_forward_ca_attestation_v1.py`
 - source verifier/classifier: `src/idx_trade/forward_ca_attestation_v1.py`
 - Execution CA verifier: `src/idx_trade/v4_x1_execution_v1_verify.py`
 - config: `config/forward_ca_attestation_v1.json`
-- checkpoint: `docs/checkpoints/2026-08-21_FORWARD_CA_ATTESTATION_V1_PREPARATION.md`
+- freeze checkpoint: `docs/checkpoints/2026-08-21_FORWARD_CA_ATTESTATION_V1_SCHEMA_FREEZE.md`
 
-## Hardening completed before live probe
+## Next lane action
 
-- calendar capture changed from per-ticker weekly calls to one all-market monthly capture per calendar month touched by the decision-to-execution window;
-- raw calendar JSON must contain non-empty `Results`;
-- calendar structural fingerprint is recomputed from raw bytes by IDX-Trade and must equal the collector declaration;
-- exact endpoint/content-type/raw SHA/source-chain checks are enforced;
-- calendar RUPS/non-CA events do not block execution merely because the ticker appears; CA keyword + applicable date window are required;
-- CA announcements published on the decision date are conservatively considered relevant;
-- Execution V1 now verifies the complete Forward-CA source chain, provider pin, upstream, source manifest, raw hashes, ticker coverage and frozen calendar fingerprint rather than accepting a self-hashed arbitrary source file.
+Integrate frozen Forward CA V1 into the Forward Paper Orchestrator:
 
-## GitHub Actions probe attempt — not admissible
+1. derive relevant ticker set from actual paper holdings + pending transitions + Decision intents;
+2. POST_EOD capture;
+3. PREOPEN refresh;
+4. merge + build attestation;
+5. only then call Execution V1;
+6. relevant CA stays reconciliation-required until event-specific quantity/cash transformations are separately frozen.
 
-A temporary one-shot GitHub Actions workflow was committed at `c4055c071e52ea5811b272e049fa5a70f4d9606f` to attempt the exact bounded calendar probe from a GitHub-hosted runner. The workflow itself used the pinned provider and `max_retries=0` for the provider request.
-
-The available GitHub connector in this ChatGPT session cannot enumerate push-triggered workflow runs or retrieve their artifacts without a run ID. Therefore this attempt is explicitly **not admitted as probe evidence**: it is unknown from this session whether the job reached the provider-request step, failed during environment setup, or completed successfully.
-
-The temporary workflow was removed at `f774ea7a8dbc7301273ed69b097daac999fd25e2` to prevent accidental future reruns. No fingerprint, PASS/FAIL verdict, or execution admission may be inferred from that attempt.
-
-## Next authorized evidence-producing action
-
-From the IDX-Trade checkout on the user's Windows machine, run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run_forward_ca_calendar_probe_v1.ps1
-```
-
-Default provider checkout:
-`D:\Documents\Project\idx-bei-forward-ca-provider`
-
-Default output:
-`D:\Documents\Project\idx-forward-ca-calendar-probe-<YYYYMMDD>-v1`
-
-The runner performs provider setup/import validation and one direct `/Home/GetCalendar` request with `range=m`, `start=0`, `length=9999`, no ticker filter and no search filter. It writes immutable raw bytes plus `PROBE_MANIFEST.json` and does not pin/promote the fingerprint automatically.
-
-After the local probe, review the manifest/raw schema and only then pin the accepted fingerprint. Do not schedule recurring capture or admit CA attestations to Execution V1 before that review.
+Do not rerun the 2026-08-21 schema probe unless a deliberate schema re-certification is required.
