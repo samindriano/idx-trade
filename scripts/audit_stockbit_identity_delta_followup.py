@@ -24,11 +24,25 @@ def unwrap(value: Any) -> Any:
     return value
 
 
-def get(path: str, params: dict[str, Any]) -> Any:
-    response = requests.get(f"{BASE}/{path}", params=params, headers={"x-api-key": KEY}, timeout=TIMEOUT)
-    if response.status_code != 200:
-        raise RuntimeError(f"{path} {params} HTTP {response.status_code}: {response.text[:200]}")
-    return unwrap(response.json())
+def compact_shape(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {"type": type(payload).__name__}
+    result: dict[str, Any] = {"keys": sorted(str(k) for k in payload)}
+    for key in ("dataset", "provider", "recordsTotal", "recordsFiltered", "total", "count", "length", "start", "page", "year", "month", "hasMore", "nextPage"):
+        if key in payload:
+            result[key] = payload.get(key)
+    containers: list[dict[str, Any]] = []
+    for key in ("data", "items", "Results", "results"):
+        rows = payload.get(key)
+        if isinstance(rows, list):
+            containers.append({
+                "container": key,
+                "count": len(rows),
+                "fields": sorted({str(f) for row in rows[:30] if isinstance(row, dict) for f in row}),
+                "sample_first_3": rows[:3],
+            })
+    result["containers"] = containers
+    return result
 
 
 def matching_dicts(value: Any, needles: tuple[str, ...]) -> list[dict[str, Any]]:
@@ -53,82 +67,38 @@ def matching_dicts(value: Any, needles: tuple[str, ...]) -> list[dict[str, Any]]
     return [dedup[key] for key in sorted(dedup)]
 
 
-def compact_shape(payload: Any) -> dict[str, Any]:
-    if not isinstance(payload, dict):
-        return {"type": type(payload).__name__}
-    result: dict[str, Any] = {"keys": sorted(str(k) for k in payload)}
-    for key in ("dataset", "provider", "recordsTotal", "recordsFiltered", "total", "count", "length", "start", "page", "year"):
-        if key in payload:
-            result[key] = payload.get(key)
-    containers: list[dict[str, Any]] = []
-    for key in ("data", "items", "Results", "results"):
-        rows = payload.get(key)
-        if isinstance(rows, list):
-            containers.append({
-                "container": key,
-                "count": len(rows),
-                "fields": sorted({str(f) for row in rows[:30] if isinstance(row, dict) for f in row}),
-            })
-    nested = payload.get("data")
-    if isinstance(nested, dict):
-        for key in ("data", "items", "Results", "results"):
-            rows = nested.get(key)
-            if isinstance(rows, list):
-                containers.append({
-                    "container": f"data.{key}",
-                    "count": len(rows),
-                    "fields": sorted({str(f) for row in rows[:30] if isinstance(row, dict) for f in row}),
-                })
-    result["containers"] = containers
-    return result
-
-
 def probe(path: str, params: dict[str, Any]) -> dict[str, Any]:
     response = requests.get(f"{BASE}/{path}", params=params, headers={"x-api-key": KEY}, timeout=TIMEOUT)
-    item: dict[str, Any] = {
+    result: dict[str, Any] = {
         "path": path,
         "params": params,
         "http_status": response.status_code,
         "raw_sha256": sha256_bytes(bytes(response.content)),
     }
     if response.status_code != 200:
-        item["body_prefix"] = response.text[:160]
-        return item
+        result["body_prefix"] = response.text[:160]
+        return result
     payload = unwrap(response.json())
-    item["shape"] = compact_shape(payload)
-    item["watch_matches"] = matching_dicts(payload, WATCH)
-    return item
+    result["shape"] = compact_shape(payload)
+    result["watch_matches"] = matching_dicts(payload, WATCH)
+    return result
 
 
 def main() -> int:
     if not KEY:
         raise SystemExit("ZAPI_API_KEY missing")
 
-    event_probes = {
-        "delistings": probe("finance:idx/delistings", {"year": 2026, "length": 200, "start": 0}),
-        "new_listings": probe("finance:idx/new-listings", {"year": 2026, "length": 200, "start": 0}),
-        "ipo": probe("finance:idx/ipo", {"year": 2026, "length": 200, "start": 0}),
+    probes = {
+        "delistings_default_2026": probe("finance:idx/delistings", {"year": 2026}),
+        "delistings_2026_07": probe("finance:idx/delistings", {"year": 2026, "month": 7, "page": 1}),
+        "delistings_2026_08": probe("finance:idx/delistings", {"year": 2026, "month": 8, "page": 1}),
+        "new_listings_default_2026": probe("finance:idx/new-listings", {"year": 2026}),
+        "new_listings_2026_07": probe("finance:idx/new-listings", {"year": 2026, "month": 7, "page": 1}),
+        "new_listings_2026_08": probe("finance:idx/new-listings", {"year": 2026, "month": 8, "page": 1}),
+        "ipo_2026": probe("finance:idx/ipo", {"year": 2026, "length": 200, "start": 0}),
     }
-
-    for name, item in event_probes.items():
+    for name, item in probes.items():
         print("EVENT_SCHEMA " + name + " " + json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
-
-    # Keep the already-observed delta sanity check compact.
-    for code in WATCH:
-        sec = get("finance:idx/securities", {"length": 20, "start": 0, "code": code})
-        comp = get("finance:idx/companies", {"length": 20, "start": 0, "code": code})
-        stock = get("finance:idx/stock-summary", {"length": 20, "start": 0, "date": DATE, "code": code})
-        print(
-            "WATCH " + code + " " + json.dumps(
-                {
-                    "securities_total": sec.get("recordsTotal") if isinstance(sec, dict) else None,
-                    "companies_total": comp.get("recordsTotal") if isinstance(comp, dict) else None,
-                    "stock_summary_total": stock.get("recordsTotal") if isinstance(stock, dict) else None,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-        )
 
     print("AUDIT_FLAGS " + json.dumps({"outcome_accessed": False, "model_accessed": False, "roster_mutated": False}, sort_keys=True))
     return 0
