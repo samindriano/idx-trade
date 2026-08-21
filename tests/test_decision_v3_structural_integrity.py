@@ -16,7 +16,7 @@ from idx_trade.decision_v3_structural_source import (
 def _source(tmp_path: Path) -> PinnedReplaySource:
     rows = []
     for day, names in (
-        ("2026-01-02", ["AAA", "BBB", "CCC"]),
+        ("2026-01-02", ["AAA", "BBB", "CCC", "DDD"]),
         ("2026-01-05", ["AAA", "BBB", "DDD"]),
     ):
         for rank, ticker in enumerate(names, start=1):
