@@ -12,6 +12,8 @@ on:
       - "tests/test_stockbit_stream_v2_red_team_wave3.py"
       - "tests/test_stockbit_stream_v2_red_team_wave4.py"
       - "docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md"
+      - "docs/checkpoints/2026-08-21_STOCKBIT_STREAM_PROSPECTIVE_ARCHIVE_V2_REMEDIATION.md"
+      - "coordination/handoffs/IDX-STOCKBIT-STREAM-PROSPECTIVE-ARCHIVE-V2.md"
       - ".github/workflows/stockbit-stream-prospective-capture.yml"
       - ".github/workflows/stockbit-stream-v2-red-team.yml"
 
