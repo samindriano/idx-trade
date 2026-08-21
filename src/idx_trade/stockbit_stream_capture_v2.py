@@ -33,8 +33,10 @@ from idx_trade.stockbit_stream_archive import (
 IDX_STOCK_SUMMARY_ENDPOINT = "https://api.zpi.web.id/v1/finance:idx/stock-summary"
 ROUTINE_TOP_N = 200
 PRIOR_SESSION_LOOKBACK_DAYS = 10
+IDENTITY_ROSTER_STALE_DAYS = 35
 V2_SLOTS = frozenset({"pre_open", "midday", "after_close"})
 ATTEMPT_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+CAPTURE_ORDER_RULE = "SHA256_DATE_SLOT_UNIVERSE_TICKER"
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class RuntimeUniverse:
     source_sha256: str
     universe_sha256: str
     identity_source_sha256: str = ""
+    identity_roster_as_of: str = ""
     selection_diagnostics: dict[str, Any] = field(default_factory=dict)
 
 
@@ -120,8 +123,7 @@ class R2LeanArchive(LeanArchive):
             if status != 412 and code not in {"PreconditionFailed", "412"}:
                 raise StreamArchiveError(f"R2 immutable put failed for {key}: {code or status}") from exc
 
-        # Collision is rare, so verify the actual immutable body rather than trusting
-        # user-controlled object metadata as an integrity oracle.
+        # A 412 is rare. Verify the actual body instead of trusting mutable object metadata.
         try:
             existing = self.client.get_object(Bucket=self.bucket, Key=object_key)["Body"].read()
         except Exception as exc:
@@ -182,6 +184,25 @@ def _unwrap_zapi_envelope(payload: Any) -> Any:
     return payload
 
 
+def _identity_roster_diagnostics(capture_day: date, identity_roster_as_of: str) -> dict[str, Any]:
+    if not identity_roster_as_of:
+        return {
+            "identity_roster_age_days": None,
+            "identity_roster_status": "AS_OF_NOT_DECLARED",
+        }
+    try:
+        as_of = date.fromisoformat(identity_roster_as_of)
+    except ValueError as exc:
+        raise StreamArchiveError("identity_roster_as_of must be YYYY-MM-DD") from exc
+    if as_of > capture_day:
+        raise StreamArchiveError("identity roster as-of date is after capture date")
+    age = (capture_day - as_of).days
+    return {
+        "identity_roster_age_days": age,
+        "identity_roster_status": "CURRENT" if age <= IDENTITY_ROSTER_STALE_DAYS else "STALE",
+    }
+
+
 def build_runtime_universe(
     *,
     api_key: str,
@@ -190,6 +211,7 @@ def build_runtime_universe(
     top_n: int = ROUTINE_TOP_N,
     session_lookback_days: int = PRIOR_SESSION_LOOKBACK_DAYS,
     session: requests.Session | None = None,
+    identity_roster_as_of: str = "",
 ) -> RuntimeUniverse:
     if top_n < 1 or top_n > 400:
         raise StreamArchiveError("top_n must be between 1 and 400")
@@ -198,11 +220,17 @@ def build_runtime_universe(
         raise StreamArchiveError(f"active identity whitelist has only {len(identities)} rows for top_n={top_n}")
     identity_source_sha = sha256_bytes(identity_csv.read_bytes())
     capture_day = date.fromisoformat(capture_date)
+    roster_diagnostics = _identity_roster_diagnostics(capture_day, identity_roster_as_of)
     http = session or requests.Session()
 
     last_error: str | None = None
+    stock_summary_requests = 0
     for lag in range(1, session_lookback_days + 1):
         candidate = capture_day - timedelta(days=lag)
+        # Saturdays and Sundays are deterministically non-sessions; do not burn API quota on them.
+        if candidate.weekday() >= 5:
+            continue
+        stock_summary_requests += 1
         response = http.get(
             IDX_STOCK_SUMMARY_ENDPOINT,
             params={"length": 1000, "start": 0, "date": candidate.isoformat()},
@@ -231,6 +259,7 @@ def build_runtime_universe(
                 last_error = f"empty stock-summary for non-session {candidate}"
                 continue
             raise StreamArchiveError(f"stock-summary row-count metadata inconsistent for {candidate}")
+        # Until pagination is implemented, fail closed if one page is not the complete market.
         if records_total != records_filtered or records_filtered != len(data):
             raise StreamArchiveError(
                 f"incomplete stock-summary pagination for {candidate}: "
@@ -283,6 +312,11 @@ def build_runtime_universe(
         for rank, row in enumerate(selected, start=1):
             row["activity_rank"] = rank
         universe_bytes = canonical_json_bytes(selected)
+        diagnostics = {
+            "invalid_numeric_tickers": sorted(invalid_numeric),
+            "stock_summary_requests": stock_summary_requests,
+            **roster_diagnostics,
+        }
         return RuntimeUniverse(
             capture_date=capture_date,
             source_session=candidate.isoformat(),
@@ -291,7 +325,8 @@ def build_runtime_universe(
             source_sha256=sha256_bytes(raw),
             universe_sha256=sha256_bytes(universe_bytes),
             identity_source_sha256=identity_source_sha,
-            selection_diagnostics={"invalid_numeric_tickers": sorted(invalid_numeric)},
+            identity_roster_as_of=identity_roster_as_of,
+            selection_diagnostics=diagnostics,
         )
 
     raise StreamArchiveError(f"no valid completed IDX stock-summary session found: {last_error}")
@@ -305,6 +340,14 @@ def _attempt_id() -> str:
         return configured
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     return f"{stamp}-{secrets.token_hex(4)}"
+
+
+def _capture_order_rows(universe: RuntimeUniverse, slot: str) -> list[dict[str, Any]]:
+    def order_key(row: Mapping[str, Any]) -> str:
+        material = f"{universe.capture_date}|{slot}|{universe.universe_sha256}|{row['ticker']}"
+        return sha256_bytes(material.encode("utf-8"))
+
+    return sorted(universe.rows, key=order_key)
 
 
 def capture_stream_v2(
@@ -338,6 +381,7 @@ def capture_stream_v2(
             "planned_calls": planned_calls,
             "quota_before": quota_before.__dict__,
             "provider_calls": 0,
+            "capture_order_rule": CAPTURE_ORDER_RULE,
             "outcome_accessed": False,
         }
 
@@ -345,9 +389,11 @@ def capture_stream_v2(
     archive.put_immutable(universe_input_key, universe.source_raw, "application/json")
 
     request_records: list[dict[str, Any]] = []
+    observed_times: list[datetime] = []
     total_rows = 0
     ok_responses = 0
-    for selected in universe.rows:
+    ordered_rows = _capture_order_rows(universe, slot)
+    for capture_order_index, selected in enumerate(ordered_rows, start=1):
         symbol = selected["ticker"]
         try:
             response, raw, observed_at = client.stream(symbol)
@@ -355,18 +401,24 @@ def capture_stream_v2(
             request_records.append({
                 "ticker": symbol,
                 "activity_rank": selected["activity_rank"],
+                "capture_order_index": capture_order_index,
                 "response_classification": "REQUEST_EXCEPTION",
                 "error_type": type(exc).__name__,
                 "row_count": 0,
             })
             continue
 
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise StreamArchiveError(f"naive observed availability timestamp for {symbol}")
+        observed_at = observed_at.astimezone(timezone.utc)
+        observed_times.append(observed_at)
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
         classification, _, items = parse_stream_payload(raw, response.status_code, symbol)
         record = {
             "ticker": symbol,
             "activity_rank": selected["activity_rank"],
+            "capture_order_index": capture_order_index,
             "response_classification": classification,
             "http_status": response.status_code,
             "observed_available_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
@@ -401,6 +453,13 @@ def capture_stream_v2(
     else:
         status = "DATA_FAILED"
 
+    first_observed = min(observed_times) if observed_times else None
+    last_observed = max(observed_times) if observed_times else None
+    observation_span_seconds = (
+        (last_observed - first_observed).total_seconds()
+        if first_observed is not None and last_observed is not None
+        else None
+    )
     attempt_finished_at = datetime.now(timezone.utc)
     manifest = {
         "schema_version": "stockbit_stream_capture_v2_hardened",
@@ -413,12 +472,17 @@ def capture_stream_v2(
         "attempt_started_at_utc": attempt_started_at.isoformat().replace("+00:00", "Z"),
         "attempt_finished_at_utc": attempt_finished_at.isoformat().replace("+00:00", "Z"),
         "attempt_duration_seconds": (attempt_finished_at - attempt_started_at).total_seconds(),
+        "first_observed_at_utc": first_observed.isoformat().replace("+00:00", "Z") if first_observed else None,
+        "last_observed_at_utc": last_observed.isoformat().replace("+00:00", "Z") if last_observed else None,
+        "observation_span_seconds": observation_span_seconds,
+        "capture_order_rule": CAPTURE_ORDER_RULE,
         "selection_rule": "top N active pinned identities by prior completed IDX session regular-market Value; ticker tie-break",
         "source_session": universe.source_session,
         "universe_size": len(universe.rows),
         "universe_sha256": universe.universe_sha256,
         "universe_source_sha256": universe.source_sha256,
         "identity_source_sha256": universe.identity_source_sha256,
+        "identity_roster_as_of": universe.identity_roster_as_of,
         "selection_diagnostics": universe.selection_diagnostics,
         "planned_calls": planned_calls,
         "completed_calls": completed_calls,
