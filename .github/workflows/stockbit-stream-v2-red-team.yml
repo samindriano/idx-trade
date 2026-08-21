@@ -7,12 +7,14 @@ on:
       - "src/idx_trade/stockbit_stream_archive.py"
       - "src/idx_trade/stockbit_stream_v2_primitives.py"
       - "scripts/run_stockbit_stream_capture_v2.py"
+      - "scripts/probe_zapi_stockbit_provider_acceptance.py"
       - "tests/test_stockbit_stream_v2_red_team.py"
       - "tests/test_stockbit_stream_v2_red_team_wave2.py"
       - "tests/test_stockbit_stream_v2_red_team_wave3.py"
       - "tests/test_stockbit_stream_v2_red_team_wave4.py"
       - "docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md"
       - "docs/checkpoints/2026-08-21_STOCKBIT_STREAM_PROSPECTIVE_ARCHIVE_V2_REMEDIATION.md"
+      - "docs/checkpoints/2026-08-21_ZAPI_STOCKBIT_PROVIDER_ACCEPTANCE_AUDIT.md"
       - "coordination/handoffs/IDX-STOCKBIT-STREAM-PROSPECTIVE-ARCHIVE-V2.md"
       - ".github/workflows/stockbit-stream-prospective-capture.yml"
       - ".github/workflows/stockbit-stream-v2-red-team.yml"
@@ -39,3 +41,18 @@ jobs:
           tests/test_stockbit_stream_v2_red_team_wave2.py
           tests/test_stockbit_stream_v2_red_team_wave3.py
           tests/test_stockbit_stream_v2_red_team_wave4.py
+
+  provider-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Install minimal provider-probe dependency
+        run: python -m pip install requests==2.34.2
+      - name: Run live Zapi provider acceptance probe
+        env:
+          ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+        run: python scripts/probe_zapi_stockbit_provider_acceptance.py
