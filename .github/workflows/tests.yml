@@ -42,6 +42,39 @@ jobs:
           cache: pip
       - name: Install archive runner
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,archive]"
+      - name: Bounded stock-summary schema probe
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, requests
+          base = 'https://api.zpi.web.id/v1/finance:idx/stock-summary'
+          headers = {'x-api-key': os.environ['ZAPI_API_KEY']}
+          probes = [('default', {}), ('20260820', {'date':'20260820'}), ('2026-08-20', {'date':'2026-08-20'}), ('20260612', {'date':'20260612'})]
+          for label, extra in probes:
+              params = {'length': 1000, 'start': 0, **extra}
+              r = requests.get(base, params=params, headers=headers, timeout=30)
+              out = {'probe': label, 'http_status': r.status_code, 'content_type': r.headers.get('content-type'), 'bytes': len(r.content)}
+              try:
+                  p = r.json()
+                  out['top_keys'] = sorted(p.keys()) if isinstance(p, dict) else [type(p).__name__]
+                  if isinstance(p, dict):
+                      out['provider'] = p.get('provider')
+                      out['dataset'] = p.get('dataset')
+                      out['recordsTotal'] = p.get('recordsTotal')
+                      out['recordsFiltered'] = p.get('recordsFiltered')
+                      d = p.get('data')
+                      out['data_type'] = type(d).__name__
+                      out['data_count'] = len(d) if isinstance(d, list) else None
+                      if isinstance(d, list):
+                          dates = sorted({str(x.get('Date',''))[:10] for x in d if isinstance(x,dict)})
+                          codes = [str(x.get('StockCode','')) for x in d[:5] if isinstance(x,dict)]
+                          out['distinct_dates_head'] = dates[:5]
+                          out['distinct_dates_count'] = len(dates)
+                          out['sample_codes'] = codes
+              except Exception as e:
+                  out['json_error'] = type(e).__name__
+              print(json.dumps(out, sort_keys=True))
+          PY
       - name: End-to-end five-ticker cloud smoke
         run: >-
           python scripts/run_stockbit_stream_capture_v2.py
