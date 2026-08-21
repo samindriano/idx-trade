@@ -10,6 +10,7 @@ from typing import Mapping, Sequence
 
 import pandas as pd
 
+from . import forward_ca_attestation_v1 as forward_ca
 from .v4_x1_decision_v1_contract import DecisionV1Error, _normalize_ticker
 
 _EOD_INPUT_TOKEN = object()
@@ -142,9 +143,15 @@ def verify_eod_execution_inputs(
     right_dates = pd.to_datetime(right["date"], errors="coerce")
     if left_dates.isna().any() or right_dates.isna().any():
         raise DecisionV1Error("EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID")
-    if not all(_date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date for x in left_dates):
+    if not all(
+        _date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date
+        for x in left_dates
+    ):
         raise DecisionV1Error("EXECUTION_V1_EOD_OHLCV_DATE_MISMATCH")
-    if not all(_date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date for x in right_dates):
+    if not all(
+        _date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date
+        for x in right_dates
+    ):
         raise DecisionV1Error("EXECUTION_V1_EOD_MODEL_DATE_MISMATCH")
 
     merged = right.merge(
@@ -174,7 +181,9 @@ def verify_eod_execution_inputs(
     required = {_normalize_ticker(x) for x in required_tickers}
     missing_close = required - set(closes)
     if missing_close:
-        raise DecisionV1Error(f"EXECUTION_V1_EOD_REQUIRED_CLOSE_MISSING:{sorted(missing_close)}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_EOD_REQUIRED_CLOSE_MISSING:{sorted(missing_close)}"
+        )
 
     return VerifiedEODExecutionInputs(
         session_date=session_date,
@@ -211,7 +220,10 @@ def verify_open_execution_inputs(
     dates = pd.to_datetime(view["session_date"], errors="coerce")
     if dates.isna().any():
         raise DecisionV1Error("EXECUTION_V1_OPEN_ARTIFACT_DATE_INVALID")
-    if not all(_date(x, "EXECUTION_V1_OPEN_ARTIFACT_DATE_INVALID") == session_date for x in dates):
+    if not all(
+        _date(x, "EXECUTION_V1_OPEN_ARTIFACT_DATE_INVALID") == session_date
+        for x in dates
+    ):
         raise DecisionV1Error("EXECUTION_V1_OPEN_ARTIFACT_DATE_MISMATCH")
     prices: dict[str, float] = {}
     for row in view.itertuples(index=False):
@@ -244,17 +256,41 @@ def verify_corporate_action_attestation(
         raise DecisionV1Error("EXECUTION_V1_CA_ATTESTATION_INVALID") from exc
     if not isinstance(payload, dict):
         raise DecisionV1Error("EXECUTION_V1_CA_ATTESTATION_NOT_OBJECT")
-    if payload.get("schema_version") != "v4_x1_paper_ca_attestation_v1":
+    if payload.get("schema_version") != forward_ca.ATTESTATION_SCHEMA:
         raise DecisionV1Error("EXECUTION_V1_CA_ATTESTATION_SCHEMA_CHANGED")
+
+    if forward_ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT is None:
+        raise DecisionV1Error("EXECUTION_V1_CA_CALENDAR_SCHEMA_NOT_FROZEN")
+    if payload.get("provider_repository") != forward_ca.PROVIDER_REPOSITORY:
+        raise DecisionV1Error("EXECUTION_V1_CA_PROVIDER_REPOSITORY_MISMATCH")
+    if payload.get("provider_commit") != forward_ca.PROVIDER_COMMIT:
+        raise DecisionV1Error("EXECUTION_V1_CA_PROVIDER_COMMIT_MISMATCH")
+    if payload.get("upstream_base_url") != forward_ca.UPSTREAM_BASE_URL:
+        raise DecisionV1Error("EXECUTION_V1_CA_UPSTREAM_MISMATCH")
+    if (
+        payload.get("calendar_schema_fingerprint")
+        != forward_ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT
+    ):
+        raise DecisionV1Error("EXECUTION_V1_CA_CALENDAR_SCHEMA_FINGERPRINT_MISMATCH")
+
     from_date = _date(payload.get("from_session_date"), "EXECUTION_V1_CA_FROM_DATE_INVALID")
-    through_date = _date(payload.get("through_session_date"), "EXECUTION_V1_CA_THROUGH_DATE_INVALID")
-    if from_date != _date(expected_from_session_date, "EXECUTION_V1_CA_EXPECTED_FROM_INVALID"):
+    through_date = _date(
+        payload.get("through_session_date"), "EXECUTION_V1_CA_THROUGH_DATE_INVALID"
+    )
+    if from_date != _date(
+        expected_from_session_date, "EXECUTION_V1_CA_EXPECTED_FROM_INVALID"
+    ):
         raise DecisionV1Error("EXECUTION_V1_CA_FROM_DATE_MISMATCH")
-    if through_date != _date(expected_through_session_date, "EXECUTION_V1_CA_EXPECTED_THROUGH_INVALID"):
+    if through_date != _date(
+        expected_through_session_date, "EXECUTION_V1_CA_EXPECTED_THROUGH_INVALID"
+    ):
         raise DecisionV1Error("EXECUTION_V1_CA_THROUGH_DATE_MISMATCH")
+
     status = str(payload.get("status") or "")
     if status != "NO_RELEVANT_EVENTS":
-        raise DecisionV1Error(f"EXECUTION_V1_CA_RECONCILIATION_REQUIRED:{status or 'UNKNOWN'}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_CA_RECONCILIATION_REQUIRED:{status or 'UNKNOWN'}"
+        )
     rows = payload.get("evidence_rows")
     if not isinstance(rows, list):
         raise DecisionV1Error("EXECUTION_V1_CA_EVIDENCE_ROWS_MISSING")
@@ -263,12 +299,17 @@ def verify_corporate_action_attestation(
         if not isinstance(row, dict):
             raise DecisionV1Error("EXECUTION_V1_CA_EVIDENCE_ROW_INVALID")
         ticker = _normalize_ticker(row.get("ticker"))
+        if ticker in covered:
+            raise DecisionV1Error("EXECUTION_V1_CA_EVIDENCE_DUPLICATE_TICKER")
         if row.get("status") != "NO_RELEVANT_EVENT":
             raise DecisionV1Error(f"EXECUTION_V1_CA_RELEVANT_EVENT:{ticker}")
         covered.add(ticker)
+
     required = {_normalize_ticker(x) for x in required_tickers}
     if not required.issubset(covered):
-        raise DecisionV1Error(f"EXECUTION_V1_CA_COVERAGE_INCOMPLETE:{sorted(required-covered)}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_CA_COVERAGE_INCOMPLETE:{sorted(required-covered)}"
+        )
 
     raw_source_path = Path(str(payload.get("source_path") or ""))
     if not raw_source_path.is_absolute():
@@ -281,6 +322,30 @@ def verify_corporate_action_attestation(
     actual_source_sha = _sha256(raw_source_path)
     if actual_source_sha != declared_source_sha:
         raise DecisionV1Error("EXECUTION_V1_CA_SOURCE_SHA_MISMATCH")
+
+    try:
+        source_payload, _ = forward_ca.verify_source_manifest(raw_source_path)
+    except forward_ca.ForwardCAError as exc:
+        raise DecisionV1Error(f"EXECUTION_V1_CA_SOURCE_CHAIN_INVALID:{exc}") from exc
+
+    source_from = _date(
+        source_payload.get("from_session_date"), "EXECUTION_V1_CA_SOURCE_FROM_DATE_INVALID"
+    )
+    source_through = _date(
+        source_payload.get("through_session_date"),
+        "EXECUTION_V1_CA_SOURCE_THROUGH_DATE_INVALID",
+    )
+    if source_from != from_date or source_through != through_date:
+        raise DecisionV1Error("EXECUTION_V1_CA_SOURCE_SCOPE_DATE_MISMATCH")
+    source_tickers = {
+        _normalize_ticker(x) for x in source_payload.get("required_tickers", [])
+    }
+    if covered != source_tickers:
+        raise DecisionV1Error("EXECUTION_V1_CA_SOURCE_TICKER_COVERAGE_MISMATCH")
+    if source_payload.get("calendar_schema_fingerprints") != [
+        forward_ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT
+    ]:
+        raise DecisionV1Error("EXECUTION_V1_CA_SOURCE_CALENDAR_SCHEMA_MISMATCH")
 
     return VerifiedCorporateActionAttestation(
         from_session_date=from_date,
