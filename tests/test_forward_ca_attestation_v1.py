@@ -149,6 +149,12 @@ def _source(tmp_path: Path, **phase_kwargs):
     return source, fingerprint
 
 
+def test_production_calendar_schema_fingerprint_is_frozen():
+    assert ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT == (
+        "09a2f81aaa291b27232ca610b228a28470cbe11d5599fa66f55a3b75030060f3"
+    )
+
+
 def test_phase_manifest_rejects_wrong_provider_pin(tmp_path):
     path, _ = _phase(tmp_path, "POST_EOD", provider_commit="0" * 40)
     with pytest.raises(ca.ForwardCAError, match="PROVIDER_COMMIT_MISMATCH"):
@@ -182,9 +188,9 @@ def test_merge_requires_same_two_phase_scope(tmp_path):
         )
 
 
-def test_attestation_is_blocked_until_calendar_schema_is_frozen(tmp_path):
+def test_attestation_fails_closed_if_schema_freeze_is_removed(monkeypatch, tmp_path):
     source, _ = _source(tmp_path)
-    assert ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT is None
+    monkeypatch.setattr(ca, "EXPECTED_CALENDAR_SCHEMA_FINGERPRINT", None)
     with pytest.raises(ca.ForwardCAError, match="CALENDAR_SCHEMA_NOT_FROZEN"):
         ca.build_attestation(
             source_manifest_path=source,
