@@ -48,7 +48,7 @@ PR #35 must not be promoted in its original form. The hardened implementation in
 
 ## Verification
 
-Final hardened HEAD at the time of this checkpoint is the commit containing this document; immediately prior code/CI head was `54b4ed8d72a7f2f03f8cc3521e99be0b90c14441`.
+Code/CI checkpoint: `54b4ed8d72a7f2f03f8cc3521e99be0b90c14441` plus subsequent documentation-only trigger updates.
 
 Dedicated GitHub Actions red-team run:
 
@@ -64,15 +64,19 @@ Repository-wide pytest on the same hardened code:
 - Sole failure: `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
 - The remaining failure is pre-existing/unrelated to Stockbit and is outside this lane. The earlier Stockbit legacy-order failure was remediated and no Stockbit test remained failing.
 
-## Items deliberately not claimed as fixed
+## Deliberately deferred / not code-side defects
 
 ### Cloudflare/R2 storage-policy enforcement — deferred by user
 
 Application code now uses conditional immutable writes and verifies collision bodies, but storage-account policy is a separate control. Bucket Lock / retention policy and least-privilege R2 token scope are intentionally deferred for a later Cloudflare review. Do not claim storage-layer WORM/retention until verified.
 
-### Exchange-holiday gating
+### Exchange-holiday admission
 
-The workflow is weekday scheduled and the universe lookup skips deterministic weekends. This audit did not add a guessed holiday calendar because no canonical future official-session calendar is committed in this lane. Community Stream observations on an exchange holiday are still valid prospective observations, but downstream market-session research must admit them only through an official session calendar. Do not label weekday scheduling itself as an official-session guarantee.
+The workflow is weekday scheduled and the universe lookup skips deterministic weekends. No guessed holiday list was added because no canonical future official-session calendar is committed in this lane. This is not treated as a capture-integrity defect: Stockbit community observations on an exchange holiday remain valid prospective source observations. Any downstream market-session research must admit observations only through the authoritative official session calendar, so weekday scheduling must never be interpreted as an official-session guarantee.
+
+### Cross-symbol duplicates
+
+The archive intentionally preserves re-observations from multiple requested symbols. They share the global Stockbit `post_id`; acquisition must not delete provenance. The required deduplication boundary is downstream unique-post aggregation (`source + post_id`), before sentiment/alpha counting. This audit therefore does not destructively deduplicate raw/normalized archive observations.
 
 ### Observation-span threshold
 
@@ -80,4 +84,4 @@ The manifest now measures observation span. No arbitrary maximum span was introd
 
 ## Promotion rule
 
-Do not merge original PR #35 as-is. Review/promote the hardened implementation instead. Before canonical production claims, separately verify the deferred Cloudflare storage policy. No historical backfill, sentiment fit, model selection, or outcome evaluation is authorized by this checkpoint.
+All confirmed code-side findings from this red-team exercise are remediated and covered by the adversarial gate. Do not merge original PR #35 as-is. Review/promote the hardened implementation instead. Before a stronger storage-layer immutability claim, separately verify the deferred Cloudflare storage policy. No historical backfill, sentiment fit, model selection, or outcome evaluation is authorized by this checkpoint.
