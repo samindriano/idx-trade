@@ -1,6 +1,6 @@
 {
   "schema_version": "forward_ca_attestation_v1",
-  "status": "PREPARED_CALENDAR_SCHEMA_PROBE_REQUIRED",
+  "status": "CALENDAR_PROBE_CAPTURED_REVIEW_REQUIRED",
   "primary_source": "DIRECT_IDX_VIA_PINNED_IDX_BEI",
   "provider_repository": "nichsedge/idx-bei",
   "provider_commit": "75d6c0f74fa360d225794c70c383348977de6798",
@@ -52,6 +52,9 @@
   "execution_admission_status": "NO_RELEVANT_EVENTS_ONLY",
   "calendar_schema_fingerprint": null,
   "calendar_schema_probe_required_before_execution_admission": true,
+  "calendar_schema_probe_observed_date": "2026-08-21",
+  "calendar_schema_probe_observed_fingerprint": "09a2f81aaa291b27232ca610b228a28470cbe11d5599fa66f55a3b75030060f3",
+  "calendar_schema_probe_evidence_state": "USER_LOCAL_CAPTURE_AWAITING_OFFLINE_REVIEW",
   "zapi_fallback": "NOT_WIRED_V1",
   "historical_backfill_authorized": false,
   "historical_pnl_authorized": false,
