@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
+import requests
+
 from idx_trade.stockbit_stream_archive import StreamArchiveError, verify_universe_manifest
 from idx_trade.stockbit_stream_capture_v2 import (
     IDENTITY_ROSTER_STALE_DAYS,
@@ -115,7 +117,14 @@ def main() -> int:
         }
         print(json.dumps(summary, sort_keys=True))
         return 0 if result["status"] == "DATA_READY" else 2
-    except (StreamArchiveError, OSError, ValueError, KeyError, TypeError) as exc:
+    except (
+        StreamArchiveError,
+        requests.RequestException,
+        OSError,
+        ValueError,
+        KeyError,
+        TypeError,
+    ) as exc:
         print(json.dumps({"status": "BLOCKED_OR_FAILED", "detail": str(exc)}, sort_keys=True))
         return 2
 
