@@ -5,7 +5,7 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `CALENDAR_SCHEMA_FROZEN_DIVIDEND_ACCOUNTING_PREREGISTERED`
+status: `ZAPI_DIVIDENDS_AUDIT_PREPARED_LIVE_PROBE_REQUIRED_V1_1_BLOCKED`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope
@@ -45,9 +45,7 @@ Current Execution admission remains only:
 
 Any relevant event, source incompleteness, hash mismatch, provider-pin mismatch or schema drift blocks normal execution and requires reconciliation.
 
-## Cash dividend accounting — now explicit requirement
-
-Cash dividend handling is not optional. A large ex-date price drop can be mechanical while the entitled holder simultaneously owns a dividend claim. If paper NAV marks only the lower share price until cash payment, drawdown/return is wrong.
+## Cash dividend accounting — explicit requirement
 
 Preregistered contract:
 `docs/checkpoints/2026-08-21_FORWARD_CA_DIVIDEND_ACCOUNTING_CONTRACT_V1.md`
@@ -60,29 +58,40 @@ Required future state semantics:
 - selling on ex date does not erase already-earned receivable;
 - buying first on ex date does not receive that dividend;
 - on payment date transfer receivable to cash without recognizing PnL a second time;
-- dividend tax/withholding remains an explicit unresolved policy, not a hidden haircut.
+- dividend tax/withholding remains explicit/unresolved.
 
-Automatic dividend reconciliation is still `NOT_IMPLEMENTED_FAIL_CLOSED` until event amount/date extraction, paper-state receivables and tests are implemented.
+Automatic dividend reconciliation is still `NOT_IMPLEMENTED_FAIL_CLOSED`.
 
 ## Alpha boundary around dividend traps
 
-Do not adjust V4-X1 price inputs or ranks for dividends through this lane. V4-X1 is frozen.
+Do not adjust V4-X1 price inputs or ranks for dividends through this lane. V4-X1 is frozen. Any ex-date normalization, dividend-yield feature, days-to-cum/ex feature or event-aware entry rule requires a separately preregistered alpha/overlay challenger.
 
-A run-up before cum date or mechanical ex-date drop may therefore affect its raw-price alpha features. Any attempt to normalize ex-date returns, add days-to-ex/cum features, or avoid dividend-trap entries is a separately preregistered alpha/overlay challenger, not an accounting patch.
+## Zapi `/dividends` audit — current gate
 
-## Zapi status
+The user explicitly requested that `/dividends` be audited before Forward CA V1.1 is created.
 
-The user-supplied Zapi changelog added dedicated IDX endpoints including `dividends`, `rights-offerings`, `stock-splits`, `issued-history`, `additional-listings`, `delistings` and updated `calendar`.
+Audit preregistration:
+`docs/checkpoints/2026-08-21_ZAPI_IDX_DIVIDENDS_BOUNDED_AUDIT_PREP.md`
 
-Decision:
+Prepared audit-only entry points:
 
-- do not replace direct IDX V1;
-- do not silently fallback in V1;
-- Zapi `dividends` is especially valuable as a future structured-extraction/parity helper for dividend amount and dates;
-- it must receive a bounded response/provenance audit before influencing execution/accounting;
-- official direct IDX evidence remains authority; disagreement must fail closed until explicitly resolved.
+- live bounded probe: `scripts/probe_zapi_idx_dividends_v1.py`
+- offline reviewer: `scripts/review_zapi_idx_dividends_probe_v1.py`
+- one-command Windows runner: `scripts/run_zapi_idx_dividends_audit_v1.ps1`
 
-## Prepared entry points
+The runner uses the public Zapi catalog schema first and performs at most one authenticated request, with zero retries. `ZAPI_API_KEY` is never persisted.
+
+Hard PASS status:
+`PASS_ELIGIBLE_FOR_V1_1_STRUCTURED_HELPER`
+
+It requires a ticker-scoped row with positive cash dividend/share plus parseable cum, ex, recording and payment dates with coherent ordering.
+
+Forward CA V1.1 is currently:
+`NOT_AUTHORIZED`
+
+If the audit fails, do not create V1.1 from this endpoint. If it passes, V1.1 may be prepared with direct IDX remaining authority and Zapi acting only as a structured helper/parity source; disagreement remains fail-closed.
+
+## Prepared Forward CA V1 entry points
 
 - provider setup: `scripts/setup_idx_bei_forward_ca_provider.ps1`
 - direct capture: `scripts/capture_forward_ca_idx_bei.py`
@@ -91,18 +100,12 @@ Decision:
 - Execution CA verifier: `src/idx_trade/v4_x1_execution_v1_verify.py`
 - config: `config/forward_ca_attestation_v1.json`
 - schema freeze checkpoint: `docs/checkpoints/2026-08-21_FORWARD_CA_ATTESTATION_V1_SCHEMA_FREEZE.md`
-- dividend contract: `docs/checkpoints/2026-08-21_FORWARD_CA_DIVIDEND_ACCOUNTING_CONTRACT_V1.md`
 
 ## Next lane action
 
-Before calling the Forward Paper Orchestrator production-ready, implement the minimum event-state processor in this order:
+1. run exactly one bounded Zapi `/dividends` audit using the repository runner;
+2. review result against the preregistered PASS gate;
+3. only on PASS, create Forward CA V1.1 and implement cash-dividend event certification/receivables;
+4. then implement split/reverse-split quantity transform and Forward Paper orchestration.
 
-1. cash dividend extraction/certification and dividend receivable state;
-2. split/reverse-split quantity transform;
-3. Forward CA POST_EOD/PREOPEN orchestration;
-4. relevant-event reconciliation path into Execution V1;
-5. tests for restart/idempotency, cum/ex transitions, payment settlement and no double-counting.
-
-Until those transformations are implemented, a detected CA continues to block blind execution.
-
-Do not rerun the 2026-08-21 schema probe unless a deliberate schema re-certification is required.
+Until an event-specific transformation is implemented, detected CA continues to block blind execution.
