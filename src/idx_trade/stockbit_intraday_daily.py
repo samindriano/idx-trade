@@ -121,16 +121,113 @@ def _verify_saved_gate(paths: dict[str, Path], *, expected_date: date, universe_
         raise ValueError("saved traded gate belongs to a different session")
     if metadata.get("universe_snapshot_sha256") != universe_sha:
         raise ValueError("saved traded gate universe hash mismatch")
-    for key in ("raw", "headers", "normalized", "decisions"):
-        path = paths[key]
-        if not path.exists():
-            raise FileNotFoundError(f"saved traded gate incomplete: {path}")
-        expected_hash = metadata.get(f"{key}_sha256")
-        if expected_hash != sha256_file(path):
-            raise ValueError(f"saved traded gate hash mismatch: {key}")
+    source_kind = str(metadata.get("summary_source") or "ZAPI_IDX_STOCK_SUMMARY")
+    if source_kind == "IDX_OFFICIAL_EOD_REUSE":
+        source_summary = Path(str(metadata.get("source_summary_path") or ""))
+        source_raw = Path(str(metadata.get("source_raw_path") or ""))
+        if not source_summary.is_file() or not source_raw.is_file():
+            raise FileNotFoundError("saved EOD-reused gate source artifact is missing")
+        if metadata.get("source_summary_sha256") != sha256_file(source_summary):
+            raise ValueError("saved traded gate source summary hash mismatch")
+        if metadata.get("source_raw_sha256") != sha256_file(source_raw):
+            raise ValueError("saved traded gate source raw hash mismatch")
+        for key in ("normalized", "decisions"):
+            path = paths[key]
+            if not path.exists():
+                raise FileNotFoundError(f"saved traded gate incomplete: {path}")
+            expected_hash = metadata.get(f"{key}_sha256")
+            if expected_hash != sha256_file(path):
+                raise ValueError(f"saved traded gate hash mismatch: {key}")
+    else:
+        for key in ("raw", "headers", "normalized", "decisions"):
+            path = paths[key]
+            if not path.exists():
+                raise FileNotFoundError(f"saved traded gate incomplete: {path}")
+            expected_hash = metadata.get(f"{key}_sha256")
+            if expected_hash != sha256_file(path):
+                raise ValueError(f"saved traded gate hash mismatch: {key}")
     decisions = pd.read_csv(paths["decisions"])
     safe_headers = json.loads(paths["headers"].read_text(encoding="utf-8"))
     return GateResult(decisions=decisions, summary_call_made=False, safe_headers=safe_headers)
+
+
+def _load_eod_stock_summary(day_root: Path, *, expected_date: date) -> tuple[pd.DataFrame, dict[str, Any]] | None:
+    """Reuse a verified canonical EOD Stock Summary for the same session.
+
+    The intraday gate must not make a second post-close Zapi request when the
+    canonical EOD transaction already contains the official snapshot.  This
+    is deliberately strict: any missing, stale, partial, or hash-mismatched
+    EOD artifact returns ``None`` so the existing Zapi path remains the only
+    fallback and can fail closed normally.
+    """
+
+    base_root = day_root.parent.parent
+    session_root = base_root.parent / "forward_monitoring" / "sessions" / expected_date.isoformat()
+    manifest_path = session_root / "manifest.json"
+    summary_path = session_root / "idx_stock_summary.csv"
+    raw_path = session_root / "idx_stock_summary.raw.json"
+    if not manifest_path.is_file() or not summary_path.is_file() or not raw_path.is_file():
+        return None
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    source = manifest.get("stock_summary_source") or {}
+    metadata = manifest.get("stock_summary_meta") or {}
+    if (
+        manifest.get("status") != "DATA_READY"
+        or manifest.get("session_date") != expected_date.isoformat()
+        or source.get("source") != "IDX_OFFICIAL"
+        or source.get("session_date") != expected_date.isoformat()
+        or metadata.get("completeness_status") != "COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE"
+    ):
+        return None
+    if manifest.get("stock_summary_sha256") != sha256_file(summary_path):
+        raise ValueError("canonical EOD Stock Summary hash mismatch")
+    declared_raw_sha = manifest.get("stock_summary_raw_sha256")
+    if not declared_raw_sha or declared_raw_sha != sha256_file(raw_path):
+        raise ValueError("canonical EOD Stock Summary raw hash mismatch")
+
+    frame = pd.read_csv(summary_path)
+    required = {"ticker", "as_of_date", "volume", "frequency", "regular_value"}
+    if required - set(frame.columns):
+        raise ValueError("canonical EOD Stock Summary columns are incomplete")
+    if len(frame) != int(metadata.get("rows", -1)):
+        raise ValueError("canonical EOD Stock Summary row count mismatch")
+    if int(metadata.get("rows", -1)) != int(metadata.get("records_total", -2)):
+        raise ValueError("canonical EOD Stock Summary recordsTotal mismatch")
+    if int(metadata.get("rows", -1)) != int(metadata.get("records_filtered", -3)):
+        raise ValueError("canonical EOD Stock Summary recordsFiltered mismatch")
+    if frame["ticker"].astype(str).duplicated().any():
+        raise ValueError("canonical EOD Stock Summary has duplicate tickers")
+    if frame["as_of_date"].astype(str).ne(expected_date.isoformat()).any():
+        raise ValueError("canonical EOD Stock Summary date mismatch")
+
+    numeric = frame[["volume", "frequency", "regular_value"]].apply(pd.to_numeric, errors="coerce")
+    if numeric.isna().any().any() or (numeric < 0).any().any():
+        raise ValueError("canonical EOD Stock Summary activity fields are invalid")
+    summary = pd.DataFrame(
+        {
+            "ticker": frame["ticker"].astype(str).str.upper().str.strip(),
+            "session_date": expected_date.isoformat(),
+            "volume": numeric["volume"],
+            "value": numeric["regular_value"],
+            "frequency": numeric["frequency"],
+            "raw_close": float("nan"),
+            "raw_high": float("nan"),
+            "raw_low": float("nan"),
+        }
+    ).sort_values("ticker").reset_index(drop=True)
+    provenance = {
+        "summary_source": "IDX_OFFICIAL_EOD_REUSE",
+        "source_ref": source.get("source_ref"),
+        "source_summary_path": str(summary_path),
+        "source_summary_sha256": sha256_file(summary_path),
+        "source_raw_path": str(raw_path),
+        "source_raw_sha256": declared_raw_sha,
+        "source_observed_available_at_utc": source.get("observed_available_at_utc"),
+        "source_records_total": int(metadata["records_total"]),
+        "source_records_filtered": int(metadata["records_filtered"]),
+    }
+    return summary, provenance
 
 
 def prepare_traded_gate(
@@ -150,10 +247,23 @@ def prepare_traded_gate(
 
     summary_call_made = False
     safe_headers: dict[str, Any] = {}
-    if paths["raw"].exists():
+    eod_reuse = _load_eod_stock_summary(day_root, expected_date=expected_date)
+    source_provenance: dict[str, Any] = {}
+    if eod_reuse is not None:
+        idx_summary, source_provenance = eod_reuse
+        safe_headers = {
+            "source": "IDX_OFFICIAL_EOD_REUSE",
+            "source_ref": source_provenance["source_ref"],
+            "observed_available_at_utc": source_provenance["source_observed_available_at_utc"],
+            "records_total": source_provenance["source_records_total"],
+            "records_filtered": source_provenance["source_records_filtered"],
+        }
+        _atomic_json(paths["headers"], safe_headers)
+    elif paths["raw"].exists():
         payload = json.loads(paths["raw"].read_text(encoding="utf-8"))
         if paths["headers"].exists():
             safe_headers = json.loads(paths["headers"].read_text(encoding="utf-8"))
+        idx_summary = parse_stock_summary_payload(payload, expected_date=expected_date)
     else:
         payload, safe_headers = _request_summary(session, api_key, expected_date=expected_date)
         summary_call_made = True
@@ -161,20 +271,21 @@ def prepare_traded_gate(
         # repaired offline without spending another request.
         _atomic_json(paths["raw"], payload)
         _atomic_json(paths["headers"], safe_headers)
-
-    idx_summary = parse_stock_summary_payload(payload, expected_date=expected_date)
+        idx_summary = parse_stock_summary_payload(payload, expected_date=expected_date)
     _atomic_csv(paths["normalized"], idx_summary)
     decisions = _build_gate_decisions(universe, idx_summary)
     _atomic_csv(paths["decisions"], decisions)
     metadata = {
         "expected_date": expected_date.isoformat(),
         "universe_snapshot_sha256": universe_sha,
+        **source_provenance,
+        "summary_source": source_provenance.get("summary_source", "ZAPI_IDX_STOCK_SUMMARY"),
         "canonical_summary_rows": len(idx_summary),
         "universe_rows": len(universe),
         "summary_coverage": int(decisions["idx_summary_present"].sum()),
         "would_fetch_stockbit": int(decisions["would_fetch_stockbit"].sum()),
         "would_skip_no_activity": int((decisions["gate_decision"] == "SKIP_NO_ACTIVITY").sum()),
-        "raw_sha256": sha256_file(paths["raw"]),
+        "raw_sha256": sha256_file(paths["raw"]) if paths["raw"].exists() else None,
         "headers_sha256": sha256_file(paths["headers"]),
         "normalized_sha256": sha256_file(paths["normalized"]),
         "decisions_sha256": sha256_file(paths["decisions"]),

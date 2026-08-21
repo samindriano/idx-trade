@@ -184,6 +184,70 @@ def test_gate_resume_reuses_raw_without_second_network_call(tmp_path, monkeypatc
     assert len(second.decisions) == 2
 
 
+def test_gate_reuses_verified_canonical_eod_summary_without_zapi_request(tmp_path, monkeypatch):
+    import json
+    from idx_trade.provenance import sha256_file
+
+    base_root = tmp_path / "stockbit_intraday_recurring_v1"
+    day_root = base_root / "sessions" / SESSION.isoformat()
+    eod_root = tmp_path / "forward_monitoring" / "sessions" / SESSION.isoformat()
+    eod_root.mkdir(parents=True)
+    summary_path = eod_root / "idx_stock_summary.csv"
+    raw_path = eod_root / "idx_stock_summary.raw.json"
+    summary_path.write_text(
+        "ticker,as_of_date,volume,frequency,regular_value\n"
+        "BBCA,2026-08-12,100,5,2000\n"
+        "ZERO,2026-08-12,0,0,0\n",
+        encoding="utf-8",
+    )
+    raw_path.write_text('{"source":"official"}\n', encoding="utf-8")
+    summary_sha = sha256_file(summary_path)
+    raw_sha = sha256_file(raw_path)
+    manifest = {
+        "status": "DATA_READY",
+        "session_date": SESSION.isoformat(),
+        "stock_summary_sha256": summary_sha,
+        "stock_summary_raw_sha256": raw_sha,
+        "stock_summary_meta": {
+            "rows": 2,
+            "records_total": 2,
+            "records_filtered": 2,
+            "completeness_status": "COMPLETE_RECORDS_TOTAL_SINGLE_RESPONSE",
+        },
+        "stock_summary_source": {
+            "source": "IDX_OFFICIAL",
+            "session_date": SESSION.isoformat(),
+            "source_ref": "https://www.idx.id/primary/TradingSummary/GetStockSummary?date=20260812",
+            "observed_available_at_utc": "2026-08-12T12:00:00+00:00",
+        },
+    }
+    (eod_root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    universe = pd.DataFrame({"ticker": ["BBCA", "ZERO"]})
+    monkeypatch.setattr(
+        daily,
+        "_request_summary",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("Zapi should not be called")),
+    )
+
+    result = daily.prepare_traded_gate(
+        day_root,
+        universe,
+        expected_date=SESSION,
+        universe_sha="universe-sha",
+        api_key="unused",
+        session=None,
+    )
+
+    assert not result.summary_call_made
+    assert result.safe_headers["source"] == "IDX_OFFICIAL_EOD_REUSE"
+    assert result.decisions.set_index("ticker").loc["BBCA", "gate_decision"] == "FETCH_TRADED"
+    assert result.decisions.set_index("ticker").loc["ZERO", "gate_decision"] == "SKIP_NO_ACTIVITY"
+    metadata = json.loads((day_root / "gate" / "gate_metadata.json").read_text(encoding="utf-8"))
+    assert metadata["summary_source"] == "IDX_OFFICIAL_EOD_REUSE"
+    assert metadata["source_summary_sha256"] == summary_sha
+    assert metadata["source_raw_sha256"] == raw_sha
+
+
 def test_ineligible_shadow_session_does_not_advance_counter():
     policy = daily._policy_default()
     updated = daily.update_policy_after_session(
