@@ -35,7 +35,7 @@ $uv = Resolve-UvExecutable
 if (-not $uv) {
     Write-Host "uv not found. Installing uv with Astral's official Windows installer..."
     try {
-        $installer = Invoke-RestMethod -Uri "https://astral.sh/uv/install.ps1" -UseBasicParsing
+        $installer = Invoke-RestMethod -Uri "https://astral.sh/uv/install.ps1"
         Invoke-Expression $installer
     }
     catch {
