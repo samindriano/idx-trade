@@ -1,0 +1,177 @@
+{
+  "schema_version": "decision_v3_graded_evidence_structural_replay_contract_v2",
+  "status": "FROZEN_BEFORE_FIRST_REPLAY",
+  "decision_rule_id": "V4_X1_DECISION_V3_GRADED_EVIDENCE_V2",
+  "implementation_code_head": "c89ecb4f88e98cc23c140f15dee13ca423a92f5c",
+  "source": {
+    "manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "score_filename": "clean_challenger_validation_scores.parquet",
+    "sessions": 600,
+    "rows": 172697,
+    "allowed_parquet_columns": [
+      "ticker",
+      "date",
+      "fold",
+      "mode",
+      "alpha_consensus"
+    ],
+    "policy_visible_fields": [
+      "ticker",
+      "rank_consensus"
+    ],
+    "alpha_consensus_use": "RANK_RECONSTRUCTION_ONLY_NOT_POLICY_INPUT",
+    "score_regeneration": false,
+    "provider_calls": false,
+    "network_calls": false,
+    "returns_or_pnl_access": false,
+    "target_or_outcome_access": false,
+    "protected_or_fresh_forward_access": false
+  },
+  "trajectory": {
+    "bootstrap": "EXACT_CURRENT_TOP10_ON_INDEX_0_ONLY",
+    "preroll": false,
+    "adjacency": "EXACT_PREVIOUS_SCORE_SESSION_T_MINUS_1_TO_T",
+    "continuous_state": true,
+    "fold_resets": false,
+    "second_in_memory_pass": "SAME_LOADED_SOURCE_AND_POLICY_DETERMINISM_CHECK_ONLY"
+  },
+  "replacement_metric": {
+    "definition": "max(sell_intent_count,buy_intent_count)_per_nonbootstrap_transition",
+    "bootstrap_excluded": true,
+    "rationale": "CONSERVATIVE_CHANGED_SEAT_COUNT_SUPPORTS_EXIT_ONLY_AND_FILL_ONLY_TRANSITIONS"
+  },
+  "comparators": {
+    "naive_exact_daily_top10_replacements": 3127,
+    "decision_v1_replacements": 2686,
+    "decision_v2_replacements": 1435,
+    "decision_v2_result_manifest_sha256": "a555368181dff5084be342dbf13b79993252767ae7e00804f7601477b29995ba",
+    "decision_v2_plan_digest": "51adba87f6ab714044e5064cd7a1c6c72c7327d0e04acf82ab39ff98f876c3e4"
+  },
+  "required_metrics": {
+    "churn": [
+      "total_replacements_excluding_bootstrap",
+      "replacement_mean",
+      "replacement_median",
+      "replacement_p75",
+      "replacement_p90",
+      "replacement_p95",
+      "replacement_max",
+      "share_replacements_0",
+      "share_replacements_1",
+      "share_replacements_2",
+      "share_replacements_ge3",
+      "turnover_ratio_vs_naive",
+      "turnover_ratio_vs_decision_v1",
+      "turnover_ratio_vs_decision_v2"
+    ],
+    "holding_persistence": [
+      "completed_holding_spell_distribution",
+      "one_session_holding_share",
+      "le3_session_holding_share",
+      "right_censored_spell_count"
+    ],
+    "rank_quality": [
+      "mean_current_top10_overlap_full_target",
+      "mean_top10_overlap_normalized_all_sessions",
+      "mean_current_top20_overlap",
+      "mean_target_rank",
+      "median_target_rank",
+      "mean_worst_held_rank",
+      "target_rank_gt20_name_days",
+      "target_rank_gt50_name_days"
+    ],
+    "capacity": [
+      "mean_target_size",
+      "median_target_size",
+      "minimum_target_size",
+      "share_target_size_10",
+      "share_target_size_9",
+      "share_target_size_le8",
+      "underfilled_sessions",
+      "vacancy_days"
+    ],
+    "state_attribution": [
+      "mild_pending_count",
+      "mild_recovery_count",
+      "mild_recovery_rate",
+      "confirmed_mild_exit_count",
+      "severe_exit_count",
+      "universe_exit_count",
+      "tier_a_vacancy_fill_count",
+      "tier_b_vacancy_fill_count",
+      "tier_c_vacancy_fill_count",
+      "tier_a_soft_replacement_count",
+      "tier_d_rejection_count",
+      "sessions_tier_b_prevented_underfill",
+      "sessions_tier_c_prevented_underfill",
+      "high_churn_mechanism_attribution"
+    ],
+    "tier_c_descriptive_only": [
+      "tier_c_entrant_count",
+      "tier_c_completed_holding_duration_distribution",
+      "tier_c_one_session_holding_share",
+      "tier_c_next_session_target_state_distribution",
+      "tier_c_next_session_severe_exit_count",
+      "tier_c_severe_exit_unique_sessions",
+      "replacement_seat_changes_on_tier_c_next_session_severe_exit_sessions"
+    ],
+    "stability": [
+      "six_fixed_100_session_blocks",
+      "fold_boundary_transitions_no_reset"
+    ]
+  },
+  "diagnostic_definitions": {
+    "tier_b_prevented_underfill_session": "TIER_B_VACANCY_FILL_COUNT_GT0_AND_FINAL_TARGET_SIZE_EQ10",
+    "tier_c_prevented_underfill_session": "TIER_C_VACANCY_FILL_COUNT_GT0_AND_FINAL_TARGET_SIZE_EQ10",
+    "tier_c_next_session_state": "INCUMBENT_STATE_FOR_SAME_TICKER_AT_ENTRY_INDEX_PLUS_1_OR_NOT_HELD_OR_RIGHT_CENSORED",
+    "tier_c_next_session_severe_exit": "ENTRY_REASON_TIER_C_RESIDUAL_VACANCY_FILL_AND_SAME_TICKER_STATE_SEVERE_DETERIORATION_EXIT_AT_INDEX_PLUS_1",
+    "tier_c_downstream_replacement_seat_changes": "SUM_REPLACEMENT_COUNT_ON_UNIQUE_INDEX_PLUS_1_SESSIONS_CONTAINING_AT_LEAST_ONE_TIER_C_NEXT_SESSION_SEVERE_EXIT",
+    "high_churn_transition": "NONBOOTSTRAP_REPLACEMENT_COUNT_GE3",
+    "high_churn_attribution": "REPORT_COUNTS_AND_SHARES_OF_HIGH_CHURN_TRANSITIONS_CONTAINING_EACH_SELL_AND_BUY_REASON_WITHOUT_SINGLE_CAUSAL_LABEL"
+  },
+  "gates": {
+    "A_correctness_permission_integrity": {
+      "target_size_max": 10,
+      "unique_target_required": true,
+      "nonbootstrap_entrant_current_rank_max": 10,
+      "postbootstrap_previous_absent_entrant_max_count": 0,
+      "tier_b_priority_or_permission_violation_max_count": 0,
+      "tier_c_priority_or_permission_violation_max_count": 0,
+      "tier_b_c_soft_replacement_violation_max_count": 0,
+      "target_rank_gt50_after_processing_max_count": 0,
+      "second_consecutive_rank21_50_retained_max_count": 0,
+      "first_mild_observation_retention_violation_max_count": 0,
+      "soft_replacement_non_tier_a_or_gap_violation_max_count": 0,
+      "row_order_deterministic": true,
+      "second_pass_deterministic": true
+    },
+    "B_churn": {
+      "mean_replacements_max": 2.25,
+      "turnover_vs_naive_max": 0.5,
+      "share_ge3_replacements_max": 0.35
+    },
+    "C_holding_persistence": {
+      "median_holding_min": 3,
+      "one_session_holding_share_max": 0.35
+    },
+    "D_rank_quality": {
+      "mean_full_target_top10_overlap_min": 6.0,
+      "mean_target_rank_max": 12.0
+    },
+    "E_capacity": {
+      "mean_target_size_min": 9.0,
+      "share_target_size_10_min": 0.7,
+      "share_target_size_le8_max": 0.1
+    },
+    "F_no_hidden_stale_state": {
+      "target_rank_gt50_after_processing_max_count": 0,
+      "second_consecutive_rank21_50_retained_max_count": 0,
+      "universe_exit_retention_violation_max_count": 0
+    }
+  },
+  "verdict_accept": "DECISION_V3_GRADED_EVIDENCE_V2_STRUCTURAL_ACCEPT",
+  "verdict_reject": "DECISION_V3_GRADED_EVIDENCE_V2_STRUCTURAL_REJECT",
+  "tier_c_diagnostics_are_tuning_gates": false,
+  "execution_authorized": false
+}
