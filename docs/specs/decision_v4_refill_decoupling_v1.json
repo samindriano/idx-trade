@@ -53,14 +53,34 @@
       "may_soft_replace": false
     }
   },
+  "operation_order": [
+    "classify_start_of_session_incumbents",
+    "emit_mandatory_exits",
+    "freeze_severe_exit_session_flag_from_start_of_session_incumbent_classification_only",
+    "retain_nonexited_incumbents",
+    "classify_unheld_current_top10_challengers",
+    "fill_vacancies_using_severity_conditioned_tier_permissions",
+    "apply_unchanged_v3_tier_a_soft_replacement_semantics",
+    "allow_remaining_underfill"
+  ],
   "refill_decoupling": {
-    "severe_exit_session_definition": "at_least_one_SEVERE_DETERIORATION_EXIT_after_incumbent_classification",
+    "severe_exit_session_definition": "at_least_one_start_of_session_incumbent_is_classified_SEVERE_DETERIORATION_EXIT_before_any_refill_or_soft_replacement",
+    "severe_exit_session_flag_is_circular": false,
     "on_severe_exit_session_vacancy_priority": ["A_CORE"],
     "on_nonsevere_session_vacancy_priority": ["A_CORE", "B_NEAR", "C_DISTANT"],
     "allow_temporary_underfill": true,
     "no_delayed_entry_state_or_cooldown": true,
     "soft_replacement_semantics_unchanged_from_v3": true
   },
+  "required_descriptive_diagnostics": [
+    "severe_exit_session_count",
+    "tier_a_vacancy_fills_on_severe_sessions",
+    "tier_b_candidates_blocked_on_severe_sessions",
+    "tier_c_candidates_blocked_on_severe_sessions",
+    "underfilled_sessions_after_severity_conditioned_refill",
+    "vacancy_days_after_severity_conditioned_refill",
+    "block_1_to_6_churn_quality_capacity_summary"
+  ],
   "bootstrap_first_session_exact_top10": true,
   "preroll_allowed": false,
   "fold_resets_allowed": false,
