@@ -1,0 +1,44 @@
+{
+  "schema_version": "decision_v2_minimal_profile_v1",
+  "status": "PREREGISTERED_NOT_IMPLEMENTED_NOT_REPLAYED",
+  "engine": {
+    "uses_current_rank": true,
+    "uses_previous_session_rank": true,
+    "uses_h5_h10_heads": false,
+    "uses_raw_score": false,
+    "uses_returns_or_pnl": false,
+    "uses_execution_state": false
+  },
+  "profile": {
+    "alpha_model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "target_count_max": 10,
+    "strong_zone_max_rank": 10,
+    "retention_zone_max_rank": 20,
+    "soft_replacement_min_rank_advantage": 5,
+    "entry_confirmation_previous_rank_max": 20,
+    "exit_confirmation_consecutive_outside_retention": 2,
+    "universe_absence_exit_immediate": true,
+    "allow_temporary_underfill": true,
+    "bootstrap_first_session_exact_top10": true,
+    "bootstrap_preroll": false,
+    "fold_resets": false
+  },
+  "source_replay": {
+    "manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "score_dates": 600,
+    "score_rows": 172697
+  },
+  "acceptance_gates": {
+    "mean_replacements_per_transition_max": 2.25,
+    "turnover_ratio_vs_naive_top10_max": 0.5,
+    "share_transitions_ge3_replacements_max": 0.35,
+    "median_completed_holding_sessions_min": 3,
+    "one_session_completed_holding_share_max": 0.35,
+    "mean_current_top10_overlap_when_full_min": 6.0,
+    "mean_target_rank_max": 12.0,
+    "mean_target_size_min": 9.0,
+    "share_target_size_10_min": 0.7,
+    "share_target_size_le8_max": 0.1
+  }
+}
