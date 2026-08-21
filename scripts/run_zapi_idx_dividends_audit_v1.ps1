@@ -15,16 +15,17 @@ function Resolve-Python {
     if ($py) { return @($py.Source) }
     $launcher = Get-Command py -ErrorAction SilentlyContinue
     if ($launcher) { return @($launcher.Source, "-3") }
-    $uv = Get-Command uv -ErrorAction SilentlyContinue
-    if (-not $uv) {
-        foreach ($candidate in @(
-            (Join-Path $HOME ".local\bin\uv.exe"),
-            (Join-Path $HOME ".cargo\bin\uv.exe")
-        )) {
-            if (Test-Path -LiteralPath $candidate) { $uv = Get-Item $candidate; break }
+
+    $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
+    if ($uvCmd) { return @($uvCmd.Source, "run", "--python", "3.13", "python") }
+    foreach ($candidate in @(
+        (Join-Path $HOME ".local\bin\uv.exe"),
+        (Join-Path $HOME ".cargo\bin\uv.exe")
+    )) {
+        if (Test-Path -LiteralPath $candidate) {
+            return @($candidate, "run", "--python", "3.13", "python")
         }
     }
-    if ($uv) { return @($uv.FullName, "run", "--with", "python-dateutil", "python") }
     throw "Python 3 not found. The previous Forward-CA setup normally installs uv/Python; rerun setup_idx_bei_forward_ca_provider.ps1 if needed."
 }
 
