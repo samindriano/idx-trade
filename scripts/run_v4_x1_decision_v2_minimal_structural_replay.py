@@ -12,10 +12,13 @@ if str(SRC_ROOT) not in sys.path:
 
 from idx_trade.decision_v2_structural_replay import (  # noqa: E402
     DecisionV2StructuralReplayError,
-    load_pinned_v4_x1_source,
     run_structural_replay,
     sha256_file,
     write_structural_replay_artifacts,
+)
+from idx_trade.decision_v2_structural_source import (  # noqa: E402
+    load_pinned_v4_x1_source_strict,
+    verify_frozen_replay_contract,
 )
 
 
@@ -60,7 +63,9 @@ def main() -> int:
             "DECISION_V2_STRUCTURAL_REPLAY_NOT_REVIEW_AUTHORIZED"
         )
 
-    source = load_pinned_v4_x1_source(args.historical_root)
+    # Pin the local executable contract itself before any historical data read.
+    verify_frozen_replay_contract(REPO_ROOT)
+    source = load_pinned_v4_x1_source_strict(args.historical_root)
     result = run_structural_replay(source)
     manifest_path = write_structural_replay_artifacts(
         result,
