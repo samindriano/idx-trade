@@ -1,0 +1,57 @@
+name: forward-ca-calendar-probe-once
+
+on:
+  push:
+    branches:
+      - integration/forward-ca-attestation-v1
+    paths:
+      - .github/workflows/forward-ca-calendar-probe-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout IDX-Trade branch
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned idx-bei provider
+        uses: actions/checkout@v4
+        with:
+          repository: nichsedge/idx-bei
+          ref: 75d6c0f74fa360d225794c70c383348977de6798
+          path: provider
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync pinned provider environment
+        run: uv sync --project provider/python
+
+      - name: Verify provider pin
+        run: |
+          test "$(git -C provider rev-parse HEAD)" = "75d6c0f74fa360d225794c70c383348977de6798"
+
+      - name: Run exactly one bounded IDX calendar request
+        run: |
+          uv run --project provider/python python scripts/probe_forward_ca_calendar_schema_v1.py \
+            --provider-checkout provider \
+            --date 20260821 \
+            --output-dir forward-ca-calendar-probe
+
+      - name: Upload immutable probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forward-ca-calendar-probe-20260821
+          path: forward-ca-calendar-probe/
+          if-no-files-found: warn
+          retention-days: 7
