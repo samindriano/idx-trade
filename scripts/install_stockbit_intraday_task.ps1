@@ -61,15 +61,17 @@ $days = @("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
 # Give the trigger an explicit future StartBoundary. This prevents registering
 # the task late at night with StartWhenAvailable from being interpreted as a
-# missed same-day 16:35/17:30 run.
+# missed same-day post-close run.
 $startBoundary = $StartDate.Date
 if ($startBoundary -le (Get-Date).Date) {
     $startBoundary = (Get-Date).Date.AddDays(1)
 }
-$primaryAt = $startBoundary.AddHours(16).AddMinutes(35)
-$recoveryAt = $startBoundary.AddHours(17).AddMinutes(30)
+$primaryAt = $startBoundary.AddHours(18).AddMinutes(30)
+$recoveryAt = $startBoundary.AddHours(19).AddMinutes(30)
+$finalRecoveryAt = $startBoundary.AddHours(20).AddMinutes(30)
 $primary = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $primaryAt
 $recovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $recoveryAt
+$finalRecovery = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $finalRecoveryAt
 $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -WakeToRun `
@@ -80,11 +82,11 @@ $settings = New-ScheduledTaskSettingsSet `
 
 $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $currentIdentity -LogonType Interactive -RunLevel Limited
-$task = New-ScheduledTask -Action $action -Trigger @($primary, $recovery) -Settings $settings -Principal $principal
+$task = New-ScheduledTask -Action $action -Trigger @($primary, $recovery, $finalRecovery) -Settings $settings -Principal $principal
 Register-ScheduledTask -TaskName $TaskName -InputObject $task -Force | Out-Null
 
 Write-Host "Registered scheduled task: $TaskName"
-Write-Host "Triggers: weekdays 16:35 and 17:30 local time"
+Write-Host "Triggers: weekdays 18:30, 19:30, and 20:30 local time"
 Write-Host "First trigger boundary: $($startBoundary.ToString('yyyy-MM-dd'))"
 Write-Host "WakeToRun: enabled"
 Write-Host "Data root: $DataRoot"

@@ -22,7 +22,9 @@ from .tier2_open_audit import redact_secrets
 
 STOCKBIT_CHART_ENDPOINT = "https://api.zpi.web.id/v1/finance:stockbit/chart"
 JAKARTA = ZoneInfo("Asia/Jakarta")
-DEFAULT_CAPTURE_AFTER = "16:15"
+# Official IDX Stock Summary is not reliably populated at the exchange close.
+# Keep the recurring capture after the canonical EOD availability cutoff.
+DEFAULT_CAPTURE_AFTER = "18:00"
 DEFAULT_MAX_REQUESTS = 500
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_SECONDS = 30.0

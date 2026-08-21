@@ -119,10 +119,12 @@ def test_parse_chart_payload_rejects_conflicting_duplicate_timestamp():
 
 def test_capture_state_is_fail_closed_before_close_gate():
     before = datetime(2026, 8, 11, 15, 0, tzinfo=JAKARTA)
-    after = datetime(2026, 8, 11, 17, 0, tzinfo=JAKARTA)
-    assert capture_state(before, dt_time(16, 15), False) == "BLOCKED_BEFORE_CLOSE"
-    assert capture_state(before, dt_time(16, 15), True) == "PARTIAL_SESSION"
-    assert capture_state(after, dt_time(16, 15), False) == "SESSION_COMPLETE_WINDOW"
+    before_cutoff = datetime(2026, 8, 11, 17, 59, 59, tzinfo=JAKARTA)
+    after = datetime(2026, 8, 11, 18, 0, 0, tzinfo=JAKARTA)
+    assert capture_state(before, dt_time(18, 0), False) == "BLOCKED_BEFORE_CLOSE"
+    assert capture_state(before, dt_time(18, 0), True) == "PARTIAL_SESSION"
+    assert capture_state(before_cutoff, dt_time(18, 0), False) == "BLOCKED_BEFORE_CLOSE"
+    assert capture_state(after, dt_time(18, 0), False) == "SESSION_COMPLETE_WINDOW"
 
 
 def test_request_budget_blocks_accidental_large_universe():

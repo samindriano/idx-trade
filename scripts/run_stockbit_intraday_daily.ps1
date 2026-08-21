@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)][string]$RepoRoot,
     [Parameter(Mandatory = $true)][string]$DataRoot,
     [string]$PythonExe = "",
-    [string]$CaptureAfter = "16:15",
+    [string]$CaptureAfter = "18:00",
     [int]$MonthlyQuotaReserve = 3000
 )
 
