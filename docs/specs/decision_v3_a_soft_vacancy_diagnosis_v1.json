@@ -1,0 +1,77 @@
+{
+  "name": "DECISION_V3_A_SOFT_VS_A_VACANCY_DIAGNOSIS_V1",
+  "status": "FROZEN_BEFORE_EXECUTION",
+  "execution_authorized": false,
+  "purpose": "Outcome-blind descriptive diagnosis of why Tier-A soft-replacement entrants were more durable than Tier-A vacancy-fill entrants in the frozen rejected Decision V3 replay.",
+  "parent": {
+    "v3_status": "DECISION_V3_GRADED_EVIDENCE_V2_STRUCTURAL_REJECT",
+    "v3_plan_digest": "1759d1b21849197257c638f6ac23ae0d3cdd320e34da820b4cc188d533931579",
+    "v3_failure_diagnosis_manifest_sha256": "73350606e408f987602575797f67474f83839256debee7e7b74496255beb0cab",
+    "quality_supply_diagnosis_manifest_sha256": "4818ec82add5344115dfa82f1104947859d17a992ac817a7d3e0d5bdbfdd9e76",
+    "source_manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "source_score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "sessions": 600,
+    "rows": 172697
+  },
+  "allowed_inputs": {
+    "structural_artifacts": [
+      "MANIFEST.json",
+      "summary.json",
+      "decision_session_ledger.csv",
+      "decision_membership_ledger.csv",
+      "decision_intent_ledger.csv",
+      "decision_state_ledger.csv",
+      "holding_spells.csv",
+      "fold_boundary_transitions.csv"
+    ],
+    "historical_rank_projection": [
+      "ticker",
+      "date",
+      "fold",
+      "mode",
+      "alpha_consensus"
+    ]
+  },
+  "entry_classes": {
+    "A_VACANCY": "TIER_A_VACANCY_FILL",
+    "A_SOFT": "SOFT_RANK_GAP_REPLACEMENT"
+  },
+  "frozen_questions": [
+    "How do A_SOFT and A_VACANCY differ in current rank, previous rank, rank delta, and recent Top10/Top20 persistence at entry?",
+    "How do their entry sessions differ in pre-fill mandatory-exit stress and cross-sectional Top10/Top20 overlap?",
+    "Does the next-session severe-exit gap persist within fixed current-rank, previous-rank, persistence, and session-stress reporting strata?",
+    "Does the gap persist when restricted to severe-exit sessions only?",
+    "Is eventual severe-exit incidence directionally consistent with the next-session structural result?"
+  ],
+  "fixed_reporting_strata": {
+    "current_rank": ["1-3", "4-6", "7-10"],
+    "previous_rank": ["1-10", "11-20"],
+    "top10_run_including_entry": ["1", "2", ">=3"],
+    "top20_run_including_entry": ["1", "2", ">=3"],
+    "severe_exit_count": ["0", "1", "2", ">=3"],
+    "top10_overlap": ["0-3", "4-6", "7-10"],
+    "top20_overlap": ["0-9", "10-14", "15-20"]
+  },
+  "forbidden": {
+    "decision_v4_implementation": true,
+    "decision_v4_replay": true,
+    "alternative_rule_simulation": true,
+    "counterfactual_portfolio_simulation": true,
+    "threshold_sweep": true,
+    "wait_policy_simulation": true,
+    "returns_or_pnl": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "model_refit_or_retune": true,
+    "provider_or_network": true,
+    "regime_specific_policy": true,
+    "paper_or_live_activation": true
+  },
+  "outputs": [
+    "summary.json",
+    "a_entry_diagnosis.csv",
+    "stratified_next_severe.csv",
+    "session_context_summary.csv",
+    "MANIFEST.json"
+  ],
+  "interpretation_guard": "All comparisons are descriptive structural evidence on the already-observed frozen V3 trajectory. Reporting strata are not policy thresholds and no causal effect or successor rule is inferred automatically."
+}
