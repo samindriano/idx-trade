@@ -64,18 +64,27 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    compact = {"status": summary["status"], "manifest": str(manifest_path), "manifest_sha256": _sha256(manifest_path)}
+    compact = {
+        "status": summary["status"],
+        "manifest": str(manifest_path),
+        "manifest_sha256": _sha256(manifest_path),
+    }
     for horizon in ("H5", "H10"):
-        compact[f"{horizon}_common_support_by_block"] = summary["horizons"][horizon]["block_common_support_counts"]
-        compact[f"{horizon}_robustness_counts"] = summary["horizons"][horizon]["robustness_counts"]
-        compact[f"{horizon}_v2_minus_v3_gross_mean_by_block"] = [
-            item["v2_minus_v3"]["gross"]["mean"]
-            for item in summary["horizons"][horizon]["blocks"]
+        horizon_result = summary["horizons"][horizon]
+        blocks = horizon_result["blocks"]
+        compact[f"{horizon}_common_support_by_block"] = horizon_result[
+            "block_common_support_counts"
         ]
-        compact[f"{horizon}_v2_minus_v3_primary_mean_by_block"] = [
-            item["v2_minus_v3"]["primary_net_proxy"]["mean"]
-            for item in summary["horizons"][horizon]["blocks"]
+        compact[f"{horizon}_robustness_counts"] = horizon_result[
+            "robustness_counts"
         ]
+        for comparator in ("v2_minus_v3", "v2_minus_naive"):
+            compact[f"{horizon}_{comparator}_gross_mean_by_block"] = [
+                item[comparator]["gross"]["mean"] for item in blocks
+            ]
+            compact[f"{horizon}_{comparator}_primary_mean_by_block"] = [
+                item[comparator]["primary_net_proxy"]["mean"] for item in blocks
+            ]
     print(json.dumps(compact, indent=2, sort_keys=True))
     return 0
 
