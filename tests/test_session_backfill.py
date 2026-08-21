@@ -54,6 +54,25 @@ def test_session_backfill_fails_summary_if_a_month_cannot_be_parsed(tmp_path):
     assert set(sources["status"]) == {"PARSED", "ERROR"}
 
 
+def test_session_backfill_preserves_existing_calendar_on_provider_error(tmp_path):
+    existing = pd.DataFrame({"date": ["2025-09-30"]})
+    existing.to_csv(tmp_path / "exchange_sessions.csv", index=False)
+    before = (tmp_path / "exchange_sessions.csv").read_bytes()
+
+    def fetch_month(year: int, month: int):
+        if month == 9:
+            return pd.DatetimeIndex(["2025-09-30"])
+        raise ValueError("temporary provider failure")
+
+    summary = run_exchange_session_backfill(
+        "2025-09-30", "2025-10-01", tmp_path, fetch_month=fetch_month
+    )
+
+    assert not summary["complete"]
+    assert summary["calendar_write_status"] == "PRESERVED_ON_ERROR"
+    assert (tmp_path / "exchange_sessions.csv").read_bytes() == before
+
+
 def test_session_backfill_records_selected_daily_listing_identity(tmp_path):
     daily_rows = _july_2026_daily_statistics_rows()
 

@@ -143,10 +143,20 @@ def run_exchange_session_backfill(
     write_csv_atomic(source_report, report_dir / "exchange_session_sources.csv")
 
     ordered = pd.DatetimeIndex(sorted(sessions))
-    session_frame = pd.DataFrame({"date": ordered})
-    write_csv_atomic(session_frame, report_dir / "exchange_sessions.csv")
-
     errors = int(source_report["status"].ne("PARSED").sum()) if not source_report.empty else len(months)
+    calendar_path = report_dir / "exchange_sessions.csv"
+    if errors == 0:
+        session_frame = pd.DataFrame({"date": ordered})
+        write_csv_atomic(session_frame, calendar_path)
+        calendar_write_status = "WRITTEN"
+    else:
+        # A partial or empty provider response must never destroy the last
+        # usable calendar.  Leave the canonical file untouched and expose the
+        # failed refresh through the source report/summary so the next run can
+        # retry the complete range without treating partial data as truth.
+        calendar_write_status = (
+            "PRESERVED_ON_ERROR" if calendar_path.is_file() else "NOT_WRITTEN_ON_ERROR"
+        )
     summary = {
         "start": start_ts.date().isoformat(),
         "end": end_ts.date().isoformat(),
@@ -158,6 +168,7 @@ def run_exchange_session_backfill(
         "last_session": ordered.max().date().isoformat() if len(ordered) else None,
         "sessions_sha256": _sessions_sha256(ordered),
         "complete": bool(len(ordered)) and errors == 0,
+        "calendar_write_status": calendar_write_status,
         "source": "IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES",
         "source_identity": (
             source_report["source_identity"].dropna().astype(str).drop_duplicates().iloc[0]
