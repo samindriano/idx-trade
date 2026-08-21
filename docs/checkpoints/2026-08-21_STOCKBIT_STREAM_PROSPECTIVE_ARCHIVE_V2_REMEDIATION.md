@@ -1,91 +1,95 @@
-# Stockbit Stream Prospective Archive V2 — Routine Capture Remediation
+# Stockbit Stream Prospective Archive V2 — Original Smoke Checkpoint
 
 Date: 2026-08-21  
 Scope: acquisition infrastructure only  
-Status: `CLOUD_SMOKE_PASS_READY_FOR_ROUTINE_PROMOTION`
+Status: `SUPERSEDED_BY_RED_TEAM_HARDENING`
 
-## Why V2 was needed
+> This document records the original V2 happy-path smoke lineage. Its former `READY_FOR_ROUTINE_PROMOTION` conclusion is withdrawn. The canonical code-side review is now `docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md` on `audit/stockbit-stream-v2-red-team-v1`.
 
-The first cloud bootstrap used the entire 963-ticker prospective identity list for an `after_close` run. That is useful only as a one-time sparsity/census attempt, not as a recurring social-data universe. The V1 storage hot path also performed raw writes, immediate read-backs, normalized writes/read-backs, and per-post canonical object writes/read-backs. With roughly 30 posts per ticker this turns one Stream request into many sequential object-store operations.
+## Original V2 intent
 
-V2 therefore rejects 963-ticker routine capture. Any V1 full-universe objects already written to R2 remain immutable, noncanonical bootstrap/census evidence and are not deleted or promoted into the V2 routine lineage.
+The first cloud bootstrap used the entire 963-ticker prospective identity list for an `after_close` run. That remains useful only as one-time sparsity/census evidence, not recurring coverage. Original V2 moved recurring acquisition toward top 200 by prior completed IDX-session regular-market traded value and reduced the R2 hot path.
 
-## Frozen routine universe
+Any V1 full-universe objects already written remain noncanonical bootstrap/census evidence. Do not delete them and do not schedule V1 again.
 
-Routine scheduled capture uses the top **200** active current identities ranked by the immediately prior completed IDX session's **regular-market traded value**:
+## Original frozen routine universe
+
+The intended rule was top **200** active identities ranked by immediately prior completed IDX-session regular-market traded value:
 
 `regular_value = Value - NonRegularValue`
 
-Selection is deterministic with ticker as the tie-break. Same-run Stockbit activity, sentiment, returns, model scores, targets, O2, and protected outcomes are not used.
+Expected normal 22-session Stream-call budget remains approximately:
 
-The source session is discovered by bounded backward search and every returned stock-summary row must attest the exact requested `Date`; this fails closed if Zapi ignores the historical date parameter.
+`200 × 3 × 22 = 13,200 Stream calls/month`
 
-Expected normal 22-session Stream-call budget:
+Same-run Stockbit activity, sentiment, returns, model scores, targets, O2, and protected outcomes were not used for selection.
 
-`200 tickers × 3 slots × 22 sessions = 13,200 Stream calls/month`
-
-This intentionally leaves material headroom under the user's 25,000-call Zapi Pro monthly quota.
-
-## Schedule
-
-GitHub Actions remains the canonical scheduler because the user's laptop is not assumed to be awake.
+## Nominal schedule
 
 - `08:47 WIB` — pre-open
 - `12:07 WIB` — midday
 - `16:47 WIB` — after close
 
-GitHub schedule time is nominal; actual provider observation timestamp remains authoritative.
+These are weekday schedule labels. They are not themselves proof of an official IDX trading session.
 
-## Storage remediation
+## Historical happy-path smoke evidence
 
-R2 remains private durable storage. V2 hot path writes:
-
-1. one immutable raw Stream response per ticker;
-2. one normalized JSONL observation object per successful ticker response;
-3. one run manifest;
-4. the exact IDX stock-summary source response used to construct the runtime universe.
-
-The normal R2 path uses conditional immutable PUT semantics and does **not** immediately GET every object back. Existing-object collisions are checked against stored SHA-256 metadata. Per-post canonical objects are removed from the hot path; post `first_seen` is derived offline as the minimum observed timestamp across immutable observations.
-
-## Zapi envelope remediation
-
-Live GitHub Actions evidence showed that the current Zapi REST response for `finance:idx/stock-summary` adds an outer project envelope:
-
-- top-level keys: `data`, `project`, `timestamp`;
-- the actual documented IDX stock-summary payload is nested inside the outer `data` object.
-
-The V2 cloud runner now preserves the **exact outer response bytes** for provenance while exposing the nested finance payload to the stock-summary validator.
-
-This is an execution/schema adaptation only. It does not alter universe ranking logic or use outcomes.
-
-## End-to-end cloud smoke evidence
-
-Temporary validation PR: `#34` (closed without merge after evidence)  
+Temporary validation PR: `#34` (closed without merge)  
 Workflow run: `32450648278`  
 Smoke job: `96678410979`
 
-Result:
+Historical result:
 
 - source session: `2026-08-20`;
-- selected universe: top `5` for bounded validation only;
-- planned Stream calls: `5`;
-- completed Stream calls: `5`;
-- successful responses: `5/5`;
+- selected universe: top 5 for bounded validation;
+- planned Stream calls: 5;
+- completed Stream calls: 5;
+- successful responses: 5/5;
 - response classifications: `OK=5`;
-- normalized post observations: `150`;
+- normalized observations: 150;
 - run ID: `2026-08-21_observable_validation_c12c95b65481cfa9`;
 - universe SHA-256: `c12c95b65481cfa95f23d06dd5fb7bde89eb82eade3dbc0c54817dd4ee1d995a`;
 - manifest SHA-256: `0d9e4ccc3ea224aeae5e396f86d627f64fe6708e06d35c7907df1157c2118bbe`;
-- GitHub Actions secrets were redacted in logs;
 - no model, sentiment, target, outcome, O2, or forward-counter access/mutation.
 
-The smoke proves the intended cloud path can execute end-to-end:
+This proves only that the then-current end-to-end path could succeed once:
 
-`GitHub Actions -> Zapi IDX universe -> Zapi Stockbit Stream -> private R2 -> normalized observations + manifest`.
+`GitHub Actions -> Zapi IDX universe -> Zapi Stockbit Stream -> private R2`.
 
-## Test state
+It did **not** prove fail-closed behavior, safe retry semantics, conservative PIT timing, capture-order neutrality, secret minimization, or storage-collision integrity.
 
-The remediation PR CI reached `47 passed, 1 failed`; the only failure remains the pre-existing unrelated storage assertion `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` (fixture emits two conflicts while the assertion expects one). New Stockbit Stream V2 tests passed.
+## Findings that superseded the original promotion conclusion
+
+Subsequent independent adversarial review found, among other issues:
+
+- incomplete stock-summary pages could be accepted;
+- duplicate/nonfinite/impossible universe values were not sufficiently defended;
+- partial or total Stream failure could still produce `DATA_READY`;
+- post-capture quota telemetry could orphan terminal evidence;
+- retries could poison immutable paths;
+- R2 collision checking relied on object metadata rather than actual existing bytes;
+- provider provenance and received-at PIT semantics were insufficiently enforced;
+- secrets were job-wide and Actions were mutable-tag pinned;
+- serial capture order tracked liquidity rank and could create observation-time confounding;
+- identity roster freshness was not wired into production.
+
+These are fixed in the hardened red-team lineage, not in the original smoke conclusion.
+
+## Current canonical status
+
+See:
+
+- `docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md`
+- `coordination/handoffs/IDX-STOCKBIT-STREAM-PROSPECTIVE-ARCHIVE-V2.md`
+- PR #36 / branch `audit/stockbit-stream-v2-red-team-v1`
+
+Final hardened red-team evidence reached **26/26 adversarial PASS**. Repository-wide pytest reached **72 passed, 1 skipped, 1 unrelated pre-existing storage failure**. No Stockbit test remained failing.
+
+## Storage statement correction
+
+The old wording that collision verification trusted stored SHA metadata is obsolete and must not be reused. Hardened V2 conditionally writes immutable objects and, on collision, verifies the actual existing object body hash.
+
+Cloudflare Bucket Lock / retention and R2 token-scope enforcement remain explicitly deferred for a later storage-account review. Application-layer hardening is not a claim of storage-layer WORM.
 
 ## Scientific boundary
 
@@ -98,6 +102,6 @@ The remediation PR CI reached `47 passed, 1 failed`; the only failure remains th
 - forward-counter mutation = 0
 - existing local EOD/intraday scheduler mutation = 0
 
-## Next operational state
+## Promotion rule
 
-Promote the envelope fix and permanent top-200 schedule to `main`. Remove temporary push-smoke permissions/triggers. The next routine scheduled slot may run normally from the default branch. Do not schedule the old 963-ticker V1 universe again.
+Do not use this historical smoke checkpoint as authorization to merge PR #35 or activate the original design. Any promotion must use the hardened red-team implementation and its current handoff. Cloudflare storage policy review remains a separate deferred task.
