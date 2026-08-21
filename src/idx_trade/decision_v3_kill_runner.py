@@ -15,10 +15,12 @@ from .decision_v3_kill_diagnosis import (
     build_block_summary,
     build_global_fresh_top10,
     build_severe_collapse_context,
-    build_underfill_supply_decomposition,
     summarize_kill_diagnosis,
 )
 from .decision_v3_kill_source import load_consensus_only_pinned_source
+from .decision_v3_kill_supply import (
+    build_residual_underfill_supply_decomposition,
+)
 
 
 def run_kill_diagnosis_safe(
@@ -36,7 +38,9 @@ def run_kill_diagnosis_safe(
 
     global_fresh = build_global_fresh_top10(source.frame, ledgers)
     severe_context = build_severe_collapse_context(source.frame, ledgers)
-    underfill_supply = build_underfill_supply_decomposition(source.frame, ledgers)
+    underfill_supply = build_residual_underfill_supply_decomposition(
+        source.frame, ledgers
+    )
 
     if len(underfill_supply) != EXPECTED_UNDERFILLED_SESSIONS:
         raise DecisionV3KillDiagnosisError(
