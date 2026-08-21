@@ -1,32 +1,39 @@
 name: Stockbit Stream prospective archive
 
 on:
+  # Temporary one-shot validation trigger. Remove after the first successful V2 smoke.
+  push:
+    branches: [main]
+    paths:
+      - "src/idx_trade/stockbit_stream_capture_v2.py"
+      - "scripts/run_stockbit_stream_capture_v2.py"
   schedule:
-    - cron: "47 1 * * 1-5"
-    - cron: "7 5 * * 1-5"
-    - cron: "47 9 * * 1-5"
+    - cron: "47 1 * * 1-5"  # 08:47 WIB
+    - cron: "7 5 * * 1-5"   # 12:07 WIB
+    - cron: "47 9 * * 1-5"  # 16:47 WIB
   workflow_dispatch:
     inputs:
       slot:
         description: Capture slot
         required: true
         type: choice
-        options:
-          - pre_open
-          - midday
-          - after_close
+        options: [pre_open, midday, after_close]
+      top_n:
+        description: Routine universe size
+        required: false
+        default: "200"
 
 permissions:
-  contents: read
+  contents: write  # temporary: writes only sanitized smoke evidence on the one-shot push run
 
 concurrency:
   group: stockbit-stream-prospective-capture
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     env:
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       STOCKBIT_STREAM_HMAC_SALT: ${{ secrets.STOCKBIT_STREAM_AUTHOR_HMAC_KEY }}
@@ -35,8 +42,9 @@ jobs:
       STOCKBIT_STREAM_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
       STOCKBIT_STREAM_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       STOCKBIT_STREAM_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      STOCKBIT_STREAM_STORAGE_PREFIX: stockbit-stream-v1
+      STOCKBIT_STREAM_STORAGE_PREFIX: stockbit-stream-v2
       DISPATCH_SLOT: ${{ inputs.slot || '' }}
+      DISPATCH_TOP_N: ${{ inputs.top_n || '' }}
       EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
     steps:
       - name: Checkout
@@ -48,12 +56,17 @@ jobs:
           cache: pip
       - name: Install archive runner
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,archive]"
-      - name: Resolve scheduled slot
+      - name: Resolve capture parameters
         shell: bash
         run: |
-          if [[ -n "$DISPATCH_SLOT" ]]; then
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            slot="validation"
+            top_n="5"
+          elif [[ -n "$DISPATCH_SLOT" ]]; then
             slot="$DISPATCH_SLOT"
+            top_n="${DISPATCH_TOP_N:-200}"
           else
+            top_n="200"
             case "$EVENT_SCHEDULE" in
               "47 1 * * 1-5") slot="pre_open" ;;
               "7 5 * * 1-5") slot="midday" ;;
@@ -62,9 +75,23 @@ jobs:
             esac
           fi
           echo "STOCKBIT_STREAM_SLOT=$slot" >> "$GITHUB_ENV"
-      - name: Capture immutable stream archive
-        run: >-
-          python scripts/run_stockbit_stream_capture.py
-          --universe-csv config/stockbit_stream_universe_v1.csv
-          --universe-manifest config/stockbit_stream_universe_v1.json
-          --slot "$STOCKBIT_STREAM_SLOT"
+          echo "STOCKBIT_STREAM_TOP_N=$top_n" >> "$GITHUB_ENV"
+      - name: Capture lean immutable stream archive
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_stockbit_stream_capture_v2.py \
+            --identity-csv config/stockbit_stream_universe_v1.csv \
+            --slot "$STOCKBIT_STREAM_SLOT" \
+            --top-n "$STOCKBIT_STREAM_TOP_N" | tee /tmp/stockbit-stream-result.json
+      - name: Record sanitized one-shot smoke evidence
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          mkdir -p docs/runtime
+          cp /tmp/stockbit-stream-result.json docs/runtime/stockbit_stream_v2_smoke_last.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/runtime/stockbit_stream_v2_smoke_last.json
+          git commit -m "chore(stream): record V2 cloud smoke evidence"
+          git push

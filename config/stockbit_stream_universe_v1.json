@@ -1,0 +1,28 @@
+{
+  "schema_version": "stockbit_stream_universe_v1",
+  "source_contract": "V4_X1_CLEAN_SECURITY_MASTER_PLUS_PRIMARY_LIQUID_60_SESSION_VALUE",
+  "source_artifacts": {
+    "security_master": {
+      "path": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\v4_x_clean_data_consolidation_v1_final_20260821_v1\\final_security_master_v1.csv",
+      "sha256": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e"
+    },
+    "primary_liquid_ticker_list": {
+      "path": "D:\\Documents\\Project\\idx-v4-primary740-minus-ca610-audit-20260818-v1\\v4_primary740_minus_ca610_tickers.txt",
+      "sha256": "50ba6805844df36056e76ae637856588965de42a2c2dfd0178685ee1aae24803"
+    },
+    "clean_signal_panel": {
+      "path": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\v4_x_clean_data_consolidation_v1_final_20260820_v2\\model_safe_signal_research_panel_1260_final_clean.parquet",
+      "sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e"
+    }
+  },
+  "derivation": {
+    "as_of_panel_date": "2026-07-31",
+    "lookback_sessions": 60,
+    "primary_liquid_source_ticker_count": 740,
+    "high_activity_count": 100,
+    "broad_current_common_stock_count": 963,
+    "activity_metric": "median regular_market_value over final 60 signal sessions for primary-liquid tickers; descending value then ticker tie-break",
+    "no_user_supplied_symbols": true
+  },
+  "output_sha256": "25d2cc80a883c3026538db747da73ab715e8c179e45d8e02ae2d01c4abe15380"
+}
