@@ -1,0 +1,63 @@
+{
+  "name": "DECISION_V3_A_ADMISSION_MECHANISM_DIAGNOSIS_V1",
+  "status": "FROZEN_BEFORE_EXECUTION",
+  "execution_authorized": false,
+  "purpose": "Final outcome-blind descriptive diagnosis before Decision V4 design: test whether the observed A_SOFT durability advantage is associated with the magnitude of its preregistered relative rank-gap admission evidence, versus other candidate-history evidence, using only the already-consumed same-session diagnosis artifacts.",
+  "parent": {
+    "same_session_diagnosis_manifest_sha256": "bb2b38696d83629ace4a50609eb042e42951086fda27c7d9f39ad50f25f87902",
+    "same_session_result_checkpoint_commit": "6544d408ba4e7de63f25200879f4707bbbaefdfa"
+  },
+  "allowed_inputs": {
+    "same_session_diagnosis_artifacts": [
+      "MANIFEST.json",
+      "paired_entries.csv"
+    ]
+  },
+  "population": {
+    "primary": "A_SOFT entries inside the frozen paired-session population",
+    "reference": "A_VACANCY rows may be counted only to verify the parent paired population; no new A_VACANCY policy construct is derived"
+  },
+  "frozen_questions": [
+    "Within A_SOFT, is larger soft_rank_gap associated directionally with lower next-session severe-exit incidence?",
+    "Within completed A_SOFT spells, is larger soft_rank_gap associated directionally with lower eventual severe-exit incidence and longer holding duration?",
+    "Within the pre-existing candidate-evidence reporting strata, does the direction of the soft_rank_gap versus severe-incidence relationship persist?",
+    "Within paired sessions containing at least two A_SOFT entries with discordant next-session severe outcomes, does the larger-gap entry more often belong to the non-severe outcome?",
+    "Do candidate-history variables differ between A_SOFT entries that become severe next session and those that do not, indicating evidence beyond soft_rank_gap magnitude?"
+  ],
+  "fixed_reporting_strata": [
+    "current_rank_bucket",
+    "previous_rank_bucket",
+    "top10_run_bucket",
+    "top20_run_bucket"
+  ],
+  "threshold_free_primary_statistics": [
+    "Spearman correlation of soft_rank_gap with next_session_severe_exit",
+    "Spearman correlation of soft_rank_gap with eventual_severe_exit among completed entries",
+    "Spearman correlation of soft_rank_gap with duration_sessions",
+    "mean and median soft_rank_gap conditional on observed severe versus non-severe structural state",
+    "same-session discordant-pair larger-gap concordance"
+  ],
+  "forbidden": {
+    "decision_v4_implementation": true,
+    "decision_v4_replay": true,
+    "alternative_rule_simulation": true,
+    "counterfactual_portfolio_simulation": true,
+    "gap_threshold_search_or_sweep": true,
+    "new_gap_cutoff_recommendation": true,
+    "returns_or_pnl": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "model_refit_or_retune": true,
+    "provider_or_network": true,
+    "causal_claim": true,
+    "paper_or_live_activation": true
+  },
+  "stop_rule": "After this diagnosis is consumed, stop mechanism diagnosis and return to Decision V4 design/brainstorming; no additional descriptive rescue analysis without a separately justified new question.",
+  "outputs": [
+    "summary.json",
+    "a_soft_gap_rows.csv",
+    "stratified_gap_outcomes.csv",
+    "within_session_gap_concordance.csv",
+    "MANIFEST.json"
+  ],
+  "interpretation_guard": "This diagnosis can assess whether gap magnitude is associated with durability within the already-selected A_SOFT population. It cannot identify a causal effect of the >=5 hurdle itself because all A_SOFT entries already passed that hurdle, and it cannot authorize a numeric successor threshold."
+}
