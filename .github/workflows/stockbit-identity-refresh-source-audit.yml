@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/audit_stockbit_identity_refresh_source.py"
+      - "scripts/audit_stockbit_identity_delta_followup.py"
       - "docs/checkpoints/2026-08-21_STOCKBIT_IDENTITY_REFRESH_SOURCE_AUDIT.md"
       - "config/stockbit_stream_universe_v1.csv"
       - "config/stockbit_stream_universe_v1.json"
@@ -29,3 +30,7 @@ jobs:
         env:
           ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
         run: python scripts/audit_stockbit_identity_refresh_source.py
+      - name: Probe exact CNTX/CNTB/GOTOM identity semantics
+        env:
+          ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+        run: python scripts/audit_stockbit_identity_delta_followup.py
