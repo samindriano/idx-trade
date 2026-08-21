@@ -37,7 +37,7 @@ if (-not $OutputDir) {
         $revision += 1
     }
 }
-elif (Test-Path -LiteralPath $OutputDir) {
+elseif (Test-Path -LiteralPath $OutputDir) {
     throw "Explicit audit output already exists and will not be overwritten: $OutputDir"
 }
 
@@ -72,6 +72,7 @@ if (-not $hadKey -or [string]::IsNullOrWhiteSpace($env:ZAPI_API_KEY)) {
 }
 
 $python = @(Resolve-Python)
+if ($python.Count -eq 0) { throw "Python command resolution returned nothing" }
 $exe = [string]$python[0]
 $prefix = @()
 if ($python.Count -gt 1) { $prefix = @($python[1..($python.Count - 1)]) }
