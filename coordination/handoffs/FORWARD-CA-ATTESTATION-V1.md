@@ -5,7 +5,7 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `DIVIDEND_AUTHORITY_ADMITTED_ACCOUNTING_CORE_IMPLEMENTED_LOCAL_VALIDATION_PENDING_EVENT_ADMISSION_BLOCKED`
+status: `DIVIDEND_ACCOUNTING_ADMISSION_PERSISTENCE_VALIDATED_ORCHESTRATOR_BLOCKED`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope and hard boundary
@@ -13,6 +13,8 @@ owner: `ChatGPT/Forward-CA-Attestation`
 Prospective, outcome-blind corporate-action protection for paper Execution V1. This lane protects execution/portfolio-accounting continuity and does not modify historical training data or frozen V4-X1 alpha/model/Decision V1.
 
 Legacy `PaperPortfolioState`, `paper_state_hash()` and `V4_X1_EXECUTION_V1` remain unchanged. Dividend V1.1 is additive.
+
+Forward Paper V1.1 is **not yet authorized**. Source authority, accounting, cash-dividend event admission, and durable persistence are resolved. The remaining separate boundary is real POST_EOD/PREOPEN orchestration plus an end-to-end restart rehearsal and controlled activation review.
 
 ## Primary provider
 
@@ -33,9 +35,9 @@ Accepted 2026-08-21 evidence:
 - review `PASS_ELIGIBLE_FOR_SCHEMA_FREEZE`
 - 260 results, no warnings/failures.
 
-## Existing Forward CA V1
+## Existing generic Forward CA V1
 
-Required generic legs remain:
+Current generic required legs remain:
 
 1. `/ListingActivity/GetIssuedHistory`
 2. `/NewsAnnouncement/GetAllAnnouncement`
@@ -43,7 +45,7 @@ Required generic legs remain:
 
 Both POST_EOD and PREOPEN are required with immutable raw/source-chain verification.
 
-Current legacy execution admission is intentionally still `NO_RELEVANT_EVENTS` only. A relevant event cannot pass blindly.
+The generic announcement leg is a known runtime/source-integration concern because the admitted dividend authority below is `/ListedCompany/GetAnnouncement`; do not silently treat the old generic leg as equivalent. Source migration is intentionally separate from the persistence verdict.
 
 ## Cash dividend contract
 
@@ -63,8 +65,6 @@ Frozen semantics:
 - tax/withholding remains unresolved and explicit; no silent haircut.
 
 ## Forward dividend authority — ADMITTED
-
-The source gate is resolved.
 
 Current/forward authority:
 
@@ -118,7 +118,7 @@ Frozen role:
 - `company-profile`: did contain the current BBCA Rp25 event, but remains optional parity only;
 - neither Zapi source may override direct official IDX evidence.
 
-## Dividend Engine V1.1 core — IMPLEMENTED, LOCAL TEST EVIDENCE PENDING
+## Dividend Engine V1.1 accounting core — VALIDATED
 
 Checkpoint:
 `docs/checkpoints/2026-08-21_FORWARD_CA_DIVIDEND_ENGINE_V1_1_CORE_IMPLEMENTATION.md`
@@ -135,7 +135,7 @@ Additive state types:
 - `DividendLedger`
 - `DividendAwarePaperState`
 
-Capabilities implemented:
+Capabilities:
 
 - offline certification from admitted attachment review with actual file SHA re-verification;
 - deterministic evidence/event IDs;
@@ -149,25 +149,89 @@ Capabilities implemented:
 - additive `prepare_execution_v1_1()` that corrects NAV while leaving spendable cash unchanged;
 - additive `execute_open_v1_1()` that preserves the dividend ledger while delegating base execution to frozen V1.
 
-Tests added:
-`tests/test_forward_dividend_v1.py`
+User-local validation reached `15 passed` for accounting-focused tests and later `23 passed` for the combined accounting + cash-dividend admission suite.
 
-They must be run locally before claiming PASS.
+## Cash-dividend-specific CA admission — VALIDATED
 
-## Why V1.1 is still NOT authorized
+Module:
+`src/idx_trade/forward_dividend_execution_v1_1.py`
+
+The additive admission layer permits a relevant CA window only when the relevant ticker is fully explained by verified certified cash-dividend evidence and the raw source chain reproduces cash-dividend-only semantics.
+
+It does **not** weaken legacy execution rules. `execute_open_v1()` remains unchanged; V1.1 produces a verified reconciliation wrapper for the supported dividend case.
+
+Still fail-closed:
+
+- stock split / reverse split;
+- HMETD / rights;
+- stock dividend / bonus share;
+- issued-history mechanical event;
+- mixed cash/non-cash CA;
+- unknown/unrecognized event;
+- certified dividend outside the CA window.
+
+## Durable Dividend Runtime Persistence V1.1 — VALIDATED
+
+Checkpoint:
+`docs/checkpoints/2026-08-21_FORWARD_CA_DIVIDEND_RUNTIME_PERSISTENCE_V1_1.md`
+
+Module:
+`src/idx_trade/forward_dividend_runtime_v1_1.py`
+
+Tests:
+`tests/test_forward_dividend_runtime_v1_1.py`
+
+Final persistence-code validation anchor:
+`9ba619916c37d28121c39f61148ab0d03ac21bf0`
+
+GitHub Actions validation:
+
+- run `32459699635`
+- job `96703976541`
+- Python `3.12.14`
+- full suite: **456 passed, 38 warnings in 32.47s**
+- conclusion: `success`.
+
+Persistence contract:
+
+- immutable deterministic one-snapshot-per-session JSON state;
+- byte-identical same-session rerun is idempotent;
+- divergent same-session write fails closed;
+- recursive parent file-SHA + runtime-state-hash chain;
+- latest loader rejects state-history forks;
+- certified dividend event registry persists independently of the daily CA window;
+- each registered official evidence row is reverified on every load;
+- registry is append-only across snapshots;
+- every entitlement is bound exactly to a registered certified event;
+- entitlements and settlements cannot disappear/mutate;
+- receivable can only remain outstanding or progress into the matching settlement;
+- arbitrary receivable disappearance fails closed;
+- Decision V1 shadow state is reconstructed as `(actual positions - pending sells) + pending buys`, preserving frozen shadow semantics under paper non-fills.
+
+This closes the previously identified durable state/event-memory gap. In particular, a dividend announced on 2026-08-19 remains registered and verifiable when the system reaches later cum/ex/payment sessions even if the daily CA window no longer reports the original announcement.
+
+## Current authorization boundary
 
 `forward_ca_v1_1_authorized=false` remains correct.
 
-The old CA verifier and `execute_open_v1()` still admit only `NO_RELEVANT_EVENTS`. The accounting core by itself does not authorize a cash-dividend event to pass the Forward CA gate.
+Resolved:
 
-Remaining blockers:
+1. direct official IDX dividend authority;
+2. cash-dividend accounting semantics;
+3. accounting core implementation + local validation;
+4. event-specific cash-dividend CA reconciliation + local validation;
+5. durable certified-event registry;
+6. immutable/hash-chained state persistence;
+7. persistence-level restart/idempotency and monotonic dividend lifecycle invariants;
+8. full repository CI validation for the persistence revision.
 
-1. run focused local `forward_dividend_v1` tests;
-2. implement event-specific CA attestation/reconciliation status for a certified cash dividend;
-3. bind that status into execution verification without weakening other relevant-event fail-closed behavior;
-4. integrate official announcement/attachment capture into POST_EOD/PREOPEN orchestration;
-5. validate restart/replay end-to-end;
-6. only then promote Forward Paper V1.1.
+Remaining blockers only:
+
+1. real POST_EOD/PREOPEN orchestrator integration;
+2. end-to-end orchestrator crash/restart/idempotency rehearsal;
+3. controlled operational activation review.
+
+Do not call Forward Paper V1.1 operationally authorized before those are complete.
 
 ## Alpha/research boundary
 
