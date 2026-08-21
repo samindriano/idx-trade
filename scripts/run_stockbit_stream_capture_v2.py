@@ -16,6 +16,7 @@ from idx_trade.stockbit_stream_capture_v2 import (
     build_runtime_universe,
     capture_stream_v2,
 )
+from idx_trade.stockbit_stream_http import BoundedRetrySession
 from idx_trade.stockbit_stream_v2_primitives import V2ZapiClient
 
 
@@ -60,13 +61,24 @@ def main() -> int:
     try:
         identity_manifest = verify_universe_manifest(args.identity_csv, args.identity_manifest)
         identity_roster_as_of = _validated_identity_roster_as_of(identity_manifest, capture_date)
+
+        # Live provider acceptance showed that every authenticated REST attempt is
+        # billed, while one otherwise-valid historical stock-summary request can
+        # transiently time out. Keep retries narrow: max three attempts, only for
+        # transport failures/provider 5xx; auth/quota 4xx are never multiplied.
+        universe_http = BoundedRetrySession(max_attempts=3)
         universe = build_runtime_universe(
             api_key=api_key,
             identity_csv=args.identity_csv,
             capture_date=capture_date,
             top_n=args.top_n,
+            session=universe_http,
             identity_roster_as_of=identity_roster_as_of,
         )
+        universe.selection_diagnostics["stock_summary_http_attempts"] = universe_http.attempts
+        universe.selection_diagnostics["stock_summary_retry_events"] = list(universe_http.transient_events)
+        universe.selection_diagnostics["stock_summary_max_attempts_per_request"] = universe_http.max_attempts
+
         result = capture_stream_v2(
             client=V2ZapiClient(api_key),
             archive=archive_from_env(),
@@ -87,6 +99,8 @@ def main() -> int:
             "identity_roster_as_of": universe.identity_roster_as_of,
             "identity_roster_age_days": universe.selection_diagnostics.get("identity_roster_age_days"),
             "identity_roster_status": universe.selection_diagnostics.get("identity_roster_status"),
+            "stock_summary_http_attempts": universe.selection_diagnostics.get("stock_summary_http_attempts"),
+            "stock_summary_retry_events": universe.selection_diagnostics.get("stock_summary_retry_events"),
             "universe_sha256": universe.universe_sha256,
             "planned_calls": result.get("planned_calls"),
             "completed_calls": result.get("completed_calls"),
