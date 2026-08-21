@@ -95,7 +95,6 @@ def _row(ticker: str, value, nonregular=0) -> dict:
 
 
 def test_universe_rejects_incomplete_stock_summary_page(tmp_path: Path) -> None:
-    """Top-N is invalid if the provider says more rows exist than we fetched."""
     identity = tmp_path / "identity.csv"
     _identity_csv(identity, ["BBCA", "BBRI", "BMRI"])
     session = _SummarySession(
@@ -116,13 +115,10 @@ def test_universe_rejects_incomplete_stock_summary_page(tmp_path: Path) -> None:
 
 
 def test_universe_rejects_duplicate_ticker_rows(tmp_path: Path) -> None:
-    """Duplicate provider rows must fail closed rather than first-row-wins."""
     identity = tmp_path / "identity.csv"
     _identity_csv(identity, ["BBCA", "BBRI"])
     session = _SummarySession(
-        _summary_payload(
-            [_row("BBCA", 100), _row("BBCA", 999), _row("BBRI", 500)]
-        )
+        _summary_payload([_row("BBCA", 100), _row("BBCA", 999), _row("BBRI", 500)])
     )
     with pytest.raises(StreamArchiveError, match="duplicate"):
         build_runtime_universe(
@@ -136,7 +132,6 @@ def test_universe_rejects_duplicate_ticker_rows(tmp_path: Path) -> None:
 
 
 def test_universe_does_not_admit_nonfinite_or_impossible_values(tmp_path: Path) -> None:
-    """NaN/Inf and NonRegularValue > Value may not influence membership/rank."""
     identity = tmp_path / "identity.csv"
     _identity_csv(identity, ["BBCA", "BBRI", "BMRI", "TLKM"])
     session = _SummarySession(
@@ -191,9 +186,7 @@ class _MixedClient:
             "content": f"watch ${symbol}",
             "userId": "u",
         }
-        raw = json.dumps(
-            {"data": {"count": 1, "items": [item], "symbol": symbol}}
-        ).encode("utf-8")
+        raw = json.dumps({"data": {"count": 1, "items": [item], "symbol": symbol}}).encode("utf-8")
         return _StreamResponse(200), raw, observed
 
 
@@ -254,7 +247,6 @@ def test_all_stream_failures_must_not_report_data_ready(tmp_path: Path) -> None:
 
 
 def test_quota_after_telemetry_failure_must_not_orphan_successful_capture(tmp_path: Path) -> None:
-    """Post-capture telemetry cannot erase terminal evidence after provider writes happened."""
     result = capture_stream_v2(
         client=_MixedClient(fail_quota_after=True),
         archive=LocalLeanArchive(tmp_path),
@@ -268,23 +260,23 @@ def test_quota_after_telemetry_failure_must_not_orphan_successful_capture(tmp_pa
 
 
 def test_same_slot_retry_after_partial_attempt_is_not_permanently_poisoned(tmp_path: Path) -> None:
-    """A transient crash must not make the logical slot unrecoverable via immutable collisions."""
-
     class _CrashClient(_MixedClient):
         def stream(self, symbol: str):
             if symbol == "BBCA":
                 raise StreamArchiveError("synthetic timeout after first ticker")
             return super().stream(symbol)
 
-    with pytest.raises(StreamArchiveError, match="synthetic timeout"):
-        capture_stream_v2(
-            client=_CrashClient(),
-            archive=LocalLeanArchive(tmp_path),
-            universe=_runtime_universe(),
-            slot="midday",
-            hmac_salt="red-team-salt",
-            monthly_reserve=1,
-        )
+    first = capture_stream_v2(
+        client=_CrashClient(),
+        archive=LocalLeanArchive(tmp_path),
+        universe=_runtime_universe(),
+        slot="midday",
+        hmac_salt="red-team-salt",
+        monthly_reserve=1,
+    )
+    assert first["status"] == "DATA_PARTIAL"
+    assert first["response_classification_counts"]["REQUEST_EXCEPTION"] == 1
+    assert len(list((tmp_path / "manifests").rglob("*.json"))) == 1
 
     class _ChangedFirstObservation(_MixedClient):
         def stream(self, symbol: str):
@@ -295,8 +287,6 @@ def test_same_slot_retry_after_partial_attempt_is_not_permanently_poisoned(tmp_p
                 raw = json.dumps(payload).encode("utf-8")
             return response, raw, observed
 
-    # Desired contract: retry gets a distinct immutable attempt identity or safely resumes;
-    # it must not be poisoned by the first attempt's raw object.
     result = capture_stream_v2(
         client=_ChangedFirstObservation(),
         archive=LocalLeanArchive(tmp_path),
@@ -305,11 +295,14 @@ def test_same_slot_retry_after_partial_attempt_is_not_permanently_poisoned(tmp_p
         hmac_salt="red-team-salt",
         monthly_reserve=1,
     )
+    assert result["status"] == "DATA_READY"
     assert result["completed_calls"] == 2
+    assert result["attempt_id"] != first["attempt_id"]
+    assert len(list((tmp_path / "manifests").rglob("*.json"))) == 2
 
 
 def test_r2_collision_cannot_be_authenticated_by_forgeable_metadata_only() -> None:
-    botocore = pytest.importorskip("botocore")
+    pytest.importorskip("botocore")
     from botocore.exceptions import ClientError
 
     class _FakeClient:
@@ -323,9 +316,7 @@ def test_r2_collision_cannot_be_authenticated_by_forgeable_metadata_only() -> No
             )
 
         def head_object(self, **kwargs):
-            # Attacker/other writer can forge object metadata independently of body bytes.
             import hashlib
-
             claimed = hashlib.sha256(b"expected").hexdigest()
             return {"Metadata": {"sha256": claimed}}
 
