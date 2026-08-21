@@ -12,18 +12,18 @@ $anchor = Get-Date -Format "yyyyMMdd"
 
 function Resolve-Python {
     $py = Get-Command python -ErrorAction SilentlyContinue
-    if ($py) { return @($py.Source) }
+    if ($py) { return ,@($py.Source) }
     $launcher = Get-Command py -ErrorAction SilentlyContinue
-    if ($launcher) { return @($launcher.Source, "-3") }
+    if ($launcher) { return ,@($launcher.Source, "-3") }
 
     $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
-    if ($uvCmd) { return @($uvCmd.Source, "run", "--python", "3.13", "python") }
+    if ($uvCmd) { return ,@($uvCmd.Source, "run", "--python", "3.13", "python") }
     foreach ($candidate in @(
         (Join-Path $HOME ".local\bin\uv.exe"),
         (Join-Path $HOME ".cargo\bin\uv.exe")
     )) {
         if (Test-Path -LiteralPath $candidate) {
-            return @($candidate, "run", "--python", "3.13", "python")
+            return ,@($candidate, "run", "--python", "3.13", "python")
         }
     }
     throw "Python 3 not found. The previous Forward-CA setup normally installs uv/Python; rerun setup_idx_bei_forward_ca_provider.ps1 if needed."
@@ -50,7 +50,8 @@ Write-Host ""
 $hadKey = Test-Path Env:ZAPI_API_KEY
 $temporaryKey = $false
 if (-not $hadKey -or [string]::IsNullOrWhiteSpace($env:ZAPI_API_KEY)) {
-    Write-Host "ZAPI_API_KEY is not set. Enter your Zapi API key locally. It will not be printed or written to disk."
+    Write-Host "ZAPI_API_KEY is not set in this local shell. GitHub Actions secrets are not exposed to local PowerShell."
+    Write-Host "You may enter the key locally, or run the GitHub Actions audit workflow instead."
     $secure = Read-Host "Zapi API key" -AsSecureString
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
@@ -65,10 +66,11 @@ if (-not $hadKey -or [string]::IsNullOrWhiteSpace($env:ZAPI_API_KEY)) {
     $temporaryKey = $true
 }
 
-$python = Resolve-Python
-$exe = $python[0]
+$python = @(Resolve-Python)
+if ($python.Count -eq 0) { throw "Python command resolution returned nothing" }
+$exe = [string]$python[0]
 $prefix = @()
-if ($python.Count -gt 1) { $prefix = $python[1..($python.Count - 1)] }
+if ($python.Count -gt 1) { $prefix = @($python[1..($python.Count - 1)]) }
 
 try {
     Write-Host "Running bounded live probe..."
