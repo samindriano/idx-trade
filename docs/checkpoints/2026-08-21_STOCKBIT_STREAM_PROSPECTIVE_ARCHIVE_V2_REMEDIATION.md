@@ -4,7 +4,7 @@ Date: 2026-08-21
 Scope: acquisition infrastructure only  
 Status: `SUPERSEDED_BY_RED_TEAM_HARDENING`
 
-> This document records the original V2 happy-path smoke lineage. Its former `READY_FOR_ROUTINE_PROMOTION` conclusion is withdrawn. The canonical code-side review is now `docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md` on `audit/stockbit-stream-v2-red-team-v1`.
+> This document records the original V2 happy-path smoke lineage. Its former `READY_FOR_ROUTINE_PROMOTION` conclusion is withdrawn. The canonical code-side review is now `docs/checkpoints/2026-08-21_STOCKBIT_STREAM_V2_RED_TEAM_REMEDIATION.md` and `coordination/handoffs/IDX-STOCKBIT-STREAM-PROSPECTIVE-ARCHIVE-V2.md` on `audit/stockbit-stream-v2-red-team-v1`.
 
 ## Original V2 intent
 
