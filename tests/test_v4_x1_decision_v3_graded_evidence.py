@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from idx_trade.decision_v3_graded_evidence import DecisionV3ShadowState
+from idx_trade.decision_v3_graded_evidence import DecisionV3Error, DecisionV3ShadowState
 from idx_trade.v4_x1_decision_v1_contract import (
     EXPECTED_ALPHA_MODEL_FINGERPRINT,
     EXPECTED_ALPHA_MODEL_ID,
@@ -90,6 +91,22 @@ def test_v4_adapter_bootstrap_uses_frozen_profile() -> None:
     assert plan.rule_id == "V4_X1_DECISION_V3_GRADED_EVIDENCE_V2"
     assert plan.target_positions == tuple(order[:10])
     assert plan.bootstrap is True
+
+
+def test_v4_runtime_rejects_unbound_nonbootstrap_shadow_state() -> None:
+    previous_order = [f"A{i:02d}" for i in range(1, 21)]
+    current_order = previous_order.copy()
+    state = DecisionV3ShadowState(
+        as_of_session_date="2026-01-02",
+        positions=tuple(previous_order[:10]),
+        rule_id=None,
+    )
+    with pytest.raises(DecisionV3Error, match="BOUND_SHADOW_STATE_REQUIRED"):
+        plan_v4_x1_decision_v3_graded_evidence(
+            _verified("2026-01-03", current_order),
+            _verified("2026-01-02", previous_order),
+            state,
+        )
 
 
 def test_machine_profile_keeps_v2_acceptance_gates_unchanged() -> None:
