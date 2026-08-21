@@ -19,16 +19,46 @@ from idx_trade.stockbit_stream_capture_v2 import (
 from idx_trade.stockbit_stream_v2_primitives import V2ZapiClient, parse_stream_payload_v2
 
 
+def _stream_payload(symbol: str = "BBCA", provider: str | None = "stockbit") -> bytes:
+    item = {"id": 1, "createdAt": "2026-08-21 12:00:00", "content": f"${symbol}"}
+    data = {"count": 1, "items": [item], "symbol": symbol}
+    if provider is not None:
+        data["provider"] = provider
+    return json.dumps({"data": data}).encode()
+
+
 def test_stream_parser_rejects_wrong_or_missing_provider() -> None:
-    item = {"id": 1, "createdAt": "2026-08-21 12:00:00", "content": "$BBCA"}
-    wrong = json.dumps(
-        {"data": {"count": 1, "items": [item], "symbol": "BBCA", "provider": "not-stockbit"}}
-    ).encode()
-    missing = json.dumps(
-        {"data": {"count": 1, "items": [item], "symbol": "BBCA"}}
-    ).encode()
-    assert parse_stream_payload_v2(wrong, 200, "BBCA")[0] != "OK"
-    assert parse_stream_payload_v2(missing, 200, "BBCA")[0] != "OK"
+    assert parse_stream_payload_v2(_stream_payload(provider="not-stockbit"), 200, "BBCA")[0] != "OK"
+    assert parse_stream_payload_v2(_stream_payload(provider=None), 200, "BBCA")[0] != "OK"
+    assert parse_stream_payload_v2(_stream_payload(provider="stockbit"), 200, "BBCA")[0] == "OK"
+
+
+def test_v2_client_enforces_provider_provenance_on_production_path() -> None:
+    class Response:
+        status_code = 200
+        headers = {"content-type": "application/json"}
+
+        def __init__(self, raw: bytes):
+            self.content = raw
+
+    class Session:
+        def __init__(self, raw: bytes):
+            self.raw = raw
+
+        def get(self, *args, **kwargs):
+            return Response(self.raw)
+
+    with pytest.raises(StreamArchiveError, match="provider provenance mismatch"):
+        V2ZapiClient("x", session=Session(_stream_payload(provider="not-stockbit"))).stream("BBCA")
+    with pytest.raises(StreamArchiveError, match="provider provenance mismatch"):
+        V2ZapiClient("x", session=Session(_stream_payload(provider=None))).stream("BBCA")
+
+    response, raw, observed = V2ZapiClient(
+        "x", session=Session(_stream_payload(provider="stockbit"))
+    ).stream("BBCA")
+    assert response.status_code == 200
+    assert parse_stream_payload_v2(raw, 200, "BBCA")[0] == "OK"
+    assert observed.tzinfo is not None
 
 
 def test_observed_available_timestamp_is_taken_after_response_receipt(monkeypatch) -> None:
@@ -43,7 +73,7 @@ def test_observed_available_timestamp_is_taken_after_response_receipt(monkeypatc
 
     class Response:
         status_code = 200
-        content = b'{}'
+        content = _stream_payload(provider="stockbit")
         headers = {}
 
     class Session:
