@@ -1,0 +1,77 @@
+{
+  "name": "DECISION_V3_A_SAME_SESSION_DIAGNOSIS_V1",
+  "status": "FROZEN_BEFORE_EXECUTION",
+  "execution_authorized": false,
+  "purpose": "Outcome-blind descriptive diagnosis restricted to sessions where both A_SOFT and A_VACANCY entries occurred in the already-observed frozen Decision V3 trajectory, to remove session-level stress confounding and isolate candidate-level evidence differences.",
+  "parent": {
+    "a_soft_vacancy_diagnosis_manifest_sha256": "d17f009df762678734d3f073419d44b707d55ba6dd3f25627e332438c9a7c224",
+    "a_soft_vacancy_result_checkpoint_commit": "ef58d39b39e7411cd6395bcc12aee707b6be8db6"
+  },
+  "allowed_inputs": {
+    "a_soft_vacancy_diagnosis_artifacts": [
+      "MANIFEST.json",
+      "a_entry_diagnosis.csv"
+    ]
+  },
+  "population": {
+    "paired_session_definition": "session_index with at least one A_SOFT entry and at least one A_VACANCY entry",
+    "entry_classes": [
+      "A_SOFT",
+      "A_VACANCY"
+    ]
+  },
+  "frozen_questions": [
+    "Within paired sessions, does the next-session severe-exit gap between A_SOFT and A_VACANCY persist?",
+    "Within paired sessions, how do candidate evidence variables differ: current rank, previous rank, rank delta, Top10 run, Top20 run, last3 Top10 count, last3 Top20 count, t-2 rank, and t-3 rank?",
+    "Across paired sessions, what is the equal-session-weighted difference in next-session severe incidence and candidate evidence?",
+    "Within fixed candidate-evidence reporting strata, is the direction of the A_SOFT versus A_VACANCY next-session severe gap consistent?",
+    "Is eventual severe-exit incidence directionally consistent among completed entries in paired sessions?"
+  ],
+  "fixed_reporting_strata": {
+    "current_rank": [
+      "1-3",
+      "4-6",
+      "7-10"
+    ],
+    "previous_rank": [
+      "1-10",
+      "11-20"
+    ],
+    "top10_run_including_entry": [
+      "1",
+      "2",
+      ">=3"
+    ],
+    "top20_run_including_entry": [
+      "1",
+      "2",
+      ">=3"
+    ],
+    "last3_top20_count": [
+      "1",
+      "2",
+      "3"
+    ]
+  },
+  "forbidden": {
+    "decision_v4_implementation": true,
+    "decision_v4_replay": true,
+    "alternative_rule_simulation": true,
+    "counterfactual_portfolio_simulation": true,
+    "threshold_sweep": true,
+    "returns_or_pnl": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "model_refit_or_retune": true,
+    "provider_or_network": true,
+    "causal_claim": true,
+    "paper_or_live_activation": true
+  },
+  "outputs": [
+    "summary.json",
+    "paired_entries.csv",
+    "paired_session_summary.csv",
+    "paired_stratified_next_severe.csv",
+    "MANIFEST.json"
+  ],
+  "interpretation_guard": "Same-session restriction removes session-level context differences by construction but does not randomize selection into A_SOFT versus A_VACANCY. All results remain descriptive and do not automatically authorize a successor rule."
+}
