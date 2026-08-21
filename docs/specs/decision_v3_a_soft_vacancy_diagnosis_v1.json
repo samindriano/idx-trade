@@ -30,6 +30,9 @@
       "fold",
       "mode",
       "alpha_consensus"
+    ],
+    "quality_supply_artifacts": [
+      "MANIFEST.json"
     ]
   },
   "entry_classes": {
