@@ -1,0 +1,65 @@
+{
+  "schema_version": "decision_v3_graded_evidence_profile_v1",
+  "status": "PREREGISTERED_NOT_IMPLEMENTED_NOT_REPLAYED",
+  "rule_id": "V4_X1_DECISION_V3_GRADED_EVIDENCE_V1",
+  "target_count_max": 10,
+  "strong_zone_max_rank": 10,
+  "retention_zone_max_rank": 20,
+  "mild_deterioration_max_rank": 50,
+  "severe_deterioration_min_rank": 51,
+  "core_challenger_previous_rank_max": 20,
+  "provisional_challenger_previous_rank_min": 21,
+  "provisional_challenger_previous_rank_max": 50,
+  "soft_replacement_min_rank_advantage": 5,
+  "universe_absence_exit_immediate": true,
+  "allow_temporary_underfill": true,
+  "bootstrap_first_session_exact_top10": true,
+  "preroll_allowed": false,
+  "fold_resets_allowed": false,
+  "rules": {
+    "strong_hold": "current_rank<=10",
+    "acceptable_hold": "11<=current_rank<=20",
+    "mild_pending": "21<=current_rank<=50 and previous_rank<=20",
+    "confirmed_mild_exit": "21<=current_rank<=50 and previous_rank>20",
+    "severe_exit": "current_rank>50",
+    "core_challenger": "current_rank<=10 and previous_rank<=20",
+    "provisional_challenger": "current_rank<=10 and 21<=previous_rank<=50",
+    "unqualified_fresh": "current_rank<=10 and (previous_rank>50 or previous_rank_absent)"
+  },
+  "permissions": {
+    "core_challenger_vacancy_fill": true,
+    "core_challenger_soft_replace": true,
+    "provisional_challenger_vacancy_fill": true,
+    "provisional_challenger_soft_replace": false,
+    "vacancy_priority": ["core", "provisional"],
+    "mild_pending_soft_replace": false,
+    "strong_hold_soft_replace": false
+  },
+  "source": {
+    "manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "sessions": 600,
+    "rows": 172697,
+    "replay_authorized": false
+  },
+  "gates": {
+    "mean_replacements_max": 2.25,
+    "turnover_vs_naive_max": 0.50,
+    "share_ge3_replacements_max": 0.35,
+    "median_holding_min": 3,
+    "one_session_holding_share_max": 0.35,
+    "mean_full_target_top10_overlap_min": 6.0,
+    "mean_target_rank_max": 12.0,
+    "mean_target_size_min": 9.0,
+    "share_target_size_10_min": 0.70,
+    "share_target_size_le8_max": 0.10,
+    "target_rank_gt50_after_processing_max_count": 0,
+    "second_consecutive_rank21_50_retained_max_count": 0
+  },
+  "verdict_accept": "DECISION_V3_GRADED_EVIDENCE_STRUCTURAL_ACCEPT",
+  "verdict_reject": "DECISION_V3_GRADED_EVIDENCE_STRUCTURAL_REJECT",
+  "lineage": {
+    "v2_structural_manifest_sha256": "a555368181dff5084be342dbf13b79993252767ae7e00804f7601477b29995ba",
+    "v2_failure_diagnosis_manifest_sha256": "bada04d8403457d4456653fad66d9119b80349f65e13be9cff911a886c31af06"
+  }
+}
