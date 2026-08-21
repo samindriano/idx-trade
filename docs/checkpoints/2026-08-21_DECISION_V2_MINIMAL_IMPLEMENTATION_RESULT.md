@@ -2,7 +2,7 @@
 
 Date: 2026-08-21 Asia/Jakarta
 
-Status: `IMPLEMENTED_TESTED_REVIEW_NO_HISTORICAL_REPLAY`
+Status: `IMPLEMENTED_TESTED_AUDIT_REMEDIATED_NO_HISTORICAL_REPLAY`
 
 Branch: `research/idx-decision-v2-minimal-implementation-v1`
 
@@ -22,18 +22,36 @@ Implemented components:
 - immediate universe exit;
 - qualified vacancy fill with temporary underfill;
 - qualified gap-5 soft replacement;
+- explicit capacity state `FULL` vs `UNFILLED_NO_QUALIFIED_CHALLENGER`;
+- shadow-state rule identity binding through `DecisionV2ShadowState.from_plan(...)` with cross-profile mismatch rejection;
 - deterministic row-order-independent output;
-- adversarial/unit tests covering the frozen semantics.
+- adversarial/unit tests covering the frozen semantics and audit remediation.
+
+## Audit remediation
+
+Independent audit PR `#42` found one blocking observability gap before replay: numeric `unfilled_slots` existed, but the preregistered explicit `UNFILLED_NO_QUALIFIED_CHALLENGER` state was missing.
+
+That gap is remediated without changing policy behavior or thresholds.
+
+The same remediation also adds non-scientific state-lineage hardening:
+
+- Decision plans already carry `rule_id`;
+- `DecisionV2ShadowState.from_plan(...)` now preserves that identity;
+- a bound state is rejected if reused under a different Decision profile;
+- legacy unbound generic states remain backward-compatible;
+- the controlled future historical replay runner must use bound states only.
+
+The separate exact-adjacent-session requirement remains a replay-runner invariant: iteration must use consecutive entries from the pinned 600-date score ledger `(t-1, t)` with no skipped session, no fold reset, and no pre-roll.
 
 ## Validation
 
-Draft PR: `#41` — `Implement Decision V2 minimal state machine`.
+Draft implementation PR: `#41` — `Implement Decision V2 minimal state machine`.
 
-Code HEAD validated by GitHub Actions: `905cdc9aefe0c8949693de5dbd3d3efdea9ea786`.
+Remediated implementation HEAD validated by GitHub Actions: `32af46172a686fdf407e1026ad4acdab12edc355`.
 
 Full repository pytest result:
 
-- `427 passed`;
+- `432 passed`;
 - `26 warnings`;
 - `0 failed`.
 
@@ -58,4 +76,9 @@ The implementation remains locked to the preregistered V4-X1 profile:
 
 ## Next boundary
 
-Before any historical replay, review PR #41 against the frozen preregistration. If accepted, the next separately gated action is an outcome-blind exact 600-OOS structural replay using the already pinned source manifest/score hashes and the preregistered mechanical acceptance gates.
+The implementation/audit-remediation code is ready for a final small-diff re-audit. If that passes, the next separately gated work is preparation of the outcome-blind exact 600-OOS structural replay runner with:
+
+- pinned source manifest/score hashes;
+- exact adjacent score-session ledger enforcement;
+- bound shadow-state lineage;
+- all preregistered mechanical acceptance gates encoded before the first replay.
