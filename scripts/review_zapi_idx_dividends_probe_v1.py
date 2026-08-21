@@ -5,7 +5,6 @@ from datetime import date, datetime
 import hashlib
 import json
 from pathlib import Path
-import re
 from typing import Any, Iterable
 
 MANIFEST_SCHEMA = "idx_trade_zapi_idx_dividends_probe_v1"
@@ -13,15 +12,28 @@ EXPECTED_ENDPOINT = "https://api.zpi.web.id/v1/finance:idx/dividends"
 EXPECTED_CATALOG = "https://api.zpi.web.id/api/public/scrapers/idx/endpoints/dividends/schema"
 REVIEW_SCHEMA = "idx_trade_zapi_idx_dividends_probe_review_v1"
 
-TICKER_ALIASES = ("code", "ticker", "symbol", "stockCode", "companyCode", "issuerCode", "KodeEmiten")
+TICKER_ALIASES = (
+    "code", "ticker", "symbol", "stockCode", "StockCode", "companyCode",
+    "issuerCode", "KodeEmiten", "kodeEmiten",
+)
 CASH_ALIASES = (
     "cashPerShare", "cash_per_share", "dividendPerShare", "dividend_per_share",
     "cashDividendPerShare", "cash_dividend_per_share", "dps",
 )
-CUM_ALIASES = ("cumDate", "cum_date", "cumTradingDate", "cum_date_regular_market")
-EX_ALIASES = ("exDate", "ex_date", "exTradingDate", "ex_date_regular_market")
-RECORD_ALIASES = ("recordDate", "record_date", "recordingDate", "recording_date")
-PAYMENT_ALIASES = ("paymentDate", "payment_date", "payDate", "pay_date")
+CUM_ALIASES = (
+    "cumDate", "cum_date", "cumTradingDate", "cum_date_regular_market",
+    "cumDateRegular", "cumDateReguler", "cumRegularDate",
+)
+EX_ALIASES = (
+    "exDate", "ex_date", "exTradingDate", "ex_date_regular_market",
+    "exDateRegular", "exDateReguler", "exRegularDate",
+)
+RECORD_ALIASES = (
+    "recordDate", "record_date", "recordingDate", "recording_date",
+)
+PAYMENT_ALIASES = (
+    "paymentDate", "payment_date", "payDate", "pay_date",
+)
 
 
 def _sha256(data: bytes) -> str:
@@ -121,6 +133,10 @@ def _row_score(row: dict[str, Any]) -> int:
     return sum(_first(row, group) is not None for group in groups)
 
 
+def _params_lower(params: dict[str, Any]) -> dict[str, Any]:
+    return {str(k).lower(): v for k, v in params.items()}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Offline reviewer for Zapi IDX dividends audit probe.")
     parser.add_argument("--probe-dir", required=True)
@@ -156,10 +172,27 @@ def main() -> int:
         failures.append(f"HTTP_STATUS_NOT_200:{manifest.get('http_status')}")
 
     params = manifest.get("params") if isinstance(manifest.get("params"), dict) else {}
-    target = str(manifest.get("target_code") or "").strip().upper()
-    scoped = str(params.get("code") or params.get("ticker") or params.get("symbol") or "").strip().upper()
-    if not target or scoped != target:
-        failures.append("TICKER_SCOPE_MISMATCH")
+    lower_params = _params_lower(params)
+    preferred_target = str(manifest.get("preferred_target_code") or manifest.get("target_code") or "").strip().upper()
+    scope_mode = str(manifest.get("scope_mode") or "")
+    if scope_mode not in {"SERVER_TICKER_FILTER", "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER"}:
+        failures.append(f"UNKNOWN_SCOPE_MODE:{scope_mode}")
+
+    # Every authenticated audit request must be explicitly bounded. Ticker
+    # scoping is preferred but global-feed mode is valid if rows carry ticker
+    # identity and can be filtered client-side.
+    page_size = lower_params.get("length", lower_params.get("limit", lower_params.get("pagesize")))
+    try:
+        page_size_i = int(page_size)
+    except Exception:
+        page_size_i = 0
+    if not (1 <= page_size_i <= 100):
+        failures.append("REQUEST_NOT_BOUNDED_BY_SMALL_PAGE_SIZE")
+
+    if scope_mode == "SERVER_TICKER_FILTER":
+        scoped = str(lower_params.get("code") or lower_params.get("ticker") or lower_params.get("symbol") or "").strip().upper()
+        if not preferred_target or scoped != preferred_target:
+            failures.append("SERVER_TICKER_SCOPE_MISMATCH")
 
     if not raw_path.is_file():
         failures.append("RAW_RESPONSE_MISSING")
@@ -175,6 +208,7 @@ def main() -> int:
             raw_payload = None
             failures.append("RAW_RESPONSE_NOT_JSON")
 
+    catalog_field_names: set[str] = set()
     if not catalog_path.is_file():
         failures.append("CATALOG_RAW_MISSING")
     else:
@@ -183,9 +217,11 @@ def main() -> int:
             failures.append("CATALOG_RAW_SHA_MISMATCH")
         if int(manifest.get("catalog_http_status") or 0) != 200:
             failures.append("CATALOG_HTTP_STATUS_NOT_200")
-        field_names = {str(x) for x in manifest.get("catalog_field_names", [])}
-        if not ({"code", "ticker", "symbol"} & field_names):
-            failures.append("CATALOG_NO_TICKER_FILTER")
+        catalog_field_names = {str(x).lower() for x in manifest.get("catalog_field_names", [])}
+        if not ({"length", "limit", "pagesize"} & catalog_field_names):
+            failures.append("CATALOG_HAS_NO_BOUNDED_PAGE_SIZE")
+        if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and ({"code", "ticker", "symbol"} & catalog_field_names):
+            warnings.append("GLOBAL_MODE_USED_DESPITE_AVAILABLE_TICKER_FILTER")
 
     response_headers = manifest.get("response_headers") if isinstance(manifest.get("response_headers"), dict) else {}
     content_type = str(response_headers.get("content-type") or "").lower()
@@ -221,11 +257,23 @@ def main() -> int:
 
     admissible: list[dict[str, Any]] = []
     row_keys = sorted({str(k) for row in rows[:100] for k in row})
+    explicit_ticker_rows = 0
     for row in rows:
         ticker_raw = _first(row, TICKER_ALIASES)
-        ticker = str(ticker_raw or target).strip().upper()
-        if ticker != target:
+        explicit_ticker = ticker_raw not in (None, "")
+        if explicit_ticker:
+            explicit_ticker_rows += 1
+            ticker = str(ticker_raw).strip().upper()
+        elif scope_mode == "SERVER_TICKER_FILTER":
+            ticker = preferred_target
+        else:
+            ticker = ""
+
+        if scope_mode == "SERVER_TICKER_FILTER" and ticker != preferred_target:
             continue
+        if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and not ticker:
+            continue
+
         cash = _positive_number(_first(row, CASH_ALIASES))
         cum = _date(_first(row, CUM_ALIASES))
         ex = _date(_first(row, EX_ALIASES))
@@ -244,8 +292,21 @@ def main() -> int:
             "payment_date": payment,
         })
 
+    if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and explicit_ticker_rows == 0:
+        failures.append("GLOBAL_FEED_ROWS_HAVE_NO_TICKER_IDENTITY")
     if not admissible:
         failures.append("NO_ROW_WITH_REQUIRED_DIVIDEND_SEMANTICS")
+
+    # Global-feed mode must expose enough paging semantics for production to
+    # enumerate deterministically and filter relevant tickers client-side.
+    pagination_metadata: dict[str, Any] = {}
+    for obj in (raw_payload, core):
+        if isinstance(obj, dict):
+            for key in ("start", "length", "limit", "page", "total", "recordsTotal", "recordsFiltered", "count"):
+                if key in obj and key not in pagination_metadata:
+                    pagination_metadata[key] = obj[key]
+    if scope_mode == "GLOBAL_FEED_CLIENT_SIDE_TICKER_FILTER" and not pagination_metadata:
+        warnings.append("GLOBAL_FEED_RESPONSE_HAS_NO_EXPLICIT_PAGINATION_METADATA_ITERATE_UNTIL_SHORT_PAGE")
 
     cache_ttl_observation: dict[str, Any] = {}
     for key in ("cache-control", "age", "etag", "last-modified"):
@@ -259,7 +320,8 @@ def main() -> int:
         "status": "PASS_ELIGIBLE_FOR_V1_1_STRUCTURED_HELPER" if not failures else "FAIL_NOT_ELIGIBLE_FOR_V1_1",
         "probe_dir": str(root),
         "endpoint_url": manifest.get("endpoint_url"),
-        "target_code": target,
+        "scope_mode": scope_mode,
+        "preferred_target_code": preferred_target,
         "params": params,
         "http_status": manifest.get("http_status"),
         "raw_sha256": _sha256(raw_bytes) if raw_bytes else None,
@@ -267,8 +329,10 @@ def main() -> int:
         "selected_rows_path": selected_path,
         "row_count": len(rows),
         "row_keys_union": row_keys,
+        "explicit_ticker_rows": explicit_ticker_rows,
         "provider": provider,
         "dataset": dataset,
+        "pagination_metadata": pagination_metadata,
         "admissible_semantic_rows": admissible[:20],
         "cache_observation": cache_ttl_observation,
         "failures": failures,
