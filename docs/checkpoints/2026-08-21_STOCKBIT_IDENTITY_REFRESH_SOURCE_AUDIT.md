@@ -3,7 +3,7 @@
 Date: 2026-08-21  
 Branch: `audit/stockbit-stream-v2-red-team-v1`  
 Scope: prospective Stockbit acquisition identity roster only  
-Status: `PREREGISTERED_LIVE_SOURCE_AUDIT_PENDING_NO_ROSTER_MUTATION`
+Status: `PREREGISTERED_LIVE_SOURCE_AND_LISTING_EVENT_OVERLAY_AUDIT_PENDING_NO_ROSTER_MUTATION`
 
 ## Purpose
 
@@ -25,16 +25,36 @@ Current repository identity roster:
 
 ## Candidate cloud sources
 
-Two Zapi IDX endpoints are admitted for the audit without choosing a winner in advance:
+Two Zapi IDX endpoints remain admitted as base identity candidates without choosing a winner in advance:
 
 1. `finance:idx/securities`
-   - minimal security-level identity fields;
+   - security-level identity fields;
    - expected fields include `Code`, `Name`, `Shares`, `ListingDate`, `ListingBoard`.
 2. `finance:idx/companies`
    - issuer-level listed-company reference data;
    - stock eligibility must be explicit through `EfekEmiten_Saham` rather than inferred from issuer existence alone.
 
-The latest completed `finance:idx/stock-summary` panel is a cross-check only. It is not automatically an identity authority because market-trading presence and current listing identity are different semantics.
+The latest completed `finance:idx/stock-summary` panel remains a cross-check only. It is not automatically an identity authority because market-trading presence and current listing identity are different semantics.
+
+### Preregistered listing-event overlays
+
+Before inspecting their live payloads, the audit is extended to the newly exposed IDX listing-event endpoints:
+
+- `finance:idx/delistings`
+- `finance:idx/new-listings`
+- `finance:idx/ipo` (IPO & relisting)
+
+These endpoints are **candidate overlays**, not automatically accepted authorities. Their purpose is to test whether a current base security master can be transformed into a defensible current common-stock roster without ticker-specific hard-coding.
+
+The frozen intended semantics are:
+
+- a validated delisting event effective on or before the roster as-of date may remove a ticker from the base set;
+- a validated new-listing / IPO / relisting event effective on or before the roster as-of date may add or corroborate a ticker, subject to common-stock/security-type eligibility;
+- events after the roster as-of date must not affect that snapshot;
+- an event endpoint is not allowed to override ambiguous security type, malformed ticker, or contradictory dates silently;
+- if event payload semantics are insufficient to determine effective listing status, the result remains conditional rather than inventing a rule after observing deltas.
+
+No exact field names, pagination schema, or dataset metadata are assumed for these new endpoints until the live structural probe observes them. The first live run must therefore record payload shape and relevant fields before any parser is promoted.
 
 ## Frozen audit procedure
 
@@ -78,7 +98,19 @@ For `companies`:
 - `TanggalPencatatan` parseability is measured;
 - do not infer the meaning of numeric `Status` without an independently documented contract.
 
-### D. Cross-set deltas
+### D. Listing-event structural probe
+
+For `delistings`, `new-listings`, and `ipo`:
+
+- perform bounded authenticated live reads in GitHub Actions;
+- record HTTP status, exact raw-response SHA-256, outer/unwrapped object shape, dataset/provider metadata when present, total/count metadata when present, and a small non-sensitive field-name/sample summary;
+- explicitly search returned rows/items for `CNTX`, `CNTB`, and `GOTOM` because they are already known identity deltas from the base audit;
+- do not fail the whole audit merely because a newly documented endpoint uses a different pagination envelope than `securities`/`companies`; structural discovery is the first step;
+- never treat a 404/unsupported route as absence of delisting events—it means only that the candidate endpoint is unavailable under the tested contract.
+
+After payload structure is observed, a parser may be added only if its field semantics are explicit enough to implement the frozen as-of rules above.
+
+### E. Cross-set deltas
 
 Produce exact sorted ticker deltas for:
 
@@ -90,9 +122,11 @@ Produce exact sorted ticker deltas for:
 
 For every delta ticker, include whatever non-sensitive reference metadata is already present in the retrieved provider rows. Do not silently classify unexplained deltas.
 
-### E. Stability check
+If listing-event overlays become structurally admissible, additionally report the reconstructed as-of set and exact additions/removals relative to both base candidate and pinned roster. Do not activate it automatically.
 
-Fetch each identity candidate twice in the same run using the same paginated contract.
+### F. Stability check
+
+Fetch each base identity candidate twice in the same run using the same paginated contract.
 
 Record:
 
@@ -109,22 +143,23 @@ Possible verdicts:
 
 ### `IDENTITY_REFRESH_SOURCE_ACCEPTED`
 
-Only if one candidate has:
+Only if a reproducible construction has:
 
 - deterministic cloud retrieval;
-- complete validated pagination;
-- stable immediate ticker set;
-- defensible stock-security semantics;
-- all material deltas against the pinned roster explained by observable listing/security facts or a separately documented rule;
-- enough fields to regenerate `ticker`, company name, and listing date without local-only artifacts.
+- complete validated base pagination;
+- stable immediate base ticker set;
+- defensible common-stock/security semantics;
+- defensible effective-date semantics for every listing-event overlay actually used;
+- all material deltas against the pinned roster explained by observable listing/security facts or the frozen event rule;
+- enough fields to regenerate `ticker`, company name, listing date, and current listed/not-listed status without local-only artifacts or ticker-specific hard-coding.
 
 ### `IDENTITY_REFRESH_SOURCE_CONDITIONAL`
 
-Use when the endpoint is technically usable but one or more ticker deltas or semantics remain unresolved. No roster replacement is authorized.
+Use when the base endpoint is technically usable but one or more ticker deltas, security-type rules, or listing-event semantics remain unresolved. No roster replacement is authorized.
 
 ### `IDENTITY_REFRESH_SOURCE_REJECTED`
 
-Use when candidate data is incomplete, unstable, non-paginatable, materially malformed, or lacks defensible stock identity semantics.
+Use when candidate data is incomplete, unstable, non-paginatable, materially malformed, or cannot support defensible current identity semantics even with the preregistered event overlays.
 
 ## Explicit non-goals
 
@@ -132,7 +167,7 @@ This audit does not:
 
 - modify the current 963-name identity roster;
 - modify the 35-day stale gate;
-- build Structural Core 120;
+- build Structural Core / Social Hot / Discovery tiers;
 - compute market cap or persistent liquidity;
 - capture Stockbit Stream;
 - use sentiment/NLP/LLMs;
@@ -141,4 +176,4 @@ This audit does not:
 
 ## Next step after live audit
 
-If a candidate is accepted, a separate implementation step may define how and when a new immutable identity snapshot is materialized and activated relative to the weekly structural snapshot. If conditional, resolve the exact delta semantics first.
+If the construction is accepted, a separate implementation step may define how and when a new immutable identity snapshot is materialized and activated relative to the weekly structural snapshot. If conditional, resolve the exact remaining semantics first.
