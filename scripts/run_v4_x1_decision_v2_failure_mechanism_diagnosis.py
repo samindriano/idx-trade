@@ -15,6 +15,9 @@ from idx_trade.decision_v2_failure_diagnosis import (  # noqa: E402
     run_failure_mechanism_diagnosis,
     write_failure_diagnosis_artifacts,
 )
+from idx_trade.decision_v2_failure_diagnosis_contract import (  # noqa: E402
+    verify_failure_diagnosis_prereg,
+)
 from idx_trade.decision_v2_structural_replay import sha256_file  # noqa: E402
 
 
@@ -49,6 +52,7 @@ def main() -> int:
         raise DecisionV2FailureDiagnosisError(
             "DECISION_V2_FAILURE_DIAGNOSIS_NOT_REVIEW_AUTHORIZED"
         )
+    verify_failure_diagnosis_prereg(REPO_ROOT)
     result = run_failure_mechanism_diagnosis(
         structural_root=args.structural_root,
         historical_root=args.historical_root,
