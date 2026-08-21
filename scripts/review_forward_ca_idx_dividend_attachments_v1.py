@@ -55,12 +55,40 @@ def _contains_date(text: str, day: int, month_name: str, year: int) -> bool:
     return bool(re.search(rf"\b0?{day}\s+{month}\s+{year}\b", text, flags=re.IGNORECASE))
 
 
+def _amount_regex(amount: Decimal) -> str:
+    """Return a locale-tolerant regex for an exact currency amount.
+
+    IDX disclosure PDFs commonly render an integer cash dividend as `25`,
+    `25,00`, or `25.00`.  Keep the match exact while allowing only zero
+    fractional digits when the expected amount itself is integral.
+    """
+    normalized = amount.normalize()
+    if normalized == normalized.to_integral():
+        integer = re.escape(str(int(normalized)))
+        return rf"{integer}(?:[\.,]0+)?"
+
+    canonical = format(normalized, "f")
+    whole, frac = canonical.split(".", 1)
+    return rf"{re.escape(whole)}[\.,]{re.escape(frac)}"
+
+
 def _has_dividend_amount(text: str, amount: Decimal) -> bool:
-    amount_token = re.escape(format(amount, "f"))
+    amount_token = _amount_regex(amount)
+    share_unit = r"(?:per\s+(?:lembar\s+)?saham|per\s+share|/\s*(?:lembar\s+)?saham)"
+    currency_amount = rf"(?:rp\.?|idr)\s*{amount_token}"
+
+    # Accept the major layouts observed in official IDX/issuer disclosures:
+    # - "dividen per saham ... IDR 25"
+    # - "dividen interim sebesar Rp25,00 per lembar saham"
+    # - "interim dividend of Rp25.00 per share"
+    # - table cells where the currency amount precedes "dividen per saham".
     patterns = (
-        rf"dividen\s+per\s+saham.{0,100}?idr\s*{amount_token}(?:\D|$)",
-        rf"dividen\s+per\s+saham.{0,100}?rp\.?\s*{amount_token}(?:\D|$)",
-        rf"idr\s*{amount_token}.{0,80}?dividen\s+per\s+saham",
+        rf"dividen\s+per\s+saham.{{0,120}}?{currency_amount}(?:\D|$)",
+        rf"dividen(?:\s+tunai)?(?:\s+interim)?.{{0,80}}?{currency_amount}\s*{share_unit}",
+        rf"interim\s+dividend.{{0,80}}?{currency_amount}\s*{share_unit}",
+        rf"dividend.{{0,80}}?{currency_amount}\s*{share_unit}",
+        rf"{currency_amount}.{{0,100}}?dividen\s+per\s+saham",
+        rf"{currency_amount}\s*{share_unit}",
     )
     return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
 
