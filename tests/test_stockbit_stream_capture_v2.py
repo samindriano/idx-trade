@@ -28,7 +28,7 @@ class Session:
             {"StockCode": "BBRI", "Date": "2026-08-20T00:00:00", "Value": 500, "NonRegularValue": 0},
             {"StockCode": "AADI", "Date": "2026-08-20T00:00:00", "Value": 1000, "NonRegularValue": 950},
         ]
-        return Response({"provider": "idx", "dataset": "stock-summary", "data": rows})
+        return Response({"provider": "idx", "dataset": "stock-summary", "recordsTotal": 3, "recordsFiltered": 3, "start": 0, "length": 3, "data": rows})
 
 
 def identity_csv(path: Path):
