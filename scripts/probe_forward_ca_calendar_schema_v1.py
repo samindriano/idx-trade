@@ -7,18 +7,47 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from typing import Any
 
-from idx_trade.forward_ca_attestation_v1 import (
-    CALENDAR_CAPTURE_SCOPE,
-    PROVIDER_COMMIT,
-    PROVIDER_REPOSITORY,
-    UPSTREAM_BASE_URL,
-    _structural_fingerprint,
-)
+PROVIDER_REPOSITORY = "nichsedge/idx-bei"
+PROVIDER_COMMIT = "75d6c0f74fa360d225794c70c383348977de6798"
+UPSTREAM_BASE_URL = "https://www.idx.co.id/primary"
+CALENDAR_CAPTURE_SCOPE = "ALL_MARKET_MONTHS_TOUCHING_WINDOW"
 
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _structural_fingerprint(value: Any) -> str:
+    def shape(x: Any) -> Any:
+        if isinstance(x, dict):
+            return {
+                "dict": {
+                    str(k): shape(v)
+                    for k, v in sorted(x.items(), key=lambda kv: str(kv[0]))
+                }
+            }
+        if isinstance(x, list):
+            if not x:
+                return {"list": []}
+            unique: dict[str, Any] = {}
+            for item in x[:25]:
+                sig = json.dumps(shape(item), sort_keys=True, separators=(",", ":"))
+                unique[sig] = json.loads(sig)
+            return {"list": [unique[k] for k in sorted(unique)]}
+        if x is None:
+            return "null"
+        if isinstance(x, bool):
+            return "bool"
+        if isinstance(x, int):
+            return "int"
+        if isinstance(x, float):
+            return "float"
+        return "str"
+
+    blob = json.dumps(shape(value), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
 
 
 def _verify_provider_checkout(checkout: Path) -> None:
