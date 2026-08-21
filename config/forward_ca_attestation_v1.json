@@ -1,0 +1,54 @@
+{
+  "schema_version": "forward_ca_attestation_v1",
+  "status": "PREPARED_CALENDAR_SCHEMA_PROBE_REQUIRED",
+  "primary_source": "DIRECT_IDX_VIA_PINNED_IDX_BEI",
+  "provider_repository": "nichsedge/idx-bei",
+  "provider_commit": "75d6c0f74fa360d225794c70c383348977de6798",
+  "provider_python_project_subdir": "python",
+  "provider_module": "idx.core.client.IDXClient",
+  "provider_transport": "curl_cffi",
+  "provider_impersonate": "chrome",
+  "upstream_base_url": "https://www.idx.co.id/primary",
+  "max_retries": 3,
+  "delay_seconds": 1.0,
+  "timeout_seconds": 30,
+  "capture_phases": [
+    "POST_EOD",
+    "PREOPEN"
+  ],
+  "required_endpoint_legs": [
+    "/ListingActivity/GetIssuedHistory",
+    "/NewsAnnouncement/GetAllAnnouncement",
+    "/Home/GetCalendar"
+  ],
+  "corporate_action_types": [
+    "tanpaHmetd",
+    "hmetd",
+    "stockSplit",
+    "reverseStock",
+    "sahamBonus",
+    "dividenSaham",
+    "BuybackSaham",
+    "PrivatePlacement",
+    "ipo",
+    "waran",
+    "gabungUsaha",
+    "kurangModal",
+    "konversiSaham",
+    "companyListing",
+    "partialDelisting"
+  ],
+  "attestation_statuses": [
+    "NO_RELEVANT_EVENTS",
+    "RELEVANT_EVENT_DETECTED",
+    "SOURCE_INCOMPLETE_OR_ERROR"
+  ],
+  "execution_admission_status": "NO_RELEVANT_EVENTS_ONLY",
+  "calendar_schema_fingerprint": null,
+  "calendar_schema_probe_required_before_execution_admission": true,
+  "zapi_fallback": "NOT_WIRED_V1",
+  "historical_backfill_authorized": false,
+  "historical_pnl_authorized": false,
+  "paper_mutation_authorized_by_preparation": false,
+  "raw_storage": "EXTERNAL_IMMUTABLE_HASHED"
+}
