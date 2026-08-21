@@ -26,7 +26,7 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       STOCKBIT_STREAM_HMAC_SALT: ${{ secrets.STOCKBIT_STREAM_AUTHOR_HMAC_KEY }}
