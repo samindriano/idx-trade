@@ -1,0 +1,338 @@
+from __future__ import annotations
+
+from dataclasses import replace
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+import idx_trade.forward_dividend_execution_v1_1 as gate
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as fd
+from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
+from idx_trade.v4_x1_execution_v1_contract import (
+    PaperPortfolioState,
+    PaperPosition,
+    PendingPaperIntent,
+)
+
+
+def _event(
+    *,
+    event_id: str = "CASH_DIVIDEND_BBCA_RUNTIME_TEST",
+    ticker: str = "BBCA",
+    cum_date: str = "2026-08-28",
+    source_sha: str = "a" * 64,
+) -> fd.CertifiedCashDividend:
+    return fd.CertifiedCashDividend(
+        event_id=event_id,
+        ticker=ticker,
+        announcement_timestamp="2026-08-19T18:31:03",
+        gross_dividend_per_share_idr=25.0,
+        cum_date=cum_date,
+        ex_date="2026-08-31",
+        record_date="2026-09-01",
+        payment_date="2026-09-16",
+        source_evidence_sha256=source_sha,
+    )
+
+
+def _evidence(
+    tmp_path: Path,
+    event: fd.CertifiedCashDividend | None = None,
+) -> gate.VerifiedCashDividendEvidence:
+    review = tmp_path / f"review-{(event or _event()).event_id}.json"
+    review.write_text('{"status":"synthetic"}\n', encoding="utf-8")
+    return gate.VerifiedCashDividendEvidence(
+        event=event or _event(),
+        review_path=review,
+        review_sha256=hashlib.sha256(review.read_bytes()).hexdigest(),
+        announcement_id="20260819183103-005/CSG-IVR/2026_id-id",
+        announcement_number="005/CSG-IVR/2026",
+        _verification_token=gate._VERIFIED_DIVIDEND_EVIDENCE_TOKEN,
+    )
+
+
+def _patch_verifier(
+    monkeypatch: pytest.MonkeyPatch,
+    verified_rows: list[gate.VerifiedCashDividendEvidence],
+) -> None:
+    by_path = {row.review_path.resolve(): row for row in verified_rows}
+
+    def verify(*, review_path, attachment_dir):
+        path = Path(review_path).resolve()
+        assert Path(attachment_dir).resolve().is_dir()
+        row = by_path[path]
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != row.review_sha256:
+            raise DecisionV1Error("SYNTHETIC_REVIEW_SHA_MISMATCH")
+        return row
+
+    monkeypatch.setattr(
+        gate,
+        "verify_cash_dividend_evidence_for_execution",
+        verify,
+    )
+
+
+def _registry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *events: fd.CertifiedCashDividend,
+) -> tuple[runtime.RegisteredDividendEvidence, ...]:
+    attachment_dir = tmp_path / "attachments"
+    attachment_dir.mkdir(exist_ok=True)
+    rows = [_evidence(tmp_path, event) for event in events or (_event(),)]
+    _patch_verifier(monkeypatch, rows)
+    registry: tuple[runtime.RegisteredDividendEvidence, ...] = ()
+    for row in rows:
+        registry = runtime.register_verified_cash_dividend_evidence(
+            registry,
+            row,
+            attachment_dir=attachment_dir,
+        )
+    return registry
+
+
+def _state(
+    session_date: str,
+    *,
+    cash: float = 1_000_000.0,
+    positions: tuple[PaperPosition, ...] = (),
+    pending_buys: tuple[PendingPaperIntent, ...] = (),
+    pending_sells: tuple[PendingPaperIntent, ...] = (),
+    ledger: fd.DividendLedger | None = None,
+) -> fd.DividendAwarePaperState:
+    return fd.DividendAwarePaperState(
+        base_state=PaperPortfolioState(
+            as_of_session_date=session_date,
+            cash_idr=cash,
+            positions=positions,
+            pending_buys=pending_buys,
+            pending_sells=pending_sells,
+        ),
+        dividend_ledger=ledger or fd.DividendLedger(),
+    )
+
+
+def test_runtime_snapshot_roundtrip_binds_state_registry_and_parent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    second_state = _state(
+        "2026-08-21",
+        positions=(PaperPosition("BBCA", 200),),
+    )
+    second = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        second_state,
+        registry,
+        previous_snapshot=first,
+    )
+    loaded = runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+    assert loaded.file_sha256 == second.file_sha256
+    assert loaded.previous_snapshot_sha256 == first.file_sha256
+    assert loaded.runtime_state_sha256 == runtime.runtime_state_hash(
+        second_state,
+        registry,
+    )
+    assert runtime.registered_certified_events(
+        loaded.certified_dividend_registry
+    ) == (_event(),)
+
+
+def test_same_session_identical_snapshot_is_idempotent_but_divergence_blocks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    state = _state("2026-08-20")
+    one = runtime.write_runtime_snapshot(tmp_path / "runtime", state, registry)
+    two = runtime.write_runtime_snapshot(tmp_path / "runtime", state, registry)
+    assert one.file_sha256 == two.file_sha256
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_SESSION_CONFLICT"):
+        runtime.write_runtime_snapshot(
+            tmp_path / "runtime",
+            _state("2026-08-20", cash=999_000.0),
+            registry,
+        )
+
+
+def test_snapshot_payload_tamper_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    payload = json.loads(snapshot.path.read_text(encoding="utf-8"))
+    payload["state"]["base_paper_state"]["cash_idr"] = 2_000_000.0
+    snapshot.path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_SHA_MISMATCH"):
+        runtime.load_runtime_snapshot(snapshot.path)
+
+
+def test_parent_bytes_tamper_invalidates_child_chain(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    second = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    first.path.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(DecisionV1Error, match="PARENT_SHA_MISMATCH"):
+        runtime.load_runtime_snapshot(second.path)
+
+
+def test_review_tamper_invalidates_persisted_event_registry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    registry[0].review_path.write_text('{"tampered":true}\n', encoding="utf-8")
+    with pytest.raises(DecisionV1Error, match="REVIEW_SHA_MISMATCH"):
+        runtime.load_runtime_snapshot(snapshot.path)
+
+
+def test_registry_event_survives_until_later_cum_session_and_creates_entitlement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = _event()
+    registry = _registry(tmp_path, monkeypatch, event)
+    announced = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    cum_state = _state(
+        "2026-08-28",
+        positions=(PaperPosition("BBCA", 200),),
+    )
+    cum_snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        cum_state,
+        registry,
+        previous_snapshot=announced,
+    )
+    loaded = runtime.load_runtime_snapshot(cum_snapshot.path)
+    processed = fd.process_dividend_eod(
+        loaded.state,
+        runtime.registered_certified_events(
+            loaded.certified_dividend_registry
+        ),
+        session_date="2026-08-28",
+    )
+    assert len(processed.dividend_ledger.entitlements) == 1
+    assert processed.dividend_ledger.entitlements[0].entitled_shares == 200
+
+
+def test_shadow_reconstruction_uses_actual_minus_pending_sell_plus_pending_buy() -> None:
+    state = _state(
+        "2026-08-21",
+        positions=(
+            PaperPosition("AAA", 100),
+            PaperPosition("BBB", 100),
+        ),
+        pending_sells=(
+            PendingPaperIntent(
+                "SELL",
+                "AAA",
+                21,
+                "PARTIAL_EXIT_CAPACITY",
+                "CCC",
+            ),
+        ),
+        pending_buys=(
+            PendingPaperIntent(
+                "BUY",
+                "CCC",
+                1,
+                "BLOCKED_BY_UNRESOLVED_PAIRED_SELL",
+                "AAA",
+            ),
+        ),
+    )
+    shadow = runtime.reconstruct_decision_shadow_state(state)
+    assert shadow.as_of_session_date == "2026-08-21"
+    assert shadow.positions == ("BBB", "CCC")
+
+
+def test_registry_rejects_conflicting_event_for_same_ticker_and_cum(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first_event = _event()
+    second_event = replace(
+        first_event,
+        event_id="CASH_DIVIDEND_BBCA_CONFLICT",
+        source_evidence_sha256="b" * 64,
+    )
+    attachment_dir = tmp_path / "attachments"
+    attachment_dir.mkdir()
+    first = _evidence(tmp_path, first_event)
+    second = _evidence(tmp_path, second_event)
+    _patch_verifier(monkeypatch, [first, second])
+    registry = runtime.register_verified_cash_dividend_evidence(
+        (),
+        first,
+        attachment_dir=attachment_dir,
+    )
+    with pytest.raises(DecisionV1Error, match="CONFLICTING_EVENT_SAME_TICKER_CUM"):
+        runtime.register_verified_cash_dividend_evidence(
+            registry,
+            second,
+            attachment_dir=attachment_dir,
+        )
+
+
+def test_latest_loader_rejects_forked_snapshot_history(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    # A later snapshot without the existing chain is a fork. Writing is allowed
+    # as an immutable artifact, but selecting it as "latest" must fail closed.
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-24"),
+        registry,
+        previous_snapshot=None,
+    )
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_CHAIN_FORK"):
+        runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
