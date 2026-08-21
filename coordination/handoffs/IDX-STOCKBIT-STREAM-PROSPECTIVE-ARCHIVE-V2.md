@@ -63,14 +63,15 @@ Original bounded live smoke (historical happy-path evidence only):
 - 150 normalized observations;
 - manifest SHA-256 `0d9e4ccc3ea224aeae5e396f86d627f64fe6708e06d35c7907df1157c2118bbe`.
 
-Final red-team evidence on hardened code:
+Hardened red-team evidence:
 
 - run `32453947316`;
 - **26/26 adversarial tests PASS**;
 - repository-wide pytest: **72 passed, 1 skipped, 1 failed**;
-- the sole repository-wide failure is pre-existing and unrelated: `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`.
+- the sole repository-wide failure is pre-existing and unrelated: `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`;
+- no Stockbit test remained failing.
 
-No Stockbit test remained failing.
+Subsequent branch commits after the successful code validation only corrected/strengthened lineage documentation and the red-team workflow trigger; they did not relax the validated contracts.
 
 ## Scientific boundary
 
