@@ -18,6 +18,7 @@ from .decision_v2_structural_replay import (
     SCORE_FILENAME,
     SOURCE_GUARD_EXPECTATIONS,
     _naive_top10_replacements,
+    canonical_json_sha256,
     sha256_file,
 )
 
@@ -25,8 +26,8 @@ from .decision_v2_structural_replay import (
 REPLAY_CONTRACT_RELATIVE_PATH = Path(
     "docs/specs/decision_v2_minimal_structural_replay_contract_v1.json"
 )
-EXPECTED_REPLAY_CONTRACT_SHA256 = (
-    "46fea08bfc4349fe22ec3a9d6aebed2d123d4d50556048749a4699025c6bfc99"
+EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256 = (
+    "2f4e04fe060b43da6d555717a5aab687c10f40fa114ee954ae24082f912d455f"
 )
 ALLOWED_SCORE_COLUMNS = (
     "ticker",
@@ -45,13 +46,22 @@ def verify_frozen_replay_contract(repo_root: str | Path) -> Path:
         raise DecisionV2StructuralReplayError(
             f"DECISION_V2_REPLAY_CONTRACT_MISSING:{path}"
         )
-    actual = sha256_file(path)
-    if actual != EXPECTED_REPLAY_CONTRACT_SHA256:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
         raise DecisionV2StructuralReplayError(
-            "DECISION_V2_REPLAY_CONTRACT_SHA_MISMATCH:"
-            f"{actual}!={EXPECTED_REPLAY_CONTRACT_SHA256}"
+            "DECISION_V2_REPLAY_CONTRACT_INVALID_JSON"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise DecisionV2StructuralReplayError(
+            "DECISION_V2_REPLAY_CONTRACT_NOT_OBJECT"
         )
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    actual = canonical_json_sha256(payload)
+    if actual != EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256:
+        raise DecisionV2StructuralReplayError(
+            "DECISION_V2_REPLAY_CONTRACT_CANONICAL_SHA_MISMATCH:"
+            f"{actual}!={EXPECTED_REPLAY_CONTRACT_CANONICAL_SHA256}"
+        )
     if payload.get("status") != "FROZEN_BEFORE_FIRST_REPLAY":
         raise DecisionV2StructuralReplayError(
             "DECISION_V2_REPLAY_CONTRACT_STATUS_CHANGED"
