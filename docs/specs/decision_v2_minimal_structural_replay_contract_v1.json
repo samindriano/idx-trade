@@ -1,0 +1,83 @@
+{
+  "schema_version": "decision_v2_minimal_structural_replay_contract_v1",
+  "status": "FROZEN_BEFORE_FIRST_REPLAY",
+  "source": {
+    "manifest_sha256": "6573a563bb1c408bd32cdd00f9ae8aaba654d5fec96e6a250b4a3b2898d98205",
+    "score_sha256": "48ea8932de3405155550aabcb982ebe325bf0caa9ce5737fd75d23b91a3bda0b",
+    "score_sessions": 600,
+    "score_rows": 172697,
+    "score_filename": "clean_challenger_validation_scores.parquet"
+  },
+  "comparators": {
+    "naive_exact_daily_top10_replacements": 3127,
+    "frozen_decision_v1_replacements": 2686
+  },
+  "replacement_metric": {
+    "name": "replacement_count",
+    "definition": "max(sell_intent_count,buy_intent_count) per non-bootstrap transition",
+    "rationale": "Conservative seat-change count that does not reward temporary underfill: paired sell+buy counts one changed seat, while exit-only or fill-only also counts one."
+  },
+  "hard_gates": {
+    "A_correctness_determinism": {
+      "no_target_size_gt10": true,
+      "no_duplicate_target_ticker": true,
+      "unqualified_nonbootstrap_entrant_violations_max": 0,
+      "one_observation_gt20_exit_violations_max": 0,
+      "confirmed_gt20_incumbent_retained_violations_max": 0,
+      "soft_replacement_gap_violations_max": 0,
+      "deterministic_second_pass_match": true
+    },
+    "B_churn_reduction": {
+      "mean_replacements_per_transition_max": 2.25,
+      "turnover_ratio_vs_naive_max": 0.5,
+      "share_transitions_ge3_replacements_max": 0.35
+    },
+    "C_holding_persistence": {
+      "median_completed_holding_spell_min_sessions": 3.0,
+      "one_session_completed_holding_share_max": 0.35
+    },
+    "D_rank_quality_preservation": {
+      "mean_current_top10_overlap_full_target_min": 6.0,
+      "mean_target_rank_max": 12.0,
+      "underfilled_normalized_top10_overlap_report_required": true
+    },
+    "E_capacity": {
+      "mean_target_size_min": 9.0,
+      "share_target_size_10_min": 0.7,
+      "share_target_size_le8_max": 0.1
+    },
+    "F_no_hidden_stale_state": {
+      "second_consecutive_available_session_rank_gt20_retained_violations_max": 0
+    }
+  },
+  "required_metrics": [
+    "turnover_churn",
+    "holding_persistence",
+    "rank_quality",
+    "decision_state_behavior",
+    "capacity",
+    "hundred_date_blocks",
+    "fold_segments",
+    "fold_boundary_transitions"
+  ],
+  "runtime_invariants": {
+    "bootstrap_only_ledger_index_0": true,
+    "exact_adjacent_t_minus_1_t_iteration": true,
+    "no_skipped_session": true,
+    "no_fold_reset": true,
+    "no_preroll": true,
+    "state_advanced_only_via_from_plan": true,
+    "state_rule_id_bound": true,
+    "second_in_memory_pass_only_for_determinism_gate": true
+  },
+  "forbidden": {
+    "realized_returns": true,
+    "historical_pnl": true,
+    "target_outcome_ledger": true,
+    "protected_or_fresh_forward_outcomes": true,
+    "provider_or_network_calls": true,
+    "model_refit_or_retune": true,
+    "decision_parameter_sweep": true,
+    "alternative_thresholds": true
+  }
+}
