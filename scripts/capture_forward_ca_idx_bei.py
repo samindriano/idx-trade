@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -65,6 +65,30 @@ def _verify_provider_checkout(checkout: Path) -> None:
         raise SystemExit(f"provider commit mismatch: {head} != {PROVIDER_COMMIT}")
 
 
+def _parse_session(value: str, code: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise SystemExit(code) from exc
+
+
+def _calendar_month_anchors(from_session: str, through_session: str) -> list[str]:
+    start = _parse_session(from_session, "invalid --from-session; expected YYYY-MM-DD")
+    end = _parse_session(through_session, "invalid --through-session; expected YYYY-MM-DD")
+    if end < start:
+        raise SystemExit("--through-session precedes --from-session")
+    current = date(start.year, start.month, 1)
+    final = date(end.year, end.month, 1)
+    anchors: list[str] = []
+    while current <= final:
+        anchors.append(current.strftime("%Y%m%d"))
+        if current.month == 12:
+            current = date(current.year + 1, 1, 1)
+        else:
+            current = date(current.year, current.month + 1, 1)
+    return anchors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--provider-checkout", required=True)
@@ -74,6 +98,15 @@ def main() -> int:
     parser.add_argument("--tickers", required=True, help="comma-separated IDX tickers")
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
+
+    from_session = _parse_session(
+        args.from_session, "invalid --from-session; expected YYYY-MM-DD"
+    ).isoformat()
+    through_session = _parse_session(
+        args.through_session, "invalid --through-session; expected YYYY-MM-DD"
+    ).isoformat()
+    if through_session < from_session:
+        raise SystemExit("--through-session precedes --from-session")
 
     checkout = Path(args.provider_checkout).expanduser().resolve()
     _verify_provider_checkout(checkout)
@@ -140,8 +173,8 @@ def main() -> int:
             endpoint="/ListingActivity/GetIssuedHistory",
             params={
                 "caType": ca_type,
-                "dateFrom": args.from_session,
-                "dateTo": args.through_session,
+                "dateFrom": from_session,
+                "dateTo": through_session,
                 "start": 0,
                 "length": 9999,
             },
@@ -164,14 +197,17 @@ def main() -> int:
                 "pageNumber": 1,
                 "pageSize": 100,
                 "lang": "id",
-                "dateFrom": args.from_session,
-                "dateTo": args.through_session,
+                "dateFrom": from_session,
+                "dateTo": through_session,
             },
         )
         if not isinstance(first, dict) or not isinstance(first.get("Items"), list):
             leg_status["announcements"] = "ERROR"
             raise RuntimeError(f"announcement schema invalid: {ticker}")
         pages = int(first.get("PageCount") or 1)
+        if pages < 1:
+            leg_status["announcements"] = "ERROR"
+            raise RuntimeError(f"announcement page count invalid: {ticker}")
         for page in range(2, pages + 1):
             payload = capture(
                 leg="announcements",
@@ -182,29 +218,48 @@ def main() -> int:
                     "pageNumber": page,
                     "pageSize": 100,
                     "lang": "id",
-                    "dateFrom": args.from_session,
-                    "dateTo": args.through_session,
+                    "dateFrom": from_session,
+                    "dateTo": through_session,
                 },
             )
             if not isinstance(payload, dict) or not isinstance(payload.get("Items"), list):
                 leg_status["announcements"] = "ERROR"
                 raise RuntimeError(f"announcement schema invalid: {ticker}:p{page}")
 
+    # Calendar is captured all-market, not once per ticker. The official endpoint
+    # supports d/w/m ranges; monthly all-market capture is small (~hundreds of rows)
+    # and avoids an empty-result schema fingerprint changing by ticker. Capture each
+    # distinct calendar month touched by the decision->execution window so long
+    # weekends/month boundaries remain covered, then classify only required tickers
+    # offline inside IDX-Trade.
+    for anchor in _calendar_month_anchors(from_session, through_session):
         calendar = capture(
             leg="calendar",
-            name=f"calendar_{ticker}",
+            name=f"calendar_month_{anchor[:6]}",
             endpoint="/Home/GetCalendar",
             params={
-                "range": "w",
-                "date": args.through_session.replace("-", ""),
+                "range": "m",
+                "date": anchor,
                 "start": 0,
                 "length": 9999,
-                "code": ticker,
+                "code": "",
                 "language": "id-id",
                 "search": "",
             },
         )
+        if not isinstance(calendar, dict) or not isinstance(calendar.get("Results"), list):
+            leg_status["calendar"] = "ERROR"
+            raise RuntimeError(f"calendar schema invalid: {anchor[:6]}")
+        if not calendar["Results"]:
+            leg_status["calendar"] = "ERROR"
+            raise RuntimeError(f"calendar unexpectedly empty: {anchor[:6]}")
         calendar_fingerprints.add(_structural_fingerprint(calendar))
+
+    if len(calendar_fingerprints) != 1:
+        leg_status["calendar"] = "ERROR"
+        raise RuntimeError(
+            f"calendar schema drift within capture: {sorted(calendar_fingerprints)}"
+        )
 
     manifest = {
         "schema_version": PHASE_SCHEMA,
@@ -216,9 +271,10 @@ def main() -> int:
         "transport": "curl_cffi",
         "impersonate": "chrome",
         "upstream_base_url": UPSTREAM_BASE_URL,
-        "from_session_date": args.from_session,
-        "through_session_date": args.through_session,
+        "from_session_date": from_session,
+        "through_session_date": through_session,
         "required_tickers": tickers,
+        "calendar_capture_scope": "ALL_MARKET_MONTHS_TOUCHING_WINDOW",
         "legs": {name: {"status": status} for name, status in leg_status.items()},
         "calendar_schema_fingerprints": sorted(calendar_fingerprints),
         "raw_artifacts": artifacts,
