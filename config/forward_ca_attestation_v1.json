@@ -1,6 +1,6 @@
 {
   "schema_version": "forward_ca_attestation_v1",
-  "status": "CALENDAR_SCHEMA_FROZEN_ZAPI_DIVIDENDS_AUDIT_PREPARED",
+  "status": "CALENDAR_SCHEMA_FROZEN_ZAPI_DIVIDENDS_NO_GO_COMPANY_PROFILE_AUDIT_PREPARED",
   "primary_source": "DIRECT_IDX_VIA_PINNED_IDX_BEI",
   "provider_repository": "nichsedge/idx-bei",
   "provider_commit": "75d6c0f74fa360d225794c70c383348977de6798",
@@ -83,25 +83,36 @@
   "zapi_candidate_endpoints": [
     "calendar",
     "issued-history",
-    "dividends",
+    "company-profile",
     "rights-offerings",
     "stock-splits",
     "additional-listings",
     "delistings"
   ],
-  "zapi_dividends_candidate_role": "STRUCTURED_EXTRACTION_OR_PARITY_ONLY_AFTER_BOUNDED_AUDIT_OFFICIAL_IDX_REMAINS_AUTHORITY",
-  "zapi_dividends_audit_status": "AUDIT_PREPARED_LIVE_PROBE_REQUIRED",
+  "zapi_dividends_candidate_role": "REJECTED_FOR_V1_1_AFTER_KNOWN_POSITIVE_TARGETED_AUDIT",
+  "zapi_dividends_audit_status": "NO_GO_KNOWN_POSITIVE_BBCA_2026_03_ZERO_ROWS",
   "zapi_dividends_probe_endpoint": "https://api.zpi.web.id/v1/finance:idx/dividends",
-  "zapi_dividends_public_schema_endpoint": "https://api.zpi.web.id/api/public/scrapers/idx/endpoints/dividends/schema",
-  "zapi_dividends_required_semantics": [
-    "ticker_scope",
-    "positive_gross_dividend_per_share",
-    "cum_date",
-    "ex_date",
-    "recording_date",
-    "payment_date"
-  ],
-  "zapi_dividends_required_pass_status": "PASS_ELIGIBLE_FOR_V1_1_STRUCTURED_HELPER",
+  "zapi_dividends_targeted_probe_raw_sha256": "d65efaeb59ba9803e232cc04717c7bb795765f1a4b2c4db931b0c54b66aab1ab",
+  "zapi_dividends_targeted_probe_params": {
+    "search": "BBCA",
+    "year": 2026,
+    "month": 3,
+    "page": 1,
+    "length": 20
+  },
+  "zapi_dividends_targeted_probe_status": "FAIL_NOT_ELIGIBLE_FOR_V1_1",
+  "zapi_company_profile_candidate_role": "STRUCTURED_DIVIDEND_EXTRACTION_OR_PARITY_ONLY_AFTER_EXACT_OFFICIAL_EVENT_MATCH",
+  "zapi_company_profile_audit_status": "PREPARED_LIVE_PROBE_REQUIRED",
+  "zapi_company_profile_probe_endpoint": "https://api.zpi.web.id/v1/finance:idx/company-profile",
+  "zapi_company_profile_target_code": "BBCA",
+  "zapi_company_profile_required_pass_status": "PASS_ELIGIBLE_FOR_V1_1_COMPANY_PROFILE_HELPER",
+  "zapi_company_profile_required_parity_event": {
+    "gross_dividend_per_share_idr": 20.0,
+    "cum_date": "2026-06-15",
+    "ex_date": "2026-06-17",
+    "recording_date": "2026-06-18",
+    "payment_date": "2026-06-26"
+  },
   "forward_ca_v1_1_authorized": false,
   "historical_backfill_authorized": false,
   "historical_pnl_authorized": false,
