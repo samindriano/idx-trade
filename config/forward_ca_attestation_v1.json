@@ -21,6 +21,12 @@
     "/NewsAnnouncement/GetAllAnnouncement",
     "/Home/GetCalendar"
   ],
+  "calendar_capture_scope": "ALL_MARKET_MONTHS_TOUCHING_WINDOW",
+  "calendar_range": "m",
+  "calendar_code_filter": "",
+  "calendar_length": 9999,
+  "calendar_language": "id-id",
+  "calendar_search": "",
   "corporate_action_types": [
     "tanpaHmetd",
     "hmetd",
