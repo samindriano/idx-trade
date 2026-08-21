@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import sys
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -130,11 +129,10 @@ def main() -> int:
         raise SystemExit(f"ZAPI_DIVIDENDS_PROBE_OUTPUT_EXISTS:{root}")
     root.mkdir(parents=True)
 
-    started = datetime.now(timezone.utc).isoformat()
     manifest: dict[str, Any] = {
         "schema_version": MANIFEST_SCHEMA,
         "status": "STARTED",
-        "started_at_utc": started,
+        "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "catalog_schema_url": CATALOG_SCHEMA_URL,
         "endpoint_url": ENDPOINT_URL,
         "target_code": code,
@@ -158,13 +156,14 @@ def main() -> int:
     manifest["catalog_headers"] = cat_headers
     manifest["catalog_raw_sha256"] = _sha256(cat_body)
 
+    fields: list[dict[str, Any]] = []
     try:
         catalog_payload = _parse_json(cat_body, "ZAPI_DIVIDENDS_CATALOG_JSON_INVALID")
         fields = _catalog_fields(catalog_payload)
         params = _select_params(fields, code)
     except Exception as exc:
         manifest["status"] = "CATALOG_SCHEMA_UNUSABLE_NO_AUTH_REQUEST_MADE"
-        manifest["catalog_field_names"] = [str(x.get("name") or "") for x in _catalog_fields(_parse_json(cat_body, "ZAPI_DIVIDENDS_CATALOG_JSON_INVALID"))]
+        manifest["catalog_field_names"] = [str(x.get("name") or "") for x in fields]
         manifest["error"] = str(exc)
         (root / "PROBE_MANIFEST.json").write_bytes(_json_bytes(manifest))
         print(root / "PROBE_MANIFEST.json")
