@@ -8,8 +8,39 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import requests
+
 from idx_trade.stockbit_stream_archive import StreamArchiveError, ZapiClient
 from idx_trade.stockbit_stream_capture_v2 import archive_from_env, build_runtime_universe, capture_stream_v2
+
+
+class _EnvelopeAwareResponse:
+    """Preserve exact response bytes while exposing the nested finance payload to the parser."""
+
+    def __init__(self, response: requests.Response):
+        self._response = response
+        self.status_code = response.status_code
+        self.content = response.content
+        self.headers = response.headers
+
+    def json(self):
+        payload = self._response.json()
+        if (
+            isinstance(payload, dict)
+            and isinstance(payload.get("data"), dict)
+            and "project" in payload
+            and "timestamp" in payload
+        ):
+            return payload["data"]
+        return payload
+
+
+class _EnvelopeAwareSession:
+    def __init__(self):
+        self._session = requests.Session()
+
+    def get(self, *args, **kwargs):
+        return _EnvelopeAwareResponse(self._session.get(*args, **kwargs))
 
 
 def main() -> int:
@@ -31,6 +62,7 @@ def main() -> int:
             identity_csv=args.identity_csv,
             capture_date=capture_date,
             top_n=args.top_n,
+            session=_EnvelopeAwareSession(),
         )
         result = capture_stream_v2(
             client=ZapiClient(api_key),
