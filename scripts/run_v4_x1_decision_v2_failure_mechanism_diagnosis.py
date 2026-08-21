@@ -15,6 +15,9 @@ from idx_trade.decision_v2_failure_diagnosis import (  # noqa: E402
     run_failure_mechanism_diagnosis,
     write_failure_diagnosis_artifacts,
 )
+from idx_trade.decision_v2_failure_diagnosis_boundary import (  # noqa: E402
+    apply_next_session_boundary,
+)
 from idx_trade.decision_v2_failure_diagnosis_contract import (  # noqa: E402
     verify_failure_diagnosis_prereg,
 )
@@ -57,6 +60,7 @@ def main() -> int:
         structural_root=args.structural_root,
         historical_root=args.historical_root,
     )
+    result = apply_next_session_boundary(result)
     manifest = write_failure_diagnosis_artifacts(result, args.output_dir)
     print(json.dumps(result.summary, indent=2, sort_keys=True))
     print(f"manifest={manifest}")
