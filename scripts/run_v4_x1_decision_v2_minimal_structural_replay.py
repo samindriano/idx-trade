@@ -16,6 +16,9 @@ from idx_trade.decision_v2_structural_replay import (  # noqa: E402
     sha256_file,
     write_structural_replay_artifacts,
 )
+from idx_trade.decision_v2_structural_reporting import (  # noqa: E402
+    enrich_structural_replay_reporting,
+)
 from idx_trade.decision_v2_structural_source import (  # noqa: E402
     load_pinned_v4_x1_source_strict,
     verify_frozen_replay_contract,
@@ -67,6 +70,7 @@ def main() -> int:
     verify_frozen_replay_contract(REPO_ROOT)
     source = load_pinned_v4_x1_source_strict(args.historical_root)
     result = run_structural_replay(source)
+    result = enrich_structural_replay_reporting(result)
     manifest_path = write_structural_replay_artifacts(
         result,
         args.output_dir,
