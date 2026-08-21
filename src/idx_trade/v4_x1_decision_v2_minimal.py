@@ -56,7 +56,7 @@ def rank_session_from_v4_x1_verified(verified: VerifiedScoreSession) -> RankSess
     numeric = pd.to_numeric(frame["rank_consensus"], errors="coerce")
     if numeric.isna().any():
         raise DecisionV2Error("DECISION_V2_V4_X1_RANK_NONNUMERIC")
-    if not numeric.map(float.is_integer).all():
+    if not numeric.mod(1).eq(0).all():
         raise DecisionV2Error("DECISION_V2_V4_X1_RANK_NONINTEGER")
     frame["rank_consensus"] = numeric.astype(int)
     if frame["rank_consensus"].duplicated().any():
