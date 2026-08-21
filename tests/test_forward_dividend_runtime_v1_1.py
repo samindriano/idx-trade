@@ -336,3 +336,143 @@ def test_latest_loader_rejects_forked_snapshot_history(
     )
     with pytest.raises(DecisionV1Error, match="SNAPSHOT_CHAIN_FORK"):
         runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+
+
+def _entitlement(event: fd.CertifiedCashDividend, shares: int = 200) -> fd.PaperDividendEntitlement:
+    return fd.PaperDividendEntitlement(
+        event_id=event.event_id,
+        ticker=event.ticker,
+        entitled_shares=shares,
+        gross_dividend_per_share_idr=event.gross_dividend_per_share_idr,
+        cum_date=event.cum_date,
+        ex_date=event.ex_date,
+        record_date=event.record_date,
+        payment_date=event.payment_date,
+        source_evidence_sha256=event.source_evidence_sha256,
+    )
+
+
+def test_child_snapshot_cannot_drop_registered_event(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = _event()
+    registry = _registry(tmp_path, monkeypatch, event)
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    with pytest.raises(DecisionV1Error, match="REGISTRY_NOT_APPEND_ONLY"):
+        runtime.write_runtime_snapshot(
+            tmp_path / "runtime",
+            _state("2026-08-21"),
+            (),
+            previous_snapshot=first,
+        )
+
+
+def test_ledger_entitlement_requires_matching_registered_event(
+    tmp_path: Path,
+) -> None:
+    event = _event()
+    state = _state(
+        "2026-08-28",
+        positions=(PaperPosition("BBCA", 200),),
+        ledger=fd.DividendLedger(entitlements=(_entitlement(event),)),
+    )
+    with pytest.raises(DecisionV1Error, match="LEDGER_EVENT_NOT_REGISTERED"):
+        runtime.write_runtime_snapshot(tmp_path / "runtime", state, ())
+
+
+def test_receivable_cannot_disappear_between_parent_and_child(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = _event()
+    registry = _registry(tmp_path, monkeypatch, event)
+    entitlement = _entitlement(event)
+    receivable = fd.PaperDividendReceivable(
+        event_id=event.event_id,
+        ticker=event.ticker,
+        entitled_shares=200,
+        gross_dividend_per_share_idr=25.0,
+        gross_amount_idr=5_000.0,
+        payment_date=event.payment_date,
+        source_evidence_sha256=event.source_evidence_sha256,
+    )
+    parent = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-31",
+            ledger=fd.DividendLedger(
+                entitlements=(entitlement,),
+                receivables=(receivable,),
+            ),
+        ),
+        registry,
+    )
+    with pytest.raises(DecisionV1Error, match="RECEIVABLE_DISAPPEARED"):
+        runtime.write_runtime_snapshot(
+            tmp_path / "runtime",
+            _state(
+                "2026-09-01",
+                ledger=fd.DividendLedger(entitlements=(entitlement,)),
+            ),
+            registry,
+            previous_snapshot=parent,
+        )
+
+
+def test_receivable_may_progress_exactly_once_to_settlement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = _event()
+    registry = _registry(tmp_path, monkeypatch, event)
+    entitlement = _entitlement(event)
+    receivable = fd.PaperDividendReceivable(
+        event_id=event.event_id,
+        ticker=event.ticker,
+        entitled_shares=200,
+        gross_dividend_per_share_idr=25.0,
+        gross_amount_idr=5_000.0,
+        payment_date=event.payment_date,
+        source_evidence_sha256=event.source_evidence_sha256,
+    )
+    parent = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-31",
+            ledger=fd.DividendLedger(
+                entitlements=(entitlement,),
+                receivables=(receivable,),
+            ),
+        ),
+        registry,
+    )
+    settlement = fd.PaperDividendSettlement(
+        event_id=event.event_id,
+        ticker=event.ticker,
+        entitled_shares=200,
+        gross_amount_idr=5_000.0,
+        payment_date=event.payment_date,
+        settled_on_session_date="2026-09-16",
+        source_evidence_sha256=event.source_evidence_sha256,
+    )
+    child = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-09-16",
+            cash=1_005_000.0,
+            ledger=fd.DividendLedger(
+                entitlements=(entitlement,),
+                settlements=(settlement,),
+            ),
+        ),
+        registry,
+        previous_snapshot=parent,
+    )
+    loaded = runtime.load_runtime_snapshot(child.path)
+    assert len(loaded.state.dividend_ledger.receivables) == 0
+    assert len(loaded.state.dividend_ledger.settlements) == 1
