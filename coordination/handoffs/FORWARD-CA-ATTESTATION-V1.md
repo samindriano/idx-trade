@@ -5,7 +5,7 @@ source_repository: `samindriano/idx-trade`
 branch: `integration/forward-ca-attestation-v1`
 base_branch: `research/idx-v4-x1-decision-v1`
 base_commit: `776ec2d5518a8a340ba01668191dd99f257d6d8d`
-status: `CALENDAR_SCHEMA_PROBE_READY_EXECUTION_ADMISSION_STILL_BLOCKED`
+status: `CALENDAR_SCHEMA_PROBE_EVIDENCE_REQUIRED_EXECUTION_ADMISSION_BLOCKED`
 owner: `ChatGPT/Forward-CA-Attestation`
 
 ## Scope
@@ -27,7 +27,7 @@ Primary acquisition transport is pinned `nichsedge/idx-bei@75d6c0f74fa360d225794
 
 ## Current gate before promotion
 
-`Home/GetCalendar` direct-IDX response schema must be bounded-probed and its structural fingerprint independently reviewed/frozen. Until that happens, `EXPECTED_CALENDAR_SCHEMA_FINGERPRINT=None` intentionally blocks both final attestation promotion and the Execution V1 CA verifier.
+`Home/GetCalendar` direct-IDX response schema must have retrievable immutable evidence and its structural fingerprint must be independently reviewed/frozen. Until that happens, `EXPECTED_CALENDAR_SCHEMA_FINGERPRINT=None` intentionally blocks both final attestation promotion and the Execution V1 CA verifier.
 
 The direct calendar parameter contract is independently corroborated as:
 `range/date/start/length/code/language/search`, with `d/w/m` range values and response top-level `Results`.
@@ -54,9 +54,17 @@ The direct calendar parameter contract is independently corroborated as:
 - CA announcements published on the decision date are conservatively considered relevant;
 - Execution V1 now verifies the complete Forward-CA source chain, provider pin, upstream, source manifest, raw hashes, ticker coverage and frozen calendar fingerprint rather than accepting a self-hashed arbitrary source file.
 
-## Next authorized action
+## GitHub Actions probe attempt — not admissible
 
-From the IDX-Trade checkout on the user's Windows machine, run exactly:
+A temporary one-shot GitHub Actions workflow was committed at `c4055c071e52ea5811b272e049fa5a70f4d9606f` to attempt the exact bounded calendar probe from a GitHub-hosted runner. The workflow itself used the pinned provider and `max_retries=0` for the provider request.
+
+The available GitHub connector in this ChatGPT session cannot enumerate push-triggered workflow runs or retrieve their artifacts without a run ID. Therefore this attempt is explicitly **not admitted as probe evidence**: it is unknown from this session whether the job reached the provider-request step, failed during environment setup, or completed successfully.
+
+The temporary workflow was removed at `f774ea7a8dbc7301273ed69b097daac999fd25e2` to prevent accidental future reruns. No fingerprint, PASS/FAIL verdict, or execution admission may be inferred from that attempt.
+
+## Next authorized evidence-producing action
+
+From the IDX-Trade checkout on the user's Windows machine, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\run_forward_ca_calendar_probe_v1.ps1
@@ -68,6 +76,6 @@ Default provider checkout:
 Default output:
 `D:\Documents\Project\idx-forward-ca-calendar-probe-<YYYYMMDD>-v1`
 
-The runner performs provider setup/import validation and exactly one direct `/Home/GetCalendar` request with `range=m`, `start=0`, `length=9999`, no ticker filter and no search filter. It writes immutable raw bytes plus `PROBE_MANIFEST.json` and does not pin/promote the fingerprint automatically.
+The runner performs provider setup/import validation and one direct `/Home/GetCalendar` request with `range=m`, `start=0`, `length=9999`, no ticker filter and no search filter. It writes immutable raw bytes plus `PROBE_MANIFEST.json` and does not pin/promote the fingerprint automatically.
 
-After the probe, review the manifest/raw schema and only then pin the accepted fingerprint. Do not schedule recurring capture or admit CA attestations to Execution V1 before that review.
+After the local probe, review the manifest/raw schema and only then pin the accepted fingerprint. Do not schedule recurring capture or admit CA attestations to Execution V1 before that review.
