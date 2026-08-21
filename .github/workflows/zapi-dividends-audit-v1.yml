@@ -1,0 +1,109 @@
+name: Zapi Dividends Bounded Audit V1
+
+on:
+  push:
+    branches:
+      - integration/forward-ca-attestation-v1
+    paths:
+      - '.github/workflows/zapi-dividends-audit-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+      AUDIT_DIR: ${{ runner.temp }}/idx-zapi-dividends-probe-v1
+      EVIDENCE_DIR: docs/artifacts/zapi_dividends_audit_v1/2026-08-21
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: integration/forward-ca-attestation-v1
+          fetch-depth: 0
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Verify secret presence without disclosure
+        shell: bash
+        run: |
+          if [ -z "$ZAPI_API_KEY" ]; then
+            echo 'ZAPI_API_KEY secret is missing or unavailable.'
+            exit 2
+          fi
+          echo 'ZAPI_API_KEY secret is available.'
+
+      - name: Run bounded probe and reviewer
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          python scripts/probe_zapi_idx_dividends_v1.py \
+            --output-dir "$AUDIT_DIR" \
+            --code BBCA
+          probe_exit=$?
+
+          review_exit=99
+          if [ "$probe_exit" -eq 0 ]; then
+            python scripts/review_zapi_idx_dividends_probe_v1.py \
+              --probe-dir "$AUDIT_DIR"
+            review_exit=$?
+          fi
+
+          echo "probe_exit=$probe_exit" >> "$GITHUB_OUTPUT"
+          echo "review_exit=$review_exit" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Commit non-secret audit evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$EVIDENCE_DIR"
+          for f in PROBE_MANIFEST.json PROBE_REVIEW.json catalog_schema_raw.json dividends_raw.json; do
+            if [ -f "$AUDIT_DIR/$f" ]; then
+              cp "$AUDIT_DIR/$f" "$EVIDENCE_DIR/$f"
+            fi
+          done
+
+          python - <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path(os.environ['EVIDENCE_DIR']) / 'WORKFLOW_RESULT.json'
+          payload = {
+              'schema_version': 'idx_trade_zapi_dividends_workflow_result_v1',
+              'probe_exit': int('${{ steps.audit.outputs.probe_exit }}' or 99),
+              'review_exit': int('${{ steps.audit.outputs.review_exit }}' or 99),
+              'api_key_persisted': False,
+              'source': 'GITHUB_ACTIONS_REPOSITORY_SECRET',
+          }
+          p.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$EVIDENCE_DIR"
+          if git diff --cached --quiet; then
+            echo 'No evidence files to commit.'
+          else
+            git commit -m 'data(zapi): record dividends bounded audit evidence'
+            git push origin HEAD:integration/forward-ca-attestation-v1
+          fi
+
+      - name: Enforce preregistered gate
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.audit.outputs.probe_exit }}" != '0' ]; then
+            echo 'Probe failed; V1.1 remains blocked.'
+            exit 2
+          fi
+          if [ "${{ steps.audit.outputs.review_exit }}" != '0' ]; then
+            echo 'Semantic review failed; V1.1 remains blocked.'
+            exit 3
+          fi
+          echo 'Bounded audit passed its preregistered gate.'
