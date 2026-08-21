@@ -22,7 +22,7 @@
   },
   "frozen_questions": [
     "Within paired sessions, does the next-session severe-exit gap between A_SOFT and A_VACANCY persist?",
-    "Within paired sessions, how do candidate evidence variables differ: current rank, previous rank, rank delta, Top10 run, Top20 run, last3 Top10 count, last3 Top20 count, t-2 rank, and t-3 rank?",
+    "Within paired sessions, how do candidate evidence variables differ: current rank, previous rank, rank delta, Top10 run, Top20 run, last3 Top10 count, last3 Top20 count, t-2 rank, and t-3 rank; and what is the observed soft-rank-gap distribution for A_SOFT?",
     "Across paired sessions, what is the equal-session-weighted difference in next-session severe incidence and candidate evidence?",
     "Within fixed candidate-evidence reporting strata, is the direction of the A_SOFT versus A_VACANCY next-session severe gap consistent?",
     "Is eventual severe-exit incidence directionally consistent among completed entries in paired sessions?"
