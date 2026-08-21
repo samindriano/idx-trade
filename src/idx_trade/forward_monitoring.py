@@ -318,12 +318,37 @@ def _load_security_master(paths: RuntimePaths) -> pd.DataFrame:
 
 
 def _load_tradability(paths: RuntimePaths) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    intervals = _discover_table(
-        paths.tradability_root,
-        TRADABILITY_COLUMNS,
-        label="tradability intervals",
-        optional=True,
-    )
+    merged_path = paths.tradability_root / "merged_tradability_intervals.csv"
+    curated_path = paths.tradability_root / "curated_tradability_intervals.csv"
+    if merged_path.is_file():
+        intervals = pd.read_csv(merged_path)
+        # The merged artifact is the canonical runtime input.  Keep the
+        # narrow curated registry as an attestation guard so a stale or
+        # incomplete merged file cannot silently hide accepted evidence.
+        if curated_path.is_file():
+            merged_canonical = canonicalize_tradability_intervals(intervals)
+            curated_canonical = canonicalize_tradability_intervals(
+                pd.read_csv(curated_path)
+            )
+
+            def _row_keys(frame: pd.DataFrame) -> set[tuple[str, ...]]:
+                comparable = frame[list(TRADABILITY_COLUMNS)].astype(object)
+                comparable = comparable.where(pd.notna(comparable), "<NA>")
+                return set(map(tuple, comparable.astype(str).itertuples(index=False, name=None)))
+
+            missing_curated = _row_keys(curated_canonical) - _row_keys(merged_canonical)
+            if missing_curated:
+                raise RuntimeError(
+                    "canonical merged tradability intervals omit curated evidence: "
+                    f"{len(missing_curated)} row(s)"
+                )
+    else:
+        intervals = _discover_table(
+            paths.tradability_root,
+            TRADABILITY_COLUMNS,
+            label="tradability intervals",
+            optional=True,
+        )
     windows = _discover_table(
         paths.tradability_root,
         COVERAGE_WINDOW_COLUMNS,

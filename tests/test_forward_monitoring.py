@@ -415,6 +415,58 @@ def test_table_discovery_rejects_tied_canonical_artifacts(tmp_path: Path) -> Non
         monitor._discover_table(root, monitor.SECURITY_COLUMNS, label="security master")
 
 
+def test_tradability_loader_prefers_merged_and_attests_curated_rows(tmp_path: Path) -> None:
+    root = tmp_path / "tradability"
+    root.mkdir()
+    curated = {
+        "ticker": "CNTB",
+        "market": "REGULAR",
+        "state": "SUSPENDED",
+        "effective_from": "2024-08-07",
+        "effective_to": None,
+        "announced_at": "2024-08-07",
+        "source": "IDX_EXCHANGE_ANNOUNCEMENT",
+        "source_ref": "idx://cntb",
+    }
+    merged_extra = {
+        **curated,
+        "ticker": "BREN",
+        "effective_from": "2024-01-02",
+        "source_ref": "idx://bren",
+    }
+    pd.DataFrame([curated]).to_csv(root / "curated_tradability_intervals.csv", index=False)
+    pd.DataFrame([curated, merged_extra]).to_csv(
+        root / "merged_tradability_intervals.csv", index=False
+    )
+
+    intervals, windows, anchors = monitor._load_tradability(monitor.runtime_paths(tmp_path))
+
+    assert set(intervals["ticker"]) == {"BREN", "CNTB"}
+    assert windows.empty
+    assert anchors.empty
+
+
+def test_tradability_loader_rejects_merged_file_missing_curated_evidence(tmp_path: Path) -> None:
+    root = tmp_path / "tradability"
+    root.mkdir()
+    curated = {
+        "ticker": "CNTB",
+        "market": "REGULAR",
+        "state": "SUSPENDED",
+        "effective_from": "2024-08-07",
+        "effective_to": None,
+        "announced_at": "2024-08-07",
+        "source": "IDX_EXCHANGE_ANNOUNCEMENT",
+        "source_ref": "idx://cntb",
+    }
+    merged = {**curated, "ticker": "BREN", "source_ref": "idx://bren"}
+    pd.DataFrame([curated]).to_csv(root / "curated_tradability_intervals.csv", index=False)
+    pd.DataFrame([merged]).to_csv(root / "merged_tradability_intervals.csv", index=False)
+
+    with pytest.raises(RuntimeError, match="omit curated evidence"):
+        monitor._load_tradability(monitor.runtime_paths(tmp_path))
+
+
 def test_corrupt_data_ready_session_is_failed_closed_before_status_counts_it(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
