@@ -82,6 +82,15 @@ def plan_v4_x1_decision_v3_graded_evidence(
     previous_verified: VerifiedScoreSession | None,
     shadow_state: DecisionV3ShadowState,
 ) -> DecisionV3Plan:
+    profile = V4_X1_DECISION_V3_GRADED_EVIDENCE_PROFILE_V2
+    if not isinstance(shadow_state, DecisionV3ShadowState):
+        raise DecisionV3Error("DECISION_V3_V4_X1_SHADOW_STATE_REQUIRED")
+    if (
+        shadow_state.as_of_session_date is not None
+        and shadow_state.rule_id != profile.rule_id
+    ):
+        raise DecisionV3Error("DECISION_V3_V4_X1_BOUND_SHADOW_STATE_REQUIRED")
+
     current = rank_session_from_v4_x1_verified(current_verified)
     previous = (
         None
@@ -92,5 +101,5 @@ def plan_v4_x1_decision_v3_graded_evidence(
         current_session=current,
         previous_session=previous,
         shadow_state=shadow_state,
-        profile=V4_X1_DECISION_V3_GRADED_EVIDENCE_PROFILE_V2,
+        profile=profile,
     )
