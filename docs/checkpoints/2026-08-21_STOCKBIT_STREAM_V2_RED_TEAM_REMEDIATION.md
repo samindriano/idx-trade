@@ -49,8 +49,6 @@ PR #35 must not be promoted in its original form. The hardened implementation in
 
 ## Verification
 
-Code/CI checkpoint: `54b9c31f71315267a00ca393c776bbdbddb9e7b0` plus subsequent documentation-only lineage corrections.
-
 Dedicated GitHub Actions red-team run:
 
 - Run: `32453947316`
@@ -64,6 +62,8 @@ Repository-wide pytest on the same hardened code:
 - **1 failed**
 - Sole failure: `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
 - The remaining failure is pre-existing/unrelated to Stockbit and is outside this lane. The earlier Stockbit legacy-order failure was remediated and no Stockbit test remained failing.
+
+Later commits in this branch only corrected/strengthened the red-team documentation and CI trigger coverage; they do not relax the validated contracts above.
 
 ## Deliberately deferred / not code-side defects
 
