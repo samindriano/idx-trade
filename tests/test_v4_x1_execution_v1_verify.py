@@ -263,7 +263,7 @@ def _valid_attestation(
     return attestation, source, fingerprint, issued
 
 
-def test_ca_attestation_fails_closed_before_calendar_schema_freeze(tmp_path):
+def test_ca_attestation_fails_closed_if_calendar_schema_freeze_missing(monkeypatch, tmp_path):
     path = tmp_path / "ca_attestation.json"
     path.write_text(
         json.dumps(
@@ -276,7 +276,7 @@ def test_ca_attestation_fails_closed_before_calendar_schema_freeze(tmp_path):
         ),
         encoding="utf-8",
     )
-    assert forward_ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT is None
+    monkeypatch.setattr(forward_ca, "EXPECTED_CALENDAR_SCHEMA_FINGERPRINT", None)
     with pytest.raises(DecisionV1Error, match="CA_CALENDAR_SCHEMA_NOT_FROZEN"):
         verify_corporate_action_attestation(
             attestation_path=path,
