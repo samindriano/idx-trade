@@ -96,24 +96,6 @@ def test_soft_replacement_gap5_is_inclusive_but_gap4_does_not_replace() -> None:
             "A3": 2,
             "A4": 3,
             "A5": 4,
-            "ZA": 5,
-            "A6": 6,
-            "A7": 7,
-            "A8": 8,
-            "A9": 9,
-            "A10": 10,
-            "A1": 10 + 0,
-        },
-    )
-    # Avoid duplicate rank 10: build an equivalent exact-gap case with
-    # challenger rank 10 and incumbent rank 15.
-    current_gap5 = _session(
-        "2026-01-03",
-        {
-            "A2": 1,
-            "A3": 2,
-            "A4": 3,
-            "A5": 4,
             "A6": 5,
             "A7": 6,
             "A8": 7,
@@ -124,7 +106,10 @@ def test_soft_replacement_gap5_is_inclusive_but_gap4_does_not_replace() -> None:
         },
     )
     plan5 = plan_decision_v3_graded_evidence(current_gap5, previous, _state(), PROFILE)
-    assert any(x.ticker == "ZA" and x.reason == "SOFT_RANK_GAP_REPLACEMENT" for x in plan5.buy_intents)
+    assert any(
+        x.ticker == "ZA" and x.reason == "SOFT_RANK_GAP_REPLACEMENT"
+        for x in plan5.buy_intents
+    )
 
     current_gap4 = _session(
         "2026-01-03",
@@ -198,7 +183,10 @@ def test_tier_c_entry_that_turns_severe_next_session_exits_without_grace() -> No
     entry_plan = plan_decision_v3_graded_evidence(
         entry_session, previous, _state(), PROFILE
     )
-    assert any(x.ticker == "ZC" and x.reason == "TIER_C_RESIDUAL_VACANCY_FILL" for x in entry_plan.buy_intents)
+    assert any(
+        x.ticker == "ZC" and x.reason == "TIER_C_RESIDUAL_VACANCY_FILL"
+        for x in entry_plan.buy_intents
+    )
 
     next_session = _session(
         "2026-01-04",
@@ -223,5 +211,8 @@ def test_tier_c_entry_that_turns_severe_next_session_exits_without_grace() -> No
     )
     zc = next(obs for obs in next_plan.incumbent_observations if obs.ticker == "ZC")
     assert zc.state == "SEVERE_DETERIORATION_EXIT"
-    assert any(x.ticker == "ZC" and x.reason == "SEVERE_DETERIORATION_EXIT" for x in next_plan.sell_intents)
+    assert any(
+        x.ticker == "ZC" and x.reason == "SEVERE_DETERIORATION_EXIT"
+        for x in next_plan.sell_intents
+    )
     assert "ZC" not in next_plan.target_positions
