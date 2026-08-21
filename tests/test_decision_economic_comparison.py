@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 
 from idx_trade.decision_economic_comparison import (
@@ -29,7 +31,12 @@ def test_membership_cost_proxy_one_replacement_primary_is_six_bps_nav() -> None:
     assert int(transition["sell_count"]) == 1
     # One 10%-NAV sell at 25 fee + 10 slippage bps and one 10%-NAV
     # buy at 15 fee + 10 slippage bps = 6 bps of portfolio NAV.
-    assert float(transition["cost_bps_nav_primary"]) == 6.0
+    assert math.isclose(
+        float(transition["cost_bps_nav_primary"]),
+        6.0,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    )
 
 
 def test_underfill_is_cash_not_redistributed() -> None:
