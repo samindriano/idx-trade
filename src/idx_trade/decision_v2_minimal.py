@@ -216,7 +216,7 @@ def _validate_shadow_state(
             raise DecisionV2Error("DECISION_V2_BOOTSTRAP_RULE_ID_MISMATCH")
     else:
         _parse_date(state.as_of_session_date, "DECISION_V2_SHADOW_DATE_INVALID")
-        if state.rule_id != profile.rule_id:
+        if state.rule_id is not None and state.rule_id != profile.rule_id:
             raise DecisionV2Error("DECISION_V2_SHADOW_RULE_ID_MISMATCH")
     return tuple(sorted(state.positions))
 
