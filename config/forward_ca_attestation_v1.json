@@ -1,6 +1,6 @@
 {
   "schema_version": "forward_ca_attestation_v1",
-  "status": "DIRECT_IDX_DIVIDEND_AUTHORITY_ADMITTED_ACCOUNTING_CORE_IMPLEMENTED_AWAITING_LOCAL_VALIDATION",
+  "status": "DIVIDEND_ACCOUNTING_ADMISSION_AND_DURABLE_RUNTIME_PERSISTENCE_VALIDATED_ORCHESTRATOR_BLOCKED",
   "primary_source": "DIRECT_IDX_VIA_PINNED_IDX_BEI",
   "provider_repository": "nichsedge/idx-bei",
   "provider_commit": "75d6c0f74fa360d225794c70c383348977de6798",
@@ -49,7 +49,7 @@
     "RELEVANT_EVENT_DETECTED",
     "SOURCE_INCOMPLETE_OR_ERROR"
   ],
-  "execution_admission_status": "NO_RELEVANT_EVENTS_ONLY_PENDING_EVENT_SPECIFIC_CASH_DIVIDEND_RECONCILIATION",
+  "execution_admission_status": "NO_RELEVANT_EVENTS_OR_VERIFIED_CERTIFIED_CASH_DIVIDEND_RECONCILIATION_IMPLEMENTED_ORCHESTRATOR_NOT_YET_BOUND",
   "calendar_schema_fingerprint": "09a2f81aaa291b27232ca610b228a28470cbe11d5599fa66f55a3b75030060f3",
   "calendar_schema_probe_required_before_execution_admission": false,
   "calendar_schema_probe_observed_date": "2026-08-21",
@@ -62,7 +62,7 @@
   "cash_dividend_accounting_required": true,
   "cash_dividend_accounting_module": "idx_trade.forward_dividend_v1",
   "cash_dividend_accounting_design": "ADDITIVE_DIVIDEND_AWARE_WRAPPER_LEGACY_PAPER_STATE_AND_HASH_UNCHANGED",
-  "cash_dividend_auto_reconciliation_status": "CORE_IMPLEMENTED_AWAITING_FOCUSED_LOCAL_VALIDATION_AND_EVENT_SPECIFIC_CA_ADMISSION",
+  "cash_dividend_auto_reconciliation_status": "CORE_AND_EVENT_SPECIFIC_CA_ADMISSION_LOCALLY_VALIDATED_23_PASS",
   "cash_dividend_required_fields_before_auto_reconciliation": [
     "ticker",
     "announcement_publication_timestamp",
@@ -78,6 +78,17 @@
   "cash_dividend_spendable_cash_policy": "RECEIVABLE_NOT_SPENDABLE_UNTIL_PAYMENT_DATE",
   "cash_dividend_payment_policy": "MOVE_RECEIVABLE_TO_CASH_ON_PAYMENT_DATE_WITHOUT_SECOND_PNL_RECOGNITION",
   "cash_dividend_tax_policy": "UNRESOLVED_KEEP_GROSS_RECEIVABLE_SEPARATE_FROM_TAX_ASSUMPTIONS",
+  "cash_dividend_runtime_persistence_module": "idx_trade.forward_dividend_runtime_v1_1",
+  "cash_dividend_runtime_schema": "idx_trade_forward_dividend_runtime_state_v1_1",
+  "cash_dividend_runtime_persistence_status": "FULL_PYTEST_CI_PASS_456",
+  "cash_dividend_runtime_snapshot_policy": "IMMUTABLE_DETERMINISTIC_ONE_PER_SESSION_HASH_CHAINED_FAIL_CLOSED_ON_FORK_OR_DIVERGENCE",
+  "cash_dividend_runtime_registry_policy": "APPEND_ONLY_REVERIFY_OFFICIAL_EVIDENCE_ON_EVERY_LOAD",
+  "cash_dividend_runtime_ledger_policy": "ENTITLEMENT_AND_SETTLEMENT_APPEND_ONLY_RECEIVABLE_MAY_ONLY_PERSIST_OR_PROGRESS_TO_MATCHING_SETTLEMENT",
+  "cash_dividend_runtime_shadow_reconstruction": "ACTUAL_POSITIONS_MINUS_PENDING_SELLS_PLUS_PENDING_BUYS",
+  "cash_dividend_runtime_ci_head": "9ba619916c37d28121c39f61148ab0d03ac21bf0",
+  "cash_dividend_runtime_ci_run_id": 32459699635,
+  "cash_dividend_runtime_ci_job_id": 96703976541,
+  "cash_dividend_runtime_ci_result": "456_PASSED_38_WARNINGS_IN_32_47S_PYTHON_3_12_14",
   "v4_x1_dividend_price_adjustment": false,
   "v4_x1_dividend_alpha_overlay_authorized": false,
   "dividend_adjusted_alpha_requires_successor_experiment": true,
@@ -115,11 +126,11 @@
   "zapi_company_profile_audit_observation": "CURRENT_BBCA_2026_08_EVENT_PRESENT_BUT_NON_AUTHORITATIVE",
   "forward_ca_v1_1_authorized": false,
   "forward_ca_v1_1_remaining_blockers": [
-    "FOCUSED_LOCAL_TESTS_FOR_FORWARD_DIVIDEND_V1",
-    "EVENT_SPECIFIC_CA_ATTESTATION_ADMISSION_FOR_CERTIFIED_CASH_DIVIDEND",
     "POST_EOD_PREOPEN_ORCHESTRATOR_INTEGRATION",
-    "END_TO_END_RESTART_IDEMPOTENCY_VALIDATION"
+    "END_TO_END_ORCHESTRATOR_RESTART_IDEMPOTENCY_REHEARSAL",
+    "CONTROLLED_OPERATIONAL_ACTIVATION_REVIEW"
   ],
+  "generic_forward_ca_announcement_capture_migration_status": "SEPARATE_RUNTIME_SOURCE_INTEGRATION_CONCERN_NOT_PART_OF_PERSISTENCE_VERDICT",
   "historical_backfill_authorized": false,
   "historical_pnl_authorized": false,
   "paper_mutation_authorized_by_schema_freeze_alone": false,
