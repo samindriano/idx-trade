@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: `b54314c0e001afebb398af7f595f1181fb320286`
 branch: `data/stockbit-stream-prospective-archive-v1`
-head_commit: pending final commit
+head_commit: `4a20f2dd`
 scope: Change only the existing cloud Stockbit Stream GitHub Actions schedule from weekdays-only to every calendar day.
 files_changed:
   - `.github/workflows/stockbit-stream-prospective-capture.yml`
@@ -30,6 +30,6 @@ blocking_risks:
   - A holiday/empty provider response must remain distinguishable from a provider failure in the runtime result.
 validation_run:
   - `python -m pytest tests/test_stockbit_stream_archive.py -q` — PASS (6)
-  - `git diff --check` — pending final pre-commit check
+  - `python -m pytest -q` — 1 pre-existing unrelated storage assertion failure; Stream tests remain green
+  - `git diff --check` — PASS
 recommended_next_action: Review, push, then perform one separately authorized read-only workflow/R2 manifest verification.
-

@@ -30,5 +30,8 @@ operational check is a read-only `workflow_dispatch`/R2 manifest verification.
 ## Validation
 
 - `python -m pytest tests/test_stockbit_stream_archive.py -q` — PASS (6)
-- `git diff --check` — required before commit
-
+- `python -m pytest -q` — 1 pre-existing unrelated failure in
+  `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts`
+  (the current storage contract reports independent `raw_close` and
+  `vendor_adj_close` conflicts); Stream tests remain green.
+- `git diff --check` — PASS
