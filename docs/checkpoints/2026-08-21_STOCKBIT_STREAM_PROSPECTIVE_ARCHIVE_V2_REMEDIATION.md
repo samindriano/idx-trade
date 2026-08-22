@@ -1,7 +1,7 @@
 # Stockbit Stream Prospective Archive V2 — Routine Capture Remediation
 
-Date: 2026-08-21  
-Scope: acquisition infrastructure only  
+Date: 2026-08-21
+Scope: acquisition infrastructure only
 Status: `CLOUD_SMOKE_PASS_READY_FOR_ROUTINE_PROMOTION`
 
 ## Why V2 was needed
@@ -60,8 +60,8 @@ This is an execution/schema adaptation only. It does not alter universe ranking 
 
 ## End-to-end cloud smoke evidence
 
-Temporary validation PR: `#34` (closed without merge after evidence)  
-Workflow run: `32450648278`  
+Temporary validation PR: `#34` (closed without merge after evidence)
+Workflow run: `32450648278`
 Smoke job: `96678410979`
 
 Result:
