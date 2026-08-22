@@ -11,14 +11,16 @@ from typing import Mapping, Sequence
 import pandas as pd
 
 from .official_open_evidence_v1 import (
+    ALLOWED_TRANSPORTS as OFFICIAL_OPEN_ALLOWED_TRANSPORTS,
     AUTHORITY as OFFICIAL_OPEN_AUTHORITY,
     FALLBACK_POLICY as OFFICIAL_OPEN_FALLBACK_POLICY,
     FIELD_SEMANTICS as OFFICIAL_OPEN_FIELD_SEMANTICS,
     SCHEMA_VERSION as OFFICIAL_OPEN_SCHEMA_VERSION,
-    TRANSPORT as OFFICIAL_OPEN_TRANSPORT,
+    TRANSPORT_POLICY as OFFICIAL_OPEN_TRANSPORT_POLICY,
     UPSTREAM_PATH as OFFICIAL_OPEN_UPSTREAM_PATH,
     OfficialOpenEvidenceError,
     normalize_idx_stock_summary_payload,
+    validate_transport_provenance,
 )
 from .v4_x1_decision_v1_contract import DecisionV1Error, _normalize_ticker
 
@@ -91,6 +93,7 @@ class VerifiedOpenExecutionInputs:
     field_semantics: str = ""
     fallback_policy: str = ""
     transport: str = ""
+    transport_policy: str = ""
 
 
 @dataclass(frozen=True)
@@ -161,9 +164,15 @@ def verify_eod_execution_inputs(
     right_dates = pd.to_datetime(right["date"], errors="coerce")
     if left_dates.isna().any() or right_dates.isna().any():
         raise DecisionV1Error("EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID")
-    if not all(_date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date for x in left_dates):
+    if not all(
+        _date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date
+        for x in left_dates
+    ):
         raise DecisionV1Error("EXECUTION_V1_EOD_OHLCV_DATE_MISMATCH")
-    if not all(_date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date for x in right_dates):
+    if not all(
+        _date(x, "EXECUTION_V1_EOD_ARTIFACT_DATE_INVALID") == session_date
+        for x in right_dates
+    ):
         raise DecisionV1Error("EXECUTION_V1_EOD_MODEL_DATE_MISMATCH")
 
     merged = right.merge(
@@ -193,7 +202,9 @@ def verify_eod_execution_inputs(
     required = {_normalize_ticker(x) for x in required_tickers}
     missing_close = required - set(closes)
     if missing_close:
-        raise DecisionV1Error(f"EXECUTION_V1_EOD_REQUIRED_CLOSE_MISSING:{sorted(missing_close)}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_EOD_REQUIRED_CLOSE_MISSING:{sorted(missing_close)}"
+        )
 
     return VerifiedEODExecutionInputs(
         session_date=session_date,
@@ -236,17 +247,20 @@ def verify_open_execution_inputs(
     manifest_path: str | Path | None = None,
     session_ohlcv_path: str | Path | None = None,
 ) -> VerifiedOpenExecutionInputs:
-    """Admit only hash-bound official IDX Stock Summary OpenPrice evidence.
+    """Admit only hash-bound official IDX Stock Summary OpenPrice evidence."""
 
-    `session_ohlcv_path` is retained only to fail closed with an explicit error for
-    callers still presenting generic OHLCV. Execution-grade Open now requires the
-    certified manifest produced by the official-open evidence contract.
-    """
-
-    session_date = _date(execution_session_date, "EXECUTION_V1_OPEN_SESSION_DATE_INVALID")
+    session_date = _date(
+        execution_session_date, "EXECUTION_V1_OPEN_SESSION_DATE_INVALID"
+    )
     if manifest_path is None:
-        suffix = f":{Path(session_ohlcv_path).expanduser()}" if session_ohlcv_path is not None else ""
-        raise DecisionV1Error(f"EXECUTION_V1_OPEN_CERTIFIED_MANIFEST_REQUIRED{suffix}")
+        suffix = (
+            f":{Path(session_ohlcv_path).expanduser()}"
+            if session_ohlcv_path is not None
+            else ""
+        )
+        raise DecisionV1Error(
+            f"EXECUTION_V1_OPEN_CERTIFIED_MANIFEST_REQUIRED{suffix}"
+        )
 
     manifest = Path(manifest_path).expanduser().resolve()
     if not manifest.is_file():
@@ -262,7 +276,7 @@ def verify_open_execution_inputs(
         "schema_version": OFFICIAL_OPEN_SCHEMA_VERSION,
         "authority": OFFICIAL_OPEN_AUTHORITY,
         "upstream_path": OFFICIAL_OPEN_UPSTREAM_PATH,
-        "transport": OFFICIAL_OPEN_TRANSPORT,
+        "transport_policy": OFFICIAL_OPEN_TRANSPORT_POLICY,
         "field_semantics": OFFICIAL_OPEN_FIELD_SEMANTICS,
         "fallback_policy": OFFICIAL_OPEN_FALLBACK_POLICY,
         "execution_grade": True,
@@ -270,13 +284,23 @@ def verify_open_execution_inputs(
     }
     for key, value in expected_contract.items():
         if payload.get(key) != value:
-            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_CONTRACT_CHANGED:{key}")
-    manifest_session = _date(payload.get("session_date"), "EXECUTION_V1_OPEN_MANIFEST_DATE_INVALID")
+            raise DecisionV1Error(
+                f"EXECUTION_V1_OPEN_MANIFEST_CONTRACT_CHANGED:{key}"
+            )
+    transport = str(payload.get("transport") or "")
+    if transport not in OFFICIAL_OPEN_ALLOWED_TRANSPORTS:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_CONTRACT_CHANGED:transport")
+
+    manifest_session = _date(
+        payload.get("session_date"), "EXECUTION_V1_OPEN_MANIFEST_DATE_INVALID"
+    )
     if manifest_session != session_date:
         raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_DATE_MISMATCH")
 
     raw_path = _resolve_manifest_artifact(
-        manifest, payload.get("raw_artifact_path"), "EXECUTION_V1_OPEN_RAW_ARTIFACT_MISSING"
+        manifest,
+        payload.get("raw_artifact_path"),
+        "EXECUTION_V1_OPEN_RAW_ARTIFACT_MISSING",
     )
     normalized_path = _resolve_manifest_artifact(
         manifest,
@@ -296,12 +320,16 @@ def verify_open_execution_inputs(
     if actual_normalized_sha != declared_normalized_sha:
         raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_SHA_MISMATCH")
 
+    raw_bytes = raw_path.read_bytes()
     try:
+        validate_transport_provenance(raw_bytes, transport=transport)
         raw_frame, counts = normalize_idx_stock_summary_payload(
-            raw_path.read_bytes(), expected_session_date=session_date
+            raw_bytes, expected_session_date=session_date
         )
     except OfficialOpenEvidenceError as exc:
-        raise DecisionV1Error(f"EXECUTION_V1_OPEN_RAW_EVIDENCE_INVALID:{exc}") from exc
+        raise DecisionV1Error(
+            f"EXECUTION_V1_OPEN_RAW_EVIDENCE_INVALID:{exc}"
+        ) from exc
 
     for key, expected_value in (
         ("row_count", counts["row_count"]),
@@ -312,9 +340,13 @@ def verify_open_execution_inputs(
         try:
             declared = int(payload.get(key))
         except (TypeError, ValueError) as exc:
-            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_COUNT_INVALID:{key}") from exc
+            raise DecisionV1Error(
+                f"EXECUTION_V1_OPEN_MANIFEST_COUNT_INVALID:{key}"
+            ) from exc
         if declared != int(expected_value):
-            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_COUNT_MISMATCH:{key}")
+            raise DecisionV1Error(
+                f"EXECUTION_V1_OPEN_MANIFEST_COUNT_MISMATCH:{key}"
+            )
 
     frame = pd.read_parquet(normalized_path)
     required = {"ticker", "session_date", "open_price", "first_trade"}
@@ -341,7 +373,9 @@ def verify_open_execution_inputs(
     if not _numeric_series_equal(view["open_price"], raw_frame["open_price"]):
         raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_OPENPRICE_MISMATCH")
     if not _numeric_series_equal(view["first_trade"], raw_frame["first_trade"]):
-        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_FIRSTTRADE_WITNESS_MISMATCH")
+        raise DecisionV1Error(
+            "EXECUTION_V1_OPEN_NORMALIZED_FIRSTTRADE_WITNESS_MISMATCH"
+        )
 
     prices: dict[str, float] = {}
     for row in raw_frame.itertuples(index=False):
@@ -355,9 +389,16 @@ def verify_open_execution_inputs(
         declared_positive = int(payload.get("positive_openprice_count"))
         declared_unavailable = int(payload.get("unavailable_openprice_count"))
     except (TypeError, ValueError) as exc:
-        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_INVALID") from exc
-    if declared_positive != positive_count or declared_unavailable != unavailable_count:
-        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_MISMATCH")
+        raise DecisionV1Error(
+            "EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_INVALID"
+        ) from exc
+    if (
+        declared_positive != positive_count
+        or declared_unavailable != unavailable_count
+    ):
+        raise DecisionV1Error(
+            "EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_MISMATCH"
+        )
 
     return VerifiedOpenExecutionInputs(
         session_date=session_date,
@@ -374,7 +415,8 @@ def verify_open_execution_inputs(
         upstream_path=OFFICIAL_OPEN_UPSTREAM_PATH,
         field_semantics=OFFICIAL_OPEN_FIELD_SEMANTICS,
         fallback_policy=OFFICIAL_OPEN_FALLBACK_POLICY,
-        transport=OFFICIAL_OPEN_TRANSPORT,
+        transport=transport,
+        transport_policy=OFFICIAL_OPEN_TRANSPORT_POLICY,
     )
 
 
@@ -396,15 +438,25 @@ def verify_corporate_action_attestation(
         raise DecisionV1Error("EXECUTION_V1_CA_ATTESTATION_NOT_OBJECT")
     if payload.get("schema_version") != "v4_x1_paper_ca_attestation_v1":
         raise DecisionV1Error("EXECUTION_V1_CA_ATTESTATION_SCHEMA_CHANGED")
-    from_date = _date(payload.get("from_session_date"), "EXECUTION_V1_CA_FROM_DATE_INVALID")
-    through_date = _date(payload.get("through_session_date"), "EXECUTION_V1_CA_THROUGH_DATE_INVALID")
-    if from_date != _date(expected_from_session_date, "EXECUTION_V1_CA_EXPECTED_FROM_INVALID"):
+    from_date = _date(
+        payload.get("from_session_date"), "EXECUTION_V1_CA_FROM_DATE_INVALID"
+    )
+    through_date = _date(
+        payload.get("through_session_date"), "EXECUTION_V1_CA_THROUGH_DATE_INVALID"
+    )
+    if from_date != _date(
+        expected_from_session_date, "EXECUTION_V1_CA_EXPECTED_FROM_INVALID"
+    ):
         raise DecisionV1Error("EXECUTION_V1_CA_FROM_DATE_MISMATCH")
-    if through_date != _date(expected_through_session_date, "EXECUTION_V1_CA_EXPECTED_THROUGH_INVALID"):
+    if through_date != _date(
+        expected_through_session_date, "EXECUTION_V1_CA_EXPECTED_THROUGH_INVALID"
+    ):
         raise DecisionV1Error("EXECUTION_V1_CA_THROUGH_DATE_MISMATCH")
     status = str(payload.get("status") or "")
     if status != "NO_RELEVANT_EVENTS":
-        raise DecisionV1Error(f"EXECUTION_V1_CA_RECONCILIATION_REQUIRED:{status or 'UNKNOWN'}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_CA_RECONCILIATION_REQUIRED:{status or 'UNKNOWN'}"
+        )
     rows = payload.get("evidence_rows")
     if not isinstance(rows, list):
         raise DecisionV1Error("EXECUTION_V1_CA_EVIDENCE_ROWS_MISSING")
@@ -418,7 +470,9 @@ def verify_corporate_action_attestation(
         covered.add(ticker)
     required = {_normalize_ticker(x) for x in required_tickers}
     if not required.issubset(covered):
-        raise DecisionV1Error(f"EXECUTION_V1_CA_COVERAGE_INCOMPLETE:{sorted(required-covered)}")
+        raise DecisionV1Error(
+            f"EXECUTION_V1_CA_COVERAGE_INCOMPLETE:{sorted(required-covered)}"
+        )
 
     raw_source_path = Path(str(payload.get("source_path") or ""))
     if not raw_source_path.is_absolute():
