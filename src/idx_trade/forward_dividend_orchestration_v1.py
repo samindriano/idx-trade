@@ -25,6 +25,12 @@ _CAPTURE_PHASE_ORDER = {
 }
 BOOTSTRAP_LOOKBACK_DAYS = 366
 INCREMENTAL_OVERLAP_DAYS = 7
+BLOCKER_RESOLUTION_CERTIFIED_LIVE = "CERTIFIED_LIVE"
+BLOCKER_RESOLUTION_HISTORICAL_OBSERVED = "HISTORICAL_OBSERVED"
+_BLOCKER_RESOLUTION_STATUSES = frozenset({
+    BLOCKER_RESOLUTION_CERTIFIED_LIVE,
+    BLOCKER_RESOLUTION_HISTORICAL_OBSERVED,
+})
 
 
 @dataclass(frozen=True)
@@ -52,6 +58,21 @@ class BlockingDividendJournalEntry:
 
 
 @dataclass(frozen=True)
+class DividendBlockerResolutionEntry:
+    blocker_announcement_identity: str
+    blocker_ticker: str
+    blocker_classification: str
+    resolver_announcement_identity: str
+    resolver_ticker: str
+    resolver_event_id: str
+    resolver_event_sha256: str
+    resolver_evidence_dir: str
+    resolver_review_sha256: str
+    resolver_status: str
+    resolver_review_filename: str = "ATTACHMENT_REVIEW.json"
+
+
+@dataclass(frozen=True)
 class DividendAcquisitionJournal:
     as_of_date: str
     required_tickers: tuple[str, ...]
@@ -59,6 +80,9 @@ class DividendAcquisitionJournal:
     certified_events: tuple[CertifiedDividendJournalEntry, ...] = ()
     blockers: tuple[BlockingDividendJournalEntry, ...] = ()
     capture_phase: str = POST_EOD
+    blocker_resolution_history: tuple[
+        DividendBlockerResolutionEntry, ...
+    ] = ()
 
 
 @dataclass(frozen=True)
@@ -361,6 +385,162 @@ def normalize_blockers(
     )
 
 
+def _resolver_entry(
+    row: DividendBlockerResolutionEntry,
+) -> CertifiedDividendJournalEntry:
+    return CertifiedDividendJournalEntry(
+        announcement_identity=row.resolver_announcement_identity,
+        ticker=row.resolver_ticker,
+        event_id=row.resolver_event_id,
+        event_sha256=row.resolver_event_sha256,
+        evidence_dir=row.resolver_evidence_dir,
+        review_sha256=row.resolver_review_sha256,
+        review_filename=row.resolver_review_filename,
+    )
+
+
+def normalize_blocker_resolutions(
+    rows: Sequence[DividendBlockerResolutionEntry],
+) -> tuple[DividendBlockerResolutionEntry, ...]:
+    by_blocker = {}
+    by_resolver = {}
+
+    for row in rows:
+        if not isinstance(row, DividendBlockerResolutionEntry):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_ROW_INVALID"
+            )
+
+        blocker_identity = str(
+            row.blocker_announcement_identity or ""
+        ).strip()
+        blocker_ticker = normalize_tickers((row.blocker_ticker,))[0]
+        blocker_classification = str(
+            row.blocker_classification or ""
+        ).strip()
+        resolver_identity = str(
+            row.resolver_announcement_identity or ""
+        ).strip()
+        resolver_ticker = normalize_tickers((row.resolver_ticker,))[0]
+        resolver_event_id = str(row.resolver_event_id or "").strip()
+        resolver_event_sha = str(
+            row.resolver_event_sha256 or ""
+        ).strip().lower()
+        resolver_evidence_dir = str(
+            row.resolver_evidence_dir or ""
+        ).strip()
+        resolver_review_sha = str(
+            row.resolver_review_sha256 or ""
+        ).strip().lower()
+        resolver_status = str(row.resolver_status or "").strip().upper()
+        resolver_review_filename = str(
+            row.resolver_review_filename or "ATTACHMENT_REVIEW.json"
+        ).strip()
+
+        if not blocker_identity or not blocker_classification:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_BLOCKER_MISSING"
+            )
+
+        if not resolver_identity or not resolver_event_id:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_MISSING"
+            )
+
+        if blocker_ticker != resolver_ticker:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_TICKER_MISMATCH:"
+                + blocker_identity
+            )
+
+        if blocker_identity == resolver_identity:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_SELF_REFERENCE:"
+                + blocker_identity
+            )
+
+        if not re.fullmatch(r"[0-9a-f]{64}", resolver_event_sha):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_EVENT_SHA_INVALID"
+            )
+
+        if not resolver_evidence_dir:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_EVIDENCE_DIR_MISSING"
+            )
+
+        if not re.fullmatch(r"[0-9a-f]{64}", resolver_review_sha):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_REVIEW_SHA_INVALID"
+            )
+
+        if resolver_status not in _BLOCKER_RESOLUTION_STATUSES:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_STATUS_INVALID:"
+                + resolver_status
+            )
+
+        if resolver_review_filename not in {
+            "ATTACHMENT_REVIEW.json",
+            "ATTACHMENT_REVIEW_V1_2.json",
+        }:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_REVIEW_FILENAME_INVALID"
+            )
+
+        canonical = DividendBlockerResolutionEntry(
+            blocker_announcement_identity=blocker_identity,
+            blocker_ticker=blocker_ticker,
+            blocker_classification=blocker_classification,
+            resolver_announcement_identity=resolver_identity,
+            resolver_ticker=resolver_ticker,
+            resolver_event_id=resolver_event_id,
+            resolver_event_sha256=resolver_event_sha,
+            resolver_evidence_dir=resolver_evidence_dir,
+            resolver_review_sha256=resolver_review_sha,
+            resolver_status=resolver_status,
+            resolver_review_filename=resolver_review_filename,
+        )
+
+        previous = by_blocker.get(blocker_identity)
+
+        if previous is not None and previous != canonical:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_CONFLICT:"
+                + blocker_identity
+            )
+
+        previous_resolver = by_resolver.get(resolver_identity)
+
+        if previous_resolver is not None and previous_resolver != canonical:
+            resolver_fields = (
+                "resolver_ticker",
+                "resolver_event_id",
+                "resolver_event_sha256",
+                "resolver_evidence_dir",
+                "resolver_review_sha256",
+                "resolver_status",
+                "resolver_review_filename",
+            )
+            if any(
+                getattr(previous_resolver, field)
+                != getattr(canonical, field)
+                for field in resolver_fields
+            ):
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_CONFLICT:"
+                    + resolver_identity
+                )
+
+        by_blocker[blocker_identity] = canonical
+        by_resolver[resolver_identity] = canonical
+
+    return tuple(
+        by_blocker[key]
+        for key in sorted(by_blocker)
+    )
+
+
 def normalize_journal(
     journal: DividendAcquisitionJournal,
 ) -> DividendAcquisitionJournal:
@@ -381,6 +561,9 @@ def normalize_journal(
         journal.certified_events
     )
     blockers = normalize_blockers(journal.blockers)
+    blocker_resolution_history = normalize_blocker_resolutions(
+        journal.blocker_resolution_history
+    )
 
     certified_ids = {
         row.announcement_identity
@@ -400,6 +583,35 @@ def normalize_journal(
             + ",".join(sorted(overlap))
         )
 
+    history_blocker_ids = {
+        row.blocker_announcement_identity
+        for row in blocker_resolution_history
+    }
+
+    unresolved_history_overlap = history_blocker_ids & blocker_ids
+
+    if unresolved_history_overlap:
+        raise ForwardDividendOrchestrationError(
+            "FORWARD_DIVIDEND_ORCHESTRATION_RESOLVED_BLOCKER_STILL_ACTIVE:"
+            + ",".join(sorted(unresolved_history_overlap))
+        )
+
+    certified_by_identity = {
+        row.announcement_identity: row
+        for row in certified
+    }
+
+    for row in blocker_resolution_history:
+        if (
+            row.resolver_status
+            == BLOCKER_RESOLUTION_HISTORICAL_OBSERVED
+            and row.resolver_announcement_identity in certified_by_identity
+        ):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_HISTORICAL_RESOLVER_NEW_CASH:"
+                + row.resolver_announcement_identity
+            )
+
     return DividendAcquisitionJournal(
         as_of_date=as_of,
         required_tickers=required,
@@ -407,6 +619,7 @@ def normalize_journal(
         certified_events=certified,
         blockers=blockers,
         capture_phase=phase,
+        blocker_resolution_history=blocker_resolution_history,
     )
 
 
@@ -417,7 +630,7 @@ def journal_hash(
 
     payload = {
         "policy_id": POLICY_ID,
-        "journal": asdict(canonical),
+        "journal": journal_payload(canonical),
     }
 
     raw = (
@@ -527,6 +740,16 @@ def journal_payload(
             asdict(row)
             for row in canonical.blockers
         ],
+        **(
+            {
+                "blocker_resolution_history": [
+                    asdict(row)
+                    for row in canonical.blocker_resolution_history
+                ],
+            }
+            if canonical.blocker_resolution_history
+            else {}
+        ),
     }
 
 
@@ -541,6 +764,10 @@ def journal_from_payload(
     coverage = value.get("coverage")
     certified = value.get("certified_events")
     blockers = value.get("blockers")
+    blocker_resolution_history = value.get(
+        "blocker_resolution_history",
+        [],
+    )
     required = value.get("required_tickers")
 
     if not isinstance(required, list):
@@ -563,6 +790,11 @@ def journal_from_payload(
             "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKERS_PAYLOAD_INVALID"
         )
 
+    if not isinstance(blocker_resolution_history, list):
+        raise ForwardDividendOrchestrationError(
+            "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_HISTORY_PAYLOAD_INVALID"
+        )
+
     try:
         journal = DividendAcquisitionJournal(
             as_of_date=str(value.get("as_of_date") or ""),
@@ -578,6 +810,10 @@ def journal_from_payload(
             blockers=tuple(
                 BlockingDividendJournalEntry(**row)
                 for row in blockers
+            ),
+            blocker_resolution_history=tuple(
+                DividendBlockerResolutionEntry(**row)
+                for row in blocker_resolution_history
             ),
             capture_phase=str(
                 value.get("capture_phase")
@@ -611,8 +847,28 @@ def _verify_journal_evidence_files(
     journal: DividendAcquisitionJournal,
 ) -> None:
     canonical = normalize_journal(journal)
+    evidence_rows = list(canonical.certified_events)
+    evidence_rows.extend(
+        _resolver_entry(row)
+        for row in canonical.blocker_resolution_history
+    )
+    seen_rows = set()
 
-    for row in canonical.certified_events:
+    for row in evidence_rows:
+        evidence_key = (
+            row.announcement_identity,
+            row.ticker,
+            row.event_id,
+            row.event_sha256,
+            row.evidence_dir,
+            row.review_sha256,
+            row.review_filename,
+        )
+
+        if evidence_key in seen_rows:
+            continue
+
+        seen_rows.add(evidence_key)
         root = Path(
             row.evidence_dir
         ).expanduser().resolve()
@@ -661,6 +917,90 @@ def _verify_journal_evidence_files(
                 )
 
 
+def _verify_blocker_resolution_progression(
+    parent: DividendAcquisitionJournal,
+    child: DividendAcquisitionJournal,
+) -> None:
+    parent_history = {
+        row.blocker_announcement_identity: row
+        for row in parent.blocker_resolution_history
+    }
+    child_history = {
+        row.blocker_announcement_identity: row
+        for row in child.blocker_resolution_history
+    }
+    parent_blockers = {
+        row.announcement_identity: row
+        for row in parent.blockers
+    }
+    child_certified = {
+        row.announcement_identity: row
+        for row in child.certified_events
+    }
+
+    for identity, row in parent_history.items():
+        if child_history.get(identity) != row:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_HISTORY_DROPPED_OR_CHANGED:"
+                + identity
+            )
+
+    for identity, row in child_history.items():
+        if identity not in parent_history:
+            previous_blocker = parent_blockers.get(identity)
+
+            if previous_blocker is None:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_SOURCE_MISSING:"
+                    + identity
+                )
+
+            if (
+                previous_blocker.ticker != row.blocker_ticker
+                or previous_blocker.classification
+                != row.blocker_classification
+            ):
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_BLOCKER_MISMATCH:"
+                    + identity
+                )
+
+        resolver = _resolver_entry(row)
+        certified = child_certified.get(
+            row.resolver_announcement_identity
+        )
+
+        if row.resolver_status == BLOCKER_RESOLUTION_CERTIFIED_LIVE:
+            if certified is None:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_MISSING:"
+                    + row.resolver_announcement_identity
+                )
+
+            if certified.ticker != resolver.ticker:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_TICKER_MISMATCH:"
+                    + row.resolver_announcement_identity
+                )
+
+            if certified.event_sha256 != resolver.event_sha256:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_SHA_MISMATCH:"
+                    + row.resolver_announcement_identity
+                )
+
+            if certified != resolver:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_RESOLVER_BINDING_MISMATCH:"
+                    + row.resolver_announcement_identity
+                )
+        elif certified is not None:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_HISTORICAL_RESOLVER_NEW_CASH:"
+                + row.resolver_announcement_identity
+            )
+
+
 def _verify_journal_progression(
     parent: DividendAcquisitionJournal,
     child: DividendAcquisitionJournal,
@@ -672,6 +1012,8 @@ def _verify_journal_progression(
         raise ForwardDividendOrchestrationError(
             "FORWARD_DIVIDEND_ORCHESTRATION_PARENT_ORDER_NOT_PRIOR"
         )
+
+    _verify_blocker_resolution_progression(parent, child)
 
     parent_certified = {
         row.announcement_identity: row
@@ -705,9 +1047,13 @@ def _verify_journal_progression(
         row.announcement_identity: row
         for row in child.blockers
     }
+    child_resolutions = {
+        row.blocker_announcement_identity: row
+        for row in child.blocker_resolution_history
+    }
 
     for identity, row in parent_blockers.items():
-        if identity in child_certified:
+        if identity in child_certified or identity in child_resolutions:
             continue
 
         if child_blockers.get(identity) != row:
@@ -980,6 +1326,9 @@ def merge_journal_state(
     current_blockers: Sequence[
         BlockingDividendJournalEntry
     ] = (),
+    current_blocker_resolutions: Sequence[
+        DividendBlockerResolutionEntry
+    ] = (),
 ) -> DividendAcquisitionJournal:
     current_as_of = _iso(
         as_of_date,
@@ -1015,6 +1364,15 @@ def merge_journal_state(
         current_blockers
     )
 
+    resolutions_now = normalize_blocker_resolutions(
+        current_blocker_resolutions
+    )
+
+    if prior is None and resolutions_now:
+        raise ForwardDividendOrchestrationError(
+            "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_PARENT_REQUIRED"
+        )
+
     current_ids = {
         row.announcement_identity
         for row in certified_now
@@ -1025,6 +1383,7 @@ def merge_journal_state(
 
     prior_certified = {}
     prior_blockers = {}
+    prior_resolutions = {}
 
     if prior is not None:
         prior_certified = {
@@ -1037,8 +1396,14 @@ def merge_journal_state(
             for row in prior.blockers
         }
 
+        prior_resolutions = {
+            row.blocker_announcement_identity: row
+            for row in prior.blocker_resolution_history
+        }
+
     certified_out = dict(prior_certified)
     blockers_out = dict(prior_blockers)
+    resolutions_out = dict(prior_resolutions)
 
     for row in certified_now:
         previous = prior_certified.get(
@@ -1071,6 +1436,49 @@ def merge_journal_state(
             row.announcement_identity
         ] = row
 
+    for row in resolutions_now:
+        previous_resolution = prior_resolutions.get(
+            row.blocker_announcement_identity
+        )
+
+        if (
+            previous_resolution is not None
+            and previous_resolution != row
+        ):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_HISTORY_CHANGED:"
+                + row.blocker_announcement_identity
+            )
+
+        if previous_resolution is None:
+            previous_blocker = prior_blockers.get(
+                row.blocker_announcement_identity
+            )
+
+            if previous_blocker is None:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_SOURCE_MISSING:"
+                    + row.blocker_announcement_identity
+                )
+
+            if (
+                previous_blocker.ticker != row.blocker_ticker
+                or previous_blocker.classification
+                != row.blocker_classification
+            ):
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_BLOCKER_MISMATCH:"
+                    + row.blocker_announcement_identity
+                )
+
+        resolutions_out[
+            row.blocker_announcement_identity
+        ] = row
+        blockers_out.pop(
+            row.blocker_announcement_identity,
+            None,
+        )
+
     for identity in current_ids:
         if identity not in {
             row.announcement_identity
@@ -1078,7 +1486,7 @@ def merge_journal_state(
         }:
             certified_out.pop(identity, None)
 
-    return normalize_journal(
+    merged = normalize_journal(
         DividendAcquisitionJournal(
             as_of_date=current_as_of,
             required_tickers=normalize_tickers(
@@ -1092,5 +1500,16 @@ def merge_journal_state(
                 blockers_out.values()
             ),
             capture_phase=phase,
+            blocker_resolution_history=tuple(
+                resolutions_out.values()
+            ),
         )
     )
+
+    if prior is not None:
+        _verify_blocker_resolution_progression(
+            prior,
+            merged,
+        )
+
+    return merged

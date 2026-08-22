@@ -41,9 +41,12 @@ from idx_trade.forward_dividend_provenance_v1_2 import (
     resolve_exact_announcement_provenance,
 )
 from idx_trade.forward_dividend_orchestration_v1 import (
+    BLOCKER_RESOLUTION_CERTIFIED_LIVE,
+    BLOCKER_RESOLUTION_HISTORICAL_OBSERVED,
     BlockingDividendJournalEntry,
     CertifiedDividendJournalEntry,
     DividendAcquisitionJournal,
+    DividendBlockerResolutionEntry,
     DividendCoverage,
     POST_EOD,
     PREOPEN,
@@ -1090,6 +1093,7 @@ def main() -> int:
 
         current_certified = []
         current_blockers = []
+        current_blocker_resolutions = []
         dispositions = []
         disposition_inputs = []
         evidence_by_identity = {}
@@ -1244,6 +1248,83 @@ def main() -> int:
                     ticker=row["ticker"],
                     classification=SEMANTIC_FAILURE,
                 ))
+            elif disposition.category == SUPERSEDED:
+                resolver_identity = disposition.superseded_by
+
+                if resolver_identity in prior_blockers:
+                    resolver_row = disposition_by_identity.get(
+                        resolver_identity
+                    )
+                    resolver_event = event_by_identity.get(
+                        resolver_identity
+                    )
+
+                    if resolver_row is None or resolver_event is None:
+                        raise DividendAcquisitionBatchError(
+                            "BATCH_BLOCKER_RESOLUTION_RESOLVER_MISSING:"
+                            + identity
+                        )
+
+                    if resolver_row.category not in {
+                        CERTIFIED_LIVE,
+                        HISTORICAL_OBSERVED,
+                    }:
+                        raise DividendAcquisitionBatchError(
+                            "BATCH_BLOCKER_RESOLUTION_RESOLVER_NOT_PAYABLE:"
+                            + resolver_identity
+                        )
+
+                    resolver_evidence_relpath = evidence_by_identity.get(
+                        resolver_identity
+                    )
+                    resolver_review_sha = next(
+                        (
+                            row["review_sha256"]
+                            for row in dispositions
+                            if row["announcement_identity"]
+                            == resolver_identity
+                        ),
+                        None,
+                    )
+
+                    if (
+                        resolver_evidence_relpath is None
+                        or not resolver_review_sha
+                    ):
+                        raise DividendAcquisitionBatchError(
+                            "BATCH_BLOCKER_RESOLUTION_EVIDENCE_MISSING:"
+                            + resolver_identity
+                        )
+
+                    blocker = prior_blockers[identity]
+                    current_blocker_resolutions.append(
+                        DividendBlockerResolutionEntry(
+                            blocker_announcement_identity=identity,
+                            blocker_ticker=blocker.ticker,
+                            blocker_classification=blocker.classification,
+                            resolver_announcement_identity=resolver_identity,
+                            resolver_ticker=resolver_event.ticker,
+                            resolver_event_id=resolver_event.event_id,
+                            resolver_event_sha256=(
+                                resolver_event.source_evidence_sha256
+                            ),
+                            resolver_evidence_dir=str(
+                                (
+                                    final_batch
+                                    / resolver_evidence_relpath
+                                ).resolve()
+                            ),
+                            resolver_review_sha256=str(
+                                resolver_review_sha
+                            ),
+                            resolver_status=(
+                                BLOCKER_RESOLUTION_CERTIFIED_LIVE
+                                if resolver_row.category == CERTIFIED_LIVE
+                                else BLOCKER_RESOLUTION_HISTORICAL_OBSERVED
+                            ),
+                            resolver_review_filename=REVIEW_FILENAME_V1_2,
+                        )
+                    )
 
         coverage_base = (
             prior.journal
@@ -1277,6 +1358,9 @@ def main() -> int:
             ),
             current_blockers=tuple(
                 current_blockers
+            ),
+            current_blocker_resolutions=tuple(
+                current_blocker_resolutions
             ),
         )
 
