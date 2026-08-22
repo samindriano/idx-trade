@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-22 13:50 Asia/Jakarta
+Last coordinated update: 2026-08-22 14:45 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -45,7 +45,7 @@ Repository Hygiene V2 completed on 2026-08-22.
 | 100-session prospective alpha evaluation | `WAITING` | `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1` | Outcome vault remains protected. Continue accumulation only under frozen forward protocol; do not inspect protected outcomes early. |
 | Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** V4 refill-decoupling structurally rejected; no V4.1/V5/rescue or V4 economic comparison. |
 | Sizing + Execution + CA-aware paper foundations | `DONE` | `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1` | Frozen Sizing V1 and Execution V1 plus cash-dividend/persistent CA-aware state foundations are retained. Unsupported CA remains fail-closed. |
-| E2E Baseline Paper V1 integration | `PLANNED` | planned `integration/idx-e2e-baseline-paper-v1` | **Highest-priority next project lane after documentation consolidation.** Consolidate accepted heads, deploy fresh scoring, add prospective Decision V2 shadow, bind sizing/execution/CA/accounting, then run restart/idempotency torture before paper activation. No new alpha research is required for baseline E2E. |
+| E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1` | Primary E2E lane claimed. Decision V2 → Sizing V1 provenance adapter is implemented with unchanged sizing math and explicit underfill/no-renormalization regression; fresh local validation is pending. Next code audit/remediation target is Execution V1 Decision-V2 binding, then CA/accounting/orchestration/restart-idempotency. |
 
 ---
 
@@ -124,4 +124,4 @@ Do not reopen Decision research, Path Risk rescue work, probability/payoff rescu
 
 ## Next authorized coordination action
 
-Prepare the post-Hygiene V2 roadmap/documentation consolidation and then claim `integration/idx-e2e-baseline-paper-v1` as the single primary E2E lane. Do **not** start another Decision or alpha challenger first.
+Continue `integration/idx-e2e-baseline-paper-v1` as the single primary E2E lane. Validate the Decision V2 → Sizing V1 adapter locally, then audit/remediate Execution V1 for Decision V2 provenance without changing frozen alpha/Decision/Sizing economics. Do **not** start another Decision or alpha challenger first.
