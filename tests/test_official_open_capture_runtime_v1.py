@@ -37,7 +37,18 @@ def _payload(rows, **extra):
 
 
 def _zapi_payload(rows):
-    return _payload(rows, provider="idx", path=UPSTREAM_PATH)
+    inner = {
+        "data": rows,
+        "recordsTotal": len(rows),
+        "recordsFiltered": len(rows),
+        "provider": "idx",
+        "path": UPSTREAM_PATH,
+    }
+    return json.dumps(
+        {"data": inner, "project": "finance:idx", "timestamp": "2026-08-22T00:00:00Z"},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
 
 
 def _rows(date="2026-08-24"):
@@ -188,6 +199,7 @@ def test_runtime_direct_403_falls_back_to_zapi_raw_and_certifies_same_session(tm
     assert manifest["authority"] == "IDX"
     assert manifest["upstream_path"] == UPSTREAM_PATH
     assert manifest["fallback_policy"] == "NONE"
+    assert manifest["transport_metadata"]["response_envelope"] == "data"
     assert manifest["transport_metadata"]["primary_transport_error"] == "OFFICIAL_OPEN_DIRECT_IDX_HTTP_403"
 
 
