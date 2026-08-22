@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from idx_trade.official_open_capture_runtime_v1 import (
     STATUS_ALREADY_CAPTURED,
     STATUS_CAPTURED,
+    STATUS_CAPTURE_FAIL_CLOSED,
     STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED,
     STATUS_SOURCE_NOT_READY_OR_NO_SESSION,
     STATUS_TOO_EARLY,
@@ -115,6 +116,22 @@ def test_runtime_treats_empty_source_as_retryable_not_ready(tmp_path):
     )
     assert result["status"] == STATUS_SOURCE_NOT_READY_OR_NO_SESSION
     assert not (tmp_path / "official_open" / "2026-08-24" / "manifest.json").exists()
+
+
+def test_runtime_persists_http_failure_but_leaves_session_retryable(tmp_path):
+    def fake_get(url, *, params, headers, timeout):
+        return _Response(b"forbidden", status_code=403)
+
+    result = run_same_session_official_open_capture(
+        runtime_root=tmp_path,
+        now=datetime(2026, 8, 24, 9, 7, tzinfo=JAKARTA),
+        get=fake_get,
+    )
+    assert result["status"] == STATUS_CAPTURE_FAIL_CLOSED
+    assert result["provider_error"] == "OFFICIAL_OPEN_DIRECT_IDX_HTTP_403"
+    assert not (tmp_path / "official_open" / "2026-08-24").exists()
+    latest = json.loads((tmp_path / "official_open" / "latest_capture.json").read_text())
+    assert latest["status"] == STATUS_CAPTURE_FAIL_CLOSED
 
 
 def test_runtime_refuses_partial_final_evidence_folder(tmp_path):
