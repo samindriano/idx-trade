@@ -9,6 +9,7 @@ from decision_v1_helpers import _state, _verified_direct
 from idx_trade.v4_x1_decision_v1 import plan_decision_v1
 from idx_trade.v4_x1_decision_v1_contract import DecisionPlan, DecisionV1Error, TradeIntent
 from idx_trade.v4_x1_sizing_v1 import (
+    SUPPORTED_DECISION_RULES,
     VerifiedDecisionPlan,
     _VERIFIED_DECISION_PLAN_TOKEN,
     size_decision_v1_entries,
@@ -31,7 +32,11 @@ def _synthetic_plan(buys):
 
 def test_config_hash():
     path = Path(__file__).parents[1] / "config" / "v4_x1_sizing_v1.json"
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == "3c7f205aa05e0bdaa1bd2581e652029917dea9532d5c47ef672c943bdba21cbf"
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == "7bf8e43aba9153b8d01d4ba932970e2aa437f1427a6d6f4f862063ff75a3c704"
+    assert SUPPORTED_DECISION_RULES == (
+        "V4_X1_DECISION_V1",
+        "V4_X1_DECISION_V2_MINIMAL_V1",
+    )
     verify_sizing_v1_config(path)
 
 
