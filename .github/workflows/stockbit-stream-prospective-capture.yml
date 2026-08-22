@@ -2,9 +2,11 @@ name: Stockbit Stream prospective archive
 
 on:
   schedule:
-    - cron: "47 1 * * 1-5"
-    - cron: "7 5 * * 1-5"
-    - cron: "47 9 * * 1-5"
+    # Stream observations are calendar-day captures, including weekends and
+    # IDX market holidays. The runtime does not treat these as exchange days.
+    - cron: "47 1 * * *"
+    - cron: "7 5 * * *"
+    - cron: "47 9 * * *"
   workflow_dispatch:
     inputs:
       slot:
@@ -55,9 +57,9 @@ jobs:
             slot="$DISPATCH_SLOT"
           else
             case "$EVENT_SCHEDULE" in
-              "47 1 * * 1-5") slot="pre_open" ;;
-              "7 5 * * 1-5") slot="midday" ;;
-              "47 9 * * 1-5") slot="after_close" ;;
+              "47 1 * * *") slot="pre_open" ;;
+              "7 5 * * *") slot="midday" ;;
+              "47 9 * * *") slot="after_close" ;;
               *) echo "Unknown schedule: $EVENT_SCHEDULE" >&2; exit 2 ;;
             esac
           fi
