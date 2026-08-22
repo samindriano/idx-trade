@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, time
 from pathlib import Path
 from typing import Callable
@@ -12,7 +13,7 @@ import requests
 from .official_open_evidence_v1 import (
     JAKARTA,
     OfficialOpenEvidenceError,
-    capture_direct_idx_official_open,
+    capture_official_open_with_transport_fallback,
 )
 
 
@@ -37,7 +38,9 @@ def _atomic_json(payload: dict[str, object], path: Path) -> None:
     temp.replace(path)
 
 
-def _session_paths(runtime_root: str | Path, session_date: str) -> tuple[Path, Path, Path, Path]:
+def _session_paths(
+    runtime_root: str | Path, session_date: str
+) -> tuple[Path, Path, Path, Path]:
     folder = Path(runtime_root).expanduser().resolve() / "official_open" / session_date
     return (
         folder,
@@ -47,20 +50,47 @@ def _session_paths(runtime_root: str | Path, session_date: str) -> tuple[Path, P
     )
 
 
+def _manifest_transport(manifest_path: Path) -> tuple[str | None, str | None]:
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(payload, dict):
+        return None, None
+    transport = str(payload.get("transport") or "") or None
+    policy = str(payload.get("transport_policy") or "") or None
+    return transport, policy
+
+
+def _source_not_ready(message: str) -> bool:
+    if message in {
+        "OFFICIAL_OPEN_RAW_DATA_MISSING",
+        "OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
+        "OFFICIAL_OPEN_ZAPI_RAW_EMPTY_RESPONSE",
+    }:
+        return True
+    if not message.startswith("OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:"):
+        return False
+    return "EMPTY_RESPONSE" in message and (
+        "ZAPI=OFFICIAL_OPEN_ZAPI_RAW_EMPTY_RESPONSE" in message
+        or "ZAPI=NOT_CONFIGURED" in message
+    )
+
+
 def run_same_session_official_open_capture(
     *,
     runtime_root: str | Path,
     now: datetime | None = None,
     get: Callable[..., requests.Response] = requests.get,
+    zapi_get: Callable[..., requests.Response] | None = None,
+    zapi_api_key: str | None = None,
     timeout_seconds: float = 30.0,
 ) -> dict[str, object]:
     """Capture only today's official IDX Open evidence, fail-closed.
 
-    The runtime intentionally does not infer exchange holidays from weekdays or
-    backfill prior sessions. A weekday with no Stock Summary data is reported as
-    source-not-ready-or-no-session and may be retried by the scheduler. Other
-    provider/schema failures are durably recorded as fail-closed while leaving
-    the final session path absent so a later scheduled retry can try again.
+    Direct IDX is the primary transport. If and only if that transport fails,
+    the runtime may use Zapi's raw IDX passthrough with the same complete-session
+    and OpenPrice-only certification contract. No prior session is backfilled.
     """
 
     current = now or datetime.now(JAKARTA)
@@ -86,14 +116,20 @@ def run_same_session_official_open_capture(
     if current.weekday() > 4:
         return finish(STATUS_WEEKEND_NO_SESSION)
     if current.time().replace(tzinfo=None) < NOT_BEFORE:
-        return finish(STATUS_TOO_EARLY, not_before_jakarta=NOT_BEFORE.isoformat(timespec="minutes"))
+        return finish(
+            STATUS_TOO_EARLY,
+            not_before_jakarta=NOT_BEFORE.isoformat(timespec="minutes"),
+        )
 
     folder, raw_path, normalized_path, manifest_path = _session_paths(root, session_date)
     if manifest_path.is_file():
+        transport, policy = _manifest_transport(manifest_path)
         return finish(
             STATUS_ALREADY_CAPTURED,
             manifest_path=str(manifest_path),
             evidence_folder=str(folder),
+            transport=transport,
+            transport_policy=policy,
         )
     partial = [str(path) for path in (raw_path, normalized_path) if path.exists()]
     if partial or folder.exists():
@@ -103,19 +139,19 @@ def run_same_session_official_open_capture(
             existing_paths=partial,
         )
 
+    key = zapi_api_key if zapi_api_key is not None else os.environ.get("ZAPI_API_KEY")
     try:
-        manifest = capture_direct_idx_official_open(
+        manifest = capture_official_open_with_transport_fallback(
             session_date,
             output_root=root,
-            get=get,
+            zapi_api_key=key,
+            direct_get=get,
+            zapi_get=zapi_get or requests.get,
             timeout_seconds=timeout_seconds,
         )
     except OfficialOpenEvidenceError as exc:
         message = str(exc)
-        if message in {
-            "OFFICIAL_OPEN_RAW_DATA_MISSING",
-            "OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
-        }:
+        if _source_not_ready(message):
             return finish(
                 STATUS_SOURCE_NOT_READY_OR_NO_SESSION,
                 provider_error=message,
@@ -125,10 +161,13 @@ def run_same_session_official_open_capture(
             provider_error=message,
         )
 
+    transport, policy = _manifest_transport(manifest)
     return finish(
         STATUS_CAPTURED,
         manifest_path=str(manifest),
         evidence_folder=str(manifest.parent),
+        transport=transport,
+        transport_policy=policy,
     )
 
 
