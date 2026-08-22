@@ -1,7 +1,11 @@
 {
-  "schema_version": "v4_x1_sizing_v1_remediated",
-  "status": "FROZEN_PRE_FIRST_PAPER_OUTCOME_REMEDIATED",
-  "decision_rule": "V4_X1_DECISION_V1",
+  "schema_version": "v4_x1_sizing_v1_decision_v2_adapter",
+  "status": "FROZEN_SIZING_MATH_DECISION_V2_PROVENANCE_ADAPTED_PRE_E2E",
+  "decision_rules": [
+    "V4_X1_DECISION_V1",
+    "V4_X1_DECISION_V2_MINIMAL_V1"
+  ],
+  "decision_adapter_policy": "EXACT_RECOMPUTATION_AND_PROVENANCE_VERIFICATION_NO_RULE_ID_PROJECTION",
   "lot_size_shares": 100,
   "target_weight_per_name": 0.1,
   "max_entry_weight_per_name": 0.15,
