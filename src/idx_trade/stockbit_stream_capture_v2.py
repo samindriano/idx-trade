@@ -7,9 +7,12 @@ stock-summary session using regular-market traded value.
 from __future__ import annotations
 
 import csv
+import math
 import os
-from dataclasses import dataclass
-from datetime import date, timedelta
+import re
+import secrets
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import quote
@@ -18,6 +21,7 @@ import requests
 
 from idx_trade.stockbit_stream_archive import (
     MONTHLY_RESERVE,
+    TICKER_RE,
     StreamArchiveError,
     ZapiClient,
     canonical_json_bytes,
@@ -29,6 +33,10 @@ from idx_trade.stockbit_stream_archive import (
 IDX_STOCK_SUMMARY_ENDPOINT = "https://api.zpi.web.id/v1/finance:idx/stock-summary"
 ROUTINE_TOP_N = 200
 PRIOR_SESSION_LOOKBACK_DAYS = 10
+IDENTITY_ROSTER_STALE_DAYS = 35
+V2_SLOTS = frozenset({"pre_open", "midday", "after_close"})
+ATTEMPT_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+CAPTURE_ORDER_RULE = "SHA256_DATE_SLOT_UNIVERSE_TICKER"
 
 
 @dataclass(frozen=True)
@@ -39,6 +47,9 @@ class RuntimeUniverse:
     source_raw: bytes
     source_sha256: str
     universe_sha256: str
+    identity_source_sha256: str = ""
+    identity_roster_as_of: str = ""
+    selection_diagnostics: dict[str, Any] = field(default_factory=dict)
 
 
 class LeanArchive:
@@ -66,7 +77,7 @@ class LocalLeanArchive(LeanArchive):
 
 
 class R2LeanArchive(LeanArchive):
-    """S3-compatible immutable writes without read-after-write on the hot path."""
+    """S3-compatible immutable writes; body-read verification occurs only on collisions."""
 
     def __init__(self, endpoint_url: str, bucket: str, access_key: str, secret_key: str, prefix: str):
         import boto3
@@ -112,12 +123,12 @@ class R2LeanArchive(LeanArchive):
             if status != 412 and code not in {"PreconditionFailed", "412"}:
                 raise StreamArchiveError(f"R2 immutable put failed for {key}: {code or status}") from exc
 
+        # A 412 is rare. Verify the actual body instead of trusting mutable object metadata.
         try:
-            head = self.client.head_object(Bucket=self.bucket, Key=object_key)
-        except ClientError as exc:
+            existing = self.client.get_object(Bucket=self.bucket, Key=object_key)["Body"].read()
+        except Exception as exc:
             raise StreamArchiveError(f"R2 collision verification failed for {key}") from exc
-        existing = str((head.get("Metadata") or {}).get("sha256", ""))
-        if existing != digest:
+        if sha256_bytes(existing) != digest:
             raise StreamArchiveError(f"immutable key changed: {key}")
         return digest
 
@@ -146,7 +157,11 @@ def _identity_rows(path: Path) -> dict[str, dict[str, str]]:
     result: dict[str, dict[str, str]] = {}
     for row in rows:
         ticker = str(row.get("ticker", "")).strip().upper()
-        if not ticker or str(row.get("listed_to", "")).strip():
+        if not ticker:
+            continue
+        if not TICKER_RE.fullmatch(ticker):
+            raise StreamArchiveError(f"invalid identity ticker: {ticker!r}")
+        if str(row.get("listed_to", "")).strip():
             continue
         if ticker in result:
             raise StreamArchiveError(f"duplicate active identity ticker: {ticker}")
@@ -158,6 +173,36 @@ def _row_date_matches(row: Mapping[str, Any], requested: date) -> bool:
     return str(row.get("Date", ""))[:10] == requested.isoformat()
 
 
+def _unwrap_zapi_envelope(payload: Any) -> Any:
+    if (
+        isinstance(payload, dict)
+        and "project" in payload
+        and "timestamp" in payload
+        and isinstance(payload.get("data"), dict)
+    ):
+        return payload["data"]
+    return payload
+
+
+def _identity_roster_diagnostics(capture_day: date, identity_roster_as_of: str) -> dict[str, Any]:
+    if not identity_roster_as_of:
+        return {
+            "identity_roster_age_days": None,
+            "identity_roster_status": "AS_OF_NOT_DECLARED",
+        }
+    try:
+        as_of = date.fromisoformat(identity_roster_as_of)
+    except ValueError as exc:
+        raise StreamArchiveError("identity_roster_as_of must be YYYY-MM-DD") from exc
+    if as_of > capture_day:
+        raise StreamArchiveError("identity roster as-of date is after capture date")
+    age = (capture_day - as_of).days
+    return {
+        "identity_roster_age_days": age,
+        "identity_roster_status": "CURRENT" if age <= IDENTITY_ROSTER_STALE_DAYS else "STALE",
+    }
+
+
 def build_runtime_universe(
     *,
     api_key: str,
@@ -166,18 +211,26 @@ def build_runtime_universe(
     top_n: int = ROUTINE_TOP_N,
     session_lookback_days: int = PRIOR_SESSION_LOOKBACK_DAYS,
     session: requests.Session | None = None,
+    identity_roster_as_of: str = "",
 ) -> RuntimeUniverse:
     if top_n < 1 or top_n > 400:
         raise StreamArchiveError("top_n must be between 1 and 400")
     identities = _identity_rows(identity_csv)
     if len(identities) < top_n:
         raise StreamArchiveError(f"active identity whitelist has only {len(identities)} rows for top_n={top_n}")
+    identity_source_sha = sha256_bytes(identity_csv.read_bytes())
     capture_day = date.fromisoformat(capture_date)
+    roster_diagnostics = _identity_roster_diagnostics(capture_day, identity_roster_as_of)
     http = session or requests.Session()
 
     last_error: str | None = None
+    stock_summary_requests = 0
     for lag in range(1, session_lookback_days + 1):
         candidate = capture_day - timedelta(days=lag)
+        # Saturdays and Sundays are deterministically non-sessions; do not burn API quota on them.
+        if candidate.weekday() >= 5:
+            continue
+        stock_summary_requests += 1
         response = http.get(
             IDX_STOCK_SUMMARY_ENDPOINT,
             params={"length": 1000, "start": 0, "date": candidate.isoformat()},
@@ -191,31 +244,57 @@ def build_runtime_universe(
             continue
         raw = bytes(response.content)
         try:
-            payload = response.json()
+            payload = _unwrap_zapi_envelope(response.json())
+            if not isinstance(payload, dict):
+                raise TypeError("payload is not an object")
             data = payload["data"]
+            records_total = int(payload["recordsTotal"])
+            records_filtered = int(payload.get("recordsFiltered", records_total))
         except (ValueError, KeyError, TypeError):
-            last_error = f"malformed stock-summary for {candidate}"
-            continue
-        if payload.get("provider") != "idx" or payload.get("dataset") != "stock-summary" or not isinstance(data, list) or not data:
-            last_error = f"invalid/empty stock-summary for {candidate}"
-            continue
+            raise StreamArchiveError(f"malformed stock-summary for {candidate}")
+        if payload.get("provider") != "idx" or payload.get("dataset") != "stock-summary" or not isinstance(data, list):
+            raise StreamArchiveError(f"invalid stock-summary contract for {candidate}")
+        if not data:
+            if records_total == 0 and records_filtered == 0:
+                last_error = f"empty stock-summary for non-session {candidate}"
+                continue
+            raise StreamArchiveError(f"stock-summary row-count metadata inconsistent for {candidate}")
+        # Until pagination is implemented, fail closed if one page is not the complete market.
+        if records_total != records_filtered or records_filtered != len(data):
+            raise StreamArchiveError(
+                f"incomplete stock-summary pagination for {candidate}: "
+                f"recordsTotal={records_total}, recordsFiltered={records_filtered}, rows={len(data)}"
+            )
         if not all(isinstance(row, dict) and _row_date_matches(row, candidate) for row in data):
-            last_error = f"stock-summary date filter not honored for {candidate}"
-            continue
+            raise StreamArchiveError(f"stock-summary date filter not honored for {candidate}")
+
+        provider_codes = [str(row.get("StockCode", "")).strip().upper() for row in data]
+        nonblank_codes = [code for code in provider_codes if code]
+        if len(nonblank_codes) != len(set(nonblank_codes)):
+            raise StreamArchiveError(f"duplicate StockCode rows in stock-summary for {candidate}")
 
         ranked: list[dict[str, Any]] = []
-        seen: set[str] = set()
+        invalid_numeric: list[str] = []
         for row in data:
             ticker = str(row.get("StockCode", "")).strip().upper()
-            if ticker not in identities or ticker in seen:
+            if ticker not in identities:
                 continue
-            seen.add(ticker)
             try:
                 total_value = float(row.get("Value") or 0)
                 nonregular_value = float(row.get("NonRegularValue") or 0)
-                value = max(total_value - nonregular_value, 0.0)
             except (TypeError, ValueError):
+                invalid_numeric.append(ticker)
                 continue
+            if (
+                not math.isfinite(total_value)
+                or not math.isfinite(nonregular_value)
+                or total_value < 0
+                or nonregular_value < 0
+                or nonregular_value > total_value
+            ):
+                invalid_numeric.append(ticker)
+                continue
+            value = total_value - nonregular_value
             if value <= 0:
                 continue
             identity = identities[ticker]
@@ -228,12 +307,16 @@ def build_runtime_universe(
             })
         ranked.sort(key=lambda row: (-row["regular_value"], row["ticker"]))
         if len(ranked) < top_n:
-            last_error = f"only {len(ranked)} active positive-value rows for {candidate}"
-            continue
+            raise StreamArchiveError(f"only {len(ranked)} valid active positive-value rows for {candidate}")
         selected = ranked[:top_n]
         for rank, row in enumerate(selected, start=1):
             row["activity_rank"] = rank
         universe_bytes = canonical_json_bytes(selected)
+        diagnostics = {
+            "invalid_numeric_tickers": sorted(invalid_numeric),
+            "stock_summary_requests": stock_summary_requests,
+            **roster_diagnostics,
+        }
         return RuntimeUniverse(
             capture_date=capture_date,
             source_session=candidate.isoformat(),
@@ -241,9 +324,30 @@ def build_runtime_universe(
             source_raw=raw,
             source_sha256=sha256_bytes(raw),
             universe_sha256=sha256_bytes(universe_bytes),
+            identity_source_sha256=identity_source_sha,
+            identity_roster_as_of=identity_roster_as_of,
+            selection_diagnostics=diagnostics,
         )
 
     raise StreamArchiveError(f"no valid completed IDX stock-summary session found: {last_error}")
+
+
+def _attempt_id() -> str:
+    configured = os.environ.get("STOCKBIT_STREAM_ATTEMPT_ID", "").strip()
+    if configured:
+        if not ATTEMPT_ID_RE.fullmatch(configured):
+            raise StreamArchiveError("invalid STOCKBIT_STREAM_ATTEMPT_ID")
+        return configured
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"{stamp}-{secrets.token_hex(4)}"
+
+
+def _capture_order_rows(universe: RuntimeUniverse, slot: str) -> list[dict[str, Any]]:
+    def order_key(row: Mapping[str, Any]) -> str:
+        material = f"{universe.capture_date}|{slot}|{universe.universe_sha256}|{row['ticker']}"
+        return sha256_bytes(material.encode("utf-8"))
+
+    return sorted(universe.rows, key=order_key)
 
 
 def capture_stream_v2(
@@ -259,17 +363,25 @@ def capture_stream_v2(
         raise StreamArchiveError("STOCKBIT_STREAM_HMAC_SALT is required")
     if not universe.rows:
         raise StreamArchiveError("runtime universe is empty")
+    if slot not in V2_SLOTS:
+        raise StreamArchiveError(f"invalid capture slot: {slot}")
 
-    run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}"
+    logical_slot_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}"
+    attempt_id = _attempt_id()
+    run_id = f"{logical_slot_id}_{attempt_id}"
+    attempt_started_at = datetime.now(timezone.utc)
     quota_before = client.get_usage()
     planned_calls = len(universe.rows)
     if quota_before.remaining - planned_calls < monthly_reserve:
         return {
             "status": "QUOTA_BLOCKED_BEFORE_STREAM_REQUEST",
+            "logical_slot_id": logical_slot_id,
+            "attempt_id": attempt_id,
             "run_id": run_id,
             "planned_calls": planned_calls,
             "quota_before": quota_before.__dict__,
-            "provider_calls": 1,
+            "provider_calls": 0,
+            "capture_order_rule": CAPTURE_ORDER_RULE,
             "outcome_accessed": False,
         }
 
@@ -277,17 +389,36 @@ def capture_stream_v2(
     archive.put_immutable(universe_input_key, universe.source_raw, "application/json")
 
     request_records: list[dict[str, Any]] = []
+    observed_times: list[datetime] = []
     total_rows = 0
     ok_responses = 0
-    for selected in universe.rows:
+    ordered_rows = _capture_order_rows(universe, slot)
+    for capture_order_index, selected in enumerate(ordered_rows, start=1):
         symbol = selected["ticker"]
-        response, raw, observed_at = client.stream(symbol)
+        try:
+            response, raw, observed_at = client.stream(symbol)
+        except (requests.RequestException, StreamArchiveError) as exc:
+            request_records.append({
+                "ticker": symbol,
+                "activity_rank": selected["activity_rank"],
+                "capture_order_index": capture_order_index,
+                "response_classification": "REQUEST_EXCEPTION",
+                "error_type": type(exc).__name__,
+                "row_count": 0,
+            })
+            continue
+
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise StreamArchiveError(f"naive observed availability timestamp for {symbol}")
+        observed_at = observed_at.astimezone(timezone.utc)
+        observed_times.append(observed_at)
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
         classification, _, items = parse_stream_payload(raw, response.status_code, symbol)
         record = {
             "ticker": symbol,
             "activity_rank": selected["activity_rank"],
+            "capture_order_index": capture_order_index,
             "response_classification": classification,
             "http_status": response.status_code,
             "observed_available_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
@@ -304,28 +435,65 @@ def capture_stream_v2(
             total_rows += len(normalized)
             ok_responses += 1
         request_records.append(record)
+        if response.status_code in {401, 403, 429}:
+            break
 
-    quota_after = client.get_usage()
+    quota_after = None
+    quota_after_error = None
+    try:
+        quota_after = client.get_usage()
+    except StreamArchiveError as exc:
+        quota_after_error = {"type": type(exc).__name__, "detail": str(exc)}
+
+    completed_calls = len(request_records)
+    if completed_calls == planned_calls and ok_responses == planned_calls:
+        status = "DATA_READY"
+    elif ok_responses > 0:
+        status = "DATA_PARTIAL"
+    else:
+        status = "DATA_FAILED"
+
+    first_observed = min(observed_times) if observed_times else None
+    last_observed = max(observed_times) if observed_times else None
+    observation_span_seconds = (
+        (last_observed - first_observed).total_seconds()
+        if first_observed is not None and last_observed is not None
+        else None
+    )
+    attempt_finished_at = datetime.now(timezone.utc)
     manifest = {
-        "schema_version": "stockbit_stream_capture_v2",
-        "status": "DATA_READY",
+        "schema_version": "stockbit_stream_capture_v2_hardened",
+        "status": status,
+        "logical_slot_id": logical_slot_id,
+        "attempt_id": attempt_id,
         "run_id": run_id,
         "capture_date": universe.capture_date,
         "slot": slot,
-        "selection_rule": "top N active current identities by prior completed IDX session regular-market Value; ticker tie-break",
+        "attempt_started_at_utc": attempt_started_at.isoformat().replace("+00:00", "Z"),
+        "attempt_finished_at_utc": attempt_finished_at.isoformat().replace("+00:00", "Z"),
+        "attempt_duration_seconds": (attempt_finished_at - attempt_started_at).total_seconds(),
+        "first_observed_at_utc": first_observed.isoformat().replace("+00:00", "Z") if first_observed else None,
+        "last_observed_at_utc": last_observed.isoformat().replace("+00:00", "Z") if last_observed else None,
+        "observation_span_seconds": observation_span_seconds,
+        "capture_order_rule": CAPTURE_ORDER_RULE,
+        "selection_rule": "top N active pinned identities by prior completed IDX session regular-market Value; ticker tie-break",
         "source_session": universe.source_session,
         "universe_size": len(universe.rows),
         "universe_sha256": universe.universe_sha256,
         "universe_source_sha256": universe.source_sha256,
+        "identity_source_sha256": universe.identity_source_sha256,
+        "identity_roster_as_of": universe.identity_roster_as_of,
+        "selection_diagnostics": universe.selection_diagnostics,
         "planned_calls": planned_calls,
-        "completed_calls": len(request_records),
+        "completed_calls": completed_calls,
         "successful_responses": ok_responses,
         "normalized_post_rows": total_rows,
         "response_classification_counts": {},
         "quota_before": quota_before.__dict__,
-        "quota_after": quota_after.__dict__,
+        "quota_after": quota_after.__dict__ if quota_after is not None else None,
+        "quota_after_error": quota_after_error,
         "request_records": request_records,
-        "storage_contract": "conditional immutable PUT; no normal-path object readback; collision verified by object SHA metadata",
+        "storage_contract": "conditional immutable PUT; no normal-path object readback; collision body hash verified by GET only on 412",
         "first_seen_semantics": "derive post first-seen offline as minimum observed_available_at_utc across immutable observations; no per-post hot-path object writes",
         "model_accessed": False,
         "outcome_accessed": False,
@@ -335,7 +503,7 @@ def capture_stream_v2(
         key = record["response_classification"]
         manifest["response_classification_counts"][key] = manifest["response_classification_counts"].get(key, 0) + 1
     manifest_bytes = canonical_json_bytes(manifest)
-    manifest_key = f"manifests/{run_id}.json"
+    manifest_key = f"manifests/{logical_slot_id}/{attempt_id}.json"
     manifest_sha = archive.put_immutable(manifest_key, manifest_bytes, "application/json")
     manifest["manifest_sha256"] = manifest_sha
     return manifest
