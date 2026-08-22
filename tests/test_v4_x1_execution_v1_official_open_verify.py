@@ -42,7 +42,15 @@ def _raw(*, zero_open=False, zapi=False):
         "recordsFiltered": len(rows),
     }
     if zapi:
-        payload.update(provider="idx", path=UPSTREAM_PATH)
+        payload = {
+            "data": {
+                **payload,
+                "provider": "idx",
+                "path": UPSTREAM_PATH,
+            },
+            "project": "finance:idx",
+            "timestamp": "2026-08-22T00:00:00Z",
+        }
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
 
 
@@ -156,12 +164,12 @@ def test_manifest_transport_outside_admitted_chain_is_rejected(tmp_path):
         )
 
 
-def test_zapi_transport_requires_raw_provider_and_path_witness(tmp_path):
+def test_zapi_transport_requires_nested_raw_provider_and_path_witness(tmp_path):
     manifest = _manifest(tmp_path, transport=ZAPI_RAW_TRANSPORT)
     payload = json.loads(manifest.read_text())
     raw_path = manifest.parent / payload["raw_artifact_path"]
     raw = json.loads(raw_path.read_text())
-    raw["provider"] = "other"
+    raw["data"]["provider"] = "other"
     raw_path.write_text(json.dumps(raw, sort_keys=True))
     payload["raw_artifact_sha256"] = hashlib.sha256(raw_path.read_bytes()).hexdigest()
     manifest.write_text(json.dumps(payload, sort_keys=True))
@@ -189,7 +197,7 @@ def test_direct_idx_raw_cannot_be_relabelled_as_zapi_transport(tmp_path):
     payload = json.loads(manifest.read_text())
     payload["transport"] = ZAPI_RAW_TRANSPORT
     manifest.write_text(json.dumps(payload, sort_keys=True))
-    with pytest.raises(DecisionV1Error, match="ZAPI_RAW_PROVIDER_MISMATCH"):
+    with pytest.raises(DecisionV1Error, match="ZAPI_RAW_ENVELOPE_INVALID"):
         verify_open_execution_inputs(
             manifest_path=manifest,
             execution_session_date="2026-06-12",
