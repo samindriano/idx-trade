@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -180,58 +181,68 @@ def certify_official_open_raw_response(
     transport_metadata: Mapping[str, object] | None = None,
     captured_at_jakarta: datetime | None = None,
 ) -> Path:
-    """Write immutable-style raw/normalized/manifest evidence, manifest last."""
+    """Build complete evidence in staging, then atomically promote the session folder."""
 
     session = _session(session_date)
     normalized, counts = normalize_idx_stock_summary_payload(
         raw_bytes, expected_session_date=session
     )
     folder = Path(output_dir).expanduser().resolve()
-    raw_path = folder / "raw_response.json"
-    normalized_path = folder / "open_prices.parquet"
-    manifest_path = folder / "manifest.json"
-    if any(path.exists() for path in (raw_path, normalized_path, manifest_path)):
+    if folder.exists():
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_EVIDENCE_ALREADY_EXISTS")
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    stage = folder.parent / f".{folder.name}.{uuid4().hex}.stage"
+    if stage.exists():
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_STAGING_COLLISION")
 
-    folder.mkdir(parents=True, exist_ok=True)
-    _atomic_bytes(raw_bytes, raw_path)
-    write_parquet_atomic(normalized, normalized_path)
-    raw_sha = _sha256_file(raw_path)
-    normalized_sha = _sha256_file(normalized_path)
+    raw_path = stage / "raw_response.json"
+    normalized_path = stage / "open_prices.parquet"
+    manifest_path = stage / "manifest.json"
+    try:
+        stage.mkdir(parents=False, exist_ok=False)
+        _atomic_bytes(raw_bytes, raw_path)
+        write_parquet_atomic(normalized, normalized_path)
+        raw_sha = _sha256_file(raw_path)
+        normalized_sha = _sha256_file(normalized_path)
 
-    open_numeric = pd.to_numeric(normalized["open_price"], errors="coerce")
-    positive = open_numeric.notna() & (open_numeric > 0)
-    now = captured_at_jakarta or datetime.now(JAKARTA)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=JAKARTA)
-    else:
-        now = now.astimezone(JAKARTA)
+        open_numeric = pd.to_numeric(normalized["open_price"], errors="coerce")
+        positive = open_numeric.notna() & (open_numeric > 0)
+        now = captured_at_jakarta or datetime.now(JAKARTA)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=JAKARTA)
+        else:
+            now = now.astimezone(JAKARTA)
 
-    manifest: dict[str, object] = {
-        "schema_version": SCHEMA_VERSION,
-        "session_date": session,
-        "authority": AUTHORITY,
-        "upstream_path": UPSTREAM_PATH,
-        "transport": TRANSPORT,
-        "transport_metadata": dict(transport_metadata or {}),
-        "field_semantics": FIELD_SEMANTICS,
-        "fallback_policy": FALLBACK_POLICY,
-        "raw_artifact_path": raw_path.name,
-        "raw_artifact_sha256": raw_sha,
-        "normalized_artifact_path": normalized_path.name,
-        "normalized_artifact_sha256": normalized_sha,
-        "row_count": counts["row_count"],
-        "unique_ticker_count": counts["unique_ticker_count"],
-        "records_total": counts["records_total"],
-        "records_filtered": counts["records_filtered"],
-        "duplicate_key_count": 0,
-        "positive_openprice_count": int(positive.sum()),
-        "unavailable_openprice_count": int((~positive).sum()),
-        "capture_timestamp_jakarta": now.isoformat(),
-        "execution_grade": True,
-    }
-    _atomic_json(manifest, manifest_path)
-    return manifest_path
+        manifest: dict[str, object] = {
+            "schema_version": SCHEMA_VERSION,
+            "session_date": session,
+            "authority": AUTHORITY,
+            "upstream_path": UPSTREAM_PATH,
+            "transport": TRANSPORT,
+            "transport_metadata": dict(transport_metadata or {}),
+            "field_semantics": FIELD_SEMANTICS,
+            "fallback_policy": FALLBACK_POLICY,
+            "raw_artifact_path": raw_path.name,
+            "raw_artifact_sha256": raw_sha,
+            "normalized_artifact_path": normalized_path.name,
+            "normalized_artifact_sha256": normalized_sha,
+            "row_count": counts["row_count"],
+            "unique_ticker_count": counts["unique_ticker_count"],
+            "records_total": counts["records_total"],
+            "records_filtered": counts["records_filtered"],
+            "duplicate_key_count": 0,
+            "positive_openprice_count": int(positive.sum()),
+            "unavailable_openprice_count": int((~positive).sum()),
+            "capture_timestamp_jakarta": now.isoformat(),
+            "execution_grade": True,
+        }
+        _atomic_json(manifest, manifest_path)
+        stage.replace(folder)
+    except Exception:
+        if stage.exists():
+            shutil.rmtree(stage, ignore_errors=True)
+        raise
+    return folder / "manifest.json"
 
 
 def capture_direct_idx_official_open(
@@ -261,6 +272,7 @@ __all__ = [
     "DIRECT_IDX_URL",
     "FALLBACK_POLICY",
     "FIELD_SEMANTICS",
+    "JAKARTA",
     "OfficialOpenEvidenceError",
     "SCHEMA_VERSION",
     "TRANSPORT",
