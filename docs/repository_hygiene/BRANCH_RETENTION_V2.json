@@ -19,6 +19,7 @@
     "fix/stockbit-stream-routine-remediation-v1",
     "fix/stockbit-stream-zapi-envelope-v1",
     "ops/stockbit-stream-observable-smoke-v1",
+    "audit/stockbit-stream-v2-red-team-v1",
     "integration/forward-eod-automation-monitoring",
     "data/idx-forward-calendar-extension-v1",
     "integration/v4-x1-eod-auto-score-v1",
