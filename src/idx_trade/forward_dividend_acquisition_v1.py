@@ -166,8 +166,8 @@ def extract_dividend_candidates(
         ).strip()
 
         timestamp = str(
-            announcement.get("CreatedDate")
-            or announcement.get("TglPengumuman")
+            announcement.get("TglPengumuman")
+            or announcement.get("CreatedDate")
             or ""
         ).strip()
 

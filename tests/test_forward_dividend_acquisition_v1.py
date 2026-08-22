@@ -168,3 +168,32 @@ def test_invalid_schema_fails_closed() -> None:
             {},
             expected_ticker="BBCA",
         )
+
+def test_tgl_pengumuman_precedes_created_date() -> None:
+    payload = {
+        "Replies": [
+            {
+                "pengumuman": {
+                    "Kode_Emiten": "BBCA",
+                    "JudulPengumuman": "Jadwal Dividen Tunai Interim",
+                    "Id2": "A1",
+                    "NoPengumuman": "N1",
+                    "TglPengumuman": "2026-08-19T18:31:03",
+                    "CreatedDate": "2026-08-19T19:00:02",
+                    "Form_Id": "11000",
+                },
+                "attachments": [],
+            }
+        ]
+    }
+
+    rows = acquisition.extract_dividend_candidates(
+        payload,
+        expected_ticker="BBCA",
+    )
+
+    assert len(rows) == 1
+    assert (
+        rows[0].announcement_timestamp
+        == "2026-08-19T18:31:03"
+    )
