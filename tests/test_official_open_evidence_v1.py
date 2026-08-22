@@ -36,8 +36,20 @@ def _payload(rows, **extra):
     ).encode()
 
 
-def _zapi_payload(rows, **extra):
-    return _payload(rows, provider="idx", path=UPSTREAM_PATH, **extra)
+def _zapi_payload(rows, *, provider="idx", path=UPSTREAM_PATH, **extra):
+    inner = {
+        "data": rows,
+        "recordsTotal": len(rows),
+        "recordsFiltered": len(rows),
+        "provider": provider,
+        "path": path,
+        **extra,
+    }
+    return json.dumps(
+        {"data": inner, "project": "finance:idx", "timestamp": "2026-08-22T00:00:00Z"},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
 
 
 def _rows():
@@ -85,6 +97,15 @@ def test_normalization_preserves_openprice_and_firsttrade_as_distinct_fields():
         "row_count": 3,
         "unique_ticker_count": 3,
     }
+
+
+def test_normalization_unwraps_real_zapi_raw_data_envelope():
+    frame, counts = normalize_idx_stock_summary_payload(
+        _zapi_payload(_rows()), expected_session_date="2026-06-12"
+    )
+    assert counts["row_count"] == 3
+    assert counts["records_total"] == 3
+    assert frame.set_index("ticker").loc["BBCA", "open_price"] == 6000
 
 
 def test_normalization_requires_complete_unfiltered_session():
@@ -174,11 +195,12 @@ def test_zapi_raw_fetch_uses_full_session_passthrough_without_code_filter():
     assert "secret-key" not in json.dumps(meta)
     assert meta["transport"] == ZAPI_RAW_TRANSPORT
     assert meta["provider"] == "idx"
+    assert meta["response_envelope"] == "data"
 
 
 def test_zapi_raw_provenance_must_identify_idx_and_exact_upstream_path():
     def wrong_provider(url, *, params, headers, timeout):
-        return _Response(_payload(_rows(), provider="other", path=UPSTREAM_PATH))
+        return _Response(_zapi_payload(_rows(), provider="other"))
 
     with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PROVIDER_MISMATCH"):
         fetch_zapi_raw_idx_stock_summary(
@@ -186,7 +208,7 @@ def test_zapi_raw_provenance_must_identify_idx_and_exact_upstream_path():
         )
 
     def wrong_path(url, *, params, headers, timeout):
-        return _Response(_payload(_rows(), provider="idx", path="Other/GetThing"))
+        return _Response(_zapi_payload(_rows(), path="Other/GetThing"))
 
     with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PATH_MISMATCH"):
         fetch_zapi_raw_idx_stock_summary(
@@ -246,6 +268,7 @@ def test_transport_chain_falls_back_to_zapi_raw_on_direct_http_failure(tmp_path)
     assert payload["authority"] == AUTHORITY
     assert payload["upstream_path"] == UPSTREAM_PATH
     assert payload["fallback_policy"] == "NONE"
+    assert payload["transport_metadata"]["response_envelope"] == "data"
     assert payload["transport_metadata"]["primary_transport_error"] == "OFFICIAL_OPEN_DIRECT_IDX_HTTP_403"
 
 
