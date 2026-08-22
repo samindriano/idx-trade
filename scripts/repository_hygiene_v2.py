@@ -133,7 +133,7 @@ def _build_plan(root: Path, config_path: Path, *, fetch: bool) -> dict[str, Any]
     for row in rows:
         counts[row["classification"]] = counts.get(row["classification"], 0) + 1
 
-    plan = {
+    return {
         "schema_version": 2,
         "policy": config["policy"],
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -146,7 +146,6 @@ def _build_plan(root: Path, config_path: Path, *, fetch: bool) -> dict[str, Any]
         "rows": rows,
         "apply_authorized": False,
     }
-    return plan
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -252,7 +251,8 @@ def _prepare_local_lightweight_tag(root: Path, tag: str, sha: str) -> bool:
         if local_sha != sha:
             raise RuntimeError(f"local tag collision for {tag}: expected {sha}, got {local_sha}")
         return False
-    _run(["git", "tag", tag, sha], cwd=root)
+    # update-ref guarantees a lightweight tag even if the caller has tag.gpgSign configured.
+    _run(["git", "update-ref", f"refs/tags/{tag}", sha], cwd=root)
     return True
 
 
@@ -279,7 +279,20 @@ def _prepare_local_plan_tag(
             raise RuntimeError(f"local deletion-plan tag message collision for {tag}")
         return False
 
-    _run(["git", "tag", "-a", tag, target_sha, "-F", str(plan_path)], cwd=root)
+    # Verbatim cleanup makes the annotation itself a durable exact copy of plan JSON bytes.
+    _run(
+        [
+            "git",
+            "tag",
+            "-a",
+            "--cleanup=verbatim",
+            tag,
+            target_sha,
+            "-F",
+            str(plan_path),
+        ],
+        cwd=root,
+    )
     if _local_annotated_tag_message(root, tag) != expected_message:
         raise RuntimeError(f"created deletion-plan tag does not preserve exact plan bytes: {tag}")
     return True
@@ -344,8 +357,7 @@ def _apply_command(args: argparse.Namespace) -> int:
     plan_tag = _plan_tag_name(actual_plan_sha)
 
     # A pre-existing remote deletion-plan tag is not accepted for a fresh apply. If an earlier
-    # atomic push succeeded, the branch preflight above should already fail because candidates
-    # are gone. If it did not succeed, this tag must not exist.
+    # atomic push succeeded, branch preflight should already fail because candidates are gone.
     if _remote_tag_lines(root, plan_tag):
         raise RuntimeError(f"remote deletion-plan tag already exists before apply: {plan_tag}")
 
@@ -369,8 +381,8 @@ def _apply_command(args: argparse.Namespace) -> int:
         ):
             created_local_tags.append(plan_tag)
 
-        # Archive refs, exact deletion-plan tag, and every branch deletion are one remote
-        # transaction. GitHub must either accept all ref updates or none of them.
+        # Archive refs, exact deletion-plan tag and every deletion are one remote transaction.
+        # If the server rejects atomic update semantics, the whole apply fails instead of batching.
         refspecs = [
             *[f"refs/tags/{tag}:refs/tags/{tag}" for tag in tags_to_push],
             f"refs/tags/{plan_tag}:refs/tags/{plan_tag}",
