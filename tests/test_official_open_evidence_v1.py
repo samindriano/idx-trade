@@ -1,34 +1,43 @@
 import hashlib
 import json
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from idx_trade.official_open_evidence_v1 import (
     AUTHORITY,
+    DIRECT_TRANSPORT,
     FALLBACK_POLICY,
     FIELD_SEMANTICS,
     SCHEMA_VERSION,
-    TRANSPORT,
+    TRANSPORT_POLICY,
     UPSTREAM_PATH,
+    ZAPI_RAW_TRANSPORT,
+    ZAPI_RAW_URL,
     OfficialOpenEvidenceError,
+    capture_official_open_with_transport_fallback,
     certify_official_open_raw_response,
     fetch_direct_idx_stock_summary,
+    fetch_zapi_raw_idx_stock_summary,
     normalize_idx_stock_summary_payload,
 )
 
 
-def _payload(rows):
+def _payload(rows, **extra):
     return json.dumps(
         {
             "data": rows,
             "recordsTotal": len(rows),
             "recordsFiltered": len(rows),
+            **extra,
         },
         sort_keys=True,
         separators=(",", ":"),
     ).encode()
+
+
+def _zapi_payload(rows, **extra):
+    return _payload(rows, provider="idx", path=UPSTREAM_PATH, **extra)
 
 
 def _rows():
@@ -52,6 +61,12 @@ def _rows():
             "FirstTrade": 1000,
         },
     ]
+
+
+class _Response:
+    def __init__(self, content, status_code=200):
+        self.content = content
+        self.status_code = status_code
 
 
 def test_normalization_preserves_openprice_and_firsttrade_as_distinct_fields():
@@ -99,7 +114,8 @@ def test_certification_writes_manifest_last_with_hash_bound_source(tmp_path):
     assert payload["schema_version"] == SCHEMA_VERSION
     assert payload["authority"] == AUTHORITY
     assert payload["upstream_path"] == UPSTREAM_PATH
-    assert payload["transport"] == TRANSPORT
+    assert payload["transport"] == DIRECT_TRANSPORT
+    assert payload["transport_policy"] == TRANSPORT_POLICY
     assert payload["field_semantics"] == FIELD_SEMANTICS
     assert payload["fallback_policy"] == FALLBACK_POLICY
     assert payload["execution_grade"] is True
@@ -121,23 +137,138 @@ def test_certification_refuses_overwrite(tmp_path):
         certify_official_open_raw_response(raw, session_date="2026-06-12", output_dir=output)
 
 
-class _Response:
-    status_code = 200
-    content = _payload(_rows())
-
-
 def test_direct_fetch_uses_full_session_request_without_ticker_filter():
     observed = {}
 
     def fake_get(url, *, params, headers, timeout):
         observed.update(url=url, params=params, headers=headers, timeout=timeout)
-        return _Response()
+        return _Response(_payload(_rows()))
 
     raw, meta = fetch_direct_idx_stock_summary(
         "2026-06-12", get=fake_get, timeout_seconds=7
     )
-    assert raw == _Response.content
+    assert raw == _payload(_rows())
     assert observed["params"] == {"date": "20260612", "start": 0, "length": 9999}
     assert "code" not in observed["params"]
+    assert meta["transport"] == DIRECT_TRANSPORT
     assert meta["upstream_path"] == UPSTREAM_PATH
     assert meta["http_status"] == 200
+
+
+def test_zapi_raw_fetch_uses_full_session_passthrough_without_code_filter():
+    observed = {}
+
+    def fake_get(url, *, params, headers, timeout):
+        observed.update(url=url, params=params, headers=headers, timeout=timeout)
+        return _Response(_zapi_payload(_rows()))
+
+    raw, meta = fetch_zapi_raw_idx_stock_summary(
+        "2026-06-12", api_key="secret-key", get=fake_get, timeout_seconds=7
+    )
+    assert raw == _zapi_payload(_rows())
+    assert observed["url"] == ZAPI_RAW_URL
+    assert observed["params"]["path"] == UPSTREAM_PATH
+    assert observed["params"]["query"] == "date=20260612&start=0&length=9999"
+    assert "code" not in observed["params"]["query"]
+    assert observed["headers"]["x-api-key"] == "secret-key"
+    assert "secret-key" not in json.dumps(meta)
+    assert meta["transport"] == ZAPI_RAW_TRANSPORT
+    assert meta["provider"] == "idx"
+
+
+def test_zapi_raw_provenance_must_identify_idx_and_exact_upstream_path():
+    def wrong_provider(url, *, params, headers, timeout):
+        return _Response(_payload(_rows(), provider="other", path=UPSTREAM_PATH))
+
+    with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PROVIDER_MISMATCH"):
+        fetch_zapi_raw_idx_stock_summary(
+            "2026-06-12", api_key="key", get=wrong_provider
+        )
+
+    def wrong_path(url, *, params, headers, timeout):
+        return _Response(_payload(_rows(), provider="idx", path="Other/GetThing"))
+
+    with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PATH_MISMATCH"):
+        fetch_zapi_raw_idx_stock_summary(
+            "2026-06-12", api_key="key", get=wrong_path
+        )
+
+
+def test_transport_chain_prefers_direct_and_does_not_call_zapi_when_direct_works(tmp_path):
+    zapi_calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(_payload(_rows()))
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal zapi_calls
+        zapi_calls += 1
+        raise AssertionError("Zapi must not be called when direct IDX succeeds")
+
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert payload["transport"] == DIRECT_TRANSPORT
+    assert zapi_calls == 0
+
+
+def test_transport_chain_falls_back_to_zapi_raw_on_direct_http_failure(tmp_path):
+    direct_calls = 0
+    zapi_calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        nonlocal direct_calls
+        direct_calls += 1
+        return _Response(b"forbidden", status_code=403)
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal zapi_calls
+        zapi_calls += 1
+        return _Response(_zapi_payload(_rows()))
+
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert direct_calls == 1
+    assert zapi_calls == 1
+    assert payload["transport"] == ZAPI_RAW_TRANSPORT
+    assert payload["transport_policy"] == TRANSPORT_POLICY
+    assert payload["authority"] == AUTHORITY
+    assert payload["upstream_path"] == UPSTREAM_PATH
+    assert payload["fallback_policy"] == "NONE"
+    assert payload["transport_metadata"]["primary_transport_error"] == "OFFICIAL_OPEN_DIRECT_IDX_HTTP_403"
+
+
+def test_transport_chain_does_not_hide_direct_schema_failure_with_zapi(tmp_path):
+    zapi_calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        raw = json.dumps(
+            {"data": _rows()[:2], "recordsTotal": 3, "recordsFiltered": 2}
+        ).encode()
+        return _Response(raw)
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal zapi_calls
+        zapi_calls += 1
+        return _Response(_zapi_payload(_rows()))
+
+    with pytest.raises(OfficialOpenEvidenceError, match="FULL_SESSION_COUNT_MISMATCH"):
+        capture_official_open_with_transport_fallback(
+            "2026-06-12",
+            output_root=tmp_path,
+            zapi_api_key="key",
+            direct_get=direct_get,
+            zapi_get=zapi_get,
+        )
+    assert zapi_calls == 0
