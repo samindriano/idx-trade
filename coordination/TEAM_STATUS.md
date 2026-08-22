@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-22 17:38 Asia/Jakarta
+Last coordinated update: 2026-08-22 19:23 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -45,7 +45,7 @@ Repository Hygiene V2 completed on 2026-08-22.
 | 100-session prospective alpha evaluation | `WAITING` | `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1` | Outcome vault remains protected. Continue accumulation only under frozen forward protocol; do not inspect protected outcomes early. |
 | Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** V4 refill-decoupling structurally rejected; no V4.1/V5/rescue or V4 economic comparison. |
 | Sizing + Execution + CA-aware paper foundations | `DONE` | `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1` | Frozen Sizing V1 and Execution V1 plus cash-dividend/persistent CA-aware state foundations are retained. Unsupported CA remains fail-closed. |
-| E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1` | Decision V2 → Sizing V1 and Decision V2 → Execution V1 adapters are locally accepted (53 focused tests on the Execution adapter gate). Official IDX `OpenPrice` evidence, hardened verifier, same-session capture runtime, and dedicated 09:02–09:22 retry scheduler wiring are implemented but not deployed; fresh local regression + direct IDX integration validation is next. Then selectively transplant accepted CA/dividend/persistent runtime components and complete restart/idempotency orchestration. |
+| E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1`; validated Open implementation `a17d580a0dbd89c648215043281b6f995385bec2` | Decision V2 → Sizing V1 and Decision V2 → Execution V1 adapters are accepted. Execution-grade official IDX `OpenPrice` evidence is now accepted with transport policy `DIRECT_IDX_THEN_ZAPI_RAW_V1`: direct IDX primary, Zapi raw IDX passthrough secondary on transport failure only. Real fallback smoke passed at 959/959/959 and the hardened verifier accepted it. Windows task `IDXTrade-E2E-OfficialOpen` is installed with 09:02–09:22 retries + AtLogOn; weekend headless smoke returned `WEEKEND_NO_SESSION` with exit/result 0. First weekday same-session capture is monitoring only. Next material work: selectively transplant/adapt accepted CA/dividend/persistent-runtime components, then complete restart/idempotency orchestration. |
 
 ---
 
@@ -56,7 +56,7 @@ Repository Hygiene V2 completed on 2026-08-22.
 | Stockbit Stream prospective archive | `ACTIVE` | `data/stockbit-stream-prospective-archive-v1`; remediation head `fix/stockbit-stream-zapi-envelope-v1`; audit `audit/stockbit-stream-v2-red-team-v1` | Prospective archive only. No historical backfill/model/outcome use without a separate contract. PR #35/#36 heads intentionally retained. |
 | Stockbit intraday post-close capture | `AUTOMATED` | `fix/stockbit-intraday-postclose-fix-v1` | Scheduler moved to EOD-aligned post-close windows; do not invent retroactive captures for missed sessions. |
 | Market/index forward EOD | `AUTOMATED` | `data/market-index-forward-eod-v1-monitoring` | Keep operational monitoring separate from alpha promotion. |
-| Forward Open archive | `AUTOMATED` | `ops/idx-forward-open-archive-v1` | Legacy/generic archive retained as historical operational evidence; do not treat it as the E2E execution-grade Open source. E2E now uses a separate official IDX `OpenPrice` sidecar pending local validation/deployment. |
+| Forward Open archive | `AUTOMATED` | `ops/idx-forward-open-archive-v1` | Legacy/generic archive retained as historical operational evidence; do not treat it as the E2E execution-grade Open source. The separate E2E official `OpenPrice` sidecar is now deployed and uses explicit direct-IDX → Zapi-raw transport redundancy. |
 | Frontend monitoring | `PARKED` | `frontend/v4x-v2-monitoring-refresh-v1` | Viewer/ops surface only; backend E2E completion takes priority. Preserve historical model/score/hover visibility. |
 
 ---
@@ -126,4 +126,4 @@ Do not reopen Decision research, Path Risk rescue work, probability/payoff rescu
 
 ## Next authorized coordination action
 
-Continue `integration/idx-e2e-baseline-paper-v1` as the single primary E2E lane. Run fresh local validation of the official IDX `OpenPrice` evidence/verifier/same-session capture runtime on the exact branch HEAD, including one bounded direct IDX integration smoke. If accepted, deploy the dedicated morning official-Open task, observe a real same-session capture, then selectively transplant accepted CA/dividend/persistent runtime components. Do **not** start another Decision or alpha challenger first.
+Continue `integration/idx-e2e-baseline-paper-v1` as the single primary E2E lane. The official execution-grade `OpenPrice` transport/verifier/scheduler gate is accepted and deployed; observe the first weekday same-session capture operationally, but do not block development on that observation. Next, selectively transplant and adapt the already accepted CA/dividend/persistent-runtime components into the Decision V2 → Sizing V1 → Execution V1 lineage, then complete restart/idempotency-tested paper orchestration. Do **not** start another Decision or alpha challenger first.
