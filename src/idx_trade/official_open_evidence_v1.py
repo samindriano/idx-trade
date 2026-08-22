@@ -74,6 +74,23 @@ def _json_object(raw_bytes: bytes) -> dict[str, object]:
     return payload
 
 
+def _zapi_inner_payload(payload: Mapping[str, object]) -> dict[str, object]:
+    inner = payload.get("data")
+    if not isinstance(inner, dict):
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_ENVELOPE_INVALID")
+    return inner
+
+
+def _stock_summary_payload(raw_bytes: bytes) -> dict[str, object]:
+    """Return the actual IDX Stock Summary object from direct or Zapi raw bytes."""
+
+    payload = _json_object(raw_bytes)
+    data = payload.get("data")
+    if isinstance(data, dict) and isinstance(data.get("data"), list):
+        return data
+    return payload
+
+
 def validate_transport_provenance(raw_bytes: bytes, *, transport: str) -> None:
     """Validate transport-specific provenance without changing source semantics."""
 
@@ -82,16 +99,20 @@ def validate_transport_provenance(raw_bytes: bytes, *, transport: str) -> None:
 
     payload = _json_object(raw_bytes)
     if transport == DIRECT_TRANSPORT:
-        if "provider" in payload or "path" in payload:
+        data = payload.get("data")
+        if "provider" in payload or "path" in payload or isinstance(data, dict):
             raise OfficialOpenEvidenceError(
                 "OFFICIAL_OPEN_DIRECT_IDX_WRAPPER_MARKERS_PRESENT"
             )
         return
 
-    if payload.get("provider") != "idx":
+    inner = _zapi_inner_payload(payload)
+    if inner.get("provider") != "idx":
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PROVIDER_MISMATCH")
-    if payload.get("path") != UPSTREAM_PATH:
+    if inner.get("path") != UPSTREAM_PATH:
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PATH_MISMATCH")
+    if not isinstance(inner.get("data"), list):
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_DATA_MISSING")
 
 
 def normalize_idx_stock_summary_payload(
@@ -101,13 +122,17 @@ def normalize_idx_stock_summary_payload(
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     """Parse one complete official IDX Stock Summary response without price fallback.
 
+    Direct IDX returns the Stock Summary object at the top level. Zapi raw wraps
+    that same object inside its top-level ``data`` envelope. This function
+    projects the underlying IDX object identically for either admitted transport.
+
     `open_price` is a literal numeric projection of raw `OpenPrice`. `FirstTrade`
     is retained only as an audit witness so downstream verification can prove
     that a positive FirstTrade never substitutes for a missing/non-positive OpenPrice.
     """
 
     session_date = _session(expected_session_date)
-    payload = _json_object(raw_bytes)
+    payload = _stock_summary_payload(raw_bytes)
     rows = payload.get("data")
     if not isinstance(rows, list) or not rows:
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_DATA_MISSING")
@@ -245,6 +270,7 @@ def fetch_zapi_raw_idx_stock_summary(
         "request_params": {"path": UPSTREAM_PATH, "query": upstream_query},
         "http_status": int(response.status_code),
         "provider": "idx",
+        "response_envelope": "data",
     }
 
 
