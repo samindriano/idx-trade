@@ -22,6 +22,7 @@ STATUS_TOO_EARLY = "TOO_EARLY"
 STATUS_WEEKEND_NO_SESSION = "WEEKEND_NO_SESSION"
 STATUS_SOURCE_NOT_READY_OR_NO_SESSION = "SOURCE_NOT_READY_OR_NO_SESSION"
 STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED = "PARTIAL_EVIDENCE_FAIL_CLOSED"
+STATUS_CAPTURE_FAIL_CLOSED = "CAPTURE_FAIL_CLOSED"
 
 NOT_BEFORE = time(9, 2)
 
@@ -57,8 +58,9 @@ def run_same_session_official_open_capture(
 
     The runtime intentionally does not infer exchange holidays from weekdays or
     backfill prior sessions. A weekday with no Stock Summary data is reported as
-    source-not-ready-or-no-session and may be retried by the scheduler. The
-    authoritative Execution verifier remains the final admission boundary.
+    source-not-ready-or-no-session and may be retried by the scheduler. Other
+    provider/schema failures are durably recorded as fail-closed while leaving
+    the final session path absent so a later scheduled retry can try again.
     """
 
     current = now or datetime.now(JAKARTA)
@@ -118,7 +120,10 @@ def run_same_session_official_open_capture(
                 STATUS_SOURCE_NOT_READY_OR_NO_SESSION,
                 provider_error=message,
             )
-        raise
+        return finish(
+            STATUS_CAPTURE_FAIL_CLOSED,
+            provider_error=message,
+        )
 
     return finish(
         STATUS_CAPTURED,
@@ -148,6 +153,8 @@ def main() -> int:
         return 3
     if status == STATUS_SOURCE_NOT_READY_OR_NO_SESSION:
         return 2
+    if status == STATUS_CAPTURE_FAIL_CLOSED:
+        return 4
     return 0
 
 
