@@ -10,6 +10,16 @@ from typing import Mapping, Sequence
 
 import pandas as pd
 
+from .official_open_evidence_v1 import (
+    AUTHORITY as OFFICIAL_OPEN_AUTHORITY,
+    FALLBACK_POLICY as OFFICIAL_OPEN_FALLBACK_POLICY,
+    FIELD_SEMANTICS as OFFICIAL_OPEN_FIELD_SEMANTICS,
+    SCHEMA_VERSION as OFFICIAL_OPEN_SCHEMA_VERSION,
+    TRANSPORT as OFFICIAL_OPEN_TRANSPORT,
+    UPSTREAM_PATH as OFFICIAL_OPEN_UPSTREAM_PATH,
+    OfficialOpenEvidenceError,
+    normalize_idx_stock_summary_payload,
+)
 from .v4_x1_decision_v1_contract import DecisionV1Error, _normalize_ticker
 
 _EOD_INPUT_TOKEN = object()
@@ -72,6 +82,15 @@ class VerifiedOpenExecutionInputs:
     ohlcv_artifact_path: Path
     ohlcv_artifact_sha256: str
     _verification_token: object = field(repr=False, compare=False)
+    manifest_path: Path | None = None
+    manifest_sha256: str = ""
+    raw_source_path: Path | None = None
+    raw_source_sha256: str = ""
+    authority: str = ""
+    upstream_path: str = ""
+    field_semantics: str = ""
+    fallback_policy: str = ""
+    transport: str = ""
 
 
 @dataclass(frozen=True)
@@ -191,40 +210,171 @@ def verify_eod_execution_inputs(
     )
 
 
+def _resolve_manifest_artifact(manifest_path: Path, raw_value: object, code: str) -> Path:
+    text = str(raw_value or "").strip()
+    if not text:
+        raise DecisionV1Error(code)
+    path = Path(text)
+    if not path.is_absolute():
+        path = (manifest_path.parent / path).resolve()
+    else:
+        path = path.expanduser().resolve()
+    if not path.is_file():
+        raise DecisionV1Error(code)
+    return path
+
+
+def _numeric_series_equal(left: pd.Series, right: pd.Series) -> bool:
+    a = pd.to_numeric(left, errors="coerce")
+    b = pd.to_numeric(right, errors="coerce")
+    return bool(((a.isna() & b.isna()) | a.eq(b)).all())
+
+
 def verify_open_execution_inputs(
     *,
-    session_ohlcv_path: str | Path,
     execution_session_date: str,
+    manifest_path: str | Path | None = None,
+    session_ohlcv_path: str | Path | None = None,
 ) -> VerifiedOpenExecutionInputs:
+    """Admit only hash-bound official IDX Stock Summary OpenPrice evidence.
+
+    `session_ohlcv_path` is retained only to fail closed with an explicit error for
+    callers still presenting generic OHLCV. Execution-grade Open now requires the
+    certified manifest produced by the official-open evidence contract.
+    """
+
     session_date = _date(execution_session_date, "EXECUTION_V1_OPEN_SESSION_DATE_INVALID")
-    path = Path(session_ohlcv_path).expanduser().resolve()
-    if not path.is_file():
-        raise DecisionV1Error(f"EXECUTION_V1_OPEN_OHLCV_ARTIFACT_MISSING:{path}")
-    frame = pd.read_parquet(path)
-    required = {"ticker", "session_date", "open"}
+    if manifest_path is None:
+        suffix = f":{Path(session_ohlcv_path).expanduser()}" if session_ohlcv_path is not None else ""
+        raise DecisionV1Error(f"EXECUTION_V1_OPEN_CERTIFIED_MANIFEST_REQUIRED{suffix}")
+
+    manifest = Path(manifest_path).expanduser().resolve()
+    if not manifest.is_file():
+        raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_MISSING:{manifest}")
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_INVALID") from exc
+    if not isinstance(payload, dict):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_NOT_OBJECT")
+
+    expected_contract = {
+        "schema_version": OFFICIAL_OPEN_SCHEMA_VERSION,
+        "authority": OFFICIAL_OPEN_AUTHORITY,
+        "upstream_path": OFFICIAL_OPEN_UPSTREAM_PATH,
+        "transport": OFFICIAL_OPEN_TRANSPORT,
+        "field_semantics": OFFICIAL_OPEN_FIELD_SEMANTICS,
+        "fallback_policy": OFFICIAL_OPEN_FALLBACK_POLICY,
+        "execution_grade": True,
+        "duplicate_key_count": 0,
+    }
+    for key, value in expected_contract.items():
+        if payload.get(key) != value:
+            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_CONTRACT_CHANGED:{key}")
+    manifest_session = _date(payload.get("session_date"), "EXECUTION_V1_OPEN_MANIFEST_DATE_INVALID")
+    if manifest_session != session_date:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_DATE_MISMATCH")
+
+    raw_path = _resolve_manifest_artifact(
+        manifest, payload.get("raw_artifact_path"), "EXECUTION_V1_OPEN_RAW_ARTIFACT_MISSING"
+    )
+    normalized_path = _resolve_manifest_artifact(
+        manifest,
+        payload.get("normalized_artifact_path"),
+        "EXECUTION_V1_OPEN_NORMALIZED_ARTIFACT_MISSING",
+    )
+    declared_raw_sha = str(payload.get("raw_artifact_sha256") or "")
+    declared_normalized_sha = str(payload.get("normalized_artifact_sha256") or "")
+    if not _SHA256_RE.fullmatch(declared_raw_sha):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_RAW_SHA_INVALID")
+    if not _SHA256_RE.fullmatch(declared_normalized_sha):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_SHA_INVALID")
+    actual_raw_sha = _sha256(raw_path)
+    actual_normalized_sha = _sha256(normalized_path)
+    if actual_raw_sha != declared_raw_sha:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_RAW_SHA_MISMATCH")
+    if actual_normalized_sha != declared_normalized_sha:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_SHA_MISMATCH")
+
+    try:
+        raw_frame, counts = normalize_idx_stock_summary_payload(
+            raw_path.read_bytes(), expected_session_date=session_date
+        )
+    except OfficialOpenEvidenceError as exc:
+        raise DecisionV1Error(f"EXECUTION_V1_OPEN_RAW_EVIDENCE_INVALID:{exc}") from exc
+
+    for key, expected_value in (
+        ("row_count", counts["row_count"]),
+        ("unique_ticker_count", counts["unique_ticker_count"]),
+        ("records_total", counts["records_total"]),
+        ("records_filtered", counts["records_filtered"]),
+    ):
+        try:
+            declared = int(payload.get(key))
+        except (TypeError, ValueError) as exc:
+            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_COUNT_INVALID:{key}") from exc
+        if declared != int(expected_value):
+            raise DecisionV1Error(f"EXECUTION_V1_OPEN_MANIFEST_COUNT_MISMATCH:{key}")
+
+    frame = pd.read_parquet(normalized_path)
+    required = {"ticker", "session_date", "open_price", "first_trade"}
     if not required.issubset(frame.columns):
-        raise DecisionV1Error("EXECUTION_V1_OPEN_OHLCV_SCHEMA_INVALID")
-    view = frame.loc[:, ["ticker", "session_date", "open"]].copy()
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_SCHEMA_INVALID")
+    view = frame.loc[:, ["ticker", "session_date", "open_price", "first_trade"]].copy()
     view["ticker"] = view["ticker"].map(_normalize_ticker)
-    if view["ticker"].duplicated().any():
-        raise DecisionV1Error("EXECUTION_V1_OPEN_DUPLICATE_TICKER")
     dates = pd.to_datetime(view["session_date"], errors="coerce")
     if dates.isna().any():
-        raise DecisionV1Error("EXECUTION_V1_OPEN_ARTIFACT_DATE_INVALID")
-    if not all(_date(x, "EXECUTION_V1_OPEN_ARTIFACT_DATE_INVALID") == session_date for x in dates):
-        raise DecisionV1Error("EXECUTION_V1_OPEN_ARTIFACT_DATE_MISMATCH")
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_DATE_INVALID")
+    view["session_date"] = [
+        _date(x, "EXECUTION_V1_OPEN_NORMALIZED_DATE_INVALID") for x in dates
+    ]
+    if not view["session_date"].eq(session_date).all():
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_DATE_MISMATCH")
+    if view.duplicated(["ticker", "session_date"]).any():
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_DUPLICATE_TICKER")
+    view = view.sort_values(["ticker", "session_date"]).reset_index(drop=True)
+
+    if len(view) != len(raw_frame) or not view[["ticker", "session_date"]].equals(
+        raw_frame[["ticker", "session_date"]]
+    ):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_KEYSET_MISMATCH")
+    if not _numeric_series_equal(view["open_price"], raw_frame["open_price"]):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_OPENPRICE_MISMATCH")
+    if not _numeric_series_equal(view["first_trade"], raw_frame["first_trade"]):
+        raise DecisionV1Error("EXECUTION_V1_OPEN_NORMALIZED_FIRSTTRADE_WITNESS_MISMATCH")
+
     prices: dict[str, float] = {}
-    for row in view.itertuples(index=False):
-        price = _finite_positive(row.open)
+    for row in raw_frame.itertuples(index=False):
+        price = _finite_positive(row.open_price)
         if price is not None:
             prices[row.ticker] = price
+
+    positive_count = len(prices)
+    unavailable_count = len(raw_frame) - positive_count
+    try:
+        declared_positive = int(payload.get("positive_openprice_count"))
+        declared_unavailable = int(payload.get("unavailable_openprice_count"))
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_INVALID") from exc
+    if declared_positive != positive_count or declared_unavailable != unavailable_count:
+        raise DecisionV1Error("EXECUTION_V1_OPEN_MANIFEST_AVAILABILITY_COUNT_MISMATCH")
+
     return VerifiedOpenExecutionInputs(
         session_date=session_date,
         raw_open_prices=prices,
         available_tickers=frozenset(prices),
-        ohlcv_artifact_path=path,
-        ohlcv_artifact_sha256=_sha256(path),
+        ohlcv_artifact_path=normalized_path,
+        ohlcv_artifact_sha256=actual_normalized_sha,
         _verification_token=_OPEN_INPUT_TOKEN,
+        manifest_path=manifest,
+        manifest_sha256=_sha256(manifest),
+        raw_source_path=raw_path,
+        raw_source_sha256=actual_raw_sha,
+        authority=OFFICIAL_OPEN_AUTHORITY,
+        upstream_path=OFFICIAL_OPEN_UPSTREAM_PATH,
+        field_semantics=OFFICIAL_OPEN_FIELD_SEMANTICS,
+        fallback_policy=OFFICIAL_OPEN_FALLBACK_POLICY,
+        transport=OFFICIAL_OPEN_TRANSPORT,
     )
 
 
