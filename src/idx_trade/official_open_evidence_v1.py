@@ -79,10 +79,15 @@ def validate_transport_provenance(raw_bytes: bytes, *, transport: str) -> None:
 
     if transport not in ALLOWED_TRANSPORTS:
         raise OfficialOpenEvidenceError(f"OFFICIAL_OPEN_TRANSPORT_NOT_ALLOWED:{transport}")
-    if transport == DIRECT_TRANSPORT:
-        return
 
     payload = _json_object(raw_bytes)
+    if transport == DIRECT_TRANSPORT:
+        if "provider" in payload or "path" in payload:
+            raise OfficialOpenEvidenceError(
+                "OFFICIAL_OPEN_DIRECT_IDX_WRAPPER_MARKERS_PRESENT"
+            )
+        return
+
     if payload.get("provider") != "idx":
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PROVIDER_MISMATCH")
     if payload.get("path") != UPSTREAM_PATH:
@@ -192,6 +197,7 @@ def fetch_direct_idx_stock_summary(
     raw = bytes(response.content)
     if not raw:
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE")
+    validate_transport_provenance(raw, transport=DIRECT_TRANSPORT)
     return raw, {
         "transport": DIRECT_TRANSPORT,
         "url": DIRECT_IDX_URL,
