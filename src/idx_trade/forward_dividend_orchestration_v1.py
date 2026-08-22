@@ -992,4 +992,3 @@ def merge_journal_state(
             ),
         )
     )
-

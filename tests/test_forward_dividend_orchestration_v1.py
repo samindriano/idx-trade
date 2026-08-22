@@ -655,4 +655,3 @@ def test_child_cannot_regress_coverage_history(
             ),
             previous_journal_path=parent_path,
         )
-
