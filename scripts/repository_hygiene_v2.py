@@ -68,7 +68,7 @@ def _load_config(root: Path, config_path: Path) -> dict[str, Any]:
 
 
 def _fetch(root: Path) -> None:
-    _run(["git", "fetch", "origin", "--prune"], cwd=root)
+    _run(["git", "fetch", "origin", "--prune", "--tags"], cwd=root)
 
 
 def _remote_heads(root: Path) -> dict[str, str]:
@@ -103,6 +103,10 @@ def _tag_name(branch: str, sha: str) -> str:
     return f"archive/hygiene-v2/{slug}-{sha[:12]}"
 
 
+def _plan_tag_name(plan_sha256: str) -> str:
+    return f"archive/hygiene-v2/deletion-plan-{plan_sha256[:16]}"
+
+
 def _build_plan(root: Path, config_path: Path, *, fetch: bool) -> dict[str, Any]:
     if fetch:
         _fetch(root)
@@ -130,7 +134,7 @@ def _build_plan(root: Path, config_path: Path, *, fetch: bool) -> dict[str, Any]
         counts[row["classification"]] = counts.get(row["classification"], 0) + 1
 
     plan = {
-        "schema_version": 1,
+        "schema_version": 2,
         "policy": config["policy"],
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "origin_main_sha": heads["main"],
@@ -163,6 +167,7 @@ def _plan_command(args: argparse.Namespace) -> int:
 
     print(f"PLAN_PATH={output}")
     print(f"PLAN_SHA256={digest}")
+    print(f"DELETION_PLAN_TAG={_plan_tag_name(digest)}")
     print(f"ORIGIN_MAIN_SHA={plan['origin_main_sha']}")
     print(f"REMOTE_BRANCH_COUNT={plan['remote_branch_count']}")
     for key in sorted(plan["counts"]):
@@ -176,21 +181,107 @@ def _plan_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def _verify_remote_tag(root: Path, tag: str, expected_sha: str) -> bool:
+def _remote_tag_lines(root: Path, tag: str) -> list[tuple[str, str]]:
     completed = _run(
-        ["git", "ls-remote", "--tags", "origin", f"refs/tags/{tag}"],
+        [
+            "git",
+            "ls-remote",
+            "--tags",
+            "origin",
+            f"refs/tags/{tag}",
+            f"refs/tags/{tag}^{{}}",
+        ],
         cwd=root,
     )
-    rows = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+    rows: list[tuple[str, str]] = []
+    for line in completed.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        sha, ref = line.split("\t", 1)
+        rows.append((sha, ref))
+    return rows
+
+
+def _verify_remote_lightweight_tag(root: Path, tag: str, expected_sha: str) -> bool:
+    rows = _remote_tag_lines(root, tag)
     if not rows:
         return False
-    if len(rows) != 1:
-        raise RuntimeError(f"unexpected remote tag response for {tag}: {rows}")
-    sha, ref = rows[0].split("\t", 1)
-    if ref != f"refs/tags/{tag}" or sha != expected_sha:
+    direct = [(sha, ref) for sha, ref in rows if ref == f"refs/tags/{tag}"]
+    peeled = [(sha, ref) for sha, ref in rows if ref == f"refs/tags/{tag}^{{}}"]
+    if len(direct) != 1 or peeled:
+        raise RuntimeError(f"archive tag is not the expected lightweight tag {tag}: {rows}")
+    if direct[0][0] != expected_sha:
         raise RuntimeError(
-            f"remote archive tag mismatch for {tag}: expected {expected_sha}, got {sha}"
+            f"remote archive tag mismatch for {tag}: expected {expected_sha}, got {direct[0][0]}"
         )
+    return True
+
+
+def _verify_remote_annotated_tag_target(root: Path, tag: str, expected_target: str) -> bool:
+    rows = _remote_tag_lines(root, tag)
+    if not rows:
+        return False
+    direct = [(sha, ref) for sha, ref in rows if ref == f"refs/tags/{tag}"]
+    peeled = [(sha, ref) for sha, ref in rows if ref == f"refs/tags/{tag}^{{}}"]
+    if len(direct) != 1 or len(peeled) != 1:
+        raise RuntimeError(f"expected annotated deletion-plan tag {tag}, got: {rows}")
+    if peeled[0][0] != expected_target:
+        raise RuntimeError(
+            f"remote deletion-plan tag target mismatch for {tag}: expected {expected_target}, got {peeled[0][0]}"
+        )
+    return True
+
+
+def _local_annotated_tag_message(root: Path, tag: str) -> str:
+    completed = _run(["git", "cat-file", "-p", f"refs/tags/{tag}"], cwd=root)
+    payload = completed.stdout
+    if "\n\n" not in payload:
+        raise RuntimeError(f"annotated tag payload malformed: {tag}")
+    return payload.split("\n\n", 1)[1]
+
+
+def _prepare_local_lightweight_tag(root: Path, tag: str, sha: str) -> bool:
+    local = _run(
+        ["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
+        cwd=root,
+        check=False,
+    )
+    if local.returncode == 0:
+        local_sha = local.stdout.strip()
+        if local_sha != sha:
+            raise RuntimeError(f"local tag collision for {tag}: expected {sha}, got {local_sha}")
+        return False
+    _run(["git", "tag", tag, sha], cwd=root)
+    return True
+
+
+def _prepare_local_plan_tag(
+    root: Path,
+    *,
+    tag: str,
+    target_sha: str,
+    plan_path: Path,
+) -> bool:
+    expected_message = plan_path.read_text(encoding="utf-8")
+    local = _run(
+        ["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
+        cwd=root,
+        check=False,
+    )
+    if local.returncode == 0:
+        peeled = _run(["git", "rev-parse", f"refs/tags/{tag}^{{}}"], cwd=root).stdout.strip()
+        if peeled != target_sha:
+            raise RuntimeError(
+                f"local deletion-plan tag target collision for {tag}: expected {target_sha}, got {peeled}"
+            )
+        if _local_annotated_tag_message(root, tag) != expected_message:
+            raise RuntimeError(f"local deletion-plan tag message collision for {tag}")
+        return False
+
+    _run(["git", "tag", "-a", tag, target_sha, "-F", str(plan_path)], cwd=root)
+    if _local_annotated_tag_message(root, tag) != expected_message:
+        raise RuntimeError(f"created deletion-plan tag does not preserve exact plan bytes: {tag}")
     return True
 
 
@@ -210,6 +301,8 @@ def _apply_command(args: argparse.Namespace) -> int:
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     if plan.get("policy") != "REPOSITORY_HYGIENE_V2_AGGRESSIVE":
         raise RuntimeError("wrong cleanup policy in plan")
+    if plan.get("schema_version") != 2:
+        raise RuntimeError("cleanup plan schema must be exactly 2")
     if plan.get("apply_authorized") is not False:
         raise RuntimeError("plan payload unexpectedly claims apply authorization")
 
@@ -227,7 +320,7 @@ def _apply_command(args: argparse.Namespace) -> int:
     ]
     keep_rows = [row for row in plan["rows"] if row["classification"] == "KEEP"]
 
-    # Full preflight before any mutation.
+    # Full exact-head preflight before any local or remote mutation.
     for row in candidate_rows:
         branch = row["branch"]
         expected = row["head_sha"]
@@ -248,68 +341,81 @@ def _apply_command(args: argparse.Namespace) -> int:
             )
 
     archive_rows = [row for row in candidate_rows if row["classification"] == "ARCHIVE_TAG_THEN_DELETE"]
+    plan_tag = _plan_tag_name(actual_plan_sha)
 
-    # Prepare all local archive tags first. Existing matching remote tags are accepted.
+    # A pre-existing remote deletion-plan tag is not accepted for a fresh apply. If an earlier
+    # atomic push succeeded, the branch preflight above should already fail because candidates
+    # are gone. If it did not succeed, this tag must not exist.
+    if _remote_tag_lines(root, plan_tag):
+        raise RuntimeError(f"remote deletion-plan tag already exists before apply: {plan_tag}")
+
     tags_to_push: list[str] = []
     created_local_tags: list[str] = []
     try:
         for row in archive_rows:
             tag = row["archive_tag"]
             sha = row["head_sha"]
-            if _verify_remote_tag(root, tag, sha):
+            if _verify_remote_lightweight_tag(root, tag, sha):
                 continue
-
-            local = _run(
-                ["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"],
-                cwd=root,
-                check=False,
-            )
-            if local.returncode == 0:
-                local_sha = local.stdout.strip()
-                if local_sha != sha:
-                    raise RuntimeError(
-                        f"local tag collision for {tag}: expected {sha}, got {local_sha}"
-                    )
-            else:
-                _run(["git", "tag", tag, sha], cwd=root)
+            if _prepare_local_lightweight_tag(root, tag, sha):
                 created_local_tags.append(tag)
             tags_to_push.append(tag)
 
-        if tags_to_push:
-            _run(
-                ["git", "push", "origin", *[f"refs/tags/{tag}:refs/tags/{tag}" for tag in tags_to_push]],
-                cwd=root,
-            )
+        if _prepare_local_plan_tag(
+            root,
+            tag=plan_tag,
+            target_sha=plan["origin_main_sha"],
+            plan_path=plan_path,
+        ):
+            created_local_tags.append(plan_tag)
+
+        # Archive refs, exact deletion-plan tag, and every branch deletion are one remote
+        # transaction. GitHub must either accept all ref updates or none of them.
+        refspecs = [
+            *[f"refs/tags/{tag}:refs/tags/{tag}" for tag in tags_to_push],
+            f"refs/tags/{plan_tag}:refs/tags/{plan_tag}",
+            *[f":refs/heads/{row['branch']}" for row in candidate_rows],
+        ]
+        if not refspecs:
+            raise RuntimeError("refusing empty destructive apply")
+        _run(["git", "push", "--atomic", "origin", *refspecs], cwd=root)
 
         for row in archive_rows:
-            if not _verify_remote_tag(root, row["archive_tag"], row["head_sha"]):
-                raise RuntimeError(f"archive tag missing after push: {row['archive_tag']}")
-
-        # One remote deletion transaction from the caller's perspective. No local branch is deleted.
-        branches_to_delete = [row["branch"] for row in candidate_rows]
-        if branches_to_delete:
-            _run(["git", "push", "origin", "--delete", *branches_to_delete], cwd=root)
+            if not _verify_remote_lightweight_tag(root, row["archive_tag"], row["head_sha"]):
+                raise RuntimeError(f"archive tag missing after atomic push: {row['archive_tag']}")
+        if not _verify_remote_annotated_tag_target(root, plan_tag, plan["origin_main_sha"]):
+            raise RuntimeError(f"deletion-plan tag missing after atomic push: {plan_tag}")
 
         after = _remote_heads(root)
+        branches_to_delete = [row["branch"] for row in candidate_rows]
         survivors = sorted(set(after) & set(branches_to_delete))
         if survivors:
-            raise RuntimeError(f"candidate branches still exist after delete push: {survivors}")
+            raise RuntimeError(f"candidate branches still exist after atomic push: {survivors}")
         missing_keep = sorted(row["branch"] for row in keep_rows if row["branch"] not in after)
         if missing_keep:
             raise RuntimeError(f"retained branches disappeared: {missing_keep}")
 
         result = {
-            "schema_version": 1,
+            "schema_version": 2,
             "policy": plan["policy"],
             "plan_sha256": actual_plan_sha,
+            "deletion_plan_tag": plan_tag,
             "origin_main_sha": plan["origin_main_sha"],
             "deleted_branch_count": len(branches_to_delete),
             "archive_tag_count": len(archive_rows),
             "remaining_remote_branch_count": len(after),
             "remaining_remote_branches": sorted(after),
             "deleted_branches": branches_to_delete,
-            "archive_tags": [row["archive_tag"] for row in archive_rows],
+            "archive_tags": [
+                {
+                    "branch": row["branch"],
+                    "head_sha": row["head_sha"],
+                    "tag": row["archive_tag"],
+                }
+                for row in archive_rows
+            ],
             "completed_at_utc": datetime.now(timezone.utc).isoformat(),
+            "remote_ref_update_mode": "ATOMIC_SINGLE_PUSH",
         }
         result_path = Path(args.result_output)
         if not result_path.is_absolute():
@@ -319,15 +425,18 @@ def _apply_command(args: argparse.Namespace) -> int:
         _write_json(result_path, result)
         print(f"RESULT_PATH={result_path}")
         print(f"RESULT_SHA256={_sha256_file(result_path)}")
+        print(f"DELETION_PLAN_TAG={plan_tag}")
         print(f"DELETED_BRANCH_COUNT={len(branches_to_delete)}")
         print(f"ARCHIVE_TAG_COUNT={len(archive_rows)}")
         print(f"REMAINING_REMOTE_BRANCH_COUNT={len(after)}")
+        print("REMOTE_REF_UPDATE_MODE=ATOMIC_SINGLE_PUSH")
         print("DESTRUCTIVE_APPLY_RUN=TRUE")
         return 0
     except Exception:
-        # Local tags created during a failed pre-delete/push phase are cleanup-only local state.
-        # Never delete a remote archive tag automatically.
-        for tag in created_local_tags:
+        # Local tags are disposable setup state. Never delete or rewrite a remote tag here:
+        # a successful --atomic push is all-or-nothing, and post-push verification failures
+        # must be returned for independent inspection rather than auto-remediation.
+        for tag in reversed(created_local_tags):
             _run(["git", "tag", "-d", tag], cwd=root, check=False)
         raise
 
