@@ -4,12 +4,18 @@ import json
 import pandas as pd
 import pytest
 
-from idx_trade.official_open_evidence_v1 import certify_official_open_raw_response
+from idx_trade.official_open_evidence_v1 import (
+    DIRECT_TRANSPORT,
+    TRANSPORT_POLICY,
+    UPSTREAM_PATH,
+    ZAPI_RAW_TRANSPORT,
+    certify_official_open_raw_response,
+)
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
 from idx_trade.v4_x1_execution_v1_verify import verify_open_execution_inputs
 
 
-def _raw(*, zero_open=False):
+def _raw(*, zero_open=False, zapi=False):
     rows = [
         {
             "StockCode": "AADI",
@@ -30,22 +36,22 @@ def _raw(*, zero_open=False):
             "FirstTrade": 2890,
         },
     ]
-    return json.dumps(
-        {
-            "data": rows,
-            "recordsTotal": len(rows),
-            "recordsFiltered": len(rows),
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode()
+    payload = {
+        "data": rows,
+        "recordsTotal": len(rows),
+        "recordsFiltered": len(rows),
+    }
+    if zapi:
+        payload.update(provider="idx", path=UPSTREAM_PATH)
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
 
 
-def _manifest(tmp_path, *, zero_open=False):
+def _manifest(tmp_path, *, zero_open=False, transport=DIRECT_TRANSPORT):
     return certify_official_open_raw_response(
-        _raw(zero_open=zero_open),
+        _raw(zero_open=zero_open, zapi=transport == ZAPI_RAW_TRANSPORT),
         session_date="2026-06-12",
         output_dir=tmp_path / "official_open" / "2026-06-12",
+        transport=transport,
         transport_metadata={"http_status": 200},
     )
 
@@ -58,12 +64,26 @@ def test_certified_idx_openprice_is_admitted_with_full_lineage(tmp_path):
     )
     assert verified.raw_open_prices == {"AADI": 8100.0, "BBCA": 6000.0, "BBRI": 2880.0}
     assert verified.authority == "IDX"
-    assert verified.upstream_path == "TradingSummary/GetStockSummary"
+    assert verified.upstream_path == UPSTREAM_PATH
     assert verified.field_semantics == "IDX_OFFICIAL_OPENPRICE"
     assert verified.fallback_policy == "NONE"
-    assert verified.transport == "DIRECT_IDX_HTTPS"
+    assert verified.transport == DIRECT_TRANSPORT
+    assert verified.transport_policy == TRANSPORT_POLICY
     assert verified.raw_source_sha256 == hashlib.sha256(verified.raw_source_path.read_bytes()).hexdigest()
     assert verified.manifest_sha256 == hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+
+def test_certified_zapi_raw_idx_passthrough_is_admitted_with_exact_transport_lineage(tmp_path):
+    manifest = _manifest(tmp_path, transport=ZAPI_RAW_TRANSPORT)
+    verified = verify_open_execution_inputs(
+        manifest_path=manifest,
+        execution_session_date="2026-06-12",
+    )
+    assert verified.raw_open_prices == {"AADI": 8100.0, "BBCA": 6000.0, "BBRI": 2880.0}
+    assert verified.authority == "IDX"
+    assert verified.upstream_path == UPSTREAM_PATH
+    assert verified.transport == ZAPI_RAW_TRANSPORT
+    assert verified.transport_policy == TRANSPORT_POLICY
 
 
 def test_zero_openprice_with_positive_firsttrade_remains_unavailable(tmp_path):
@@ -118,6 +138,34 @@ def test_manifest_authority_tamper_is_rejected(tmp_path):
     payload["authority"] = "STOCKBIT"
     manifest.write_text(json.dumps(payload, sort_keys=True))
     with pytest.raises(DecisionV1Error, match="MANIFEST_CONTRACT_CHANGED:authority"):
+        verify_open_execution_inputs(
+            manifest_path=manifest,
+            execution_session_date="2026-06-12",
+        )
+
+
+def test_manifest_transport_outside_admitted_chain_is_rejected(tmp_path):
+    manifest = _manifest(tmp_path)
+    payload = json.loads(manifest.read_text())
+    payload["transport"] = "UNVERIFIED_PROXY"
+    manifest.write_text(json.dumps(payload, sort_keys=True))
+    with pytest.raises(DecisionV1Error, match="MANIFEST_CONTRACT_CHANGED:transport"):
+        verify_open_execution_inputs(
+            manifest_path=manifest,
+            execution_session_date="2026-06-12",
+        )
+
+
+def test_zapi_transport_requires_raw_provider_and_path_witness(tmp_path):
+    manifest = _manifest(tmp_path, transport=ZAPI_RAW_TRANSPORT)
+    payload = json.loads(manifest.read_text())
+    raw_path = manifest.parent / payload["raw_artifact_path"]
+    raw = json.loads(raw_path.read_text())
+    raw["provider"] = "other"
+    raw_path.write_text(json.dumps(raw, sort_keys=True))
+    payload["raw_artifact_sha256"] = hashlib.sha256(raw_path.read_bytes()).hexdigest()
+    manifest.write_text(json.dumps(payload, sort_keys=True))
+    with pytest.raises(DecisionV1Error, match="ZAPI_RAW_PROVIDER_MISMATCH"):
         verify_open_execution_inputs(
             manifest_path=manifest,
             execution_session_date="2026-06-12",
