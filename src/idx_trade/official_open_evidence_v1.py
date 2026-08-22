@@ -5,7 +5,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Callable, Mapping
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -17,21 +17,22 @@ from .v4_x1_decision_v1_contract import _normalize_ticker
 
 
 JAKARTA = ZoneInfo("Asia/Jakarta")
-SCHEMA_VERSION = "idx_official_open_evidence_v1"
+SCHEMA_VERSION = "idx_official_open_evidence_v1_1"
 AUTHORITY = "IDX"
 UPSTREAM_PATH = "TradingSummary/GetStockSummary"
 FIELD_SEMANTICS = "IDX_OFFICIAL_OPENPRICE"
 FALLBACK_POLICY = "NONE"
-TRANSPORT = "DIRECT_IDX_HTTPS"
+DIRECT_TRANSPORT = "DIRECT_IDX_HTTPS"
+ZAPI_RAW_TRANSPORT = "ZAPI_IDX_RAW_PASSTHROUGH"
+TRANSPORT = DIRECT_TRANSPORT  # legacy alias for the primary transport
+ALLOWED_TRANSPORTS = frozenset({DIRECT_TRANSPORT, ZAPI_RAW_TRANSPORT})
+TRANSPORT_POLICY = "DIRECT_IDX_THEN_ZAPI_RAW_V1"
 DIRECT_IDX_URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
+ZAPI_RAW_URL = "https://api.zpi.web.id/v1/finance:idx/raw"
 
 
 class OfficialOpenEvidenceError(RuntimeError):
     pass
-
-
-def _sha256_bytes(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
@@ -57,8 +58,35 @@ def _atomic_bytes(payload: bytes, path: Path) -> None:
 
 
 def _atomic_json(payload: Mapping[str, object], path: Path) -> None:
-    data = (json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n").encode("utf-8")
+    data = (
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n"
+    ).encode("utf-8")
     _atomic_bytes(data, path)
+
+
+def _json_object(raw_bytes: bytes) -> dict[str, object]:
+    try:
+        payload = json.loads(raw_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_JSON_INVALID") from exc
+    if not isinstance(payload, dict):
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_NOT_OBJECT")
+    return payload
+
+
+def validate_transport_provenance(raw_bytes: bytes, *, transport: str) -> None:
+    """Validate transport-specific provenance without changing source semantics."""
+
+    if transport not in ALLOWED_TRANSPORTS:
+        raise OfficialOpenEvidenceError(f"OFFICIAL_OPEN_TRANSPORT_NOT_ALLOWED:{transport}")
+    if transport == DIRECT_TRANSPORT:
+        return
+
+    payload = _json_object(raw_bytes)
+    if payload.get("provider") != "idx":
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PROVIDER_MISMATCH")
+    if payload.get("path") != UPSTREAM_PATH:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PATH_MISMATCH")
 
 
 def normalize_idx_stock_summary_payload(
@@ -74,12 +102,7 @@ def normalize_idx_stock_summary_payload(
     """
 
     session_date = _session(expected_session_date)
-    try:
-        payload = json.loads(raw_bytes.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_JSON_INVALID") from exc
-    if not isinstance(payload, dict):
-        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_NOT_OBJECT")
+    payload = _json_object(raw_bytes)
     rows = payload.get("data")
     if not isinstance(rows, list) or not rows:
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RAW_DATA_MISSING")
@@ -113,7 +136,9 @@ def normalize_idx_stock_summary_payload(
             )
         key = (ticker, row_date)
         if key in seen:
-            raise OfficialOpenEvidenceError(f"OFFICIAL_OPEN_RAW_DUPLICATE_KEY:{ticker}:{row_date}")
+            raise OfficialOpenEvidenceError(
+                f"OFFICIAL_OPEN_RAW_DUPLICATE_KEY:{ticker}:{row_date}"
+            )
         seen.add(key)
         out.append(
             {
@@ -147,16 +172,19 @@ def fetch_direct_idx_stock_summary(
         "start": 0,
         "length": 9999,
     }
-    response = get(
-        DIRECT_IDX_URL,
-        params=params,
-        headers={
-            "Referer": "https://www.idx.co.id/",
-            "User-Agent": "idx-trade-official-open/1.0",
-            "Accept": "application/json,text/plain,*/*",
-        },
-        timeout=timeout_seconds,
-    )
+    try:
+        response = get(
+            DIRECT_IDX_URL,
+            params=params,
+            headers={
+                "Referer": "https://www.idx.co.id/",
+                "User-Agent": "idx-trade-official-open/1.0",
+                "Accept": "application/json,text/plain,*/*",
+            },
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR") from exc
     if response.status_code != 200:
         raise OfficialOpenEvidenceError(
             f"OFFICIAL_OPEN_DIRECT_IDX_HTTP_{response.status_code}"
@@ -165,11 +193,52 @@ def fetch_direct_idx_stock_summary(
     if not raw:
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE")
     return raw, {
-        "transport": TRANSPORT,
+        "transport": DIRECT_TRANSPORT,
         "url": DIRECT_IDX_URL,
         "upstream_path": UPSTREAM_PATH,
         "request_params": params,
         "http_status": int(response.status_code),
+    }
+
+
+def fetch_zapi_raw_idx_stock_summary(
+    session_date: str,
+    *,
+    api_key: str,
+    get: Callable[..., requests.Response] = requests.get,
+    timeout_seconds: float = 30.0,
+) -> tuple[bytes, dict[str, object]]:
+    """Fetch the same IDX Stock Summary payload through Zapi raw passthrough."""
+
+    if not api_key:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_API_KEY_MISSING")
+    session = _session(session_date)
+    upstream_query = f"date={session.replace('-', '')}&start=0&length=9999"
+    params = {"path": UPSTREAM_PATH, "query": upstream_query}
+    try:
+        response = get(
+            ZAPI_RAW_URL,
+            params=params,
+            headers={"x-api-key": api_key, "Accept": "application/json"},
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_REQUEST_ERROR") from exc
+    if response.status_code != 200:
+        raise OfficialOpenEvidenceError(
+            f"OFFICIAL_OPEN_ZAPI_RAW_HTTP_{response.status_code}"
+        )
+    raw = bytes(response.content)
+    if not raw:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_EMPTY_RESPONSE")
+    validate_transport_provenance(raw, transport=ZAPI_RAW_TRANSPORT)
+    return raw, {
+        "transport": ZAPI_RAW_TRANSPORT,
+        "url": ZAPI_RAW_URL,
+        "upstream_path": UPSTREAM_PATH,
+        "request_params": {"path": UPSTREAM_PATH, "query": upstream_query},
+        "http_status": int(response.status_code),
+        "provider": "idx",
     }
 
 
@@ -178,12 +247,14 @@ def certify_official_open_raw_response(
     *,
     session_date: str,
     output_dir: str | Path,
+    transport: str = DIRECT_TRANSPORT,
     transport_metadata: Mapping[str, object] | None = None,
     captured_at_jakarta: datetime | None = None,
 ) -> Path:
     """Build complete evidence in staging, then atomically promote the session folder."""
 
     session = _session(session_date)
+    validate_transport_provenance(raw_bytes, transport=transport)
     normalized, counts = normalize_idx_stock_summary_payload(
         raw_bytes, expected_session_date=session
     )
@@ -218,7 +289,8 @@ def certify_official_open_raw_response(
             "session_date": session,
             "authority": AUTHORITY,
             "upstream_path": UPSTREAM_PATH,
-            "transport": TRANSPORT,
+            "transport": transport,
+            "transport_policy": TRANSPORT_POLICY,
             "transport_metadata": dict(transport_metadata or {}),
             "field_semantics": FIELD_SEMANTICS,
             "fallback_policy": FALLBACK_POLICY,
@@ -263,22 +335,94 @@ def capture_direct_idx_official_open(
         raw,
         session_date=session,
         output_dir=folder,
+        transport=DIRECT_TRANSPORT,
         transport_metadata=metadata,
     )
 
 
+def _direct_transport_failure(message: str) -> bool:
+    return message.startswith("OFFICIAL_OPEN_DIRECT_IDX_HTTP_") or message in {
+        "OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR",
+        "OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
+    }
+
+
+def capture_official_open_with_transport_fallback(
+    session_date: str,
+    *,
+    output_root: str | Path,
+    zapi_api_key: str | None,
+    direct_get: Callable[..., requests.Response] = requests.get,
+    zapi_get: Callable[..., requests.Response] = requests.get,
+    timeout_seconds: float = 30.0,
+) -> Path:
+    """Prefer direct IDX; fail over only on transport failure to Zapi raw IDX."""
+
+    session = _session(session_date)
+    folder = Path(output_root) / "official_open" / session
+    try:
+        raw, metadata = fetch_direct_idx_stock_summary(
+            session,
+            get=direct_get,
+            timeout_seconds=timeout_seconds,
+        )
+        return certify_official_open_raw_response(
+            raw,
+            session_date=session,
+            output_dir=folder,
+            transport=DIRECT_TRANSPORT,
+            transport_metadata=metadata,
+        )
+    except OfficialOpenEvidenceError as exc:
+        direct_error = str(exc)
+        if not _direct_transport_failure(direct_error):
+            raise
+
+    if not zapi_api_key:
+        raise OfficialOpenEvidenceError(
+            f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI=NOT_CONFIGURED"
+        )
+    try:
+        raw, metadata = fetch_zapi_raw_idx_stock_summary(
+            session,
+            api_key=zapi_api_key,
+            get=zapi_get,
+            timeout_seconds=timeout_seconds,
+        )
+    except OfficialOpenEvidenceError as exc:
+        raise OfficialOpenEvidenceError(
+            f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI={exc}"
+        ) from exc
+
+    return certify_official_open_raw_response(
+        raw,
+        session_date=session,
+        output_dir=folder,
+        transport=ZAPI_RAW_TRANSPORT,
+        transport_metadata={**metadata, "primary_transport_error": direct_error},
+    )
+
+
 __all__ = [
+    "ALLOWED_TRANSPORTS",
     "AUTHORITY",
     "DIRECT_IDX_URL",
+    "DIRECT_TRANSPORT",
     "FALLBACK_POLICY",
     "FIELD_SEMANTICS",
     "JAKARTA",
     "OfficialOpenEvidenceError",
     "SCHEMA_VERSION",
     "TRANSPORT",
+    "TRANSPORT_POLICY",
     "UPSTREAM_PATH",
+    "ZAPI_RAW_TRANSPORT",
+    "ZAPI_RAW_URL",
     "capture_direct_idx_official_open",
+    "capture_official_open_with_transport_fallback",
     "certify_official_open_raw_response",
     "fetch_direct_idx_stock_summary",
+    "fetch_zapi_raw_idx_stock_summary",
     "normalize_idx_stock_summary_payload",
+    "validate_transport_provenance",
 ]
