@@ -35,12 +35,17 @@ def _universe_order(overrides: dict[int, str], total: int = 70) -> list[str]:
     return result
 
 
+def _top10(prefix: str) -> dict[int, str]:
+    return {rank: f"{prefix}{rank}" for rank in range(1, 11)}
+
+
 def test_established_top10_challenger_replaces_severe_pending_before_ordinary_soft_replace() -> None:
     held = tuple(f"H{i}" for i in range(1, 11))
     previous = _session(
         "2026-01-05",
         _universe_order(
             {
+                **_top10("P"),
                 1: "C",
                 11: "H1",
                 12: "H2",
@@ -59,6 +64,7 @@ def test_established_top10_challenger_replaces_severe_pending_before_ordinary_so
         "2026-01-06",
         _universe_order(
             {
+                **_top10("Q"),
                 1: "C",
                 11: "H2",
                 12: "H3",
@@ -89,8 +95,8 @@ def test_established_top10_challenger_replaces_severe_pending_before_ordinary_so
     assert "H1" in original.target_positions
     assert "H10" not in original.target_positions
 
-    # V2.1 gives the established challenger priority against the severe pending
-    # incumbent, while keeping the acceptable incumbent.
+    # V2.1 gives the one deliberately established challenger priority against
+    # the severe pending incumbent, while keeping the acceptable incumbent.
     assert "H1" not in candidate.target_positions
     assert "H10" in candidate.target_positions
     assert "C" in candidate.target_positions
@@ -110,6 +116,7 @@ def test_non_established_qualified_challenger_gets_no_new_severe_permission() ->
         "2026-01-05",
         _universe_order(
             {
+                **_top10("P"),
                 11: "H1",
                 12: "H2",
                 13: "H3",
@@ -128,6 +135,7 @@ def test_non_established_qualified_challenger_gets_no_new_severe_permission() ->
         "2026-01-06",
         _universe_order(
             {
+                **_top10("Q"),
                 1: "C",
                 11: "H2",
                 12: "H3",
@@ -166,6 +174,7 @@ def test_real_vacancy_consumes_established_challenger_before_optional_severe_rep
         "2026-01-05",
         _universe_order(
             {
+                **_top10("P"),
                 1: "C",
                 11: "H1",
                 12: "H2",
@@ -183,6 +192,7 @@ def test_real_vacancy_consumes_established_challenger_before_optional_severe_rep
         "2026-01-06",
         _universe_order(
             {
+                **_top10("Q"),
                 1: "C",
                 11: "H2",
                 12: "H3",
