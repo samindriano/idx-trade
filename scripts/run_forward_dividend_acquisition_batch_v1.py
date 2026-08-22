@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Any
+from typing import Any, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -70,10 +70,42 @@ PHASE_ORDER = {
     PREOPEN: 0,
     POST_EOD: 1,
 }
+ALLOWED_DISPOSITION_CATEGORIES = frozenset({
+    CERTIFIED_LIVE,
+    HISTORICAL_OBSERVED,
+    CORROBORATING_ONLY,
+    SUPERSEDED,
+    BLOCKED_LIVE_UNRESOLVED,
+})
 
 
 class DividendAcquisitionBatchError(RuntimeError):
     pass
+
+
+def verify_certified_journal_binding(
+    *,
+    disposition: Mapping[str, Any],
+    journal_entry: Any,
+    expected_evidence_dir: Path,
+) -> None:
+    """Require the complete immutable live-event binding, including filename."""
+    expected_evidence = expected_evidence_dir.resolve()
+    if (
+        journal_entry.ticker != str(disposition.get("ticker") or "").strip().upper()
+        or journal_entry.event_id != str(disposition.get("event_id") or "")
+        or journal_entry.event_sha256
+        != str(disposition.get("event_sha256") or "").lower()
+        or journal_entry.review_sha256
+        != str(disposition.get("review_sha256") or "").lower()
+        or journal_entry.review_filename
+        != str(disposition.get("review_filename") or "")
+        or Path(journal_entry.evidence_dir).resolve() != expected_evidence
+    ):
+        raise DividendAcquisitionBatchError(
+            "BATCH_LIVE_JOURNAL_EVENT_BINDING_MISMATCH:"
+            + str(disposition.get("announcement_identity") or "")
+        )
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -641,11 +673,27 @@ def verify_complete_batch_contents(
             raise DividendAcquisitionBatchError("BATCH_DISPOSITION_ROW_INVALID")
         status = str(row.get("status") or "")
         identity = str(row.get("announcement_identity") or "").strip()
+        if status not in ALLOWED_DISPOSITION_CATEGORIES:
+            raise DividendAcquisitionBatchError(
+                "BATCH_DISPOSITION_STATUS_INVALID:" + status
+            )
         if not identity or identity in disposition_ids:
             raise DividendAcquisitionBatchError(
                 "BATCH_DISPOSITION_IDENTITY_INVALID_OR_DUPLICATE"
             )
         disposition_ids.add(identity)
+        if not str(row.get("reason") or "").strip():
+            raise DividendAcquisitionBatchError(
+                "BATCH_DISPOSITION_REASON_MISSING:" + identity
+            )
+        if not str(row.get("ticker") or "").strip().upper():
+            raise DividendAcquisitionBatchError(
+                "BATCH_DISPOSITION_TICKER_MISSING:" + identity
+            )
+        if status == SUPERSEDED and not str(row.get("superseded_by") or "").strip():
+            raise DividendAcquisitionBatchError(
+                "BATCH_SUPERSEDED_RESOLVER_MISSING:" + identity
+            )
         evidence_relpath = str(row.get("evidence_relpath") or "").strip()
         review_sha = row.get("review_sha256")
         if evidence_relpath:
@@ -678,8 +726,54 @@ def verify_complete_batch_contents(
         raise DividendAcquisitionBatchError("BATCH_JOURNAL_HASH_MISMATCH")
     journal_live_ids = {row.announcement_identity for row in journal.certified_events}
     journal_blocker_ids = {row.announcement_identity for row in journal.blockers}
-    if journal_live_ids != live_ids or journal_blocker_ids != blocker_ids:
+    if journal_live_ids != live_ids or not blocker_ids.issubset(journal_blocker_ids):
         raise DividendAcquisitionBatchError("BATCH_DISPOSITION_JOURNAL_MISMATCH")
+    disposition_by_id = {
+        str(row["announcement_identity"]): row
+        for row in dispositions
+    }
+    for identity in journal_blocker_ids:
+        current_row = disposition_by_id.get(identity)
+        if (
+            current_row is not None
+            and str(current_row.get("status") or "")
+            != BLOCKED_LIVE_UNRESOLVED
+        ):
+            raise DividendAcquisitionBatchError(
+                "BATCH_RESOLVED_BLOCKER_REMAINS_ACTIVE:" + identity
+            )
+    journal_live = {
+        row.announcement_identity: row
+        for row in journal.certified_events
+    }
+    journal_blockers = {
+        row.announcement_identity: row
+        for row in journal.blockers
+    }
+    for row in dispositions:
+        identity = str(row["announcement_identity"])
+        if str(row.get("status") or "") == CERTIFIED_LIVE:
+            journal_row = journal_live.get(identity)
+            if journal_row is None:
+                raise DividendAcquisitionBatchError(
+                    "BATCH_LIVE_JOURNAL_ROW_MISSING:" + identity
+                )
+            verify_certified_journal_binding(
+                disposition=row,
+                journal_entry=journal_row,
+                expected_evidence_dir=(
+                    batch_root / str(row.get("evidence_relpath") or "")
+                ),
+            )
+        elif str(row.get("status") or "") == BLOCKED_LIVE_UNRESOLVED:
+            journal_row = journal_blockers.get(identity)
+            if journal_row is None or (
+                journal_row.ticker != str(row.get("ticker") or "").strip().upper()
+                or journal_row.classification != SEMANTIC_FAILURE
+            ):
+                raise DividendAcquisitionBatchError(
+                    "BATCH_BLOCKER_JOURNAL_BINDING_MISMATCH:" + identity
+                )
     if journal_target.exists():
         loaded = load_journal_document(journal_target)
         if loaded.journal_sha256 != payload.get("journal_sha256"):
@@ -1215,6 +1309,17 @@ def main() -> int:
             })
             identity = row["announcement_identity"]
             event = event_by_identity.get(identity)
+            if (
+                identity in prior_blockers
+                and disposition.category in {
+                    HISTORICAL_OBSERVED,
+                    CORROBORATING_ONLY,
+                }
+            ):
+                raise DividendAcquisitionBatchError(
+                    "BATCH_PRIOR_BLOCKER_NONPAYABLE_TRANSITION_REQUIRES_EXPLICIT_RESOLVER:"
+                    + identity
+                )
             if disposition.category == CERTIFIED_LIVE:
                 if event is None:
                     raise DividendAcquisitionBatchError(
@@ -1238,6 +1343,23 @@ def main() -> int:
                     review_sha256=str(row["review_sha256"]),
                     review_filename=REVIEW_FILENAME_V1_2,
                 ))
+                if identity in prior_blockers:
+                    blocker = prior_blockers[identity]
+                    current_blocker_resolutions.append(
+                        DividendBlockerResolutionEntry(
+                            blocker_announcement_identity=identity,
+                            blocker_ticker=blocker.ticker,
+                            blocker_classification=blocker.classification,
+                            resolver_announcement_identity=identity,
+                            resolver_ticker=event.ticker,
+                            resolver_event_id=event.event_id,
+                            resolver_event_sha256=event.source_evidence_sha256,
+                            resolver_evidence_dir=str(final_evidence_dir),
+                            resolver_review_sha256=str(row["review_sha256"]),
+                            resolver_status=BLOCKER_RESOLUTION_CERTIFIED_LIVE,
+                            resolver_review_filename=REVIEW_FILENAME_V1_2,
+                        )
+                    )
             elif disposition.category == BLOCKED_LIVE_UNRESOLVED:
                 if identity in prior_certified:
                     raise DividendAcquisitionBatchError(
@@ -1251,7 +1373,7 @@ def main() -> int:
             elif disposition.category == SUPERSEDED:
                 resolver_identity = disposition.superseded_by
 
-                if resolver_identity in prior_blockers:
+                if identity in prior_blockers:
                     resolver_row = disposition_by_identity.get(
                         resolver_identity
                     )
@@ -1362,6 +1484,10 @@ def main() -> int:
             current_blocker_resolutions=tuple(
                 current_blocker_resolutions
             ),
+            current_disposition_statuses={
+                row["announcement_identity"]: row["status"]
+                for row in dispositions
+            },
         )
 
         prior_metadata = None

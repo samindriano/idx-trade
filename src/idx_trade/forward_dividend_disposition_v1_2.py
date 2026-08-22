@@ -245,6 +245,14 @@ def apply_temporal_disposition(
         ),
     )
 
+    if any(
+        _date_from_timestamp(row.announcement_timestamp) > as_of
+        for row in ordered
+    ):
+        raise DividendDispositionError(
+            "DISPOSITION_FUTURE_ANNOUNCEMENT_AFTER_AS_OF"
+        )
+
     # A later correction with the same defensible economic/document lineage
     # replaces the earlier version, including when the earlier version had
     # already completed.  A live correction with a different economic event

@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 
 class ForwardDividendOrchestrationError(RuntimeError):
@@ -30,6 +30,13 @@ BLOCKER_RESOLUTION_HISTORICAL_OBSERVED = "HISTORICAL_OBSERVED"
 _BLOCKER_RESOLUTION_STATUSES = frozenset({
     BLOCKER_RESOLUTION_CERTIFIED_LIVE,
     BLOCKER_RESOLUTION_HISTORICAL_OBSERVED,
+})
+_DISPOSITION_STATUSES = frozenset({
+    "CERTIFIED_LIVE",
+    "HISTORICAL_OBSERVED",
+    "CORROBORATING_ONLY",
+    "SUPERSEDED",
+    "BLOCKED_LIVE_UNRESOLVED",
 })
 
 
@@ -78,6 +85,9 @@ class DividendAcquisitionJournal:
     required_tickers: tuple[str, ...]
     coverage: tuple[DividendCoverage, ...]
     certified_events: tuple[CertifiedDividendJournalEntry, ...] = ()
+    # Current payable/live projection.  `certified_history` is the immutable
+    # evidence registry and must survive historical/superseded transitions.
+    certified_history: tuple[CertifiedDividendJournalEntry, ...] = ()
     blockers: tuple[BlockingDividendJournalEntry, ...] = ()
     capture_phase: str = POST_EOD
     blocker_resolution_history: tuple[
@@ -560,6 +570,21 @@ def normalize_journal(
     certified = normalize_certified_entries(
         journal.certified_events
     )
+    certified_history = normalize_certified_entries(
+        journal.certified_history
+    )
+    history_by_identity = {
+        row.announcement_identity: row
+        for row in certified_history
+    }
+    for row in certified:
+        previous = history_by_identity.get(row.announcement_identity)
+        if previous is not None and previous != row:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_HISTORY_CHANGED:"
+                + row.announcement_identity
+            )
+        history_by_identity[row.announcement_identity] = row
     blockers = normalize_blockers(journal.blockers)
     blocker_resolution_history = normalize_blocker_resolutions(
         journal.blocker_resolution_history
@@ -619,6 +644,9 @@ def normalize_journal(
         certified_events=certified,
         blockers=blockers,
         capture_phase=phase,
+        certified_history=tuple(history_by_identity.values())
+        if journal.certified_history
+        else (),
         blocker_resolution_history=blocker_resolution_history,
     )
 
@@ -736,6 +764,16 @@ def journal_payload(
             asdict(row)
             for row in canonical.certified_events
         ],
+        **(
+            {
+                "certified_history": [
+                    asdict(row)
+                    for row in canonical.certified_history
+                ],
+            }
+            if canonical.certified_history
+            else {}
+        ),
         "blockers": [
             asdict(row)
             for row in canonical.blockers
@@ -763,6 +801,7 @@ def journal_from_payload(
 
     coverage = value.get("coverage")
     certified = value.get("certified_events")
+    certified_history = value.get("certified_history", [])
     blockers = value.get("blockers")
     blocker_resolution_history = value.get(
         "blocker_resolution_history",
@@ -783,6 +822,11 @@ def journal_from_payload(
     if not isinstance(certified, list):
         raise ForwardDividendOrchestrationError(
             "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_PAYLOAD_INVALID"
+        )
+
+    if not isinstance(certified_history, list):
+        raise ForwardDividendOrchestrationError(
+            "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_HISTORY_PAYLOAD_INVALID"
         )
 
     if not isinstance(blockers, list):
@@ -806,6 +850,10 @@ def journal_from_payload(
             certified_events=tuple(
                 CertifiedDividendJournalEntry(**row)
                 for row in certified
+            ),
+            certified_history=tuple(
+                CertifiedDividendJournalEntry(**row)
+                for row in certified_history
             ),
             blockers=tuple(
                 BlockingDividendJournalEntry(**row)
@@ -848,6 +896,7 @@ def _verify_journal_evidence_files(
 ) -> None:
     canonical = normalize_journal(journal)
     evidence_rows = list(canonical.certified_events)
+    evidence_rows.extend(canonical.certified_history)
     evidence_rows.extend(
         _resolver_entry(row)
         for row in canonical.blocker_resolution_history
@@ -1019,18 +1068,37 @@ def _verify_journal_progression(
         row.announcement_identity: row
         for row in parent.certified_events
     }
+    parent_history = {
+        row.announcement_identity: row
+        for row in (parent.certified_history or parent.certified_events)
+    }
 
     child_certified = {
         row.announcement_identity: row
         for row in child.certified_events
     }
+    child_history = {
+        row.announcement_identity: row
+        for row in (child.certified_history or child.certified_events)
+    }
+
+    for identity, row in parent_history.items():
+        if child_history.get(identity) != row:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_HISTORY_DROPPED_OR_CHANGED:"
+                + identity
+            )
 
     for identity, row in parent_certified.items():
         if identity not in child_certified:
-            raise ForwardDividendOrchestrationError(
-                "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_HISTORY_DROPPED:"
-                + identity
-            )
+            # The current payable projection may retire an event, but only
+            # after the immutable certified-history registry retains it.
+            if child_history.get(identity) != row:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_CERTIFIED_HISTORY_DROPPED:"
+                    + identity
+                )
+            continue
 
         if child_certified[identity] != row:
             raise ForwardDividendOrchestrationError(
@@ -1329,6 +1397,7 @@ def merge_journal_state(
     current_blocker_resolutions: Sequence[
         DividendBlockerResolutionEntry
     ] = (),
+    current_disposition_statuses: Mapping[object, object] | None = None,
 ) -> DividendAcquisitionJournal:
     current_as_of = _iso(
         as_of_date,
@@ -1368,6 +1437,18 @@ def merge_journal_state(
         current_blocker_resolutions
     )
 
+    disposition_statuses = {
+        str(identity).strip(): str(status).strip().upper()
+        for identity, status in (current_disposition_statuses or {}).items()
+    }
+    if any(
+        not identity or status not in _DISPOSITION_STATUSES
+        for identity, status in disposition_statuses.items()
+    ):
+        raise ForwardDividendOrchestrationError(
+            "FORWARD_DIVIDEND_ORCHESTRATION_DISPOSITION_STATUS_INVALID"
+        )
+
     if prior is None and resolutions_now:
         raise ForwardDividendOrchestrationError(
             "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_PARENT_REQUIRED"
@@ -1380,8 +1461,29 @@ def merge_journal_state(
         row.announcement_identity
         for row in blockers_now
     }
+    current_certified_ids = {
+        row.announcement_identity for row in certified_now
+    }
+    current_blocker_ids = {
+        row.announcement_identity for row in blockers_now
+    }
+    for identity, status in disposition_statuses.items():
+        if status == "CERTIFIED_LIVE" and identity not in current_certified_ids:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_DISPOSITION_LIVE_BINDING_MISSING:"
+                + identity
+            )
+        if (
+            status == "BLOCKED_LIVE_UNRESOLVED"
+            and identity not in current_blocker_ids
+        ):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_DISPOSITION_BLOCKER_BINDING_MISSING:"
+                + identity
+            )
 
     prior_certified = {}
+    prior_certified_history = {}
     prior_blockers = {}
     prior_resolutions = {}
 
@@ -1389,6 +1491,13 @@ def merge_journal_state(
         prior_certified = {
             row.announcement_identity: row
             for row in prior.certified_events
+        }
+        prior_certified_history = {
+            row.announcement_identity: row
+            for row in (
+                prior.certified_history
+                or prior.certified_events
+            )
         }
 
         prior_blockers = {
@@ -1402,8 +1511,31 @@ def merge_journal_state(
         }
 
     certified_out = dict(prior_certified)
+    certified_history_out = dict(prior_certified_history)
     blockers_out = dict(prior_blockers)
     resolutions_out = dict(prior_resolutions)
+
+    # A prior active blocker may not silently become historical,
+    # corroborating, superseded, or certified. The disposition is only a
+    # classification; the append-only resolution entry is the evidence-bound
+    # state transition. If a producer has already recorded a resolution,
+    # retaining it across later batches is sufficient.
+    if prior is not None and disposition_statuses:
+        resolution_ids = set(prior_resolutions) | {
+            row.blocker_announcement_identity
+            for row in resolutions_now
+        }
+        for identity in prior_blockers:
+            status = disposition_statuses.get(identity)
+            if (
+                status is not None
+                and status != "BLOCKED_LIVE_UNRESOLVED"
+                and identity not in resolution_ids
+            ):
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_TRANSITION_REQUIRES_RESOLUTION:"
+                    + identity
+                )
 
     for row in certified_now:
         previous = prior_certified.get(
@@ -1424,6 +1556,7 @@ def merge_journal_state(
         certified_out[
             row.announcement_identity
         ] = row
+        certified_history_out[row.announcement_identity] = row
 
     for row in blockers_now:
         if row.announcement_identity in prior_certified:
@@ -1435,6 +1568,10 @@ def merge_journal_state(
         blockers_out[
             row.announcement_identity
         ] = row
+
+    for identity, status in disposition_statuses.items():
+        if status != "CERTIFIED_LIVE":
+            certified_out.pop(identity, None)
 
     for row in resolutions_now:
         previous_resolution = prior_resolutions.get(
@@ -1495,6 +1632,9 @@ def merge_journal_state(
             coverage=tuple(coverage),
             certified_events=tuple(
                 certified_out.values()
+            ),
+            certified_history=tuple(
+                certified_history_out.values()
             ),
             blockers=tuple(
                 blockers_out.values()

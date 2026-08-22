@@ -869,6 +869,47 @@ def test_cross_batch_blocker_resolution_records_a1_to_a2() -> None:
     assert result.blocker_resolution_history == (_resolution(),)
 
 
+def test_prior_blocker_nonblocking_disposition_requires_resolution() -> None:
+    prior = DividendAcquisitionJournal(
+        as_of_date="2026-08-22",
+        required_tickers=("BBCA",),
+        coverage=(),
+        blockers=(_blocker(),),
+    )
+    with pytest.raises(
+        ForwardDividendOrchestrationError,
+        match="BLOCKER_TRANSITION_REQUIRES_RESOLUTION",
+    ):
+        merge_journal_state(
+            prior_journal=prior,
+            as_of_date="2026-08-23",
+            capture_phase="POST_EOD",
+            required_tickers=("BBCA",),
+            coverage=(),
+            current_disposition_statuses={
+                "A1": "HISTORICAL_OBSERVED",
+            },
+        )
+
+
+def test_non_live_disposition_removes_prior_live_projection() -> None:
+    prior = DividendAcquisitionJournal(
+        as_of_date="2026-08-22",
+        required_tickers=("BBCA",),
+        coverage=(),
+        certified_events=(_certified("A1"),),
+    )
+    result = merge_journal_state(
+        prior_journal=prior,
+        as_of_date="2026-08-23",
+        capture_phase="POST_EOD",
+        required_tickers=("BBCA",),
+        coverage=(),
+        current_disposition_statuses={"A1": "HISTORICAL_OBSERVED"},
+    )
+    assert result.certified_events == ()
+
+
 def test_historical_blocker_resolution_does_not_create_new_cash() -> None:
     prior = DividendAcquisitionJournal(
         as_of_date="2026-08-22",
@@ -1051,6 +1092,34 @@ def test_resolution_conflict_fails_closed() -> None:
         )
 
 
+def test_disposition_status_contract_rejects_unknown_or_unbound_status() -> None:
+    with pytest.raises(
+        ForwardDividendOrchestrationError,
+        match="DISPOSITION_STATUS_INVALID",
+    ):
+        merge_journal_state(
+            prior_journal=None,
+            as_of_date="2026-08-23",
+            capture_phase="POST_EOD",
+            required_tickers=("BBCA",),
+            coverage=(),
+            current_disposition_statuses={"A1": "MAYBE"},
+        )
+
+    with pytest.raises(
+        ForwardDividendOrchestrationError,
+        match="DISPOSITION_LIVE_BINDING_MISSING",
+    ):
+        merge_journal_state(
+            prior_journal=None,
+            as_of_date="2026-08-23",
+            capture_phase="POST_EOD",
+            required_tickers=("BBCA",),
+            coverage=(),
+            current_disposition_statuses={"A1": "CERTIFIED_LIVE"},
+        )
+
+
 def test_resolution_evidence_tamper_breaks_recursive_chain(tmp_path) -> None:
     evidence = tmp_path / "resolver-evidence"
     evidence.mkdir()
@@ -1166,10 +1235,11 @@ def test_resolution_history_is_recursive_and_deterministic(tmp_path) -> None:
         DividendAcquisitionJournal(
             as_of_date="2026-08-23",
             required_tickers=("BBCA",),
-            coverage=(),
-            certified_events=(resolver,),
-            blocker_resolution_history=(resolution,),
-        )
+                coverage=(),
+                certified_events=(resolver,),
+                certified_history=(resolver,),
+                blocker_resolution_history=(resolution,),
+            )
     ) == journal_hash(child)
 
     payload = json.loads(child_path.read_text(encoding="utf-8"))

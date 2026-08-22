@@ -173,10 +173,23 @@ def _reconcile_effective_intents_v2(
         )
 
     # If a replacement SELL is already resolved because that ticker was only a
-    # never-filled pending BUY, its paired BUY must not remain artificially
-    # blocked by execute_open_v1's sell-resolution dependency.
+    # never-filled pending BUY, or because it was fully sold on an earlier
+    # official Open, its paired BUY must not remain artificially blocked by
+    # execute_open_v1's same-session sell-resolution dependency.  A peer that
+    # is still held or still pending-sell remains a real dependency.
+    already_absent_sell_peers = {
+        intent.replacement_peer
+        for intent in effective_buys.values()
+        if intent.replacement_peer is not None
+        and intent.replacement_peer not in actual
+        and intent.replacement_peer not in pending_sells
+        and intent.replacement_peer not in effective_sells
+    }
     for ticker, intent in tuple(effective_buys.items()):
-        if intent.replacement_peer in pre_resolved_sell_peers:
+        if (
+            intent.replacement_peer in pre_resolved_sell_peers
+            or intent.replacement_peer in already_absent_sell_peers
+        ):
             effective_buys[ticker] = replace(
                 intent,
                 reason="PAPER_PAIR_SELL_ALREADY_ABSENT_" + intent.reason,

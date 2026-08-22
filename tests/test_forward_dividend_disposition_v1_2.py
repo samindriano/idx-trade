@@ -69,6 +69,17 @@ def test_completed_event_is_historical_and_future_event_is_live():
     )
 
 
+def test_future_announcement_is_rejected_before_temporal_disposition():
+    with pytest.raises(
+        DividendDispositionError,
+        match="FUTURE_ANNOUNCEMENT_AFTER_AS_OF",
+    ):
+        apply_temporal_disposition(
+            [_candidate(identity="BBCA|NUMBER|FUTURE", timestamp="2026-08-23T09:00:00")],
+            as_of_date="2026-08-22",
+        )
+
+
 def test_advertisement_and_post_event_report_do_not_duplicate_payable_event():
     result = apply_temporal_disposition(
         [

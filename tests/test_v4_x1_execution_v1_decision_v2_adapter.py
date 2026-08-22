@@ -217,6 +217,46 @@ def test_pending_buy_reversal_cancels_impossible_sell_and_unblocks_paired_buy():
     assert not result.state_after.pending_sells
 
 
+def test_pending_buy_resolves_when_replacement_peer_was_sold_on_prior_session():
+    state = PaperPortfolioState(
+        "2026-08-21",
+        50_000_000,
+        (),
+        pending_buys=(
+            PendingPaperIntent(
+                "BUY", "BBB", 1, "MARKET_ENTRY_UNAVAILABLE", "AAA"
+            ),
+        ),
+    )
+    plan = _plan(
+        current_shadow=("BBB",),
+        target=("BBB",),
+    )
+    order = prepare_execution_v1_from_decision_v2(
+        _synthetic_verified(plan),
+        state,
+        eod_inputs=_eod("2026-08-21", "2026-08-24", {"BBB": 1000.0}),
+    )
+
+    assert order.effective_buy_intents[0].ticker == "BBB"
+    assert order.effective_buy_intents[0].replacement_peer is None
+    assert order.effective_buy_intents[0].reason.startswith(
+        "PAPER_PAIR_SELL_ALREADY_ABSENT_"
+    )
+
+    result = execute_open_v1(
+        order,
+        state,
+        open_inputs=_open("2026-08-24", {"BBB": 1000.0}),
+        ca_attestation=_ca("2026-08-21", "2026-08-24", ["BBB"]),
+    )
+    assert [(row.ticker, row.shares) for row in result.state_after.positions] == [
+        ("BBB", 5000)
+    ]
+    assert not result.state_after.pending_buys
+    assert not result.state_after.pending_sells
+
+
 def test_pending_sell_reversal_cancels_impossible_buy_and_keeps_actual_holding():
     state = PaperPortfolioState(
         "2026-08-21",

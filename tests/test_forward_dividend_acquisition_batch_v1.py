@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -179,4 +180,38 @@ def test_discovery_duplicate_announcement_identity_fails_closed(tmp_path):
             expected_tickers=("BBCA",),
             expected_from="2025-08-22",
             expected_to="2026-08-22",
+        )
+
+
+def test_certified_journal_binding_includes_review_filename(tmp_path):
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "ATTACHMENT_REVIEW_V1_2.json").write_text(
+        "{}\n",
+        encoding="utf-8",
+    )
+    journal_row = SimpleNamespace(
+        ticker="BBCA",
+        event_id="E1",
+        event_sha256="a" * 64,
+        review_sha256="b" * 64,
+        review_filename="ATTACHMENT_REVIEW_V1_2.json",
+        evidence_dir=str(evidence),
+    )
+    disposition = {
+        "announcement_identity": "BBCA|NUMBER|N1",
+        "ticker": "BBCA",
+        "event_id": "E1",
+        "event_sha256": "a" * 64,
+        "review_sha256": "b" * 64,
+        "review_filename": "DIFFERENT_REVIEW.json",
+    }
+    with pytest.raises(
+        batch.DividendAcquisitionBatchError,
+        match="LIVE_JOURNAL_EVENT_BINDING_MISMATCH",
+    ):
+        batch.verify_certified_journal_binding(
+            disposition=disposition,
+            journal_entry=journal_row,
+            expected_evidence_dir=evidence,
         )
