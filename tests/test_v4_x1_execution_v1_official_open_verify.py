@@ -172,6 +172,30 @@ def test_zapi_transport_requires_raw_provider_and_path_witness(tmp_path):
         )
 
 
+def test_zapi_raw_cannot_be_relabelled_as_direct_idx_transport(tmp_path):
+    manifest = _manifest(tmp_path, transport=ZAPI_RAW_TRANSPORT)
+    payload = json.loads(manifest.read_text())
+    payload["transport"] = DIRECT_TRANSPORT
+    manifest.write_text(json.dumps(payload, sort_keys=True))
+    with pytest.raises(DecisionV1Error, match="DIRECT_IDX_WRAPPER_MARKERS_PRESENT"):
+        verify_open_execution_inputs(
+            manifest_path=manifest,
+            execution_session_date="2026-06-12",
+        )
+
+
+def test_direct_idx_raw_cannot_be_relabelled_as_zapi_transport(tmp_path):
+    manifest = _manifest(tmp_path, transport=DIRECT_TRANSPORT)
+    payload = json.loads(manifest.read_text())
+    payload["transport"] = ZAPI_RAW_TRANSPORT
+    manifest.write_text(json.dumps(payload, sort_keys=True))
+    with pytest.raises(DecisionV1Error, match="ZAPI_RAW_PROVIDER_MISMATCH"):
+        verify_open_execution_inputs(
+            manifest_path=manifest,
+            execution_session_date="2026-06-12",
+        )
+
+
 def test_firsttrade_substitution_is_rejected_even_if_forged_parquet_sha_is_updated(tmp_path):
     manifest = _manifest(tmp_path, zero_open=True)
     payload = json.loads(manifest.read_text())
