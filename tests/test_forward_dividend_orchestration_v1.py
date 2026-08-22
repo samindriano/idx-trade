@@ -390,6 +390,7 @@ def test_blocker_can_resolve_to_certified() -> None:
     result = merge_journal_state(
         prior_journal=prior,
         as_of_date="2026-08-22",
+        capture_phase="POST_EOD",
         required_tickers=("BBCA",),
         coverage=(),
         current_certified=(certified,),
@@ -423,6 +424,7 @@ def test_certified_event_cannot_mutate() -> None:
         merge_journal_state(
             prior_journal=prior,
             as_of_date="2026-08-22",
+        capture_phase="POST_EOD",
             required_tickers=("BBCA",),
             coverage=(),
             current_certified=(
@@ -462,6 +464,7 @@ def test_certified_event_cannot_downgrade_to_blocker() -> None:
         merge_journal_state(
             prior_journal=prior,
             as_of_date="2026-08-22",
+        capture_phase="POST_EOD",
             required_tickers=("BBCA",),
             coverage=(),
             current_blockers=(
@@ -655,3 +658,124 @@ def test_child_cannot_regress_coverage_history(
             ),
             previous_journal_path=parent_path,
         )
+
+
+def test_same_day_preopen_to_post_eod_is_valid(
+    tmp_path,
+) -> None:
+    parent_path = tmp_path / "2026-08-22_PREOPEN.json"
+    child_path = tmp_path / "2026-08-22_POST_EOD.json"
+
+    write_journal_document(
+        parent_path,
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-22",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="PREOPEN",
+        ),
+    )
+
+    child = write_journal_document(
+        child_path,
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-22",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="POST_EOD",
+        ),
+        previous_journal_path=parent_path,
+    )
+
+    assert child.journal.capture_phase == "POST_EOD"
+
+
+def test_same_day_same_phase_parent_is_rejected(
+    tmp_path,
+) -> None:
+    parent_path = tmp_path / "a.json"
+
+    write_journal_document(
+        parent_path,
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-22",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="PREOPEN",
+        ),
+    )
+
+    with pytest.raises(
+        ForwardDividendOrchestrationError,
+        match="PARENT_ORDER_NOT_PRIOR",
+    ):
+        write_journal_document(
+            tmp_path / "b.json",
+            DividendAcquisitionJournal(
+                as_of_date="2026-08-22",
+                required_tickers=("BBCA",),
+                coverage=(),
+                capture_phase="PREOPEN",
+            ),
+            previous_journal_path=parent_path,
+        )
+
+
+def test_post_eod_to_same_day_preopen_is_rejected(
+    tmp_path,
+) -> None:
+    parent_path = tmp_path / "a.json"
+
+    write_journal_document(
+        parent_path,
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-22",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="POST_EOD",
+        ),
+    )
+
+    with pytest.raises(
+        ForwardDividendOrchestrationError,
+        match="PARENT_ORDER_NOT_PRIOR",
+    ):
+        write_journal_document(
+            tmp_path / "b.json",
+            DividendAcquisitionJournal(
+                as_of_date="2026-08-22",
+                required_tickers=("BBCA",),
+                coverage=(),
+                capture_phase="PREOPEN",
+            ),
+            previous_journal_path=parent_path,
+        )
+
+
+def test_next_day_preopen_follows_prior_post_eod(
+    tmp_path,
+) -> None:
+    parent_path = tmp_path / "2026-08-22_POST_EOD.json"
+
+    write_journal_document(
+        parent_path,
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-22",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="POST_EOD",
+        ),
+    )
+
+    child = write_journal_document(
+        tmp_path / "2026-08-23_PREOPEN.json",
+        DividendAcquisitionJournal(
+            as_of_date="2026-08-23",
+            required_tickers=("BBCA",),
+            coverage=(),
+            capture_phase="PREOPEN",
+        ),
+        previous_journal_path=parent_path,
+    )
+
+    assert child.journal.capture_phase == "PREOPEN"

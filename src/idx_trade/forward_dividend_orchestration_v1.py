@@ -17,6 +17,12 @@ class ForwardDividendOrchestrationError(RuntimeError):
 
 POLICY_ID = "FORWARD_DIVIDEND_ORCHESTRATION_V1"
 JOURNAL_SCHEMA = "idx_trade_forward_dividend_acquisition_journal_v1"
+PREOPEN = "PREOPEN"
+POST_EOD = "POST_EOD"
+_CAPTURE_PHASE_ORDER = {
+    PREOPEN: 0,
+    POST_EOD: 1,
+}
 BOOTSTRAP_LOOKBACK_DAYS = 366
 INCREMENTAL_OVERLAP_DAYS = 7
 
@@ -35,6 +41,7 @@ class CertifiedDividendJournalEntry:
     event_sha256: str
     evidence_dir: str
     review_sha256: str
+    review_filename: str = "ATTACHMENT_REVIEW.json"
 
 
 @dataclass(frozen=True)
@@ -51,6 +58,7 @@ class DividendAcquisitionJournal:
     coverage: tuple[DividendCoverage, ...]
     certified_events: tuple[CertifiedDividendJournalEntry, ...] = ()
     blockers: tuple[BlockingDividendJournalEntry, ...] = ()
+    capture_phase: str = POST_EOD
 
 
 @dataclass(frozen=True)
@@ -76,6 +84,37 @@ def _iso(value: object, code: str) -> str:
         raise ForwardDividendOrchestrationError(code)
 
     return text
+
+
+def normalize_capture_phase(value: object) -> str:
+    phase = str(value or "").strip().upper()
+
+    if phase not in _CAPTURE_PHASE_ORDER:
+        raise ForwardDividendOrchestrationError(
+            f"FORWARD_DIVIDEND_ORCHESTRATION_CAPTURE_PHASE_INVALID:{phase}"
+        )
+
+    return phase
+
+
+def _journal_order_key(
+    journal: DividendAcquisitionJournal,
+) -> tuple[date, int]:
+    canonical_date = date.fromisoformat(
+        _iso(
+            journal.as_of_date,
+            "FORWARD_DIVIDEND_ORCHESTRATION_JOURNAL_DATE_INVALID",
+        )
+    )
+
+    phase = normalize_capture_phase(
+        journal.capture_phase
+    )
+
+    return (
+        canonical_date,
+        _CAPTURE_PHASE_ORDER[phase],
+    )
 
 
 def normalize_tickers(values: Iterable[object]) -> tuple[str, ...]:
@@ -215,6 +254,10 @@ def normalize_certified_entries(
         event_sha = str(row.event_sha256 or "").strip().lower()
         evidence_dir = str(row.evidence_dir or "").strip()
         review_sha = str(row.review_sha256 or "").strip().lower()
+        review_filename = str(
+            row.review_filename
+            or "ATTACHMENT_REVIEW.json"
+        ).strip()
 
         if not identity or not event_id:
             raise ForwardDividendOrchestrationError(
@@ -236,6 +279,14 @@ def normalize_certified_entries(
                 "FORWARD_DIVIDEND_ORCHESTRATION_REVIEW_SHA_INVALID"
             )
 
+        if review_filename not in {
+            "ATTACHMENT_REVIEW.json",
+            "ATTACHMENT_REVIEW_V1_2.json",
+        }:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_REVIEW_FILENAME_INVALID"
+            )
+
         canonical = CertifiedDividendJournalEntry(
             announcement_identity=identity,
             ticker=ticker,
@@ -243,6 +294,7 @@ def normalize_certified_entries(
             event_sha256=event_sha,
             evidence_dir=evidence_dir,
             review_sha256=review_sha,
+            review_filename=review_filename,
         )
 
         previous = by_identity.get(identity)
@@ -323,6 +375,7 @@ def normalize_journal(
     )
 
     required = normalize_tickers(journal.required_tickers)
+    phase = normalize_capture_phase(journal.capture_phase)
     coverage = normalize_coverage(journal.coverage)
     certified = normalize_certified_entries(
         journal.certified_events
@@ -353,6 +406,7 @@ def normalize_journal(
         coverage=coverage,
         certified_events=certified,
         blockers=blockers,
+        capture_phase=phase,
     )
 
 
@@ -459,6 +513,7 @@ def journal_payload(
 
     return {
         "as_of_date": canonical.as_of_date,
+        "capture_phase": canonical.capture_phase,
         "required_tickers": list(canonical.required_tickers),
         "coverage": [
             asdict(row)
@@ -524,6 +579,10 @@ def journal_from_payload(
                 BlockingDividendJournalEntry(**row)
                 for row in blockers
             ),
+            capture_phase=str(
+                value.get("capture_phase")
+                or POST_EOD
+            ),
         )
     except (TypeError, ValueError) as exc:
         raise ForwardDividendOrchestrationError(
@@ -558,7 +617,7 @@ def _verify_journal_evidence_files(
             row.evidence_dir
         ).expanduser().resolve()
 
-        review = root / "ATTACHMENT_REVIEW.json"
+        review = root / row.review_filename
 
         if not review.is_file():
             raise ForwardDividendOrchestrationError(
@@ -572,6 +631,35 @@ def _verify_journal_evidence_files(
                 + row.announcement_identity
             )
 
+        if row.review_filename == "ATTACHMENT_REVIEW_V1_2.json":
+            from .forward_dividend_provenance_v1_2 import (
+                ForwardDividendProvenanceV12Error,
+                certify_direct_idx_dividend_from_attachment_review_v1_2,
+            )
+
+            try:
+                event = (
+                    certify_direct_idx_dividend_from_attachment_review_v1_2(
+                        review,
+                        root,
+                    )
+                )
+            except ForwardDividendProvenanceV12Error as exc:
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_V1_2_EVIDENCE_INVALID:"
+                    + row.announcement_identity
+                ) from exc
+
+            if (
+                event.event_id != row.event_id
+                or event.source_evidence_sha256 != row.event_sha256
+                or event.ticker != row.ticker
+            ):
+                raise ForwardDividendOrchestrationError(
+                    "FORWARD_DIVIDEND_ORCHESTRATION_V1_2_EVENT_BINDING_MISMATCH:"
+                    + row.announcement_identity
+                )
+
 
 def _verify_journal_progression(
     parent: DividendAcquisitionJournal,
@@ -580,12 +668,9 @@ def _verify_journal_progression(
     parent = normalize_journal(parent)
     child = normalize_journal(child)
 
-    if (
-        date.fromisoformat(parent.as_of_date)
-        >= date.fromisoformat(child.as_of_date)
-    ):
+    if _journal_order_key(parent) >= _journal_order_key(child):
         raise ForwardDividendOrchestrationError(
-            "FORWARD_DIVIDEND_ORCHESTRATION_PARENT_DATE_NOT_PRIOR"
+            "FORWARD_DIVIDEND_ORCHESTRATION_PARENT_ORDER_NOT_PRIOR"
         )
 
     parent_certified = {
@@ -763,6 +848,14 @@ def _load_journal_document(
                 "FORWARD_DIVIDEND_ORCHESTRATION_PARENT_DATE_MISMATCH"
             )
 
+        if (
+            parent.journal.capture_phase
+            != str(previous.get("capture_phase") or "")
+        ):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_PARENT_PHASE_MISMATCH"
+            )
+
         _verify_journal_progression(
             parent.journal,
             journal,
@@ -814,6 +907,7 @@ def write_journal_document(
             "file_sha256": parent.file_sha256,
             "journal_sha256": parent.journal_sha256,
             "as_of_date": parent.journal.as_of_date,
+            "capture_phase": parent.journal.capture_phase,
         }
 
     payload = {
@@ -877,6 +971,7 @@ def merge_journal_state(
     *,
     prior_journal: DividendAcquisitionJournal | None,
     as_of_date: str,
+    capture_phase: str,
     required_tickers: Iterable[object],
     coverage: Sequence[DividendCoverage],
     current_certified: Sequence[
@@ -891,19 +986,25 @@ def merge_journal_state(
         "FORWARD_DIVIDEND_ORCHESTRATION_MERGE_DATE_INVALID",
     )
 
+    phase = normalize_capture_phase(capture_phase)
+
     prior = (
         None
         if prior_journal is None
         else normalize_journal(prior_journal)
     )
 
+    proposed_order = (
+        date.fromisoformat(current_as_of),
+        _CAPTURE_PHASE_ORDER[phase],
+    )
+
     if (
         prior is not None
-        and date.fromisoformat(prior.as_of_date)
-        >= date.fromisoformat(current_as_of)
+        and _journal_order_key(prior) >= proposed_order
     ):
         raise ForwardDividendOrchestrationError(
-            "FORWARD_DIVIDEND_ORCHESTRATION_MERGE_PARENT_DATE_NOT_PRIOR"
+            "FORWARD_DIVIDEND_ORCHESTRATION_MERGE_PARENT_ORDER_NOT_PRIOR"
         )
 
     certified_now = normalize_certified_entries(
@@ -990,5 +1091,6 @@ def merge_journal_state(
             blockers=tuple(
                 blockers_out.values()
             ),
+            capture_phase=phase,
         )
     )

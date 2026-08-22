@@ -100,6 +100,85 @@ def validate_attachment(row: Any) -> dict[str, Any]:
     }
 
 
+def select_exact_candidate(
+    discovery: dict[str, Any],
+    *,
+    ticker: str,
+    announcement_id: str = "",
+    announcement_number: str = "",
+) -> dict[str, Any]:
+    announcement_id = str(
+        announcement_id or ""
+    ).strip()
+
+    announcement_number = str(
+        announcement_number or ""
+    ).strip()
+
+    if bool(announcement_id) == bool(announcement_number):
+        raise RuntimeError(
+            "CANDIDATE_SELECTOR_EXACTLY_ONE_REQUIRED"
+        )
+
+    candidates = discovery.get("candidates")
+
+    if not isinstance(candidates, list):
+        raise RuntimeError(
+            "DISCOVERY_CANDIDATES_INVALID"
+        )
+
+    matches = []
+
+    for row in candidates:
+        if not isinstance(row, dict):
+            continue
+
+        row_ticker = str(
+            row.get("ticker") or ""
+        ).strip().upper()
+
+        if row_ticker != ticker:
+            continue
+
+        if announcement_id:
+            matched = (
+                str(
+                    row.get("announcement_id")
+                    or ""
+                ).strip()
+                == announcement_id
+            )
+        else:
+            matched = (
+                str(
+                    row.get("announcement_number")
+                    or ""
+                ).strip()
+                == announcement_number
+            )
+
+        if matched:
+            matches.append(row)
+
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"EXACT_CANDIDATE_COUNT_INVALID:"
+            f"{len(matches)}"
+        )
+
+    candidate = matches[0]
+
+    if (
+        candidate.get("classification")
+        != CASH_DIVIDEND_CANDIDATE
+    ):
+        raise RuntimeError(
+            "CANDIDATE_NOT_CASH_DIVIDEND"
+        )
+
+    return candidate
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -110,7 +189,14 @@ def main() -> int:
     parser.add_argument("--provider-checkout", required=True)
     parser.add_argument("--discovery-manifest", required=True)
     parser.add_argument("--ticker", required=True)
-    parser.add_argument("--announcement-id", required=True)
+
+    identity = parser.add_mutually_exclusive_group(
+        required=True
+    )
+
+    identity.add_argument("--announcement-id")
+    identity.add_argument("--announcement-number")
+
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
 
@@ -151,37 +237,24 @@ def main() -> int:
     if discovery.get("provider_commit") != PROVIDER_COMMIT:
         raise RuntimeError("DISCOVERY_PROVIDER_COMMIT_MISMATCH")
 
-    ticker = str(args.ticker).strip().upper()
-    announcement_id = str(args.announcement_id).strip()
+    ticker = str(
+        args.ticker
+    ).strip().upper()
 
-    candidates = discovery.get("candidates")
+    announcement_id = str(
+        args.announcement_id or ""
+    ).strip()
 
-    if not isinstance(candidates, list):
-        raise RuntimeError("DISCOVERY_CANDIDATES_INVALID")
+    announcement_number = str(
+        args.announcement_number or ""
+    ).strip()
 
-    matches = [
-        row
-        for row in candidates
-        if isinstance(row, dict)
-        and str(row.get("ticker") or "").strip().upper() == ticker
-        and str(row.get("announcement_id") or "").strip()
-        == announcement_id
-    ]
-
-    if len(matches) != 1:
-        raise RuntimeError(
-            f"EXACT_CANDIDATE_COUNT_INVALID:{len(matches)}"
-        )
-
-    candidate = matches[0]
-
-    if (
-        candidate.get("classification")
-        != CASH_DIVIDEND_CANDIDATE
-    ):
-        raise RuntimeError(
-            "CANDIDATE_NOT_CASH_DIVIDEND"
-        )
+    candidate = select_exact_candidate(
+        discovery,
+        ticker=ticker,
+        announcement_id=announcement_id,
+        announcement_number=announcement_number,
+    )
 
     raw_attachments = candidate.get("attachments")
 
@@ -262,6 +335,20 @@ def main() -> int:
                 }
             )
 
+        # The outer batch is published by renaming a `.partial.<id>`
+        # directory to its final name. Do not persist that transient path in
+        # an immutable child manifest. The attachment output is
+        # `<batch>/evidence/<candidate>` and discovery is `<batch>/discovery`,
+        # so this relative binding survives the atomic publish rename.
+        source_discovery_reference = (
+            "../../discovery/DISCOVERY_MANIFEST.json"
+            if "/batches/" in str(manifest_path).replace("\\", "/")
+            else os.path.relpath(
+                manifest_path,
+                start=output,
+            ).replace("\\", "/")
+        )
+
         result = {
             "schema_version": SCHEMA,
             "status": "COMPLETE_AWAITING_SEMANTIC_REVIEW",
@@ -271,9 +358,8 @@ def main() -> int:
                 "ONE_ATTEMPT_PER_ATTACHMENT_NO_RETRY"
             ),
             "retry_count": 0,
-            "source_discovery_manifest_path": str(
-                manifest_path
-            ),
+            "source_discovery_manifest_path": source_discovery_reference,
+            "source_discovery_manifest_relpath": source_discovery_reference,
             "source_discovery_manifest_sha256": discovery_sha,
             "candidate": {
                 "ticker": candidate["ticker"],

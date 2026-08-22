@@ -63,12 +63,41 @@ def extract_pdf_text(path: Path) -> tuple[str, int]:
     return "\n".join(parts), len(reader.pages)
 
 
+def _identity_matches(
+    *,
+    announcement_id_value: object,
+    announcement_number_value: object,
+    announcement_id: str,
+    announcement_number: str,
+) -> bool:
+    if bool(announcement_id) == bool(announcement_number):
+        raise RuntimeError(
+            "ANNOUNCEMENT_SELECTOR_EXACTLY_ONE_REQUIRED"
+        )
+
+    if announcement_id:
+        return (
+            str(
+                announcement_id_value or ""
+            ).strip()
+            == announcement_id
+        )
+
+    return (
+        str(
+            announcement_number_value or ""
+        ).strip()
+        == announcement_number
+    )
+
+
 def exact_announcement_raw_sha(
     *,
     discovery_path: Path,
     discovery: dict[str, Any],
     ticker: str,
-    announcement_id: str,
+    announcement_id: str = "",
+    announcement_number: str = "",
 ) -> str:
     raw_artifacts = discovery.get("raw_artifacts")
 
@@ -129,13 +158,28 @@ def exact_announcement_raw_sha(
             if not isinstance(announcement, dict):
                 continue
 
-            identity = str(
-                announcement.get("Id2")
-                or announcement.get("Id")
+            row_ticker = str(
+                announcement.get("Kode_Emiten")
                 or ""
-            ).strip()
+            ).strip().upper()
 
-            if identity == announcement_id:
+            if row_ticker != ticker:
+                continue
+
+            if _identity_matches(
+                announcement_id_value=(
+                    announcement.get("Id2")
+                    or announcement.get("Id")
+                ),
+                announcement_number_value=(
+                    announcement.get("NoPengumuman")
+                    or announcement.get(
+                        "AnnouncementNo"
+                    )
+                ),
+                announcement_id=announcement_id,
+                announcement_number=announcement_number,
+            ):
                 found = True
 
         if found:
@@ -208,13 +252,37 @@ def main() -> int:
     if candidate.get("classification") != CASH_DIVIDEND_CANDIDATE:
         raise RuntimeError("CANDIDATE_NOT_CASH_DIVIDEND")
 
-    ticker = str(candidate.get("ticker") or "").strip().upper()
+    ticker = str(
+        candidate.get("ticker") or ""
+    ).strip().upper()
+
     announcement_id = str(
         candidate.get("announcement_id") or ""
     ).strip()
 
-    if not ticker or not announcement_id:
-        raise RuntimeError("CANDIDATE_IDENTITY_MISSING")
+    announcement_number = str(
+        candidate.get("announcement_number") or ""
+    ).strip()
+
+    if (
+        not ticker
+        or not (
+            announcement_id
+            or announcement_number
+        )
+    ):
+        raise RuntimeError(
+            "CANDIDATE_IDENTITY_MISSING"
+        )
+
+    # Prefer IDX announcement id when present.
+    # Announcement number is the deterministic fallback.
+    selector_id = announcement_id
+    selector_number = (
+        ""
+        if selector_id
+        else announcement_number
+    )
 
     discovery_path = Path(
         str(
@@ -256,9 +324,19 @@ def main() -> int:
         row
         for row in discovery_candidates
         if isinstance(row, dict)
-        and str(row.get("ticker") or "").strip().upper() == ticker
-        and str(row.get("announcement_id") or "").strip()
-        == announcement_id
+        and str(
+            row.get("ticker") or ""
+        ).strip().upper() == ticker
+        and _identity_matches(
+            announcement_id_value=row.get(
+                "announcement_id"
+            ),
+            announcement_number_value=row.get(
+                "announcement_number"
+            ),
+            announcement_id=selector_id,
+            announcement_number=selector_number,
+        )
     ]
 
     if len(exact_candidates) != 1:
@@ -282,7 +360,8 @@ def main() -> int:
         discovery_path=discovery_path,
         discovery=discovery,
         ticker=ticker,
-        announcement_id=announcement_id,
+        announcement_id=selector_id,
+        announcement_number=selector_number,
     )
 
     rows = attachment_manifest.get("attachments")
