@@ -82,25 +82,9 @@ def test_eod_close_mismatch_fails_closed(monkeypatch, tmp_path):
         )
 
 
-def test_open_verifier_requires_exact_execution_date(monkeypatch, tmp_path):
+def test_open_verifier_rejects_generic_ohlcv_without_certified_manifest(tmp_path):
     path = _write_stub(tmp_path / "session_ohlcv.parquet", b"open")
-    good = pd.DataFrame({
-        "ticker": ["AAA", "BBB"],
-        "session_date": pd.to_datetime(["2026-08-24", "2026-08-24"]),
-        "open": [1010.0, 0.0],
-    })
-    monkeypatch.setattr(pd, "read_parquet", lambda _: good.copy())
-    verified = verify_open_execution_inputs(
-        session_ohlcv_path=path,
-        execution_session_date="2026-08-24",
-    )
-    assert verified.raw_open_prices == {"AAA": 1010.0}
-    assert verified.available_tickers == frozenset({"AAA"})
-
-    bad = good.copy()
-    bad["session_date"] = pd.Timestamp("2026-08-25")
-    monkeypatch.setattr(pd, "read_parquet", lambda _: bad.copy())
-    with pytest.raises(DecisionV1Error, match="OPEN_ARTIFACT_DATE_MISMATCH"):
+    with pytest.raises(DecisionV1Error, match="OPEN_CERTIFIED_MANIFEST_REQUIRED"):
         verify_open_execution_inputs(
             session_ohlcv_path=path,
             execution_session_date="2026-08-24",
