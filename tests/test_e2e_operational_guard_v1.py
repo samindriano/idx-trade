@@ -146,7 +146,7 @@ def test_phase_attestation_is_immutable_and_parent_bound(tmp_path: Path) -> None
             session_date="2026-08-24",
             expected_branch="integration/test",
             expected_commit="a" * 40,
-            now=_at(8, 46),
+            now=_at(9, 31),
         )
     with pytest.raises(E2EOperationalGuardError, match="IMMUTABLE_CONFLICT"):
         write_phase_attestation(

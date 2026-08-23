@@ -246,6 +246,26 @@ def write_phase_attestation(
         / "phase_attestations"
         / f"{session}_{phase_name}.json"
     )
+    if target.is_file():
+        try:
+            existing = json.loads(target.read_text(encoding="utf-8"))
+            existing_body = dict(existing)
+            existing_declared = str(existing_body.pop("payload_sha256") or "")
+            existing_actual = hashlib.sha256(
+                (json.dumps(existing_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+            ).hexdigest()
+        except (OSError, json.JSONDecodeError, TypeError) as exc:
+            raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_INVALID") from exc
+        if (
+            existing.get("schema_version") != PHASE_ATTESTATION_SCHEMA
+            or existing_actual != existing_declared
+            or existing.get("phase") != phase_name
+            or existing.get("session_date") != session
+            or str(existing.get("expected_branch") or "") != str(expected_branch).strip()
+            or str(existing.get("expected_commit") or "").lower() != str(expected_commit).strip().lower()
+        ):
+            raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_IMMUTABLE_CONFLICT")
+        return target, hashlib.sha256(target.read_bytes()).hexdigest()
     encoded = (json.dumps(body, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
@@ -308,7 +328,7 @@ def require_phase_attestation(
     current = _local_now(now)
     if current < issued.astimezone(JAKARTA):
         raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_FROM_FUTURE")
-    if (current - issued.astimezone(JAKARTA)).total_seconds() > 900:
+    if (current - issued.astimezone(JAKARTA)).total_seconds() > 3600:
         raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_EXPIRED")
     return path, hashlib.sha256(path.read_bytes()).hexdigest()
 
