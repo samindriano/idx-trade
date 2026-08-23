@@ -74,21 +74,21 @@ bootstrap configurations.
 External runtime config exists under the user-local runtime root and was
 repinned to the final branch HEAD before the deployment smoke; any later
 repository commit requires another repin.
-`IDXTrade-E2E-Paper` Task Scheduler installation remains blocked on legitimate
-interactive elevation. No static or synthetic CA artifact is accepted as the
-live authority. Deployment must use the external dynamic config and capture
-each exact window through the new collector.
+`IDXTrade-E2E-Paper` is installed as a user-level `Sam / Interactive / Limited`
+task with 11 daily triggers. `AtLogOn` was intentionally omitted because this
+machine rejects that trigger for non-elevated registration; daily retries plus
+`StartWhenAvailable` provide the safe catch-up path. No static or synthetic CA
+artifact is accepted as the live authority. Deployment uses the external
+dynamic config and captures each exact window through the new collector.
 
-The final pre-install smoke on 2026-08-23 returned
+The final manual scheduler smoke on 2026-08-23 returned
 `WEEKEND_OR_HOLIDAY_NOOP`, with `provider_calls=false` and
-`outcome_access=false`. The task was not registered because
-`Register-ScheduledTask` returned `Access is denied (HRESULT 0x80070005)`.
+`outcome_access=false`; Windows Task Scheduler reported `LastTaskResult=0`.
 
 ## Decision
 
-`IMPLEMENTATION_REMEDIATED_REVIEWED_SCHEDULER_ELEVATION_REQUIRED`
+`CONTROLLED_LIVE_E2E_ARMED_WEEKDAY_PROOF_PENDING`
 
-Next safe action: provide one normal administrator-approved deployment path,
-repin the external config to the final repository HEAD, install only the new
-task, and perform the authorized weekend/no-session smoke. A weekday capture
-and paper cycle remain unproven.
+Next safe action: wait for the first legitimate weekday session and inspect the
+fresh POST_EOD → PREOPEN → official Open → paper execution chain. Do not
+backfill a missed session or claim weekday proof from this weekend no-op.

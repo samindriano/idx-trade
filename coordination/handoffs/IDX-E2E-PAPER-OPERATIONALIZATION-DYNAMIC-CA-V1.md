@@ -49,6 +49,12 @@ hash-pinned `PUBLISH.json` marker. Recovery is accepted only when the current
 phase/from/through/ticker invocation matches the recovered manifest and the
 real execution-consumer V1.2 verifier passes.
 
+The scheduler installer is user-level and does not request an elevated or
+SYSTEM principal. The machine rejected an `AtLogOn` trigger during
+non-elevated registration, so the new task intentionally uses the 11 daily
+retry triggers with `StartWhenAvailable`; the existing runner remains the
+source of truth for catch-up and fail-closed missed-run behavior.
+
 ## decisions_made
 
 - Static attestation configs remain valid for existing replay/bootstrap paths.
@@ -61,10 +67,9 @@ real execution-consumer V1.2 verifier passes.
 ## blocking_risks
 
 - No real provider capture was run in this remediation increment.
-- External dynamic config exists outside Git, but must be repinned after the
-  final branch tip; it was repinned before the final weekend smoke.
-  `IDXTrade-E2E-Paper` is not installed: the legitimate
-  registration attempt failed with `Access is denied` / `0x80070005`.
+- External dynamic config exists outside Git and was repinned before the final
+  weekend smoke. `IDXTrade-E2E-Paper` is installed as `Sam / Interactive /
+  Limited` with 11 daily triggers; no `AtLogOn` trigger is present.
 - First weekday same-session proof is still pending and must not be claimed
   from weekend/no-session behavior.
 
@@ -77,12 +82,12 @@ real execution-consumer V1.2 verifier passes.
 - `git diff --check`: PASS.
 - Final weekend runner smoke: `WEEKEND_OR_HOLIDAY_NOOP`,
   `provider_calls=false`, `outcome_access=false`.
+- Scheduled-task smoke: `LastTaskResult=0`, task returned
+  `WEEKEND_OR_HOLIDAY_NOOP`.
 
 ## recommended_next_action
 
-Independent review of commit `86c608e95404fcf59b367a63b919a0656971fb97` is
-PASS for the prior P1 remediation. Next, repin the external dynamic runtime
-config to the final repository HEAD, obtain one legitimate administrator-
-approved registration path, install only the new `IDXTrade-E2E-Paper` task,
-run one weekend/no-session smoke without provider capture, and wait for the
-first weekday cycle.
+Independent review of commit `a59afb5fbda86f20dfe56bf6c46d6304f7003fac` is
+PASS for the P1 remediation and user-level scheduler change. The task is now
+armed; wait for the first legitimate weekday cycle and verify all exact
+point-in-time parents before declaring a paper execution pass.
