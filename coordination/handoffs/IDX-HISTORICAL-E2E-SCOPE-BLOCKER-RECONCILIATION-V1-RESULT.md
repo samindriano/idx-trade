@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `13a854538f8cdfd0d8b033d45dede48fd44e9fac`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending commit for this checkpoint
+head_commit: `8289a64ab0392ecc42c6f2a4f7442d83f0912347`
 scope: outcome-blind support-run reconciliation only
 files_changed:
   - `docs/checkpoints/2026-08-24_HISTORICAL_E2E_SCOPE_BLOCKER_RECONCILIATION_V1.md`
