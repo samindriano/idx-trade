@@ -29,7 +29,7 @@ ALLOWED_TRANSPORTS = frozenset({DIRECT_TRANSPORT, ZAPI_RAW_TRANSPORT})
 TRANSPORT_POLICY = "DIRECT_IDX_THEN_ZAPI_RAW_V1"
 DIRECT_IDX_URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
 ZAPI_RAW_URL = "https://api.zpi.web.id/v1/finance:idx/raw"
-ZAPI_PROJECT = "finance:idx"
+ZAPI_PROJECT = "finance:idx:raw"
 
 
 class OfficialOpenEvidenceError(RuntimeError):

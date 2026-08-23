@@ -48,7 +48,7 @@ def _raw(*, zero_open=False, zapi=False):
                 "provider": "idx",
                 "path": UPSTREAM_PATH,
             },
-            "project": "finance:idx",
+            "project": "finance:idx:raw",
             "timestamp": "2026-08-22T00:00:00Z",
         }
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

@@ -46,7 +46,7 @@ def _zapi_payload(rows, *, provider="idx", path=UPSTREAM_PATH, **extra):
         **extra,
     }
     return json.dumps(
-        {"data": inner, "project": "finance:idx", "timestamp": "2026-08-22T00:00:00Z"},
+        {"data": inner, "project": "finance:idx:raw", "timestamp": "2026-08-22T00:00:00Z"},
         sort_keys=True,
         separators=(",", ":"),
     ).encode()
@@ -213,6 +213,18 @@ def test_zapi_raw_provenance_must_identify_idx_and_exact_upstream_path():
     with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PATH_MISMATCH"):
         fetch_zapi_raw_idx_stock_summary(
             "2026-06-12", api_key="key", get=wrong_path
+        )
+
+
+def test_zapi_raw_rejects_legacy_non_raw_project_marker():
+    def legacy_project(url, *, params, headers, timeout):
+        return _Response(
+            _zapi_payload(_rows()).replace(b"finance:idx:raw", b"finance:idx")
+        )
+
+    with pytest.raises(OfficialOpenEvidenceError, match="ZAPI_RAW_PROJECT_MISMATCH"):
+        fetch_zapi_raw_idx_stock_summary(
+            "2026-06-12", api_key="key", get=legacy_project
         )
 
 

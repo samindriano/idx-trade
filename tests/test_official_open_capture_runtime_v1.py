@@ -45,7 +45,7 @@ def _zapi_payload(rows):
         "path": UPSTREAM_PATH,
     }
     return json.dumps(
-        {"data": inner, "project": "finance:idx", "timestamp": "2026-08-22T00:00:00Z"},
+        {"data": inner, "project": "finance:idx:raw", "timestamp": "2026-08-22T00:00:00Z"},
         sort_keys=True,
         separators=(",", ":"),
     ).encode()
