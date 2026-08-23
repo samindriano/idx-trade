@@ -27,7 +27,8 @@ findings:
     Those raw rows are preserved but excluded from the common-share dividend
     candidate contract; other issuer mismatches remain fail-closed.
   - Fresh market-wide acquisition did not complete because `ASSA` returned
-    HTTP 403 after earlier partial progress.
+    HTTP 403 after earlier partial progress; the three restarted stages made
+    65 attempts but covered only 34 unique tickers.
 
 decisions_made:
   - No retry after the HTTP 403.

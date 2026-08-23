@@ -57,8 +57,10 @@ forensic review.
 
 The official endpoint is source-discoverable and can produce internally
 coherent full issuer pages with the corrected page size. However, the bounded
-market-wide acquisition did not complete: only 65 unique issuer attempts were
-reached across preserved partial stages, and at least one issuer hit HTTP 403.
+market-wide acquisition did not complete: the three preserved runs made 65
+stage attempts but covered only 34 unique tickers because each fresh run
+restarted from the beginning of the sorted universe, and at least one issuer
+hit HTTP 403.
 
 Therefore this lane does **not** establish a market-wide no-event proof and
 does not remove `DIVIDEND_MARKET_WIDE_NO_EVENT_PROOF_MISSING` from the strict
