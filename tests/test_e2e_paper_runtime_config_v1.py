@@ -61,6 +61,21 @@ def test_task_pinned_expected_sha_is_checked(tmp_path: Path) -> None:
         load_runtime_config(root, expected_sha256="0" * 64)
 
 
+def test_hash_and_parse_share_one_config_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = _write_config(tmp_path)
+    config_path = (root / "operational" / "config.json").resolve()
+    original_read_text = Path.read_text
+
+    def reject_second_config_read(path: Path, *args: object, **kwargs: object) -> str:
+        if path.resolve() == config_path:
+            raise AssertionError("config.json must be parsed from the hashed byte snapshot")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", reject_second_config_read)
+    loaded = load_runtime_config(root)
+    assert loaded.config_sha256 == hashlib.sha256(config_path.read_bytes()).hexdigest()
+
+
 def test_relative_path_and_secret_field_fail_closed(tmp_path: Path) -> None:
     root = _write_config(tmp_path, repo_root="repo")
     with pytest.raises(E2ERuntimeConfigError, match="NOT_ABSOLUTE"):

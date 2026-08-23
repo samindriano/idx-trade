@@ -15,8 +15,9 @@ def test_scheduler_status_exit_contract() -> None:
 def test_task_installer_isolated_and_retry_safe() -> None:
     script = Path(__file__).parents[1] / "scripts" / "install_e2e_paper_task.ps1"
     text = script.read_text(encoding="utf-8")
-    for at in ("08:30", "08:45", "09:00", "09:02", "09:07", "09:12", "09:17", "09:22", "18:05"):
+    for at in ("08:30", "08:45", "09:00", "09:02", "09:07", "09:12", "09:17", "09:22", "18:35", "19:35", "20:35"):
         assert at in text
+    assert '"18:05"' not in text
     assert "-AtLogOn" in text
     assert "-StartWhenAvailable" in text
     assert "-MultipleInstances IgnoreNew" in text

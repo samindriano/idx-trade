@@ -37,7 +37,11 @@ $triggers = @(
   (New-ScheduledTaskTrigger -Daily -At "09:12"),
   (New-ScheduledTaskTrigger -Daily -At "09:17"),
   (New-ScheduledTaskTrigger -Daily -At "09:22"),
-  (New-ScheduledTaskTrigger -Daily -At "18:05"),
+  # Follow the existing upstream EOD triggers (18:30/19:30/20:30)
+  # so each E2E attempt runs after an upstream EOD attempt and can retry.
+  (New-ScheduledTaskTrigger -Daily -At "18:35"),
+  (New-ScheduledTaskTrigger -Daily -At "19:35"),
+  (New-ScheduledTaskTrigger -Daily -At "20:35"),
   (New-ScheduledTaskTrigger -AtLogOn)
 )
 $settings = New-ScheduledTaskSettingsSet `

@@ -11,6 +11,8 @@ The E2E controller now has a deterministic external-runtime entrypoint:
 - `src/idx_trade/e2e_paper_runtime_config_v1.py` loads only
   `%LOCALAPPDATA%\IDXTrade\e2e_baseline_paper_v1\operational\config.json`;
 - `config.json.sha256` is required and must match the exact config bytes;
+- the loader hashes and parses one in-memory config-byte snapshot, preventing
+  a hash/parse time-of-check/time-of-use drift;
 - all critical paths are absolute and all provider/CA/model-independent
   deployment identities remain explicit;
 - secret-like config keys are rejected;
@@ -18,7 +20,9 @@ The E2E controller now has a deterministic external-runtime entrypoint:
   config into the existing controller;
 - `scripts/install_e2e_paper_task.ps1` prepares a user-level, limited,
   network-aware, `IgnoreNew`, `StartWhenAvailable` task with EOD and PREOPEN
-  retry triggers without touching existing tasks.
+  retry triggers without touching existing tasks. Post-EOD retries are
+  scheduled at 18:35/19:35/20:35, after the existing upstream EOD attempts at
+  18:30/19:30/20:30.
 
 The scheduler action contains only the Python runner, runtime root, and the
 config SHA pin. It does not contain credentials or CA material. The runner also
@@ -33,7 +37,7 @@ CA bootstrap or paper execution was attempted.
 
 ## Validation
 
-- new focused config/scheduler tests: PASS, 6 tests;
+- new focused config/scheduler tests: PASS, 7 tests;
 - controller/operational focused regression tests: PASS;
 - full pytest: PASS, with only the three existing pandas FutureWarnings;
 - `py_compile`: PASS;

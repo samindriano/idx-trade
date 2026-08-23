@@ -21,8 +21,8 @@ provider, model, state, or scheduler hierarchy was introduced.
 - `src/idx_trade/e2e_paper_runtime_config_v1.py`
 - `scripts/run_e2e_paper_scheduled_v1.py`
 - `scripts/install_e2e_paper_task.ps1`
-- focused tests for config hashing, secret-key rejection, exit semantics, and
-  task isolation/retry settings.
+- focused tests for config hashing, same-snapshot hash/parse binding,
+  secret-key rejection, exit semantics, and task isolation/retry settings.
 
 ## Findings / decisions
 
@@ -31,6 +31,10 @@ provider, model, state, or scheduler hierarchy was introduced.
   pinned in the task action.
 - Missing config, missing SHA sidecar, changed config bytes, relative paths,
   invalid commits, and secret-like keys fail closed.
+- Config is hashed and parsed from one in-memory byte snapshot; the task action
+  pins the same digest.
+- Post-EOD task retries are 18:35/19:35/20:35, following the existing upstream
+  EOD attempts at 18:30/19:30/20:30.
 - Installer refuses an existing task and does not reference or modify
   `IDXTrade-ForwardEOD`, `IDXTrade-ForwardOpenArchive`, Official Open, or
   Stockbit tasks.
@@ -41,7 +45,7 @@ provider, model, state, or scheduler hierarchy was introduced.
 
 ## Validation
 
-- focused new tests after SHA/repository pin hardening: PASS (6);
+- focused new tests after SHA/repository pin hardening: PASS (7);
 - existing operational/controller tests: PASS;
 - full pytest: PASS with three pre-existing pandas FutureWarnings;
 - `py_compile`: PASS;
