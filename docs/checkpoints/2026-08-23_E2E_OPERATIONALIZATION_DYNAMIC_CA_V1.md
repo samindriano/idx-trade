@@ -3,7 +3,9 @@
 Date: 2026-08-23 (Asia/Jakarta)
 Branch: `integration/idx-e2e-baseline-paper-v1`
 Implementation commits: `0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6`,
-`ffd138a2db2df20b3a75703a21bf3b073a1d0b46`
+`ffd138a2db2df20b3a75703a21bf3b073a1d0b46`,
+`6cd9868780692494424016748e443fc6e4744f99`,
+`86c608e95404fcf59b367a63b919a0656971fb97`
 
 ## Scope
 
@@ -27,6 +29,13 @@ bootstrap configurations.
   directory is published only after the manifest passes the existing
   `forward_ca_attestation_v1.verify_phase_manifest` gate; failures remain in a
   `.partial.*` staging directory and never appear as a final capture.
+- Phase publication now has a recoverable two-artifact transaction marker. The
+  V1.2 attestation is built to a pending immutable file, the final manifest
+  path/SHA is bound before publication, and a retry validates exact
+  phase/from/through/ticker scope plus the real execution-consumer V1.2
+  verifier before clearing `PUBLISH.json`. A crash between the two renames is
+  therefore resumable without provider access and cannot be accepted under a
+  changed invocation window.
 - Built V1.2 attestations with timezone-aware UTC capture time, exact phase
   window, required tickers, phase-manifest path/SHA, and evidence rows.
 - The V1.2 builder now requires the raw calendar fingerprint to equal the
@@ -39,31 +48,41 @@ bootstrap configurations.
   dynamic CA fields:
   `ca_attestation_root`, `ca_capture_script`, and
   `ca_capture_script_sha256`.
+- Added exact `through_session_date` binding to the durable CA phase sidecar;
+  stale same-session attestations for another forward window are rejected on
+  reuse.
 
 ## Validation
 
-- Focused CA capture/config/controller/attestation tests: PASS (`32 passed`).
+- Focused CA capture/controller/attestation remediation tests: PASS (`24 passed`).
+- Focused scheduler contract tests: PASS (`20 passed`).
 - Full repository pytest: PASS; only the repository's existing three pandas
   `FutureWarning`s were emitted.
 - `py_compile`: PASS for all changed Python modules/scripts.
 - `git diff --check`: PASS.
-- No provider capture, model scoring, protected outcome access, or scheduler
-  installation was performed in this increment.
+- No provider capture, model scoring, or protected outcome access was
+  performed in this increment.
+- The external runtime config was created outside Git, but the new task was
+  not installed: the final `Register-ScheduledTask` call failed with
+  `Access is denied (HRESULT 0x80070005)`. No UAC/security bypass was used;
+  no existing task was changed.
 - `coordination/TEAM_STATUS.md` was intentionally not modified; only MAIN may
   edit that file.
 
 ## Deployment boundary
 
-External runtime config and `IDXTrade-E2E-Paper` Task Scheduler installation
-remain pending independent review of this implementation. No static or
-synthetic CA artifact is accepted as the live authority. A future deployment
-must use an external dynamic config pinned to the final repository HEAD and
-capture each exact window through the new collector.
+External runtime config exists under the user-local runtime root and must be
+repinned to the final branch HEAD after any further repository commit.
+`IDXTrade-E2E-Paper` Task Scheduler installation remains blocked on legitimate
+interactive elevation. No static or synthetic CA artifact is accepted as the
+live authority. Deployment must use the external dynamic config and capture
+each exact window through the new collector.
 
 ## Decision
 
-`IMPLEMENTATION_PUSHED_REVIEW_REQUIRED`
+`IMPLEMENTATION_REMEDIATED_REVIEWED_SCHEDULER_ELEVATION_REQUIRED`
 
-Next safe action: independent review, then create the external hash-pinned
-config and perform only the authorized weekend/no-session deployment smoke
-before waiting for the first real weekday cycle.
+Next safe action: provide one normal administrator-approved deployment path,
+repin the external config to the final repository HEAD, install only the new
+task, and perform the authorized weekend/no-session smoke. A weekday capture
+and paper cycle remain unproven.

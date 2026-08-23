@@ -6,9 +6,9 @@ task_id: IDX-E2E-PAPER-OPERATIONALIZATION-DYNAMIC-CA-V1
 model_used: GPT-5.6
 reasoning_level: high
 source_repository: samindriano/idx-trade
-source_commit: ffd138a2db2df20b3a75703a21bf3b073a1d0b46
+source_commit: 86c608e95404fcf59b367a63b919a0656971fb97
 branch: integration/idx-e2e-baseline-paper-v1
-head_commit: ffd138a2db2df20b3a75703a21bf3b073a1d0b46
+head_commit: 86c608e95404fcf59b367a63b919a0656971fb97
 
 ## scope
 
@@ -23,6 +23,7 @@ targets, models, outcomes, or existing local schedulers.
 - `src/idx_trade/forward_ca_attestation_v1.py`
 - `scripts/capture_forward_ca_idx_bei.py`
 - `tests/test_capture_forward_ca_idx_bei.py`
+- `tests/test_e2e_paper_operational_controller_v1.py`
 - `tests/test_e2e_paper_runtime_config_v1.py`
 - `docs/checkpoints/2026-08-23_E2E_OPERATIONALIZATION_DYNAMIC_CA_V1.md`
 
@@ -42,6 +43,12 @@ does not access outcomes. Failed captures remain inspectable under an external
 verification. The V1.2 builder rejects a stable but non-frozen calendar schema
 fingerprint and atomically publishes its output.
 
+The remediation adds exact `through_session_date` to the durable CA sidecar,
+and makes the phase directory/attestation publication recoverable through a
+hash-pinned `PUBLISH.json` marker. Recovery is accepted only when the current
+phase/from/through/ticker invocation matches the recovered manifest and the
+real execution-consumer V1.2 verifier passes.
+
 ## decisions_made
 
 - Static attestation configs remain valid for existing replay/bootstrap paths.
@@ -53,22 +60,26 @@ fingerprint and atomically publishes its output.
 
 ## blocking_risks
 
-- No real provider capture was run yet in this increment.
-- External dynamic config has not been created and `IDXTrade-E2E-Paper` has not
-  been installed.
+- No real provider capture was run in this remediation increment.
+- External dynamic config exists outside Git, but must be repinned after the
+  final branch tip. `IDXTrade-E2E-Paper` is not installed: the legitimate
+  registration attempt failed with `Access is denied` / `0x80070005`.
 - First weekday same-session proof is still pending and must not be claimed
   from weekend/no-session behavior.
 
 ## validation_run
 
 - `python -m pytest -q --basetemp <external-temp-root>`: PASS.
-- Focused CA/config/controller/attestation tests: 32 passed.
+- Focused CA capture/controller/attestation remediation tests: 24 passed.
+- Focused scheduler contract tests: 20 passed.
 - `python -m py_compile` on changed modules/scripts: PASS.
 - `git diff --check`: PASS.
 
 ## recommended_next_action
 
-Independent review of commit `ffd138a2db2df20b3a75703a21bf3b073a1d0b46`.
-If accepted, create an external hash-pinned dynamic runtime config, run one
-weekend/no-session scheduler smoke without provider capture, install only the
-new `IDXTrade-E2E-Paper` task, and wait for the first weekday cycle.
+Independent review of commit `86c608e95404fcf59b367a63b919a0656971fb97` is
+PASS for the prior P1 remediation. Next, repin the external dynamic runtime
+config to the final repository HEAD, obtain one legitimate administrator-
+approved registration path, install only the new `IDXTrade-E2E-Paper` task,
+run one weekend/no-session smoke without provider capture, and wait for the
+first weekday cycle.
