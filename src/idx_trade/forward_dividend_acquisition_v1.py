@@ -136,7 +136,11 @@ def extract_dividend_candidates(
         # as BABY-R.  They remain preserved in the immutable raw page but are
         # outside this common-share dividend candidate contract.  Other issuer
         # mismatches remain a hard schema error.
-        if raw_row_ticker.startswith(ticker + "-"):
+        if (
+            raw_row_ticker.startswith(ticker + "-")
+            or raw_row_ticker.startswith(ticker + " ")
+            or re.fullmatch(rf"[A-Z]-{re.escape(ticker)}", raw_row_ticker)
+        ):
             continue
 
         row_ticker = normalize_ticker(raw_row_ticker)
