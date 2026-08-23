@@ -39,9 +39,9 @@ UNIVERSE_COLUMNS = (
 )
 SLOTS = ("pre_open", "midday", "after_close")
 SCHEDULE_CRONS = {
-    "47 1 * * 1-5": "pre_open",  # 08:47 Asia/Jakarta
-    "7 5 * * 1-5": "midday",  # 12:07 Asia/Jakarta
-    "47 9 * * 1-5": "after_close",  # 16:47 Asia/Jakarta
+    "47 1 * * *": "pre_open",  # 08:47 Asia/Jakarta, every calendar day
+    "7 5 * * *": "midday",  # 12:07 Asia/Jakarta, every calendar day
+    "47 9 * * *": "after_close",  # 16:47 Asia/Jakarta, every calendar day
 }
 CASHTAG_RE = re.compile(r"(?<![A-Za-z0-9_])\$([A-Z][A-Z0-9]{1,5})(?![A-Za-z0-9_])")
 TICKER_RE = re.compile(r"^[A-Z][A-Z0-9]{1,5}$")
