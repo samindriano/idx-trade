@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
-from idx_trade.stockbit_stream_archive import QuotaSnapshot
+from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
 
@@ -128,6 +128,18 @@ class StreamResponse503:
     headers = {"content-type": "application/json"}
 
 
+class PostQuotaTimeoutClient(Client):
+    def __init__(self):
+        super().__init__()
+        self.usage_calls = 0
+
+    def get_usage(self):
+        self.usage_calls += 1
+        if self.usage_calls == 2:
+            raise StreamArchiveError("quota telemetry timeout")
+        return super().get_usage()
+
+
 def test_capture_v2_avoids_per_post_hot_path_objects(tmp_path: Path):
     rows = [
         {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
@@ -156,3 +168,17 @@ def test_capture_v2_marks_partial_stream_failures_not_data_ready(tmp_path: Path)
     assert result["completed_calls"] == 2
     assert result["successful_responses"] == 1
     assert result["response_classification_counts"] == {"OK": 1, "HTTP_503": 1}
+
+
+def test_capture_v2_preserves_ready_run_when_post_quota_telemetry_times_out(tmp_path: Path):
+    rows = [
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b'{"provider":"idx"}', "a" * 64, "c" * 64)
+    result = capture_stream_v2(client=PostQuotaTimeoutClient(), archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    assert result["status"] == "DATA_READY"
+    assert result["quota_after"] == {
+        "status": "UNAVAILABLE",
+        "source": "MCP_GET_USAGE",
+        "detail": "quota telemetry timeout",
+    }

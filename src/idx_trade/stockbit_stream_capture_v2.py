@@ -305,7 +305,18 @@ def capture_stream_v2(
             ok_responses += 1
         request_records.append(record)
 
-    quota_after = client.get_usage()
+    try:
+        quota_after_payload: dict[str, Any] = client.get_usage().__dict__
+    except StreamArchiveError as exc:
+        # The stream responses and immutable objects are already captured at
+        # this point. A slow quota telemetry endpoint must not discard the run
+        # manifest; preserve the diagnostic as an explicit non-authoritative
+        # field instead of pretending the after-quota snapshot exists.
+        quota_after_payload = {
+            "status": "UNAVAILABLE",
+            "source": "MCP_GET_USAGE",
+            "detail": str(exc),
+        }
     status = (
         "DATA_READY"
         if request_records
@@ -330,7 +341,7 @@ def capture_stream_v2(
         "normalized_post_rows": total_rows,
         "response_classification_counts": {},
         "quota_before": quota_before.__dict__,
-        "quota_after": quota_after.__dict__,
+        "quota_after": quota_after_payload,
         "request_records": request_records,
         "storage_contract": "conditional immutable PUT; no normal-path object readback; collision verified by object SHA metadata",
         "first_seen_semantics": "derive post first-seen offline as minimum observed_available_at_utc across immutable observations; no per-post hot-path object writes",

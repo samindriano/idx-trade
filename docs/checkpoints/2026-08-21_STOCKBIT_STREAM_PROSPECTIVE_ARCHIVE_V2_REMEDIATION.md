@@ -61,6 +61,11 @@ The V2 capture manifest now reports `PARTIAL_FAILURE` unless every planned
 stream request completes with an `OK` classification. The CLI therefore exits
 non-zero for a partial run instead of falsely reporting `DATA_READY`.
 
+Post-capture quota telemetry is best-effort: if the final MCP `get_usage`
+request times out after all stream objects are written, the manifest remains
+eligible for `DATA_READY` and records `quota_after.status=UNAVAILABLE` with the
+diagnostic source/detail. The pre-capture quota guard remains hard-gated.
+
 This is an execution/schema adaptation only. It does not alter universe ranking logic or use outcomes.
 
 ## End-to-end cloud smoke evidence
