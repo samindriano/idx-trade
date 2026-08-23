@@ -197,7 +197,7 @@ def test_direct_idx_raw_cannot_be_relabelled_as_zapi_transport(tmp_path):
     payload = json.loads(manifest.read_text())
     payload["transport"] = ZAPI_RAW_TRANSPORT
     manifest.write_text(json.dumps(payload, sort_keys=True))
-    with pytest.raises(DecisionV1Error, match="ZAPI_RAW_ENVELOPE_INVALID"):
+    with pytest.raises(DecisionV1Error, match="OFFICIAL_OPEN_ZAPI_RAW_PROJECT_MISMATCH"):
         verify_open_execution_inputs(
             manifest_path=manifest,
             execution_session_date="2026-06-12",
