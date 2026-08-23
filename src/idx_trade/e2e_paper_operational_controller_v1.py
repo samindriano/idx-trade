@@ -211,7 +211,7 @@ def _session_manifest(config: OperationalControllerConfig, session: str) -> dict
 
 def _previous_score_manifest(config: OperationalControllerConfig, current_session: str) -> Path | None:
     meta_dir = config.runtime_root / "state" / "decisions"
-    rows: list[tuple[str, Path]] = []
+    rows: list[tuple[str, Path, str]] = []
     if not meta_dir.is_dir():
         return None
     for path in sorted(meta_dir.glob("*.json")):
@@ -222,17 +222,23 @@ def _previous_score_manifest(config: OperationalControllerConfig, current_sessio
             raise E2EOperationalGuardError("E2E_OPERATIONAL_META_HASH_MISMATCH")
         session = str(payload.get("last_score_session_date") or "")
         if session and session < current_session:
-            rows.append((session, Path(str(payload.get("last_score_manifest_path") or "")).expanduser().resolve()))
+            rows.append((
+                session,
+                Path(str(payload.get("last_score_manifest_path") or "")).expanduser().resolve(),
+                str(payload.get("last_score_manifest_sha256") or "").lower(),
+            ))
     if not rows:
         return None
-    latest_session = max(session for session, _ in rows)
-    latest = [path for session, path in rows if session == latest_session]
-    if len({str(path) for path in latest}) != 1:
+    latest_session = max(session for session, _, _ in rows)
+    latest = [(path, sha) for session, path, sha in rows if session == latest_session]
+    if len({(str(path), sha) for path, sha in latest}) != 1:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_AMBIGUOUS")
-    path = latest[0]
+    path, expected_sha = latest[0]
     if not path.is_file():
         raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_MISSING")
-    load_score_manifest(path)
+    verified = load_score_manifest(path)
+    if not expected_sha or verified.manifest_sha256 != expected_sha:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_SHA_MISMATCH")
     return path
 
 
@@ -301,6 +307,15 @@ def _verify_phase_sidecar(config: OperationalControllerConfig, session: str, pha
     ):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_PARENT_MISMATCH")
     load_journal_document(journal)
+    if (
+        str(payload.get("provider_commit") or "").lower()
+        != str(config.provider_expected_commit or "").lower()
+        or Path(str(payload.get("ca_attestation_path") or "")).expanduser().resolve()
+        != Path(config.ca_attestation_path).expanduser().resolve()
+        or str(payload.get("ca_attestation_sha256") or "").lower()
+        != str(config.ca_attestation_sha256 or "").lower()
+    ):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_CONFIG_MISMATCH")
     return payload
 
 
@@ -316,6 +331,9 @@ def _ensure_ca_phase(
     sidecar = _phase_sidecar_path(config, session, phase)
     if sidecar.is_file():
         payload = _verify_phase_sidecar(config, session, phase)
+        expected_tickers = sorted({str(value).strip().upper() for value in required_tickers})
+        if list(payload.get("required_tickers") or []) != expected_tickers:
+            raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_TICKER_SCOPE_CHANGED")
         if phase == "PREOPEN" and str(payload.get("finished_at_jakarta") or ""):
             finished = datetime.fromisoformat(str(payload["finished_at_jakarta"]))
             if finished.astimezone(JAKARTA).time() >= time(9, 2):
