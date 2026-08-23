@@ -1,6 +1,6 @@
 # Stockbit Stream R2 Retention V1
 
-Status: `LONG_TERM_POLICY_READY_REMOTE_APPLY_PENDING`
+Status: `STOCKBIT_STREAM_LONG_TERM_RETENTION_ACTIVE`
 
 ## Decision
 
@@ -44,18 +44,32 @@ secret values are never printed or committed.
 
 ## Activation
 
-Remote activation is intentionally pending until this branch is merged and
-the new removal-only workflow is dispatched once. The activation result must
-record the workflow run, merged lifecycle payload SHA-256, exact remaining
-rules, and proof that both retired IDs are absent.
+Remote activation completed after the policy change was merged to `main`:
+
+- workflow run: `32626013468`
+- workflow URL: `https://github.com/samindriano/idx-trade/actions/runs/32626013468`
+- workflow checkout: `300ebf15f2e7cc53a0147cb3bb247fb9a87980e3`
+- result: `APPLIED_AND_VERIFIED`
+- final merged lifecycle payload SHA-256:
+  `1ec643ae14dc9dfcd6b76afb410d1c6caea3caa9668717c77a05f3f0e9653d80`
+
+The exact project-owned rules `stockbit-v2-raw-delete-180d` and
+`stockbit-v2-normalized-delete-180d` are absent after verification. There is
+no remaining object-delete lifecycle rule for `raw/` or `normalized/`.
+The unrelated `Default Multipart Abort Rule` remains preserved verbatim; it
+does not delete completed Stockbit research objects.
+
+No R2 object was listed, read, deleted, or overwritten by the workflow. The
+change only replaced the bucket lifecycle configuration, so existing archive
+objects remain available and future automatic expiry is disabled.
 
 ## Validation
 
 The focused retention suite covers indefinite policy generation, protected
 prefixes, dry-run network freedom, missing credentials, exact retired-rule
 removal, unrelated-rule preservation, ownership conflicts, duplicate IDs, and
-post-apply verification. Full repository validation remains subject to the
-known unrelated storage revision-conflict test.
+post-apply verification. The focused suite passed; full repository validation
+retains the known unrelated storage revision-conflict failure.
 
 ## Cost and future optimization
 
