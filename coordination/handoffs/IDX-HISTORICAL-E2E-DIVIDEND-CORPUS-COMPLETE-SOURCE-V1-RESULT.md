@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `369907b6b9a9aec740624d2ffd5b210e54cf9d84`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending commit for this checkpoint
+head_commit: `0d341bb9ca2aa12acab7d464d7f27190c30860f3`
 scope: offline normalization and coverage audit of immutable official IDX
   issuer-announcement raw bytes
 files_changed:
