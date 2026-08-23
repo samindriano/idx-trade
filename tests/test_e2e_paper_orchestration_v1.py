@@ -12,6 +12,8 @@ from idx_trade import forward_dividend_v1 as dividend
 from idx_trade import forward_dividend_runtime_v1_1 as dividend_runtime
 from idx_trade.e2e_paper_orchestration_v1 import (
     E2EPaperOrchestrationError,
+    _reconciliation_payload,
+    _verify_prepared_ca_parent,
     execute_preopen,
     bootstrap_t0,
     prepare_post_eod,
@@ -349,6 +351,47 @@ def test_next_session_rejects_tampered_previous_score_sha(tmp_path: Path) -> Non
         )
 
 
+def test_next_session_rejects_deleted_previous_execution_artifact(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    first_score = _score(tmp_path, "2026-08-24", 0)
+    first_eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    first_ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    first_prepared = prepare_post_eod(
+        root,
+        current_score=first_score,
+        previous_score=None,
+        eod_inputs=first_eod,
+        ca_reconciliation=first_ca,
+    )
+    first_result = execute_preopen(
+        root,
+        prepared_path=first_prepared.path,
+        current_score=first_score,
+        previous_score=None,
+        eod_inputs=first_eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=first_ca,
+    )
+    first_result.path.unlink()
+
+    second_score = _score(tmp_path, "2026-08-25", 1)
+    second_eod = _eod(tmp_path, "2026-08-25", "2026-08-26", tickers)
+    second_ca = _ca(tmp_path, "2026-08-25", "2026-08-26", tickers)
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="PREVIOUS_EXECUTION_PARENT_MISSING_OR_TAMPERED",
+    ):
+        prepare_post_eod(
+            root,
+            current_score=second_score,
+            previous_score=first_score,
+            eod_inputs=second_eod,
+            ca_reconciliation=second_ca,
+        )
+
+
 def test_preopen_rejects_open_provenance_tamper(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")
@@ -676,6 +719,50 @@ def test_preopen_allows_ca_extension_only_with_verified_new_event(
         dividend_evidence=(evidence,),
     )
     assert result.status == "EXECUTION_COMPLETE"
+
+
+def test_preopen_rejects_replacement_journal_identity_for_preserved_event(
+    tmp_path: Path,
+) -> None:
+    tickers = [f"T{index:02d}" for index in range(11)]
+    base = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    journal_a = tmp_path / "journal-a.json"
+    journal_b = tmp_path / "journal-b.json"
+    row_a = {
+        "event_id": "DIV-T00",
+        "review_sha256": "a" * 64,
+        "event_sha256": "d" * 64,
+        "ticker": "T00",
+    }
+    row_b = {**row_a, "review_sha256": "b" * 64}
+    for path, row in ((journal_a, row_a), (journal_b, row_b)):
+        path.write_text(
+            json.dumps({
+                "journal": {
+                    "certified_events": [row],
+                    "certified_history": [],
+                    "blocker_resolution_history": [],
+                }
+            }) + "\n",
+            encoding="utf-8",
+        )
+    parent = _reconciliation_payload(
+        replace(base, v12_journal_path=journal_a, v12_journal_sha256=_sha(journal_a))
+    )
+    current = replace(
+        base,
+        v12_journal_path=journal_b,
+        v12_journal_sha256=_sha(journal_b),
+    )
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_CA_PREOPEN_JOURNAL_ENTRY_CHANGED:DIV-T00",
+    ):
+        _verify_prepared_ca_parent(
+            {"ca_reconciliation": parent},
+            current,
+            dividend_evidence=(),
+        )
 
 
 def test_integrated_dividend_cum_ex_payment_is_exactly_once(

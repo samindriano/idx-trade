@@ -69,6 +69,7 @@ def _resolution(
     resolver_evidence_dir: str = "C:/idx-trade-test-evidence",
     resolver_review_sha256: str = "c" * 64,
     resolver_status: str = BLOCKER_RESOLUTION_CERTIFIED_LIVE,
+    resolution_kind: str = "CROSS_ANNOUNCEMENT",
 ) -> DividendBlockerResolutionEntry:
     return DividendBlockerResolutionEntry(
         blocker_announcement_identity=blocker_identity,
@@ -81,6 +82,7 @@ def _resolution(
         resolver_evidence_dir=resolver_evidence_dir,
         resolver_review_sha256=resolver_review_sha256,
         resolver_status=resolver_status,
+        resolution_kind=resolution_kind,
     )
 
 
@@ -463,6 +465,36 @@ def test_blocker_can_resolve_to_certified() -> None:
 
     assert result.certified_events == (certified,)
     assert result.blockers == ()
+
+
+def test_same_announcement_recovery_can_resolve_later_certification() -> None:
+    prior = DividendAcquisitionJournal(
+        as_of_date="2026-08-21",
+        required_tickers=("BBCA",),
+        coverage=(),
+        blockers=(_blocker("A1"),),
+    )
+    certified = _certified("A1", event_id="E1")
+    resolution = _resolution(
+        blocker_identity="A1",
+        resolver_identity="A1",
+        resolver_event_id="E1",
+        resolution_kind="SAME_ANNOUNCEMENT_RECOVERY",
+    )
+
+    result = merge_journal_state(
+        prior_journal=prior,
+        as_of_date="2026-08-22",
+        capture_phase="PREOPEN",
+        required_tickers=("BBCA",),
+        coverage=(),
+        current_certified=(certified,),
+        current_blocker_resolutions=(resolution,),
+    )
+
+    assert result.blockers == ()
+    assert result.certified_events == (certified,)
+    assert result.blocker_resolution_history == (resolution,)
 
 
 def test_certified_event_cannot_mutate() -> None:

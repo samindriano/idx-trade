@@ -23,6 +23,8 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     _canonical_hash,
     bootstrap_t0,
 )
+import idx_trade.e2e_paper_orchestration_v1 as e2e_orchestration_module
+from idx_trade.e2e_replay_boundary_v1 import replay_boundary_static_audit_v1
 from idx_trade.v4_x1_execution_v1_contract import PaperPortfolioState, PaperPosition
 
 
@@ -157,8 +159,16 @@ def run(output_dir: Path) -> Path:
         "schema_version": "idx_trade_e2e_paper_deterministic_replay_v1",
         "replay_kind": "DETERMINISTIC_CORE_REPLAY",
         "synthetic_only": True,
-        "provider_calls": False,
-        "protected_outcomes_accessed": False,
+        "guards": replay_boundary_static_audit_v1(
+            (Path(__file__), e2e_orchestration_module.__file__),
+            source_kind="synthetic_modules_only",
+        ),
+        "replay_boundary": {
+            "source_kind": "synthetic_modules_only",
+            "provider_path_invoked": False,
+            "protected_outcome_path_invoked": False,
+            "by_construction": True,
+        },
         "oracle": {
             "cum_entitled_shares": 5_000,
             "ex_receivable_amount_idr": 125_000.0,

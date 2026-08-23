@@ -305,6 +305,9 @@ def _execution_plan_payload(
 def _reconciliation_payload(value: VerifiedDividendCAReconciliation) -> dict[str, Any]:
     if not isinstance(value, VerifiedDividendCAReconciliation):
         raise E2EPaperOrchestrationError("E2E_VERIFIED_CA_RECONCILIATION_REQUIRED")
+    journal_identity = None
+    if value.v12_journal_path is not None:
+        journal_identity = _journal_identity_payload(value.v12_journal_path)
     return {
         "from_session_date": value.from_session_date,
         "through_session_date": value.through_session_date,
@@ -322,6 +325,7 @@ def _reconciliation_payload(value: VerifiedDividendCAReconciliation) -> dict[str
             else None
         ),
         "v12_journal_sha256": value.v12_journal_sha256,
+        "v12_journal_identity": journal_identity,
     }
 
 
@@ -402,7 +406,43 @@ def _verify_persisted_reconciliation_payload(value: object) -> dict[str, Any]:
         if not journal_path.is_file() or _sha256_file(journal_path) != str(journal_sha):
             raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_PARENT_HASH_MISMATCH")
         payload["v12_journal_path"] = str(journal_path)
+        actual_identity = _journal_identity_payload(journal_path)
+        declared_identity = payload.get("v12_journal_identity")
+        if declared_identity is not None and declared_identity != actual_identity:
+            raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_MISMATCH")
+        payload["v12_journal_identity"] = actual_identity
     return payload
+
+
+def _journal_identity_payload(path: str | Path) -> dict[str, list[dict[str, Any]]]:
+    """Return the persisted journal evidence identities used for parent binding."""
+    journal_path = Path(path).expanduser().resolve()
+    try:
+        document = json.loads(journal_path.read_text(encoding="utf-8"))
+        journal = document.get("journal") if isinstance(document, Mapping) else None
+        if not isinstance(journal, Mapping):
+            raise ValueError("journal payload missing")
+    except Exception as exc:
+        raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_INVALID") from exc
+
+    def entries(key: str, identity_key: str) -> list[dict[str, Any]]:
+        raw = journal.get(key, [])
+        if not isinstance(raw, list):
+            raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_INVALID")
+        out = []
+        for row in raw:
+            if not isinstance(row, Mapping) or not str(row.get(identity_key) or ""):
+                raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_INVALID")
+            out.append(dict(row))
+        return sorted(out, key=lambda row: str(row[identity_key]))
+
+    return {
+        "certified_events": entries("certified_events", "event_id"),
+        "certified_history": entries("certified_history", "event_id"),
+        "blocker_resolution_history": entries(
+            "blocker_resolution_history", "blocker_announcement_identity"
+        ),
+    }
 
 
 def _verify_prepared_ca_parent(
@@ -419,11 +459,12 @@ def _verify_prepared_ca_parent(
     if parent == current_payload:
         return current_payload
 
-    if parent.get("v12_journal_sha256") is not None and (
-        parent.get("v12_journal_path") != current_payload.get("v12_journal_path")
-        or parent.get("v12_journal_sha256") != current_payload.get("v12_journal_sha256")
-    ):
-        raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_PARENT_CHANGED")
+    # POST_EOD preparation and PREOPEN execution are separate immutable CA
+    # phases. Their journals necessarily have different paths/hashes even
+    # when the semantic event set is unchanged. Each current journal is
+    # independently hash-verified above; the semantic parent checks below
+    # still reject removed/changed prior events and require evidence for new
+    # events.
 
     if (
         parent.get("from_session_date") != current_payload.get("from_session_date")
@@ -448,10 +489,33 @@ def _verify_prepared_ca_parent(
             raise E2EPaperOrchestrationError(
                 "E2E_CA_PREPARED_EVENT_PARENT_CHANGED:" + event_id
             )
+
+    parent_identity = parent.get("v12_journal_identity") or {}
+    current_identity = current_payload.get("v12_journal_identity") or {}
+    for key, identity_key in (
+        ("certified_events", "event_id"),
+        ("certified_history", "event_id"),
+        ("blocker_resolution_history", "blocker_announcement_identity"),
+    ):
+        parent_rows = {
+            str(row.get(identity_key)): row
+            for row in parent_identity.get(key, [])
+            if isinstance(row, Mapping)
+        }
+        current_rows = {
+            str(row.get(identity_key)): row
+            for row in current_identity.get(key, [])
+            if isinstance(row, Mapping)
+        }
+        for identity, row in parent_rows.items():
+            if current_rows.get(identity) != row:
+                raise E2EPaperOrchestrationError(
+                    "E2E_CA_PREOPEN_JOURNAL_ENTRY_CHANGED:" + identity
+                )
     new_event_ids = set(current_events) - set(parent_events)
     evidence_ids = {
         row.event.event_id
-        for row in dividend_evidence
+        for row in (*current.verified_evidence, *dividend_evidence)
     }
     if not new_event_ids.issubset(evidence_ids):
         raise E2EPaperOrchestrationError(
@@ -593,6 +657,48 @@ def _load_meta(paths: E2EPaperPaths) -> dict[str, Any] | None:
     if _canonical_hash(body) != declared:
         raise E2EPaperOrchestrationError("E2E_META_HASH_MISMATCH")
     return payload
+
+
+def _verify_previous_execution_parent(
+    paths: E2EPaperPaths,
+    meta: Mapping[str, Any],
+    *,
+    current_session: str,
+) -> dict[str, str]:
+    """Verify the durable execution immediately preceding a new decision.
+
+    Runtime snapshots recursively verify their own parents, but the next
+    decision also needs an explicit execution-artifact anchor.  Otherwise a
+    deleted/tampered execution JSON could be hidden behind an intact snapshot.
+    """
+    execution_path = Path(str(meta.get("last_execution_path") or "")).expanduser().resolve()
+    declared_sha = str(meta.get("last_execution_sha256") or "")
+    if not execution_path.is_file() or _sha256_file(execution_path) != declared_sha:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_MISSING_OR_TAMPERED")
+    execution = _read_verified_json(execution_path, EXECUTION_SCHEMA)
+    body = dict(execution)
+    execution_sha = str(body.pop("payload_sha256") or "")
+    if not execution_sha or _canonical_hash(body) != execution_sha:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PAYLOAD_HASH_MISMATCH")
+    if str(meta.get("last_execution_session_date") or "") != str(execution.get("execution_session_date") or ""):
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_SESSION_MISMATCH")
+    if execution.get("execution_session_date") > current_session:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_NOT_ANCESTOR")
+    runtime_path = Path(str(meta.get("runtime_snapshot_path") or "")).expanduser().resolve()
+    runtime_sha = str(meta.get("runtime_snapshot_sha256") or "")
+    if not runtime_path.is_file() or _sha256_file(runtime_path) != runtime_sha:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_RUNTIME_PARENT_MISSING_OR_TAMPERED")
+    if str(execution.get("runtime_snapshot_path") or "") != str(runtime_path):
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_RUNTIME_PATH_MISMATCH")
+    if str(execution.get("runtime_snapshot_sha256") or "") != runtime_sha:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_RUNTIME_SHA_MISMATCH")
+    return {
+        "path": str(execution_path),
+        "sha256": declared_sha,
+        "execution_session_date": str(execution["execution_session_date"]),
+        "runtime_snapshot_path": str(runtime_path),
+        "runtime_snapshot_sha256": runtime_sha,
+    }
 
 
 def _write_meta(paths: E2EPaperPaths, payload: Mapping[str, Any]) -> tuple[Path, str]:
@@ -773,6 +879,11 @@ def prepare_post_eod(
     if state.base_state.as_of_session_date != session:
         raise E2EPaperOrchestrationError("E2E_PAPER_STATE_SESSION_MISMATCH")
     meta = _load_meta(paths)
+    previous_execution = (
+        None
+        if meta is None
+        else _verify_previous_execution_parent(paths, meta, current_session=session)
+    )
     plan, bootstrap = _resolve_scores(
         current_score, previous_score, state=state, meta=meta, current_date=session
     )
@@ -848,6 +959,7 @@ def prepare_post_eod(
         },
         "current_score": _score_ref(current_score),
         "previous_score": None if previous_score is None else _score_ref(previous_score),
+        "previous_execution": previous_execution,
         "decision_plan": _decision_payload(plan),
         "decision_plan_sha256": _canonical_hash(_decision_payload(plan)),
         "execution_plan": order_payload,
@@ -1012,7 +1124,10 @@ def execute_preopen(
     current_event_ids = {
         event.event_id for event in ca_reconciliation.certified_events
     }
-    evidence_ids = {row.event.event_id for row in dividend_evidence}
+    available_evidence = tuple(
+        (*ca_reconciliation.verified_evidence, *dividend_evidence)
+    )
+    evidence_ids = {row.event.event_id for row in available_evidence}
     parent_ca = payload.get("ca_reconciliation")
     parent_event_ids = {
         str(row.get("event_id"))
@@ -1024,10 +1139,7 @@ def execute_preopen(
         raise E2EPaperOrchestrationError(
             "E2E_DIVIDEND_EVIDENCE_COVERAGE_MISMATCH"
         )
-    _verify_dividend_evidence_bindings(
-        dividend_evidence,
-        ca_reconciliation,
-    )
+    _verify_dividend_evidence_bindings(available_evidence, ca_reconciliation)
     _verify_reconciliation(
         ca_reconciliation,
         decision_date=decision_date,
@@ -1125,6 +1237,17 @@ def execute_preopen(
     if not isinstance(state_ref, dict) or str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve()) or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256 or str(state_ref.get("state_sha256")) != dividend.dividend_aware_state_hash(state):
         raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
     plan, _ = _resolve_scores(current_score, previous_score, state=state, meta=_load_meta(paths), current_date=decision_date)
+    declared_previous_execution = payload.get("previous_execution")
+    current_meta = _load_meta(paths)
+    actual_previous_execution = (
+        None
+        if current_meta is None
+        else _verify_previous_execution_parent(
+            paths, current_meta, current_session=decision_date
+        )
+    )
+    if actual_previous_execution != declared_previous_execution:
+        raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_CHANGED")
     if _canonical_hash(_decision_payload(plan)) != payload.get("decision_plan_sha256"):
         raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
     _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
@@ -1164,8 +1287,7 @@ def execute_preopen(
     if _canonical_hash(_execution_plan_payload(order_plan)) != payload.get("execution_plan_sha256"):
         raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
     evidence_by_event = {
-        row.event.event_id: row
-        for row in (*ca_reconciliation.verified_evidence, *dividend_evidence)
+        row.event.event_id: row for row in available_evidence
     }
     evidence = tuple(evidence_by_event.values())
     for row in evidence:

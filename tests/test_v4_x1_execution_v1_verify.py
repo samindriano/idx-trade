@@ -62,6 +62,29 @@ def test_eod_verifier_derives_immediate_next_official_session(monkeypatch, tmp_p
     assert verified.official_calendar_sha256 == hashlib.sha256(calendar_path.read_bytes()).hexdigest()
 
 
+def test_eod_verifier_rejects_weekend_as_official_session(monkeypatch, tmp_path):
+    ohlcv_path = _write_stub(tmp_path / "session_ohlcv.parquet", b"eod")
+    model_path = _write_stub(tmp_path / "model_input.parquet", b"model")
+    calendar_path = tmp_path / "calendar.csv"
+    calendar_path.write_text(
+        "date\n2026-08-21\n2026-08-22\n2026-08-24\n", encoding="utf-8"
+    )
+    ohlcv, model = _eod_frames()
+
+    def fake_read(path):
+        return ohlcv.copy() if Path(path) == ohlcv_path else model.copy()
+
+    monkeypatch.setattr(pd, "read_parquet", fake_read)
+    with pytest.raises(DecisionV1Error, match="WEEKEND_SESSION"):
+        verify_eod_execution_inputs(
+            session_ohlcv_path=ohlcv_path,
+            model_input_path=model_path,
+            official_calendar_path=calendar_path,
+            decision_session_date="2026-08-21",
+            required_tickers=["AAA", "BBB"],
+        )
+
+
 def test_eod_close_mismatch_fails_closed(monkeypatch, tmp_path):
     ohlcv_path = _write_stub(tmp_path / "session_ohlcv.parquet")
     model_path = _write_stub(tmp_path / "model_input.parquet")

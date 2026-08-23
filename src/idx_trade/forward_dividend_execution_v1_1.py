@@ -392,7 +392,12 @@ def _load_and_verify_post_eod_attestation_v1_2(
     str,
     Mapping[str, Mapping[str, Any]],
 ]:
-    """Verify a POST_EOD-only CA phase without requiring a future PREOPEN leg."""
+    """Verify one self-contained V1.2 CA capture phase.
+
+    POST_EOD is sufficient for preparation; PREOPEN is a later monotonic
+    refresh. Neither phase requires the other to exist in the same
+    attestation.
+    """
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -401,7 +406,8 @@ def _load_and_verify_post_eod_attestation_v1_2(
         raise DecisionV1Error("DIVIDEND_V1_2_CA_ATTESTATION_NOT_OBJECT")
     if payload.get("schema_version") != forward_ca.ATTESTATION_SCHEMA_V1_2:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_ATTESTATION_SCHEMA_CHANGED")
-    if payload.get("capture_phase") != "POST_EOD":
+    capture_phase = str(payload.get("capture_phase") or "")
+    if capture_phase not in {"POST_EOD", "PREOPEN"}:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_CAPTURE_PHASE_INVALID")
     if payload.get("provider_repository") != forward_ca.PROVIDER_REPOSITORY:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_PROVIDER_REPOSITORY_MISMATCH")
@@ -431,7 +437,7 @@ def _load_and_verify_post_eod_attestation_v1_2(
         phase = forward_ca.verify_phase_manifest(phase_path)
     except forward_ca.ForwardCAError as exc:
         raise DecisionV1Error(f"DIVIDEND_V1_2_CA_PHASE_CHAIN_INVALID:{exc}") from exc
-    if phase.get("phase") != "POST_EOD":
+    if phase.get("phase") != capture_phase:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_PHASE_ORDER_INVALID")
     if phase.get("from_session_date") != from_date or phase.get("through_session_date") != through_date:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_PHASE_SCOPE_MISMATCH")
@@ -474,8 +480,8 @@ def _load_and_verify_post_eod_attestation_v1_2(
     phase_tickers = {_normalize_ticker(x) for x in phase.get("required_tickers", [])}
     if phase_tickers != covered:
         raise DecisionV1Error("DIVIDEND_V1_2_CA_PHASE_TICKER_COVERAGE_MISMATCH")
-    payload["_v12_post_eod"] = True
-    return payload, from_date, through_date, covered, relevant, phase_path, actual_phase_sha, {"POST_EOD": phase}
+    payload["_v12_capture_phase"] = capture_phase
+    return payload, from_date, through_date, covered, relevant, phase_path, actual_phase_sha, {capture_phase: phase}
 
 
 def _load_and_verify_attestation_common(
@@ -645,7 +651,11 @@ def reconcile_corporate_action_attestation_v1_1(
     path = Path(attestation_path).expanduser().resolve()
     original_status = str(payload["status"])
     if payload.get("schema_version") == forward_ca.ATTESTATION_SCHEMA_V1_2:
-        _verify_v12_knowledge_cutoff(payload, phases["POST_EOD"], tuple(row.event for row in evidence))
+        capture_phase = str(payload.get("_v12_capture_phase") or payload.get("capture_phase") or "")
+        phase = phases.get(capture_phase)
+        if phase is None:
+            raise DecisionV1Error("DIVIDEND_V1_2_CAPTURE_PHASE_MANIFEST_MISSING")
+        _verify_v12_knowledge_cutoff(payload, phase, tuple(row.event for row in evidence))
 
     if original_status == "NO_RELEVANT_EVENTS":
         if payload.get("schema_version") == forward_ca.ATTESTATION_SCHEMA_V1_2:

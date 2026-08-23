@@ -137,9 +137,15 @@ def verify_eod_execution_inputs(
     sessions = pd.to_datetime(calendar["date"], errors="coerce")
     if sessions.isna().any():
         raise DecisionV1Error("EXECUTION_V1_OFFICIAL_CALENDAR_DATE_INVALID")
-    session_keys = sorted(
-        {pd.Timestamp(x).tz_localize(None).normalize().date().isoformat() for x in sessions}
-    )
+    normalized_sessions = [
+        pd.Timestamp(x).tz_localize(None).normalize().date().isoformat()
+        for x in sessions
+    ]
+    if len(normalized_sessions) != len(set(normalized_sessions)):
+        raise DecisionV1Error("EXECUTION_V1_OFFICIAL_CALENDAR_DUPLICATE_DATE")
+    session_keys = sorted(set(normalized_sessions))
+    if any(pd.Timestamp(x).weekday() >= 5 for x in session_keys):
+        raise DecisionV1Error("EXECUTION_V1_OFFICIAL_CALENDAR_WEEKEND_SESSION")
     if session_date not in session_keys:
         raise DecisionV1Error("EXECUTION_V1_DECISION_DATE_NOT_OFFICIAL_SESSION")
     idx = session_keys.index(session_date)
