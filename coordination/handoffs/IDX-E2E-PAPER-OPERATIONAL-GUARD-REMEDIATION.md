@@ -6,9 +6,9 @@ task_id: IDX-E2E-PAPER-OPERATIONAL-GUARD-REMEDIATION
 model_used: Codex root + Orchestra read-only audits
 reasoning_level: xhigh
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
-source_commit: `1ef978a24d8c74958e25e5d351c4c2232d9937a2`
+source_commit: `10a9e9bf7d4ab18372952b98ee1855fad77b30a1`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: pending push
+head_commit: `10a9e9bf7d4ab18372952b98ee1855fad77b30a1`
 
 ## Scope
 
@@ -44,6 +44,12 @@ weekday live PAPER cycle.
 `python -m py_compile` for all new/changed Python scripts: PASS
 Focused guard + E2E orchestration + dividend runtime tests: PASS
 `git diff --check`: PASS
+
+Controlled Sunday smoke at 2026-08-23 12:49:11 Asia/Jakarta:
+`WEEKEND_OR_HOLIDAY_NOOP`, calendar session count 9, deployment attestation
+PASS, provider calls false, model refit/rescore false, outcome access false.
+The persisted operational status SHA was
+`cdda059e3d2a9a226d4d88ab9398f9b85c5e70e04a2c9c4ec3eccb08fd73d6a3`.
 
 ## Blocking risks
 
