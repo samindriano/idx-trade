@@ -62,7 +62,8 @@ real execution-consumer V1.2 verifier passes.
 
 - No real provider capture was run in this remediation increment.
 - External dynamic config exists outside Git, but must be repinned after the
-  final branch tip. `IDXTrade-E2E-Paper` is not installed: the legitimate
+  final branch tip; it was repinned before the final weekend smoke.
+  `IDXTrade-E2E-Paper` is not installed: the legitimate
   registration attempt failed with `Access is denied` / `0x80070005`.
 - First weekday same-session proof is still pending and must not be claimed
   from weekend/no-session behavior.
@@ -74,6 +75,8 @@ real execution-consumer V1.2 verifier passes.
 - Focused scheduler contract tests: 20 passed.
 - `python -m py_compile` on changed modules/scripts: PASS.
 - `git diff --check`: PASS.
+- Final weekend runner smoke: `WEEKEND_OR_HOLIDAY_NOOP`,
+  `provider_calls=false`, `outcome_access=false`.
 
 ## recommended_next_action
 

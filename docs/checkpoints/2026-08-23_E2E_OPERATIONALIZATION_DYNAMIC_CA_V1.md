@@ -71,12 +71,18 @@ bootstrap configurations.
 
 ## Deployment boundary
 
-External runtime config exists under the user-local runtime root and must be
-repinned to the final branch HEAD after any further repository commit.
+External runtime config exists under the user-local runtime root and was
+repinned to the final branch HEAD before the deployment smoke; any later
+repository commit requires another repin.
 `IDXTrade-E2E-Paper` Task Scheduler installation remains blocked on legitimate
 interactive elevation. No static or synthetic CA artifact is accepted as the
 live authority. Deployment must use the external dynamic config and capture
 each exact window through the new collector.
+
+The final pre-install smoke on 2026-08-23 returned
+`WEEKEND_OR_HOLIDAY_NOOP`, with `provider_calls=false` and
+`outcome_access=false`. The task was not registered because
+`Register-ScheduledTask` returned `Access is denied (HRESULT 0x80070005)`.
 
 ## Decision
 
