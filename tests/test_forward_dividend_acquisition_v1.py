@@ -135,6 +135,26 @@ def test_response_ticker_mismatch_fails_closed() -> None:
         )
 
 
+def test_security_class_suffix_is_excluded_from_common_share_candidates() -> None:
+    payload = {
+        "Replies": [
+            _reply(
+                ticker="BBCA-R",
+                title="Jadwal Dividen Tunai",
+            )
+        ],
+        "ResultCount": 1,
+    }
+
+    assert (
+        acquisition.extract_dividend_candidates(
+            payload,
+            expected_ticker="BBCA",
+        )
+        == ()
+    )
+
+
 def test_duplicate_identity_conflict_fails_closed() -> None:
     payload = {
         "Replies": [

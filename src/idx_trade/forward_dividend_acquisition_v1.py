@@ -131,7 +131,15 @@ def extract_dividend_candidates(
         if not row_ticker_raw:
             continue
 
-        row_ticker = normalize_ticker(row_ticker_raw)
+        raw_row_ticker = str(row_ticker_raw).strip().upper()
+        # Issuer histories may include rights/warrant/security-class rows such
+        # as BABY-R.  They remain preserved in the immutable raw page but are
+        # outside this common-share dividend candidate contract.  Other issuer
+        # mismatches remain a hard schema error.
+        if raw_row_ticker.startswith(ticker + "-"):
+            continue
+
+        row_ticker = normalize_ticker(raw_row_ticker)
         if row_ticker != ticker:
             raise ForwardDividendAcquisitionError(
                 "FORWARD_DIVIDEND_RESPONSE_TICKER_MISMATCH"

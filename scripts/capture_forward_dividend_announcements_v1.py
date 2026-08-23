@@ -25,7 +25,11 @@ from idx_trade.forward_dividend_acquisition_v1 import (
 )
 
 SCHEMA = "idx_trade_forward_dividend_announcement_capture_v1"
-PAGE_SIZE = 100
+# The official ListedCompany/GetAnnouncement endpoint can report a total above
+# 100 while returning an empty second page for indexFrom=100.  A single large
+# page avoids that upstream pagination inconsistency while the ResultCount and
+# returned-row equality checks below still fail closed on truncation.
+PAGE_SIZE = 9999
 MAX_PAGES_PER_TICKER = 20
 
 
