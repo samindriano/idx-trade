@@ -21,5 +21,6 @@ def test_task_installer_isolated_and_retry_safe() -> None:
     assert "-StartWhenAvailable" in text
     assert "-MultipleInstances IgnoreNew" in text
     assert "-RunOnlyIfNetworkAvailable" in text
+    assert "--config-sha256" in text
     assert "IDXTrade-ForwardEOD" not in text
     assert "IDXTrade-ForwardOpenArchive" not in text

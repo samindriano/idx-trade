@@ -15,6 +15,10 @@ $configSha = Join-Path $resolvedRuntime "operational\config.json.sha256"
 if (-not (Test-Path -LiteralPath $config) -or -not (Test-Path -LiteralPath $configSha)) {
   throw "E2E runtime config is missing or not hash-pinned: $resolvedRuntime"
 }
+$configDigest = (Get-Content -LiteralPath $configSha -Raw).Trim().ToLowerInvariant()
+if ($configDigest -notmatch '^[0-9a-f]{64}$') {
+  throw "E2E runtime config SHA sidecar is invalid: $resolvedRuntime"
+}
 if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
   throw "Scheduled task already exists: $TaskName. Refusing to replace it."
 }
@@ -22,7 +26,7 @@ if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
 $python = (Get-Command $PythonExe -ErrorAction Stop).Source
 $runner = Join-Path $resolvedRepo "scripts\run_e2e_paper_scheduled_v1.py"
 if (-not (Test-Path -LiteralPath $runner)) { throw "Runner missing: $runner" }
-$arguments = "`"$runner`" --runtime-root `"$resolvedRuntime`""
+$arguments = "`"$runner`" --runtime-root `"$resolvedRuntime`" --config-sha256 `"$configDigest`""
 $action = New-ScheduledTaskAction -Execute $python -Argument $arguments -WorkingDirectory $resolvedRepo
 $triggers = @(
   (New-ScheduledTaskTrigger -Daily -At "08:30"),

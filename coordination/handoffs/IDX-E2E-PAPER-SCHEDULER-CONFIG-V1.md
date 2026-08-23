@@ -27,7 +27,8 @@ provider, model, state, or scheduler hierarchy was introduced.
 ## Findings / decisions
 
 - The task action can carry only the runtime root; operational paths and
-  hashes are loaded from an external immutable config.
+  hashes are loaded from an external immutable config; the config SHA is also
+  pinned in the task action.
 - Missing config, missing SHA sidecar, changed config bytes, relative paths,
   invalid commits, and secret-like keys fail closed.
 - Installer refuses an existing task and does not reference or modify
@@ -40,7 +41,7 @@ provider, model, state, or scheduler hierarchy was introduced.
 
 ## Validation
 
-- focused new tests: PASS (5);
+- focused new tests after SHA/repository pin hardening: PASS (6);
 - existing operational/controller tests: PASS;
 - full pytest: PASS with three pre-existing pandas FutureWarnings;
 - `py_compile`: PASS;

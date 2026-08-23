@@ -44,6 +44,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         loaded = load_runtime_config(args.runtime_root, expected_sha256=args.config_sha256)
+        if loaded.controller.repo_root != REPO_ROOT.resolve():
+            raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_REPO_ROOT_MISMATCH")
         result = run_operational_cycle(loaded.controller)
     except E2ERuntimeConfigError as exc:
         print(json.dumps({"controller_status": "WAITING_OPERATIONAL_CONFIGURATION", "reason": str(exc)}, sort_keys=True))

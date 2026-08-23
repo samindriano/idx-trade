@@ -55,6 +55,12 @@ def test_missing_or_changed_sidecar_fails_closed(tmp_path: Path) -> None:
         load_runtime_config(root)
 
 
+def test_task_pinned_expected_sha_is_checked(tmp_path: Path) -> None:
+    root = _write_config(tmp_path)
+    with pytest.raises(E2ERuntimeConfigError, match="EXPECTED_SHA_MISMATCH"):
+        load_runtime_config(root, expected_sha256="0" * 64)
+
+
 def test_relative_path_and_secret_field_fail_closed(tmp_path: Path) -> None:
     root = _write_config(tmp_path, repo_root="repo")
     with pytest.raises(E2ERuntimeConfigError, match="NOT_ABSOLUTE"):

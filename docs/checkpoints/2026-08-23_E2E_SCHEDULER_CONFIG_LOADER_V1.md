@@ -20,8 +20,9 @@ The E2E controller now has a deterministic external-runtime entrypoint:
   network-aware, `IgnoreNew`, `StartWhenAvailable` task with EOD and PREOPEN
   retry triggers without touching existing tasks.
 
-The scheduler action contains only the Python runner and runtime root. It does
-not contain credentials or CA material.
+The scheduler action contains only the Python runner, runtime root, and the
+config SHA pin. It does not contain credentials or CA material. The runner also
+requires the configured repository root to equal its own checkout root.
 
 ## Safety boundary
 
@@ -32,7 +33,7 @@ CA bootstrap or paper execution was attempted.
 
 ## Validation
 
-- new focused config/scheduler tests: PASS, 5 tests;
+- new focused config/scheduler tests: PASS, 6 tests;
 - controller/operational focused regression tests: PASS;
 - full pytest: PASS, with only the three existing pandas FutureWarnings;
 - `py_compile`: PASS;
