@@ -46,6 +46,11 @@ R2 remains private durable storage. V2 hot path writes:
 3. one run manifest;
 4. the exact IDX stock-summary source response used to construct the runtime universe.
 
+Each V2 `run_id` namespaces both the selected-universe digest and the exact
+Stock Summary source-response digest. A retry with changed upstream response
+bytes therefore cannot collide with a prior partial run that selected the same
+tickers.
+
 The normal R2 path uses conditional immutable PUT semantics and does **not** immediately GET every object back. Existing-object collisions are checked against stored SHA-256 metadata. Per-post canonical objects are removed from the hot path; post `first_seen` is derived offline as the minimum observed timestamp across immutable observations.
 
 ## Zapi envelope remediation

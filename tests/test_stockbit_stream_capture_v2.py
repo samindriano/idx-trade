@@ -182,3 +182,16 @@ def test_capture_v2_preserves_ready_run_when_post_quota_telemetry_times_out(tmp_
         "source": "MCP_GET_USAGE",
         "detail": "quota telemetry timeout",
     }
+
+
+def test_capture_v2_run_namespace_includes_source_response_digest(tmp_path: Path):
+    rows = [
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    first = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"first", "a" * 64, "c" * 64)
+    second = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"second", "b" * 64, "c" * 64)
+    first_result = capture_stream_v2(client=Client(), archive=LocalLeanArchive(tmp_path / "first"), universe=first, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    second_result = capture_stream_v2(client=Client(), archive=LocalLeanArchive(tmp_path / "second"), universe=second, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    assert first_result["run_id"] != second_result["run_id"]
+    assert "a" * 16 in first_result["run_id"]
+    assert "b" * 16 in second_result["run_id"]

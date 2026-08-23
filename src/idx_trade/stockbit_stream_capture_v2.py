@@ -260,7 +260,10 @@ def capture_stream_v2(
     if not universe.rows:
         raise StreamArchiveError("runtime universe is empty")
 
-    run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}"
+    # Include the exact source-response digest so a retry with the same
+    # selected tickers but changed upstream bytes gets a new immutable
+    # namespace instead of colliding with a partially completed run.
+    run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}_{universe.source_sha256[:16]}"
     quota_before = client.get_usage()
     planned_calls = len(universe.rows)
     if quota_before.remaining - planned_calls < monthly_reserve:
