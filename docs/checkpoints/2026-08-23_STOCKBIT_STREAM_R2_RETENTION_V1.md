@@ -1,75 +1,64 @@
 # Stockbit Stream R2 Retention V1
 
-Status: `ACTIVE_AND_VERIFIED`
+Status: `LONG_TERM_POLICY_READY_REMOTE_APPLY_PENDING`
 
-## Scope
+## Decision
 
-The Stockbit stream capture path remains unchanged. This checkpoint adds a
-bounded, manual-only Cloudflare R2 lifecycle control plane so storage growth is
-limited without touching capture scheduling, source data, model artifacts, or
-outcomes.
+The previous policy deleted:
 
-The pinned policy is:
+- `stockbit-stream-v2/raw/` after 180 days;
+- `stockbit-stream-v2/normalized/` after 180 days.
 
-- `stockbit-stream-v2/raw/` expires after 180 days;
-- `stockbit-stream-v2/normalized/` expires after 180 days;
-- `stockbit-stream-v2/manifests/` is preserved;
-- `stockbit-stream-v2/universe_inputs/` is preserved.
+That bounded forward-audit retention is not suitable for the intended
+prospective Stockbit research archive. The new policy retains all four
+research prefixes indefinitely:
 
-The 180-day window is intentionally longer than the expected 100-session
-forward audit horizon while keeping the observed archive comfortably below the
-10 GB-month free storage allowance at the current capture volume. It is a
-storage policy, not a scientific eligibility rule; expired payloads must never
-be treated as evidence that a capture did not occur.
+- `stockbit-stream-v2/raw/`;
+- `stockbit-stream-v2/normalized/`;
+- `stockbit-stream-v2/manifests/`;
+- `stockbit-stream-v2/universe_inputs/`.
 
-The user-provided R2 dashboard snapshot on 2026-08-23 showed approximately
-4.1k objects, 93.69 MB in the Stockbit bucket, and $0 billable usage for the
-current period. This is a baseline observation, not a substitute for a
-provider-side lifecycle verification.
+No replacement delete rule is generated. The two retired project-owned rule
+IDs are explicitly pinned in the config and may be removed only when their
+complete old 180-day definitions match exactly.
 
-## Safety and activation
+## Implementation and safety
 
-No R2 object was listed, read, deleted, or overwritten by this change. The
-capture workflow does not depend on the retention workflow.
+The capture path, 08:47 / 12:07 / 16:47 schedule, top-200 universe policy,
+historical artifacts, models, counters, and outcomes are unchanged.
 
-Cloudflare's S3-compatible API does not support Object Lifecycle. The utility
-therefore uses the Cloudflare account REST lifecycle endpoint, with a separate
-`CLOUDFLARE_API_TOKEN` supplied only at manual activation time. The GitHub
-workflow is `workflow_dispatch` only. Before its PUT, it performs a GET
-preflight, preserves all existing lifecycle rules verbatim, and appends only
-the two owned Stockbit rules. An existing rule that collides with an owned rule
-ID causes a fail-closed stop. It then performs a GET verification of the full
-merged configuration. It also fails closed if the token, account, or bucket is
-missing, or if the remote rules differ from the applied payload.
+The lifecycle utility is removal-only for the two exact project-owned rules:
 
-Activation was completed through the manual GitHub Actions workflow after the
-narrowly scoped `CLOUDFLARE_API_TOKEN` secret was added. The R2 S3 access key
-was not used for lifecycle configuration. Secret values were not printed or
-stored in the repository.
+- `stockbit-v2-raw-delete-180d`;
+- `stockbit-v2-normalized-delete-180d`.
 
-The successful activation run was:
+Before a PUT it GETs the current lifecycle configuration, preserves every
+unrelated rule verbatim, and fails closed on missing/duplicate rule IDs,
+changed fields on a retired rule, or an unowned object-delete rule targeting a
+Stockbit research prefix. After PUT it GET-verifies the complete merged rule
+set. It never lists, reads, deletes, or overwrites an R2 object.
 
-- workflow run: `32624790465`
-- result: `APPLIED_AND_VERIFIED`
-- applied merged lifecycle payload SHA-256:
-  `bff7dfc38185501163986cc4261d5d237d529133293f07cf7ee2ddc3e69ce1c6`
-- existing remote rule preserved verbatim: `Default Multipart Abort Rule`
+The existing unrelated `Default Multipart Abort Rule` must remain unchanged.
+The project-owned GitHub secret is used only by the manual lifecycle workflow;
+secret values are never printed or committed.
 
-The two owned rules now apply the 180-day expiry to the raw and normalized
-prefixes. The workflow only changed lifecycle configuration; it did not list,
-read, delete, or overwrite any R2 object. Future expiry is provider-managed;
-no manual cleanup or capture rerun was performed.
+## Activation
 
-## Verification
+Remote activation is intentionally pending until this branch is merged and
+the new removal-only workflow is dispatched once. The activation result must
+record the workflow run, merged lifecycle payload SHA-256, exact remaining
+rules, and proof that both retired IDs are absent.
 
-The local dry-run emits a deterministic lifecycle payload and SHA-256. Tests
-prove that only raw/normalized prefixes can expire, provenance prefixes cannot
-be selected, dry-run performs no network call, and missing activation
-credentials fail closed. The activation workflow additionally verified the
-full merged remote lifecycle configuration after the PUT.
+## Validation
 
-## Boundaries
+The focused retention suite covers indefinite policy generation, protected
+prefixes, dry-run network freedom, missing credentials, exact retired-rule
+removal, unrelated-rule preservation, ownership conflicts, duplicate IDs, and
+post-apply verification. Full repository validation remains subject to the
+known unrelated storage revision-conflict test.
 
-This lane does not change Stockbit capture, Zapi/IDX acquisition, R2 object
-contents, model/runtime artifacts, counters, labels, outcomes, or forward
-eligibility.
+## Cost and future optimization
+
+Storage-tier migration is deliberately deferred. If growth later becomes
+material, a separate reviewed task may move old raw objects to a cheaper tier;
+automatic deletion is not an acceptable substitute for the research archive.

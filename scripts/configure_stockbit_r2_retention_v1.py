@@ -1,9 +1,9 @@
-"""Render and optionally apply the bounded Stockbit R2 lifecycle policy.
+"""Render and optionally apply the Stockbit R2 long-term retention policy.
 
 This is a control-plane utility only.  It never lists, reads, or deletes R2
-objects.  Applying the policy requires an explicitly supplied Cloudflare API
-token and performs a PUT followed by a strict GET verification of the bucket
-lifecycle rules.
+objects. Applying the policy removes only the exact project-owned 180-day
+expiry rules, preserves unrelated rules verbatim, and performs a PUT followed
+by a strict GET verification of the bucket lifecycle rules.
 """
 
 from __future__ import annotations
@@ -20,9 +20,15 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-SECONDS_PER_DAY = 86_400
 DEFAULT_CONFIG = Path("config/stockbit_r2_retention_v1.json")
 API_ROOT = "https://api.cloudflare.com/client/v4"
+SUPPORTED_SCHEMA = "stockbit_r2_retention_v2"
+RAW_PREFIX = "raw/"
+NORMALIZED_PREFIX = "normalized/"
+PROJECT_OWNED_RULE_IDS = {
+    "stockbit-v2-raw-delete-180d",
+    "stockbit-v2-normalized-delete-180d",
+}
 
 
 class RetentionPolicyError(RuntimeError):
@@ -57,81 +63,54 @@ def load_policy(path: Path) -> dict[str, Any]:
         raise RetentionPolicyError(f"cannot read retention policy: {path}") from exc
     if not isinstance(policy, dict):
         raise RetentionPolicyError("retention policy must be a JSON object")
-    if policy.get("schema_version") != "stockbit_r2_retention_v1":
+    if policy.get("schema_version") != SUPPORTED_SCHEMA:
         raise RetentionPolicyError("unsupported retention policy schema")
     storage_prefix = _require_nonempty_string(policy.get("storage_prefix"), "storage_prefix").strip("/")
     if not storage_prefix or storage_prefix.startswith(".") or ".." in Path(storage_prefix).parts:
         raise RetentionPolicyError("storage_prefix must be a safe non-empty prefix")
-    try:
-        retention_days = int(policy["retention_days"])
-    except (KeyError, TypeError, ValueError) as exc:
-        raise RetentionPolicyError("retention_days must be an integer") from exc
-    if retention_days <= 0:
-        raise RetentionPolicyError("retention_days must be positive")
     preserve = _normalise_prefixes(policy.get("preserve_prefixes", []), "preserve_prefixes")
-    expire = _normalise_prefixes(policy.get("expire_prefixes", []), "expire_prefixes")
-    if not preserve or not expire:
-        raise RetentionPolicyError("preserve_prefixes and expire_prefixes must both be non-empty")
-    full_preserve = [f"{storage_prefix}/{value}" for value in preserve]
-    full_expire = [f"{storage_prefix}/{value}" for value in expire]
-    for preserve_prefix in full_preserve:
-        for expire_prefix in full_expire:
-            if preserve_prefix.startswith(expire_prefix) or expire_prefix.startswith(preserve_prefix):
-                raise RetentionPolicyError("preserve and expire prefixes overlap")
+    if set(preserve) != {RAW_PREFIX, NORMALIZED_PREFIX, "manifests/", "universe_inputs/"}:
+        raise RetentionPolicyError("preserve_prefixes must cover all Stockbit Stream research prefixes")
+    retired_ids = policy.get("retired_project_rule_ids")
+    if not isinstance(retired_ids, list) or set(retired_ids) != PROJECT_OWNED_RULE_IDS:
+        raise RetentionPolicyError("retired_project_rule_ids must exactly match the retired project-owned rules")
     return {
         "schema_version": policy["schema_version"],
         "storage_prefix": storage_prefix,
-        "retention_days": retention_days,
         "preserve_prefixes": preserve,
-        "expire_prefixes": expire,
+        "retired_project_rule_ids": sorted(retired_ids),
         "policy_intent": policy.get("policy_intent", ""),
     }
 
 
 def build_lifecycle_payload(policy: dict[str, Any]) -> dict[str, Any]:
     """Build the exact Cloudflare R2 REST lifecycle payload."""
-    validated = {
-        "schema_version": policy.get("schema_version"),
-        "storage_prefix": policy.get("storage_prefix"),
-        "retention_days": policy.get("retention_days"),
-        "preserve_prefixes": policy.get("preserve_prefixes"),
-        "expire_prefixes": policy.get("expire_prefixes"),
+    # Reuse the same strict validation path for callers that pass an in-memory policy.
+    load_policy_from_mapping(policy)
+    return {"rules": []}
+
+
+def load_policy_from_mapping(policy: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(policy, dict):
+        raise RetentionPolicyError("retention policy must be a JSON object")
+    if policy.get("schema_version") != SUPPORTED_SCHEMA:
+        raise RetentionPolicyError("unsupported retention policy schema")
+    storage_prefix = _require_nonempty_string(policy.get("storage_prefix"), "storage_prefix").strip("/")
+    if not storage_prefix or storage_prefix.startswith(".") or ".." in Path(storage_prefix).parts:
+        raise RetentionPolicyError("storage_prefix must be a safe non-empty prefix")
+    preserve = _normalise_prefixes(policy.get("preserve_prefixes", []), "preserve_prefixes")
+    if set(preserve) != {RAW_PREFIX, NORMALIZED_PREFIX, "manifests/", "universe_inputs/"}:
+        raise RetentionPolicyError("preserve_prefixes must cover all Stockbit Stream research prefixes")
+    retired_ids = policy.get("retired_project_rule_ids")
+    if not isinstance(retired_ids, list) or set(retired_ids) != PROJECT_OWNED_RULE_IDS:
+        raise RetentionPolicyError("retired_project_rule_ids must exactly match the retired project-owned rules")
+    return {
+        "schema_version": SUPPORTED_SCHEMA,
+        "storage_prefix": storage_prefix,
+        "preserve_prefixes": preserve,
+        "retired_project_rule_ids": sorted(retired_ids),
         "policy_intent": policy.get("policy_intent", ""),
     }
-    # Reuse the same validation path for callers that pass an in-memory policy.
-    storage_prefix = _require_nonempty_string(validated["storage_prefix"], "storage_prefix").strip("/")
-    try:
-        retention_days = int(validated["retention_days"])
-    except (TypeError, ValueError) as exc:
-        raise RetentionPolicyError("retention_days must be an integer") from exc
-    if retention_days <= 0:
-        raise RetentionPolicyError("retention_days must be positive")
-    preserve = _normalise_prefixes(validated["preserve_prefixes"] or [], "preserve_prefixes")
-    expire = _normalise_prefixes(validated["expire_prefixes"] or [], "expire_prefixes")
-    if not preserve or not expire:
-        raise RetentionPolicyError("preserve_prefixes and expire_prefixes must both be non-empty")
-    full_preserve = [f"{storage_prefix}/{value}" for value in preserve]
-    full_expire = [f"{storage_prefix}/{value}" for value in expire]
-    for preserve_prefix in full_preserve:
-        for expire_prefix in full_expire:
-            if preserve_prefix.startswith(expire_prefix) or expire_prefix.startswith(preserve_prefix):
-                raise RetentionPolicyError("preserve and expire prefixes overlap")
-    max_age = retention_days * SECONDS_PER_DAY
-    rules = []
-    for relative_prefix in expire:
-        full_prefix = f"{storage_prefix}/{relative_prefix}"
-        rule_slug = relative_prefix.rstrip("/").replace("/", "-")
-        rules.append(
-            {
-                "id": f"stockbit-v2-{rule_slug}-delete-{retention_days}d",
-                "conditions": {"prefix": full_prefix},
-                "enabled": True,
-                "deleteObjectsTransition": {
-                    "condition": {"type": "Age", "maxAge": max_age}
-                },
-            }
-        )
-    return {"rules": sorted(rules, key=lambda rule: str(rule.get("id", "")))}
 
 
 def canonical_payload_bytes(payload: dict[str, Any]) -> bytes:
@@ -205,44 +184,108 @@ def _safe_rule_summary(rule: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def verify_remote_policy(account_id: str, bucket_name: str, token: str, expected: dict[str, Any]) -> None:
+def _retired_rule_shapes(policy: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    validated = load_policy_from_mapping(policy)
+    storage_prefix = validated["storage_prefix"]
+    max_age = 180 * 86_400
+    return {
+        "stockbit-v2-raw-delete-180d": {
+            "id": "stockbit-v2-raw-delete-180d",
+            "conditions": {"prefix": f"{storage_prefix}/{RAW_PREFIX}"},
+            "enabled": True,
+            "deleteObjectsTransition": {"condition": {"type": "Age", "maxAge": max_age}},
+        },
+        "stockbit-v2-normalized-delete-180d": {
+            "id": "stockbit-v2-normalized-delete-180d",
+            "conditions": {"prefix": f"{storage_prefix}/{NORMALIZED_PREFIX}"},
+            "enabled": True,
+            "deleteObjectsTransition": {"condition": {"type": "Age", "maxAge": max_age}},
+        },
+    }
+
+
+def _targets_retired_prefix(rule: dict[str, Any], policy: dict[str, Any]) -> bool:
+    conditions = rule.get("conditions")
+    if not isinstance(conditions, dict):
+        return False
+    prefix = conditions.get("prefix")
+    storage_prefix = load_policy_from_mapping(policy)["storage_prefix"]
+    return prefix in {f"{storage_prefix}/{RAW_PREFIX}", f"{storage_prefix}/{NORMALIZED_PREFIX}"}
+
+
+def _has_object_delete_transition(rule: dict[str, Any]) -> bool:
+    return isinstance(rule.get("deleteObjectsTransition"), dict)
+
+
+def verify_remote_policy(
+    account_id: str,
+    bucket_name: str,
+    token: str,
+    expected: dict[str, Any],
+    policy: dict[str, Any],
+) -> None:
     response = _request_json("GET", lifecycle_url(account_id, bucket_name), token)
-    observed = {"rules": _rules_from_response(response, allow_empty=False)}
-    expected_sorted = {"rules": sorted(expected.get("rules", []), key=lambda rule: str(rule.get("id", "")))}
+    observed = {"rules": _rules_from_response(response, allow_empty=True)}
+    expected_sorted = preflight_remote_policy(response, expected, policy)
     if observed != expected_sorted:
-        raise RetentionPolicyError("remote lifecycle rules do not match the pinned policy")
+        raise RetentionPolicyError("remote lifecycle rules do not match the long-term policy")
 
 
-def preflight_remote_policy(response: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
-    """Build a replacement payload while preserving every existing rule."""
+def preflight_remote_policy(
+    response: dict[str, Any],
+    expected: dict[str, Any],
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    """Remove exact retired rules and preserve every unrelated rule verbatim."""
     observed_rules = _rules_from_response(response, allow_empty=True)
     expected_rules = sorted(expected.get("rules", []), key=lambda rule: str(rule.get("id", "")))
-    expected_by_id = {str(rule.get("id")): rule for rule in expected_rules}
+    retired_shapes = _retired_rule_shapes(policy)
+    observed_ids: list[str] = []
+    for rule in observed_rules:
+        rule_id = rule.get("id")
+        if not isinstance(rule_id, str) or not rule_id:
+            raise RetentionPolicyError("remote lifecycle contains a rule without a stable id")
+        if rule_id in observed_ids:
+            raise RetentionPolicyError("remote lifecycle contains duplicate rule ids")
+        observed_ids.append(rule_id)
     preserved_rules: list[dict[str, Any]] = []
     for rule in observed_rules:
         rule_id = rule.get("id")
         if not isinstance(rule_id, str) or not rule_id:
             raise RetentionPolicyError("remote lifecycle contains a rule without a stable id")
-        if rule_id in expected_by_id:
-            if rule != expected_by_id[rule_id]:
+        if rule_id in retired_shapes:
+            if rule != retired_shapes[rule_id]:
                 summary = _safe_rule_summary(rule)
                 raise RetentionPolicyError(
-                    "remote lifecycle rule id collides with the pinned policy; "
+                    "remote lifecycle retired-rule id does not match the exact old 180-day rule; "
                     f"observed_rule={json.dumps(summary, sort_keys=True, separators=(',', ':'))}"
                 )
             continue
+        if _targets_retired_prefix(rule, policy) and _has_object_delete_transition(rule):
+            summary = _safe_rule_summary(rule)
+            raise RetentionPolicyError(
+                "remote lifecycle contains an unowned object-delete rule for a Stockbit research prefix; "
+                f"observed_rule={json.dumps(summary, sort_keys=True, separators=(',', ':'))}"
+            )
         preserved_rules.append(rule)
     return {"rules": sorted([*preserved_rules, *expected_rules], key=lambda rule: str(rule.get("id", "")))}
 
 
-def apply_policy(account_id: str, bucket_name: str, token: str, payload: dict[str, Any], verify: bool) -> dict[str, Any]:
+def apply_policy(
+    account_id: str,
+    bucket_name: str,
+    token: str,
+    payload: dict[str, Any],
+    policy: dict[str, Any],
+    verify: bool,
+) -> dict[str, Any]:
     if not token:
         raise RetentionPolicyError("CLOUDFLARE_API_TOKEN is required for --apply")
     preflight = _request_json("GET", lifecycle_url(account_id, bucket_name), token)
-    applied_payload = preflight_remote_policy(preflight, payload)
+    applied_payload = preflight_remote_policy(preflight, payload, policy)
     _request_json("PUT", lifecycle_url(account_id, bucket_name), token, applied_payload)
     if verify:
-        verify_remote_policy(account_id, bucket_name, token, applied_payload)
+        verify_remote_policy(account_id, bucket_name, token, payload, policy)
     return applied_payload
 
 
@@ -277,10 +320,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.verify_only:
             if not token:
                 raise RetentionPolicyError("CLOUDFLARE_API_TOKEN is required for --verify-only")
-            verify_remote_policy(account_id, bucket_name, token, payload)
+            verify_remote_policy(account_id, bucket_name, token, payload, policy)
             print(json.dumps({"status": "VERIFIED", "lifecycle_payload_sha256": payload_sha256(payload)}, sort_keys=True))
             return 0
-        applied_payload = apply_policy(account_id, bucket_name, token, payload, verify=args.verify)
+        applied_payload = apply_policy(account_id, bucket_name, token, payload, policy, verify=args.verify)
         print(json.dumps({"status": "APPLIED_AND_VERIFIED" if args.verify else "APPLIED", "lifecycle_payload_sha256": payload_sha256(applied_payload)}, sort_keys=True))
         return 0
     except RetentionPolicyError as exc:
