@@ -2,9 +2,12 @@ name: Stockbit Stream prospective archive
 
 on:
   schedule:
-    - cron: "47 1 * * 1-5"  # 08:47 WIB
-    - cron: "7 5 * * 1-5"   # 12:07 WIB
-    - cron: "47 9 * * 1-5"  # 16:47 WIB
+    # Social-stream evidence is prospective calendar-day data. The existing
+    # runner still uses the latest valid completed IDX session for universe
+    # ranking on weekends and exchange holidays.
+    - cron: "47 1 * * *"  # 08:47 WIB, every calendar day
+    - cron: "7 5 * * *"   # 12:07 WIB, every calendar day
+    - cron: "47 9 * * *"  # 16:47 WIB, every calendar day
   workflow_dispatch:
     inputs:
       slot:
@@ -59,9 +62,9 @@ jobs:
           else
             top_n="200"
             case "$EVENT_SCHEDULE" in
-              "47 1 * * 1-5") slot="pre_open" ;;
-              "7 5 * * 1-5") slot="midday" ;;
-              "47 9 * * 1-5") slot="after_close" ;;
+              "47 1 * * *") slot="pre_open" ;;
+              "7 5 * * *") slot="midday" ;;
+              "47 9 * * *") slot="after_close" ;;
               *) echo "Unknown schedule: $EVENT_SCHEDULE" >&2; exit 2 ;;
             esac
           fi

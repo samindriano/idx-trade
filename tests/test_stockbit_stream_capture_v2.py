@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
 from idx_trade.stockbit_stream_archive import QuotaSnapshot
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
@@ -31,6 +32,37 @@ class Session:
         return Response({"provider": "idx", "dataset": "stock-summary", "data": rows})
 
 
+class WeekendCaptureSession:
+    """A weekend capture may use the latest completed Friday session."""
+
+    def get(self, url, params, headers, timeout):
+        requested = params["date"]
+        if requested == "2026-08-22":
+            return Response({"provider": "idx", "dataset": "stock-summary", "data": []})
+        assert requested == "2026-08-21"
+        rows = [
+            {"StockCode": "BBCA", "Date": "2026-08-21T00:00:00", "Value": 300, "NonRegularValue": 0},
+            {"StockCode": "BBRI", "Date": "2026-08-21T00:00:00", "Value": 500, "NonRegularValue": 0},
+            {"StockCode": "AADI", "Date": "2026-08-21T00:00:00", "Value": 1000, "NonRegularValue": 950},
+        ]
+        return Response({"provider": "idx", "dataset": "stock-summary", "data": rows})
+
+
+def test_envelope_aware_response_exposes_inner_idx_payload():
+    response = Response(
+        {
+            "project": "finance:idx",
+            "timestamp": "2026-08-21T00:00:00Z",
+            "data": {"provider": "idx", "dataset": "stock-summary", "data": []},
+        }
+    )
+    assert _EnvelopeAwareResponse(response).json() == {
+        "provider": "idx",
+        "dataset": "stock-summary",
+        "data": [],
+    }
+
+
 def identity_csv(path: Path):
     fields = ["ticker", "company_name", "listed_from", "listed_to", "capture_broad", "capture_high", "activity_rank", "activity_median_regular_value_60", "universe_source"]
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -47,6 +79,21 @@ def test_runtime_universe_uses_prior_session_regular_value(tmp_path: Path):
     assert universe.source_session == "2026-08-20"
     assert [row["ticker"] for row in universe.rows] == ["BBRI", "BBCA"]
     assert [row["activity_rank"] for row in universe.rows] == [1, 2]
+
+
+def test_runtime_universe_continues_past_weekend_for_calendar_day_capture(tmp_path: Path):
+    path = tmp_path / "identity.csv"
+    identity_csv(path)
+    universe = build_runtime_universe(
+        api_key="x",
+        identity_csv=path,
+        capture_date="2026-08-23",
+        top_n=2,
+        session=WeekendCaptureSession(),
+    )
+    assert universe.capture_date == "2026-08-23"
+    assert universe.source_session == "2026-08-21"
+    assert [row["ticker"] for row in universe.rows] == ["BBRI", "BBCA"]
 
 
 class StreamResponse:
