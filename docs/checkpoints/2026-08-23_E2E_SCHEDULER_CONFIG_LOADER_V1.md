@@ -13,6 +13,10 @@ The E2E controller now has a deterministic external-runtime entrypoint:
 - `config.json.sha256` is required and must match the exact config bytes;
 - the loader hashes and parses one in-memory config-byte snapshot, preventing
   a hash/parse time-of-check/time-of-use drift;
+- the scheduled runner verifies its own pinned SHA and the clean, exact
+  branch/HEAD before importing repository controller modules;
+- the pre-open start is fixed at 08:30 Asia/Jakarta; external config cannot
+  expand that window to an earlier time or to 09:02 and later;
 - all critical paths are absolute and all provider/CA/model-independent
   deployment identities remain explicit;
 - secret-like config keys are rejected;
@@ -37,7 +41,7 @@ CA bootstrap or paper execution was attempted.
 
 ## Validation
 
-- new focused config/scheduler tests: PASS, 7 tests;
+- new focused config/scheduler tests: PASS, 11 tests;
 - controller/operational focused regression tests: PASS;
 - full pytest: PASS, with only the three existing pandas FutureWarnings;
 - `py_compile`: PASS;

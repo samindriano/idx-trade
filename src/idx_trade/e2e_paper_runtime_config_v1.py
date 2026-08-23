@@ -32,6 +32,7 @@ class E2ERuntimeConfigError(RuntimeError):
 class LoadedRuntimeConfig:
     config_path: Path
     config_sha256: str
+    runner_sha256: str
     controller: OperationalControllerConfig
 
 
@@ -87,9 +88,14 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         preopen_start = time.fromisoformat(preopen_text)
     except ValueError as exc:
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_PREOPEN_TIME_INVALID") from exc
+    if preopen_start != time(8, 30):
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_PREOPEN_TIME_UNAUTHORIZED")
     ca_sha = _required_text(payload, "ca_attestation_sha256").lower()
     if not _SHA_RE.fullmatch(ca_sha):
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_CA_SHA_INVALID")
+    runner_sha = _required_text(payload, "runner_sha256").lower()
+    if not _SHA_RE.fullmatch(runner_sha):
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_RUNNER_SHA_INVALID")
 
     controller = OperationalControllerConfig(
         runtime_root=root,
@@ -120,7 +126,12 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
     if controller.initial_journal_path is not None:
         if controller.initial_journal_sha256 is None or not _SHA_RE.fullmatch(controller.initial_journal_sha256):
             raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_INITIAL_JOURNAL_SHA_INVALID")
-    return LoadedRuntimeConfig(config_path=config_path, config_sha256=actual_sha, controller=controller)
+    return LoadedRuntimeConfig(
+        config_path=config_path,
+        config_sha256=actual_sha,
+        runner_sha256=runner_sha,
+        controller=controller,
+    )
 
 
 __all__ = ["CONFIG_SCHEMA", "E2ERuntimeConfigError", "LoadedRuntimeConfig", "load_runtime_config"]

@@ -33,6 +33,10 @@ provider, model, state, or scheduler hierarchy was introduced.
   invalid commits, and secret-like keys fail closed.
 - Config is hashed and parsed from one in-memory byte snapshot; the task action
   pins the same digest.
+- The scheduled runner verifies its own config-pinned SHA and exact clean
+  branch/HEAD before importing controller modules.
+- `preopen_capture_start` is fixed to 08:30 Asia/Jakarta; invalid earlier or
+  late values fail closed.
 - Post-EOD task retries are 18:35/19:35/20:35, following the existing upstream
   EOD attempts at 18:30/19:30/20:30.
 - Installer refuses an existing task and does not reference or modify
@@ -45,7 +49,7 @@ provider, model, state, or scheduler hierarchy was introduced.
 
 ## Validation
 
-- focused new tests after SHA/repository pin hardening: PASS (7);
+- focused new tests after SHA/repository pin hardening: PASS (11);
 - existing operational/controller tests: PASS;
 - full pytest: PASS with three pre-existing pandas FutureWarnings;
 - `py_compile`: PASS;

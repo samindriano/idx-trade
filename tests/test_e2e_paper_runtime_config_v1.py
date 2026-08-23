@@ -31,6 +31,7 @@ def _write_config(tmp_path: Path, **updates: object) -> Path:
         "python_exe": str(tmp_path / "python.exe"),
         "ca_attestation_path": str(tmp_path / "ca-attestation.json"),
         "ca_attestation_sha256": "c" * 64,
+        "runner_sha256": "d" * 64,
         "preopen_capture_start": "08:30",
     }
     payload.update(updates)
@@ -82,4 +83,11 @@ def test_relative_path_and_secret_field_fail_closed(tmp_path: Path) -> None:
         load_runtime_config(root)
     root = _write_config(tmp_path, api_key="must-not-be-configured")
     with pytest.raises(E2ERuntimeConfigError, match="SECRET_FIELD"):
+        load_runtime_config(root)
+
+
+@pytest.mark.parametrize("preopen", ["00:00", "08:29", "09:02"])
+def test_preopen_time_cannot_expand_authorized_window(tmp_path: Path, preopen: str) -> None:
+    root = _write_config(tmp_path, preopen_capture_start=preopen)
+    with pytest.raises(E2ERuntimeConfigError, match="PREOPEN_TIME_UNAUTHORIZED"):
         load_runtime_config(root)

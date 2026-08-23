@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import ast
 
 from scripts.run_e2e_paper_scheduled_v1 import scheduler_exit_code
 
@@ -25,3 +26,16 @@ def test_task_installer_isolated_and_retry_safe() -> None:
     assert "--config-sha256" in text
     assert "IDXTrade-ForwardEOD" not in text
     assert "IDXTrade-ForwardOpenArchive" not in text
+
+
+def test_scheduled_runner_attests_before_importing_repo_modules() -> None:
+    runner = Path(__file__).parents[1] / "scripts" / "run_e2e_paper_scheduled_v1.py"
+    tree = ast.parse(runner.read_text(encoding="utf-8"))
+    module_imports = [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))]
+    assert not any(
+        isinstance(node, ast.ImportFrom) and (node.module or "").startswith("idx_trade")
+        for node in module_imports
+    )
+    source = runner.read_text(encoding="utf-8")
+    assert "_bootstrap_attest" in source
+    assert "E2E_RUNTIME_RUNNER_SHA_MISMATCH" in source
