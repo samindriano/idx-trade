@@ -1,0 +1,14 @@
+{
+  "schema_version": "stockbit_r2_retention_v1",
+  "storage_prefix": "stockbit-stream-v2",
+  "retention_days": 180,
+  "preserve_prefixes": [
+    "manifests/",
+    "universe_inputs/"
+  ],
+  "expire_prefixes": [
+    "raw/",
+    "normalized/"
+  ],
+  "policy_intent": "Retain provenance-critical manifests and universe inputs; expire bulky raw and normalized stream payloads after a bounded audit window."
+}
