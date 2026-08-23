@@ -1,7 +1,7 @@
 # Controlled Live E2E Paper Operationalization — Guard Remediation
 
-Date: 2026-08-23 Asia/Jakarta  
-Branch: `integration/idx-e2e-baseline-paper-v1`  
+Date: 2026-08-23 Asia/Jakarta
+Branch: `integration/idx-e2e-baseline-paper-v1`
 Parent: `1ef978a24d8c74958e25e5d351c4c2232d9937a2`
 
 ## Scope

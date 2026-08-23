@@ -1,14 +1,14 @@
 # Handoff
 
-from: Codex root coordinator  
-to: ChatGPT independent review / MAIN integration  
-task_id: IDX-E2E-PAPER-OPERATIONAL-GUARD-REMEDIATION  
-model_used: Codex root + Orchestra read-only audits  
-reasoning_level: xhigh  
-source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`  
-source_commit: `1ef978a24d8c74958e25e5d351c4c2232d9937a2`  
-branch: `integration/idx-e2e-baseline-paper-v1`  
-head_commit: pending push  
+from: Codex root coordinator
+to: ChatGPT independent review / MAIN integration
+task_id: IDX-E2E-PAPER-OPERATIONAL-GUARD-REMEDIATION
+model_used: Codex root + Orchestra read-only audits
+reasoning_level: xhigh
+source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
+source_commit: `1ef978a24d8c74958e25e5d351c4c2232d9937a2`
+branch: `integration/idx-e2e-baseline-paper-v1`
+head_commit: pending push
 
 ## Scope
 
@@ -41,8 +41,8 @@ weekday live PAPER cycle.
 
 ## Validation
 
-`python -m py_compile` for all new/changed Python scripts: PASS  
-Focused guard + E2E orchestration + dividend runtime tests: PASS  
+`python -m py_compile` for all new/changed Python scripts: PASS
+Focused guard + E2E orchestration + dividend runtime tests: PASS
 `git diff --check`: PASS
 
 ## Blocking risks
