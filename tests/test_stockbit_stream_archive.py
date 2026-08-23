@@ -195,7 +195,7 @@ def test_universe_manifest_and_schedule_are_pinned(tmp_path: Path) -> None:
     manifest_path.write_text(json.dumps({"output_sha256": digest}), encoding="utf-8")
     assert verify_universe_manifest(csv_path, manifest_path)["output_sha256"] == digest
     assert load_universe(csv_path)[0]["ticker"] == "BBCA"
-    assert SCHEDULE_CRONS["47 1 * * 1-5"] == "pre_open"
+    assert SCHEDULE_CRONS["47 1 * * *"] == "pre_open"
 
     manifest_path.write_text(json.dumps({"output_sha256": "0" * 64}), encoding="utf-8")
     with pytest.raises(StreamArchiveError):

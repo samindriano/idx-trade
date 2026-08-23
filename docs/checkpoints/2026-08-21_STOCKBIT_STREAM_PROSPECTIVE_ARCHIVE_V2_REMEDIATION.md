@@ -20,19 +20,20 @@ Selection is deterministic with ticker as the tie-break. Same-run Stockbit activ
 
 The source session is discovered by bounded backward search and every returned stock-summary row must attest the exact requested `Date`; this fails closed if Zapi ignores the historical date parameter.
 
-Expected normal 22-session Stream-call budget:
+Expected daily calendar-day Stream-call budget:
 
-`200 tickers × 3 slots × 22 sessions = 13,200 Stream calls/month`
+`200 tickers × 3 slots × 30–31 calendar days = 18,000–18,600 Stream calls/month`
 
-This intentionally leaves material headroom under the user's 25,000-call Zapi Pro monthly quota.
+This remains below the user's 25,000-call Zapi Pro monthly quota, with the
+remaining headroom reserved for bounded retries/manual validation.
 
 ## Schedule
 
-GitHub Actions remains the canonical scheduler because the user's laptop is not assumed to be awake.
+GitHub Actions remains the canonical scheduler because the user's laptop is not assumed to be awake. The schedule is every calendar day; on weekends and exchange holidays the runtime reuses the latest valid completed IDX session only for deterministic universe ranking while retaining the actual calendar capture date in the run ID.
 
-- `08:47 WIB` — pre-open
-- `12:07 WIB` — midday
-- `16:47 WIB` — after close
+- `08:47 WIB` — pre-open, every calendar day
+- `12:07 WIB` — midday, every calendar day
+- `16:47 WIB` — after close, every calendar day
 
 GitHub schedule time is nominal; actual provider observation timestamp remains authoritative.
 
@@ -55,6 +56,10 @@ Live GitHub Actions evidence showed that the current Zapi REST response for `fin
 - the actual documented IDX stock-summary payload is nested inside the outer `data` object.
 
 The V2 cloud runner now preserves the **exact outer response bytes** for provenance while exposing the nested finance payload to the stock-summary validator.
+
+The V2 capture manifest now reports `PARTIAL_FAILURE` unless every planned
+stream request completes with an `OK` classification. The CLI therefore exits
+non-zero for a partial run instead of falsely reporting `DATA_READY`.
 
 This is an execution/schema adaptation only. It does not alter universe ranking logic or use outcomes.
 
@@ -85,7 +90,7 @@ The smoke proves the intended cloud path can execute end-to-end:
 
 ## Test state
 
-The remediation PR CI reached `47 passed, 1 failed`; the only failure remains the pre-existing unrelated storage assertion `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` (fixture emits two conflicts while the assertion expects one). New Stockbit Stream V2 tests passed.
+The remediation PR CI reached `47 passed, 1 failed`; the only failure remains the pre-existing unrelated storage assertion `tests/test_storage.py::test_explicit_revision_mode_returns_audit_conflicts` (fixture emits two conflicts while the assertion expects one). New Stockbit Stream V2 tests passed. The current remediation adds explicit envelope, weekend, schedule-contract, and partial-failure coverage.
 
 ## Scientific boundary
 

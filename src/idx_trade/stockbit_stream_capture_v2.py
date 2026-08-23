@@ -306,9 +306,16 @@ def capture_stream_v2(
         request_records.append(record)
 
     quota_after = client.get_usage()
+    status = (
+        "DATA_READY"
+        if request_records
+        and len(request_records) == planned_calls
+        and all(record.get("response_classification") == "OK" for record in request_records)
+        else "PARTIAL_FAILURE"
+    )
     manifest = {
         "schema_version": "stockbit_stream_capture_v2",
-        "status": "DATA_READY",
+        "status": status,
         "run_id": run_id,
         "capture_date": universe.capture_date,
         "slot": slot,

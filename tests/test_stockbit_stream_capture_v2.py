@@ -115,6 +115,19 @@ class Client:
         return StreamResponse(), raw, datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
 
 
+class PartialClient(Client):
+    def stream(self, symbol):
+        if symbol == "BBCA":
+            self.calls.append(symbol)
+            return StreamResponse503(), b'{"error":"temporary"}', datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+        return super().stream(symbol)
+
+
+class StreamResponse503:
+    status_code = 503
+    headers = {"content-type": "application/json"}
+
+
 def test_capture_v2_avoids_per_post_hot_path_objects(tmp_path: Path):
     rows = [
         {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
@@ -130,3 +143,16 @@ def test_capture_v2_avoids_per_post_hot_path_objects(tmp_path: Path):
     assert len(list((tmp_path / "raw").rglob("*.json"))) == 2
     assert len(list((tmp_path / "normalized").rglob("*.jsonl"))) == 2
     assert len(list((tmp_path / "manifests").rglob("*.json"))) == 1
+
+
+def test_capture_v2_marks_partial_stream_failures_not_data_ready(tmp_path: Path):
+    rows = [
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 300.0, "activity_rank": 2},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b'{"provider":"idx"}', "a" * 64, "b" * 64)
+    result = capture_stream_v2(client=PartialClient(), archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert result["completed_calls"] == 2
+    assert result["successful_responses"] == 1
+    assert result["response_classification_counts"] == {"OK": 1, "HTTP_503": 1}
