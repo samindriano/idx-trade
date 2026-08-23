@@ -2,7 +2,8 @@
 
 Date: 2026-08-23 (Asia/Jakarta)
 Branch: `integration/idx-e2e-baseline-paper-v1`
-Implementation commit: `0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6`
+Implementation commits: `0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6`,
+`ffd138a2db2df20b3a75703a21bf3b073a1d0b46`
 
 ## Scope
 
@@ -28,6 +29,9 @@ bootstrap configurations.
   `.partial.*` staging directory and never appear as a final capture.
 - Built V1.2 attestations with timezone-aware UTC capture time, exact phase
   window, required tickers, phase-manifest path/SHA, and evidence rows.
+- The V1.2 builder now requires the raw calendar fingerprint to equal the
+  frozen production fingerprint before publication, and publishes the
+  attestation through an immutable temporary-file/replace path.
 - Updated the operational controller to bind the actual per-window attestation
   into the existing dividend/CA consumers, including the exact next-session
   `through_session` boundary. Existing static attestations remain compatible.
@@ -38,7 +42,7 @@ bootstrap configurations.
 
 ## Validation
 
-- Focused CA capture/config/controller/attestation tests: PASS (`30 passed`).
+- Focused CA capture/config/controller/attestation tests: PASS (`32 passed`).
 - Full repository pytest: PASS; only the repository's existing three pandas
   `FutureWarning`s were emitted.
 - `py_compile`: PASS for all changed Python modules/scripts.

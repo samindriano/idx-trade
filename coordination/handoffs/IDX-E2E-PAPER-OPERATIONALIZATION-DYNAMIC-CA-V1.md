@@ -6,9 +6,9 @@ task_id: IDX-E2E-PAPER-OPERATIONALIZATION-DYNAMIC-CA-V1
 model_used: GPT-5.6
 reasoning_level: high
 source_repository: samindriano/idx-trade
-source_commit: 0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6
+source_commit: ffd138a2db2df20b3a75703a21bf3b073a1d0b46
 branch: integration/idx-e2e-baseline-paper-v1
-head_commit: 0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6
+head_commit: ffd138a2db2df20b3a75703a21bf3b073a1d0b46
 
 ## scope
 
@@ -39,7 +39,8 @@ The collector uses the pinned provider checkout and captures the three already
 accepted official IDX source legs. It does not parse or promote events and it
 does not access outcomes. Failed captures remain inspectable under an external
 `.partial.*` directory; final output is published only after manifest
-verification.
+verification. The V1.2 builder rejects a stable but non-frozen calendar schema
+fingerprint and atomically publishes its output.
 
 ## decisions_made
 
@@ -61,13 +62,13 @@ verification.
 ## validation_run
 
 - `python -m pytest -q --basetemp <external-temp-root>`: PASS.
-- Focused CA/config/controller/attestation tests: 30 passed.
+- Focused CA/config/controller/attestation tests: 32 passed.
 - `python -m py_compile` on changed modules/scripts: PASS.
 - `git diff --check`: PASS.
 
 ## recommended_next_action
 
-Independent review of commit `0e1fa9c2a03dc2b87c22c10c91524a2d034b7af6`.
+Independent review of commit `ffd138a2db2df20b3a75703a21bf3b073a1d0b46`.
 If accepted, create an external hash-pinned dynamic runtime config, run one
 weekend/no-session scheduler smoke without provider capture, install only the
 new `IDXTrade-E2E-Paper` task, and wait for the first weekday cycle.
