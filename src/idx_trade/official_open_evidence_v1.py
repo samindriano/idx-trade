@@ -29,6 +29,7 @@ ALLOWED_TRANSPORTS = frozenset({DIRECT_TRANSPORT, ZAPI_RAW_TRANSPORT})
 TRANSPORT_POLICY = "DIRECT_IDX_THEN_ZAPI_RAW_V1"
 DIRECT_IDX_URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
 ZAPI_RAW_URL = "https://api.zpi.web.id/v1/finance:idx/raw"
+ZAPI_PROJECT = "finance:idx"
 
 
 class OfficialOpenEvidenceError(RuntimeError):
@@ -75,6 +76,10 @@ def _json_object(raw_bytes: bytes) -> dict[str, object]:
 
 
 def _zapi_inner_payload(payload: Mapping[str, object]) -> dict[str, object]:
+    if payload.get("project") != ZAPI_PROJECT:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_PROJECT_MISMATCH")
+    if "timestamp" not in payload or payload.get("timestamp") in (None, ""):
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_TIMESTAMP_MISSING")
     inner = payload.get("data")
     if not isinstance(inner, dict):
         raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_ENVELOPE_INVALID")
@@ -448,6 +453,7 @@ __all__ = [
     "TRANSPORT",
     "TRANSPORT_POLICY",
     "UPSTREAM_PATH",
+    "ZAPI_PROJECT",
     "ZAPI_RAW_TRANSPORT",
     "ZAPI_RAW_URL",
     "capture_direct_idx_official_open",
