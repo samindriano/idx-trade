@@ -13,6 +13,8 @@ def test_official_open_task_has_only_post_auction_retry_triggers_and_logon_catch
     assert "MultipleInstances IgnoreNew" in text
     assert "IDXTrade-E2E-OfficialOpen" in text
     assert "IDXTrade-ForwardOpenArchive" not in text
+    assert "DIRECT_IDX_THEN_ZAPI_RAW_V1" in text
+    assert "Zapi raw IDX passthrough only on direct transport failure" in text
 
 
 def test_headless_runner_invokes_only_same_session_official_open_runtime():
