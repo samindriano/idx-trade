@@ -18,6 +18,17 @@ contracts.
 | CA per-date rate >= 90% | 164/600 dates | 15 dates (`47..61`) |
 | Open-ready and CA>=90% intersection | 107/600 dates | 9 dates (`478..486`) |
 
+Across the exact 2,584 decision intents paired to the 600 certified
+execution-session artifacts, the acquired Open coverage is:
+
+- BUY: 905/1,297 positive (69.78%); 392 true nonpositive/unavailable;
+- SELL: 891/1,287 positive (69.23%); 396 true nonpositive/unavailable;
+- missing ticker/session keys: 0.
+
+The prior readiness baseline recorded BUY only (351/1,297, 27.06%) and did
+not publish a separate SELL baseline. Positive coverage is therefore an
+acquisition improvement, not a claim that nonpositive rows can be filled.
+
 The CA exposure diagnostic is the accepted external ledger:
 
 - path: `D:\Documents\Project\idx-historical-e2e-replay-readiness-20260823-v6\ca_exposure_gap.csv`

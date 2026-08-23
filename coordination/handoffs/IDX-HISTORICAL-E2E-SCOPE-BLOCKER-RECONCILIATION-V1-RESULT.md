@@ -17,6 +17,9 @@ files_changed:
 findings:
   - 376/600 sessions have complete positive Open support for all Decision V2
     BUY intents; the longest consecutive run is 34.
+  - Exact intent pairing against the 600 certified Open sessions gives BUY
+    905/1,297 positive and SELL 891/1,287 positive; the remainder are true
+    nonpositive Open rows, with zero missing ticker/session keys.
   - CA exposure continuity is strict-resolved for 4,471/5,693 rows (78.55%).
   - 164/600 dates reach the CA >=90% gate; the longest run is 15.
   - Open-ready and CA>=90% intersect on 107 dates; the longest run is 9.
