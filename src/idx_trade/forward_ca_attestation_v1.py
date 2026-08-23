@@ -532,6 +532,8 @@ def build_phase_attestation_v1_2(
     """
 
     phase = verify_phase_manifest(phase_manifest_path)
+    if phase.get("calendar_schema_fingerprints") != [EXPECTED_CALENDAR_SCHEMA_FINGERPRINT]:
+        raise ForwardCAError("FORWARD_CA_CALENDAR_SCHEMA_FINGERPRINT_MISMATCH")
     capture_timestamp = _capture_timestamp_utc(phase.get("capture_timestamp_utc"))
     phase_name = str(phase["phase"])
     evidence_rows: list[dict[str, Any]] = []
@@ -576,5 +578,16 @@ def build_phase_attestation_v1_2(
             raise ForwardCAError(f"FORWARD_CA_OUTPUT_EXISTS:{out}")
         return out
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_bytes(encoded)
+    temporary = out.with_name(
+        f".{out.name}.{hashlib.sha256(encoded).hexdigest()[:12]}.tmp"
+    )
+    temporary.write_bytes(encoded)
+    try:
+        if out.exists():
+            if out.read_bytes() != encoded:
+                raise ForwardCAError(f"FORWARD_CA_OUTPUT_EXISTS:{out}")
+        else:
+            temporary.replace(out)
+    finally:
+        temporary.unlink(missing_ok=True)
     return out

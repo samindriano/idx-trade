@@ -97,6 +97,7 @@ def _phase(
         "upstream_base_url": ca.UPSTREAM_BASE_URL,
         "from_session_date": "2026-08-21",
         "through_session_date": "2026-08-24",
+        "capture_timestamp_utc": "2026-08-23T12:00:00Z",
         "required_tickers": ["AAA"],
         "calendar_capture_scope": ca.CALENDAR_CAPTURE_SCOPE,
         "legs": {
@@ -259,3 +260,38 @@ def test_from_date_ca_announcement_is_conservatively_relevant(monkeypatch, tmp_p
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["status"] == "RELEVANT_EVENT_DETECTED"
     assert any("ANNOUNCEMENT" in x for x in payload["evidence_rows"][0]["reasons"])
+
+
+def test_v12_builder_rejects_stable_but_unpinned_calendar_schema(monkeypatch, tmp_path):
+    phase_path, raw_fingerprint = _phase(tmp_path, "POST_EOD")
+    monkeypatch.setattr(ca, "EXPECTED_CALENDAR_SCHEMA_FINGERPRINT", "b" * 64)
+    assert ca.verify_phase_manifest(phase_path)["calendar_schema_fingerprints"] == [raw_fingerprint]
+    with pytest.raises(ca.ForwardCAError, match="CALENDAR_SCHEMA_FINGERPRINT_MISMATCH"):
+        ca.build_phase_attestation_v1_2(
+            phase_manifest_path=phase_path,
+            output_path=tmp_path / "v12.json",
+        )
+
+
+def test_v12_builder_reuses_identical_output_and_rejects_conflict(tmp_path):
+    phase_path, raw_fingerprint = _phase(tmp_path, "POST_EOD")
+    original = ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT
+    try:
+        ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT = raw_fingerprint
+        output = tmp_path / "v12.json"
+        assert ca.build_phase_attestation_v1_2(
+            phase_manifest_path=phase_path,
+            output_path=output,
+        ) == output.resolve()
+        assert ca.build_phase_attestation_v1_2(
+            phase_manifest_path=phase_path,
+            output_path=output,
+        ) == output.resolve()
+        output.write_text("conflict\n", encoding="utf-8")
+        with pytest.raises(ca.ForwardCAError, match="OUTPUT_EXISTS"):
+            ca.build_phase_attestation_v1_2(
+                phase_manifest_path=phase_path,
+                output_path=output,
+            )
+    finally:
+        ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT = original
