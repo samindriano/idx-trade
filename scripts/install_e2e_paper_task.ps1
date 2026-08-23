@@ -47,8 +47,7 @@ $triggers = @(
 $settings = New-ScheduledTaskSettingsSet `
   -StartWhenAvailable `
   -MultipleInstances IgnoreNew `
-  -RunOnlyIfNetworkAvailable `
-  -AllowHardTerminate
+  -RunOnlyIfNetworkAvailable
 $principal = New-ScheduledTaskPrincipal `
   -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) `
   -LogonType InteractiveToken `
