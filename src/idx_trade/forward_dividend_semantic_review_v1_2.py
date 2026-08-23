@@ -84,8 +84,17 @@ def _parse_per_share_number(
             left, right = value.rsplit(",", 1)
 
             if len(right) == 3:
-                # Conventional thousands grouping.
-                value = left.replace(",", "") + right
+                # One separator followed by exactly three digits is
+                # ambiguous in IDX's Indonesian/English documents. A value
+                # such as 0,125 is unambiguously decimal; every other
+                # single-separator form must fail closed rather than make a
+                # silent 1000x interpretation.
+                if left == "0":
+                    value = left + "." + right
+                else:
+                    raise DividendSemanticReviewError(
+                        "DIVIDEND_SEMANTIC_V1_2_AMOUNT_AMBIGUOUS_THREE_DIGIT_SEPARATOR"
+                    )
             else:
                 # IDX can publish high-precision dividend/share,
                 # e.g. TLKM 223,1658777.
@@ -107,7 +116,12 @@ def _parse_per_share_number(
             left, right = value.rsplit(".", 1)
 
             if len(right) == 3:
-                value = left.replace(".", "") + right
+                if left == "0":
+                    value = left + "." + right
+                else:
+                    raise DividendSemanticReviewError(
+                        "DIVIDEND_SEMANTIC_V1_2_AMOUNT_AMBIGUOUS_THREE_DIGIT_SEPARATOR"
+                    )
             else:
                 value = (
                     left.replace(".", "")

@@ -274,22 +274,31 @@ def _sizing_payload(plan: ExecutionOrderPlan) -> dict[str, Any]:
     }
 
 
-def _execution_plan_payload(plan: ExecutionOrderPlan) -> dict[str, Any]:
+def _execution_plan_payload(
+    plan: ExecutionOrderPlan | dividend.DividendAwareExecutionOrderPlan,
+) -> dict[str, Any]:
+    dividend_plan = plan if isinstance(plan, dividend.DividendAwareExecutionOrderPlan) else None
+    base = plan.base_plan if dividend_plan is not None else plan
     return {
-        "decision_session_date": plan.decision_session_date,
-        "execution_session_date": plan.execution_session_date,
-        "state_hash": plan.state_hash,
-        "eod_nav_idr": plan.eod_nav_idr,
-        "projected_cash_for_sizing_idr": plan.projected_cash_for_sizing_idr,
-        "sizing_plan": _sizing_payload(plan),
-        "sells": [asdict(x) for x in plan.sells],
-        "effective_buy_intents": [_intent_payload(x) for x in plan.effective_buy_intents],
-        "target_positions": list(plan.target_positions),
-        "regular_market_values_t": dict(sorted(plan.regular_market_values_t.items())),
-        "eod_ohlcv_sha256": plan.eod_ohlcv_sha256,
-        "eod_model_input_sha256": plan.eod_model_input_sha256,
-        "official_calendar_sha256": plan.official_calendar_sha256,
-        "rule_id": plan.rule_id,
+        "decision_session_date": base.decision_session_date,
+        "execution_session_date": base.execution_session_date,
+        "state_hash": base.state_hash,
+        "eod_nav_idr": base.eod_nav_idr,
+        "projected_cash_for_sizing_idr": base.projected_cash_for_sizing_idr,
+        "sizing_plan": _sizing_payload(base),
+        "sells": [asdict(x) for x in base.sells],
+        "effective_buy_intents": [_intent_payload(x) for x in base.effective_buy_intents],
+        "target_positions": list(base.target_positions),
+        "regular_market_values_t": dict(sorted(base.regular_market_values_t.items())),
+        "eod_ohlcv_sha256": base.eod_ohlcv_sha256,
+        "eod_model_input_sha256": base.eod_model_input_sha256,
+        "official_calendar_sha256": base.official_calendar_sha256,
+        "rule_id": base.rule_id,
+        **({
+            "dividend_state_hash": dividend_plan.dividend_state_hash,
+            "dividend_ledger_hash": dividend_plan.dividend_ledger_hash,
+            "total_return_nav_idr": dividend_plan.total_return_nav_idr,
+        } if dividend_plan is not None else {}),
     }
 
 
@@ -307,6 +316,12 @@ def _reconciliation_payload(value: VerifiedDividendCAReconciliation) -> dict[str
         "attestation_sha256": value.attestation_sha256,
         "source_path": str(value.source_path.resolve()),
         "source_sha256": value.source_sha256,
+        "v12_journal_path": (
+            str(value.v12_journal_path.resolve())
+            if value.v12_journal_path is not None
+            else None
+        ),
+        "v12_journal_sha256": value.v12_journal_sha256,
     }
 
 
@@ -378,6 +393,15 @@ def _verify_persisted_reconciliation_payload(value: object) -> dict[str, Any]:
         if not path.is_file() or _sha256_file(path) != declared_sha:
             raise E2EPaperOrchestrationError(f"{code}_PARENT_HASH_MISMATCH")
         payload[path_key] = str(path)
+    journal_path_raw = payload.get("v12_journal_path")
+    journal_sha = payload.get("v12_journal_sha256")
+    if (journal_path_raw is None) != (journal_sha is None):
+        raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_PARENT_INCOMPLETE")
+    if journal_path_raw is not None:
+        journal_path = Path(str(journal_path_raw)).expanduser().resolve()
+        if not journal_path.is_file() or _sha256_file(journal_path) != str(journal_sha):
+            raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_PARENT_HASH_MISMATCH")
+        payload["v12_journal_path"] = str(journal_path)
     return payload
 
 
@@ -394,6 +418,12 @@ def _verify_prepared_ca_parent(
     _verify_persisted_reconciliation_payload(current_payload)
     if parent == current_payload:
         return current_payload
+
+    if parent.get("v12_journal_sha256") is not None and (
+        parent.get("v12_journal_path") != current_payload.get("v12_journal_path")
+        or parent.get("v12_journal_sha256") != current_payload.get("v12_journal_sha256")
+    ):
+        raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_PARENT_CHANGED")
 
     if (
         parent.get("from_session_date") != current_payload.get("from_session_date")
@@ -419,10 +449,6 @@ def _verify_prepared_ca_parent(
                 "E2E_CA_PREPARED_EVENT_PARENT_CHANGED:" + event_id
             )
     new_event_ids = set(current_events) - set(parent_events)
-    if not new_event_ids:
-        raise E2EPaperOrchestrationError(
-            "E2E_CA_PREPARED_PARENT_CHANGED_WITHOUT_EXTENSION"
-        )
     evidence_ids = {
         row.event.event_id
         for row in dividend_evidence
@@ -520,6 +546,40 @@ def _load_latest_state(paths: E2EPaperPaths) -> dividend.DividendAwarePaperState
     return snapshot.state
 
 
+def _historical_dividend_states(
+    paths: E2EPaperPaths,
+) -> dict[str, dividend.DividendAwarePaperState]:
+    """Load immutable runtime snapshots for late-certificate entitlement lookup."""
+    snapshot_dir = (
+        paths.root / dividend_runtime.RUNTIME_DIRNAME / dividend_runtime.SNAPSHOT_DIRNAME
+    ).resolve()
+    states: dict[str, dividend.DividendAwarePaperState] = {}
+    if not snapshot_dir.is_dir():
+        return states
+    for snapshot_path in sorted(snapshot_dir.glob("*.json")):
+        loaded = dividend_runtime.load_runtime_snapshot(snapshot_path)
+        states[loaded.state.base_state.as_of_session_date] = loaded.state
+    return states
+
+
+def _state_for_dividend_sizing(
+    paths: E2EPaperPaths,
+    state: dividend.DividendAwarePaperState,
+    events: Sequence[dividend.CertifiedCashDividend],
+    *,
+    session_date: str,
+) -> dividend.DividendAwarePaperState:
+    """Project CA lifecycle for sizing without mutating/persisting runtime state."""
+    if not events:
+        return state
+    return dividend.process_dividend_eod(
+        state,
+        events,
+        session_date=session_date,
+        historical_states_by_date=_historical_dividend_states(paths),
+    )
+
+
 def _load_meta(paths: E2EPaperPaths) -> dict[str, Any] | None:
     if not paths.meta_path.is_dir():
         return None
@@ -553,6 +613,49 @@ def bootstrap_t0(
     session = _date(session_date)
     if float(initial_nav_idr) != INITIAL_NAV_IDR:
         raise E2EPaperOrchestrationError("E2E_T0_INITIAL_NAV_CHANGED")
+
+    # Inspect the immutable root before any write. A divergent retry must not
+    # replace/mutate a runtime snapshot merely because T0 was checked late.
+    if paths.t0_path.is_file():
+        existing = _read_verified_json(paths.t0_path, T0_SCHEMA)
+        existing_body = dict(existing)
+        declared_sha = str(existing_body.pop("payload_sha256") or "")
+        if _canonical_hash(existing_body) != declared_sha:
+            raise E2EPaperOrchestrationError("E2E_T0_PAYLOAD_SHA_MISMATCH")
+        if (
+            existing.get("session_date") != session
+            or float(existing.get("initial_nav_idr") or 0.0) != INITIAL_NAV_IDR
+        ):
+            raise E2EPaperOrchestrationError("E2E_T0_ROOT_CONFLICT")
+        snapshot_path = Path(
+            str(existing.get("runtime_snapshot_path") or "")
+        ).expanduser().resolve()
+        snapshot = dividend_runtime.load_runtime_snapshot(snapshot_path)
+        if (
+            snapshot.file_sha256 != str(existing.get("runtime_snapshot_sha256") or "")
+            or dividend.dividend_aware_state_hash(snapshot.state)
+            != str(existing.get("state_sha256") or "")
+            or snapshot.state.base_state.as_of_session_date != session
+            or snapshot.state.base_state.cash_idr != INITIAL_NAV_IDR
+            or snapshot.state.base_state.positions
+            or snapshot.state.base_state.pending_buys
+            or snapshot.state.base_state.pending_sells
+            or snapshot.state.dividend_ledger != dividend.DividendLedger()
+            or snapshot.certified_dividend_registry
+        ):
+            raise E2EPaperOrchestrationError("E2E_T0_RUNTIME_ROOT_CONFLICT")
+        return paths.t0_path
+
+    snapshot_dir = (
+        paths.root
+        / dividend_runtime.RUNTIME_DIRNAME
+        / dividend_runtime.SNAPSHOT_DIRNAME
+    )
+    if any(snapshot_dir.glob("*.json")):
+        raise E2EPaperOrchestrationError("E2E_T0_PREEXISTING_RUNTIME_STATE")
+    if any(paths.meta_path.glob("*.json")) or any(paths.prepared_dir.glob("*.json")) or any(paths.execution_dir.glob("*.json")):
+        raise E2EPaperOrchestrationError("E2E_T0_PREEXISTING_RUNTIME_STATE")
+
     state = dividend.DividendAwarePaperState(
         base_state=PaperPortfolioState(
             as_of_session_date=session,
@@ -617,6 +720,42 @@ def _resolve_scores(
     return plan, bootstrap
 
 
+def derive_required_execution_tickers(
+    runtime_root: str | Path,
+    *,
+    current_score: VerifiedScoreSession,
+    previous_score: VerifiedScoreSession | None,
+    eod_inputs: VerifiedEODExecutionInputs,
+) -> tuple[str, ...]:
+    """Resolve Decision V2 before CA acquisition and return the exact CA scope."""
+    paths = E2EPaperPaths.from_root(runtime_root)
+    session = _date(current_score.session_date)
+    if eod_inputs.session_date != session:
+        raise E2EPaperOrchestrationError("E2E_EOD_SESSION_MISMATCH")
+    state = _load_latest_state(paths)
+    if state.base_state.as_of_session_date != session:
+        raise E2EPaperOrchestrationError("E2E_PAPER_STATE_SESSION_MISMATCH")
+    meta = _load_meta(paths)
+    plan, _ = _resolve_scores(
+        current_score,
+        previous_score,
+        state=state,
+        meta=meta,
+        current_date=session,
+    )
+    required = tuple(sorted(
+        {
+            *(position.ticker for position in state.base_state.positions),
+            *plan.target_positions,
+            *(row.ticker for row in state.base_state.pending_buys),
+            *(row.ticker for row in state.base_state.pending_sells),
+        }
+    ))
+    if not set(required).issubset(eod_inputs.raw_close_prices):
+        raise E2EPaperOrchestrationError("E2E_EOD_REQUIRED_TICKER_MISSING")
+    return required
+
+
 def prepare_post_eod(
     runtime_root: str | Path,
     *,
@@ -637,7 +776,14 @@ def prepare_post_eod(
     plan, bootstrap = _resolve_scores(
         current_score, previous_score, state=state, meta=meta, current_date=session
     )
-    required = tuple(sorted(set(state.base_state.positions[i].ticker for i in range(len(state.base_state.positions))) | set(plan.target_positions) | {x.ticker for x in state.base_state.pending_buys} | {x.ticker for x in state.base_state.pending_sells}))
+    required = tuple(sorted(
+        {
+            *(position.ticker for position in state.base_state.positions),
+            *plan.target_positions,
+            *(row.ticker for row in state.base_state.pending_buys),
+            *(row.ticker for row in state.base_state.pending_sells),
+        }
+    ))
     if not set(required).issubset(eod_inputs.raw_close_prices):
         raise E2EPaperOrchestrationError("E2E_EOD_REQUIRED_TICKER_MISSING")
     _verify_reconciliation(
@@ -650,6 +796,19 @@ def prepare_post_eod(
         _reconciliation_payload(ca_reconciliation)
     )
     snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+    registered_events = dividend_runtime.registered_certified_events(
+        snapshot.certified_dividend_registry
+    )
+    sizing_events = tuple({
+        event.event_id: event
+        for event in (*registered_events, *ca_reconciliation.certified_events)
+    }.values())
+    sizing_state = _state_for_dividend_sizing(
+        paths,
+        state,
+        sizing_events,
+        session_date=session,
+    )
     decision_shadow = (
         DecisionV2ShadowState.empty()
         if bootstrap
@@ -661,8 +820,20 @@ def prepare_post_eod(
     verified_sizing = verify_decision_v2_plan_for_sizing(
         plan, current_score, previous_score, decision_shadow
     )
-    base_plan = prepare_execution_v1_from_decision_v2(verified_sizing, state.base_state, eod_inputs=eod_inputs)
-    order_payload = _execution_plan_payload(base_plan)
+    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
+        verified_sizing,
+        sizing_state,
+        eod_inputs=eod_inputs,
+    )
+    # The prepared plan is sized from the projected CA state, but execution
+    # still verifies and advances the immutable runtime state from its raw
+    # snapshot.  Keep the parent hashes bound to that raw snapshot.
+    order_plan = replace(
+        order_plan,
+        dividend_state_hash=dividend.dividend_aware_state_hash(state),
+        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
+    )
+    order_payload = _execution_plan_payload(order_plan)
     payload = {
         "schema_version": PREPARED_SCHEMA,
         "status": "PREPARED_EXECUTION",
@@ -842,7 +1013,14 @@ def execute_preopen(
         event.event_id for event in ca_reconciliation.certified_events
     }
     evidence_ids = {row.event.event_id for row in dividend_evidence}
-    if evidence_ids != current_event_ids:
+    parent_ca = payload.get("ca_reconciliation")
+    parent_event_ids = {
+        str(row.get("event_id"))
+        for row in (parent_ca.get("certified_events", []) if isinstance(parent_ca, Mapping) else [])
+        if isinstance(row, Mapping)
+    }
+    new_event_ids = current_event_ids - parent_event_ids
+    if not evidence_ids.issuperset(new_event_ids) or not evidence_ids.issubset(current_event_ids):
         raise E2EPaperOrchestrationError(
             "E2E_DIVIDEND_EVIDENCE_COVERAGE_MISMATCH"
         )
@@ -958,11 +1136,38 @@ def execute_preopen(
             as_of_session_date=previous_score.session_date,
         )
     )
+    snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+    registered_events = dividend_runtime.registered_certified_events(
+        snapshot.certified_dividend_registry
+    )
+    sizing_events = tuple({
+        event.event_id: event
+        for event in (*registered_events, *ca_reconciliation.certified_events)
+    }.values())
+    sizing_state = _state_for_dividend_sizing(
+        paths,
+        state,
+        sizing_events,
+        session_date=decision_date,
+    )
     verified_sizing = verify_decision_v2_plan_for_sizing(plan, current_score, previous_score, shadow)
-    base_plan = prepare_execution_v1_from_decision_v2(verified_sizing, state.base_state, eod_inputs=eod_inputs)
-    if _canonical_hash(_execution_plan_payload(base_plan)) != payload.get("execution_plan_sha256"):
+    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
+        verified_sizing,
+        sizing_state,
+        eod_inputs=eod_inputs,
+    )
+    order_plan = replace(
+        order_plan,
+        dividend_state_hash=dividend.dividend_aware_state_hash(state),
+        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
+    )
+    if _canonical_hash(_execution_plan_payload(order_plan)) != payload.get("execution_plan_sha256"):
         raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
-    evidence = tuple(dividend_evidence)
+    evidence_by_event = {
+        row.event.event_id: row
+        for row in (*ca_reconciliation.verified_evidence, *dividend_evidence)
+    }
+    evidence = tuple(evidence_by_event.values())
     for row in evidence:
         if row.event not in ca_reconciliation.certified_events:
             raise E2EPaperOrchestrationError("E2E_DIVIDEND_EVIDENCE_NOT_IN_RECONCILIATION")
@@ -973,11 +1178,21 @@ def execute_preopen(
             row,
             attachment_dir=row.review_path.parent,
         )
+    all_registered_events = dividend_runtime.registered_certified_events(registry)
+    lifecycle_reconciliation = replace(
+        ca_reconciliation,
+        certified_events=tuple(sorted(
+            {event.event_id: event for event in (*all_registered_events, *ca_reconciliation.certified_events)}.values(),
+            key=lambda event: event.event_id,
+        )),
+    )
+    historical_states_by_date = _historical_dividend_states(paths)
     result = execute_open_v1_1_reconciled(
-        _dividend_order_plan(base_plan, state, eod_inputs.raw_close_prices),
+        order_plan,
         state,
         open_inputs=open_inputs,
-        reconciliation=ca_reconciliation,
+        reconciliation=lifecycle_reconciliation,
+        historical_states_by_date=historical_states_by_date,
     )
     snapshot_payload = dividend_runtime._snapshot_payload(
         result.state_after,
@@ -1087,6 +1302,7 @@ __all__ = [
     "PreparedExecutionResult",
     "CompletedExecutionResult",
     "bootstrap_t0",
+    "derive_required_execution_tickers",
     "prepare_post_eod",
     "execute_preopen",
     "load_score_manifest",

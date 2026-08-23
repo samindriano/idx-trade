@@ -13,6 +13,7 @@ UPSTREAM_BASE_URL = "https://www.idx.co.id/primary"
 PHASE_SCHEMA = "idx_trade_forward_ca_phase_manifest_v1"
 SOURCE_SCHEMA = "idx_trade_forward_ca_source_manifest_v1"
 ATTESTATION_SCHEMA = "v4_x1_paper_ca_attestation_v1"
+ATTESTATION_SCHEMA_V1_2 = "v4_x1_paper_ca_attestation_v1_2"
 CALENDAR_CAPTURE_SCOPE = "ALL_MARKET_MONTHS_TOUCHING_WINDOW"
 EXPECTED_CALENDAR_SCHEMA_FINGERPRINT: str | None = "09a2f81aaa291b27232ca610b228a28470cbe11d5599fa66f55a3b75030060f3"
 REQUIRED_PHASES = ("POST_EOD", "PREOPEN")

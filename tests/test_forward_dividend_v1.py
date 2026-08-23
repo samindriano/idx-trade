@@ -162,6 +162,31 @@ def test_first_buy_on_ex_date_does_not_receive_prior_dividend() -> None:
     assert result.dividend_ledger.receivables == ()
 
 
+def test_late_certification_requires_and_uses_immutable_cum_date_state() -> None:
+    late_event = replace(
+        _event(),
+        announcement_timestamp="2026-08-29T10:00:00",
+        knowledge_at_timestamp="2026-08-29T10:00:00",
+    )
+    current = fd.DividendAwarePaperState(_base("2026-08-31", shares=0))
+    historical = fd.DividendAwarePaperState(_base("2026-08-28", shares=200))
+
+    with pytest.raises(DecisionV1Error, match="HISTORICAL_CUM_STATE_REQUIRED"):
+        fd.snapshot_cum_date_entitlements(
+            current,
+            (late_event,),
+            session_date="2026-08-31",
+        )
+
+    recovered = fd.snapshot_cum_date_entitlements(
+        current,
+        (late_event,),
+        session_date="2026-08-31",
+        historical_states_by_date={"2026-08-28": historical},
+    )
+    assert recovered.dividend_ledger.entitlements[0].entitled_shares == 200
+
+
 def test_receivable_is_in_total_return_nav_but_not_cash() -> None:
     ledger = fd.DividendLedger(
         entitlements=(_entitlement(shares=200),),

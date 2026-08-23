@@ -267,6 +267,28 @@ def test_t0_is_idempotent_and_rejects_divergent_inputs(tmp_path: Path) -> None:
         bootstrap_t0(root, session_date="2026-08-24", initial_nav_idr=1.0)
 
 
+def test_t0_fails_before_mutation_when_runtime_snapshot_preexists(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    snapshot_dir = root / "forward_execution_v1_1" / "state_snapshots"
+    snapshot_dir.mkdir(parents=True)
+    sentinel = snapshot_dir / "2026-08-24.json"
+    sentinel.write_bytes(b"preexisting-runtime-state\n")
+    with pytest.raises(E2EPaperOrchestrationError, match="T0_PREEXISTING_RUNTIME_STATE"):
+        bootstrap_t0(root, session_date="2026-08-24")
+    assert not (root / "state" / "T0.json").exists()
+    assert sentinel.read_bytes() == b"preexisting-runtime-state\n"
+
+
+def test_t0_conflict_does_not_mutate_canonical_root(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    snapshot = root / "forward_execution_v1_1" / "state_snapshots" / "2026-08-24.json"
+    before = snapshot.read_bytes()
+    with pytest.raises(E2EPaperOrchestrationError, match="T0_ROOT_CONFLICT"):
+        bootstrap_t0(root, session_date="2026-08-25")
+    assert snapshot.read_bytes() == before
+
+
 def test_next_session_uses_persisted_score_parent_and_shadow(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")
@@ -581,7 +603,7 @@ def test_existing_execution_rejects_changed_dividend_evidence(
         )
 
 
-def test_preopen_rejects_changed_ca_without_new_event_extension(tmp_path: Path) -> None:
+def test_preopen_accepts_fresh_ca_capture_without_semantic_delta(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")
     tickers = [f"T{index:02d}" for index in range(11)]
@@ -598,19 +620,16 @@ def test_preopen_rejects_changed_ca_without_new_event_extension(tmp_path: Path) 
     changed_root = tmp_path / "changed-ca"
     changed_root.mkdir()
     changed_ca = _ca(changed_root, "2026-08-24", "2026-08-25", tickers)
-    with pytest.raises(
-        E2EPaperOrchestrationError,
-        match="CA_PREPARED_PARENT_CHANGED_WITHOUT_EXTENSION",
-    ):
-        execute_preopen(
-            root,
-            prepared_path=prepared.path,
-            current_score=current,
-            previous_score=None,
-            eod_inputs=eod,
-            open_inputs=_open(tmp_path, "2026-08-25", tickers),
-            ca_reconciliation=changed_ca,
-        )
+    result = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=changed_ca,
+    )
+    assert result.status == "EXECUTION_COMPLETE"
 
 
 def test_preopen_allows_ca_extension_only_with_verified_new_event(

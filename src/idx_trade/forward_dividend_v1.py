@@ -144,6 +144,9 @@ class CertifiedCashDividend:
     record_date: str
     payment_date: str
     source_evidence_sha256: str
+    # V1.2 may certify an economic event after its cum date. This is an
+    # explicit knowledge-time marker, never a backdated trading decision.
+    knowledge_at_timestamp: str | None = None
 
 
 @dataclass(frozen=True)
@@ -485,8 +488,16 @@ def _validated_event(event: CertifiedCashDividend) -> CertifiedCashDividend:
     amount = _positive(event.gross_dividend_per_share_idr, "DIVIDEND_V1_PER_SHARE_INVALID")
     cum, ex, record, payment = _event_dates(event.cum_date, event.ex_date, event.record_date, event.payment_date)
     source_sha = _sha(event.source_evidence_sha256, "DIVIDEND_V1_SOURCE_SHA_INVALID")
-    if _iso_date(announced, "DIVIDEND_V1_ANNOUNCEMENT_DATE_INVALID") > cum:
+    if (
+        _iso_date(announced, "DIVIDEND_V1_ANNOUNCEMENT_DATE_INVALID") > cum
+        and event.knowledge_at_timestamp is None
+    ):
         raise DecisionV1Error("DIVIDEND_V1_ANNOUNCEMENT_AFTER_CUM_DATE")
+    if event.knowledge_at_timestamp is not None:
+        if _timestamp(event.knowledge_at_timestamp) != event.knowledge_at_timestamp:
+            raise DecisionV1Error("DIVIDEND_V1_KNOWLEDGE_TIMESTAMP_INVALID")
+        if event.knowledge_at_timestamp != announced:
+            raise DecisionV1Error("DIVIDEND_V1_KNOWLEDGE_TIMESTAMP_MISMATCH")
     return replace(
         event,
         ticker=symbol,
@@ -504,6 +515,7 @@ def snapshot_cum_date_entitlements(
     events: Sequence[CertifiedCashDividend],
     *,
     session_date: str,
+    historical_states_by_date: Mapping[str, "DividendAwarePaperState"] | None = None,
 ) -> DividendAwarePaperState:
     session = _iso_date(session_date, "DIVIDEND_V1_SESSION_DATE_INVALID")
     if _iso_date(state.base_state.as_of_session_date, "DIVIDEND_V1_STATE_DATE_INVALID") != session:
@@ -529,13 +541,30 @@ def snapshot_cum_date_entitlements(
     changed = False
     entitlements = list(ledger.entitlements)
     for event in sorted(candidates.values(), key=lambda x: x.event_id):
-        if event.cum_date != session:
+        if event.cum_date > session:
             continue
         existing_other = same_cum.get((event.ticker, event.cum_date))
         if existing_other is not None and existing_other != event.event_id:
             raise DecisionV1Error("DIVIDEND_V1_CONFLICTING_EVENT_SAME_TICKER_CUM")
-        shares = positions.get(event.ticker, 0)
         existing = by_id.get(event.event_id)
+        if event.cum_date == session:
+            shares = positions.get(event.ticker, 0)
+        elif existing is not None:
+            # Once an entitlement is already recorded, later lifecycle passes
+            # must not re-derive it from a mutated current position.
+            shares = existing.entitled_shares
+        else:
+            historical = (
+                None
+                if historical_states_by_date is None
+                else historical_states_by_date.get(event.cum_date)
+            )
+            if historical is None:
+                raise DecisionV1Error("DIVIDEND_V1_HISTORICAL_CUM_STATE_REQUIRED")
+            if _iso_date(historical.base_state.as_of_session_date, "DIVIDEND_V1_HISTORICAL_CUM_STATE_DATE_INVALID") != event.cum_date:
+                raise DecisionV1Error("DIVIDEND_V1_HISTORICAL_CUM_STATE_DATE_MISMATCH")
+            _, historical_positions, _, _ = normalize_state(historical.base_state)
+            shares = historical_positions.get(event.ticker, 0)
         if existing is not None:
             if shares != existing.entitled_shares:
                 raise DecisionV1Error("DIVIDEND_V1_REPLAY_POSITION_ENTITLEMENT_MISMATCH")
@@ -648,9 +677,15 @@ def process_dividend_eod(
     events: Sequence[CertifiedCashDividend],
     *,
     session_date: str,
+    historical_states_by_date: Mapping[str, DividendAwarePaperState] | None = None,
 ) -> DividendAwarePaperState:
-    advanced = advance_dividend_lifecycle(state, session_date=session_date)
-    return snapshot_cum_date_entitlements(advanced, events, session_date=session_date)
+    snapshotted = snapshot_cum_date_entitlements(
+        state,
+        events,
+        session_date=session_date,
+        historical_states_by_date=historical_states_by_date,
+    )
+    return advance_dividend_lifecycle(snapshotted, session_date=session_date)
 
 
 def paper_total_return_nav_idr(
@@ -698,6 +733,51 @@ def prepare_execution_v1_1(
         dividend_state_hash=state_hash,
         dividend_ledger_hash=ledger_hash,
         total_return_nav_idr=corrected_nav,
+    )
+
+
+def prepare_execution_v1_1_from_decision_v2(
+    verified_plan: object,
+    state: DividendAwarePaperState,
+    *,
+    eod_inputs: object,
+) -> DividendAwareExecutionOrderPlan:
+    """Dividend-aware wrapper for the accepted Decision V2 execution adapter.
+
+    The adapter remains the authority for frozen Execution V1 mechanics; this
+    wrapper only replaces the sizing NAV with total-return NAV when an already
+    earned receivable exists.
+    """
+    from .v4_x1_execution_v1_decision_v2_adapter import (
+        prepare_execution_v1_from_decision_v2,
+    )
+    from .v4_x1_sizing_v1_decision_v2_adapter import _require_verified_v2
+    from .v4_x1_sizing_v1 import _size_entries_core
+
+    base_plan = prepare_execution_v1_from_decision_v2(
+        verified_plan,
+        state.base_state,
+        eod_inputs=eod_inputs,
+    )
+    corrected_nav = paper_total_return_nav_idr(state, eod_inputs.raw_close_prices)
+    if not math.isclose(corrected_nav, base_plan.eod_nav_idr, rel_tol=0.0, abs_tol=1e-6):
+        decision_plan = _require_verified_v2(verified_plan)
+        sizing_plan = _size_entries_core(
+            decision_session_date=decision_plan.decision_session_date,
+            target_positions=decision_plan.target_positions,
+            intents=base_plan.effective_buy_intents,
+            nav_idr=corrected_nav,
+            available_cash_idr=base_plan.projected_cash_for_sizing_idr,
+            reference_prices=eod_inputs.raw_close_prices,
+        )
+        if sizing_plan._verification_token is not _SIZING_PLAN_TOKEN:
+            raise DecisionV1Error("DIVIDEND_V1_SIZING_PLAN_NOT_VERIFIED")
+        base_plan = replace(base_plan, eod_nav_idr=corrected_nav, sizing_plan=sizing_plan)
+    return DividendAwareExecutionOrderPlan(
+        base_plan=base_plan,
+        dividend_state_hash=dividend_aware_state_hash(state),
+        dividend_ledger_hash=dividend_ledger_hash(state.dividend_ledger),
+        total_return_nav_idr=float(corrected_nav),
     )
 
 

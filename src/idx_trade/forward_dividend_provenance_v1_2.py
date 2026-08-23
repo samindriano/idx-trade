@@ -1071,4 +1071,5 @@ def certify_direct_idx_dividend_from_attachment_review_v1_2(
         record_date=str(evidence["record_date"]),
         payment_date=str(evidence["payment_date"]),
         source_evidence_sha256=evidence_sha,
+        knowledge_at_timestamp=str(evidence["announcement_timestamp"]),
     )

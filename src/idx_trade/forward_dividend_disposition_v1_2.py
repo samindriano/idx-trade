@@ -17,6 +17,11 @@ _CORROBORATION_TERMS = (
     "advertisement",
     "proof publication",
     "bukti publikasi",
+    "laporan pasca",
+    "post-event",
+    "post event",
+    "after payment",
+    "pasca pembayaran",
 )
 _CORRECTION_TERMS = (
     "koreksi",
@@ -44,6 +49,7 @@ class DividendDispositionCandidate:
     record_date: str | None = None
     payment_date: str | None = None
     document_sha256: tuple[str, ...] = ()
+    lineage_references: tuple[str, ...] = ()
     review_status: str | None = None
     semantic_failures: tuple[str, ...] = ()
 
@@ -118,6 +124,27 @@ def candidate_from_review(
                 if value:
                     documents.add(value)
 
+    lineage_references: set[str] = set()
+    for key in (
+        "supersedes_announcement_identity",
+        "correction_of_announcement_identity",
+        "related_announcement_identity",
+        "referenced_announcement_identity",
+    ):
+        value = candidate.get(key)
+        if value:
+            lineage_references.add(str(value).strip())
+    if isinstance(review, Mapping):
+        for key in (
+            "supersedes_announcement_identity",
+            "correction_of_announcement_identity",
+            "related_announcement_identity",
+            "referenced_announcement_identity",
+        ):
+            value = review.get(key)
+            if value:
+                lineage_references.add(str(value).strip())
+
     failure_values = tuple(sorted({str(x) for x in semantic_failures if str(x)}))
     if isinstance(review, Mapping):
         failure_values = tuple(sorted({
@@ -145,6 +172,7 @@ def candidate_from_review(
         record_date=_event_value(event, "record_date"),
         payment_date=_event_value(event, "payment_date"),
         document_sha256=tuple(sorted(documents)),
+        lineage_references=tuple(sorted(x for x in lineage_references if x)),
         review_status=(
             str(review.get("status") or "").strip()
             if isinstance(review, Mapping)
@@ -178,9 +206,19 @@ def _same_economic_event(
     if left.ticker != right.ticker:
         return False
 
+    if (
+        right.announcement_identity in left.lineage_references
+        or left.announcement_identity in right.lineage_references
+    ):
+        return True
+
     left_docs = set(left.document_sha256)
     right_docs = set(right.document_sha256)
-    if left_docs and right_docs and left_docs.intersection(right_docs):
+    shared_docs = left_docs.intersection(right_docs)
+    # A single generic attachment is not an economic-lineage proof. Require
+    # two independent shared immutable documents when explicit announcement
+    # linkage is absent. Exact schedule/economics below remains sufficient.
+    if len(shared_docs) >= 2:
         return True
 
     comparable = (
@@ -371,14 +409,7 @@ def apply_temporal_disposition(
                     and _has_event(other)
                     and _date_from_timestamp(other.announcement_timestamp)
                     < _date_from_timestamp(candidate.announcement_timestamp)
-                    and (
-                        _has_term(candidate.title, _CORROBORATION_TERMS)
-                        or (
-                            other.payment_date
-                            and date.fromisoformat(other.payment_date)
-                            < _date_from_timestamp(candidate.announcement_timestamp)
-                        )
-                    )
+                    and _has_term(candidate.title, _CORROBORATION_TERMS)
                 )
             ),
             None,

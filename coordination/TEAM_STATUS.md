@@ -20,3 +20,14 @@ Only MAIN may edit this file.
   the existing data-foundation contracts with the frozen research
   specification, and records a GO/NO-GO decision before any new data or model
   work.
+
+## Branch-local handoff — 2026-08-23
+
+- **Lane:** `integration/idx-e2e-baseline-paper-v1`
+- **Status:** `REVIEW`
+- **Result:** Cash-dividend V1.2 and restart/idempotency E2E remediation
+  completed; deterministic core replay and production-path replay passed.
+- **Boundary:** no provider calls, protected outcome access, model work, or
+  scheduler mutation. Await independent review before operational continuation.
+- **Checkpoint:** `docs/checkpoints/2026-08-23_CASH_DIVIDEND_E2E_REMEDIATION_RESULT.md`
+- **Handoff:** `coordination/handoffs/IDX-CASH-DIVIDEND-E2E-REMEDIATION-RESULT.md`

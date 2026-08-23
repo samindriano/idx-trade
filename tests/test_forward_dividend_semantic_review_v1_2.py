@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from idx_trade.forward_dividend_semantic_review_v1 import (
@@ -8,6 +10,7 @@ from idx_trade.forward_dividend_semantic_review_v1 import (
 from idx_trade.forward_dividend_semantic_review_v1_2 import (
     _amount_mode_and_values,
     _material_non_cash_subject,
+    _parse_per_share_number,
     analyze_cash_dividend_documents_v1_2,
     extract_cash_dividend_schedule_v1_2,
     normalize_text,
@@ -52,6 +55,23 @@ def test_bbri_dash_amount() -> None:
 
     assert mode == "GENERIC_PER_SHARE"
     assert values == {"137"}
+
+
+def test_zero_leading_three_digit_separator_is_decimal_not_thousands():
+    assert _parse_per_share_number("0,125") == Decimal("0.125")
+    assert _parse_per_share_number("0.125") == Decimal("0.125")
+
+
+def test_nonzero_single_three_digit_separator_is_ambiguous():
+    with pytest.raises(
+        DividendSemanticReviewError,
+        match="AMBIGUOUS_THREE_DIGIT_SEPARATOR",
+    ):
+        _parse_per_share_number("123,456")
+
+
+def test_multi_separator_grouping_remains_supported():
+    assert _parse_per_share_number("1.234.567") == Decimal("1234567")
 
 
 def test_bbca_final_prefers_remaining_payable() -> None:

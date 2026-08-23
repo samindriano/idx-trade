@@ -77,6 +77,7 @@ class DividendBlockerResolutionEntry:
     resolver_review_sha256: str
     resolver_status: str
     resolver_review_filename: str = "ATTACHMENT_REVIEW.json"
+    resolution_kind: str = "CROSS_ANNOUNCEMENT"
 
 
 @dataclass(frozen=True)
@@ -446,6 +447,9 @@ def normalize_blocker_resolutions(
         resolver_review_filename = str(
             row.resolver_review_filename or "ATTACHMENT_REVIEW.json"
         ).strip()
+        resolution_kind = str(
+            row.resolution_kind or "CROSS_ANNOUNCEMENT"
+        ).strip().upper()
 
         if not blocker_identity or not blocker_classification:
             raise ForwardDividendOrchestrationError(
@@ -463,10 +467,21 @@ def normalize_blocker_resolutions(
                 + blocker_identity
             )
 
-        if blocker_identity == resolver_identity:
+        if blocker_identity == resolver_identity and resolution_kind != "SAME_ANNOUNCEMENT_RECOVERY":
             raise ForwardDividendOrchestrationError(
                 "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_SELF_REFERENCE:"
                 + blocker_identity
+            )
+        if resolution_kind not in {
+            "CROSS_ANNOUNCEMENT",
+            "SAME_ANNOUNCEMENT_RECOVERY",
+        }:
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_KIND_INVALID"
+            )
+        if blocker_identity != resolver_identity and resolution_kind == "SAME_ANNOUNCEMENT_RECOVERY":
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_KIND_MISMATCH"
             )
 
         if not re.fullmatch(r"[0-9a-f]{64}", resolver_event_sha):
@@ -510,6 +525,7 @@ def normalize_blocker_resolutions(
             resolver_review_sha256=resolver_review_sha,
             resolver_status=resolver_status,
             resolver_review_filename=resolver_review_filename,
+            resolution_kind=resolution_kind,
         )
 
         previous = by_blocker.get(blocker_identity)
@@ -531,6 +547,7 @@ def normalize_blocker_resolutions(
                 "resolver_review_sha256",
                 "resolver_status",
                 "resolver_review_filename",
+                "resolution_kind",
             )
             if any(
                 getattr(previous_resolver, field)
@@ -1013,6 +1030,16 @@ def _verify_blocker_resolution_progression(
                     "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_BLOCKER_MISMATCH:"
                     + identity
                 )
+
+        if (
+            row.blocker_announcement_identity
+            == row.resolver_announcement_identity
+            and row.resolution_kind != "SAME_ANNOUNCEMENT_RECOVERY"
+        ):
+            raise ForwardDividendOrchestrationError(
+                "FORWARD_DIVIDEND_ORCHESTRATION_BLOCKER_RESOLUTION_KIND_MISMATCH:"
+                + identity
+            )
 
         resolver = _resolver_entry(row)
         certified = child_certified.get(

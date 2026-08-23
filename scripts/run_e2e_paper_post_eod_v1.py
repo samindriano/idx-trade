@@ -10,10 +10,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from idx_trade.e2e_paper_orchestration_v1 import (
+    derive_required_execution_tickers,
     load_score_manifest,
     prepare_post_eod,
 )
 from idx_trade.forward_dividend_execution_v1_1 import (
+    reconcile_corporate_action_attestation_v1_2_journal,
     reconcile_corporate_action_attestation_v1_1,
     verify_cash_dividend_evidence_for_execution,
 )
@@ -29,6 +31,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--model-input", required=True)
     parser.add_argument("--calendar", required=True)
     parser.add_argument("--ca-attestation", required=True)
+    parser.add_argument(
+        "--ca-journal",
+        help="Immutable V1.2 acquisition journal. When supplied, it is the dividend lifecycle source of truth.",
+    )
     parser.add_argument(
         "--dividend-review",
         action="append",
@@ -65,22 +71,41 @@ def main() -> int:
         decision_session_date=current.session_date,
         required_tickers=required,
     )
-    if args.dividend_review and not args.attachment_dir:
-        raise SystemExit("--attachment-dir is required with --dividend-review")
     evidence = tuple(
         verify_cash_dividend_evidence_for_execution(
             review_path=path,
-            attachment_dir=args.attachment_dir,
+            attachment_dir=(
+                args.attachment_dir
+                if args.attachment_dir
+                else Path(path).expanduser().resolve().parent
+            ),
         )
         for path in args.dividend_review
     )
-    ca = reconcile_corporate_action_attestation_v1_1(
-        attestation_path=args.ca_attestation,
-        expected_from_session_date=eod.session_date,
-        expected_through_session_date=eod.next_official_session_date,
-        required_tickers=required,
-        dividend_evidence=evidence,
+    execution_universe = derive_required_execution_tickers(
+        args.runtime_root,
+        current_score=current,
+        previous_score=previous,
+        eod_inputs=eod,
     )
+    if args.ca_journal:
+        if evidence:
+            raise SystemExit("DIVIDEND_V1_2_JOURNAL_EVIDENCE_MUST_BE_INLINE")
+        ca = reconcile_corporate_action_attestation_v1_2_journal(
+            attestation_path=args.ca_attestation,
+            journal_path=args.ca_journal,
+            expected_from_session_date=eod.session_date,
+            expected_through_session_date=eod.next_official_session_date,
+            required_tickers=execution_universe,
+        )
+    else:
+        ca = reconcile_corporate_action_attestation_v1_1(
+            attestation_path=args.ca_attestation,
+            expected_from_session_date=eod.session_date,
+            expected_through_session_date=eod.next_official_session_date,
+            required_tickers=execution_universe,
+            dividend_evidence=evidence,
+        )
     result = prepare_post_eod(
         args.runtime_root,
         current_score=current,

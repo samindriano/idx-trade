@@ -120,8 +120,38 @@ def test_advertisement_and_post_event_report_do_not_duplicate_payable_event():
     assert len(result.live_events) == 0
 
 
+def test_prior_paid_dividend_does_not_corroborate_unrelated_unresolved_candidate():
+    result = apply_temporal_disposition(
+        [
+            _candidate(
+                identity="BBCA|NUMBER|PAID",
+                timestamp="2026-06-05T16:48:01",
+                amount="20",
+                payment="2026-06-26",
+            ),
+            _candidate(
+                identity="BBCA|NUMBER|NEW_UNRESOLVED",
+                timestamp="2026-08-19T18:31:03",
+                title="Jadwal Dividen Tunai",
+                event_id=None,
+                event_sha=None,
+                amount=None,
+                docs=(),
+                payment=None,
+            ),
+        ],
+        as_of_date="2026-08-22",
+    )
+    categories = {
+        row.announcement_identity: row.category
+        for row in result.dispositions
+    }
+    assert categories["BBCA|NUMBER|NEW_UNRESOLVED"] == BLOCKED_LIVE_UNRESOLVED
+
+
 def test_unresolved_correction_predecessor_is_superseded_by_shared_document():
     shared = "f" * 64
+    shared_schedule = "1" * 64
     result = apply_temporal_disposition(
         [
             _candidate(
@@ -132,7 +162,7 @@ def test_unresolved_correction_predecessor_is_superseded_by_shared_document():
                 event_id=None,
                 event_sha=None,
                 amount=None,
-                docs=(shared,),
+                docs=(shared, shared_schedule),
                 payment=None,
             ),
             _candidate(
@@ -143,7 +173,7 @@ def test_unresolved_correction_predecessor_is_superseded_by_shared_document():
                 event_id="TLKM-FINAL",
                 event_sha="b" * 64,
                 amount="223.1658777",
-                docs=(shared, "e" * 64),
+                docs=(shared, shared_schedule, "e" * 64),
                 payment="2026-07-10",
             ),
         ],

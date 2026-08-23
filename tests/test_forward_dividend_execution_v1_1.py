@@ -11,6 +11,7 @@ import pytest
 import idx_trade.forward_dividend_execution_v1_1 as gate
 import idx_trade.forward_dividend_v1 as fd
 from idx_trade import forward_ca_attestation_v1 as ca
+from idx_trade import forward_dividend_orchestration_v1 as orchestration
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
 from idx_trade.v4_x1_execution_v1_contract import (
     ExecutionResult,
@@ -107,6 +108,99 @@ def _patch_source_manifest(monkeypatch: pytest.MonkeyPatch, source: Path) -> Non
         )
 
     monkeypatch.setattr(ca, "verify_source_manifest", fake_verify)
+
+
+def _write_post_eod_v12_attestation_and_journal(tmp_path: Path) -> tuple[Path, Path]:
+    raw_rows = {
+        "issued_history": ({"data": []}, "/ListingActivity/GetIssuedHistory"),
+        "announcements": ({"Items": []}, "/NewsAnnouncement/GetAllAnnouncement"),
+        "calendar": ({"Results": [{"Date": "2026-08-20"}]}, "/Home/GetCalendar"),
+    }
+    artifacts = []
+    for leg, (payload, endpoint) in raw_rows.items():
+        raw = tmp_path / f"post-{leg}.json"
+        raw.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        artifacts.append({
+            "leg": leg,
+            "endpoint": endpoint,
+            "http_status": 200,
+            "content_type": "application/json",
+            "path": raw.name,
+            "sha256": hashlib.sha256(raw.read_bytes()).hexdigest(),
+        })
+    calendar_payload = raw_rows["calendar"][0]
+    phase = tmp_path / "post-phase.json"
+    phase.write_text(json.dumps({
+        "schema_version": ca.PHASE_SCHEMA,
+        "status": "COMPLETE",
+        "provider_repository": ca.PROVIDER_REPOSITORY,
+        "provider_commit": ca.PROVIDER_COMMIT,
+        "upstream_base_url": ca.UPSTREAM_BASE_URL,
+        "calendar_capture_scope": ca.CALENDAR_CAPTURE_SCOPE,
+        "phase": "POST_EOD",
+        "from_session_date": "2026-08-19",
+        "through_session_date": "2026-08-20",
+        "capture_timestamp_utc": "2026-08-19T12:00:00+00:00",
+        "required_tickers": ["BBCA"],
+        "legs": {leg: {"status": "COMPLETE"} for leg in raw_rows},
+        "raw_artifacts": artifacts,
+        "calendar_schema_fingerprints": [ca._structural_fingerprint(calendar_payload)],
+    }, sort_keys=True) + "\n", encoding="utf-8")
+    phase_sha = hashlib.sha256(phase.read_bytes()).hexdigest()
+    attestation = tmp_path / "post-eod-attestation.json"
+    attestation.write_text(json.dumps({
+        "schema_version": ca.ATTESTATION_SCHEMA_V1_2,
+        "capture_phase": "POST_EOD",
+        "capture_timestamp_utc": "2026-08-19T12:00:00+00:00",
+        "provider_repository": ca.PROVIDER_REPOSITORY,
+        "provider_commit": ca.PROVIDER_COMMIT,
+        "upstream_base_url": ca.UPSTREAM_BASE_URL,
+        "calendar_schema_fingerprint": ca.EXPECTED_CALENDAR_SCHEMA_FINGERPRINT,
+        "from_session_date": "2026-08-19",
+        "through_session_date": "2026-08-20",
+        "status": "NO_RELEVANT_EVENTS",
+        "evidence_rows": [{"ticker": "BBCA", "status": ca.NO_EVENT, "reasons": []}],
+        "phase_manifest_path": phase.name,
+        "phase_manifest_sha256": phase_sha,
+    }, sort_keys=True) + "\n", encoding="utf-8")
+    journal = tmp_path / "journal.json"
+    orchestration.write_journal_document(
+        journal,
+        orchestration.DividendAcquisitionJournal(
+            as_of_date="2026-08-19",
+            required_tickers=("BBCA",),
+            coverage=(orchestration.DividendCoverage("BBCA", "2026-08-19"),),
+            capture_phase=orchestration.POST_EOD,
+        ),
+    )
+    return attestation, journal
+
+
+def test_v12_post_eod_journal_does_not_require_preopen_leg(tmp_path: Path) -> None:
+    attestation, journal = _write_post_eod_v12_attestation_and_journal(tmp_path)
+    result = gate.reconcile_corporate_action_attestation_v1_2_journal(
+        attestation_path=attestation,
+        journal_path=journal,
+        expected_from_session_date="2026-08-19",
+        expected_through_session_date="2026-08-20",
+        required_tickers=("BBCA",),
+    )
+    assert result.v12_journal_path == journal.resolve()
+    assert result.certified_events == ()
+
+
+def test_v12_event_known_after_capture_cutoff_is_rejected() -> None:
+    event = _event(
+        announcement_timestamp="2026-08-19T13:00:00+00:00",
+        cum_date="2026-08-19",
+        ex_date="2026-08-20",
+    )
+    with pytest.raises(DecisionV1Error, match="AFTER_CAPTURE_CUTOFF"):
+        gate._verify_v12_knowledge_cutoff(
+            {"capture_timestamp_utc": "2026-08-19T12:00:00+00:00"},
+            {"capture_timestamp_utc": "2026-08-19T12:00:00+00:00"},
+            (event,),
+        )
 
 
 def test_relevant_cash_dividend_is_admitted_only_after_verified_reconciliation(

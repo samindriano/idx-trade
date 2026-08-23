@@ -40,6 +40,7 @@ class RegisteredDividendEvidence:
     event: dividend.CertifiedCashDividend
     announcement_id: str
     announcement_number: str
+    evidence_version: str = "V1.1"
 
 
 @dataclass(frozen=True)
@@ -271,6 +272,7 @@ def _registered_payload(row: RegisteredDividendEvidence) -> dict[str, Any]:
         "review_sha256": verified.review_sha256,
         "announcement_id": verified.announcement_id,
         "announcement_number": verified.announcement_number,
+        "evidence_version": verified.evidence_version,
         "event": _event_payload(verified.event),
     }
 
@@ -291,6 +293,7 @@ def _registered_from_payload(value: object) -> RegisteredDividendEvidence:
         event=event,
         announcement_id=str(value.get("announcement_id") or ""),
         announcement_number=str(value.get("announcement_number") or ""),
+        evidence_version=str(value.get("evidence_version") or "V1.1"),
     )
     return _verify_registered_evidence(row)
 
@@ -321,6 +324,7 @@ def _verify_registered_evidence(
     if (
         verified.announcement_id != row.announcement_id
         or verified.announcement_number != row.announcement_number
+        or verified.evidence_version != row.evidence_version
     ):
         raise DecisionV1Error(
             "DIVIDEND_V1_1_RUNTIME_ANNOUNCEMENT_IDENTITY_MISMATCH"
@@ -332,6 +336,7 @@ def _verify_registered_evidence(
         event=event,
         announcement_id=verified.announcement_id,
         announcement_number=verified.announcement_number,
+        evidence_version=verified.evidence_version,
     )
 
 
@@ -391,6 +396,7 @@ def register_verified_cash_dividend_evidence(
         event=dividend._validated_event(verified.event),
         announcement_id=verified.announcement_id,
         announcement_number=verified.announcement_number,
+        evidence_version=verified.evidence_version,
     )
     return normalize_certified_dividend_registry((*rows, candidate))
 
