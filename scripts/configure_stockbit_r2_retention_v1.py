@@ -192,6 +192,19 @@ def _rules_from_response(response: dict[str, Any], *, allow_empty: bool) -> list
     return sorted(rules, key=lambda rule: str(rule.get("id", "")))
 
 
+def _safe_rule_summary(rule: dict[str, Any]) -> dict[str, Any]:
+    conditions = rule.get("conditions") if isinstance(rule.get("conditions"), dict) else {}
+    transition = rule.get("deleteObjectsTransition") if isinstance(rule.get("deleteObjectsTransition"), dict) else {}
+    transition_condition = transition.get("condition") if isinstance(transition.get("condition"), dict) else {}
+    return {
+        "id": rule.get("id"),
+        "prefix": conditions.get("prefix"),
+        "enabled": rule.get("enabled"),
+        "delete_type": transition_condition.get("type"),
+        "delete_max_age": transition_condition.get("maxAge"),
+    }
+
+
 def verify_remote_policy(account_id: str, bucket_name: str, token: str, expected: dict[str, Any]) -> None:
     response = _request_json("GET", lifecycle_url(account_id, bucket_name), token)
     observed = {"rules": _rules_from_response(response, allow_empty=False)}
@@ -205,7 +218,11 @@ def preflight_remote_policy(response: dict[str, Any], expected: dict[str, Any]) 
     observed_rules = _rules_from_response(response, allow_empty=True)
     expected_rules = sorted(expected.get("rules", []), key=lambda rule: str(rule.get("id", "")))
     if observed_rules not in ([], expected_rules):
-        raise RetentionPolicyError("remote lifecycle contains unowned rules; refusing to replace it")
+        summaries = [_safe_rule_summary(rule) for rule in observed_rules]
+        raise RetentionPolicyError(
+            "remote lifecycle contains unowned rules; refusing to replace it; "
+            f"observed_rules={json.dumps(summaries, sort_keys=True, separators=(',', ':'))}"
+        )
 
 
 def apply_policy(account_id: str, bucket_name: str, token: str, payload: dict[str, Any], verify: bool) -> None:
