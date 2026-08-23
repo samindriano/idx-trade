@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -95,6 +95,23 @@ def _iso_date(value: object, code: str) -> str:
         return date.fromisoformat(str(value)[:10]).isoformat()
     except Exception as exc:
         raise ForwardCAError(code) from exc
+
+
+def _capture_timestamp_utc(value: object) -> str:
+    """Validate and normalize a source-capture timestamp.
+
+    A phase attestation is only useful for the V1.2 knowledge cutoff when the
+    source capture carries an explicit timezone-aware UTC timestamp.  Do not
+    accept a naive local timestamp or silently assign a timezone here.
+    """
+
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except (TypeError, ValueError) as exc:
+        raise ForwardCAError("FORWARD_CA_CAPTURE_TIMESTAMP_INVALID") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ForwardCAError("FORWARD_CA_CAPTURE_TIMESTAMP_INVALID")
+    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _load_json(path: Path, code: str) -> Any:
@@ -500,4 +517,64 @@ def build_attestation(*, source_manifest_path: str | Path, output_path: str | Pa
         "source_sha256": source["_source_sha256"],
     }
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return out
+
+
+def build_phase_attestation_v1_2(
+    *, phase_manifest_path: str | Path, output_path: str | Path
+) -> Path:
+    """Build one current-phase V1.2 attestation from a verified raw capture.
+
+    The live controller captures POST_EOD and PREOPEN separately.  A merged
+    source manifest is intentionally not required for either phase: each
+    attestation is bound to its own immutable phase manifest, exact window,
+    required ticker set, calendar fingerprint, and capture cutoff.
+    """
+
+    phase = verify_phase_manifest(phase_manifest_path)
+    capture_timestamp = _capture_timestamp_utc(phase.get("capture_timestamp_utc"))
+    phase_name = str(phase["phase"])
+    evidence_rows: list[dict[str, Any]] = []
+    any_event = False
+    for ticker in phase["required_tickers"]:
+        relevant, reasons = _ticker_has_relevant_event(
+            ticker,
+            from_date=phase["from_session_date"],
+            through_date=phase["through_session_date"],
+            phases={phase_name: phase},
+        )
+        any_event = any_event or relevant
+        evidence_rows.append(
+            {
+                "ticker": ticker,
+                "status": RELEVANT if relevant else NO_EVENT,
+                "reasons": reasons,
+            }
+        )
+
+    phase_path = Path(phase["_manifest_path"]).expanduser().resolve()
+    payload: dict[str, Any] = {
+        "schema_version": ATTESTATION_SCHEMA_V1_2,
+        "capture_phase": phase_name,
+        "from_session_date": phase["from_session_date"],
+        "through_session_date": phase["through_session_date"],
+        "capture_timestamp_utc": capture_timestamp,
+        "status": "RELEVANT_EVENT_DETECTED" if any_event else "NO_RELEVANT_EVENTS",
+        "provider_repository": PROVIDER_REPOSITORY,
+        "provider_commit": PROVIDER_COMMIT,
+        "upstream_base_url": UPSTREAM_BASE_URL,
+        "calendar_schema_fingerprint": EXPECTED_CALENDAR_SCHEMA_FINGERPRINT,
+        "required_tickers": phase["required_tickers"],
+        "evidence_rows": evidence_rows,
+        "phase_manifest_path": str(phase_path),
+        "phase_manifest_sha256": str(phase["_manifest_sha256"]),
+    }
+    out = Path(output_path).expanduser().resolve()
+    encoded = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    if out.exists():
+        if out.read_bytes() != encoded:
+            raise ForwardCAError(f"FORWARD_CA_OUTPUT_EXISTS:{out}")
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(encoded)
     return out

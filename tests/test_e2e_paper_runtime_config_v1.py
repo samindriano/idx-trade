@@ -48,6 +48,46 @@ def test_loads_hash_pinned_external_config(tmp_path: Path) -> None:
     assert loaded.controller.expected_commit == "a" * 40
 
 
+def test_loads_dynamic_per_window_ca_capture_config(tmp_path: Path) -> None:
+    root = _write_config(
+        tmp_path,
+        ca_attestation_path=None,
+        ca_attestation_sha256=None,
+        ca_attestation_root=str(tmp_path / "ca-runtime"),
+        ca_capture_script=str(tmp_path / "capture_ca.py"),
+        ca_capture_script_sha256="e" * 64,
+    )
+    loaded = load_runtime_config(root)
+    assert loaded.controller.ca_attestation_path is None
+    assert loaded.controller.ca_attestation_root == (tmp_path / "ca-runtime").resolve()
+    assert loaded.controller.ca_capture_script == (tmp_path / "capture_ca.py").resolve()
+    assert loaded.controller.ca_capture_script_sha256 == "e" * 64
+
+
+def test_dynamic_ca_fields_are_all_or_none(tmp_path: Path) -> None:
+    root = _write_config(
+        tmp_path,
+        ca_attestation_path=None,
+        ca_attestation_sha256=None,
+        ca_attestation_root=str(tmp_path / "ca-runtime"),
+        ca_capture_script=None,
+        ca_capture_script_sha256=None,
+    )
+    with pytest.raises(E2ERuntimeConfigError, match="DYNAMIC_CA_FIELDS_INCOMPLETE"):
+        load_runtime_config(root)
+
+
+def test_static_and_dynamic_ca_sources_cannot_be_ambiguous(tmp_path: Path) -> None:
+    root = _write_config(
+        tmp_path,
+        ca_attestation_root=str(tmp_path / "ca-runtime"),
+        ca_capture_script=str(tmp_path / "capture_ca.py"),
+        ca_capture_script_sha256="e" * 64,
+    )
+    with pytest.raises(E2ERuntimeConfigError, match="CA_SOURCE_AMBIGUOUS"):
+        load_runtime_config(root)
+
+
 def test_missing_or_changed_sidecar_fails_closed(tmp_path: Path) -> None:
     root = _write_config(tmp_path)
     sidecar = root / "operational" / "config.json.sha256"

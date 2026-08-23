@@ -50,6 +50,12 @@ class OperationalControllerConfig:
     python_exe: Path | None = None
     ca_attestation_path: Path | None = None
     ca_attestation_sha256: str | None = None
+    # New live deployments capture a fresh phase-bound attestation per exact
+    # decision/execution window.  The static path fields remain supported for
+    # accepted replay/bootstrap configurations.
+    ca_attestation_root: Path | None = None
+    ca_capture_script: Path | None = None
+    ca_capture_script_sha256: str | None = None
     initial_journal_path: Path | None = None
     initial_journal_sha256: str | None = None
     preopen_capture_start: time = time(8, 30)
@@ -157,15 +163,30 @@ def _write_json_immutable(path: Path, payload: Mapping[str, Any]) -> str:
 
 
 def _config_missing(config: OperationalControllerConfig) -> str | None:
-    required = (
+    required = [
         ("provider_checkout", config.provider_checkout),
         ("provider_expected_commit", config.provider_expected_commit),
         ("uv_exe", config.uv_exe),
         ("python_exe", config.python_exe),
-        ("ca_attestation_path", config.ca_attestation_path),
-        ("ca_attestation_sha256", config.ca_attestation_sha256),
-    )
+    ]
     missing = [name for name, value in required if not value]
+    static_configured = bool(config.ca_attestation_path and config.ca_attestation_sha256)
+    dynamic_configured = bool(
+        config.ca_attestation_root
+        and config.ca_capture_script
+        and config.ca_capture_script_sha256
+    )
+    if not static_configured and not dynamic_configured:
+        static_any = bool(config.ca_attestation_path or config.ca_attestation_sha256)
+        dynamic_any = bool(
+            config.ca_attestation_root
+            or config.ca_capture_script
+            or config.ca_capture_script_sha256
+        )
+        if dynamic_any and not static_any:
+            missing.append("ca_attestation_root/capture_script/sha256")
+        else:
+            missing.extend(("ca_attestation_path", "ca_attestation_sha256"))
     if missing:
         return "MISSING_OPERATIONAL_CONFIG:" + ",".join(missing)
     provider = Path(config.provider_checkout).expanduser().resolve()
@@ -174,9 +195,18 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
     for name, value in (("uv_exe", config.uv_exe), ("python_exe", config.python_exe)):
         if not Path(value).expanduser().resolve().is_file():
             return "OPERATIONAL_EXECUTABLE_MISSING:" + name
-    attestation = Path(config.ca_attestation_path).expanduser().resolve()
-    if not attestation.is_file() or _sha256(attestation) != str(config.ca_attestation_sha256).lower():
-        return "CA_ATTESTATION_HASH_MISMATCH"
+    if static_configured:
+        attestation = Path(config.ca_attestation_path).expanduser().resolve()
+        if not attestation.is_file() or _sha256(attestation) != str(config.ca_attestation_sha256).lower():
+            return "CA_ATTESTATION_HASH_MISMATCH"
+    if dynamic_configured:
+        capture_script = Path(config.ca_capture_script).expanduser().resolve()
+        declared_capture_sha = str(config.ca_capture_script_sha256).lower()
+        if not capture_script.is_file() or _sha256(capture_script) != declared_capture_sha:
+            return "CA_CAPTURE_SCRIPT_HASH_MISMATCH"
+        root = Path(config.ca_attestation_root).expanduser().resolve()
+        if root == Path(root.anchor):
+            return "CA_ATTESTATION_ROOT_UNSAFE"
     if config.initial_journal_path is not None:
         if not config.initial_journal_sha256:
             return "INITIAL_JOURNAL_SHA_MISSING"
@@ -208,6 +238,135 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
     if dirty:
         return "PROVIDER_WORKTREE_DIRTY"
     return None
+
+
+def _phase_attestation_target(
+    config: OperationalControllerConfig,
+    *,
+    session: str,
+    phase: str,
+) -> Path:
+    if config.ca_attestation_root is None:
+        if config.ca_attestation_path is None:
+            raise E2EOperationalGuardError("CA_ATTESTATION_PATH_MISSING")
+        return Path(config.ca_attestation_path).expanduser().resolve()
+    root = Path(config.ca_attestation_root).expanduser().resolve()
+    return root / "attestations" / f"{session}_{phase}.json"
+
+
+def _phase_attestation_sha(config: OperationalControllerConfig, path: Path) -> str:
+    if not path.is_file():
+        raise E2EOperationalGuardError("CA_ATTESTATION_MISSING")
+    digest = _sha256(path)
+    if config.ca_attestation_root is None:
+        expected = str(config.ca_attestation_sha256 or "").lower()
+        if digest != expected:
+            raise E2EOperationalGuardError("CA_ATTESTATION_HASH_MISMATCH")
+    return digest
+
+
+def _verify_dynamic_phase_attestation(
+    path: Path,
+    *,
+    session: str,
+    through_session: str,
+    required_tickers: Sequence[str],
+) -> None:
+    """Reuse the execution consumer's full V1.2 attestation verifier."""
+
+    try:
+        from .forward_dividend_execution_v1_1 import (
+            _load_and_verify_post_eod_attestation_v1_2,
+        )
+
+        _load_and_verify_post_eod_attestation_v1_2(
+            path=path,
+            expected_from_session_date=session,
+            expected_through_session_date=through_session,
+            required_tickers=required_tickers,
+        )
+    except Exception as exc:
+        raise E2EOperationalGuardError("CA_ATTESTATION_V1_2_INVALID") from exc
+
+
+def _capture_phase_attestation(
+    config: OperationalControllerConfig,
+    *,
+    session: str,
+    through_session: str,
+    phase: str,
+    required_tickers: Sequence[str],
+) -> tuple[Path, str, str]:
+    """Resolve or capture the exact phase attestation for one window."""
+
+    target = _phase_attestation_target(config, session=session, phase=phase)
+    if target.is_file():
+        if config.ca_attestation_root is None:
+            return target, _phase_attestation_sha(config, target), "STATIC"
+        payload = _read_json(target)
+        if (
+            payload.get("schema_version") != "v4_x1_paper_ca_attestation_v1_2"
+            or payload.get("capture_phase") != phase
+            or payload.get("from_session_date") != session
+            or payload.get("through_session_date") != through_session
+            or sorted(payload.get("required_tickers") or [])
+            != sorted({str(value).strip().upper() for value in required_tickers})
+        ):
+            raise E2EOperationalGuardError("CA_ATTESTATION_SCOPE_MISMATCH")
+        _verify_dynamic_phase_attestation(
+            target,
+            session=session,
+            through_session=through_session,
+            required_tickers=required_tickers,
+        )
+        return target, _phase_attestation_sha(config, target), "REUSED"
+
+    if config.ca_attestation_root is None or config.ca_capture_script is None:
+        return target, _phase_attestation_sha(config, target), "STATIC"
+
+    capture_root = (
+        Path(config.ca_attestation_root).expanduser().resolve()
+        / "captures"
+        / f"{session}_{phase}"
+    )
+    command = [
+        str(Path(config.uv_exe).expanduser().resolve()),
+        "run",
+        "--project",
+        str((Path(config.provider_checkout).expanduser().resolve() / "python").resolve()),
+        "python",
+        str(Path(config.ca_capture_script).expanduser().resolve()),
+        "--provider-checkout",
+        str(Path(config.provider_checkout).expanduser().resolve()),
+        "--phase",
+        phase,
+        "--from-session",
+        session,
+        "--through-session",
+        through_session,
+        "--tickers",
+        ",".join(sorted({str(value).strip().upper() for value in required_tickers})),
+        "--output-dir",
+        str(capture_root),
+        "--attestation-output",
+        str(target),
+    ]
+    _run_child(config, f"ca_capture_{phase.lower()}", command)
+    payload = _read_json(target)
+    if (
+        payload.get("schema_version") != "v4_x1_paper_ca_attestation_v1_2"
+        or payload.get("capture_phase") != phase
+        or payload.get("from_session_date") != session
+        or payload.get("through_session_date") != through_session
+    ):
+        raise E2EOperationalGuardError("CA_CAPTURED_ATTESTATION_INVALID")
+    _verify_dynamic_phase_attestation(
+        target,
+        session=session,
+        through_session=through_session,
+        required_tickers=required_tickers,
+    )
+    return target, _phase_attestation_sha(config, target), "CAPTURED"
 
 
 def _session_manifest(config: OperationalControllerConfig, session: str) -> dict[str, Any]:
@@ -356,14 +515,25 @@ def _verify_phase_sidecar(config: OperationalControllerConfig, session: str, pha
         or str(batch_manifest.get("journal_sha256") or "") != journal_doc.journal_sha256
     ):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_BATCH_MANIFEST_INVALID")
-    if (
-        str(payload.get("provider_commit") or "").lower()
-        != str(config.provider_expected_commit or "").lower()
-        or Path(str(payload.get("ca_attestation_path") or "")).expanduser().resolve()
-        != Path(config.ca_attestation_path).expanduser().resolve()
-        or str(payload.get("ca_attestation_sha256") or "").lower()
-        != str(config.ca_attestation_sha256 or "").lower()
-    ):
+    attestation_path = Path(str(payload.get("ca_attestation_path") or "")).expanduser().resolve()
+    attestation_sha = str(payload.get("ca_attestation_sha256") or "").lower()
+    if not attestation_path.is_file() or _sha256(attestation_path) != attestation_sha:
+        raise E2EOperationalGuardError("CA_ATTESTATION_HASH_MISMATCH")
+    if config.ca_attestation_root is None:
+        config_attestation = (
+            Path(config.ca_attestation_path).expanduser().resolve()
+            if config.ca_attestation_path is not None
+            else None
+        )
+        if (
+            config_attestation is None
+            or attestation_path != config_attestation
+            or attestation_sha != str(config.ca_attestation_sha256 or "").lower()
+        ):
+            raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_CONFIG_MISMATCH")
+    elif Path(config.ca_attestation_root).expanduser().resolve() not in attestation_path.parents:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_CONFIG_MISMATCH")
+    if str(payload.get("provider_commit") or "").lower() != str(config.provider_expected_commit or "").lower():
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_CONFIG_MISMATCH")
     return payload
 
@@ -372,6 +542,7 @@ def _ensure_ca_phase(
     config: OperationalControllerConfig,
     *,
     session: str,
+    through_session: str,
     phase: str,
     required_tickers: Sequence[str],
     now: datetime,
@@ -406,6 +577,13 @@ def _ensure_ca_phase(
         if not post_journal.is_file():
             raise E2EOperationalGuardError("E2E_PREOPEN_POST_EOD_JOURNAL_MISSING")
         prior = post_journal
+    attestation_path, attestation_sha, attestation_status = _capture_phase_attestation(
+        config,
+        session=session,
+        through_session=through_session,
+        phase=phase,
+        required_tickers=required_tickers,
+    )
     command = [
         str(Path(config.python_exe).expanduser().resolve()),
         str((config.repo_root / "scripts" / "run_forward_dividend_acquisition_batch_v1.py").resolve()),
@@ -439,8 +617,9 @@ def _ensure_ca_phase(
         "journal_sha256": _sha256(journal),
         "batch_root": str(batch.resolve()),
         "provider_commit": str(config.provider_expected_commit).lower(),
-        "ca_attestation_path": str(Path(config.ca_attestation_path).expanduser().resolve()),
-        "ca_attestation_sha256": str(config.ca_attestation_sha256).lower(),
+        "ca_attestation_path": str(attestation_path),
+        "ca_attestation_sha256": attestation_sha,
+        "ca_attestation_status": attestation_status,
     }
     body["payload_sha256"] = _canonical_hash(body)
     _write_json_immutable(sidecar, body)
@@ -705,6 +884,7 @@ def run_operational_cycle(
                 ca_status = _ensure_ca_phase(
                     config,
                     session=today,
+                    through_session=str(payload.get("execution_session_date") or ""),
                     phase="PREOPEN",
                     required_tickers=tuple(payload.get("required_tickers") or ()),
                     now=current,
@@ -751,6 +931,7 @@ def run_operational_cycle(
                         prepared_path=str(prepared[0]),
                         ca_phase_sidecar=str(_phase_sidecar_path(config, today, "PREOPEN")),
                     )
+                ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
                 payload = _read_json(prepared[0])
                 current_score_path = Path(str(payload["current_score"]["manifest_path"])).expanduser().resolve()
                 previous_ref = payload.get("previous_score")
@@ -776,7 +957,7 @@ def run_operational_cycle(
                     "--model-input", str(Path(str(eod["model_input"]["path"])).expanduser().resolve()),
                     "--calendar", str(Path(str(eod["calendar"]["path"])).expanduser().resolve()),
                     "--open-manifest", str(open_manifest.resolve()),
-                    "--ca-attestation", str(Path(config.ca_attestation_path).expanduser().resolve()),
+                    "--ca-attestation", str(ca_attestation_path),
                     "--expected-branch", config.expected_branch,
                     "--expected-commit", config.expected_commit,
                     "--phase-attestation", str(phase_attestation_path.resolve()),
@@ -863,10 +1044,13 @@ def run_operational_cycle(
             ca_status = _ensure_ca_phase(
                 config,
                 session=today,
+                through_session=eod_inputs.next_official_session_date,
                 phase="POST_EOD",
                 required_tickers=required,
                 now=current,
             )
+            sidecar = _verify_phase_sidecar(config, today, "POST_EOD")
+            ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
             phase_attestation_path, _ = write_phase_attestation(
                 config.runtime_root,
                 phase="POST_EOD",
@@ -883,7 +1067,7 @@ def run_operational_cycle(
                 "--session-ohlcv", str(eod_paths["session_ohlcv"]),
                 "--model-input", str(eod_paths["model_input"]),
                 "--calendar", str(eod_paths["calendar"]),
-                "--ca-attestation", str(Path(config.ca_attestation_path).expanduser().resolve()),
+                "--ca-attestation", str(ca_attestation_path),
                 "--expected-branch", config.expected_branch,
                 "--expected-commit", config.expected_commit,
                 "--phase-attestation", str(phase_attestation_path.resolve()),

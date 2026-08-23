@@ -90,9 +90,36 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_PREOPEN_TIME_INVALID") from exc
     if preopen_start != time(8, 30):
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_PREOPEN_TIME_UNAUTHORIZED")
-    ca_sha = _required_text(payload, "ca_attestation_sha256").lower()
-    if not _SHA_RE.fullmatch(ca_sha):
+    static_ca_path_present = payload.get("ca_attestation_path") is not None
+    static_ca_sha_present = payload.get("ca_attestation_sha256") is not None
+    if static_ca_path_present != static_ca_sha_present:
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_STATIC_CA_FIELDS_INCOMPLETE")
+    dynamic_ca_keys = (
+        "ca_attestation_root",
+        "ca_capture_script",
+        "ca_capture_script_sha256",
+    )
+    dynamic_ca_present = [payload.get(key) is not None for key in dynamic_ca_keys]
+    if any(dynamic_ca_present) and not all(dynamic_ca_present):
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_DYNAMIC_CA_FIELDS_INCOMPLETE")
+    if not any(dynamic_ca_present) and not static_ca_path_present:
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_CA_SOURCE_MISSING")
+    if all(dynamic_ca_present) and static_ca_path_present:
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_CA_SOURCE_AMBIGUOUS")
+    ca_sha = (
+        _required_text(payload, "ca_attestation_sha256").lower()
+        if static_ca_path_present
+        else None
+    )
+    if ca_sha is not None and not _SHA_RE.fullmatch(ca_sha):
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_CA_SHA_INVALID")
+    ca_capture_sha = (
+        _required_text(payload, "ca_capture_script_sha256").lower()
+        if all(dynamic_ca_present)
+        else None
+    )
+    if ca_capture_sha is not None and not _SHA_RE.fullmatch(ca_capture_sha):
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_CA_CAPTURE_SHA_INVALID")
     runner_sha = _required_text(payload, "runner_sha256").lower()
     if not _SHA_RE.fullmatch(runner_sha):
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_RUNNER_SHA_INVALID")
@@ -109,8 +136,23 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         provider_expected_commit=provider_commit,
         uv_exe=_absolute_path(payload, "uv_exe"),
         python_exe=_absolute_path(payload, "python_exe"),
-        ca_attestation_path=_absolute_path(payload, "ca_attestation_path"),
+        ca_attestation_path=(
+            _absolute_path(payload, "ca_attestation_path")
+            if static_ca_path_present
+            else None
+        ),
         ca_attestation_sha256=ca_sha,
+        ca_attestation_root=(
+            _absolute_path(payload, "ca_attestation_root")
+            if all(dynamic_ca_present)
+            else None
+        ),
+        ca_capture_script=(
+            _absolute_path(payload, "ca_capture_script")
+            if all(dynamic_ca_present)
+            else None
+        ),
+        ca_capture_script_sha256=ca_capture_sha,
         initial_journal_path=(
             _absolute_path(payload, "initial_journal_path")
             if payload.get("initial_journal_path") is not None
