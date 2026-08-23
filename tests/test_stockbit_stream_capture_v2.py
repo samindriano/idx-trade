@@ -125,6 +125,19 @@ class PartialClient(Client):
         return super().stream(symbol)
 
 
+class TransientRecoveryClient(Client):
+    def __init__(self):
+        super().__init__()
+        self.attempts = {}
+
+    def stream(self, symbol):
+        self.attempts[symbol] = self.attempts.get(symbol, 0) + 1
+        if symbol == "BBCA" and self.attempts[symbol] == 1:
+            self.calls.append(symbol)
+            return StreamResponse503(), b'{"error":"temporary"}', datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+        return super().stream(symbol)
+
+
 class StreamResponse503:
     status_code = 503
     headers = {"content-type": "application/json"}
@@ -170,6 +183,22 @@ def test_capture_v2_marks_partial_stream_failures_not_data_ready(tmp_path: Path)
     assert result["completed_calls"] == 2
     assert result["successful_responses"] == 1
     assert result["response_classification_counts"] == {"OK": 1, "HTTP_503": 1}
+
+
+def test_capture_v2_retries_transient_5xx_once_and_recovers(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 300.0, "activity_rank": 2},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b'{"provider":"idx"}', "a" * 64, "b" * 64)
+    client = TransientRecoveryClient()
+    result = capture_stream_v2(client=client, archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    assert result["status"] == "DATA_READY"
+    assert result["provider_calls"] == 3
+    assert client.calls == ["BBCA", "BBCA", "BBRI"]
+    bbca = next(record for record in result["request_records"] if record["ticker"] == "BBCA")
+    assert bbca["retry_recovered"] is True
+    assert [attempt["http_status"] for attempt in bbca["provider_attempts"]] == [503, 200]
 
 
 def test_capture_v2_preserves_ready_run_when_post_quota_telemetry_times_out(tmp_path: Path):

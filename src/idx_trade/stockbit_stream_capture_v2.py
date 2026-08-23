@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import os
+import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -29,6 +30,8 @@ from idx_trade.stockbit_stream_archive import (
 IDX_STOCK_SUMMARY_ENDPOINT = "https://api.zpi.web.id/v1/finance:idx/stock-summary"
 ROUTINE_TOP_N = 200
 PRIOR_SESSION_LOOKBACK_DAYS = 10
+MAX_STREAM_ATTEMPTS = 2
+RETRYABLE_STREAM_HTTP_STATUSES = frozenset({500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526})
 
 
 @dataclass(frozen=True)
@@ -266,11 +269,13 @@ def capture_stream_v2(
     run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}_{universe.source_sha256[:16]}"
     quota_before = client.get_usage()
     planned_calls = len(universe.rows)
-    if quota_before.remaining - planned_calls < monthly_reserve:
+    provider_call_budget = planned_calls * MAX_STREAM_ATTEMPTS
+    if quota_before.remaining - provider_call_budget < monthly_reserve:
         return {
             "status": "QUOTA_BLOCKED_BEFORE_STREAM_REQUEST",
             "run_id": run_id,
             "planned_calls": planned_calls,
+            "provider_call_budget": provider_call_budget,
             "quota_before": quota_before.__dict__,
             "provider_calls": 1,
             "outcome_accessed": False,
@@ -282,9 +287,21 @@ def capture_stream_v2(
     request_records: list[dict[str, Any]] = []
     total_rows = 0
     ok_responses = 0
+    provider_calls = 0
     for selected in universe.rows:
         symbol = selected["ticker"]
-        response, raw, observed_at = client.stream(symbol)
+        attempts: list[dict[str, Any]] = []
+        for attempt_number in range(1, MAX_STREAM_ATTEMPTS + 1):
+            response, raw, observed_at = client.stream(symbol)
+            provider_calls += 1
+            attempts.append({
+                "attempt": attempt_number,
+                "http_status": response.status_code,
+                "observed_available_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
+            })
+            if response.status_code not in RETRYABLE_STREAM_HTTP_STATUSES or attempt_number == MAX_STREAM_ATTEMPTS:
+                break
+            time.sleep(0.25 * attempt_number)
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
         classification, _, items = parse_stream_payload(raw, response.status_code, symbol)
@@ -297,6 +314,8 @@ def capture_stream_v2(
             "row_count": len(items),
             "raw_key": raw_key,
             "raw_sha256": raw_sha,
+            "provider_attempts": attempts,
+            "retry_recovered": len(attempts) > 1 and classification == "OK",
         }
         if classification == "OK":
             normalized = [normalize_post(item, symbol, "ROUTINE_TOP_VALUE", observed_at, hmac_salt) for item in items]
@@ -339,6 +358,8 @@ def capture_stream_v2(
         "universe_sha256": universe.universe_sha256,
         "universe_source_sha256": universe.source_sha256,
         "planned_calls": planned_calls,
+        "provider_call_budget": provider_call_budget,
+        "provider_calls": provider_calls,
         "completed_calls": len(request_records),
         "successful_responses": ok_responses,
         "normalized_post_rows": total_rows,
