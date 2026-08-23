@@ -17,6 +17,8 @@ from idx_trade.e2e_paper_orchestration_v1 import (
 )
 from idx_trade.e2e_operational_guard_v1 import (
     JAKARTA,
+    attest_deployment,
+    exclusive_run_lock,
     load_session_dates,
     require_phase_window,
 )
@@ -42,14 +44,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--calendar", required=True)
     parser.add_argument("--open-manifest", required=True)
     parser.add_argument("--ca-attestation", required=True)
+    parser.add_argument("--expected-branch", required=True)
+    parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--ca-journal")
     parser.add_argument("--dividend-review", action="append", default=[])
     parser.add_argument("--attachment-dir")
     return parser
 
 
-def main() -> int:
-    args = _parser().parse_args()
+def _run(args: argparse.Namespace) -> int:
     current = load_score_manifest(args.current_score_manifest)
     previous = (
         None
@@ -138,6 +141,17 @@ def main() -> int:
         }
     )
     return 0
+
+
+def main() -> int:
+    args = _parser().parse_args()
+    attest_deployment(
+        REPO_ROOT,
+        expected_branch=args.expected_branch,
+        expected_commit=args.expected_commit,
+    )
+    with exclusive_run_lock(Path(args.runtime_root) / "operational" / "phase.lock"):
+        return _run(args)
 
 
 if __name__ == "__main__":

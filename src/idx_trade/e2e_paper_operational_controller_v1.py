@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, time
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -48,14 +49,43 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _sha256(path: Path) -> str:
+    if not path.is_file():
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_ARTIFACT_MISSING")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _canonical_hash(payload: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        (json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+    ).hexdigest()
+
+
 def _pipeline_pointer(config: OperationalControllerConfig) -> dict[str, Any]:
-    return _read_json(
+    pointer = _read_json(
         config.forward_runtime_root
         / "forward_monitoring"
         / "eod_automation"
         / "v4_x1_pipeline"
         / "latest.json"
     )
+    run_log_path = Path(str(pointer.get("run_log_path") or "")).expanduser().resolve()
+    declared_run_log_sha = str(pointer.get("run_log_sha256") or "")
+    if not run_log_path.is_file() or _sha256(run_log_path) != declared_run_log_sha:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_UPSTREAM_LOG_HASH_MISMATCH")
+    return pointer
+
+
+def _verify_score_pointer(pointer: dict[str, Any], session: str) -> dict[str, Any]:
+    score = pointer.get("x1_score")
+    if not isinstance(score, dict):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_POINTER_MISSING")
+    path = Path(str(score.get("manifest_path") or "")).expanduser().resolve()
+    if not path.is_file() or _sha256(path) != str(score.get("manifest_sha256") or ""):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_MANIFEST_HASH_MISMATCH")
+    if str(score.get("session_date") or "") != session:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_SESSION_MISMATCH")
+    return score
 
 
 def _status_path(config: OperationalControllerConfig) -> Path:
@@ -70,7 +100,29 @@ def _prepared_for_session(config: OperationalControllerConfig, session: str) -> 
             payload = _read_json(path)
         except E2EOperationalGuardError:
             continue
-        if str(payload.get("execution_session_date") or "") == session:
+        if str(payload.get("schema_version") or "") != "idx_trade_e2e_paper_prepared_execution_v1":
+            continue
+        declared = str(payload.get("payload_sha256") or "")
+        body = dict(payload)
+        body.pop("payload_sha256", None)
+        if not declared or _canonical_hash(body) != declared:
+            continue
+        if str(payload.get("execution_session_date") or "") != session:
+            continue
+        eod = payload.get("eod_inputs")
+        if not isinstance(eod, dict):
+            continue
+        valid_refs = True
+        for key in ("ohlcv", "model_input", "calendar"):
+            ref = eod.get(key)
+            if not isinstance(ref, dict):
+                valid_refs = False
+                break
+            ref_path = Path(str(ref.get("path") or "")).expanduser().resolve()
+            if not ref_path.is_file() or _sha256(ref_path) != str(ref.get("sha256") or ""):
+                valid_refs = False
+                break
+        if valid_refs:
             candidates.append(path)
     return candidates
 
@@ -161,7 +213,7 @@ def run_operational_cycle(
                 })
             else:
                 pointer = _pipeline_pointer(config)
-                score = pointer.get("x1_score") if isinstance(pointer.get("x1_score"), dict) else {}
+                score = _verify_score_pointer(pointer, today)
                 eod = pointer.get("eod") if isinstance(pointer.get("eod"), dict) else {}
                 status["upstream_pointer_path"] = str(
                     config.forward_runtime_root
@@ -180,6 +232,7 @@ def run_operational_cycle(
                         "reason": "CANONICAL_EOD_OR_SAME_DAY_SCORE_NOT_READY",
                     })
                 else:
+                    status["calendar_sha256"] = _sha256(config.calendar_path)
                     status.update({
                         "controller_status": "WAITING_CA_RECONCILIATION",
                         "reason": "CA_POST_EOD_INPUT_NOT_CONFIGURED",

@@ -111,7 +111,12 @@ def load_session_dates(path: str | Path) -> tuple[str, ...]:
     lines = [line.strip() for line in calendar.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not lines or lines[0].lower() not in {"date", "session_date"}:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CALENDAR_SCHEMA_INVALID")
-    values = tuple(sorted({_iso_date(line.split(",", 1)[0]) for line in lines[1:]}))
+    values_list = [_iso_date(line.split(",", 1)[0]) for line in lines[1:]]
+    if len(values_list) != len(set(values_list)):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_CALENDAR_DUPLICATE_DATE")
+    if any(date.fromisoformat(value).weekday() >= 5 for value in values_list):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_CALENDAR_WEEKEND_SESSION")
+    values = tuple(sorted(values_list))
     if not values:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CALENDAR_EMPTY")
     return values

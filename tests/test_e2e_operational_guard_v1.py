@@ -60,13 +60,29 @@ def test_post_eod_and_non_session_fail_closed() -> None:
 
 def test_calendar_loader_and_status_write_are_deterministic(tmp_path: Path) -> None:
     calendar = tmp_path / "sessions.csv"
-    calendar.write_text("date\n2026-08-25\n2026-08-24\n2026-08-24\n", encoding="utf-8")
+    calendar.write_text("date\n2026-08-25\n2026-08-24\n", encoding="utf-8")
     assert load_session_dates(calendar) == ("2026-08-24", "2026-08-25")
     status = tmp_path / "operational" / "latest.json"
     sha = write_status_atomic(status, {"status": "WEEKEND_OR_HOLIDAY_NOOP", "outcome_access": False})
     assert status.is_file()
     assert sha
     assert json.loads(status.read_text(encoding="utf-8"))["outcome_access"] is False
+
+
+@pytest.mark.parametrize(
+    ("contents", "error"),
+    [
+        ("date\n2026-08-24\n2026-08-24\n", "DUPLICATE_DATE"),
+        ("date\n2026-08-22\n", "WEEKEND_SESSION"),
+    ],
+)
+def test_calendar_loader_rejects_duplicate_or_weekend_rows(
+    tmp_path: Path, contents: str, error: str
+) -> None:
+    calendar = tmp_path / "sessions.csv"
+    calendar.write_text(contents, encoding="utf-8")
+    with pytest.raises(E2EOperationalGuardError, match=error):
+        load_session_dates(calendar)
 
 
 def test_exclusive_lock_rejects_second_holder(tmp_path: Path) -> None:
