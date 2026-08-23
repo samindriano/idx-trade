@@ -23,6 +23,10 @@ EXPECTED_ENDPOINT_BY_LEG = {
     "announcements": "/NewsAnnouncement/GetAllAnnouncement",
     "calendar": "/Home/GetCalendar",
 }
+DIRECT_TRANSPORT = "DIRECT_IDX_HTTPS"
+ZAPI_RAW_TRANSPORT = "ZAPI_IDX_RAW_PASSTHROUGH"
+TRANSPORT_POLICY = "DIRECT_IDX_THEN_ZAPI_RAW_V1"
+ZAPI_PROJECT = "finance:idx:raw"
 NO_EVENT = "NO_RELEVANT_EVENT"
 RELEVANT = "RELEVANT_EVENT"
 
@@ -135,6 +139,45 @@ def _resolve_artifact(manifest_path: Path, row: Mapping[str, Any]) -> Path:
     return path
 
 
+def _verify_zapi_transport_artifact(
+    manifest_path: Path,
+    row: Mapping[str, Any],
+    normalized_path: Path,
+    *,
+    expected_endpoint: str,
+) -> None:
+    envelope_path = manifest_path.parent / str(row.get("transport_raw_path") or "")
+    if not envelope_path.is_file():
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_ARTIFACT_MISSING")
+    declared = str(row.get("transport_raw_sha256") or "")
+    if not _SHA_RE.fullmatch(declared) or _sha256(envelope_path) != declared:
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_SHA_MISMATCH")
+    envelope = _load_json(envelope_path, "FORWARD_CA_ZAPI_RAW_JSON_INVALID")
+    if not isinstance(envelope, dict) or envelope.get("project") != ZAPI_PROJECT:
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_PROJECT_MISMATCH")
+    inner = envelope.get("data")
+    expected_path = expected_endpoint.lstrip("/")
+    if (
+        not isinstance(inner, dict)
+        or inner.get("provider") != "idx"
+        or str(inner.get("path") or "").lstrip("/") != expected_path
+    ):
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_SOURCE_MISMATCH")
+    normalized = _load_json(normalized_path, "FORWARD_CA_NORMALIZED_JSON_INVALID")
+    payload = inner.get("data")
+    if isinstance(payload, dict):
+        expected_normalized = payload
+    elif isinstance(payload, list):
+        expected_normalized = {"data": payload}
+        for key in ("recordsTotal", "recordsFiltered"):
+            if key in inner:
+                expected_normalized[key] = inner[key]
+    else:
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_DATA_MISSING")
+    if normalized != expected_normalized:
+        raise ForwardCAError("FORWARD_CA_ZAPI_RAW_NORMALIZED_MISMATCH")
+
+
 def _verify_raw_leg_payload(leg: str, payload: Any) -> str | None:
     if leg == "issued_history":
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
@@ -211,9 +254,22 @@ def verify_phase_manifest(path: str | Path) -> dict[str, Any]:
             raise ForwardCAError("FORWARD_CA_RAW_LEG_INVALID")
         if row.get("endpoint") != EXPECTED_ENDPOINT_BY_LEG[leg]:
             raise ForwardCAError(f"FORWARD_CA_RAW_ENDPOINT_MISMATCH:{leg}")
+        transport = str(row.get("transport") or DIRECT_TRANSPORT)
+        if transport not in {DIRECT_TRANSPORT, ZAPI_RAW_TRANSPORT}:
+            raise ForwardCAError("FORWARD_CA_TRANSPORT_INVALID")
+        if transport == ZAPI_RAW_TRANSPORT:
+            if payload.get("transport_policy") != TRANSPORT_POLICY:
+                raise ForwardCAError("FORWARD_CA_TRANSPORT_POLICY_MISMATCH")
         seen_legs.add(leg)
         raw_path = _resolve_artifact(manifest_path, row)
         raw_payload = _load_json(raw_path, "FORWARD_CA_RAW_JSON_INVALID")
+        if transport == ZAPI_RAW_TRANSPORT:
+            _verify_zapi_transport_artifact(
+                manifest_path,
+                row,
+                raw_path,
+                expected_endpoint=EXPECTED_ENDPOINT_BY_LEG[leg],
+            )
         fingerprint = _verify_raw_leg_payload(leg, raw_payload)
         if fingerprint is not None:
             observed_calendar_fingerprints.add(fingerprint)

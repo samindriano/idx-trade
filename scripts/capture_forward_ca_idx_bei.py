@@ -11,11 +11,13 @@ import argparse
 from datetime import date, datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import uuid
 from typing import Any
+from urllib.parse import urlencode
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -44,6 +46,17 @@ CA_TYPES = (
     "companyListing",
     "partialDelisting",
 )
+
+TRANSPORT_WARMUP_URLS = (
+    "https://www.idx.co.id/",
+    "https://www.idx.co.id/id/perusahaan-tercatat/ringkasan-perusahaan/",
+)
+TRANSPORT_API_REFERER = TRANSPORT_WARMUP_URLS[1]
+ZAPI_RAW_URL = "https://api.zpi.web.id/v1/finance:idx/raw"
+ZAPI_PROJECT = "finance:idx:raw"
+ZAPI_TRANSPORT = forward_ca.ZAPI_RAW_TRANSPORT
+DIRECT_TRANSPORT = forward_ca.DIRECT_TRANSPORT
+TRANSPORT_POLICY = forward_ca.TRANSPORT_POLICY
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -205,6 +218,134 @@ def _recover_interrupted_publication(
         raise SystemExit("FORWARD_CA_INTERRUPTED_PUBLICATION_INVALID") from exc
 
 
+def _build_transport_client(checkout: Path, raw_dir: Path) -> tuple[Any, list[dict[str, Any]]]:
+    """Build the pinned IDX client over one warmed curl_cffi browser session.
+
+    The provider checkout remains pinned and owns the request/client contract;
+    this local adapter only supplies the persistent session and the previously
+    proven public-page warm-up. No User-Agent is manually supplied, so the
+    impersonation profile remains the authority for browser headers.
+    """
+
+    from curl_cffi import requests as curl_requests
+    from idx.core import client as provider_client_module  # type: ignore
+
+    session = curl_requests.Session(impersonate="chrome")
+    session.headers.update(
+        {"Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"}
+    )
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    transport_preflight: list[dict[str, Any]] = []
+    stage = raw_dir.parent
+    for index, url in enumerate(TRANSPORT_WARMUP_URLS, start=1):
+        raw_path = raw_dir / f"warmup_{index}.bin"
+        captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        try:
+            response = session.get(url, timeout=30)
+            body = bytes(response.content)
+            raw_path.write_bytes(body)
+            transport_preflight.append(
+                {
+                    "kind": f"IDX_WARMUP_{index}",
+                    "requested_url": url,
+                    "final_url": str(getattr(response, "url", url)),
+                    "captured_at_utc": captured_at,
+                    "http_status": int(response.status_code),
+                    "content_type": str(response.headers.get("content-type", "")),
+                    "path": str(raw_path.relative_to(stage)),
+                    "bytes": len(body),
+                    "sha256": _sha256_bytes(body),
+                }
+            )
+        except Exception as exc:
+            transport_preflight.append(
+                {
+                    "kind": f"IDX_WARMUP_{index}",
+                    "requested_url": url,
+                    "captured_at_utc": captured_at,
+                    "http_status": 0,
+                    "content_type": "",
+                    "path": "",
+                    "bytes": 0,
+                    "sha256": "",
+                    "error": f"{type(exc).__name__}:{exc}",
+                }
+            )
+
+    # IDXClient.get() calls its module-level requests.get(). Point that call at
+    # the warmed Session without changing the pinned provider checkout.
+    provider_client_module.requests = session
+    client = provider_client_module.IDXClient(
+        base_url=UPSTREAM_BASE_URL,
+        headers={
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "referer": TRANSPORT_API_REFERER,
+        },
+        max_retries=3,
+        delay_seconds=1.0,
+    )
+    return client, transport_preflight
+
+
+def _fetch_zapi_raw(
+    endpoint: str,
+    params: dict[str, Any],
+) -> bytes:
+    """Fetch one exact IDX endpoint through Zapi's raw transport only."""
+
+    api_key = os.environ.get("ZAPI_API_KEY")
+    if not api_key:
+        raise SystemExit("FORWARD_CA_ZAPI_API_KEY_MISSING")
+    try:
+        import requests
+
+        response = requests.get(
+            ZAPI_RAW_URL,
+            params={
+                "path": endpoint.lstrip("/"),
+                "query": urlencode(params),
+            },
+            headers={"x-api-key": api_key, "Accept": "application/json"},
+            timeout=30,
+        )
+    except Exception as exc:
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_REQUEST_ERROR") from exc
+    if response.status_code != 200:
+        raise SystemExit(f"FORWARD_CA_ZAPI_RAW_HTTP_STATUS:{response.status_code}")
+    body = bytes(response.content)
+    if not body:
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_EMPTY_RESPONSE")
+    return body
+
+
+def _normalize_zapi_raw_payload(raw: bytes, endpoint: str) -> dict[str, Any] | list[Any]:
+    try:
+        envelope = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_JSON_INVALID") from exc
+    if not isinstance(envelope, dict) or envelope.get("project") != ZAPI_PROJECT:
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_PROJECT_MISMATCH")
+    inner = envelope.get("data")
+    if not isinstance(inner, dict):
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_ENVELOPE_INVALID")
+    if (
+        inner.get("provider") != "idx"
+        or str(inner.get("path") or "").lstrip("/") != endpoint.lstrip("/")
+    ):
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_SOURCE_MISMATCH")
+    payload = inner.get("data")
+    if not isinstance(payload, (dict, list)):
+        raise SystemExit("FORWARD_CA_ZAPI_RAW_DATA_MISSING")
+    if isinstance(payload, dict):
+        return payload
+    normalized: dict[str, Any] = {"data": payload}
+    for key in ("recordsTotal", "recordsFiltered"):
+        if key in inner:
+            normalized[key] = inner[key]
+    return normalized
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider-checkout", required=True)
@@ -245,7 +386,7 @@ def main() -> int:
     provider_src = checkout / "python" / "src"
     sys.path.insert(0, str(provider_src))
     try:
-        from idx.core.client import IDXClient  # type: ignore
+        from idx.core.client import IDXClient  # type: ignore  # noqa: F401
     except ImportError as exc:
         raise SystemExit("FORWARD_CA_PROVIDER_IMPORT_FAILED") from exc
 
@@ -255,20 +396,93 @@ def main() -> int:
     raw_dir = stage / "raw"
     raw_dir.mkdir(parents=False, exist_ok=False)
     artifacts: list[dict[str, Any]] = []
+    transport_attempts: list[dict[str, Any]] = []
+    selected_transports: set[str] = set()
     leg_status = {leg: "COMPLETE" for leg in forward_ca.REQUIRED_LEGS}
     calendar_fingerprints: set[str] = set()
 
-    client = IDXClient(base_url=UPSTREAM_BASE_URL, max_retries=3, delay_seconds=1.0)
+    client, transport_preflight = _build_transport_client(checkout, raw_dir)
 
     def capture(*, leg: str, name: str, endpoint: str, params: dict[str, Any]) -> Any:
         captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        response = client.get(endpoint, params=params, impersonate="chrome", timeout=30)
-        if response is None:
-            leg_status[leg] = "ERROR"
-            raise SystemExit(f"FORWARD_CA_NO_RESPONSE:{endpoint}")
-        body = bytes(response.content)
+        response = None
+        direct_error = ""
+        try:
+            response = client.get(endpoint, params=params, impersonate="chrome", timeout=30)
+        except Exception as exc:
+            direct_error = f"{type(exc).__name__}:{exc}"
+        if response is not None and response.status_code == 200:
+            body = bytes(response.content)
+            raw_path = raw_dir / f"{name}.json"
+            raw_path.write_bytes(body)
+            content_type = str(response.headers.get("content-type", ""))
+            if "json" not in content_type.lower():
+                leg_status[leg] = "ERROR"
+                raise SystemExit(f"FORWARD_CA_CONTENT_TYPE_NOT_JSON:{endpoint}")
+            try:
+                payload = response.json()
+            except Exception as exc:
+                leg_status[leg] = "ERROR"
+                raise SystemExit(f"FORWARD_CA_JSON_INVALID:{endpoint}") from exc
+            artifacts.append(
+                {
+                    "phase": args.phase,
+                    "leg": leg,
+                    "name": name,
+                    "endpoint": endpoint,
+                    "params": params,
+                    "captured_at_utc": captured_at,
+                    "http_status": 200,
+                    "content_type": content_type,
+                    "path": str(raw_path.relative_to(stage)),
+                    "sha256": _sha256_bytes(body),
+                    "transport": DIRECT_TRANSPORT,
+                }
+            )
+            selected_transports.add(DIRECT_TRANSPORT)
+            return payload
+
+        if response is not None:
+            body = bytes(response.content)
+            failed_path = raw_dir / f"{name}.direct-failure.bin"
+            failed_path.write_bytes(body)
+            direct_status = int(response.status_code)
+            transport_attempts.append(
+                {
+                    "transport": DIRECT_TRANSPORT,
+                    "endpoint": endpoint,
+                    "params": params,
+                    "captured_at_utc": captured_at,
+                    "http_status": direct_status,
+                    "content_type": str(response.headers.get("content-type", "")),
+                    "path": str(failed_path.relative_to(stage)),
+                    "sha256": _sha256_bytes(body),
+                }
+            )
+        else:
+            transport_attempts.append(
+                {
+                    "transport": DIRECT_TRANSPORT,
+                    "endpoint": endpoint,
+                    "params": params,
+                    "captured_at_utc": captured_at,
+                    "http_status": 0,
+                    "content_type": "",
+                    "path": "",
+                    "sha256": "",
+                    "error": direct_error or "NO_RESPONSE",
+                }
+            )
+
+        zapi_raw = _fetch_zapi_raw(endpoint, params)
+        zapi_envelope_path = raw_dir / f"{name}.zapi-envelope.json"
+        zapi_envelope_path.write_bytes(zapi_raw)
+        normalized_payload = _normalize_zapi_raw_payload(zapi_raw, endpoint)
+        normalized_raw = json.dumps(
+            normalized_payload, indent=2, sort_keys=True
+        ).encode("utf-8")
         raw_path = raw_dir / f"{name}.json"
-        raw_path.write_bytes(body)
+        raw_path.write_bytes(normalized_raw)
         artifacts.append(
             {
                 "phase": args.phase,
@@ -277,23 +491,17 @@ def main() -> int:
                 "endpoint": endpoint,
                 "params": params,
                 "captured_at_utc": captured_at,
-                "http_status": int(response.status_code),
-                "content_type": str(response.headers.get("content-type", "")),
-        "path": str(raw_path.relative_to(stage)),
-                "sha256": _sha256_bytes(body),
+                "http_status": 200,
+                "content_type": "application/json",
+                "path": str(raw_path.relative_to(stage)),
+                "sha256": _sha256_bytes(normalized_raw),
+                "transport": ZAPI_TRANSPORT,
+                "transport_raw_path": str(zapi_envelope_path.relative_to(stage)),
+                "transport_raw_sha256": _sha256_bytes(zapi_raw),
             }
         )
-        if response.status_code != 200:
-            leg_status[leg] = "ERROR"
-            raise SystemExit(f"FORWARD_CA_HTTP_STATUS:{endpoint}:{response.status_code}")
-        if "json" not in str(response.headers.get("content-type", "")).lower():
-            leg_status[leg] = "ERROR"
-            raise SystemExit(f"FORWARD_CA_CONTENT_TYPE_NOT_JSON:{endpoint}")
-        try:
-            return response.json()
-        except Exception as exc:
-            leg_status[leg] = "ERROR"
-            raise SystemExit(f"FORWARD_CA_JSON_INVALID:{endpoint}") from exc
+        selected_transports.add(ZAPI_TRANSPORT)
+        return normalized_payload
 
     request_from = from_session.replace("-", "")
     request_through = through_session.replace("-", "")
@@ -382,6 +590,13 @@ def main() -> int:
         "provider_module": "idx.core.client.IDXClient",
         "transport": "curl_cffi",
         "impersonate": "chrome",
+        "transport_policy": TRANSPORT_POLICY,
+        "selected_transports": sorted(selected_transports),
+        "transport_attempts": transport_attempts,
+        "transport_session": "curl_cffi.Session",
+        "transport_warmup_urls": list(TRANSPORT_WARMUP_URLS),
+        "transport_api_referer": TRANSPORT_API_REFERER,
+        "transport_preflight": transport_preflight,
         "upstream_base_url": UPSTREAM_BASE_URL,
         "from_session_date": from_session,
         "through_session_date": through_session,
