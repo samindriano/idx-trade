@@ -7,7 +7,7 @@ model_used: GPT-5 Codex
 reasoning_level: high
 source_repository: `samindriano/idx-trade`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: pending final commit after documentation
+head_commit: ce91d60a8b9b5bdbedad15e7a4f0254d69b4d2f2
 scope: Remediate and adversarially validate the frozen cash-dividend and E2E
 paper orchestration path without provider, outcome, model, or scheduler access.
 

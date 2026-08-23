@@ -3,7 +3,7 @@
 Date: 2026-08-23 (Asia/Jakarta)
 Branch: `integration/idx-e2e-baseline-paper-v1`
 Pre-result implementation HEAD: `9436c38d02faa71fc16529433e93a4618568d661`
-Remediation is validated in the current working tree; final commit is pending.
+Remediation commit: `ce91d60a8b9b5bdbedad15e7a4f0254d69b4d2f2`.
 Canonical coordination anchor read: `origin/main:coordination/TEAM_STATUS.md`
 
 ## Final boundary
