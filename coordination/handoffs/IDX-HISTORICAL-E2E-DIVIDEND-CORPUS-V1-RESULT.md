@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `4cded37de834d017b9852765ddb2827166a009b3`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending commit for this checkpoint
+head_commit: `a698782846fbd13bc57367390ee7f3ca4b9acd92`
 scope: outcome-blind official IDX issuer-announcement corpus discovery
 files_changed:
   - `scripts/capture_forward_dividend_announcements_v1.py`
