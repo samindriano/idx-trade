@@ -5,8 +5,10 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
+
 from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
-from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
+from idx_trade.stockbit_stream_archive import QuotaSnapshot
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
 
@@ -136,7 +138,7 @@ class PostQuotaTimeoutClient(Client):
     def get_usage(self):
         self.usage_calls += 1
         if self.usage_calls == 2:
-            raise StreamArchiveError("quota telemetry timeout")
+            raise requests.ReadTimeout("quota telemetry timeout")
         return super().get_usage()
 
 

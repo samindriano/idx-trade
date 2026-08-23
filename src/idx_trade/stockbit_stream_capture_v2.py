@@ -310,7 +310,7 @@ def capture_stream_v2(
 
     try:
         quota_after_payload: dict[str, Any] = client.get_usage().__dict__
-    except StreamArchiveError as exc:
+    except (StreamArchiveError, requests.RequestException) as exc:
         # The stream responses and immutable objects are already captured at
         # this point. A slow quota telemetry endpoint must not discard the run
         # manifest; preserve the diagnostic as an explicit non-authoritative
