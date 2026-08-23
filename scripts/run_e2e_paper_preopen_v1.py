@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 import sys
 
@@ -13,6 +14,11 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     derive_required_execution_tickers,
     execute_preopen,
     load_score_manifest,
+)
+from idx_trade.e2e_operational_guard_v1 import (
+    JAKARTA,
+    load_session_dates,
+    require_phase_window,
 )
 from idx_trade.forward_dividend_execution_v1_1 import (
     reconcile_corporate_action_attestation_v1_2_journal,
@@ -64,6 +70,12 @@ def main() -> int:
         official_calendar_path=args.calendar,
         decision_session_date=current.session_date,
         required_tickers=required,
+    )
+    require_phase_window(
+        phase="PREOPEN",
+        session_date=eod.next_official_session_date,
+        official_session_dates=load_session_dates(eod.official_calendar_path),
+        now=datetime.now(tz=JAKARTA),
     )
     open_inputs = verify_open_execution_inputs(
         execution_session_date=eod.next_official_session_date,
