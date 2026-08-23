@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: `b71fa802b5e051fce8d7a195dea4ec2c4911d083`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending milestone commit
+head_commit: `ba6715e641034b2b7a7980e0e17add0d4dabb232`
 scope: outcome-blind replay-engine scope/idempotency/RMV guardrails
 
 ## Files changed
