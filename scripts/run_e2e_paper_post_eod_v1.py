@@ -149,7 +149,6 @@ def main() -> int:
         REPO_ROOT,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
-        attestation_path=args.phase_attestation,
     )
     require_phase_attestation(
         args.runtime_root,
@@ -157,6 +156,7 @@ def main() -> int:
         session_date=load_score_manifest(args.current_score_manifest).session_date,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
+        attestation_path=args.phase_attestation,
     )
     with exclusive_run_lock(Path(args.runtime_root) / "operational" / "phase.lock"):
         return _run(args)

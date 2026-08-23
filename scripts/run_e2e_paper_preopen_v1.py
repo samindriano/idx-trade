@@ -152,7 +152,6 @@ def main() -> int:
         REPO_ROOT,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
-        attestation_path=args.phase_attestation,
     )
     try:
         prepared_payload = json.loads(Path(args.prepared).read_text(encoding="utf-8"))
@@ -165,6 +164,7 @@ def main() -> int:
         session_date=execution_session,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
+        attestation_path=args.phase_attestation,
     )
     with exclusive_run_lock(Path(args.runtime_root) / "operational" / "phase.lock"):
         return _run(args)
