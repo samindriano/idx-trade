@@ -1,6 +1,6 @@
 # Stockbit Stream R2 Retention V1
 
-Status: `CONTROL_PLANE_READY_SECRET_REQUIRED`
+Status: `ACTIVE_AND_VERIFIED`
 
 ## Scope
 
@@ -42,18 +42,31 @@ ID causes a fail-closed stop. It then performs a GET verification of the full
 merged configuration. It also fails closed if the token, account, or bucket is
 missing, or if the remote rules differ from the applied payload.
 
-Before activation, add a narrowly scoped GitHub secret named
-`CLOUDFLARE_API_TOKEN` with permission to edit the target R2 bucket lifecycle.
-Do not use the R2 S3 access key as a substitute. Until that secret is added and
-the manual workflow is dispatched, existing objects remain untouched and no
-retention cleanup is active.
+Activation was completed through the manual GitHub Actions workflow after the
+narrowly scoped `CLOUDFLARE_API_TOKEN` secret was added. The R2 S3 access key
+was not used for lifecycle configuration. Secret values were not printed or
+stored in the repository.
+
+The successful activation run was:
+
+- workflow run: `32624790465`
+- result: `APPLIED_AND_VERIFIED`
+- applied merged lifecycle payload SHA-256:
+  `bff7dfc38185501163986cc4261d5d237d529133293f07cf7ee2ddc3e69ce1c6`
+- existing remote rule preserved verbatim: `Default Multipart Abort Rule`
+
+The two owned rules now apply the 180-day expiry to the raw and normalized
+prefixes. The workflow only changed lifecycle configuration; it did not list,
+read, delete, or overwrite any R2 object. Future expiry is provider-managed;
+no manual cleanup or capture rerun was performed.
 
 ## Verification
 
 The local dry-run emits a deterministic lifecycle payload and SHA-256. Tests
 prove that only raw/normalized prefixes can expire, provenance prefixes cannot
 be selected, dry-run performs no network call, and missing activation
-credentials fail closed.
+credentials fail closed. The activation workflow additionally verified the
+full merged remote lifecycle configuration after the PUT.
 
 ## Boundaries
 
