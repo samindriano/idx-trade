@@ -58,7 +58,7 @@ Register-ScheduledTask `
   -Trigger $triggers `
   -Settings $settings `
   -Principal $principal `
-  -Description "IDX Trade E2E official OpenPrice capture: direct IDX, same-session only, retries 09:02-09:22, logon catch-up, fail-closed."
+  -Description "IDX Trade E2E official OpenPrice capture: direct IDX primary, Zapi raw IDX passthrough only on direct transport failure; same-session only; retries 09:02-09:22; logon catch-up; fail-closed."
 
 $registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
 if (-not $registered) {
@@ -69,4 +69,4 @@ Write-Host "Installed scheduled task: $TaskName"
 Write-Host "Daily capture retries: 09:02, 09:07, 09:12, 09:17, 09:22"
 Write-Host "Logon same-session catch-up: enabled"
 Write-Host "Runtime root: $resolvedRuntime"
-Write-Host "Transport: direct IDX TradingSummary/GetStockSummary"
+Write-Host "Transport policy: DIRECT_IDX_THEN_ZAPI_RAW_V1 (direct IDX primary; Zapi raw IDX passthrough only on direct transport failure)"
