@@ -19,7 +19,8 @@ def test_task_installer_isolated_and_retry_safe() -> None:
     for at in ("08:30", "08:45", "09:00", "09:02", "09:07", "09:12", "09:17", "09:22", "18:35", "19:35", "20:35"):
         assert at in text
     assert '"18:05"' not in text
-    assert "-AtLogOn" in text
+    assert "-AtLogOn" not in text
+    assert "logon trigger requires elevated" in text
     assert "-StartWhenAvailable" in text
     assert "-MultipleInstances IgnoreNew" in text
     assert "-RunOnlyIfNetworkAvailable" in text

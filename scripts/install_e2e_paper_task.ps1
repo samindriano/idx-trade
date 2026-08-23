@@ -41,9 +41,11 @@ $triggers = @(
   # so each E2E attempt runs after an upstream EOD attempt and can retry.
   (New-ScheduledTaskTrigger -Daily -At "18:35"),
   (New-ScheduledTaskTrigger -Daily -At "19:35"),
-  (New-ScheduledTaskTrigger -Daily -At "20:35"),
-  (New-ScheduledTaskTrigger -AtLogOn)
+  (New-ScheduledTaskTrigger -Daily -At "20:35")
 )
+# A logon trigger requires elevated Task Scheduler registration on this
+# machine. The daily triggers plus StartWhenAvailable provide user-level
+# catch-up without weakening the runtime's own idempotency/fail-closed gates.
 $settings = New-ScheduledTaskSettingsSet `
   -StartWhenAvailable `
   -MultipleInstances IgnoreNew `
