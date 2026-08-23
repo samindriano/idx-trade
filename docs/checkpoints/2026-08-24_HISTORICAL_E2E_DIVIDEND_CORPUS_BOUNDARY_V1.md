@@ -68,6 +68,7 @@ scope was opened.
 ## Validation
 
 - `tests/test_forward_dividend_acquisition_v1.py`: 9 passed
+- full repository suite: 717 passed, 3 existing pandas `FutureWarning`s
 - `py_compile`: PASS for the modified launcher, extractor, and test
 - `git diff --check`: PASS
 

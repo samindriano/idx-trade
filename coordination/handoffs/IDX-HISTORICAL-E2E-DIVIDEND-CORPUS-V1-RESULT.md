@@ -49,6 +49,7 @@ blocking_risks:
 
 validation_run:
   - `python -m pytest tests/test_forward_dividend_acquisition_v1.py -q` → 9 passed
+  - `python -m pytest -q --basetemp D:\\Documents\\Project\\idx-historical-e2e-pytest-basetemp-20260824-v1` → 717 passed, 3 existing warnings
   - `python -m py_compile scripts/capture_forward_dividend_announcements_v1.py src/idx_trade/forward_dividend_acquisition_v1.py tests/test_forward_dividend_acquisition_v1.py` → PASS
   - `git diff --check` → PASS
 
