@@ -72,7 +72,7 @@ def test_preflight_rejects_unowned_remote_lifecycle_rule():
             }
         ]
     }
-    with pytest.raises(RetentionPolicyError, match="unowned"):
+    with pytest.raises(RetentionPolicyError, match="unowned.*unrelated-rule"):
         preflight_remote_policy({"success": True, "result": foreign}, expected)
 
 
