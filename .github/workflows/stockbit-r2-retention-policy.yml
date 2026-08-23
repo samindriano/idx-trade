@@ -17,5 +17,5 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Apply and verify bounded lifecycle policy
+      - name: Apply and verify long-term lifecycle policy
         run: python scripts/configure_stockbit_r2_retention_v1.py --config config/stockbit_r2_retention_v1.json --apply --verify

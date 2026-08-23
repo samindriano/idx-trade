@@ -1,14 +1,15 @@
 {
-  "schema_version": "stockbit_r2_retention_v1",
+  "schema_version": "stockbit_r2_retention_v2",
   "storage_prefix": "stockbit-stream-v2",
-  "retention_days": 180,
   "preserve_prefixes": [
+    "raw/",
+    "normalized/",
     "manifests/",
     "universe_inputs/"
   ],
-  "expire_prefixes": [
-    "raw/",
-    "normalized/"
+  "retired_project_rule_ids": [
+    "stockbit-v2-raw-delete-180d",
+    "stockbit-v2-normalized-delete-180d"
   ],
-  "policy_intent": "Retain provenance-critical manifests and universe inputs; expire bulky raw and normalized stream payloads after a bounded audit window."
+  "policy_intent": "Retain all Stockbit Stream research payloads indefinitely; remove only the retired project-owned 180-day expiry rules and preserve unrelated lifecycle rules."
 }
