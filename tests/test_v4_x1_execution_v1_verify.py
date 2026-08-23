@@ -105,6 +105,27 @@ def test_eod_close_mismatch_fails_closed(monkeypatch, tmp_path):
         )
 
 
+def test_eod_missing_regular_market_value_fails_closed(monkeypatch, tmp_path):
+    ohlcv_path = _write_stub(tmp_path / "session_ohlcv.parquet")
+    model_path = _write_stub(tmp_path / "model_input.parquet")
+    calendar_path = _calendar(tmp_path / "calendar.csv")
+    ohlcv, model = _eod_frames()
+    model.loc[model["ticker"] == "BBB", "regular_market_value"] = float("nan")
+
+    def fake_read(path):
+        return ohlcv.copy() if Path(path) == ohlcv_path else model.copy()
+
+    monkeypatch.setattr(pd, "read_parquet", fake_read)
+    with pytest.raises(DecisionV1Error, match="REGULAR_MARKET_VALUE_INVALID"):
+        verify_eod_execution_inputs(
+            session_ohlcv_path=ohlcv_path,
+            model_input_path=model_path,
+            official_calendar_path=calendar_path,
+            decision_session_date="2026-08-21",
+            required_tickers=["AAA", "BBB"],
+        )
+
+
 def test_open_verifier_rejects_generic_ohlcv_without_certified_manifest(tmp_path):
     path = _write_stub(tmp_path / "session_ohlcv.parquet", b"open")
     with pytest.raises(DecisionV1Error, match="OPEN_CERTIFIED_MANIFEST_REQUIRED"):

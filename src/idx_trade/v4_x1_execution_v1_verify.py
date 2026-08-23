@@ -198,12 +198,22 @@ def verify_eod_execution_inputs(
 
     closes = {}
     regular_values = {}
+    invalid_regular_values = []
     for row in merged.itertuples(index=False):
         close = _finite_positive(row.close)
         value = _finite_nonnegative(row.regular_market_value)
         if close is not None:
             closes[row.ticker] = close
-        regular_values[row.ticker] = 0.0 if value is None else value
+        if value is None:
+            invalid_regular_values.append(row.ticker)
+        else:
+            regular_values[row.ticker] = value
+
+    if invalid_regular_values:
+        raise DecisionV1Error(
+            "EXECUTION_V1_EOD_REGULAR_MARKET_VALUE_INVALID:"
+            + str(sorted(invalid_regular_values))
+        )
 
     required = {_normalize_ticker(x) for x in required_tickers}
     missing_close = required - set(closes)

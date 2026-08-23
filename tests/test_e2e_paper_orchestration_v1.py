@@ -217,6 +217,56 @@ def test_t0_post_eod_preopen_is_atomic_and_idempotent(tmp_path: Path) -> None:
     assert result.file_sha256 == rerun.file_sha256
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("status", "EXECUTION_FAILED", "E2E_EXISTING_EXECUTION_STATUS_INVALID"),
+        ("execution_session_date", "2099-01-01", "E2E_EXISTING_EXECUTION_SESSION_MISMATCH"),
+    ],
+)
+def test_existing_execution_rejects_tampered_status_or_session(
+    tmp_path: Path, field: str, value: str, expected: str
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    first = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    body = json.loads(first.path.read_text(encoding="utf-8"))
+    body[field] = value
+    body_without_hash = dict(body)
+    body_without_hash.pop("payload_sha256", None)
+    body["payload_sha256"] = _canonical_hash(body_without_hash)
+    first.path.write_text(json.dumps(body, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(E2EPaperOrchestrationError, match=expected):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
 def test_existing_execution_rejects_forged_ca_reconciliation_token(
     tmp_path: Path,
 ) -> None:

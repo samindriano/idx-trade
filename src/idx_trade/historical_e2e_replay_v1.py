@@ -26,6 +26,10 @@ from .e2e_paper_orchestration_v1 import (
 from .forward_dividend_execution_v1_1 import (
     reconcile_corporate_action_attestation_v1_2_journal,
 )
+from .historical_e2e_scope_validator_v1 import (
+    STRICT_SCOPE_FROZEN,
+    load_replay_scope,
+)
 from .v4_x1_execution_v1_verify import (
     verify_eod_execution_inputs,
     verify_open_execution_inputs,
@@ -102,8 +106,14 @@ def _assert_accounting_invariants(
 def replay_verified_session(
     runtime_root: str | Path,
     artifacts: HistoricalReplayArtifacts,
+    *,
+    scope_manifest_path: str | Path,
 ) -> HistoricalReplayResult:
     """Replay one transition through public artifact verifiers and production orchestration."""
+
+    scope = load_replay_scope(scope_manifest_path)
+    if scope.get("status") != STRICT_SCOPE_FROZEN:
+        raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SCOPE_NOT_FROZEN")
 
     score_manifest = _assert_path(artifacts.score_manifest_path, "SCORE_MANIFEST_MISSING")
     previous_manifest = (
@@ -123,6 +133,20 @@ def replay_verified_session(
         decision_session_date=artifacts.decision_session_date,
         required_tickers=(),
     )
+    strict_indices = {
+        int(value) for value in scope.get("strict_session_indices", [])
+    }
+    scope_rows = scope.get("open", {}).get("per_session", [])
+    allowed_pairs = {
+        (str(row["decision_session_date"]), str(row["execution_session_date"]))
+        for row in scope_rows
+        if isinstance(row, dict) and int(row.get("session_index", -1)) in strict_indices
+    }
+    if (
+        artifacts.decision_session_date,
+        eod.next_official_session_date,
+    ) not in allowed_pairs:
+        raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SESSION_OUT_OF_SCOPE")
     runtime = Path(runtime_root).expanduser().resolve()
     required = derive_required_execution_tickers(
         runtime,
@@ -174,23 +198,14 @@ def replay_verified_session(
 
 
 def replay_scope_manifest(path: str | Path) -> dict[str, object]:
-    """Load a frozen scope manifest without opening any target/outcome field."""
+    """Load and strictly validate an outcome-blind replay scope manifest."""
 
-    manifest = _assert_path(Path(path), "REPLAY_SCOPE_MANIFEST_MISSING")
     try:
-        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        return load_replay_scope(path)
     except Exception as exc:
-        raise HistoricalE2EReplayError("REPLAY_SCOPE_MANIFEST_INVALID") from exc
-    if not isinstance(payload, dict):
-        raise HistoricalE2EReplayError("REPLAY_SCOPE_MANIFEST_NOT_OBJECT")
-    if payload.get("outcome_access") is not False:
-        raise HistoricalE2EReplayError("REPLAY_SCOPE_OUTCOME_ACCESS_FLAG_INVALID")
-    if payload.get("status") not in {
-        "STRICT_SCOPE_FROZEN",
-        "STRICT_SCOPE_EMPTY_BLOCKED",
-    }:
-        raise HistoricalE2EReplayError("REPLAY_SCOPE_STATUS_NOT_FROZEN")
-    return payload
+        if isinstance(exc, HistoricalE2EReplayError):
+            raise
+        raise HistoricalE2EReplayError(str(exc)) from exc
 
 
 __all__ = [

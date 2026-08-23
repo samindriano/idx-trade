@@ -1029,6 +1029,10 @@ def _recover_staged_execution(
     execution_body = stage.get("execution_body")
     if not isinstance(execution_body, dict):
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_PAYLOAD_MISSING")
+    if execution_body.get("status") != "EXECUTION_COMPLETE":
+        raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_STATUS_INVALID")
+    if _date(execution_body.get("execution_session_date")) != execution_date:
+        raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_SESSION_MISMATCH")
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1181,6 +1185,13 @@ def execute_preopen(
         existing_hash = str(existing_body.pop("payload_sha256", ""))
         if not existing_hash or _canonical_hash(existing_body) != existing_hash:
             raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_HASH_MISMATCH")
+        if existing_body.get("status") != "EXECUTION_COMPLETE":
+            raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_STATUS_INVALID")
+        if (
+            existing_body.get("decision_session_date") != decision_date
+            or existing_body.get("execution_session_date") != execution_date
+        ):
+            raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_SESSION_MISMATCH")
         if (
             str(existing_body.get("prepared_path") or "") != str(prepared)
             or str(existing_body.get("prepared_sha256") or "")
