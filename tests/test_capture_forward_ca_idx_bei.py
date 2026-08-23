@@ -174,3 +174,37 @@ def test_existing_output_fails_before_provider_access(
     with pytest.raises(SystemExit, match="FORWARD_CA_OUTPUT_EXISTS"):
         capture.main()
     assert FakeClient.calls == []
+
+
+def test_interrupted_publication_is_completed_without_provider_access(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calendar = {"Results": [{"Code": "BBCA", "Date": "2026-08-22", "Title": "RUPS"}]}
+    output, attestation = _run(tmp_path, monkeypatch, responses=_responses(calendar))
+    pending = attestation.with_name(".pending-attestation")
+    pending.write_bytes(attestation.read_bytes())
+    attestation.unlink()
+    marker = {
+        "schema_version": "idx_trade_forward_ca_publication_v1",
+        "output_dir": str(output.resolve()),
+        "attestation": str(attestation.resolve()),
+        "pending_attestation": str(pending.resolve()),
+        "manifest_sha256": capture._sha256_bytes((output / "MANIFEST.json").read_bytes()),
+        "pending_attestation_sha256": capture._sha256_bytes(pending.read_bytes()),
+    }
+    (output / "PUBLISH.json").write_text(json.dumps(marker), encoding="utf-8")
+    FakeClient.calls = []
+
+    assert capture._recover_interrupted_publication(
+        output,
+        attestation,
+        expected_phase="POST_EOD",
+        expected_from_session="2026-08-22",
+        expected_through_session="2026-08-23",
+        required_tickers=["BBCA", "TLKM"],
+    ) is True
+    assert attestation.is_file()
+    assert not pending.exists()
+    assert not (output / "PUBLISH.json").exists()
+    assert FakeClient.calls == []

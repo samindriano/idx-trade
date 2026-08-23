@@ -521,7 +521,10 @@ def build_attestation(*, source_manifest_path: str | Path, output_path: str | Pa
 
 
 def build_phase_attestation_v1_2(
-    *, phase_manifest_path: str | Path, output_path: str | Path
+    *,
+    phase_manifest_path: str | Path,
+    output_path: str | Path,
+    manifest_path_for_attestation: str | Path | None = None,
 ) -> Path:
     """Build one current-phase V1.2 attestation from a verified raw capture.
 
@@ -554,7 +557,11 @@ def build_phase_attestation_v1_2(
             }
         )
 
-    phase_path = Path(phase["_manifest_path"]).expanduser().resolve()
+    phase_path = (
+        Path(manifest_path_for_attestation).expanduser().resolve()
+        if manifest_path_for_attestation is not None
+        else Path(phase["_manifest_path"]).expanduser().resolve()
+    )
     payload: dict[str, Any] = {
         "schema_version": ATTESTATION_SCHEMA_V1_2,
         "capture_phase": phase_name,

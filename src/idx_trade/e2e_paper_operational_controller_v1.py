@@ -484,7 +484,13 @@ def _phase_sidecar_path(config: OperationalControllerConfig, session: str, phase
     return config.runtime_root / "operational" / "ca_phase" / f"{session}_{phase}.json"
 
 
-def _verify_phase_sidecar(config: OperationalControllerConfig, session: str, phase: str) -> dict[str, Any]:
+def _verify_phase_sidecar(
+    config: OperationalControllerConfig,
+    session: str,
+    phase: str,
+    *,
+    through_session: str,
+) -> dict[str, Any]:
     path = _phase_sidecar_path(config, session, phase)
     payload = _read_json(path)
     body = dict(payload)
@@ -495,6 +501,7 @@ def _verify_phase_sidecar(config: OperationalControllerConfig, session: str, pha
     if (
         payload.get("phase") != phase
         or payload.get("session_date") != session
+        or payload.get("through_session_date") != through_session
         or Path(str(payload.get("journal_path") or "")).expanduser().resolve() != journal.resolve()
         or not journal.is_file()
         or _sha256(journal) != str(payload.get("journal_sha256") or "")
@@ -550,7 +557,12 @@ def _ensure_ca_phase(
     batch, journal = _journal_paths(config, session, phase)
     sidecar = _phase_sidecar_path(config, session, phase)
     if sidecar.is_file():
-        payload = _verify_phase_sidecar(config, session, phase)
+        payload = _verify_phase_sidecar(
+            config,
+            session,
+            phase,
+            through_session=through_session,
+        )
         expected_tickers = sorted({str(value).strip().upper() for value in required_tickers})
         if list(payload.get("required_tickers") or []) != expected_tickers:
             raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_TICKER_SCOPE_CHANGED")
@@ -610,6 +622,7 @@ def _ensure_ca_phase(
         "schema_version": "idx_trade_e2e_operational_ca_phase_v1",
         "phase": phase,
         "session_date": session,
+        "through_session_date": through_session,
         "started_at_jakarta": started.isoformat(),
         "finished_at_jakarta": finished.isoformat(),
         "required_tickers": sorted({str(value).strip().upper() for value in required_tickers}),
@@ -915,8 +928,15 @@ def run_operational_cycle(
                         reason=missing,
                         prepared_path=str(prepared[0]),
                     )
+                payload = _read_json(prepared[0])
+                through_session = str(payload.get("execution_session_date") or "")
                 try:
-                    sidecar = _verify_phase_sidecar(config, today, "PREOPEN")
+                    sidecar = _verify_phase_sidecar(
+                        config,
+                        today,
+                        "PREOPEN",
+                        through_session=through_session,
+                    )
                 except E2EOperationalGuardError as exc:
                     return finish(
                         controller_status="WAITING_PREOPEN_CA_CAPTURE",
@@ -932,7 +952,6 @@ def run_operational_cycle(
                         ca_phase_sidecar=str(_phase_sidecar_path(config, today, "PREOPEN")),
                     )
                 ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
-                payload = _read_json(prepared[0])
                 current_score_path = Path(str(payload["current_score"]["manifest_path"])).expanduser().resolve()
                 previous_ref = payload.get("previous_score")
                 previous_score_path = None if not isinstance(previous_ref, Mapping) else Path(str(previous_ref["manifest_path"])).expanduser().resolve()
@@ -1049,7 +1068,12 @@ def run_operational_cycle(
                 required_tickers=required,
                 now=current,
             )
-            sidecar = _verify_phase_sidecar(config, today, "POST_EOD")
+            sidecar = _verify_phase_sidecar(
+                config,
+                today,
+                "POST_EOD",
+                through_session=eod_inputs.next_official_session_date,
+            )
             ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
             phase_attestation_path, _ = write_phase_attestation(
                 config.runtime_root,

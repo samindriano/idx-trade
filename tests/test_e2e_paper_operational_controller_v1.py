@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -79,6 +80,59 @@ def test_missing_operational_config_fails_closed_without_provider_call(tmp_path:
         "MISSING_OPERATIONAL_CONFIG:provider_checkout,provider_expected_commit,uv_exe,"
         "python_exe,ca_attestation_path,ca_attestation_sha256"
     )
+
+
+def test_reused_ca_sidecar_is_bound_to_exact_through_session(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    sidecar = controller._phase_sidecar_path(config, "2026-08-24", "POST_EOD")
+    sidecar.parent.mkdir(parents=True)
+    sidecar.write_text("placeholder\n", encoding="utf-8")
+    seen: dict[str, str] = {}
+
+    def verify(_config, session, phase, *, through_session):
+        seen.update(session=session, phase=phase, through_session=through_session)
+        return {"required_tickers": ["BBCA"], "finished_at_jakarta": ""}
+
+    monkeypatch.setattr(controller, "_verify_phase_sidecar", verify)
+    assert controller._ensure_ca_phase(
+        config,
+        session="2026-08-24",
+        through_session="2026-08-25",
+        phase="POST_EOD",
+        required_tickers=["BBCA"],
+        now=datetime(2026, 8, 24, 18, tzinfo=JAKARTA),
+    ) == "REUSED"
+    assert seen == {
+        "session": "2026-08-24",
+        "phase": "POST_EOD",
+        "through_session": "2026-08-25",
+    }
+
+
+def test_phase_sidecar_rejects_stale_through_session(tmp_path: Path) -> None:
+    config = _config(tmp_path)
+    sidecar = controller._phase_sidecar_path(config, "2026-08-24", "POST_EOD")
+    sidecar.parent.mkdir(parents=True)
+    body = {
+        "schema_version": "idx_trade_e2e_operational_ca_phase_v1",
+        "phase": "POST_EOD",
+        "session_date": "2026-08-24",
+        "through_session_date": "2026-08-26",
+    }
+    sidecar.write_text(
+        json.dumps({**body, "payload_sha256": _canonical_hash(body)}),
+        encoding="utf-8",
+    )
+    with pytest.raises(E2EOperationalGuardError, match="CA_PHASE_SIDECAR_PARENT_MISMATCH"):
+        controller._verify_phase_sidecar(
+            config,
+            "2026-08-24",
+            "POST_EOD",
+            through_session="2026-08-25",
+        )
 
 
 def test_child_failure_is_redacted_to_hash_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

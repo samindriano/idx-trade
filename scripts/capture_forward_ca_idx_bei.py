@@ -132,6 +132,79 @@ def _count(value: object) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def _recover_interrupted_publication(
+    out: Path,
+    attestation: Path,
+    *,
+    expected_phase: str,
+    expected_from_session: str,
+    expected_through_session: str,
+    required_tickers: list[str],
+) -> bool:
+    """Complete one interrupted two-artifact publication without provider access."""
+
+    marker = out / "PUBLISH.json"
+    if not marker.is_file():
+        return False
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+        final_manifest = out / "MANIFEST.json"
+        pending = Path(str(payload["pending_attestation"])).expanduser().resolve()
+        if Path(str(payload["output_dir"])).expanduser().resolve() != out.resolve():
+            raise ValueError("output directory mismatch")
+        if Path(str(payload["attestation"])).expanduser().resolve() != attestation.resolve():
+            raise ValueError("attestation path mismatch")
+        if not final_manifest.is_file():
+            raise ValueError("final manifest missing")
+        phase = forward_ca.verify_phase_manifest(final_manifest)
+        if (
+            phase.get("phase") != expected_phase
+            or phase.get("from_session_date") != expected_from_session
+            or phase.get("through_session_date") != expected_through_session
+            or sorted(phase.get("required_tickers") or []) != sorted(required_tickers)
+        ):
+            raise ValueError("phase scope mismatch")
+        if str(payload["manifest_sha256"]) != hashlib.sha256(final_manifest.read_bytes()).hexdigest():
+            raise ValueError("manifest hash mismatch")
+        if not pending.is_file():
+            if not attestation.is_file():
+                raise ValueError("pending attestation missing")
+        else:
+            pending_sha = hashlib.sha256(pending.read_bytes()).hexdigest()
+            if pending_sha != str(payload["pending_attestation_sha256"]):
+                raise ValueError("pending attestation hash mismatch")
+            if attestation.exists():
+                if attestation.read_bytes() != pending.read_bytes():
+                    raise ValueError("final attestation conflict")
+                pending.unlink()
+            else:
+                pending.replace(attestation)
+        if not attestation.is_file():
+            raise ValueError("final attestation missing")
+        attestation_doc = json.loads(attestation.read_text(encoding="utf-8"))
+        if (
+            attestation_doc.get("phase_manifest_path")
+            != str(final_manifest.resolve())
+            or attestation_doc.get("phase_manifest_sha256")
+            != str(payload["manifest_sha256"])
+        ):
+            raise ValueError("attestation binding mismatch")
+        from idx_trade.forward_dividend_execution_v1_1 import (
+            _load_and_verify_post_eod_attestation_v1_2,
+        )
+
+        _load_and_verify_post_eod_attestation_v1_2(
+            path=attestation,
+            expected_from_session_date=expected_from_session,
+            expected_through_session_date=expected_through_session,
+            required_tickers=required_tickers,
+        )
+        marker.unlink()
+        return True
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise SystemExit("FORWARD_CA_INTERRUPTED_PUBLICATION_INVALID") from exc
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider-checkout", required=True)
@@ -147,6 +220,25 @@ def main() -> int:
     through_session = _parse_date(args.through_session, "--through-session")
     if through_session < from_session:
         raise SystemExit("FORWARD_CA_SESSION_WINDOW_REVERSED")
+    tickers = sorted({value.strip().upper() for value in args.tickers.split(",") if value.strip()})
+    if not tickers:
+        raise SystemExit("FORWARD_CA_REQUIRED_TICKERS_EMPTY")
+    out = Path(args.output_dir).expanduser().resolve()
+    attestation = Path(args.attestation_output).expanduser().resolve()
+    if out.exists():
+        if _recover_interrupted_publication(
+            out,
+            attestation,
+            expected_phase=args.phase,
+            expected_from_session=from_session,
+            expected_through_session=through_session,
+            required_tickers=tickers,
+        ):
+            print(json.dumps({"status": "RECOVERED", "outcome_access": False}, sort_keys=True))
+            return 0
+        raise SystemExit(f"FORWARD_CA_OUTPUT_EXISTS:{out}")
+    if attestation.exists():
+        raise SystemExit(f"FORWARD_CA_ATTESTATION_EXISTS:{attestation}")
     checkout = Path(args.provider_checkout).expanduser().resolve()
     _verify_provider_checkout(checkout)
 
@@ -157,12 +249,6 @@ def main() -> int:
     except ImportError as exc:
         raise SystemExit("FORWARD_CA_PROVIDER_IMPORT_FAILED") from exc
 
-    tickers = sorted({value.strip().upper() for value in args.tickers.split(",") if value.strip()})
-    if not tickers:
-        raise SystemExit("FORWARD_CA_REQUIRED_TICKERS_EMPTY")
-    out = Path(args.output_dir).expanduser().resolve()
-    if out.exists():
-        raise SystemExit(f"FORWARD_CA_OUTPUT_EXISTS:{out}")
     out.parent.mkdir(parents=True, exist_ok=True)
     stage = out.parent / f".{out.name}.partial.{uuid.uuid4().hex}"
     stage.mkdir(parents=False, exist_ok=False)
@@ -310,19 +396,32 @@ def main() -> int:
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     forward_ca.verify_phase_manifest(manifest_path)
 
-    attestation = Path(args.attestation_output).expanduser().resolve()
-    stage.replace(out)
     final_manifest_path = out / "MANIFEST.json"
-    try:
-        forward_ca.build_phase_attestation_v1_2(
-            phase_manifest_path=final_manifest_path,
-            output_path=attestation,
-        )
-    except Exception:
-        # Keep the failed evidence inspectable, but never leave a directory
-        # that looks like a published phase capture.
-        out.replace(stage)
-        raise
+    pending_attestation = attestation.parent / (
+        f".{attestation.name}.{out.name}.{uuid.uuid4().hex}.pending"
+    )
+    forward_ca.build_phase_attestation_v1_2(
+        phase_manifest_path=manifest_path,
+        output_path=pending_attestation,
+        manifest_path_for_attestation=final_manifest_path,
+    )
+    pending_attestation_sha256 = hashlib.sha256(pending_attestation.read_bytes()).hexdigest()
+    publish_marker = {
+        "schema_version": "idx_trade_forward_ca_publication_v1",
+        "output_dir": str(out),
+        "attestation": str(attestation),
+        "pending_attestation": str(pending_attestation),
+        "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+        "pending_attestation_sha256": pending_attestation_sha256,
+    }
+    (stage / "PUBLISH.json").write_text(
+        json.dumps(publish_marker, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    stage.replace(out)
+    pending_attestation.replace(attestation)
+    (out / "PUBLISH.json").unlink()
+    final_manifest_path = out / "MANIFEST.json"
     print(json.dumps({
         "status": "COMPLETE",
         "phase_manifest": str(final_manifest_path),
