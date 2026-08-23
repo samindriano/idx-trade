@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+import json
 from pathlib import Path
 import sys
 
@@ -20,6 +21,7 @@ from idx_trade.e2e_operational_guard_v1 import (
     attest_deployment,
     exclusive_run_lock,
     load_session_dates,
+    require_phase_attestation,
     require_phase_window,
 )
 from idx_trade.forward_dividend_execution_v1_1 import (
@@ -147,6 +149,18 @@ def main() -> int:
     args = _parser().parse_args()
     attest_deployment(
         REPO_ROOT,
+        expected_branch=args.expected_branch,
+        expected_commit=args.expected_commit,
+    )
+    try:
+        prepared_payload = json.loads(Path(args.prepared).read_text(encoding="utf-8"))
+        execution_session = str(prepared_payload.get("execution_session_date") or "")
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit("E2E_PREPARED_ATTESTATION_SESSION_INVALID") from exc
+    require_phase_attestation(
+        args.runtime_root,
+        phase="PREOPEN",
+        session_date=execution_session,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
     )

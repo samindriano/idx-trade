@@ -54,6 +54,55 @@ def test_score_pointer_requires_exact_manifest_hash_and_session(tmp_path: Path) 
         controller._verify_score_pointer({"x1_score": good}, "2026-08-20")
 
 
+def test_score_pointer_verifies_artifact_when_declared(tmp_path: Path) -> None:
+    manifest = tmp_path / "score.json"
+    artifact = tmp_path / "scores.parquet"
+    manifest.write_text("{}\n", encoding="utf-8")
+    artifact.write_bytes(b"score")
+    good = {
+        "manifest_path": str(manifest),
+        "manifest_sha256": _sha(manifest),
+        "artifact_path": str(artifact),
+        "artifact_sha256": _sha(artifact),
+        "session_date": "2026-08-21",
+    }
+    assert controller._verify_score_pointer({"x1_score": good}, "2026-08-21") == good
+    with pytest.raises(E2EOperationalGuardError, match="ARTIFACT_HASH_MISMATCH"):
+        controller._verify_score_pointer(
+            {"x1_score": {**good, "artifact_sha256": "0" * 64}}, "2026-08-21"
+        )
+
+
+def test_missing_operational_config_fails_closed_without_provider_call(tmp_path: Path) -> None:
+    config = _config(tmp_path)
+    assert controller._config_missing(config) == (
+        "MISSING_OPERATIONAL_CONFIG:provider_checkout,provider_expected_commit,uv_exe,"
+        "python_exe,ca_attestation_path,ca_attestation_sha256"
+    )
+
+
+def test_child_failure_is_redacted_to_hash_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config = _config(tmp_path)
+
+    class Failed:
+        returncode = 7
+        stdout = "safe stdout"
+        stderr = "safe stderr"
+
+    monkeypatch.setattr(controller.subprocess, "run", lambda *args, **kwargs: Failed())
+    with pytest.raises(E2EOperationalGuardError, match="CHILD_PROCESS_FAILED:test"):
+        controller._run_child(config, "test", ["python", "script.py"])
+    logs = list((config.runtime_root / "operational" / "processes").glob("*.json"))
+    assert len(logs) == 1
+    payload = json.loads(logs[0].read_text(encoding="utf-8"))
+    assert "safe stdout" not in json.dumps(payload)
+    assert payload["stdout_sha256"] == _sha256_text("safe stdout")
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
 def test_prepared_selection_requires_schema_payload_and_eod_file_hashes(tmp_path: Path) -> None:
     config = _config(tmp_path)
     prepared_dir = config.runtime_root / "prepared"

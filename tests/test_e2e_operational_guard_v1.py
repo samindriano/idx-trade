@@ -12,7 +12,9 @@ from idx_trade.e2e_operational_guard_v1 import (
     attest_deployment,
     exclusive_run_lock,
     load_session_dates,
+    require_phase_attestation,
     require_phase_window,
+    write_phase_attestation,
     write_status_atomic,
 )
 
@@ -107,3 +109,51 @@ def test_deployment_attestation_rejects_wrong_identity_and_dirty_tree(tmp_path: 
     (tmp_path / "tracked.txt").write_text("dirty", encoding="utf-8")
     with pytest.raises(E2EOperationalGuardError, match="WORKTREE_DIRTY"):
         attest_deployment(tmp_path, expected_branch="master", expected_commit=head)
+
+
+def test_phase_attestation_is_immutable_and_parent_bound(tmp_path: Path) -> None:
+    path, digest = write_phase_attestation(
+        tmp_path,
+        phase="PREOPEN",
+        session_date="2026-08-24",
+        expected_branch="integration/test",
+        expected_commit="a" * 40,
+        issued_at=_at(8, 30),
+    )
+    assert path.is_file()
+    assert digest
+    assert require_phase_attestation(
+        tmp_path,
+        phase="PREOPEN",
+        session_date="2026-08-24",
+        expected_branch="integration/test",
+        expected_commit="a" * 40,
+        now=_at(8, 31),
+    )[1] == digest
+    with pytest.raises(E2EOperationalGuardError, match="PARENT_MISMATCH"):
+        require_phase_attestation(
+            tmp_path,
+            phase="PREOPEN",
+            session_date="2026-08-24",
+            expected_branch="integration/test",
+            expected_commit="b" * 40,
+            now=_at(8, 31),
+        )
+    with pytest.raises(E2EOperationalGuardError, match="EXPIRED"):
+        require_phase_attestation(
+            tmp_path,
+            phase="PREOPEN",
+            session_date="2026-08-24",
+            expected_branch="integration/test",
+            expected_commit="a" * 40,
+            now=_at(8, 46),
+        )
+    with pytest.raises(E2EOperationalGuardError, match="IMMUTABLE_CONFLICT"):
+        write_phase_attestation(
+            tmp_path,
+            phase="PREOPEN",
+            session_date="2026-08-24",
+            expected_branch="integration/test",
+            expected_commit="b" * 40,
+            issued_at=_at(8, 30),
+        )

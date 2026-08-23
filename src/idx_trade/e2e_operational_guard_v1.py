@@ -25,6 +25,7 @@ PREOPEN_START = time(9, 2)
 PREOPEN_END = time(9, 22, 59)
 POST_EOD_START = time(18, 0)
 SCHEMA_VERSION = "idx_trade_e2e_operational_guard_v1"
+PHASE_ATTESTATION_SCHEMA = "idx_trade_e2e_phase_attestation_v1"
 
 
 class E2EOperationalGuardError(RuntimeError):
@@ -207,6 +208,111 @@ def write_status_atomic(path: str | Path, payload: Mapping[str, object]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def write_phase_attestation(
+    runtime_root: str | Path,
+    *,
+    phase: str,
+    session_date: str,
+    expected_branch: str,
+    expected_commit: str,
+    issued_at: datetime | None = None,
+) -> tuple[Path, str]:
+    """Issue the short-lived controller-to-phase handoff.
+
+    The phase scripts are intentionally not standalone operational entrypoints:
+    they must consume an attestation written by the controller after the
+    deployment, calendar, parent-artifact, and phase-window checks have passed.
+    """
+
+    phase_name = str(phase).strip().upper()
+    if phase_name not in {"PREOPEN", "POST_EOD"}:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_PHASE_INVALID")
+    session = _iso_date(session_date)
+    current = _local_now(issued_at)
+    body: dict[str, object] = {
+        "schema_version": PHASE_ATTESTATION_SCHEMA,
+        "phase": phase_name,
+        "session_date": session,
+        "issued_at_jakarta": current.isoformat(),
+        "expected_branch": str(expected_branch).strip(),
+        "expected_commit": str(expected_commit).strip().lower(),
+    }
+    body["payload_sha256"] = hashlib.sha256(
+        (json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+    ).hexdigest()
+    target = (
+        Path(runtime_root).expanduser().resolve()
+        / "operational"
+        / "phase_attestations"
+        / f"{session}_{phase_name}.json"
+    )
+    encoded = (json.dumps(body, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+    temporary.write_bytes(encoded)
+    if target.exists() and target.read_bytes() != encoded:
+        temporary.unlink(missing_ok=True)
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_IMMUTABLE_CONFLICT")
+    if not target.exists():
+        os.replace(temporary, target)
+    else:
+        temporary.unlink(missing_ok=True)
+    return target, hashlib.sha256(encoded).hexdigest()
+
+
+def require_phase_attestation(
+    runtime_root: str | Path,
+    *,
+    phase: str,
+    session_date: str,
+    expected_branch: str,
+    expected_commit: str,
+    now: datetime | None = None,
+) -> tuple[Path, str]:
+    """Require the exact immutable controller handoff for a phase child."""
+
+    phase_name = str(phase).strip().upper()
+    session = _iso_date(session_date)
+    path = (
+        Path(runtime_root).expanduser().resolve()
+        / "operational"
+        / "phase_attestations"
+        / f"{session}_{phase_name}.json"
+    )
+    if not path.is_file():
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_MISSING")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_INVALID") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != PHASE_ATTESTATION_SCHEMA:
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_INVALID")
+    declared = str(payload.get("payload_sha256") or "")
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    actual = hashlib.sha256(
+        (json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+    ).hexdigest()
+    if actual != declared:
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_HASH_MISMATCH")
+    if (
+        payload.get("phase") != phase_name
+        or payload.get("session_date") != session
+        or str(payload.get("expected_branch") or "") != str(expected_branch).strip()
+        or str(payload.get("expected_commit") or "").lower() != str(expected_commit).strip().lower()
+    ):
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_PARENT_MISMATCH")
+    issued = datetime.fromisoformat(str(payload.get("issued_at_jakarta") or ""))
+    if issued.tzinfo is None:
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_CLOCK_INVALID")
+    current = _local_now(now)
+    if current < issued.astimezone(JAKARTA):
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_FROM_FUTURE")
+    if (current - issued.astimezone(JAKARTA)).total_seconds() > 900:
+        raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_EXPIRED")
+    return path, hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 __all__ = [
     "DeploymentAttestation",
     "E2EOperationalGuardError",
@@ -220,4 +326,6 @@ __all__ = [
     "load_session_dates",
     "require_phase_window",
     "write_status_atomic",
+    "write_phase_attestation",
+    "require_phase_attestation",
 ]
