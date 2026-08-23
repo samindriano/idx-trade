@@ -131,7 +131,7 @@ def build_lifecycle_payload(policy: dict[str, Any]) -> dict[str, Any]:
                 },
             }
         )
-    return {"rules": rules}
+    return {"rules": sorted(rules, key=lambda rule: str(rule.get("id", "")))}
 
 
 def canonical_payload_bytes(payload: dict[str, Any]) -> bytes:
@@ -213,26 +213,37 @@ def verify_remote_policy(account_id: str, bucket_name: str, token: str, expected
         raise RetentionPolicyError("remote lifecycle rules do not match the pinned policy")
 
 
-def preflight_remote_policy(response: dict[str, Any], expected: dict[str, Any]) -> None:
-    """Reject unknown rules before a PUT that replaces bucket lifecycle state."""
+def preflight_remote_policy(response: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    """Build a replacement payload while preserving every existing rule."""
     observed_rules = _rules_from_response(response, allow_empty=True)
     expected_rules = sorted(expected.get("rules", []), key=lambda rule: str(rule.get("id", "")))
-    if observed_rules not in ([], expected_rules):
-        summaries = [_safe_rule_summary(rule) for rule in observed_rules]
-        raise RetentionPolicyError(
-            "remote lifecycle contains unowned rules; refusing to replace it; "
-            f"observed_rules={json.dumps(summaries, sort_keys=True, separators=(',', ':'))}"
-        )
+    expected_by_id = {str(rule.get("id")): rule for rule in expected_rules}
+    preserved_rules: list[dict[str, Any]] = []
+    for rule in observed_rules:
+        rule_id = rule.get("id")
+        if not isinstance(rule_id, str) or not rule_id:
+            raise RetentionPolicyError("remote lifecycle contains a rule without a stable id")
+        if rule_id in expected_by_id:
+            if rule != expected_by_id[rule_id]:
+                summary = _safe_rule_summary(rule)
+                raise RetentionPolicyError(
+                    "remote lifecycle rule id collides with the pinned policy; "
+                    f"observed_rule={json.dumps(summary, sort_keys=True, separators=(',', ':'))}"
+                )
+            continue
+        preserved_rules.append(rule)
+    return {"rules": sorted([*preserved_rules, *expected_rules], key=lambda rule: str(rule.get("id", "")))}
 
 
-def apply_policy(account_id: str, bucket_name: str, token: str, payload: dict[str, Any], verify: bool) -> None:
+def apply_policy(account_id: str, bucket_name: str, token: str, payload: dict[str, Any], verify: bool) -> dict[str, Any]:
     if not token:
         raise RetentionPolicyError("CLOUDFLARE_API_TOKEN is required for --apply")
     preflight = _request_json("GET", lifecycle_url(account_id, bucket_name), token)
-    preflight_remote_policy(preflight, payload)
-    _request_json("PUT", lifecycle_url(account_id, bucket_name), token, payload)
+    applied_payload = preflight_remote_policy(preflight, payload)
+    _request_json("PUT", lifecycle_url(account_id, bucket_name), token, applied_payload)
     if verify:
-        verify_remote_policy(account_id, bucket_name, token, payload)
+        verify_remote_policy(account_id, bucket_name, token, applied_payload)
+    return applied_payload
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -269,8 +280,8 @@ def main(argv: list[str] | None = None) -> int:
             verify_remote_policy(account_id, bucket_name, token, payload)
             print(json.dumps({"status": "VERIFIED", "lifecycle_payload_sha256": payload_sha256(payload)}, sort_keys=True))
             return 0
-        apply_policy(account_id, bucket_name, token, payload, verify=args.verify)
-        print(json.dumps({"status": "APPLIED_AND_VERIFIED" if args.verify else "APPLIED", "lifecycle_payload_sha256": payload_sha256(payload)}, sort_keys=True))
+        applied_payload = apply_policy(account_id, bucket_name, token, payload, verify=args.verify)
+        print(json.dumps({"status": "APPLIED_AND_VERIFIED" if args.verify else "APPLIED", "lifecycle_payload_sha256": payload_sha256(applied_payload)}, sort_keys=True))
         return 0
     except RetentionPolicyError as exc:
         print(f"RETENTION_POLICY_FAIL_CLOSED: {exc}", file=sys.stderr)

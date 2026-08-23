@@ -21,10 +21,10 @@ CONFIG = Path("config/stockbit_r2_retention_v1.json")
 def test_pinned_policy_expires_only_raw_and_normalized_after_180_days():
     policy = load_policy(CONFIG)
     payload = build_lifecycle_payload(policy)
-    assert [rule["conditions"]["prefix"] for rule in payload["rules"]] == [
+    assert {rule["conditions"]["prefix"] for rule in payload["rules"]} == {
         "stockbit-stream-v2/raw/",
         "stockbit-stream-v2/normalized/",
-    ]
+    }
     assert [rule["deleteObjectsTransition"]["condition"] for rule in payload["rules"]] == [
         {"type": "Age", "maxAge": 180 * 86_400},
         {"type": "Age", "maxAge": 180 * 86_400},
@@ -59,25 +59,40 @@ def test_apply_fails_closed_without_control_plane_token(monkeypatch):
     assert main(["--config", str(CONFIG), "--apply", "--verify"]) == 2
 
 
-def test_preflight_rejects_unowned_remote_lifecycle_rule():
+def test_preflight_rejects_conflicting_owned_rule_id():
     policy = load_policy(CONFIG)
     expected = build_lifecycle_payload(policy)
-    foreign = {
+    conflicting = {
         "rules": [
             {
-                "id": "unrelated-rule",
-                "conditions": {"prefix": "stockbit-stream-v1/"},
+                "id": expected["rules"][0]["id"],
+                "conditions": {"prefix": "unexpected/"},
                 "enabled": True,
                 "deleteObjectsTransition": {"condition": {"type": "Age", "maxAge": 86400}},
             }
         ]
     }
-    with pytest.raises(RetentionPolicyError, match="unowned.*unrelated-rule"):
-        preflight_remote_policy({"success": True, "result": foreign}, expected)
+    with pytest.raises(RetentionPolicyError, match="collides"):
+        preflight_remote_policy({"success": True, "result": conflicting}, expected)
+
+
+def test_preflight_preserves_existing_rule_verbatim():
+    policy = load_policy(CONFIG)
+    expected = build_lifecycle_payload(policy)
+    existing = {
+        "id": "Default Multipart Abort Rule",
+        "conditions": {"prefix": ""},
+        "enabled": True,
+        "abortMultipartUploadsTransition": {"condition": {"type": "Age", "maxAge": 604800}},
+    }
+    merged = preflight_remote_policy({"success": True, "result": {"rules": [existing]}}, expected)
+    assert existing in merged["rules"]
+    assert expected["rules"][0] in merged["rules"]
+    assert len(merged["rules"]) == 3
 
 
 def test_preflight_accepts_empty_or_exact_owned_policy():
     policy = load_policy(CONFIG)
     expected = build_lifecycle_payload(policy)
-    preflight_remote_policy({"success": True, "result": {}}, expected)
-    preflight_remote_policy({"success": True, "result": expected}, expected)
+    assert preflight_remote_policy({"success": True, "result": {}}, expected) == expected
+    assert preflight_remote_policy({"success": True, "result": expected}, expected) == expected

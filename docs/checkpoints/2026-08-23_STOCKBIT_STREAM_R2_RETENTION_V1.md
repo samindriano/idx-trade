@@ -36,10 +36,11 @@ Cloudflare's S3-compatible API does not support Object Lifecycle. The utility
 therefore uses the Cloudflare account REST lifecycle endpoint, with a separate
 `CLOUDFLARE_API_TOKEN` supplied only at manual activation time. The GitHub
 workflow is `workflow_dispatch` only. Before its PUT, it performs a GET
-preflight and continues only when the bucket has no rules or already has the
-exact owned policy; any unowned or broad rule causes a fail-closed stop. It
-then performs a GET verification. It also fails closed if the token, account,
-or bucket is missing, or if the remote rules differ from the pinned payload.
+preflight, preserves all existing lifecycle rules verbatim, and appends only
+the two owned Stockbit rules. An existing rule that collides with an owned rule
+ID causes a fail-closed stop. It then performs a GET verification of the full
+merged configuration. It also fails closed if the token, account, or bucket is
+missing, or if the remote rules differ from the applied payload.
 
 Before activation, add a narrowly scoped GitHub secret named
 `CLOUDFLARE_API_TOKEN` with permission to edit the target R2 bucket lifecycle.
