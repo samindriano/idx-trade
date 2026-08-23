@@ -48,12 +48,7 @@ $settings = New-ScheduledTaskSettingsSet `
   -StartWhenAvailable `
   -MultipleInstances IgnoreNew `
   -RunOnlyIfNetworkAvailable
-$principal = New-ScheduledTaskPrincipal `
-  -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) `
-  -LogonType Interactive `
-  -RunLevel Limited
-
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $triggers -Settings $settings -Principal $principal -Description "Fail-closed IDX-Trade E2E PAPER controller; config and CA authority remain external and hash-pinned." | Out-Null
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $triggers -Settings $settings -Description "Fail-closed IDX-Trade E2E PAPER controller; config and CA authority remain external and hash-pinned." | Out-Null
 $registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
 if (-not $registered.Settings.Enabled -or $registered.Principal.RunLevel -ne "Limited") {
   throw "E2E task registration verification failed: $TaskName"
