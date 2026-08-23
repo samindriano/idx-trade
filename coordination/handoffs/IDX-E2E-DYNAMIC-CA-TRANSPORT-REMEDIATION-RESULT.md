@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `91323a9509eda740a6f45294d81c5e0b02c4f34a`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: `511bf8f7c9992102445954164b7f7e4fea742436`
+head_commit: `19dfbccfba746a292c1618bc0b3dd1d03a9e2f30`
 
 ## Scope
 

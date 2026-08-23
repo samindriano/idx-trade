@@ -4,6 +4,7 @@ Date: 2026-08-23 (Asia/Jakarta)
 Branch: `integration/idx-e2e-baseline-paper-v1`
 Pre-remediation checkout: `91323a9509eda740a6f45294d81c5e0b02c4f34a`
 Final pushed code commit: `511bf8f7c9992102445954164b7f7e4fea742436`
+Final pushed branch commit: `19dfbccfba746a292c1618bc0b3dd1d03a9e2f30`
 Provider checkout: `D:\Documents\Project\idx-bei-forward-ca-provider`
 Provider commit: `75d6c0f74fa360d225794c70c383348977de6798`
 
@@ -123,7 +124,7 @@ overwritten, and the manifest/attestation hashes remained unchanged.
 
 - runtime `expected_commit`: `511bf8f7c9992102445954164b7f7e4fea742436`;
 - `capture_forward_ca_idx_bei.py` SHA: `6699a8e1af260c70fd70a0ef74611b18a2049568789651621063e13821516ec3`;
-- external config SHA sidecar: `72433697097cb14668503cce157005a035dfb6e87410f9cdbee8c4a765bb0723`;
+- external config SHA sidecar: `29e9212aca323400f8665186ca4183824a7fe49cbcc3e5dbd39f45225edebd03`;
 - installed `IDXTrade-E2E-Paper` action uses that config SHA;
 - task remains enabled with its existing 11 daily triggers;
 - no unrelated scheduler was changed.
