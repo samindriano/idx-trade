@@ -42,6 +42,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--ca-attestation", required=True)
     parser.add_argument("--expected-branch", required=True)
     parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--phase-attestation")
     parser.add_argument(
         "--ca-journal",
         help="Immutable V1.2 acquisition journal. When supplied, it is the dividend lifecycle source of truth.",
@@ -148,6 +149,7 @@ def main() -> int:
         REPO_ROOT,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
+        attestation_path=args.phase_attestation,
     )
     require_phase_attestation(
         args.runtime_root,

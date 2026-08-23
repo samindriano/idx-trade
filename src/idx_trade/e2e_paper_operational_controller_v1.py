@@ -89,22 +89,46 @@ def _pipeline_pointer(config: OperationalControllerConfig) -> dict[str, Any]:
     )
     run_log_path = Path(str(pointer.get("run_log_path") or "")).expanduser().resolve()
     declared_run_log_sha = str(pointer.get("run_log_sha256") or "")
-    if not run_log_path.is_file() or _sha256(run_log_path) != declared_run_log_sha:
+    pipeline_root = (
+        config.forward_runtime_root
+        / "forward_monitoring"
+        / "eod_automation"
+        / "v4_x1_pipeline"
+    ).resolve()
+    if (
+        run_log_path.parent != (pipeline_root / "runs").resolve()
+        or not run_log_path.is_file()
+        or _sha256(run_log_path) != declared_run_log_sha
+    ):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_UPSTREAM_LOG_HASH_MISMATCH")
     return pointer
 
 
-def _verify_score_pointer(pointer: dict[str, Any], session: str) -> dict[str, Any]:
+def _verify_score_pointer(
+    pointer: dict[str, Any],
+    session: str,
+    *,
+    expected_forward_root: Path | None = None,
+) -> dict[str, Any]:
     score = pointer.get("x1_score")
     if not isinstance(score, dict):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_POINTER_MISSING")
     path = Path(str(score.get("manifest_path") or "")).expanduser().resolve()
+    model_root = None
+    if expected_forward_root is not None:
+        model_root = (
+            Path(expected_forward_root).expanduser().resolve()
+            / "forward_monitoring"
+            / "model_runs"
+        )
+        if model_root not in path.parents:
+            raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_MANIFEST_ROOT_MISMATCH")
     if not path.is_file() or _sha256(path) != str(score.get("manifest_sha256") or ""):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_MANIFEST_HASH_MISMATCH")
     artifact_value = score.get("artifact_path")
     if artifact_value is not None:
         artifact = Path(str(artifact_value)).expanduser().resolve()
-        if not artifact.is_file() or _sha256(artifact) != str(score.get("artifact_sha256") or ""):
+        if path.parent not in artifact.parents or not artifact.is_file() or _sha256(artifact) != str(score.get("artifact_sha256") or ""):
             raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_ARTIFACT_HASH_MISMATCH")
     if str(score.get("session_date") or "") != session:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_SCORE_SESSION_MISMATCH")
@@ -171,6 +195,18 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
         raise E2EOperationalGuardError("E2E_PROVIDER_COMMIT_ATTESTATION_FAILED") from exc
     if actual != str(config.provider_expected_commit).strip().lower():
         return "PROVIDER_COMMIT_MISMATCH"
+    try:
+        dirty = subprocess.run(
+            ["git", "-C", str(provider), "status", "--porcelain", "--untracked-files=all"],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise E2EOperationalGuardError("E2E_PROVIDER_WORKTREE_ATTESTATION_FAILED") from exc
+    if dirty:
+        return "PROVIDER_WORKTREE_DIRTY"
     return None
 
 
@@ -194,12 +230,13 @@ def _session_manifest(config: OperationalControllerConfig, session: str) -> dict
         raise E2EOperationalGuardError("E2E_OPERATIONAL_EOD_CALENDAR_PATH_MISMATCH")
     if _sha256(calendar_path) != str(manifest.get("calendar_sha256") or ""):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_EOD_CALENDAR_HASH_MISMATCH")
+    session_root = manifest_path.parent.resolve()
     for path_key, sha_key in (
         ("session_ohlcv_path", "session_ohlcv_sha256"),
         ("snapshot_path", "snapshot_sha256"),
     ):
         path = Path(str(manifest.get(path_key) or "")).expanduser().resolve()
-        if not path.is_file() or _sha256(path) != str(manifest.get(sha_key) or ""):
+        if session_root not in path.parents or not path.is_file() or _sha256(path) != str(manifest.get(sha_key) or ""):
             raise E2EOperationalGuardError("E2E_OPERATIONAL_EOD_ARTIFACT_HASH_MISMATCH:" + path_key)
     return {
         "manifest_path": manifest_path.resolve(),
@@ -306,7 +343,19 @@ def _verify_phase_sidecar(config: OperationalControllerConfig, session: str, pha
         or not (batch / "BATCH_MANIFEST.json").is_file()
     ):
         raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_SIDECAR_PARENT_MISMATCH")
-    load_journal_document(journal)
+    journal_doc = load_journal_document(journal)
+    batch_manifest = _read_json(batch / "BATCH_MANIFEST.json")
+    batch_body = dict(batch_manifest)
+    batch_declared = str(batch_body.pop("batch_payload_sha256") or "")
+    if (
+        batch_manifest.get("status") != "COMPLETE"
+        or not batch_declared
+        or _canonical_hash(batch_body) != batch_declared
+        or Path(str(batch_manifest.get("batch_root") or "")).expanduser().resolve() != batch.resolve()
+        or Path(str(batch_manifest.get("journal_target") or "")).expanduser().resolve() != journal.resolve()
+        or str(batch_manifest.get("journal_sha256") or "") != journal_doc.journal_sha256
+    ):
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_CA_BATCH_MANIFEST_INVALID")
     if (
         str(payload.get("provider_commit") or "").lower()
         != str(config.provider_expected_commit or "").lower()
@@ -525,7 +574,11 @@ def _run_operational_cycle_legacy(
                 })
             else:
                 pointer = _pipeline_pointer(config)
-                score = _verify_score_pointer(pointer, today)
+                score = _verify_score_pointer(
+                    pointer,
+                    today,
+                    expected_forward_root=config.forward_runtime_root,
+                )
                 eod = pointer.get("eod") if isinstance(pointer.get("eod"), dict) else {}
                 status["upstream_pointer_path"] = str(
                     config.forward_runtime_root
@@ -705,7 +758,7 @@ def run_operational_cycle(
                 eod = payload["eod_inputs"]
                 before_execution = config.runtime_root / "executions" / f"{today}.json"
                 was_complete = before_execution.is_file()
-                write_phase_attestation(
+                phase_attestation_path, _ = write_phase_attestation(
                     config.runtime_root,
                     phase="PREOPEN",
                     session_date=today,
@@ -726,6 +779,7 @@ def run_operational_cycle(
                     "--ca-attestation", str(Path(config.ca_attestation_path).expanduser().resolve()),
                     "--expected-branch", config.expected_branch,
                     "--expected-commit", config.expected_commit,
+                    "--phase-attestation", str(phase_attestation_path.resolve()),
                     "--ca-journal", str(_journal_paths(config, today, "PREOPEN")[1].resolve()),
                 ]
                 if previous_score_path is not None:
@@ -756,7 +810,11 @@ def run_operational_cycle(
                 )
 
             pointer = _pipeline_pointer(config)
-            score_ref = _verify_score_pointer(pointer, today)
+            score_ref = _verify_score_pointer(
+                pointer,
+                today,
+                expected_forward_root=config.forward_runtime_root,
+            )
             eod_ref = pointer.get("eod") if isinstance(pointer.get("eod"), dict) else {}
             status["upstream_pointer_path"] = str(
                 config.forward_runtime_root
@@ -809,7 +867,7 @@ def run_operational_cycle(
                 required_tickers=required,
                 now=current,
             )
-            write_phase_attestation(
+            phase_attestation_path, _ = write_phase_attestation(
                 config.runtime_root,
                 phase="POST_EOD",
                 session_date=today,
@@ -828,6 +886,7 @@ def run_operational_cycle(
                 "--ca-attestation", str(Path(config.ca_attestation_path).expanduser().resolve()),
                 "--expected-branch", config.expected_branch,
                 "--expected-commit", config.expected_commit,
+                "--phase-attestation", str(phase_attestation_path.resolve()),
                 "--ca-journal", str(_journal_paths(config, today, "POST_EOD")[1].resolve()),
             ]
             if previous_path is not None:

@@ -48,6 +48,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--ca-attestation", required=True)
     parser.add_argument("--expected-branch", required=True)
     parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--phase-attestation")
     parser.add_argument("--ca-journal")
     parser.add_argument("--dividend-review", action="append", default=[])
     parser.add_argument("--attachment-dir")
@@ -151,6 +152,7 @@ def main() -> int:
         REPO_ROOT,
         expected_branch=args.expected_branch,
         expected_commit=args.expected_commit,
+        attestation_path=args.phase_attestation,
     )
     try:
         prepared_payload = json.loads(Path(args.prepared).read_text(encoding="utf-8"))

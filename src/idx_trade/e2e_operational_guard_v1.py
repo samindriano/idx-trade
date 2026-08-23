@@ -265,7 +265,20 @@ def write_phase_attestation(
             or str(existing.get("expected_commit") or "").lower() != str(expected_commit).strip().lower()
         ):
             raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_IMMUTABLE_CONFLICT")
-        return target, hashlib.sha256(target.read_bytes()).hexdigest()
+        try:
+            issued = datetime.fromisoformat(str(existing.get("issued_at_jakarta") or ""))
+        except ValueError as exc:
+            raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_CLOCK_INVALID") from exc
+        if issued.tzinfo is None:
+            raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_CLOCK_INVALID")
+        age = (current - issued.astimezone(JAKARTA)).total_seconds()
+        if 0 <= age <= 3600:
+            return target, hashlib.sha256(target.read_bytes()).hexdigest()
+        if age < 0:
+            raise E2EOperationalGuardError("E2E_PHASE_ATTESTATION_FROM_FUTURE")
+        target = target.with_name(
+            f"{session}_{phase_name}_{current.astimezone(ZoneInfo('UTC')).strftime('%Y%m%dT%H%M%S%fZ')}_{uuid4().hex[:8]}.json"
+        )
     encoded = (json.dumps(body, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
@@ -287,6 +300,7 @@ def require_phase_attestation(
     session_date: str,
     expected_branch: str,
     expected_commit: str,
+    attestation_path: str | Path | None = None,
     now: datetime | None = None,
 ) -> tuple[Path, str]:
     """Require the exact immutable controller handoff for a phase child."""
@@ -294,7 +308,9 @@ def require_phase_attestation(
     phase_name = str(phase).strip().upper()
     session = _iso_date(session_date)
     path = (
-        Path(runtime_root).expanduser().resolve()
+        Path(attestation_path).expanduser().resolve()
+        if attestation_path is not None
+        else Path(runtime_root).expanduser().resolve()
         / "operational"
         / "phase_attestations"
         / f"{session}_{phase_name}.json"

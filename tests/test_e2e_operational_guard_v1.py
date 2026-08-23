@@ -148,6 +148,24 @@ def test_phase_attestation_is_immutable_and_parent_bound(tmp_path: Path) -> None
             expected_commit="a" * 40,
             now=_at(9, 31),
         )
+    rollover, rollover_digest = write_phase_attestation(
+        tmp_path,
+        phase="PREOPEN",
+        session_date="2026-08-24",
+        expected_branch="integration/test",
+        expected_commit="a" * 40,
+        issued_at=_at(9, 31),
+    )
+    assert rollover != path
+    assert require_phase_attestation(
+        tmp_path,
+        phase="PREOPEN",
+        session_date="2026-08-24",
+        expected_branch="integration/test",
+        expected_commit="a" * 40,
+        attestation_path=rollover,
+        now=_at(9, 32),
+    )[1] == rollover_digest
     with pytest.raises(E2EOperationalGuardError, match="IMMUTABLE_CONFLICT"):
         write_phase_attestation(
             tmp_path,
