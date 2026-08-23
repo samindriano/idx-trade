@@ -3,6 +3,7 @@
 Date: 2026-08-23 (Asia/Jakarta)
 Branch: `integration/idx-e2e-baseline-paper-v1`
 Pre-remediation checkout: `91323a9509eda740a6f45294d81c5e0b02c4f34a`
+Final pushed code commit: `511bf8f7c9992102445954164b7f7e4fea742436`
 Provider checkout: `D:\Documents\Project\idx-bei-forward-ca-provider`
 Provider commit: `75d6c0f74fa360d225794c70c383348977de6798`
 
@@ -118,6 +119,17 @@ overwritten, and the manifest/attestation hashes remained unchanged.
   the external smoke artifacts;
 - no protected outcomes, model scoring, or live PAPER state accessed.
 
-External deployment pins must be reconciled to the final pushed branch commit
-and the final `capture_forward_ca_idx_bei.py` SHA before the next scheduled E2E
-cycle. No unrelated scheduler is changed by this result.
+## External pin reconciliation
+
+- runtime `expected_commit`: `511bf8f7c9992102445954164b7f7e4fea742436`;
+- `capture_forward_ca_idx_bei.py` SHA: `6699a8e1af260c70fd70a0ef74611b18a2049568789651621063e13821516ec3`;
+- external config SHA sidecar: `72433697097cb14668503cce157005a035dfb6e87410f9cdbee8c4a765bb0723`;
+- installed `IDXTrade-E2E-Paper` action uses that config SHA;
+- task remains enabled with its existing 11 daily triggers;
+- no unrelated scheduler was changed.
+
+Operational caveat: the repository currently has the pre-existing user change
+`notebooks/e2e_monte_carlo_v4_x1.ipynb`. The scheduler's fail-closed bootstrap
+checks repository cleanliness, so the next scheduled cycle will stop at the
+repo-dirty gate until that user-owned notebook change is committed or otherwise
+resolved. This lane intentionally did not alter it.

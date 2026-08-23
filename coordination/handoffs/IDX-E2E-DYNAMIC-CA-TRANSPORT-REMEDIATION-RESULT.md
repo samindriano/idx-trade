@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade`
 source_commit: `91323a9509eda740a6f45294d81c5e0b02c4f34a`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: set by the commit containing this handoff
+head_commit: `511bf8f7c9992102445954164b7f7e4fea742436`
 
 ## Scope
 
@@ -65,10 +65,9 @@ schemas. It is admitted only as an IDX transport fallback.
 
 ## Decisions needed
 
-1. Independent review of the transport policy and external pin reconciliation.
-2. Before the next scheduler cycle, update the external runtime config's
-   `expected_commit` and `ca_capture_script_sha256`, refresh its config SHA,
-   and update only the `IDXTrade-E2E-Paper` action's config SHA argument.
+1. Independent review of the transport policy and bounded real smoke.
+2. Resolve the pre-existing user-owned notebook modification before expecting
+   the scheduled controller to pass its repository-cleanliness gate.
 
 ## Blocking risks
 
@@ -81,6 +80,7 @@ schemas. It is admitted only as an IDX transport fallback.
 
 ## Recommended next action
 
-Review, push, reconcile the external config/task pin to the final commit, and
-then allow the normal weekday E2E scheduler cycle. Do not access protected
-outcomes or retroactively create paper execution.
+Review and then allow the normal weekday E2E scheduler cycle only after the
+repository-cleanliness gate is resolved. External config/task pins are already
+reconciled to this commit. Do not access protected outcomes or retroactively
+create paper execution.
