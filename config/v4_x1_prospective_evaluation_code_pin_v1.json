@@ -1,0 +1,40 @@
+{
+  "schema_version": "v4_x1_prospective_evaluation_code_pin_v1",
+  "status": "AUDITED_SYNTHETIC_ONLY_REAL_ACCESS_BLOCKED",
+  "model": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "generation": "V4-X1-CLEAN",
+    "fingerprint": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf"
+  },
+  "protocol": {
+    "path": "../docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md",
+    "source_commit": "ed719dd67ae93b6b20f02579df80fd67eec331dd",
+    "git_blob_sha1": "f76af5733db3c6a2c7a99b1e80268004ece1e616"
+  },
+  "evaluator": {
+    "path": "../src/idx_trade/prospective_evaluation_v1.py",
+    "source_commit": "b4acde477f2d4e895c0e38ddccde94d6d783f43c",
+    "git_blob_sha1": "2e9bf76501dcab46594b611efd149ee64f3e7999"
+  },
+  "gate": {
+    "path": "../src/idx_trade/prospective_evaluation_gate_v1.py",
+    "source_commit": "aa279769535c7192c0bf122989c7490d11c61123",
+    "git_blob_sha1": "bb16513ba0fdd4888085d37130d5531079ff3b1b"
+  },
+  "contract": {
+    "path": "v4_x1_prospective_evaluation_contract_v1.json",
+    "sha256": "6d64c76dc60ef04f02e9a811e920e7351c00b94aaa2cc834f6019d4a648cb8ac"
+  },
+  "target_identity": {
+    "status": "UNRESOLVED",
+    "blocker": "CANONICAL_TARGET_IDENTITY_UNRESOLVED",
+    "evidence": "Historical target lineage has multiple non-equivalent hashes/metrics and no unique canonical identity binding."
+  },
+  "access_policy": {
+    "real_loader_allowed": false,
+    "real_outcome_marker_allowed": false,
+    "protected_outcomes_accessed": false,
+    "synthetic_rehearsal_allowed": true,
+    "requires_explicit_human_authorization": true
+  }
+}

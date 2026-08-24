@@ -24,6 +24,7 @@ from idx_trade.prospective_evaluation_gate_v1 import (
     RESULT_FILENAME,
     ProtectedEvaluationBundle,
     ProspectiveAccessGateBlocked,
+    _write_json_exclusive,
     git_blob_sha1_file,
     run_protected_evaluation_once,
     validate_session_inventory,
@@ -678,3 +679,25 @@ def test_orphan_marker_fails_closed_without_loader(tmp_path: Path) -> None:
     with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior"):
         _invoke(case, "orphan", loader)
     assert called is False
+
+
+def test_atomic_publish_failure_cleans_temporary_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    destination = tmp_path / "immutable.json"
+
+    def fail_link(*args, **kwargs):
+        raise OSError("synthetic publish interruption")
+
+    monkeypatch.setattr("idx_trade.prospective_evaluation_gate_v1.os.link", fail_link)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="atomic publish unavailable"):
+        _write_json_exclusive(destination, {"status": "synthetic"})
+    assert not destination.exists()
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_orphan_atomic_temporary_file_blocks_resume(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    output = case["root"] / "orphan-temp"
+    output.mkdir()
+    (output / ".result.json.synthetic.tmp").write_text("partial", encoding="utf-8")
+    with pytest.raises(ProspectiveAccessGateBlocked, match="partial atomic temporary"):
+        _invoke(case, "orphan-temp", lambda: case["bundle"])

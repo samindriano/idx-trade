@@ -594,7 +594,8 @@ def _validate_code_pin_manifest(
 
     def _pinned_file(section_name: str, actual: Path, *, git_blob: bool) -> str:
         section = payload.get(section_name)
-        if not isinstance(section, dict) or not str(section.get("source_commit") or "").strip():
+        source_commit = str(section.get("source_commit") or "").strip().lower() if isinstance(section, dict) else ""
+        if len(source_commit) != 40 or any(char not in "0123456789abcdef" for char in source_commit):
             raise ProspectiveAccessGateBlocked(f"code pin {section_name} source commit is missing")
         trusted_paths = {
             "evaluator": Path(_evaluator_module.__file__).resolve(),
@@ -1328,10 +1329,10 @@ def _existing_result(
     result = output_dir / RESULT_FILENAME
     manifest = output_dir / FINAL_MANIFEST_FILENAME
     failure = output_dir / FAILURE_FILENAME
-    if not any(path.exists() for path in (preaccess, marker, result, manifest, failure)):
-        return None
     if any(path.name.startswith(".") and path.name.endswith(".tmp") for path in output_dir.iterdir()):
         raise ProspectiveAccessGateBlocked("partial atomic temporary output exists; manual recovery required")
+    if not any(path.exists() for path in (preaccess, marker, result, manifest, failure)):
+        return None
     if preaccess.exists() and marker.exists() and result.exists() and manifest.exists() and not failure.exists():
         expected_preaccess = _preaccess_payload(prepared, mode=mode)
         expected_preaccess_sha = _json_payload_sha256(expected_preaccess)

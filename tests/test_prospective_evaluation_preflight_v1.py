@@ -22,6 +22,7 @@ from idx_trade.provenance import sha256_file
 
 
 CONTRACT = Path("config/v4_x1_prospective_evaluation_contract_v1.json").resolve()
+CODE_PIN = Path("config/v4_x1_prospective_evaluation_code_pin_v1.json").resolve()
 CLI = Path("tools/evaluate_prospective_v4_x1.py").resolve()
 PROTOCOL = Path("docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md").resolve()
 EVALUATOR = Path("src/idx_trade/prospective_evaluation_v1.py").resolve()
@@ -77,17 +78,17 @@ def test_code_pin_manifest_binds_to_executing_gate_and_evaluator(tmp_path: Path)
         },
         "protocol": {
             "path": str(PROTOCOL),
-            "source_commit": "SYNTHETIC_PROTOCOL_COMMIT",
+            "source_commit": "a" * 40,
             "git_blob_sha1": git_blob_sha1_file(PROTOCOL),
         },
         "evaluator": {
             "path": str(EVALUATOR),
-            "source_commit": "SYNTHETIC_EVALUATOR_COMMIT",
+            "source_commit": "b" * 40,
             "git_blob_sha1": git_blob_sha1_file(EVALUATOR),
         },
         "gate": {
             "path": str(GATE),
-            "source_commit": "SYNTHETIC_GATE_COMMIT",
+            "source_commit": "c" * 40,
             "git_blob_sha1": git_blob_sha1_file(GATE),
         },
         "contract": {"path": str(CONTRACT), "sha256": sha256_file(CONTRACT)},
@@ -117,6 +118,18 @@ def test_code_pin_manifest_binds_to_executing_gate_and_evaluator(tmp_path: Path)
             contract_path=CONTRACT,
             fixture_root=None,
         )
+
+
+def test_committed_code_pin_manifest_is_self_consistent() -> None:
+    _validate_code_pin_manifest(
+        CODE_PIN,
+        sha256_file(CODE_PIN),
+        protocol_path=PROTOCOL,
+        evaluator_path=EVALUATOR,
+        gate_path=GATE,
+        contract_path=CONTRACT,
+        fixture_root=None,
+    )
 
 
 def test_resolved_target_must_match_contract_and_source_manifest(tmp_path: Path) -> None:
