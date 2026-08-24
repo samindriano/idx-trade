@@ -1118,6 +1118,13 @@ def prepare_pre_outcome_access(
             Path(str(benchmark["artifact_path"])),
             str(benchmark["artifact_sha256"]),
         )
+    construction_pin = target.get("construction_code")
+    if isinstance(construction_pin, Mapping):
+        construction_path = _resolve_path(construction_pin.get("path"))
+        construction_sha = str(construction_pin.get("sha256") or "").lower()
+        if len(construction_sha) != 64:
+            raise ProspectiveAccessGateBlocked("target construction-code SHA-256 is invalid")
+        record("target construction code", construction_path, construction_sha)
     for row in inventory.itertuples(index=False):
         record("score artifact", Path(str(row.score_artifact_path)), str(row.score_artifact_sha256))
         record("score manifest", Path(str(row.score_manifest_path)), str(row.score_manifest_sha256))

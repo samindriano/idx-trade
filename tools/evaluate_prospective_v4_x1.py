@@ -7,6 +7,7 @@ real marker, and result writer are intentionally not reachable from this CLI.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -14,13 +15,31 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from idx_trade.prospective_evaluation_gate_v1 import (
-    ProspectiveAccessGateBlocked,
-    inspect_persisted_access_status,
-    validate_preflight_bundle,
-    validate_machine_readable_contract,
-)
 from idx_trade.provenance import sha256_file
+
+FROZEN_CODE_PIN_MANIFEST_SHA256 = "a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651"
+FROZEN_GATE_BLOB_SHA1 = "3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd"
+FROZEN_GATE_SOURCE_COMMIT = "c99c9dbe20993f50f422b0a215488c8d4c011227"
+
+
+def _independent_code_pin_check() -> None:
+    """Check the executing gate bytes before importing that gate module."""
+
+    gate_path = REPO_ROOT / "src" / "idx_trade" / "prospective_evaluation_gate_v1.py"
+    manifest_path = REPO_ROOT / "config" / "v4_x1_prospective_evaluation_code_pin_v1.json"
+    gate_bytes = gate_path.read_bytes()
+    gate_blob = hashlib.sha1(f"blob {len(gate_bytes)}\0".encode("ascii") + gate_bytes).hexdigest()
+    if gate_blob != FROZEN_GATE_BLOB_SHA1:
+        raise RuntimeError("independent gate Git blob pin mismatch")
+    manifest_bytes = manifest_path.read_bytes()
+    if hashlib.sha256(manifest_bytes).hexdigest() != FROZEN_CODE_PIN_MANIFEST_SHA256:
+        raise RuntimeError("independent code-pin manifest SHA-256 mismatch")
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    gate = manifest.get("gate")
+    if not isinstance(gate, dict) or gate.get("git_blob_sha1") != FROZEN_GATE_BLOB_SHA1:
+        raise RuntimeError("independent manifest gate pin mismatch")
+    if gate.get("source_commit") != FROZEN_GATE_SOURCE_COMMIT:
+        raise RuntimeError("independent manifest gate commit mismatch")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -42,6 +61,17 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    try:
+        _independent_code_pin_check()
+    except (OSError, UnicodeError, json.JSONDecodeError, RuntimeError) as exc:
+        print(json.dumps({"status": "INTEGRITY_FAILURE", "reason": str(exc)}, sort_keys=True, indent=2))
+        return 0
+    from idx_trade.prospective_evaluation_gate_v1 import (
+        ProspectiveAccessGateBlocked,
+        inspect_persisted_access_status,
+        validate_preflight_bundle,
+        validate_machine_readable_contract,
+    )
     if args.status_only:
         if args.output_dir is None:
             print(json.dumps({"status": "INTEGRITY_FAILURE", "reason": "--output-dir is required"}, sort_keys=True))
