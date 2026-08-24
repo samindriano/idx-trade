@@ -1,8 +1,8 @@
 # Historical E2E Scope Remediation V2
 
-Date: 2026-08-24  
-Branch: `research/idx-historical-e2e-replay-v1`  
-Parent: `9c505366fa7704ec58ca976b32d9994c92d63ebb`  
+Date: 2026-08-24
+Branch: `research/idx-historical-e2e-replay-v1`
+Parent: `9c505366fa7704ec58ca976b32d9994c92d63ebb`
 Scope: outcome-blind historical E2E scope validation and replay-boundary hardening
 
 ## Verdict
