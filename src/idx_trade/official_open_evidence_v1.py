@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Mapping
@@ -30,6 +31,13 @@ TRANSPORT_POLICY = "DIRECT_IDX_THEN_ZAPI_RAW_V1"
 DIRECT_IDX_URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary"
 ZAPI_RAW_URL = "https://api.zpi.web.id/v1/finance:idx/raw"
 ZAPI_PROJECT = "finance:idx"
+DIRECT_WARMUP_URLS = (
+    "https://www.idx.co.id/",
+    "https://www.idx.co.id/id/perusahaan-tercatat/ringkasan-perusahaan/",
+)
+DIRECT_API_REFERER = DIRECT_WARMUP_URLS[1]
+MAX_ZAPI_ATTEMPTS = 2
+RETRYABLE_HTTP_STATUSES = frozenset({500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526})
 
 
 class OfficialOpenEvidenceError(RuntimeError):
@@ -195,10 +203,74 @@ def normalize_idx_stock_summary_payload(
     }
 
 
+def _request_error_detail(exc: BaseException) -> str:
+    detail = str(exc).replace("\r", " ").replace("\n", " ").strip()
+    return f"{type(exc).__name__}:{detail[:240]}"
+
+
+def _fetch_direct_with_browser_transport(
+    *,
+    params: Mapping[str, object],
+    timeout_seconds: float,
+) -> tuple[object, dict[str, object]]:
+    """Fetch direct IDX through the accepted warmed browser-like transport."""
+
+    try:
+        from curl_cffi import requests as curl_requests
+    except ImportError as exc:  # pragma: no cover - deployment configuration
+        raise OfficialOpenEvidenceError(
+            "OFFICIAL_OPEN_DIRECT_IDX_BROWSER_TRANSPORT_UNAVAILABLE"
+        ) from exc
+
+    session = curl_requests.Session(impersonate="chrome")
+    session.headers.update(
+        {"Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"}
+    )
+    warmups: list[dict[str, object]] = []
+    try:
+        for warmup_url in DIRECT_WARMUP_URLS:
+            try:
+                warmup = session.get(warmup_url, timeout=timeout_seconds)
+                warmups.append(
+                    {"url": warmup_url, "http_status": int(warmup.status_code)}
+                )
+            except Exception as exc:
+                warmups.append(
+                    {
+                        "url": warmup_url,
+                        "http_status": 0,
+                        "error": _request_error_detail(exc),
+                    }
+                )
+        response = session.get(
+            DIRECT_IDX_URL,
+            params=params,
+            headers={
+                "Referer": DIRECT_API_REFERER,
+                "Accept": "application/json,text/plain,*/*",
+            },
+            timeout=timeout_seconds,
+        )
+    except Exception as exc:
+        raise OfficialOpenEvidenceError(
+            f"OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR:{_request_error_detail(exc)}"
+        ) from exc
+    finally:
+        close = getattr(session, "close", None)
+        if callable(close):
+            close()
+    return response, {
+        "transport": "DIRECT_IDX_CURL_CFFI_CHROME",
+        "impersonate": "chrome",
+        "warmup": warmups,
+        "referer": DIRECT_API_REFERER,
+    }
+
+
 def fetch_direct_idx_stock_summary(
     session_date: str,
     *,
-    get: Callable[..., requests.Response] = requests.get,
+    get: Callable[..., requests.Response] | None = None,
     timeout_seconds: float = 30.0,
 ) -> tuple[bytes, dict[str, object]]:
     session = _session(session_date)
@@ -207,19 +279,26 @@ def fetch_direct_idx_stock_summary(
         "start": 0,
         "length": 9999,
     }
-    try:
-        response = get(
-            DIRECT_IDX_URL,
-            params=params,
-            headers={
-                "Referer": "https://www.idx.co.id/",
-                "User-Agent": "idx-trade-official-open/1.0",
-                "Accept": "application/json,text/plain,*/*",
-            },
-            timeout=timeout_seconds,
+    if get is None:
+        response, browser_metadata = _fetch_direct_with_browser_transport(
+            params=params, timeout_seconds=timeout_seconds
         )
-    except requests.RequestException as exc:
-        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR") from exc
+    else:
+        try:
+            response = get(
+                DIRECT_IDX_URL,
+                params=params,
+                headers={
+                    "Referer": DIRECT_API_REFERER,
+                    "Accept": "application/json,text/plain,*/*",
+                },
+                timeout=timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise OfficialOpenEvidenceError(
+                f"OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR:{_request_error_detail(exc)}"
+            ) from exc
+        browser_metadata = {}
     if response.status_code != 200:
         raise OfficialOpenEvidenceError(
             f"OFFICIAL_OPEN_DIRECT_IDX_HTTP_{response.status_code}"
@@ -234,6 +313,7 @@ def fetch_direct_idx_stock_summary(
         "upstream_path": UPSTREAM_PATH,
         "request_params": params,
         "http_status": int(response.status_code),
+        **browser_metadata,
     }
 
 
@@ -259,7 +339,9 @@ def fetch_zapi_raw_idx_stock_summary(
             timeout=timeout_seconds,
         )
     except requests.RequestException as exc:
-        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_REQUEST_ERROR") from exc
+        raise OfficialOpenEvidenceError(
+            f"OFFICIAL_OPEN_ZAPI_RAW_REQUEST_ERROR:{_request_error_detail(exc)}"
+        ) from exc
     if response.status_code != 200:
         raise OfficialOpenEvidenceError(
             f"OFFICIAL_OPEN_ZAPI_RAW_HTTP_{response.status_code}"
@@ -358,7 +440,7 @@ def capture_direct_idx_official_open(
     session_date: str,
     *,
     output_root: str | Path,
-    get: Callable[..., requests.Response] = requests.get,
+    get: Callable[..., requests.Response] | None = None,
     timeout_seconds: float = 30.0,
 ) -> Path:
     session = _session(session_date)
@@ -378,10 +460,21 @@ def capture_direct_idx_official_open(
 
 
 def _direct_transport_failure(message: str) -> bool:
-    return message.startswith("OFFICIAL_OPEN_DIRECT_IDX_HTTP_") or message in {
-        "OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR",
+    return message.startswith("OFFICIAL_OPEN_DIRECT_IDX_HTTP_") or message.startswith(
+        "OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR"
+    ) or message in {
         "OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
+        "OFFICIAL_OPEN_DIRECT_IDX_BROWSER_TRANSPORT_UNAVAILABLE",
     }
+
+
+def _zapi_retryable_failure(message: str) -> bool:
+    if message.startswith("OFFICIAL_OPEN_ZAPI_RAW_REQUEST_ERROR:"):
+        return True
+    return any(
+        message == f"OFFICIAL_OPEN_ZAPI_RAW_HTTP_{status}"
+        for status in RETRYABLE_HTTP_STATUSES
+    )
 
 
 def capture_official_open_with_transport_fallback(
@@ -389,8 +482,8 @@ def capture_official_open_with_transport_fallback(
     *,
     output_root: str | Path,
     zapi_api_key: str | None,
-    direct_get: Callable[..., requests.Response] = requests.get,
-    zapi_get: Callable[..., requests.Response] = requests.get,
+    direct_get: Callable[..., requests.Response] | None = None,
+    zapi_get: Callable[..., requests.Response] | None = None,
     timeout_seconds: float = 30.0,
 ) -> Path:
     """Prefer direct IDX; fail over only on transport failure to Zapi raw IDX."""
@@ -419,17 +512,28 @@ def capture_official_open_with_transport_fallback(
         raise OfficialOpenEvidenceError(
             f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI=NOT_CONFIGURED"
         )
-    try:
-        raw, metadata = fetch_zapi_raw_idx_stock_summary(
-            session,
-            api_key=zapi_api_key,
-            get=zapi_get,
-            timeout_seconds=timeout_seconds,
-        )
-    except OfficialOpenEvidenceError as exc:
+    zapi_error: str | None = None
+    for attempt in range(1, MAX_ZAPI_ATTEMPTS + 1):
+        try:
+            raw, metadata = fetch_zapi_raw_idx_stock_summary(
+                session,
+                api_key=zapi_api_key,
+                get=zapi_get or requests.get,
+                timeout_seconds=timeout_seconds,
+            )
+            metadata = {**metadata, "attempt_count": attempt}
+            break
+        except OfficialOpenEvidenceError as exc:
+            zapi_error = str(exc)
+            if attempt == MAX_ZAPI_ATTEMPTS or not _zapi_retryable_failure(zapi_error):
+                raise OfficialOpenEvidenceError(
+                    f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI={zapi_error}"
+                ) from exc
+            time.sleep(0.25 * attempt)
+    else:  # pragma: no cover - loop always either breaks or raises
         raise OfficialOpenEvidenceError(
-            f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI={exc}"
-        ) from exc
+            f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI={zapi_error}"
+        )
 
     return certify_official_open_raw_response(
         raw,
