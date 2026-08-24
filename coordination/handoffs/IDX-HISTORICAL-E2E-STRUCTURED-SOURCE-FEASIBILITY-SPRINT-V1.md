@@ -72,3 +72,15 @@ small, exact exposure-scoped and page-complete request, or close the source
 feasibility sprint with the minimal external blocker: an official structured
 dividend archive/endpoint with deterministic historical completeness is still
 required.
+
+## Final mission disposition
+
+The accepted engine and scope safeguards are ready, but no non-empty strict
+historical scope can be frozen from the currently admissible evidence.
+
+`TRUE_HISTORICAL_E2E_ENGINE_READY_PERFORMANCE_BLOCKED_BY_DATA`
+
+No historical replay, P&L/NAV metric, or Monte Carlo was run. Resumption would
+require a new admissible official structured dividend/archive source (and, if
+needed, matching CA event enumeration) with deterministic historical
+completeness and positive-control parity.

@@ -80,3 +80,18 @@ be evaluated independently only with the same outcome-blind, exposure-scoped,
 page-complete, provenance-preserving rules. No CA call was made in this
 positive-control step.
 
+## Historical E2E disposition
+
+The replay engine, Open/pending semantics, and generalized outcome-blind scope
+contract are ready for a non-empty replay scope. The remaining strict scope is
+empty because the available dividend/CA evidence cannot establish the required
+historical state. The structured-source sprint did not identify an admissible
+replacement source, so no further autonomous source query is justified under
+the current evidence.
+
+Final disposition:
+
+`TRUE_HISTORICAL_E2E_ENGINE_READY_PERFORMANCE_BLOCKED_BY_DATA`
+
+This is not a performance result. No deterministic historical portfolio replay,
+P&L/NAV metric, or true E2E Monte Carlo was run.
