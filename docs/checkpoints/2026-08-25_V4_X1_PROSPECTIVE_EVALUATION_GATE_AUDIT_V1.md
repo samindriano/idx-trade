@@ -100,7 +100,7 @@ Additional checks:
 
 Final executable/code identity:
 
-- branch HEAD: `e6eec1623850f4abfce896f381b62d97e5c9c592`;
+- branch HEAD: `916ae24d2f77a1bbc37e3fdf664bf1f68e63eaab`;
 - code-pin manifest SHA-256:
   `ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a`;
 - gate source commit: `ff05f3a8c6f398217c6eba395fca5ea11ad3dacb`;
