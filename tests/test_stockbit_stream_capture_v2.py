@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+import pytest
 
 from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
-from idx_trade.stockbit_stream_archive import QuotaSnapshot
+from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
 
@@ -48,6 +49,16 @@ class WeekendCaptureSession:
             {"StockCode": "AADI", "Date": "2026-08-21T00:00:00", "Value": 1000, "NonRegularValue": 950},
         ]
         return Response({"provider": "idx", "dataset": "stock-summary", "data": rows})
+
+
+class BlockingUniverseSession:
+    def __init__(self, status: int):
+        self.status = status
+        self.calls = 0
+
+    def get(self, url, params, headers, timeout):
+        self.calls += 1
+        return Response({"error": "blocked"}, status=self.status)
 
 
 def test_envelope_aware_response_exposes_inner_idx_payload():
@@ -96,6 +107,22 @@ def test_runtime_universe_continues_past_weekend_for_calendar_day_capture(tmp_pa
     assert universe.capture_date == "2026-08-23"
     assert universe.source_session == "2026-08-21"
     assert [row["ticker"] for row in universe.rows] == ["BBRI", "BBCA"]
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_runtime_universe_does_not_retry_auth_or_rate_limit_failures(tmp_path: Path, status: int):
+    path = tmp_path / "identity.csv"
+    identity_csv(path)
+    session = BlockingUniverseSession(status)
+    with pytest.raises(StreamArchiveError, match=f"HTTP {status}"):
+        build_runtime_universe(
+            api_key="x",
+            identity_csv=path,
+            capture_date="2026-08-21",
+            top_n=2,
+            session=session,
+        )
+    assert session.calls == 1
 
 
 class StreamResponse:

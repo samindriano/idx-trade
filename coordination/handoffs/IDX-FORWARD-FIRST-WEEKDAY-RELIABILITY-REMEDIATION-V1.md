@@ -44,9 +44,9 @@ integration lineage; they are not a second capture system.
 
 ## Validation
 
-- Focused Stockbit/Open/scheduler tests: `39 passed` with isolated temp root,
-  including explicit position-37 timeout recovery/failure and
-  direct-plus-Zapi double-timeout guards.
+- Focused Stockbit/Open/scheduler tests: `42 passed` with isolated temp root,
+  including explicit position-37 timeout recovery/failure,
+  direct-plus-Zapi double-timeout, and no-retry 401/403/429 guards.
 - Full repository pytest: `706 passed`, `0 failed`, `3 existing FutureWarnings`.
 - `py_compile`: PASS.
 - `git diff --check`: PASS.
@@ -60,6 +60,10 @@ integration lineage; they are not a second capture system.
   triggers remain 09:02/09:07/09:12/09:17/09:22 plus AtLogOn with
   `StartWhenAvailable` and `IgnoreNew`; changing this requires separate
   operational approval and live proof.
+- The current trigger set is not fully robust to a missed morning window:
+  `StartWhenAvailable` plus `IgnoreNew` can coalesce delayed instances. Later
+  same-day retry triggers remain a separate policy review because their use
+  must be legal under the frozen paper contract.
 - Stockbit archive failure and Official Open evidence failure remain isolated;
   neither path mutates model, PaperState, Decision, counters, or outcomes.
 

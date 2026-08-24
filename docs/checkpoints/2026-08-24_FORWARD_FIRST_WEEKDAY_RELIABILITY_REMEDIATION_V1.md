@@ -104,6 +104,11 @@ Open run remain the controlled proof points.
   current retry policy remains 09:02, 09:07, 09:12, 09:17, 09:22 plus AtLogOn,
   `StartWhenAvailable`, and `IgnoreNew`. This is a live operational policy
   decision requiring separate review; this branch only tests and documents it.
+- The current trigger set is not fully robust to a missed morning window:
+  `StartWhenAvailable` plus `IgnoreNew` can coalesce delayed instances. A
+  separately reviewed future policy could add later same-day retry triggers,
+  but it must first verify late evidence is legal under the frozen paper
+  contract; no such scheduler mutation is included here.
 - The dependency boundary remains explicit: Stockbit is an archive lane;
   Official Open is an execution-evidence lane. A Stockbit failure does not
   mutate Official Open, PaperState, alpha EOD scoring, or Decision V2. An
@@ -112,9 +117,9 @@ Open run remain the controlled proof points.
 
 ## Validation
 
-- Focused: `39 passed` using an isolated pytest temp root, including explicit
-  position-37 timeout recovery/failure and direct-plus-Zapi double-timeout
-  guards.
+- Focused: `42 passed` using an isolated pytest temp root, including explicit
+  position-37 timeout recovery/failure, direct-plus-Zapi double-timeout, and
+  no-retry 401/403/429 guards.
 - Full repository: `706 passed`, `0 failed`, `3 existing FutureWarnings`.
 - `python -m py_compile` passed for the changed Python modules.
 - `git diff --check` passed.
