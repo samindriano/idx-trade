@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
 source_commit: `70da7968a1df27f8831bdad67799cc9ea771a697`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: `70da7968a1df27f8831bdad67799cc9ea771a697`
+head_commit: `0480c9dfc994a98a0ba39694e8b4d8baa9338009`
 
 ## Scope
 
