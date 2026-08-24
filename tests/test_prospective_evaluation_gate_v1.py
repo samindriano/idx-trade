@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+import pickle
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -145,6 +149,12 @@ def _fixture(tmp_path: Path, *, paper_valid: bool = True, benchmark_status: str 
             "execution_provenance_valid": paper_valid,
             "preclassified_invalidity": not paper_valid,
             "invalidity_reason": "SYNTHETIC_PRECLASSIFIED_BREAK" if not paper_valid else "",
+            "execution_material_drag": False,
+            "material_drag_rule_id": "SYNTHETIC_NO_MATERIAL_DRAG",
+            "transitions": [
+                {"session_date": date.date().isoformat(), "forward_position": position}
+                for position, date in enumerate(dates, start=1)
+            ],
         },
     )
 
@@ -196,6 +206,7 @@ def _fixture(tmp_path: Path, *, paper_valid: bool = True, benchmark_status: str 
     )
     orders = pd.DataFrame(
         {
+            "session_date": dates,
             "requires_open_decision": [True] * 100,
             "pending_due_to_unavailable_open": [False] * 100,
         }
@@ -250,6 +261,7 @@ def _fixture(tmp_path: Path, *, paper_valid: bool = True, benchmark_status: str 
         "paths": {
             "counter": counter_path,
             "target": target_path,
+            "target_source_manifest": source_manifest_path,
             "paper": paper_path,
             "benchmark_attestation": benchmark_attestation_path,
             "benchmark_artifact": benchmark_path,
@@ -355,6 +367,23 @@ def test_score_manifest_fingerprint_tamper_blocks_before_loader(tmp_path: Path) 
         _invoke(case, "fingerprint", lambda: case["bundle"], session_inventory=inventory)
 
 
+def test_neutral_extra_score_column_is_not_silently_ignored(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    inventory = case["inventory"].copy()
+    artifact = Path(inventory.iloc[0]["score_artifact_path"])
+    score = pd.read_csv(artifact)
+    score["fwd5"] = 0.0
+    score.to_csv(artifact, index=False)
+    inventory.loc[0, "score_artifact_sha256"] = sha256_file(artifact)
+    manifest = Path(inventory.iloc[0]["score_manifest_path"])
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["output"]["artifact_sha256"] = inventory.loc[0, "score_artifact_sha256"]
+    payload["output"]["columns"] = list(score.columns)
+    inventory.loc[0, "score_manifest_sha256"] = _write_json(manifest, payload)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="schema must be exactly"):
+        _invoke(case, "score-extra-column", lambda: case["bundle"], session_inventory=inventory)
+
+
 def test_target_maturity_99_blocks_before_loader(tmp_path: Path) -> None:
     case = _fixture(tmp_path)
     _, sha = _rewrite_attestation(case, "target", lambda p: p.update(matured_session_count=99))
@@ -447,6 +476,50 @@ def test_benchmark_hash_mismatch_blocks_before_loader(tmp_path: Path) -> None:
         _invoke(case, "benchmarkbad", lambda: case["bundle"])
 
 
+def test_target_source_manifest_mutation_blocks_before_loader(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    case["paths"]["target_source_manifest"].write_text("mutated\n", encoding="utf-8")
+    with pytest.raises(ProspectiveAccessGateBlocked, match="canonical target source manifest sha256"):
+        _invoke(case, "target-source-bad", lambda: case["bundle"])
+
+
+def test_execution_bundle_must_cover_all_sessions(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    bad_bundle = ProtectedEvaluationBundle(
+        target_frame=case["bundle"].target_frame,
+        ledger=case["bundle"].ledger,
+        nav_frame=case["bundle"].nav_frame,
+        execution_frame=case["bundle"].execution_frame.iloc[:-1].copy(),
+        order_frame=case["bundle"].order_frame,
+        metadata=case["bundle"].metadata,
+    )
+    with pytest.raises(ProspectiveAccessGateBlocked, match="exactly all 100 sessions"):
+        _invoke(case, "execution-missing", lambda: bad_bundle)
+    assert (case["root"] / "execution-missing" / MARKER_FILENAME).exists()
+
+
+def test_crash_after_marker_creates_orphan_that_blocks_fresh_process_equivalent(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    def crash(event: str) -> None:
+        if event == "MARKER_WRITTEN":
+            raise RuntimeError("synthetic process crash")
+
+    with pytest.raises(RuntimeError, match="synthetic process crash"):
+        _invoke(case, "crashed", lambda: case["bundle"], event_hook=crash)
+    assert (case["root"] / "crashed" / MARKER_FILENAME).exists()
+    called = False
+
+    def resumed_loader():
+        nonlocal called
+        called = True
+        return case["bundle"]
+
+    with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior"):
+        _invoke(case, "crashed", resumed_loader)
+    assert called is False
+
+
 def test_benchmark_unavailable_is_frozen_not_reconstructed_after_access(tmp_path: Path) -> None:
     case = _fixture(tmp_path, benchmark_status="UNAVAILABLE")
     result = _invoke(case, "benchmark-none", lambda: case["bundle"])
@@ -500,6 +573,10 @@ def test_target_key_mismatch_fails_only_after_marker_and_locks_state(tmp_path: P
 def test_successful_rerun_is_idempotent_and_never_calls_loader_again(tmp_path: Path) -> None:
     case = _fixture(tmp_path)
     first = _invoke(case, "idem", lambda: case["bundle"])
+    hashes_before = {
+        name: sha256_file(case["root"] / "idem" / name)
+        for name in (PREACCESS_FILENAME, MARKER_FILENAME, RESULT_FILENAME, FINAL_MANIFEST_FILENAME)
+    }
     called = False
     events: list[str] = []
 
@@ -512,6 +589,78 @@ def test_successful_rerun_is_idempotent_and_never_calls_loader_again(tmp_path: P
     assert called is False
     assert events == ["IDEMPOTENT_RESULT_REUSED"]
     assert second["verdicts"] == first["verdicts"]
+    assert hashes_before == {
+        name: sha256_file(case["root"] / "idem" / name)
+        for name in (PREACCESS_FILENAME, MARKER_FILENAME, RESULT_FILENAME, FINAL_MANIFEST_FILENAME)
+    }
+
+
+def test_cold_restart_resume_and_completed_rerun_are_cross_process_idempotent(tmp_path: Path) -> None:
+    """Processes A/B/C must prove durable resume without reloading the bundle."""
+
+    case = _fixture(tmp_path)
+    bundle_path = case["root"] / "cold-bundle.pkl"
+    kwargs_path = case["root"] / "cold-kwargs.pkl"
+    with bundle_path.open("wb") as handle:
+        pickle.dump(case["bundle"], handle)
+    with kwargs_path.open("wb") as handle:
+        pickle.dump(case["kwargs"], handle)
+    child = r'''
+import json
+import pickle
+import sys
+from pathlib import Path
+
+from idx_trade.prospective_evaluation_gate_v1 import run_protected_evaluation_once
+
+root = Path(sys.argv[1])
+mode = sys.argv[2]
+with (root / "cold-bundle.pkl").open("rb") as handle:
+    bundle = pickle.load(handle)
+with (root / "cold-kwargs.pkl").open("rb") as handle:
+    kwargs = pickle.load(handle)
+
+def loader():
+    if mode == "sentinel":
+        (root / "loader-called").write_text("called\n", encoding="utf-8")
+    return bundle
+
+result = run_protected_evaluation_once(
+    output_dir=root / "cold-run",
+    protected_loader=loader,
+    **kwargs,
+)
+print(json.dumps({"evaluation_id": result["evaluation_id"]}, sort_keys=True))
+'''
+    env = os.environ.copy()
+    src_root = str(Path(__file__).resolve().parents[1] / "src")
+    env["PYTHONPATH"] = os.pathsep.join(
+        [src_root, env.get("PYTHONPATH", "")]
+    ).rstrip(os.pathsep)
+
+    subprocess.run(
+        [sys.executable, "-c", child, str(case["root"]), "loader"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    immutable_names = (PREACCESS_FILENAME, MARKER_FILENAME, RESULT_FILENAME, FINAL_MANIFEST_FILENAME)
+    hashes_before = {
+        name: sha256_file(case["root"] / "cold-run" / name) for name in immutable_names
+    }
+    for _ in range(2):
+        subprocess.run(
+            [sys.executable, "-c", child, str(case["root"]), "sentinel"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert not (case["root"] / "loader-called").exists()
+        assert hashes_before == {
+            name: sha256_file(case["root"] / "cold-run" / name) for name in immutable_names
+        }
 
 
 def test_orphan_marker_fails_closed_without_loader(tmp_path: Path) -> None:

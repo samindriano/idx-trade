@@ -1,0 +1,130 @@
+{
+  "schema_version": "prospective_evaluation_contract_v1",
+  "status": "BASE_FROZEN_REAL_ACCESS_BLOCKED",
+  "model": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "generation": "V4-X1-CLEAN",
+    "fingerprint": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "ranking": "alpha_consensus DESC, ticker ASC"
+  },
+  "evaluation": {
+    "expected_sessions": 100,
+    "statistic": "session-level cross-sectional Spearman rank IC",
+    "historical_point_estimate": 0.0980538834688018,
+    "historical_reference_bound": "not worse than -0.018",
+    "two_sided_alpha": 0.05,
+    "diagnostics_secondary": true,
+    "explicit_human_authorization_required": true,
+    "preflight_must_never_access_outcomes": true
+  },
+  "target_identity": {
+    "status": "UNRESOLVED",
+    "blocker": "CANONICAL_TARGET_IDENTITY_UNRESOLVED",
+    "target_id": null,
+    "horizon": null,
+    "definition": null,
+    "transform": null,
+    "provenance": null,
+    "hashes": null
+  },
+  "required_pre_access_artifacts": {
+    "session_inventory": {
+      "rows": 100,
+      "forward_positions": "exactly 1..100",
+      "unique_session_date": true,
+      "unique_session_index": true,
+      "strict_chronology": true,
+      "score_artifact_and_manifest_sha256": true
+    },
+    "counter": {"current": 100, "target": 100, "inventory_sha256_binding": true},
+    "target": {
+      "maturity": "all 100 sessions",
+      "source_manifest_sha256": true,
+      "construction_code_pin": true,
+      "canonical_identity_required": true
+    },
+    "paper_state": {
+      "predecessor_and_100_session_boundary": true,
+      "exact_continuity_attestation": true,
+      "execution_provenance_or_preclassified_invalidity": true
+    },
+    "benchmark": {
+      "pinned_before_access": true,
+      "artifact_sha256": true,
+      "unavailable_requires_reason": true
+    },
+    "prior_access_audit": {
+      "review_complete": true,
+      "unauthorized_access_known_false": true,
+      "prior_real_marker_absent": true
+    }
+  },
+  "score_artifact_rules": {
+    "model_identity_exact": true,
+    "one_artifact_per_session": true,
+    "date_and_ticker_keys_exact": true,
+    "immutable_hashes": true,
+    "forbidden_outcome_columns": [
+      "canonical_target",
+      "realized_return",
+      "forward_return",
+      "outcome",
+      "label",
+      "target",
+      "nav",
+      "pnl",
+      "dividend",
+      "payoff"
+    ],
+    "forbidden_outcome_metadata": true
+  },
+  "code_pins": {
+    "protocol_git_blob_sha1_required": true,
+    "evaluator_git_blob_sha1_required": true,
+    "gate_git_blob_sha1_required": true,
+    "source_commit_metadata_required": true,
+    "pin_manifest_sha256_required_for_real_access": true,
+    "target_construction_pin_required_if_resolved": true
+  },
+  "outcome_contamination_rules": {
+    "provider_calls_false": true,
+    "protected_outcome_accessed_false": true,
+    "realized_forward_outcome_loaded_false": true,
+    "historical_prediction_generated_false": true,
+    "model_refit_false": true,
+    "model_retuned_false": true,
+    "science_changed_false": true,
+    "real_loader_only_after_marker": true,
+    "real_marker_only_after_all_pre_access_gates": true
+  },
+  "transaction_rules": {
+    "attestation_immutable": true,
+    "marker_immutable": true,
+    "result_immutable": true,
+    "manifest_immutable": true,
+    "exclusive_atomic_creation": true,
+    "fsync_before_publish": true,
+    "partial_or_orphan_state_fails_closed": true,
+    "successful_rerun_returns_same_result": true,
+    "successful_rerun_does_not_call_loader": true,
+    "input_and_code_drift_on_rerun_blocks": true
+  },
+  "operator_modes": [
+    "PRE_FLIGHT_BLOCKED",
+    "PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT",
+    "REAL_ACCESS_AUTHORIZED",
+    "REAL_ACCESS_ALREADY_COMPLETED",
+    "ORPHAN_OR_INTERRUPTED_STATE",
+    "INTEGRITY_FAILURE"
+  ],
+  "scientific_boundary": {
+    "model_changed": false,
+    "decision_changed": false,
+    "sizing_changed": false,
+    "execution_changed": false,
+    "forward_counter_changed": false,
+    "protected_outcomes_accessed": false,
+    "real_loader_called": false,
+    "real_marker_written": false
+  }
+}

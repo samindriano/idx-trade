@@ -108,6 +108,22 @@ def test_alpha_metrics_use_session_level_ic_and_frozen_bootstrap() -> None:
     assert result["positive_ic_fraction"] == pytest.approx(1.0)
     assert result["bootstrap_ci_95"] == pytest.approx([1.0, 1.0])
     assert result["bootstrap_nonfinite_replicates"] == 0
+    assert result["bootstrap_status"] == "VALID"
+
+
+def test_nonfinite_bootstrap_replicates_are_explicitly_inconclusive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def invalid_bootstrap(*args, **kwargs):
+        return np.array([math.nan]), 1
+
+    monkeypatch.setattr(
+        "idx_trade.prospective_evaluation_v1.moving_block_bootstrap_distribution",
+        invalid_bootstrap,
+    )
+    result = evaluate_alpha_metrics(_alpha_fixture())
+    assert result["bootstrap_nonfinite_replicates"] == 1
+    assert result["bootstrap_status"] == "INCONCLUSIVE_STATISTICS"
 
 
 def test_moving_block_bootstrap_is_deterministic_and_parameters_are_frozen() -> None:
@@ -147,6 +163,7 @@ def test_portfolio_vol_sharpe_sortino_match_frozen_formulas() -> None:
     assert metrics["annualized_volatility"] == pytest.approx(expected_vol)
     assert metrics["sharpe_0"] == pytest.approx(expected_sharpe)
     assert metrics["sortino_0"] == pytest.approx(expected_sortino)
+    assert metrics["bootstrap"]["status"] == "VALID"
 
 
 def test_max_drawdown_tracks_peak_trough_and_recovery() -> None:

@@ -332,7 +332,10 @@ def top_k_summary(
             per_session,
             lambda sample: float(np.mean(sample)),
         )
-        ci_low, ci_high = bootstrap_interval(distribution)
+        if np.isfinite(distribution).any():
+            ci_low, ci_high = bootstrap_interval(distribution)
+        else:
+            ci_low, ci_high = math.nan, math.nan
         result[f"TOP_{k}"] = {
             "session_count": int(per_session.size),
             "mean": float(np.mean(per_session)),
@@ -363,7 +366,10 @@ def evaluate_alpha_metrics(
     std_ic = _sample_std(ic_values)
     icir = mean_ic / std_ic if np.isfinite(std_ic) and std_ic > 0 else math.nan
     distribution, nonfinite = moving_block_bootstrap_distribution(ic_values, lambda sample: float(np.mean(sample)))
-    ci_low, ci_high = bootstrap_interval(distribution)
+    if np.isfinite(distribution).any():
+        ci_low, ci_high = bootstrap_interval(distribution)
+    else:
+        ci_low, ci_high = math.nan, math.nan
     return {
         "session_count": int(len(session_ic)),
         "row_count": int(session_ic["row_count"].sum()),
@@ -374,6 +380,7 @@ def evaluate_alpha_metrics(
         "icir": float(icir),
         "bootstrap_ci_95": [ci_low, ci_high],
         "bootstrap_nonfinite_replicates": int(nonfinite),
+        "bootstrap_status": "INCONCLUSIVE_STATISTICS" if nonfinite else "VALID",
         "session_ic": session_ic,
         "rank_buckets": rank_bucket_summary(
             alpha_frame,
@@ -540,6 +547,11 @@ def evaluate_portfolio_metrics(
             "nonfinite_compounded_replicates": int(nonfinite_compounded),
             "nonfinite_mean_replicates": int(nonfinite_mean),
             "nonfinite_sharpe_replicates": int(nonfinite_sharpe),
+            "status": (
+                "INCONCLUSIVE_STATISTICS"
+                if any((nonfinite_compounded, nonfinite_mean, nonfinite_sharpe))
+                else "VALID"
+            ),
         },
         "daily_returns": returns_frame,
     }

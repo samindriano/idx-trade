@@ -4,14 +4,17 @@ import hashlib
 import json
 import math
 import os
+import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from . import prospective_evaluation_v1 as _evaluator_module
 from .prospective_evaluation_v1 import (
     MODEL_FINGERPRINT,
     MODEL_GENERATION,
@@ -36,11 +39,14 @@ from .provenance import sha256_file
 
 ACCESS_GATE_SCHEMA = "v4_x1_prospective_protected_access_gate_v1"
 REQUIRED_SESSION_COUNT = 100
+PROSPECTIVE_CONTRACT_SCHEMA = "prospective_evaluation_contract_v1"
+PROSPECTIVE_CONTRACT_RELATIVE_PATH = "config/v4_x1_prospective_evaluation_contract_v1.json"
+CODE_PIN_MANIFEST_SCHEMA = "v4_x1_prospective_evaluation_code_pin_v1"
 
 # Frozen before this protected-access adapter was implemented.
 PROTOCOL_GIT_BLOB_SHA1 = "f76af5733db3c6a2c7a99b1e80268004ece1e616"
 EVALUATOR_IMPLEMENTATION_COMMIT = "0bf9ff5bc4b3ef6639d48823c75437f0359c6bc7"
-EVALUATOR_GIT_BLOB_SHA1 = "ce7a6d356b0b1ab52277c50411fdfb86ac59ad4c"
+EVALUATOR_GIT_BLOB_SHA1 = "2e9bf76501dcab46594b611efd149ee64f3e7999"
 
 MODE_SYNTHETIC_REHEARSAL = "SYNTHETIC_REHEARSAL"
 MODE_PROTECTED_PROSPECTIVE = "PROTECTED_PROSPECTIVE"
@@ -62,6 +68,22 @@ _SCORE_MANIFEST_FALSE_GUARDS = (
     "model_refit",
     "model_retuned",
     "science_changed",
+)
+_FORBIDDEN_SCORE_COLUMN_TOKENS = frozenset(
+    {
+        "canonical_target",
+        "realized_return",
+        "forward_return",
+        "outcome",
+        "label",
+        "target",
+        "nav",
+        "pnl",
+        "dividend",
+        "payoff",
+        "profit",
+        "loss",
+    }
 )
 _LEDGER_INVALID_STATES = frozenset(
     {
@@ -107,6 +129,10 @@ class _PreparedAccess:
     benchmark_frame: pd.DataFrame | None
     protocol_blob_sha1: str
     evaluator_blob_sha1: str
+    gate_blob_sha1: str | None = None
+    contract_sha256: str | None = None
+    code_pin_manifest_sha256: str | None = None
+    evaluation_id: str | None = None
 
 
 def git_blob_sha1_file(path: str | Path) -> str:
@@ -147,19 +173,44 @@ def _canonical_hash(payload: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _json_bytes(payload: Mapping[str, Any]) -> bytes:
+    return (
+        json.dumps(_json_value(dict(payload)), sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+    ).encode("utf-8")
+
+
 def _write_json_exclusive(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = (
-        json.dumps(_json_value(dict(payload)), sort_keys=True, indent=2, ensure_ascii=False)
-        + "\n"
-    ).encode("utf-8")
+    encoded = _json_bytes(payload)
+    temp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
     try:
-        with path.open("xb") as handle:
+        with temp.open("xb") as handle:
             handle.write(encoded)
             handle.flush()
             os.fsync(handle.fileno())
+        # A hard-link publish is atomic and never replaces an existing final file.
+        # This avoids exposing a partially written JSON document or silently
+        # overwriting an immutable attestation/result under a race.
+        os.link(temp, path)
+        if os.name != "nt":
+            directory_fd = os.open(str(path.parent), os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
     except FileExistsError as exc:
-        raise ProspectiveAccessGateBlocked(f"immutable output already exists: {path.name}") from exc
+        if path.exists():
+            raise ProspectiveAccessGateBlocked(f"immutable output already exists: {path.name}") from exc
+        raise ProspectiveAccessGateBlocked(f"temporary output already exists: {temp.name}") from exc
+    except OSError as exc:
+        raise ProspectiveAccessGateBlocked(
+            f"atomic publish unavailable for immutable output: {path.name}"
+        ) from exc
+    finally:
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _read_json(path: Path, *, label: str) -> dict[str, Any]:
@@ -173,10 +224,23 @@ def _read_json(path: Path, *, label: str) -> dict[str, Any]:
 
 
 def _normalize_dates(values: pd.Series, *, label: str) -> pd.Series:
-    dates = pd.to_datetime(values, errors="coerce", utc=True).dt.tz_convert(None).dt.normalize()
+    """Normalize session labels without shifting their civil calendar date."""
+
+    def _parse(value: object) -> pd.Timestamp:
+        try:
+            timestamp = pd.Timestamp(value)
+        except (TypeError, ValueError):
+            return pd.NaT
+        if pd.isna(timestamp):
+            return pd.NaT
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.tz_localize(None)
+        return timestamp.normalize()
+
+    dates = values.map(_parse)
     if dates.isna().any():
         raise ProspectiveAccessGateBlocked(f"{label} contains invalid dates")
-    return dates
+    return pd.to_datetime(dates)
 
 
 def _require_columns(frame: pd.DataFrame, required: set[str], *, label: str) -> None:
@@ -242,9 +306,7 @@ def _inventory_hash(data: pd.DataFrame) -> str:
                 "forward_position": int(row.forward_position),
                 "session_index": int(row.session_index),
                 "session_date": row.session_date.date().isoformat(),
-                "score_artifact_path": str(Path(str(row.score_artifact_path)).resolve()),
                 "score_artifact_sha256": str(row.score_artifact_sha256).lower(),
-                "score_manifest_path": str(Path(str(row.score_manifest_path)).resolve()),
                 "score_manifest_sha256": str(row.score_manifest_sha256).lower(),
             }
         )
@@ -261,9 +323,25 @@ def _load_score_artifact(
 ) -> pd.DataFrame:
     frame = _read_table(path, label="V4-X1 score artifact")
     _require_columns(frame, {"ticker", "alpha_consensus"}, label="V4-X1 score artifact")
+    forbidden = sorted(
+        column
+        for column in frame.columns
+        if any(token in str(column).strip().lower() for token in _FORBIDDEN_SCORE_COLUMN_TOKENS)
+    )
+    if forbidden:
+        raise ProspectiveAccessGateBlocked(
+            f"V4-X1 score artifact contains forbidden outcome-like columns: {forbidden}"
+        )
     date_col = "date" if "date" in frame.columns else "session_date" if "session_date" in frame.columns else None
     if date_col is None:
         raise ProspectiveAccessGateBlocked("V4-X1 score artifact lacks date/session_date")
+    if "date" in frame.columns and "session_date" in frame.columns:
+        raise ProspectiveAccessGateBlocked("V4-X1 score artifact has ambiguous date columns")
+    date_col = "date" if "date" in frame.columns else "session_date"
+    if set(frame.columns) != {date_col, "ticker", "alpha_consensus"}:
+        raise ProspectiveAccessGateBlocked(
+            "V4-X1 score artifact schema must be exactly date/session_date, ticker, alpha_consensus"
+        )
     dates = _normalize_dates(frame[date_col], label="V4-X1 score artifact")
     if not dates.eq(session_date).all():
         raise ProspectiveAccessGateBlocked("V4-X1 score artifact contains the wrong session")
@@ -291,7 +369,7 @@ def _validate_score_manifest(
     session_date: pd.Timestamp,
     artifact_path: Path,
     artifact_sha256: str,
-) -> None:
+) -> dict[str, Any]:
     manifest = _read_json(manifest_path, label="V4-X1 score manifest")
     checks = {
         "status": manifest.get("status") == "DONE",
@@ -310,12 +388,32 @@ def _validate_score_manifest(
         raise ProspectiveAccessGateBlocked("V4-X1 score manifest child artifact hash mismatch")
     if output.get("artifact_path") and _resolve_path(output["artifact_path"]) != artifact_path:
         raise ProspectiveAccessGateBlocked("V4-X1 score manifest child artifact path mismatch")
+    declared_columns = output.get("columns")
+    if not isinstance(declared_columns, list):
+        raise ProspectiveAccessGateBlocked("V4-X1 score manifest must declare exact output columns")
+    if any(
+        any(token in str(column).strip().lower() for token in _FORBIDDEN_SCORE_COLUMN_TOKENS)
+        for column in declared_columns
+    ):
+        raise ProspectiveAccessGateBlocked("V4-X1 score manifest declares outcome-like columns")
     guards = manifest.get("guards")
     if not isinstance(guards, dict):
         raise ProspectiveAccessGateBlocked("V4-X1 score manifest guards are missing")
     bad = [name for name in _SCORE_MANIFEST_FALSE_GUARDS if guards.get(name) is not False]
     if bad:
         raise ProspectiveAccessGateBlocked(f"V4-X1 score manifest guard changed: {bad}")
+    metadata = manifest.get("metadata")
+    if isinstance(metadata, Mapping):
+        forbidden_metadata = sorted(
+            str(key)
+            for key in metadata
+            if any(token in str(key).strip().lower() for token in _FORBIDDEN_SCORE_COLUMN_TOKENS)
+        )
+        if forbidden_metadata:
+            raise ProspectiveAccessGateBlocked(
+                f"V4-X1 score manifest contains outcome-like metadata: {forbidden_metadata}"
+            )
+    return manifest
 
 
 def validate_session_inventory(
@@ -369,12 +467,15 @@ def validate_session_inventory(
         )
         artifact_sha = str(row.score_artifact_sha256).lower()
         manifest_sha = str(row.score_manifest_sha256).lower()
-        _validate_score_manifest(
+        manifest_payload = _validate_score_manifest(
             manifest,
             session_date=row.session_date,
             artifact_path=artifact,
             artifact_sha256=artifact_sha,
         )
+        artifact_columns = list(_read_table(artifact, label="V4-X1 score artifact").columns)
+        if manifest_payload["output"].get("columns") != artifact_columns:
+            raise ProspectiveAccessGateBlocked("V4-X1 score manifest columns do not match artifact exactly")
         score_parts.append(
             _load_score_artifact(
                 artifact,
@@ -401,6 +502,130 @@ def _read_verified_json_attestation(
 ) -> tuple[Path, dict[str, Any]]:
     path = _verified_path(path_value, sha_value, label=label, fixture_root=fixture_root)
     return path, _read_json(path, label=label)
+
+
+def validate_machine_readable_contract(
+    path_value: str | Path,
+    sha_value: str,
+    *,
+    fixture_root: Path | None = None,
+    require_resolved_target: bool = False,
+) -> tuple[Path, dict[str, Any]]:
+    """Validate the frozen, outcome-blind contract without reading outcomes."""
+
+    path = _verified_path(
+        path_value,
+        sha_value,
+        label="prospective evaluation contract",
+        fixture_root=fixture_root,
+    )
+    payload = _read_json(path, label="prospective evaluation contract")
+    if payload.get("schema_version") != PROSPECTIVE_CONTRACT_SCHEMA:
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract schema mismatch")
+    if payload.get("status") != "BASE_FROZEN_REAL_ACCESS_BLOCKED":
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract status is not frozen/blocked")
+    model = payload.get("model")
+    evaluation = payload.get("evaluation")
+    if not isinstance(model, dict) or not isinstance(evaluation, dict):
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract model/evaluation is malformed")
+    expected_model = {
+        "model_id": MODEL_NAME,
+        "generation": MODEL_GENERATION,
+        "fingerprint": MODEL_FINGERPRINT,
+        "ranking": "alpha_consensus DESC, ticker ASC",
+    }
+    if any(model.get(key) != value for key, value in expected_model.items()):
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract model identity mismatch")
+    if evaluation.get("expected_sessions") != REQUIRED_SESSION_COUNT:
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract session count mismatch")
+    if evaluation.get("two_sided_alpha") != 0.05:
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract alpha mismatch")
+    if evaluation.get("explicit_human_authorization_required") is not True:
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract lacks explicit authorization rule")
+    if evaluation.get("preflight_must_never_access_outcomes") is not True:
+        raise ProspectiveAccessGateBlocked("prospective evaluation contract lacks preflight outcome prohibition")
+    target = payload.get("target_identity")
+    if not isinstance(target, dict):
+        raise ProspectiveAccessGateBlocked("prospective evaluation target identity is malformed")
+    target_status = str(target.get("status") or "").upper()
+    if target_status == "UNRESOLVED":
+        if target.get("blocker") != "CANONICAL_TARGET_IDENTITY_UNRESOLVED":
+            raise ProspectiveAccessGateBlocked("unresolved target lacks canonical blocker")
+        if require_resolved_target:
+            raise ProspectiveAccessGateBlocked("CANONICAL_TARGET_IDENTITY_UNRESOLVED")
+    elif target_status != "RESOLVED":
+        raise ProspectiveAccessGateBlocked("prospective evaluation target identity status is invalid")
+    elif require_resolved_target:
+        required_target_fields = ("target_id", "horizon", "definition", "transform", "provenance", "hashes")
+        if any(not target.get(key) for key in required_target_fields):
+            raise ProspectiveAccessGateBlocked("resolved target identity is missing exact provenance fields")
+    return path, {"path": str(path), "sha256": str(sha_value).lower(), **payload}
+
+
+def _validate_code_pin_manifest(
+    path_value: str | Path,
+    sha_value: str,
+    *,
+    protocol_path: Path,
+    evaluator_path: Path,
+    gate_path: Path,
+    contract_path: Path,
+    fixture_root: Path | None,
+) -> tuple[Path, dict[str, Any], str, str, str]:
+    path = _verified_path(
+        path_value,
+        sha_value,
+        label="prospective evaluation code pin manifest",
+        fixture_root=fixture_root,
+    )
+    payload = _read_json(path, label="prospective evaluation code pin manifest")
+    if payload.get("schema_version") != CODE_PIN_MANIFEST_SCHEMA:
+        raise ProspectiveAccessGateBlocked("prospective evaluation code pin manifest schema mismatch")
+    model = payload.get("model")
+    if not isinstance(model, dict) or any(
+        model.get(key) != value
+        for key, value in {
+            "model_id": MODEL_NAME,
+            "generation": MODEL_GENERATION,
+            "fingerprint": MODEL_FINGERPRINT,
+        }.items()
+    ):
+        raise ProspectiveAccessGateBlocked("prospective evaluation code pin model mismatch")
+
+    def _pinned_file(section_name: str, actual: Path, *, git_blob: bool) -> str:
+        section = payload.get(section_name)
+        if not isinstance(section, dict) or not str(section.get("source_commit") or "").strip():
+            raise ProspectiveAccessGateBlocked(f"code pin {section_name} source commit is missing")
+        trusted_paths = {
+            "evaluator": Path(_evaluator_module.__file__).resolve(),
+            "gate": Path(__file__).resolve(),
+        }
+        trusted = trusted_paths.get(section_name)
+        if trusted is not None and actual != trusted:
+            raise ProspectiveAccessGateBlocked(
+                f"code pin {section_name} is not the executing module"
+            )
+        declared = str(section.get("path") or "").strip()
+        expected_path = _resolve_path(declared, base_dir=path.parent)
+        if expected_path != actual:
+            raise ProspectiveAccessGateBlocked(f"code pin {section_name} path mismatch")
+        expected_hash = str(section.get("git_blob_sha1") or "").lower()
+        if git_blob:
+            if git_blob_sha1_file(actual) != expected_hash:
+                raise ProspectiveAccessGateBlocked(f"code pin {section_name} Git blob mismatch")
+        return expected_hash
+
+    protocol_blob = _pinned_file("protocol", protocol_path, git_blob=True)
+    evaluator_blob = _pinned_file("evaluator", evaluator_path, git_blob=True)
+    gate_blob = _pinned_file("gate", gate_path, git_blob=True)
+    contract = payload.get("contract")
+    if not isinstance(contract, dict):
+        raise ProspectiveAccessGateBlocked("code pin contract section is missing")
+    if _resolve_path(str(contract.get("path") or ""), base_dir=path.parent) != contract_path:
+        raise ProspectiveAccessGateBlocked("code pin contract path mismatch")
+    if sha256_file(contract_path) != str(contract.get("sha256") or "").lower():
+        raise ProspectiveAccessGateBlocked("code pin contract hash mismatch")
+    return path, {"path": str(path), "sha256": str(sha_value).lower(), **payload}, protocol_blob, evaluator_blob, gate_blob
 
 
 def _expected_boundary(expected_sessions: pd.DataFrame) -> tuple[str, str]:
@@ -467,12 +692,51 @@ def _validate_target(
     }
 
 
+def _validate_target_against_contract(
+    target: Mapping[str, Any], contract_payload: Mapping[str, Any] | None
+) -> None:
+    """Cross-bind target metadata to the frozen contract, never by self-report alone."""
+
+    if contract_payload is None:
+        return
+    contract_target = contract_payload.get("target_identity")
+    if not isinstance(contract_target, Mapping):
+        raise ProspectiveAccessGateBlocked("contract target identity is malformed")
+    if str(contract_target.get("status") or "").upper() != "RESOLVED":
+        return
+    expected_identity_sha = _canonical_hash(dict(contract_target))
+    if str(target.get("canonical_target_id") or "") != str(contract_target.get("target_id") or ""):
+        raise ProspectiveAccessGateBlocked("canonical target does not match frozen contract identity")
+    if str(target.get("target_identity_sha256") or "").lower() != expected_identity_sha:
+        raise ProspectiveAccessGateBlocked("canonical target identity hash is not contract-bound")
+    for target_key, contract_key in (
+        ("horizon", "horizon"),
+        ("definition", "definition"),
+        ("transform", "transform"),
+        ("provenance", "provenance"),
+        ("target_hashes", "hashes"),
+    ):
+        if target.get(target_key) != contract_target.get(contract_key):
+            raise ProspectiveAccessGateBlocked(
+                f"canonical target {target_key} does not match frozen contract"
+            )
+    source_path = Path(str(target["source_manifest_path"])).resolve()
+    source_payload = _read_json(source_path, label="canonical target source manifest")
+    if str(source_payload.get("canonical_target_id") or "") != str(contract_target.get("target_id") or ""):
+        raise ProspectiveAccessGateBlocked("target source manifest identity mismatch")
+    if str(source_payload.get("target_identity_sha256") or "").lower() != expected_identity_sha:
+        raise ProspectiveAccessGateBlocked("target source manifest is not contract-bound")
+    if source_payload.get("target_identity") != dict(contract_target):
+        raise ProspectiveAccessGateBlocked("target source manifest target definition mismatch")
+
+
 def _validate_paper(
     path_value: Any,
     sha_value: Any,
     *,
     expected_sessions: pd.DataFrame,
     fixture_root: Path | None,
+    require_detailed_continuity: bool = False,
 ) -> dict[str, Any]:
     path, payload = _read_verified_json_attestation(
         path_value, sha_value, label="PaperState continuity attestation", fixture_root=fixture_root
@@ -496,6 +760,29 @@ def _validate_paper(
             )
     elif preclassified:
         raise ProspectiveAccessGateBlocked("valid PaperState cannot also be preclassified invalid")
+    transitions = payload.get("transitions")
+    if require_detailed_continuity:
+        if not isinstance(transitions, list) or len(transitions) != REQUIRED_SESSION_COUNT:
+            raise ProspectiveAccessGateBlocked("PaperState detailed transition ledger is required")
+        expected_dates = expected_sessions["session_date"].dt.date.astype(str).tolist()
+        observed_dates: list[str] = []
+        observed_positions: list[int] = []
+        for transition in transitions:
+            if not isinstance(transition, Mapping):
+                raise ProspectiveAccessGateBlocked("PaperState transition ledger is malformed")
+            observed_dates.append(str(transition.get("session_date") or ""))
+            try:
+                observed_positions.append(int(transition.get("forward_position")))
+            except (TypeError, ValueError) as exc:
+                raise ProspectiveAccessGateBlocked("PaperState transition position is malformed") from exc
+        if observed_dates != expected_dates or observed_positions != list(range(1, 101)):
+            raise ProspectiveAccessGateBlocked("PaperState transition ledger does not match the frozen block")
+        if len(set(observed_dates)) != REQUIRED_SESSION_COUNT:
+            raise ProspectiveAccessGateBlocked("PaperState transition ledger contains duplicate sessions")
+        if not isinstance(payload.get("execution_material_drag"), bool):
+            raise ProspectiveAccessGateBlocked("PaperState execution material-drag status is missing")
+        if not str(payload.get("material_drag_rule_id") or "").strip():
+            raise ProspectiveAccessGateBlocked("PaperState material-drag rule identity is missing")
     return {
         "path": str(path),
         "sha256": str(sha_value).lower(),
@@ -518,6 +805,8 @@ def _validate_benchmark(
     )
     status = str(payload.get("status") or "").strip().upper()
     if status == "UNAVAILABLE":
+        if not str(payload.get("reason") or "").strip():
+            raise ProspectiveAccessGateBlocked("unavailable benchmark requires a pre-access reason")
         return {"path": str(path), "sha256": str(sha_value).lower(), **payload, "status": status}, None
     if status != "PINNED":
         raise ProspectiveAccessGateBlocked("benchmark status must be PINNED or UNAVAILABLE")
@@ -603,6 +892,11 @@ def prepare_pre_outcome_access(
     protocol_path: str | Path,
     evaluator_path: str | Path,
     evaluator_commit: str = EVALUATOR_IMPLEMENTATION_COMMIT,
+    gate_path: str | Path | None = None,
+    contract_path: str | Path | None = None,
+    contract_sha256: str | None = None,
+    code_pin_manifest_path: str | Path | None = None,
+    code_pin_manifest_sha256: str | None = None,
     fixture_root: str | Path | None = None,
     final_access_authorized: bool = False,
 ) -> _PreparedAccess:
@@ -619,11 +913,46 @@ def prepare_pre_outcome_access(
 
     protocol = Path(protocol_path).resolve()
     evaluator = Path(evaluator_path).resolve()
+    gate = Path(gate_path).resolve() if gate_path is not None else None
+    contract = Path(contract_path).resolve() if contract_path is not None else None
     if not protocol.is_file() or not evaluator.is_file():
         raise ProspectiveAccessGateBlocked("protocol/evaluator pin path is missing")
-    protocol_blob, evaluator_blob = _verify_code_pins(
-        protocol_path=protocol, evaluator_path=evaluator, evaluator_commit=evaluator_commit
-    )
+    if normalized_mode == MODE_PROTECTED_PROSPECTIVE:
+        if contract is None or not contract_sha256:
+            raise ProspectiveAccessGateBlocked("real protected access requires frozen contract pin")
+        if code_pin_manifest_path is None or not code_pin_manifest_sha256 or gate is None:
+            raise ProspectiveAccessGateBlocked("real protected access requires audited code pin manifest")
+    contract_payload: dict[str, Any] | None = None
+    contract_sha: str | None = None
+    if contract is not None:
+        _, contract_payload = validate_machine_readable_contract(
+            contract,
+            str(contract_sha256 or ""),
+            fixture_root=scoped_root,
+            require_resolved_target=normalized_mode == MODE_PROTECTED_PROSPECTIVE,
+        )
+        contract_sha = str(contract_sha256).lower()
+
+    code_pin_payload: dict[str, Any] | None = None
+    code_pin_sha: str | None = None
+    gate_blob: str | None = None
+    if code_pin_manifest_path is not None:
+        if gate is None:
+            raise ProspectiveAccessGateBlocked("code pin manifest requires gate source path")
+        _, code_pin_payload, protocol_blob, evaluator_blob, gate_blob = _validate_code_pin_manifest(
+            code_pin_manifest_path,
+            str(code_pin_manifest_sha256 or ""),
+            protocol_path=protocol,
+            evaluator_path=evaluator,
+            gate_path=gate,
+            contract_path=contract if contract is not None else Path("__missing_contract__"),
+            fixture_root=scoped_root,
+        )
+        code_pin_sha = str(code_pin_manifest_sha256).lower()
+    else:
+        protocol_blob, evaluator_blob = _verify_code_pins(
+            protocol_path=protocol, evaluator_path=evaluator, evaluator_commit=evaluator_commit
+        )
 
     inventory, score_frame, inventory_sha = validate_session_inventory(
         session_inventory, fixture_root=scoped_root
@@ -641,11 +970,13 @@ def prepare_pre_outcome_access(
         expected_sessions=expected,
         fixture_root=scoped_root,
     )
+    _validate_target_against_contract(target, contract_payload)
     paper = _validate_paper(
         paper_attestation_path,
         paper_attestation_sha256,
         expected_sessions=expected,
         fixture_root=scoped_root,
+        require_detailed_continuity=normalized_mode == MODE_PROTECTED_PROSPECTIVE,
     )
     benchmark, benchmark_frame = _validate_benchmark(
         benchmark_attestation_path,
@@ -670,12 +1001,15 @@ def prepare_pre_outcome_access(
         benchmark_frame=benchmark_frame,
         protocol_blob_sha1=protocol_blob,
         evaluator_blob_sha1=evaluator_blob,
+        gate_blob_sha1=gate_blob,
+        contract_sha256=contract_sha,
+        code_pin_manifest_sha256=code_pin_sha,
     )
 
 
 def _preaccess_payload(prepared: _PreparedAccess, *, mode: str) -> dict[str, Any]:
     first, last = _expected_boundary(prepared.expected_sessions)
-    return {
+    payload = {
         "schema_version": ACCESS_GATE_SCHEMA,
         "status": "PRE_OUTCOME_ACCESS_GATES_PASS",
         "mode": mode,
@@ -702,10 +1036,20 @@ def _preaccess_payload(prepared: _PreparedAccess, *, mode: str) -> dict[str, Any
         "benchmark_attestation_sha256": prepared.benchmark["sha256"],
         "access_audit_sha256": prepared.access_audit["sha256"],
         "unauthorized_access_known": False,
+        "contract_sha256": prepared.contract_sha256,
+        "code_pin_manifest_sha256": prepared.code_pin_manifest_sha256,
     }
+    payload["evaluation_id"] = _canonical_hash(payload)
+    return payload
 
 
-def _marker_payload(prepared: _PreparedAccess, *, mode: str, preaccess_sha256: str) -> dict[str, Any]:
+def _marker_payload(
+    prepared: _PreparedAccess,
+    *,
+    mode: str,
+    preaccess_sha256: str,
+    evaluation_id: str,
+) -> dict[str, Any]:
     return {
         "schema_version": ACCESS_GATE_SCHEMA,
         "marker": REAL_ACCESS_MARKER if mode == MODE_PROTECTED_PROSPECTIVE else REHEARSAL_ACCESS_MARKER,
@@ -718,7 +1062,16 @@ def _marker_payload(prepared: _PreparedAccess, *, mode: str, preaccess_sha256: s
         "protocol_git_blob_sha1": prepared.protocol_blob_sha1,
         "evaluator_git_blob_sha1": prepared.evaluator_blob_sha1,
         "evaluator_commit": EVALUATOR_IMPLEMENTATION_COMMIT,
+        "gate_git_blob_sha1": prepared.gate_blob_sha1,
+        "contract_sha256": prepared.contract_sha256,
+        "code_pin_manifest_sha256": prepared.code_pin_manifest_sha256,
+        "evaluation_id": evaluation_id,
+        "created_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
+
+
+def _json_payload_sha256(payload: Mapping[str, Any]) -> str:
+    return hashlib.sha256(_json_bytes(payload)).hexdigest()
 
 
 def _validate_target_bundle(
@@ -784,6 +1137,67 @@ def _validate_nav_bundle(bundle: ProtectedEvaluationBundle, prepared: _PreparedA
     return nav
 
 
+def _validate_execution_bundle(
+    bundle: ProtectedEvaluationBundle, prepared: _PreparedAccess
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Require complete, session-keyed execution and order evidence before metrics."""
+
+    if bundle.execution_frame is None or bundle.order_frame is None:
+        raise ProspectiveAccessGateBlocked("operationally valid evaluation requires execution and order frames")
+    expected_dates = set(prepared.expected_sessions["session_date"])
+
+    execution = bundle.execution_frame.copy()
+    _require_columns(
+        execution,
+        {"session_date", "gross_buy_notional", "gross_sell_notional", "nav_prev"},
+        label="protected execution frame",
+    )
+    execution = execution[["session_date", "gross_buy_notional", "gross_sell_notional", "nav_prev"]].copy()
+    execution["session_date"] = _normalize_dates(execution["session_date"], label="protected execution frame")
+    if execution["session_date"].duplicated().any() or set(execution["session_date"]) != expected_dates:
+        raise ProspectiveAccessGateBlocked("protected execution frame must cover exactly all 100 sessions")
+    execution = execution.sort_values("session_date", kind="mergesort").reset_index(drop=True)
+
+    orders = bundle.order_frame.copy()
+    _require_columns(
+        orders,
+        {"session_date", "requires_open_decision", "pending_due_to_unavailable_open"},
+        label="protected order frame",
+    )
+    orders = orders[["session_date", "requires_open_decision", "pending_due_to_unavailable_open"]].copy()
+    orders["session_date"] = _normalize_dates(orders["session_date"], label="protected order frame")
+    if not set(orders["session_date"]).issubset(expected_dates):
+        raise ProspectiveAccessGateBlocked("protected order frame contains an unexpected session")
+    if set(orders["session_date"]) != expected_dates:
+        raise ProspectiveAccessGateBlocked("protected order frame must cover every evaluation session")
+    for column in ("requires_open_decision", "pending_due_to_unavailable_open"):
+        if not orders[column].map(lambda value: isinstance(value, (bool, np.bool_))).all():
+            raise ProspectiveAccessGateBlocked(f"protected order frame {column} must be boolean")
+    return execution, orders.sort_values("session_date", kind="mergesort").reset_index(drop=True)
+
+
+def _state_reconstructable(
+    execution: pd.DataFrame, orders: pd.DataFrame, expected_sessions: pd.DataFrame
+) -> bool:
+    """Derive the sequential-state guard from the attested, session-keyed frames."""
+
+    expected_dates = expected_sessions["session_date"].tolist()
+    if execution["session_date"].tolist() != expected_dates or orders["session_date"].tolist() != expected_dates:
+        return False
+    numeric = execution[["gross_buy_notional", "gross_sell_notional", "nav_prev"]].apply(
+        pd.to_numeric, errors="coerce"
+    )
+    if not np.isfinite(numeric.to_numpy(dtype=float)).all():
+        return False
+    if (numeric[["gross_buy_notional", "gross_sell_notional"]] < 0).any().any():
+        return False
+    if (numeric["nav_prev"] <= 0).any():
+        return False
+    if (orders["pending_due_to_unavailable_open"] & ~orders["requires_open_decision"]).any():
+        return False
+    return True
+
+
 def _evaluate_loaded_bundle(bundle: ProtectedEvaluationBundle, prepared: _PreparedAccess) -> dict[str, Any]:
     _validate_bundle_metadata(bundle, prepared)
     target_id = str(prepared.target["canonical_target_id"])
@@ -793,10 +1207,21 @@ def _evaluate_loaded_bundle(bundle: ProtectedEvaluationBundle, prepared: _Prepar
     try:
         validate_alpha_session_alignment(alpha_frame, prepared.expected_sessions)
         alpha = evaluate_alpha_metrics(alpha_frame)
+        top_k = alpha.get("top_k", {})
+        top_k_nonfinite = (
+            sum(
+                int(summary.get("bootstrap_nonfinite_replicates", 0))
+                for summary in top_k.values()
+                if isinstance(summary, Mapping)
+            )
+            if isinstance(top_k, Mapping)
+            else 1
+        )
+        alpha_bootstrap_valid = int(alpha.get("bootstrap_nonfinite_replicates", 0)) == 0 and top_k_nonfinite == 0
         alpha_state = alpha_verdict(
             mean_ic=float(alpha["mean_ic"]),
             ci_low=float(alpha["bootstrap_ci_95"][0]),
-            valid=True,
+            valid=alpha_bootstrap_valid,
         )
         ledger = validate_exclusion_ledger(bundle.ledger, prepared.expected_sessions)
     except ProspectiveEvaluationBlocked as exc:
@@ -826,16 +1251,36 @@ def _evaluate_loaded_bundle(bundle: ProtectedEvaluationBundle, prepared: _Prepar
 
     nav = _validate_nav_bundle(bundle, prepared)
     try:
+        execution_frame, order_frame = _validate_execution_bundle(bundle, prepared)
         portfolio = evaluate_portfolio_metrics(nav)
-        turnover = evaluate_turnover(bundle.execution_frame)  # type: ignore[arg-type]
-        pending = evaluate_pending_orders(bundle.order_frame)  # type: ignore[arg-type]
-        economics = economic_verdict(
-            net_total_return=float(portfolio["net_total_return"]),
-            sharpe_0=float(portfolio["sharpe_0"]),
-            valid=True,
+        turnover = evaluate_turnover(execution_frame)
+        pending = evaluate_pending_orders(order_frame)
+        state_reconstructable = _state_reconstructable(
+            execution_frame, order_frame, prepared.expected_sessions
         )
+        bootstrap = portfolio.get("bootstrap", {})
+        portfolio_bootstrap_valid = not any(
+            int(bootstrap.get(key, 0)) > 0
+            for key in (
+                "nonfinite_compounded_replicates",
+                "nonfinite_mean_replicates",
+                "nonfinite_sharpe_replicates",
+            )
+        )
+        economics = (
+            economic_verdict(
+                net_total_return=float(portfolio["net_total_return"]),
+                sharpe_0=float(portfolio["sharpe_0"]),
+                valid=True,
+            )
+            if portfolio_bootstrap_valid
+            else "ECONOMIC_INCONCLUSIVE_STATISTICS"
+        )
+        execution_invariants_valid = bool(ledger_valid and portfolio_bootstrap_valid)
         execution = execution_verdict(
-            invariants_valid=True, state_reconstructable=True, material_drag=False
+            invariants_valid=execution_invariants_valid,
+            state_reconstructable=state_reconstructable,
+            material_drag=bool(prepared.paper.get("execution_material_drag", False)),
         )
         operational_valid = bool(ledger_valid)
         overall = overall_verdict(
@@ -875,7 +1320,9 @@ def _evaluate_loaded_bundle(bundle: ProtectedEvaluationBundle, prepared: _Prepar
     }
 
 
-def _existing_result(output_dir: Path, *, mode: str) -> dict[str, Any] | None:
+def _existing_result(
+    output_dir: Path, *, mode: str, prepared: _PreparedAccess
+) -> dict[str, Any] | None:
     preaccess = output_dir / PREACCESS_FILENAME
     marker = output_dir / MARKER_FILENAME
     result = output_dir / RESULT_FILENAME
@@ -883,18 +1330,55 @@ def _existing_result(output_dir: Path, *, mode: str) -> dict[str, Any] | None:
     failure = output_dir / FAILURE_FILENAME
     if not any(path.exists() for path in (preaccess, marker, result, manifest, failure)):
         return None
+    if any(path.name.startswith(".") and path.name.endswith(".tmp") for path in output_dir.iterdir()):
+        raise ProspectiveAccessGateBlocked("partial atomic temporary output exists; manual recovery required")
     if preaccess.exists() and marker.exists() and result.exists() and manifest.exists() and not failure.exists():
+        expected_preaccess = _preaccess_payload(prepared, mode=mode)
+        expected_preaccess_sha = _json_payload_sha256(expected_preaccess)
+        if sha256_file(preaccess) != expected_preaccess_sha:
+            raise ProspectiveAccessGateBlocked("persisted preaccess differs from current frozen inputs/code")
         final = _read_json(manifest, label="final evaluation manifest")
+        preaccess_payload = _read_json(preaccess, label="preaccess attestation")
         marker_payload = _read_json(marker, label="outcome access marker")
+        result_payload = _read_json(result, label="persisted prospective evaluation result")
         if str(final.get("mode") or "") != mode or str(marker_payload.get("mode") or "") != mode:
             raise ProspectiveAccessGateBlocked("persisted evaluation mode mismatch")
+        if str(preaccess_payload.get("evaluation_id") or "") != str(expected_preaccess["evaluation_id"]):
+            raise ProspectiveAccessGateBlocked("persisted evaluation identity mismatch")
+        expected_marker = _marker_payload(
+            prepared,
+            mode=mode,
+            preaccess_sha256=expected_preaccess_sha,
+            evaluation_id=str(expected_preaccess["evaluation_id"]),
+        )
+        for key, expected_value in expected_marker.items():
+            if key == "created_at_utc":
+                continue
+            if marker_payload.get(key) != expected_value:
+                raise ProspectiveAccessGateBlocked(f"persisted marker binding mismatch: {key}")
         if sha256_file(result) != str(final.get("result_sha256") or ""):
             raise ProspectiveAccessGateBlocked("persisted result hash mismatch")
         if sha256_file(marker) != str(final.get("marker_sha256") or ""):
             raise ProspectiveAccessGateBlocked("persisted marker hash mismatch")
         if sha256_file(preaccess) != str(final.get("preaccess_attestation_sha256") or ""):
             raise ProspectiveAccessGateBlocked("persisted preaccess hash mismatch")
-        return _read_json(result, label="persisted prospective evaluation result")
+        expected_final = {
+            "status": "PROSPECTIVE_EVALUATION_COMPLETE",
+            "mode": mode,
+            "session_inventory_sha256": prepared.inventory_sha256,
+            "model_fingerprint": MODEL_FINGERPRINT,
+            "protocol_git_blob_sha1": prepared.protocol_blob_sha1,
+            "evaluator_git_blob_sha1": prepared.evaluator_blob_sha1,
+            "gate_git_blob_sha1": prepared.gate_blob_sha1,
+            "contract_sha256": prepared.contract_sha256,
+            "code_pin_manifest_sha256": prepared.code_pin_manifest_sha256,
+        }
+        for key, expected_value in expected_final.items():
+            if final.get(key) != expected_value:
+                raise ProspectiveAccessGateBlocked(f"persisted result manifest binding mismatch: {key}")
+        if result_payload.get("evaluation_id") != expected_preaccess["evaluation_id"]:
+            raise ProspectiveAccessGateBlocked("persisted result evaluation identity mismatch")
+        return result_payload
     raise ProspectiveAccessGateBlocked(
         "partial prior outcome-access state exists; fail closed for forensic recovery"
     )
@@ -919,6 +1403,11 @@ def run_protected_evaluation_once(
     protocol_path: str | Path,
     evaluator_path: str | Path,
     evaluator_commit: str = EVALUATOR_IMPLEMENTATION_COMMIT,
+    gate_path: str | Path | None = None,
+    contract_path: str | Path | None = None,
+    contract_sha256: str | None = None,
+    code_pin_manifest_path: str | Path | None = None,
+    code_pin_manifest_sha256: str | None = None,
     fixture_root: str | Path | None = None,
     final_access_authorized: bool = False,
     event_hook: Callable[[str], None] | None = None,
@@ -941,14 +1430,6 @@ def run_protected_evaluation_once(
         _require_under_root(destination, Path(fixture_root).resolve(), label="output directory")
 
     destination.mkdir(parents=True, exist_ok=True)
-    persisted = _existing_result(destination, mode=normalized_mode)
-    if persisted is not None:
-        if event_hook is not None:
-            event_hook("IDEMPOTENT_RESULT_REUSED")
-        return persisted
-    if any(destination.iterdir()):
-        raise ProspectiveAccessGateBlocked("output directory must be empty before first access")
-
     prepared = prepare_pre_outcome_access(
         mode=normalized_mode,
         session_inventory=session_inventory,
@@ -965,9 +1446,22 @@ def run_protected_evaluation_once(
         protocol_path=protocol_path,
         evaluator_path=evaluator_path,
         evaluator_commit=evaluator_commit,
+        gate_path=gate_path,
+        contract_path=contract_path,
+        contract_sha256=contract_sha256,
+        code_pin_manifest_path=code_pin_manifest_path,
+        code_pin_manifest_sha256=code_pin_manifest_sha256,
         fixture_root=fixture_root,
         final_access_authorized=final_access_authorized,
     )
+
+    persisted = _existing_result(destination, mode=normalized_mode, prepared=prepared)
+    if persisted is not None:
+        if event_hook is not None:
+            event_hook("IDEMPOTENT_RESULT_REUSED")
+        return persisted
+    if any(destination.iterdir()):
+        raise ProspectiveAccessGateBlocked("output directory must be empty before first access")
 
     preaccess_path = destination / PREACCESS_FILENAME
     marker_path = destination / MARKER_FILENAME
@@ -975,14 +1469,21 @@ def run_protected_evaluation_once(
     manifest_path = destination / FINAL_MANIFEST_FILENAME
     failure_path = destination / FAILURE_FILENAME
 
-    _write_json_exclusive(preaccess_path, _preaccess_payload(prepared, mode=normalized_mode))
+    preaccess_payload = _preaccess_payload(prepared, mode=normalized_mode)
+    evaluation_id = str(preaccess_payload["evaluation_id"])
+    _write_json_exclusive(preaccess_path, preaccess_payload)
     preaccess_sha = sha256_file(preaccess_path)
     if event_hook is not None:
         event_hook("PREATTESTATION_WRITTEN")
 
     _write_json_exclusive(
         marker_path,
-        _marker_payload(prepared, mode=normalized_mode, preaccess_sha256=preaccess_sha),
+        _marker_payload(
+            prepared,
+            mode=normalized_mode,
+            preaccess_sha256=preaccess_sha,
+            evaluation_id=evaluation_id,
+        ),
     )
     marker_sha = sha256_file(marker_path)
     if event_hook is not None:
@@ -998,6 +1499,7 @@ def run_protected_evaluation_once(
         result_payload = {
             "access_gate_schema": ACCESS_GATE_SCHEMA,
             "access_mode": normalized_mode,
+            "evaluation_id": evaluation_id,
             "session_inventory_sha256": prepared.inventory_sha256,
             "preaccess_attestation_sha256": preaccess_sha,
             "outcome_access_marker_sha256": marker_sha,
@@ -1019,6 +1521,10 @@ def run_protected_evaluation_once(
                 "protocol_git_blob_sha1": prepared.protocol_blob_sha1,
                 "evaluator_git_blob_sha1": prepared.evaluator_blob_sha1,
                 "evaluator_commit": EVALUATOR_IMPLEMENTATION_COMMIT,
+                "gate_git_blob_sha1": prepared.gate_blob_sha1,
+                "contract_sha256": prepared.contract_sha256,
+                "code_pin_manifest_sha256": prepared.code_pin_manifest_sha256,
+                "canonical_target_id": prepared.target["canonical_target_id"],
             },
         )
         if event_hook is not None:
