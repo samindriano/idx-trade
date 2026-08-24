@@ -58,7 +58,15 @@ PYTHONPATH=src pytest -q tests/test_prospective_evaluation_v1.py
 18 passed in 3.73s
 ```
 
-The repository workflow is configured to run on `main` pushes and pull requests, not ordinary research-branch pushes; therefore no branch-push GitHub Actions run was expected at this checkpoint.
+A draft pull request was then opened as PR #83 to exercise the repository's pull-request CI on the full merge tree. GitHub Actions run `32746330183` completed successfully on Python 3.12.14:
+
+```text
+........................................................................ [ 76%]
+......................                                                   [100%]
+94 passed, 4 warnings in 8.16s
+```
+
+The four warnings are pre-existing NumPy/Pandas timedelta deprecation warnings from tradability tests; the run contains no evaluator test failure.
 
 ## Scientific boundary
 
