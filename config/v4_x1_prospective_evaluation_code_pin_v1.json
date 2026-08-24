@@ -18,7 +18,7 @@
   },
   "gate": {
     "path": "../src/idx_trade/prospective_evaluation_gate_v1.py",
-    "source_commit": "9df943123011d1dbdb6bf896eab7e0db76be7c3c",
+    "source_commit": "c99c9dbe20993f50f422b0a215488c8d4c011227",
     "git_blob_sha1": "3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd"
   },
   "contract": {
