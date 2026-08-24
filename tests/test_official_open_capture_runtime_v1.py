@@ -4,11 +4,13 @@ from zoneinfo import ZoneInfo
 
 from idx_trade.official_open_capture_runtime_v1 import (
     STATUS_ALREADY_CAPTURED,
+    STATUS_AFTER_WINDOW_NO_EXECUTION_GRADE,
     STATUS_CAPTURED,
     STATUS_CAPTURE_FAIL_CLOSED,
     STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED,
     STATUS_SOURCE_NOT_READY_OR_NO_SESSION,
     STATUS_TOO_EARLY,
+    STATUS_HOLIDAY_NO_SESSION,
     STATUS_WEEKEND_NO_SESSION,
     run_same_session_official_open_capture,
 )
@@ -96,6 +98,48 @@ def test_runtime_does_not_call_network_on_weekend(tmp_path):
         get=fake_get,
     )
     assert result["status"] == STATUS_WEEKEND_NO_SESSION
+    assert called is False
+
+
+def test_runtime_does_not_call_network_on_weekday_absent_from_official_calendar(tmp_path):
+    called = False
+
+    def fake_get(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("network must not be called on an official holiday")
+
+    calendar = tmp_path / "calendar.csv"
+    calendar.write_text("date\n2026-08-24\n2026-08-26\n", encoding="utf-8")
+    result = run_same_session_official_open_capture(
+        runtime_root=tmp_path,
+        official_calendar_path=calendar,
+        now=datetime(2026, 8, 25, 9, 7, tzinfo=JAKARTA),
+        get=fake_get,
+    )
+    assert result["status"] == STATUS_HOLIDAY_NO_SESSION
+    assert result["calendar_path"] == str(calendar.resolve())
+    assert called is False
+
+
+def test_runtime_does_not_capture_after_execution_grade_window(tmp_path):
+    called = False
+
+    def fake_get(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("network must not be called after the Open window")
+
+    calendar = tmp_path / "calendar.csv"
+    calendar.write_text("date\n2026-08-24\n", encoding="utf-8")
+    result = run_same_session_official_open_capture(
+        runtime_root=tmp_path,
+        official_calendar_path=calendar,
+        now=datetime(2026, 8, 24, 9, 23, tzinfo=JAKARTA),
+        get=fake_get,
+    )
+    assert result["status"] == STATUS_AFTER_WINDOW_NO_EXECUTION_GRADE
+    assert result["execution_grade"] is False
     assert called is False
 
 
@@ -244,19 +288,19 @@ def test_runtime_refuses_partial_final_evidence_folder(tmp_path):
 
 
 def test_runtime_never_backfills_previous_session(tmp_path):
-    observed_date = None
+    called = False
 
     def fake_get(url, *, params, headers, timeout):
-        nonlocal observed_date
-        observed_date = params["date"]
-        return _Response(_payload(_rows("2026-08-25")))
+        nonlocal called
+        called = True
+        raise AssertionError("late invocation must not access the provider")
 
     result = run_same_session_official_open_capture(
         runtime_root=tmp_path,
         now=datetime(2026, 8, 25, 14, 0, tzinfo=JAKARTA),
         get=fake_get,
     )
-    assert result["status"] == STATUS_CAPTURED
-    assert observed_date == "20260825"
-    assert (tmp_path / "official_open" / "2026-08-25" / "manifest.json").is_file()
+    assert result["status"] == STATUS_AFTER_WINDOW_NO_EXECUTION_GRADE
+    assert result["execution_grade"] is False
+    assert called is False
     assert not (tmp_path / "official_open" / "2026-08-24").exists()

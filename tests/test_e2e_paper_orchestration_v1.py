@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -12,11 +13,16 @@ from idx_trade import forward_dividend_v1 as dividend
 from idx_trade import forward_dividend_runtime_v1_1 as dividend_runtime
 from idx_trade.e2e_paper_orchestration_v1 import (
     E2EPaperOrchestrationError,
+    INITIAL_NAV_IDR,
     _reconciliation_payload,
     _verify_prepared_ca_parent,
     execute_preopen,
     bootstrap_t0,
     prepare_post_eod,
+)
+from idx_trade.e2e_paper_continuity_v1 import (
+    MISSED_STATUS,
+    advance_missed_execution_no_certified_open,
 )
 from idx_trade.forward_dividend_execution_v1_1 import (
     VerifiedCashDividendEvidence,
@@ -45,6 +51,7 @@ from idx_trade.official_open_evidence_v1 import (
     TRANSPORT_POLICY as OFFICIAL_OPEN_TRANSPORT_POLICY,
     UPSTREAM_PATH as OFFICIAL_OPEN_UPSTREAM_PATH,
 )
+from idx_trade.e2e_operational_guard_v1 import JAKARTA
 
 
 def _sha(path: Path) -> str:
@@ -876,3 +883,96 @@ def test_pending_buy_resolves_on_next_official_open(tmp_path: Path) -> None:
     assert second_result.status == "EXECUTION_COMPLETE"
     after_second = dividend_runtime.load_latest_runtime_snapshot(root).state
     assert "T00" not in {row.ticker for row in after_second.base_state.pending_buys}
+
+
+def test_missing_official_open_advances_state_without_execution_or_cash_movement(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+
+    result = advance_missed_execution_no_certified_open(
+        root,
+        prepared_path=prepared.path,
+        official_calendar_path=eod.official_calendar_path,
+        ca_reconciliation=ca,
+        official_open_root=tmp_path / "official_open",
+        issued_at=datetime(2026, 8, 25, 10, tzinfo=JAKARTA),
+    )
+
+    assert result.status == MISSED_STATUS
+    assert result.path.is_file()
+    assert not (root / "executions" / "2026-08-25.json").exists()
+    snapshot = dividend_runtime.load_latest_runtime_snapshot(root)
+    assert snapshot.state.base_state.as_of_session_date == "2026-08-25"
+    assert snapshot.state.base_state.cash_idr == INITIAL_NAV_IDR
+    assert snapshot.state.base_state.positions == ()
+    assert snapshot.state.base_state.pending_buys == ()
+    assert snapshot.state.base_state.pending_sells == ()
+    payload = json.loads(result.path.read_text(encoding="utf-8"))
+    assert payload["fills"] == 0
+    assert payload["costs_idr"] == 0.0
+    assert payload["prepared_order_expired"] is True
+    assert payload["no_retroactive_execution"] is True
+
+    rerun = advance_missed_execution_no_certified_open(
+        root,
+        prepared_path=prepared.path,
+        official_calendar_path=eod.official_calendar_path,
+        ca_reconciliation=ca,
+        official_open_root=tmp_path / "official_open",
+    )
+    assert rerun.file_sha256 == result.file_sha256
+    assert rerun.runtime_snapshot_sha256 == result.runtime_snapshot_sha256
+
+    next_score = _score(tmp_path, "2026-08-25", 1)
+    next_eod = _eod(tmp_path, "2026-08-25", "2026-08-26", tickers)
+    next_ca = _ca(tmp_path, "2026-08-25", "2026-08-26", tickers)
+    next_prepared = prepare_post_eod(
+        root,
+        current_score=next_score,
+        previous_score=current,
+        eod_inputs=next_eod,
+        ca_reconciliation=next_ca,
+    )
+    next_payload = json.loads(next_prepared.path.read_text(encoding="utf-8"))
+    assert next_payload["previous_execution"]["status"] == MISSED_STATUS
+
+
+def test_missing_open_transition_rejects_late_certified_open(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    open_manifest = tmp_path / "official_open" / "2026-08-25" / "manifest.json"
+    open_manifest.parent.mkdir(parents=True)
+    open_manifest.write_text("certified\n", encoding="utf-8")
+
+    with pytest.raises(E2EPaperOrchestrationError, match="CERTIFIED_OPEN_EXISTS"):
+        advance_missed_execution_no_certified_open(
+            root,
+            prepared_path=prepared.path,
+            official_calendar_path=eod.official_calendar_path,
+            ca_reconciliation=ca,
+            official_open_root=tmp_path / "official_open",
+        )

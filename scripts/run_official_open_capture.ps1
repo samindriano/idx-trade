@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$RepoRoot,
   [Parameter(Mandatory = $true)][string]$RuntimeRoot,
+  [string]$CalendarPath,
   [string]$PythonExe = "python",
   [double]$TimeoutSeconds = 30
 )
@@ -18,7 +19,13 @@ New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logPath = Join-Path $logRoot "official-open-$stamp.log"
 
-& $PythonExe -m idx_trade.official_open_capture_runtime_v1 `
-  --runtime-root $resolvedRuntime `
-  --timeout-seconds $TimeoutSeconds *>&1 | Tee-Object -FilePath $logPath
+$args = @(
+  "-m", "idx_trade.official_open_capture_runtime_v1",
+  "--runtime-root", $resolvedRuntime,
+  "--timeout-seconds", $TimeoutSeconds
+)
+if ($CalendarPath) {
+  $args += @("--calendar-path", $CalendarPath)
+}
+& $PythonExe @args *>&1 | Tee-Object -FilePath $logPath
 exit $LASTEXITCODE

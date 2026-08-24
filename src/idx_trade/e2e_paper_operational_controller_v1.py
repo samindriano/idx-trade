@@ -27,12 +27,20 @@ from .e2e_operational_guard_v1 import (
     write_status_atomic,
 )
 from .e2e_paper_orchestration_v1 import (
+    PREPARED_SCHEMA,
+    _read_verified_json,
     bootstrap_t0,
     derive_required_execution_tickers,
     load_score_manifest,
 )
+from .e2e_paper_continuity_v1 import advance_missed_execution_no_certified_open
 from .forward_dividend_orchestration_v1 import load_journal_document
+from .forward_dividend_execution_v1_1 import (
+    reconcile_corporate_action_attestation_v1_1,
+    reconcile_corporate_action_attestation_v1_2_journal,
+)
 from .v4_x1_execution_v1_verify import verify_eod_execution_inputs
+from .v4_x1_decision_v1_contract import DecisionV1Error
 
 
 @dataclass(frozen=True)
@@ -238,6 +246,34 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
     if dirty:
         return "PROVIDER_WORKTREE_DIRTY"
     return None
+
+
+def _reconcile_prepared_ca(
+    prepared_payload: Mapping[str, Any],
+    *,
+    required_tickers: Sequence[str],
+):
+    """Re-verify the exact CA parent already bound into a prepared plan."""
+
+    raw = prepared_payload.get("ca_reconciliation")
+    if not isinstance(raw, Mapping):
+        raise E2EOperationalGuardError("E2E_PREPARED_CA_PAYLOAD_MISSING")
+    attestation = str(raw.get("attestation_path") or "")
+    journal = raw.get("v12_journal_path")
+    if journal is not None:
+        return reconcile_corporate_action_attestation_v1_2_journal(
+            attestation_path=attestation,
+            journal_path=str(journal),
+            expected_from_session_date=str(raw.get("from_session_date") or ""),
+            expected_through_session_date=str(raw.get("through_session_date") or ""),
+            required_tickers=required_tickers,
+        )
+    return reconcile_corporate_action_attestation_v1_1(
+        attestation_path=attestation,
+        expected_from_session_date=str(raw.get("from_session_date") or ""),
+        expected_through_session_date=str(raw.get("through_session_date") or ""),
+        required_tickers=required_tickers,
+    )
 
 
 def _phase_attestation_target(
@@ -1041,18 +1077,68 @@ def run_operational_cycle(
                     score_manifest_path=score_ref.get("manifest_path"),
                     score_manifest_sha256=score_ref.get("manifest_sha256"),
                 )
+
+            # A prepared order for today's exact execution session must be
+            # retired before attempting a new POST_EOD preparation when no
+            # certified Open exists.  This path uses only the already-bound
+            # prepared/CA parents and never manufactures a price or fill.
+            prepared_today = _prepared_for_session(config, today)
+            open_manifest = config.official_open_root / today / "manifest.json"
+            if not open_manifest.is_file() and len(prepared_today) == 1:
+                prepared_payload = _read_verified_json(
+                    prepared_today[0], PREPARED_SCHEMA
+                )
+                if str(prepared_payload.get("execution_session_date") or "") == today:
+                    required_prepared = tuple(
+                        sorted(str(value) for value in (prepared_payload.get("required_tickers") or ()))
+                    )
+                    prepared_ca = _reconcile_prepared_ca(
+                        prepared_payload,
+                        required_tickers=required_prepared,
+                    )
+                    missed = advance_missed_execution_no_certified_open(
+                        config.runtime_root,
+                        prepared_path=prepared_today[0],
+                        official_calendar_path=str(
+                            prepared_payload["eod_inputs"]["calendar"]["path"]
+                        ),
+                        ca_reconciliation=prepared_ca,
+                        official_open_root=config.official_open_root,
+                        issued_at=current,
+                    )
+                    return finish(
+                        controller_status="MISSED_EXECUTION_NO_CERTIFIED_OPEN",
+                        reason="NO_CERTIFIED_OPEN_FOR_EXACT_EXECUTION_SESSION",
+                        decision_session_date=missed.decision_session_date,
+                        execution_session_date=missed.execution_session_date,
+                        missed_execution_path=str(missed.path),
+                        missed_execution_sha256=missed.file_sha256,
+                        runtime_snapshot_path=str(missed.runtime_snapshot_path),
+                        runtime_snapshot_sha256=missed.runtime_snapshot_sha256,
+                        prepared_order_expired=True,
+                        no_retroactive_execution=True,
+                    )
             eod_paths = _session_manifest(config, today)
             current_score = load_score_manifest(score_ref["manifest_path"])
             previous_path = _previous_score_manifest(config, today)
             previous_score = None if previous_path is None else load_score_manifest(previous_path)
             required = tuple(sorted({str(value).strip().upper() for value in current_score.scores["ticker"].tolist()}))
-            eod_inputs = verify_eod_execution_inputs(
-                session_ohlcv_path=eod_paths["session_ohlcv"],
-                model_input_path=eod_paths["model_input"],
-                official_calendar_path=eod_paths["calendar"],
-                decision_session_date=today,
-                required_tickers=required,
-            )
+            try:
+                eod_inputs = verify_eod_execution_inputs(
+                    session_ohlcv_path=eod_paths["session_ohlcv"],
+                    model_input_path=eod_paths["model_input"],
+                    official_calendar_path=eod_paths["calendar"],
+                    decision_session_date=today,
+                    required_tickers=required,
+                )
+            except DecisionV1Error as error:
+                if str(error) == "EXECUTION_V1_NEXT_OFFICIAL_SESSION_UNAVAILABLE":
+                    return finish(
+                        controller_status="WAITING_OFFICIAL_CALENDAR_SUCCESSOR",
+                        reason="NO_VERIFIED_NEXT_OFFICIAL_SESSION_YET",
+                        decision_session_date=today,
+                    )
+                raise
             bootstrap_t0(config.runtime_root, session_date=today)
             required = derive_required_execution_tickers(
                 config.runtime_root,

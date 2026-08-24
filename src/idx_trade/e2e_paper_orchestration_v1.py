@@ -675,7 +675,22 @@ def _verify_previous_execution_parent(
     declared_sha = str(meta.get("last_execution_sha256") or "")
     if not execution_path.is_file() or _sha256_file(execution_path) != declared_sha:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_MISSING_OR_TAMPERED")
-    execution = _read_verified_json(execution_path, EXECUTION_SCHEMA)
+    try:
+        execution = _read_verified_json(execution_path, EXECUTION_SCHEMA)
+        execution_kind = "EXECUTION"
+    except E2EPaperOrchestrationError:
+        # A whole-session Open miss is a durable continuity parent, not an
+        # execution.  It may be used as the immediate predecessor only after
+        # its own immutable payload and runtime snapshot are verified.
+        execution = _read_verified_json(
+            execution_path,
+            "idx_trade_e2e_paper_missed_execution_v1",
+        )
+        if execution.get("status") != "MISSED_EXECUTION_NO_CERTIFIED_OPEN":
+            raise E2EPaperOrchestrationError(
+                "E2E_PREVIOUS_EXECUTION_STATUS_INVALID"
+            )
+        execution_kind = "MISSED"
     body = dict(execution)
     execution_sha = str(body.pop("payload_sha256") or "")
     if not execution_sha or _canonical_hash(body) != execution_sha:
@@ -692,13 +707,16 @@ def _verify_previous_execution_parent(
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_RUNTIME_PATH_MISMATCH")
     if str(execution.get("runtime_snapshot_sha256") or "") != runtime_sha:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_RUNTIME_SHA_MISMATCH")
-    return {
+    result = {
         "path": str(execution_path),
         "sha256": declared_sha,
         "execution_session_date": str(execution["execution_session_date"]),
         "runtime_snapshot_path": str(runtime_path),
         "runtime_snapshot_sha256": runtime_sha,
     }
+    if execution_kind == "MISSED":
+        result["status"] = "MISSED_EXECUTION_NO_CERTIFIED_OPEN"
+    return result
 
 
 def _write_meta(paths: E2EPaperPaths, payload: Mapping[str, Any]) -> tuple[Path, str]:

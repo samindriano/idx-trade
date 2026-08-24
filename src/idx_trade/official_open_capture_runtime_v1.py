@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from datetime import datetime, time
@@ -15,15 +16,18 @@ from .official_open_evidence_v1 import (
     OfficialOpenEvidenceError,
     capture_official_open_with_transport_fallback,
 )
+from .e2e_operational_guard_v1 import load_session_dates
 
 
 STATUS_CAPTURED = "CAPTURED"
 STATUS_ALREADY_CAPTURED = "ALREADY_CAPTURED"
 STATUS_TOO_EARLY = "TOO_EARLY"
 STATUS_WEEKEND_NO_SESSION = "WEEKEND_NO_SESSION"
+STATUS_HOLIDAY_NO_SESSION = "HOLIDAY_NO_SESSION"
 STATUS_SOURCE_NOT_READY_OR_NO_SESSION = "SOURCE_NOT_READY_OR_NO_SESSION"
 STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED = "PARTIAL_EVIDENCE_FAIL_CLOSED"
 STATUS_CAPTURE_FAIL_CLOSED = "CAPTURE_FAIL_CLOSED"
+STATUS_AFTER_WINDOW_NO_EXECUTION_GRADE = "AFTER_WINDOW_NO_EXECUTION_GRADE"
 
 NOT_BEFORE = time(9, 2)
 
@@ -77,6 +81,23 @@ def _source_not_ready(message: str) -> bool:
     )
 
 
+def _configured_calendar_path(runtime_root: Path) -> Path | None:
+    """Resolve the hash-pinned calendar without introducing a provider call."""
+
+    config_path = runtime_root / "operational" / "config.json"
+    sidecar_path = runtime_root / "operational" / "config.json.sha256"
+    if not config_path.is_file() or not sidecar_path.is_file():
+        return None
+    actual = hashlib.sha256(config_path.read_bytes()).hexdigest()
+    if sidecar_path.read_text(encoding="utf-8").strip().lower() != actual:
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RUNTIME_CONFIG_SHA_MISMATCH")
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    value = payload.get("calendar_path") if isinstance(payload, dict) else None
+    if not isinstance(value, str) or not Path(value).is_absolute():
+        raise OfficialOpenEvidenceError("OFFICIAL_OPEN_RUNTIME_CALENDAR_CONFIG_INVALID")
+    return Path(value).expanduser().resolve()
+
+
 def run_same_session_official_open_capture(
     *,
     runtime_root: str | Path,
@@ -85,6 +106,7 @@ def run_same_session_official_open_capture(
     zapi_get: Callable[..., requests.Response] | None = None,
     zapi_api_key: str | None = None,
     timeout_seconds: float = 30.0,
+    official_calendar_path: str | Path | None = None,
 ) -> dict[str, object]:
     """Capture only today's official IDX Open evidence, fail-closed.
 
@@ -113,12 +135,44 @@ def run_same_session_official_open_capture(
         _atomic_json(result, status_path)
         return result
 
+    try:
+        calendar_path = (
+            Path(official_calendar_path).expanduser().resolve()
+            if official_calendar_path is not None
+            else _configured_calendar_path(root)
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, OfficialOpenEvidenceError) as exc:
+        return finish(
+            STATUS_CAPTURE_FAIL_CLOSED,
+            provider_error=str(exc),
+        )
     if current.weekday() > 4:
         return finish(STATUS_WEEKEND_NO_SESSION)
+    if calendar_path is not None:
+        try:
+            official_sessions = load_session_dates(calendar_path)
+        except Exception as exc:
+            return finish(
+                STATUS_CAPTURE_FAIL_CLOSED,
+                provider_error=f"OFFICIAL_OPEN_CALENDAR_UNRESOLVED:{exc}",
+                calendar_path=str(calendar_path),
+            )
+        if session_date not in official_sessions:
+            return finish(
+                STATUS_HOLIDAY_NO_SESSION,
+                reason="NO_OFFICIAL_SESSION_TODAY",
+                calendar_path=str(calendar_path),
+            )
     if current.time().replace(tzinfo=None) < NOT_BEFORE:
         return finish(
             STATUS_TOO_EARLY,
             not_before_jakarta=NOT_BEFORE.isoformat(timespec="minutes"),
+        )
+    if current.time().replace(tzinfo=None) > time(9, 22):
+        return finish(
+            STATUS_AFTER_WINDOW_NO_EXECUTION_GRADE,
+            reason="OFFICIAL_OPEN_CAPTURE_WINDOW_CLOSED",
+            execution_grade=False,
         )
 
     folder, raw_path, normalized_path, manifest_path = _session_paths(root, session_date)
@@ -176,6 +230,7 @@ def _parse_args() -> argparse.Namespace:
         description="Capture same-session execution-grade official IDX OpenPrice evidence"
     )
     parser.add_argument("--runtime-root", required=True)
+    parser.add_argument("--calendar-path")
     parser.add_argument("--timeout-seconds", type=float, default=30.0)
     return parser.parse_args()
 
@@ -185,6 +240,7 @@ def main() -> int:
     result = run_same_session_official_open_capture(
         runtime_root=args.runtime_root,
         timeout_seconds=args.timeout_seconds,
+        official_calendar_path=args.calendar_path,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
     status = str(result["status"])
