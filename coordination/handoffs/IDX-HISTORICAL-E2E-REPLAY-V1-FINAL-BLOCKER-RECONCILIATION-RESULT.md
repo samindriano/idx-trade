@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade-historical-e2e`
 source_commit: `571a856d8c87be30ec9e3baa01820803c392198e`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending final documentation commit
+head_commit: `75868248a034ed770db8f4458392d59351113024`
 scope: outcome-blind final reconciliation of CA, dividend, and tradability exposure blockers
 files_changed:
   - `docs/checkpoints/2026-08-24_HISTORICAL_E2E_REPLAY_FINAL_BLOCKER_RECONCILIATION_V1.md`
