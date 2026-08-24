@@ -94,14 +94,17 @@ Additional checks:
 - `git diff --check`: PASS before publication;
 - full repository pytest: `158 passed`, exit code `0` on the final executable state;
 - no provider/network call and no protected artifact was loaded.
+- independent adversarial re-review: PASS; no remaining P0/P1 findings;
+  specifically confirmed independent CLI pin-before-import and target-construction
+  inclusion in the final pre-marker rehash.
 
 Final executable/code identity:
 
-- branch HEAD: `f08445345bb2cfdc56c717ae1e999a94f70b60a7`;
+- branch HEAD: `e6eec1623850f4abfce896f381b62d97e5c9c592`;
 - code-pin manifest SHA-256:
-  `a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651`;
-- gate source commit: `c99c9dbe20993f50f422b0a215488c8d4c011227`;
-- gate Git blob: `3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd`;
+  `ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a`;
+- gate source commit: `ff05f3a8c6f398217c6eba395fca5ea11ad3dacb`;
+- gate Git blob: `499deedd5c4549285adb12bed68f427bf60d2bc8`;
 - frozen contract SHA-256 remains
   `6d64c76dc60ef04f02e9a811e920e7351c00b94aaa2cc834f6019d4a648cb8ac`.
 

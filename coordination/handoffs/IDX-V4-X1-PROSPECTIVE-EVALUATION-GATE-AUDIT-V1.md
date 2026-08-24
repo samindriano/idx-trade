@@ -6,9 +6,9 @@ task_id: IDX-V4-X1-PROSPECTIVE-EVALUATION-GATE-AUDIT-V1
 model_used: GPT-5 Codex
 reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
-source_commit: f08445345bb2cfdc56c717ae1e999a94f70b60a7
+source_commit: e6eec1623850f4abfce896f381b62d97e5c9c592
 branch: research/idx-v4-x1-prospective-evaluation-protocol-v1
-head_commit: f08445345bb2cfdc56c717ae1e999a94f70b60a7
+head_commit: e6eec1623850f4abfce896f381b62d97e5c9c592
 scope: outcome-blind audit and hardening of the V4-X1 prospective protected-access gate
 files_changed:
   - src/idx_trade/prospective_evaluation_gate_v1.py
@@ -45,5 +45,6 @@ validation_run:
   - py_compile gate/evaluator/preflight CLI: PASS;
   - git diff --check: PASS;
   - full pytest: 158 passed;
+  - independent adversarial re-review: PASS; no remaining P0/P1 findings;
   - protected access: not attempted.
-recommended_next_action: keep PR #83 draft and obtain independent ChatGPT review; resolve the target identity blocker before any real protected loader authorization. Code-pin manifest SHA256: a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651.
+recommended_next_action: keep PR #83 draft and obtain independent ChatGPT review; resolve the target identity blocker before any real protected loader authorization. Code-pin manifest SHA256: ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a.
