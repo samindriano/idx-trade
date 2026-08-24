@@ -44,7 +44,9 @@ integration lineage; they are not a second capture system.
 
 ## Validation
 
-- Focused Stockbit/Open/scheduler tests: `36 passed` with isolated temp root.
+- Focused Stockbit/Open/scheduler tests: `39 passed` with isolated temp root,
+  including explicit position-37 timeout recovery/failure and
+  direct-plus-Zapi double-timeout guards.
 - Full repository pytest: `706 passed`, `0 failed`, `3 existing FutureWarnings`.
 - `py_compile`: PASS.
 - `git diff --check`: PASS.

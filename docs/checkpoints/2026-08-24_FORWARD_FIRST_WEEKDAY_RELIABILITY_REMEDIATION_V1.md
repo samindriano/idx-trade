@@ -112,7 +112,9 @@ Open run remain the controlled proof points.
 
 ## Validation
 
-- Focused: `36 passed` using an isolated pytest temp root.
+- Focused: `39 passed` using an isolated pytest temp root, including explicit
+  position-37 timeout recovery/failure and direct-plus-Zapi double-timeout
+  guards.
 - Full repository: `706 passed`, `0 failed`, `3 existing FutureWarnings`.
 - `python -m py_compile` passed for the changed Python modules.
 - `git diff --check` passed.
