@@ -49,6 +49,18 @@ integration lineage; they are not a second capture system.
 - `py_compile`: PASS.
 - `git diff --check`: PASS.
 
+## Explicit policy decisions
+
+- `ttl=30` was reviewed but not adopted because raw Zapi cache-control
+  semantics for this endpoint are not proven; bounded retry is the only added
+  transient mechanism.
+- The live Official Open scheduler was inspected but not mutated. Existing
+  triggers remain 09:02/09:07/09:12/09:17/09:22 plus AtLogOn with
+  `StartWhenAvailable` and `IgnoreNew`; changing this requires separate
+  operational approval and live proof.
+- Stockbit archive failure and Official Open evidence failure remain isolated;
+  neither path mutates model, PaperState, Decision, counters, or outcomes.
+
 ## Boundaries and next action
 
 - No historical E2E replay, model fit/rescore, labels, realized outcomes,
