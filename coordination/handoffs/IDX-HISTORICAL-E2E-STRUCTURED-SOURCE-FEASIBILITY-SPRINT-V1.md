@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade-historical-e2e`
 source_commit: `6506d6db35bb36c748bebae8adcf7cbbe016ba36`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: pending documentation commit
+head_commit: `df61f6877b9eee4856be3249fcb069c6a68d3d84`
 
 ## Scope
 
@@ -72,4 +72,3 @@ small, exact exposure-scoped and page-complete request, or close the source
 feasibility sprint with the minimal external blocker: an official structured
 dividend archive/endpoint with deterministic historical completeness is still
 required.
-
