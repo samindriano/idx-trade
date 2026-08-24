@@ -7,10 +7,11 @@ stock-summary session using regular-market traded value.
 from __future__ import annotations
 
 import csv
+import json
 import os
 import time
-from dataclasses import dataclass
-from datetime import date, timedelta
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import quote
@@ -42,10 +43,14 @@ class RuntimeUniverse:
     source_raw: bytes
     source_sha256: str
     universe_sha256: str
+    source_request_attempts: list[dict[str, Any]] = field(default_factory=list)
 
 
 class LeanArchive:
     def put_immutable(self, key: str, payload: bytes, content_type: str) -> str:
+        raise NotImplementedError
+
+    def read_immutable(self, key: str) -> bytes | None:
         raise NotImplementedError
 
 
@@ -66,6 +71,12 @@ class LocalLeanArchive(LeanArchive):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(payload)
         return digest
+
+    def read_immutable(self, key: str) -> bytes | None:
+        if key.startswith("/") or ".." in Path(key).parts:
+            raise StreamArchiveError(f"unsafe archive key: {key}")
+        path = self.root / key
+        return path.read_bytes() if path.exists() else None
 
 
 class R2LeanArchive(LeanArchive):
@@ -124,6 +135,25 @@ class R2LeanArchive(LeanArchive):
             raise StreamArchiveError(f"immutable key changed: {key}")
         return digest
 
+    def read_immutable(self, key: str) -> bytes | None:
+        from botocore.exceptions import ClientError
+
+        object_key = self._key(key)
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=object_key)
+            payload = bytes(response["Body"].read())
+            expected = str((response.get("Metadata") or {}).get("sha256", ""))
+            actual = sha256_bytes(payload)
+            if expected and expected != actual:
+                raise StreamArchiveError(f"immutable key changed: {key}")
+            return payload
+        except ClientError as exc:
+            status = int(exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0) or 0)
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            if status == 404 or code in {"NoSuchKey", "NotFound"}:
+                return None
+            raise StreamArchiveError(f"R2 immutable read failed for {key}: {code or status}") from exc
+
 
 def archive_from_env() -> LeanArchive:
     backend = os.environ.get("STOCKBIT_STREAM_STORAGE_BACKEND", "s3").lower()
@@ -179,14 +209,51 @@ def build_runtime_universe(
     http = session or requests.Session()
 
     last_error: str | None = None
+    source_request_attempts: list[dict[str, Any]] = []
     for lag in range(1, session_lookback_days + 1):
         candidate = capture_day - timedelta(days=lag)
-        response = http.get(
-            IDX_STOCK_SUMMARY_ENDPOINT,
-            params={"length": 1000, "start": 0, "date": candidate.isoformat()},
-            headers={"x-api-key": api_key},
-            timeout=30,
-        )
+        response: requests.Response | None = None
+        for attempt_number in range(1, MAX_STREAM_ATTEMPTS + 1):
+            observed_at = datetime.now(timezone.utc)
+            try:
+                response = http.get(
+                    IDX_STOCK_SUMMARY_ENDPOINT,
+                    params={"length": 1000, "start": 0, "date": candidate.isoformat()},
+                    headers={"x-api-key": api_key},
+                    timeout=30,
+                )
+            except requests.RequestException as exc:
+                source_request_attempts.append(
+                    {
+                        "session_date": candidate.isoformat(),
+                        "attempt": attempt_number,
+                        "http_status": None,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "observed_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
+                    }
+                )
+                if attempt_number == MAX_STREAM_ATTEMPTS:
+                    last_error = f"request exception for {candidate}: {exc}"
+                    break
+                time.sleep(0.25 * attempt_number)
+                continue
+
+            source_request_attempts.append(
+                {
+                    "session_date": candidate.isoformat(),
+                    "attempt": attempt_number,
+                    "http_status": int(response.status_code),
+                    "observed_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
+                }
+            )
+            if response.status_code in RETRYABLE_STREAM_HTTP_STATUSES and attempt_number < MAX_STREAM_ATTEMPTS:
+                time.sleep(0.25 * attempt_number)
+                continue
+            break
+
+        if response is None:
+            continue
         if response.status_code in {401, 403, 429}:
             raise StreamArchiveError(f"IDX universe request blocked: HTTP {response.status_code}")
         if response.status_code != 200:
@@ -244,6 +311,7 @@ def build_runtime_universe(
             source_raw=raw,
             source_sha256=sha256_bytes(raw),
             universe_sha256=sha256_bytes(universe_bytes),
+            source_request_attempts=source_request_attempts,
         )
 
     raise StreamArchiveError(f"no valid completed IDX stock-summary session found: {last_error}")
@@ -266,7 +334,67 @@ def capture_stream_v2(
     # Include the exact source-response digest so a retry with the same
     # selected tickers but changed upstream bytes gets a new immutable
     # namespace instead of colliding with a partially completed run.
-    run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}_{universe.source_sha256[:16]}"
+    # Preserve the existing main-branch namespace contract.  The HMAC salt
+    # remains part of normalization, but must not change archive identity.
+    hmac_sha256 = sha256_bytes(hmac_salt.encode("utf-8"))
+    base_run_id = f"{universe.capture_date}_{slot}_{universe.universe_sha256[:16]}_{universe.source_sha256[:16]}"
+    run_id = base_run_id
+    manifest_key = f"manifests/{run_id}.json"
+    existing_manifest = archive.read_immutable(manifest_key)
+    resumed_from_manifest_key: str | None = None
+    resumed_from_run_id: str | None = None
+    prior: dict[str, Any] | None = None
+    if existing_manifest:
+        try:
+            prior = json.loads(existing_manifest.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise StreamArchiveError(f"existing run manifest is invalid: {run_id}") from exc
+        if not isinstance(prior, dict) or prior.get("run_id") != run_id:
+            raise StreamArchiveError(f"existing run manifest identity mismatch: {run_id}")
+        if prior.get("status") == "DATA_READY":
+            for record in prior.get("request_records", []):
+                if not isinstance(record, dict) or record.get("response_classification") != "OK":
+                    raise StreamArchiveError(f"ready run manifest contains invalid record: {run_id}")
+                raw_key = str(record.get("raw_key") or "")
+                normalized_key = str(record.get("normalized_key") or "")
+                raw_payload = archive.read_immutable(raw_key) if raw_key else None
+                normalized_payload = archive.read_immutable(normalized_key) if normalized_key else None
+                if raw_payload is None or normalized_payload is None:
+                    raise StreamArchiveError(f"ready run artifact missing: {run_id}:{record.get('ticker')}")
+                if (
+                    sha256_bytes(raw_payload) != record.get("raw_sha256")
+                    or sha256_bytes(normalized_payload) != record.get("normalized_sha256")
+                ):
+                    raise StreamArchiveError(f"ready run artifact hash mismatch: {run_id}:{record.get('ticker')}")
+            prior["idempotent_replay"] = True
+            prior["manifest_sha256"] = sha256_bytes(existing_manifest)
+            return prior
+        if prior.get("run_id") != base_run_id:
+            raise StreamArchiveError(f"existing partial run manifest identity mismatch: {base_run_id}")
+        # A partial manifest is immutable and must never be overwritten.  A
+        # deterministic resume namespace lets the retry reuse verified OK
+        # objects while placing repaired objects and the final manifest under
+        # a new immutable run id.
+        resumed_from_run_id = base_run_id
+        resumed_from_manifest_key = manifest_key
+        resume_suffix = sha256_bytes(existing_manifest)[:16]
+        run_id = f"{base_run_id}_resume_{resume_suffix}"
+        manifest_key = f"manifests/{run_id}.json"
+        existing_resume_manifest = archive.read_immutable(manifest_key)
+        if existing_resume_manifest:
+            try:
+                resume_prior = json.loads(existing_resume_manifest.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise StreamArchiveError(f"existing resume manifest is invalid: {run_id}") from exc
+            if not isinstance(resume_prior, dict) or resume_prior.get("run_id") != run_id:
+                raise StreamArchiveError(f"existing resume manifest identity mismatch: {run_id}")
+            if resume_prior.get("status") == "DATA_READY":
+                resume_prior["idempotent_replay"] = True
+                resume_prior["manifest_sha256"] = sha256_bytes(existing_resume_manifest)
+                return resume_prior
+            raise StreamArchiveError(
+                f"resume namespace already has a non-ready manifest: {run_id}"
+            )
     quota_before = client.get_usage()
     planned_calls = len(universe.rows)
     provider_call_budget = planned_calls * MAX_STREAM_ATTEMPTS
@@ -288,12 +416,68 @@ def capture_stream_v2(
     total_rows = 0
     ok_responses = 0
     provider_calls = 0
+    prior_records = {}
+    if prior:
+        prior_records = {
+            str(record.get("ticker")): record
+            for record in prior.get("request_records", [])
+            if isinstance(record, dict)
+        }
+
     for selected in universe.rows:
         symbol = selected["ticker"]
+        prior_record = prior_records.get(symbol)
+        if prior_record and prior_record.get("response_classification") == "OK":
+            raw_key = str(prior_record.get("raw_key") or "")
+            normalized_key = str(prior_record.get("normalized_key") or "")
+            raw_payload = archive.read_immutable(raw_key) if raw_key else None
+            normalized_payload = archive.read_immutable(normalized_key) if normalized_key else None
+            if raw_payload is None or normalized_payload is None:
+                raise StreamArchiveError(f"resume artifact missing for {run_id}:{symbol}")
+            raw_sha = sha256_bytes(raw_payload)
+            normalized_sha = sha256_bytes(normalized_payload)
+            if raw_sha != prior_record.get("raw_sha256") or normalized_sha != prior_record.get("normalized_sha256"):
+                raise StreamArchiveError(f"resume artifact hash mismatch for {run_id}:{symbol}")
+            resumed = dict(prior_record)
+            resumed["resumed_from_immutable_artifact"] = True
+            request_records.append(resumed)
+            total_rows += int(resumed.get("row_count", 0) or 0)
+            ok_responses += 1
+            continue
+
         attempts: list[dict[str, Any]] = []
+        response: requests.Response | None = None
+        raw: bytes | None = None
+        observed_at: datetime | None = None
         for attempt_number in range(1, MAX_STREAM_ATTEMPTS + 1):
-            response, raw, observed_at = client.stream(symbol)
             provider_calls += 1
+            try:
+                response, raw, observed_at = client.stream(symbol)
+            except requests.RequestException as exc:
+                observed_at = datetime.now(timezone.utc)
+                attempts.append(
+                    {
+                        "attempt": attempt_number,
+                        "http_status": None,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "observed_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
+                    }
+                )
+                if attempt_number == MAX_STREAM_ATTEMPTS:
+                    request_records.append(
+                        {
+                            "ticker": symbol,
+                            "activity_rank": selected["activity_rank"],
+                            "response_classification": "REQUEST_EXCEPTION",
+                            "http_status": None,
+                            "provider_attempts": attempts,
+                            "retry_recovered": False,
+                        }
+                    )
+                    break
+                time.sleep(0.25 * attempt_number)
+                continue
             attempts.append({
                 "attempt": attempt_number,
                 "http_status": response.status_code,
@@ -302,6 +486,8 @@ def capture_stream_v2(
             if response.status_code not in RETRYABLE_STREAM_HTTP_STATUSES or attempt_number == MAX_STREAM_ATTEMPTS:
                 break
             time.sleep(0.25 * attempt_number)
+        if response is None or raw is None or observed_at is None:
+            continue
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
         classification, _, items = parse_stream_payload(raw, response.status_code, symbol)
@@ -350,6 +536,10 @@ def capture_stream_v2(
         "schema_version": "stockbit_stream_capture_v2",
         "status": status,
         "run_id": run_id,
+        "base_run_id": base_run_id,
+        "resumed_from_run_id": resumed_from_run_id,
+        "resumed_from_manifest_key": resumed_from_manifest_key,
+        "hmac_salt_sha256": hmac_sha256,
         "capture_date": universe.capture_date,
         "slot": slot,
         "selection_rule": "top N active current identities by prior completed IDX session regular-market Value; ticker tie-break",
@@ -357,6 +547,7 @@ def capture_stream_v2(
         "universe_size": len(universe.rows),
         "universe_sha256": universe.universe_sha256,
         "universe_source_sha256": universe.source_sha256,
+        "universe_request_attempts": universe.source_request_attempts,
         "planned_calls": planned_calls,
         "provider_call_budget": provider_call_budget,
         "provider_calls": provider_calls,
@@ -377,7 +568,6 @@ def capture_stream_v2(
         key = record["response_classification"]
         manifest["response_classification_counts"][key] = manifest["response_classification_counts"].get(key, 0) + 1
     manifest_bytes = canonical_json_bytes(manifest)
-    manifest_key = f"manifests/{run_id}.json"
     manifest_sha = archive.put_immutable(manifest_key, manifest_bytes, "application/json")
     manifest["manifest_sha256"] = manifest_sha
     return manifest
