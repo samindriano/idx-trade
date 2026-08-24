@@ -8,17 +8,24 @@ from pathlib import Path
 import pytest
 
 from idx_trade.historical_e2e_scope_validator_v1 import (
+    EXPECTED_CANDIDATE_SESSION_COUNT,
     HistoricalE2EScopeValidationError,
+    MIN_STRICT_SESSION_COUNT,
     canonical_scope_payload_hash,
     load_replay_scope,
     validate_scope_payload,
 )
 
 
-def _synthetic_scope(*, status: str = "STRICT_SCOPE_FROZEN") -> dict[str, object]:
+def _synthetic_scope(
+    *,
+    status: str = "STRICT_SCOPE_FROZEN",
+    strict_start: int = 0,
+    strict_count: int = EXPECTED_CANDIDATE_SESSION_COUNT,
+) -> dict[str, object]:
     sessions = []
     first_decision_date = date(2020, 1, 2)
-    for index in range(600):
+    for index in range(EXPECTED_CANDIDATE_SESSION_COUNT):
         decision_date = first_decision_date + timedelta(days=index)
         execution_date = decision_date + timedelta(days=1)
         sessions.append(
@@ -39,11 +46,25 @@ def _synthetic_scope(*, status: str = "STRICT_SCOPE_FROZEN") -> dict[str, object
             "structural_manifest_sha256": "a" * 64,
             "calendar_sha256": "b" * 64,
         },
-        "candidate_session_count": 600,
-        "strict_session_indices": list(range(600)) if status == "STRICT_SCOPE_FROZEN" else [],
+        "candidate_session_count": EXPECTED_CANDIDATE_SESSION_COUNT,
+        "strict_session_indices": (
+            list(range(strict_start, strict_start + strict_count))
+            if status == "STRICT_SCOPE_FROZEN"
+            else []
+        ),
         "blockers": [] if status == "STRICT_SCOPE_FROZEN" else ["BLOCKED"],
         "open": {"per_session": sessions},
     }
+    if status == "STRICT_SCOPE_FROZEN":
+        payload.update(
+            {
+                "start_session": sessions[strict_start]["decision_session_date"],
+                "end_session": sessions[strict_start + strict_count - 1][
+                    "decision_session_date"
+                ],
+                "session_count": strict_count,
+            }
+        )
     payload["scope_payload_sha256"] = canonical_scope_payload_hash(payload)
     return payload
 
@@ -62,6 +83,24 @@ def test_valid_synthetic_strict_scope_is_accepted_and_hash_is_deterministic() ->
     assert canonical_scope_payload_hash(
         {key: value for key, value in reordered.items() if key != "scope_payload_sha256"}
     ) == payload["scope_payload_sha256"]
+
+
+@pytest.mark.parametrize(
+    "strict_count", [20, 60, 120, 252, EXPECTED_CANDIDATE_SESSION_COUNT]
+)
+def test_meaningful_contiguous_strict_ranges_are_accepted(strict_count: int) -> None:
+    payload = _synthetic_scope(strict_start=0, strict_count=strict_count)
+    assert validate_scope_payload(payload)["session_count"] == strict_count
+
+
+def test_strict_scope_minimum_is_twenty_sessions() -> None:
+    payload = _synthetic_scope(strict_count=MIN_STRICT_SESSION_COUNT - 1)
+    _assert_invalid(payload, "REPLAY_SCOPE_SESSION_COUNT_INVALID")
+
+
+def test_nonzero_scope_start_fails_without_predecessor_state_anchor() -> None:
+    payload = _synthetic_scope(strict_start=17, strict_count=20)
+    _assert_invalid(payload, "REPLAY_SCOPE_NONZERO_START_STATE_UNSUPPORTED")
 
 
 def test_empty_scope_is_valid_only_as_blocked_status() -> None:
@@ -111,7 +150,7 @@ def test_malformed_hashes_fail_closed(field: str, value: str) -> None:
         ),
     ],
 )
-def test_non_contiguous_duplicate_and_incorrect_six_by_one_hundred_fail_closed(
+def test_non_contiguous_duplicate_and_incorrect_strict_indices_fail_closed(
     mutator, expected: str
 ) -> None:
     payload = _synthetic_scope()
@@ -137,6 +176,26 @@ def test_duplicate_session_identity_fails_even_with_unique_indices() -> None:
     payload["open"]["per_session"] = sessions
     payload.pop("scope_payload_sha256", None)
     _assert_invalid(payload, "REPLAY_SCOPE_SESSION_IDENTITY_DUPLICATE")
+
+
+def test_strict_scope_gap_fails_closed() -> None:
+    payload = _synthetic_scope(strict_count=20)
+    payload["strict_session_indices"] = list(range(9)) + list(range(10, 21))
+    payload.pop("scope_payload_sha256", None)
+    _assert_invalid(payload, "REPLAY_SCOPE_STRICT_SESSION_INDICES_NOT_CONTIGUOUS")
+
+
+@pytest.mark.parametrize("field", ["start_session", "end_session", "session_count"])
+def test_explicit_strict_range_boundaries_are_required_and_bound(field: str) -> None:
+    payload = _synthetic_scope(strict_start=0, strict_count=20)
+    if field == "start_session":
+        payload[field] = "2020-01-03"
+    elif field == "end_session":
+        payload[field] = "2020-01-03"
+    else:
+        payload[field] = 21
+    payload.pop("scope_payload_sha256", None)
+    _assert_invalid(payload, "REPLAY_SCOPE_(RANGE_BOUND|.*SESSION_COUNT)_")
 
 
 @pytest.mark.parametrize(

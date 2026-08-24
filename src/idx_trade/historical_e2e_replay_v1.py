@@ -53,6 +53,11 @@ class HistoricalReplayArtifacts:
     open_manifest_path: Path
     ca_attestation_path: Path
     ca_journal_path: Path
+    # Optional sequence metadata lets the runner bind each artifact to the
+    # frozen strict interval while retaining compatibility with older callers
+    # that supplied only the artifact paths.
+    session_index: int | None = None
+    execution_session_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -133,19 +138,35 @@ def replay_verified_session(
         decision_session_date=artifacts.decision_session_date,
         required_tickers=(),
     )
-    strict_indices = {
-        int(value) for value in scope.get("strict_session_indices", [])
-    }
-    scope_rows = scope.get("open", {}).get("per_session", [])
+    strict_indices = set(scope["strict_session_indices"])
+    scope_rows = scope["open"]["per_session"]
     allowed_pairs = {
-        (str(row["decision_session_date"]), str(row["execution_session_date"]))
+        int(row["session_index"]): (
+            str(row["decision_session_date"]),
+            str(row["execution_session_date"]),
+        )
         for row in scope_rows
         if isinstance(row, dict) and int(row.get("session_index", -1)) in strict_indices
     }
+    matching_indices = [
+        index
+        for index, pair in allowed_pairs.items()
+        if pair[0] == artifacts.decision_session_date
+    ]
+    if len(matching_indices) != 1:
+        raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SESSION_OUT_OF_SCOPE")
+    if artifacts.session_index is not None:
+        if type(artifacts.session_index) is not int:
+            raise HistoricalE2EReplayError("HISTORICAL_REPLAY_ARTIFACT_SESSION_INDEX_INVALID")
+        if artifacts.session_index != matching_indices[0]:
+            raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SESSION_OUT_OF_SCOPE")
+    expected_execution = allowed_pairs[matching_indices[0]][1]
     if (
-        artifacts.decision_session_date,
-        eod.next_official_session_date,
-    ) not in allowed_pairs:
+        artifacts.execution_session_date is not None
+        and artifacts.execution_session_date != expected_execution
+    ):
+        raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SESSION_OUT_OF_SCOPE")
+    if eod.next_official_session_date != expected_execution:
         raise HistoricalE2EReplayError("HISTORICAL_REPLAY_SESSION_OUT_OF_SCOPE")
     runtime = Path(runtime_root).expanduser().resolve()
     required = derive_required_execution_tickers(

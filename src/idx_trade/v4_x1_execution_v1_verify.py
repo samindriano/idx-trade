@@ -94,6 +94,11 @@ class VerifiedOpenExecutionInputs:
     fallback_policy: str = ""
     transport: str = ""
     transport_policy: str = ""
+    # Certified source rows are distinct from executable positive Open values.
+    # A non-positive Open remains unavailable to execution, but is still
+    # evidence that the source row was present and verified for this session.
+    evidence_tickers: frozenset[str] = frozenset()
+    nonpositive_tickers: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -401,6 +406,8 @@ def verify_open_execution_inputs(
 
     positive_count = len(prices)
     unavailable_count = len(raw_frame) - positive_count
+    evidence_tickers = frozenset(str(row.ticker) for row in raw_frame.itertuples(index=False))
+    nonpositive_tickers = evidence_tickers - frozenset(prices)
     try:
         declared_positive = int(payload.get("positive_openprice_count"))
         declared_unavailable = int(payload.get("unavailable_openprice_count"))
@@ -433,6 +440,8 @@ def verify_open_execution_inputs(
         fallback_policy=OFFICIAL_OPEN_FALLBACK_POLICY,
         transport=transport,
         transport_policy=OFFICIAL_OPEN_TRANSPORT_POLICY,
+        evidence_tickers=evidence_tickers,
+        nonpositive_tickers=nonpositive_tickers,
     )
 
 

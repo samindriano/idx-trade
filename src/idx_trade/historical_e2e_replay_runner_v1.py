@@ -1,4 +1,4 @@
-"""Outcome-blind driver for a frozen six-block historical replay scope.
+"""Outcome-blind driver for a frozen contiguous historical replay scope.
 
 The driver owns only scope/sequence control.  The existing T0 bootstrap and
 single-transition replay remain injectable boundaries so synthetic callers can
@@ -20,7 +20,6 @@ from .historical_e2e_replay_v1 import (
     replay_verified_session,
 )
 from .historical_e2e_scope_validator_v1 import (
-    EXPECTED_CANDIDATE_SESSION_COUNT,
     STRICT_SCOPE_FROZEN,
     load_replay_scope,
 )
@@ -140,10 +139,10 @@ def _scope_pairs(scope: Mapping[str, object]) -> tuple[tuple[int, str, str], ...
             scope.get("status", "MISSING"),
         )
 
-    expected_indices = list(range(EXPECTED_CANDIDATE_SESSION_COUNT))
     strict_indices = scope.get("strict_session_indices")
-    if strict_indices != expected_indices:
+    if not isinstance(strict_indices, list) or not strict_indices:
         _error("HISTORICAL_REPLAY_RUN_STRICT_SCOPE_COUNT_OR_ORDER_INVALID")
+    expected_indices = strict_indices
 
     open_payload = scope.get("open")
     if not isinstance(open_payload, Mapping):
@@ -162,7 +161,14 @@ def _scope_pairs(scope: Mapping[str, object]) -> tuple[tuple[int, str, str], ...
         rows_by_index[raw_index] = raw_row
 
     pairs: list[tuple[int, str, str]] = []
-    for session_index in expected_indices:
+    for position, session_index in enumerate(expected_indices):
+        if type(session_index) is not int or (
+            position and session_index != expected_indices[position - 1] + 1
+        ):
+            _error(
+                "HISTORICAL_REPLAY_RUN_STRICT_SCOPE_COUNT_OR_ORDER_INVALID",
+                position,
+            )
         row = rows_by_index.get(session_index)
         if row is None:
             _error(
@@ -193,13 +199,16 @@ def _validate_artifacts(
     artifacts: Sequence[HistoricalReplayArtifacts],
     scope_pairs: Sequence[tuple[int, str, str]],
 ) -> None:
-    if len(artifacts) != EXPECTED_CANDIDATE_SESSION_COUNT:
+    expected_count = len(scope_pairs)
+    if len(artifacts) != expected_count:
         _error(
             "HISTORICAL_REPLAY_RUN_ARTIFACT_COUNT_MISMATCH",
-            f"expected={EXPECTED_CANDIDATE_SESSION_COUNT},actual={len(artifacts)}",
+            f"expected={expected_count},actual={len(artifacts)}",
         )
 
-    expected_dates = {decision: index for index, decision, _ in scope_pairs}
+    expected_positions = {
+        decision: position for position, (_, decision, _) in enumerate(scope_pairs)
+    }
     seen_dates: set[str] = set()
     seen_indices: set[int] = set()
     for position, artifact in enumerate(artifacts):
@@ -208,6 +217,8 @@ def _validate_artifacts(
 
         expected_index, expected_decision, expected_execution = scope_pairs[position]
         raw_index = _artifact_value(artifact, "session_index", default=expected_index)
+        if raw_index is None:
+            raw_index = expected_index
         if type(raw_index) is not int:
             _error("HISTORICAL_REPLAY_RUN_ARTIFACT_SESSION_INDEX_INVALID", position)
         if raw_index in seen_indices:
@@ -223,7 +234,7 @@ def _validate_artifacts(
 
         # A valid scope date appearing at a different position is specifically
         # an ordering failure; an unknown date is an exact-pair failure.
-        if decision in expected_dates and expected_dates[decision] != position:
+        if decision in expected_positions and expected_positions[decision] != position:
             _error("HISTORICAL_REPLAY_RUN_ARTIFACT_ORDER_INVALID", position)
         if raw_index != expected_index:
             _error("HISTORICAL_REPLAY_RUN_ARTIFACT_ORDER_INVALID", position)
@@ -337,10 +348,10 @@ def run_historical_e2e_replay(
     # All guards above are intentionally complete before this first mutation.
     bootstrap(runtime_root, session_date=scope_pairs[0][1])
     summaries: list[HistoricalReplayTransitionSummary] = []
-    for session_index, decision_date, execution_date in scope_pairs:
+    for position, (session_index, decision_date, execution_date) in enumerate(scope_pairs):
         result = transition(
             runtime_root,
-            artifact_sequence[session_index],
+            artifact_sequence[position],
             scope_manifest_path=scope_manifest_path,
         )
         summaries.append(

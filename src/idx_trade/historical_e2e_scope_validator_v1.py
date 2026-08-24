@@ -20,8 +20,7 @@ SCHEMA_VERSION = "idx_trade_historical_e2e_scope_v1"
 STRICT_SCOPE_FROZEN = "STRICT_SCOPE_FROZEN"
 STRICT_SCOPE_EMPTY_BLOCKED = "STRICT_SCOPE_EMPTY_BLOCKED"
 EXPECTED_CANDIDATE_SESSION_COUNT = 600
-STRICT_BLOCK_COUNT = 6
-STRICT_BLOCK_SIZE = 100
+MIN_STRICT_SESSION_COUNT = 20
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 _MISSING = object()
 
@@ -181,7 +180,10 @@ def _validate_strict_indices(
 
     if not strict_indices:
         _error("REPLAY_SCOPE_EMPTY_STRICT_SCOPE_INVALID")
-    if len(strict_indices) != EXPECTED_CANDIDATE_SESSION_COUNT:
+    session_count = payload.get("session_count", _MISSING)
+    if type(session_count) is not int or session_count < MIN_STRICT_SESSION_COUNT:
+        _error("REPLAY_SCOPE_SESSION_COUNT_INVALID")
+    if len(strict_indices) != session_count:
         _error("REPLAY_SCOPE_STRICT_SESSION_COUNT_INVALID")
 
     normalized: list[int] = []
@@ -196,20 +198,82 @@ def _validate_strict_indices(
         seen.add(raw_index)
         normalized.append(raw_index)
 
-    if normalized != candidate_indices:
+    candidate_index_set = set(candidate_indices)
+    if any(index not in candidate_index_set for index in normalized):
         _error("REPLAY_SCOPE_STRICT_SESSION_INDEX_SET_INVALID")
+    # The production runner bootstraps a zero-holding T0 state.  A truncated
+    # range beginning later would silently discard predecessor holdings unless
+    # a separate predecessor-state artifact is introduced and wired through
+    # the runner.  Keep the generalized length contract, but fail closed on
+    # that unsupported start-state shape for now.
+    if normalized[0] != 0:
+        _error("REPLAY_SCOPE_NONZERO_START_STATE_UNSUPPORTED")
+    if normalized != list(range(normalized[0], normalized[0] + session_count)):
+        _error("REPLAY_SCOPE_STRICT_SESSION_INDICES_NOT_CONTIGUOUS")
 
-    if len(normalized) != STRICT_BLOCK_COUNT * STRICT_BLOCK_SIZE:
-        _error("REPLAY_SCOPE_BLOCK_GEOMETRY_INVALID")
-    for block_number in range(STRICT_BLOCK_COUNT):
-        start = block_number * STRICT_BLOCK_SIZE
-        block = normalized[start : start + STRICT_BLOCK_SIZE]
-        if len(block) != STRICT_BLOCK_SIZE:
-            _error("REPLAY_SCOPE_BLOCK_GEOMETRY_INVALID", str(block_number))
-        if block != list(range(block[0], block[0] + STRICT_BLOCK_SIZE)):
-            _error("REPLAY_SCOPE_BLOCK_NOT_CONTIGUOUS", str(block_number))
-        if block_number and block[0] != normalized[start - 1] + 1:
-            _error("REPLAY_SCOPE_BLOCKS_NOT_CONTIGUOUS", str(block_number))
+    _validate_scope_boundaries(
+        payload,
+        normalized,
+        session_count=session_count,
+    )
+
+
+def _validate_scope_boundaries(
+    payload: Mapping[str, object],
+    strict_indices: list[int],
+    *,
+    session_count: int,
+) -> None:
+    """Validate explicit range boundaries without inferring a scope choice."""
+
+    start = payload.get("start_session", _MISSING)
+    end = payload.get("end_session", _MISSING)
+    if start is _MISSING or end is _MISSING:
+        _error("REPLAY_SCOPE_RANGE_BOUND_MISSING")
+
+    # Frozen manifests conventionally use decision-session ISO dates for the
+    # public range boundaries.  Accepting candidate indices as well keeps the
+    # contract unambiguous for programmatic callers while still binding both
+    # forms to the exact strict index interval below.
+    if type(start) is int and type(end) is int:
+        if start != strict_indices[0] or end != strict_indices[-1]:
+            _error("REPLAY_SCOPE_RANGE_BOUND_MISMATCH")
+    elif isinstance(start, str) and isinstance(end, str):
+        try:
+            parsed_start = date.fromisoformat(start)
+            parsed_end = date.fromisoformat(end)
+        except ValueError as exc:
+            raise HistoricalE2EScopeValidationError(
+                "REPLAY_SCOPE_RANGE_BOUND_INVALID"
+            ) from exc
+        if parsed_start.isoformat() != start or parsed_end.isoformat() != end:
+            _error("REPLAY_SCOPE_RANGE_BOUND_INVALID")
+        open_payload = _require_mapping(
+            payload.get("open", _MISSING),
+            "REPLAY_SCOPE_OPEN_SCHEMA_INVALID",
+        )
+        per_session = open_payload.get("per_session", _MISSING)
+        if not isinstance(per_session, list):
+            _error("REPLAY_SCOPE_CANDIDATE_SESSIONS_INVALID")
+        rows_by_index = {
+            row.get("session_index"): row
+            for row in per_session
+            if isinstance(row, Mapping)
+        }
+        start_row = rows_by_index.get(strict_indices[0])
+        end_row = rows_by_index.get(strict_indices[-1])
+        if (
+            not isinstance(start_row, Mapping)
+            or not isinstance(end_row, Mapping)
+            or start_row.get("decision_session_date") != start
+            or end_row.get("decision_session_date") != end
+        ):
+            _error("REPLAY_SCOPE_RANGE_BOUND_MISMATCH")
+    else:
+        _error("REPLAY_SCOPE_RANGE_BOUND_INVALID")
+
+    if session_count != len(strict_indices):
+        _error("REPLAY_SCOPE_SESSION_COUNT_INVALID")
 
 
 def validate_scope_payload(payload: object) -> dict[str, Any]:
@@ -272,9 +336,8 @@ __all__ = [
     "EXPECTED_CANDIDATE_SESSION_COUNT",
     "HistoricalE2EScopeError",
     "HistoricalE2EScopeValidationError",
+    "MIN_STRICT_SESSION_COUNT",
     "SCHEMA_VERSION",
-    "STRICT_BLOCK_COUNT",
-    "STRICT_BLOCK_SIZE",
     "STRICT_SCOPE_EMPTY_BLOCKED",
     "STRICT_SCOPE_FROZEN",
     "canonical_scope_payload_hash",

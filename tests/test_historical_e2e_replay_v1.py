@@ -85,6 +85,9 @@ def test_scope_manifest_fails_closed_before_replay(
         "candidate_session_count": 600,
         "strict_session_indices": list(range(600)),
         "open": {"per_session": sessions},
+        "start_session": sessions[0]["decision_session_date"],
+        "end_session": sessions[-1]["decision_session_date"],
+        "session_count": 600,
     }
     if field == "DRAFT":
         payload["status"] = "DRAFT"

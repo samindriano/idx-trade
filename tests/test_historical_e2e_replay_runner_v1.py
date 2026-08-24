@@ -14,14 +14,23 @@ from idx_trade.historical_e2e_replay_runner_v1 import (
     run_historical_e2e_replay,
 )
 from idx_trade.historical_e2e_replay_v1 import HistoricalReplayArtifacts
-from idx_trade.historical_e2e_scope_validator_v1 import canonical_scope_payload_hash
+from idx_trade.historical_e2e_scope_validator_v1 import (
+    EXPECTED_CANDIDATE_SESSION_COUNT,
+    canonical_scope_payload_hash,
+)
 
 
-SESSION_COUNT = 600
+SESSION_COUNT = EXPECTED_CANDIDATE_SESSION_COUNT
 START_DATE = date(2020, 1, 2)
 
 
-def _scope(tmp_path: Path, *, frozen: bool = True) -> Path:
+def _scope(
+    tmp_path: Path,
+    *,
+    frozen: bool = True,
+    strict_start: int = 0,
+    strict_count: int = SESSION_COUNT,
+) -> Path:
     rows = [
         {
             "session_index": index,
@@ -38,16 +47,30 @@ def _scope(tmp_path: Path, *, frozen: bool = True) -> Path:
         "protected_outcome_access": False,
         "source_pins": {"calendar_sha256": "a" * 64},
         "candidate_session_count": SESSION_COUNT,
-        "strict_session_indices": list(range(SESSION_COUNT)) if frozen else [],
+        "strict_session_indices": (
+            list(range(strict_start, strict_start + strict_count)) if frozen else []
+        ),
         "open": {"per_session": rows},
     }
+    if frozen:
+        payload.update(
+            {
+                "start_session": rows[strict_start]["decision_session_date"],
+                "end_session": rows[strict_start + strict_count - 1][
+                    "decision_session_date"
+                ],
+                "session_count": strict_count,
+            }
+        )
     payload["scope_payload_sha256"] = canonical_scope_payload_hash(payload)
     path = tmp_path / "REPLAY_SCOPE.json"
     path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
-def _artifacts() -> list[HistoricalReplayArtifacts]:
+def _artifacts(
+    *, strict_start: int = 0, strict_count: int = SESSION_COUNT
+) -> list[HistoricalReplayArtifacts]:
     return [
         HistoricalReplayArtifacts(
             decision_session_date=(START_DATE + timedelta(days=index)).isoformat(),
@@ -59,8 +82,10 @@ def _artifacts() -> list[HistoricalReplayArtifacts]:
             open_manifest_path=Path(f"open-{index}.json"),
             ca_attestation_path=Path(f"ca-{index}.json"),
             ca_journal_path=Path(f"journal-{index}.json"),
+            session_index=index,
+            execution_session_date=(START_DATE + timedelta(days=index + 1)).isoformat(),
         )
-        for index in range(SESSION_COUNT)
+        for index in range(strict_start, strict_start + strict_count)
     ]
 
 
@@ -70,7 +95,8 @@ def _transition_result(index: int, artifact: HistoricalReplayArtifacts) -> dict[
 
     return {
         "decision_session_date": artifact.decision_session_date,
-        "execution_session_date": (START_DATE + timedelta(days=index + 1)).isoformat(),
+        "execution_session_date": artifact.execution_session_date
+        or (START_DATE + timedelta(days=index + 1)).isoformat(),
         "status": "EXECUTION_COMPLETE",
         "execution_sha256": digest("execution"),
         "runtime_snapshot_sha256": digest("snapshot"),
@@ -78,11 +104,13 @@ def _transition_result(index: int, artifact: HistoricalReplayArtifacts) -> dict[
     }
 
 
-def test_valid_six_by_one_hundred_shape_bootstraps_once_and_replays_in_order(
-    tmp_path: Path,
+@pytest.mark.parametrize("strict_count", [20, 60, 120, 252, SESSION_COUNT])
+def test_valid_contiguous_scope_bootstraps_once_and_replays_in_order(
+    tmp_path: Path, strict_count: int
 ) -> None:
-    scope = _scope(tmp_path)
-    artifacts = _artifacts()
+    strict_start = 0
+    scope = _scope(tmp_path, strict_start=strict_start, strict_count=strict_count)
+    artifacts = _artifacts(strict_start=strict_start, strict_count=strict_count)
     bootstrap_calls: list[tuple[object, str]] = []
     transition_calls: list[tuple[int, str, object]] = []
 
@@ -108,14 +136,18 @@ def test_valid_six_by_one_hundred_shape_bootstraps_once_and_replays_in_order(
     )
 
     assert len(bootstrap_calls) == 1
-    assert bootstrap_calls[0] == (tmp_path / "runtime", "2020-01-02")
-    assert len(transition_calls) == 600
-    assert [call[0] for call in transition_calls] == list(range(600))
-    assert transition_calls[99][1] == "2020-04-10"
-    assert transition_calls[100][1] == "2020-04-11"
-    assert summary.strict_session_count == 600
-    assert len(summary.transitions) == 600
-    assert summary.to_dict()["transition_count"] == 600
+    assert bootstrap_calls[0] == (
+        tmp_path / "runtime",
+        (START_DATE + timedelta(days=strict_start)).isoformat(),
+    )
+    assert len(transition_calls) == strict_count
+    assert [call[0] for call in transition_calls] == list(range(strict_count))
+    assert transition_calls[0][1] == (
+        START_DATE + timedelta(days=strict_start)
+    ).isoformat()
+    assert summary.strict_session_count == strict_count
+    assert len(summary.transitions) == strict_count
+    assert summary.to_dict()["transition_count"] == strict_count
     assert summary.to_dict()["summary_sha256"] == summary.summary_sha256
     assert canonical_summary_sha256(summary.to_dict()) == summary.summary_sha256
     assert "cash_idr" not in summary.to_dict()
@@ -136,7 +168,7 @@ def test_empty_scope_is_rejected_before_callbacks(tmp_path: Path) -> None:
     with pytest.raises(HistoricalE2EReplayRunnerError, match="STRICT_SCOPE_EMPTY_BLOCKED"):
         run_historical_e2e_replay(
             tmp_path / "runtime",
-            _artifacts(),
+            _artifacts(strict_count=20),
             scope_manifest_path=scope,
             bootstrap_callback=bootstrap,
             transition_callback=transition,
@@ -169,17 +201,21 @@ def test_exact_pair_mismatch_is_rejected_before_bootstrap(tmp_path: Path) -> Non
     assert calls == []
 
 
-@pytest.mark.parametrize("mutation", ["duplicate", "order"])
+@pytest.mark.parametrize("mutation", ["duplicate", "order", "gap"])
 def test_duplicate_or_out_of_order_artifacts_are_rejected_before_callbacks(
     tmp_path: Path,
     mutation: str,
 ) -> None:
-    scope = _scope(tmp_path)
-    artifacts = _artifacts()
+    scope = _scope(tmp_path, strict_start=0, strict_count=20)
+    artifacts = _artifacts(strict_start=0, strict_count=20)
     if mutation == "duplicate":
-        artifacts[150] = artifacts[149]
+        artifacts[10] = artifacts[9]
+    elif mutation == "order":
+        artifacts[10], artifacts[11] = artifacts[11], artifacts[10]
     else:
-        artifacts[150], artifacts[151] = artifacts[151], artifacts[150]
+        artifacts[10] = HistoricalReplayArtifacts(
+            **{**artifacts[10].__dict__, "session_index": 62}
+        )
     calls: list[str] = []
 
     with pytest.raises(HistoricalE2EReplayRunnerError):
@@ -194,12 +230,12 @@ def test_duplicate_or_out_of_order_artifacts_are_rejected_before_callbacks(
 
 
 def test_summary_is_deterministic_for_identical_stubbed_replays(tmp_path: Path) -> None:
-    scope = _scope(tmp_path)
+    scope = _scope(tmp_path, strict_start=0, strict_count=20)
 
     def run_once() -> object:
         return run_historical_e2e_replay(
             tmp_path / "runtime",
-            _artifacts(),
+            _artifacts(strict_start=0, strict_count=20),
             scope_manifest_path=scope,
             bootstrap_callback=lambda *args, **kwargs: None,
             transition_callback=lambda runtime_root, artifact, *, scope_manifest_path: _transition_result(

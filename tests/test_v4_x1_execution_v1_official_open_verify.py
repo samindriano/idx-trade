@@ -102,6 +102,8 @@ def test_zero_openprice_with_positive_firsttrade_remains_unavailable(tmp_path):
     )
     assert "BBCA" not in verified.raw_open_prices
     assert "BBCA" not in verified.available_tickers
+    assert "BBCA" in verified.evidence_tickers
+    assert "BBCA" in verified.nonpositive_tickers
     assert verified.raw_open_prices["AADI"] == 8100.0
 
 
