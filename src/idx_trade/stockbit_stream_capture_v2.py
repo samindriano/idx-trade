@@ -33,6 +33,7 @@ ROUTINE_TOP_N = 200
 PRIOR_SESSION_LOOKBACK_DAYS = 10
 MAX_STREAM_ATTEMPTS = 2
 RETRYABLE_STREAM_HTTP_STATUSES = frozenset({500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526})
+RETRYABLE_STREAM_VALIDATION_CLASSIFICATIONS = frozenset({"ITEM_SCHEMA_ERROR"})
 
 
 @dataclass(frozen=True)
@@ -481,12 +482,37 @@ def capture_stream_v2(
                     break
                 time.sleep(0.25 * attempt_number)
                 continue
-            attempts.append({
+            classification, _, items, validation_detail = parse_stream_payload_detailed(
+                raw,
+                response.status_code,
+                symbol,
+            )
+            attempt = {
                 "attempt": attempt_number,
                 "http_status": response.status_code,
                 "observed_available_at_utc": observed_at.isoformat().replace("+00:00", "Z"),
-            })
-            if response.status_code not in RETRYABLE_STREAM_HTTP_STATUSES or attempt_number == MAX_STREAM_ATTEMPTS:
+                "response_classification": classification,
+                "raw_sha256": sha256_bytes(raw),
+            }
+            if validation_detail is not None:
+                attempt["validation_detail"] = validation_detail
+            should_retry = (
+                attempt_number < MAX_STREAM_ATTEMPTS
+                and (
+                    response.status_code in RETRYABLE_STREAM_HTTP_STATUSES
+                    or classification in RETRYABLE_STREAM_VALIDATION_CLASSIFICATIONS
+                )
+            )
+            if should_retry and classification in RETRYABLE_STREAM_VALIDATION_CLASSIFICATIONS:
+                diagnostic_key = f"raw/{run_id}/{quote(symbol, safe='')}/attempt-{attempt_number}.json"
+                attempt["raw_key"] = diagnostic_key
+                archive.put_immutable(
+                    diagnostic_key,
+                    raw,
+                    response.headers.get("content-type", "application/json"),
+                )
+            attempts.append(attempt)
+            if not should_retry:
                 break
             time.sleep(0.25 * attempt_number)
         if response is None or raw is None or observed_at is None:

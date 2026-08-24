@@ -99,3 +99,8 @@ After review and integration, run one controlled `workflow_dispatch` capture
 on the integrated main path. A fully valid run should be `DATA_READY`; a
 persistent `ITEM_SCHEMA_ERROR` should remain visible as a fail-closed incident
 with the offending field detail.
+
+This diagnostics-only phase is superseded for implementation review by the
+bounded schema-retry follow-up in
+`2026-08-24_STOCKBIT_STREAM_SCHEMA_RETRY_REMEDIATION_V2.md`. The original
+incident evidence and strict fail-closed result remain unchanged.
