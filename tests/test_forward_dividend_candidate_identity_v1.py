@@ -68,6 +68,60 @@ def test_downloader_selects_by_announcement_number_when_id_missing():
     )
 
 
+def test_downloader_accepts_complete_normalized_candidate_inventory():
+    schema = "idx_trade_historical_dividend_corpus_normalized_v1"
+
+    discovery = {
+        "schema_version": schema,
+        "status": "COMPLETE",
+        "provider_commit": downloader.PROVIDER_COMMIT,
+        "source_manifest_sha256": "a" * 64,
+        "candidates": [
+            {
+                "ticker": "BBCA",
+                "announcement_id": "A1",
+                "announcement_number": "N1",
+                "classification": downloader.CASH_DIVIDEND_CANDIDATE,
+            }
+        ],
+    }
+
+    assert downloader.validate_discovery_manifest(discovery) == schema
+
+
+def test_downloader_rejects_incomplete_or_unpinned_inventory():
+    base = {
+        "schema_version": (
+            "idx_trade_historical_dividend_corpus_normalized_v1"
+        ),
+        "status": "COMPLETE",
+        "provider_commit": downloader.PROVIDER_COMMIT,
+        "candidates": [{"ticker": "BBCA"}],
+    }
+
+    with pytest.raises(RuntimeError, match="PARENT_MANIFEST_SHA_INVALID"):
+        downloader.validate_discovery_manifest(base)
+
+    incomplete = dict(base)
+    incomplete["source_manifest_sha256"] = "a" * 64
+    incomplete["status"] = "INCOMPLETE"
+
+    with pytest.raises(RuntimeError, match="DISCOVERY_NOT_COMPLETE"):
+        downloader.validate_discovery_manifest(incomplete)
+
+
+def test_downloader_does_not_accept_incomplete_raw_batch_schema():
+    discovery = {
+        "schema_version": "idx_trade_historical_dividend_corpus_batch_v1",
+        "status": "INCOMPLETE",
+        "provider_commit": downloader.PROVIDER_COMMIT,
+        "candidates": [{"ticker": "BBCA"}],
+    }
+
+    with pytest.raises(RuntimeError, match="DISCOVERY_SCHEMA_MISMATCH"):
+        downloader.validate_discovery_manifest(discovery)
+
+
 def test_downloader_requires_exactly_one_identity_selector():
     discovery = {
         "candidates": []

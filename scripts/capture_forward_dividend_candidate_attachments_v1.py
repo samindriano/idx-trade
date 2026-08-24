@@ -22,7 +22,12 @@ from idx_trade.forward_dividend_acquisition_v1 import (
 )
 
 SCHEMA = "idx_trade_forward_dividend_attachment_capture_v1_1"
-DISCOVERY_SCHEMA = "idx_trade_forward_dividend_announcement_capture_v1"
+DISCOVERY_SCHEMAS = frozenset(
+    {
+        "idx_trade_forward_dividend_announcement_capture_v1",
+        "idx_trade_historical_dividend_corpus_normalized_v1",
+    }
+)
 ALLOWED_HOST = "www.idx.co.id"
 
 
@@ -98,6 +103,47 @@ def validate_attachment(row: Any) -> dict[str, Any]:
         ),
         "is_attachment": bool(row.get("is_attachment")),
     }
+
+
+def validate_discovery_manifest(
+    discovery: dict[str, Any],
+) -> str:
+    """Validate an immutable candidate inventory before any network call.
+
+    The normalized corpus is an accepted, hash-pinned projection of the raw
+    announcement pages.  It is safe as a candidate selector only when it is
+    complete, tied to the pinned provider, and carries the parent raw-manifest
+    hash.  The raw/incomplete batch schema is intentionally not accepted here:
+    callers must use a complete scoped inventory instead.
+    """
+    schema = str(discovery.get("schema_version") or "").strip()
+
+    if schema not in DISCOVERY_SCHEMAS:
+        raise RuntimeError("DISCOVERY_SCHEMA_MISMATCH")
+
+    if discovery.get("status") != "COMPLETE":
+        raise RuntimeError("DISCOVERY_NOT_COMPLETE")
+
+    if discovery.get("provider_commit") != PROVIDER_COMMIT:
+        raise RuntimeError("DISCOVERY_PROVIDER_COMMIT_MISMATCH")
+
+    candidates = discovery.get("candidates")
+
+    if not isinstance(candidates, list) or not candidates:
+        raise RuntimeError("DISCOVERY_CANDIDATES_INVALID")
+
+    if schema == "idx_trade_historical_dividend_corpus_normalized_v1":
+        parent_sha = str(
+            discovery.get("source_manifest_sha256") or ""
+        ).strip().lower()
+
+        if len(parent_sha) != 64 or any(
+            character not in "0123456789abcdef"
+            for character in parent_sha
+        ):
+            raise RuntimeError("DISCOVERY_PARENT_MANIFEST_SHA_INVALID")
+
+    return schema
 
 
 def select_exact_candidate(
@@ -228,14 +274,7 @@ def main() -> int:
             "DISCOVERY_MANIFEST_INVALID_JSON"
         ) from exc
 
-    if discovery.get("schema_version") != DISCOVERY_SCHEMA:
-        raise RuntimeError("DISCOVERY_SCHEMA_MISMATCH")
-
-    if discovery.get("status") != "COMPLETE":
-        raise RuntimeError("DISCOVERY_NOT_COMPLETE")
-
-    if discovery.get("provider_commit") != PROVIDER_COMMIT:
-        raise RuntimeError("DISCOVERY_PROVIDER_COMMIT_MISMATCH")
+    discovery_schema = validate_discovery_manifest(discovery)
 
     ticker = str(
         args.ticker
@@ -361,6 +400,9 @@ def main() -> int:
             "source_discovery_manifest_path": source_discovery_reference,
             "source_discovery_manifest_relpath": source_discovery_reference,
             "source_discovery_manifest_sha256": discovery_sha,
+            "source_discovery_manifest_schema_version": (
+                discovery_schema
+            ),
             "candidate": {
                 "ticker": candidate["ticker"],
                 "announcement_id": candidate["announcement_id"],
