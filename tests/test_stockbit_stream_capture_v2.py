@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+import pytest
 
 from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
-from idx_trade.stockbit_stream_archive import QuotaSnapshot
+from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
 
@@ -48,6 +49,16 @@ class WeekendCaptureSession:
             {"StockCode": "AADI", "Date": "2026-08-21T00:00:00", "Value": 1000, "NonRegularValue": 950},
         ]
         return Response({"provider": "idx", "dataset": "stock-summary", "data": rows})
+
+
+class BlockingUniverseSession:
+    def __init__(self, status: int):
+        self.status = status
+        self.calls = 0
+
+    def get(self, url, params, headers, timeout):
+        self.calls += 1
+        return Response({"error": "blocked"}, status=self.status)
 
 
 def test_envelope_aware_response_exposes_inner_idx_payload():
@@ -98,6 +109,22 @@ def test_runtime_universe_continues_past_weekend_for_calendar_day_capture(tmp_pa
     assert [row["ticker"] for row in universe.rows] == ["BBRI", "BBCA"]
 
 
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_runtime_universe_does_not_retry_auth_or_rate_limit_failures(tmp_path: Path, status: int):
+    path = tmp_path / "identity.csv"
+    identity_csv(path)
+    session = BlockingUniverseSession(status)
+    with pytest.raises(StreamArchiveError, match=f"HTTP {status}"):
+        build_runtime_universe(
+            api_key="x",
+            identity_csv=path,
+            capture_date="2026-08-21",
+            top_n=2,
+            session=session,
+        )
+    assert session.calls == 1
+
+
 class StreamResponse:
     status_code = 200
     headers = {"content-type": "application/json"}
@@ -135,6 +162,35 @@ class TransientRecoveryClient(Client):
         if symbol == "BBCA" and self.attempts[symbol] == 1:
             self.calls.append(symbol)
             return StreamResponse503(), b'{"error":"temporary"}', datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+        return super().stream(symbol)
+
+
+class RequestExceptionRecoveryClient(Client):
+    def __init__(self, failures: int):
+        super().__init__()
+        self.failures = failures
+        self.attempts = 0
+
+    def stream(self, symbol):
+        self.attempts += 1
+        self.calls.append(symbol)
+        if self.attempts <= self.failures:
+            raise requests.ReadTimeout("stream timeout")
+        return super().stream(symbol)
+
+
+class Symbol37TimeoutClient(Client):
+    def __init__(self, failures: int):
+        super().__init__()
+        self.failures = failures
+        self.attempts = 0
+
+    def stream(self, symbol):
+        if symbol == "TICK37":
+            self.attempts += 1
+            if self.attempts <= self.failures:
+                self.calls.append(symbol)
+                raise requests.ReadTimeout("symbol 37 timeout")
         return super().stream(symbol)
 
 
@@ -199,6 +255,107 @@ def test_capture_v2_retries_transient_5xx_once_and_recovers(tmp_path: Path):
     bbca = next(record for record in result["request_records"] if record["ticker"] == "BBCA")
     assert bbca["retry_recovered"] is True
     assert [attempt["http_status"] for attempt in bbca["provider_attempts"]] == [503, 200]
+
+
+def test_capture_v2_retries_request_exception_once_and_records_recovery(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    client = RequestExceptionRecoveryClient(failures=1)
+    result = capture_stream_v2(client=client, archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    record = result["request_records"][0]
+    assert result["status"] == "DATA_READY"
+    assert result["provider_calls"] == 2
+    assert record["retry_recovered"] is True
+    assert record["provider_attempts"][0]["error_type"] == "ReadTimeout"
+    assert record["provider_attempts"][1]["http_status"] == 200
+
+
+def test_capture_v2_marks_two_request_exceptions_partial(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    client = RequestExceptionRecoveryClient(failures=2)
+    result = capture_stream_v2(client=client, archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    record = result["request_records"][0]
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert result["successful_responses"] == 0
+    assert record["response_classification"] == "REQUEST_EXCEPTION"
+    assert len(record["provider_attempts"]) == 2
+
+
+def test_capture_v2_symbol_37_timeout_once_recovers(tmp_path: Path):
+    rows = [
+        {
+            "ticker": f"TICK{i:02d}",
+            "company_name": f"TICK{i:02d}",
+            "listed_from": "2000",
+            "source_session": "2026-08-20",
+            "regular_value": float(1000 - i),
+            "activity_rank": i,
+        }
+        for i in range(1, 38)
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    result = capture_stream_v2(
+        client=Symbol37TimeoutClient(failures=1),
+        archive=LocalLeanArchive(tmp_path),
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    record = next(row for row in result["request_records"] if row["ticker"] == "TICK37")
+    assert result["status"] == "DATA_READY"
+    assert record["retry_recovered"] is True
+    assert len(record["provider_attempts"]) == 2
+
+
+def test_capture_v2_symbol_37_timeout_twice_is_partial(tmp_path: Path):
+    rows = [
+        {
+            "ticker": f"TICK{i:02d}",
+            "company_name": f"TICK{i:02d}",
+            "listed_from": "2000",
+            "source_session": "2026-08-20",
+            "regular_value": float(1000 - i),
+            "activity_rank": i,
+        }
+        for i in range(1, 38)
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    result = capture_stream_v2(
+        client=Symbol37TimeoutClient(failures=2),
+        archive=LocalLeanArchive(tmp_path),
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    record = next(row for row in result["request_records"] if row["ticker"] == "TICK37")
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert record["response_classification"] == "REQUEST_EXCEPTION"
+    assert len(record["provider_attempts"]) == 2
+
+
+def test_capture_v2_resumes_partial_under_new_immutable_namespace(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 300.0, "activity_rank": 2},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    archive = LocalLeanArchive(tmp_path)
+    first = capture_stream_v2(client=PartialClient(), archive=archive, universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    second = capture_stream_v2(client=TransientRecoveryClient(), archive=archive, universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    assert first["status"] == "PARTIAL_FAILURE"
+    assert second["status"] == "DATA_READY"
+    assert second["resumed_from_run_id"] == first["run_id"]
+    assert second["resumed_from_manifest_key"] == f"manifests/{first['run_id']}.json"
+    assert second["run_id"] != first["run_id"]
+    assert len(list((tmp_path / "manifests").rglob("*.json"))) == 2
+    assert len(list((tmp_path / "normalized").rglob("*.jsonl"))) == 2
 
 
 def test_capture_v2_preserves_ready_run_when_post_quota_telemetry_times_out(tmp_path: Path):
