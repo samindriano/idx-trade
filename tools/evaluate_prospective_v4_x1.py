@@ -17,9 +17,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from idx_trade.provenance import sha256_file
 
-FROZEN_CODE_PIN_MANIFEST_SHA256 = "a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651"
-FROZEN_GATE_BLOB_SHA1 = "3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd"
-FROZEN_GATE_SOURCE_COMMIT = "c99c9dbe20993f50f422b0a215488c8d4c011227"
+FROZEN_CODE_PIN_MANIFEST_SHA256 = "ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a"
+FROZEN_GATE_BLOB_SHA1 = "499deedd5c4549285adb12bed68f427bf60d2bc8"
+FROZEN_GATE_SOURCE_COMMIT = "ff05f3a8c6f398217c6eba395fca5ea11ad3dacb"
 
 
 def _independent_code_pin_check() -> None:
