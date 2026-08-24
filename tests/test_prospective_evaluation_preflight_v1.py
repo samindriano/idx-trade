@@ -162,6 +162,13 @@ def test_committed_code_pin_manifest_is_self_consistent() -> None:
 
 
 def test_resolved_target_must_match_contract_and_source_manifest(tmp_path: Path) -> None:
+    construction = tmp_path / "target_builder.py"
+    construction.write_text("# frozen synthetic target builder\n", encoding="utf-8")
+    construction_pin = {
+        "path": str(construction.resolve()),
+        "sha256": sha256_file(construction),
+        "source_commit": "a" * 40,
+    }
     identity = {
         "status": "RESOLVED",
         "target_id": "TARGET_V1",
@@ -170,6 +177,7 @@ def test_resolved_target_must_match_contract_and_source_manifest(tmp_path: Path)
         "transform": "gross_raw_price_return",
         "provenance": {"builder": "builder.py"},
         "hashes": {"builder_sha256": "a" * 64},
+        "construction_code": construction_pin,
     }
     source = tmp_path / "target-source.json"
     source.write_text(
@@ -191,6 +199,7 @@ def test_resolved_target_must_match_contract_and_source_manifest(tmp_path: Path)
         "transform": identity["transform"],
         "provenance": identity["provenance"],
         "target_hashes": identity["hashes"],
+        "construction_code": construction_pin,
         "source_manifest_path": str(source),
     }
     _validate_target_against_contract(target, {"target_identity": identity})

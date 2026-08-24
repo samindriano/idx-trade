@@ -306,10 +306,19 @@ def test_rehearsal_writes_marker_before_loader_and_completes(tmp_path: Path) -> 
 
     result = _invoke(case, "run", loader, event_hook=events.append)
     assert events == [
+        "BEFORE_PREATTESTATION_WRITE",
         "PREATTESTATION_WRITTEN",
+        "BEFORE_MARKER_WRITE",
         "MARKER_WRITTEN",
+        "BEFORE_LOADER",
         "LOADER_CALLED",
+        "AFTER_LOADER",
+        "BEFORE_RESULT_WRITE",
+        "AFTER_RESULT_WRITE",
+        "BEFORE_FINAL_MANIFEST_WRITE",
+        "AFTER_FINAL_MANIFEST_WRITE",
         "FINAL_RESULT_WRITTEN",
+        "AFTER_SUCCESS",
     ]
     assert result["verdicts"]["overall"] == "PROSPECTIVE_PASS"
     assert (case["root"] / "run" / PREACCESS_FILENAME).is_file()
@@ -450,6 +459,42 @@ def test_fault_after_final_result_write_locks_rerun(tmp_path: Path) -> None:
     output = case["root"] / "fault-after-final"
     assert (output / FINAL_MANIFEST_FILENAME).exists()
     assert (output / FAILURE_FILENAME).exists()
+
+
+@pytest.mark.parametrize(
+    "crash_event",
+    [
+        "BEFORE_PREATTESTATION_WRITE",
+        "PREATTESTATION_WRITTEN",
+        "BEFORE_MARKER_WRITE",
+        "MARKER_WRITTEN",
+        "BEFORE_LOADER",
+        "LOADER_CALLED",
+        "AFTER_LOADER",
+        "BEFORE_RESULT_WRITE",
+        "AFTER_RESULT_WRITE",
+        "BEFORE_FINAL_MANIFEST_WRITE",
+        "AFTER_FINAL_MANIFEST_WRITE",
+    ],
+)
+def test_each_transaction_stage_has_fail_closed_recovery_boundary(
+    tmp_path: Path, crash_event: str
+) -> None:
+    case = _fixture(tmp_path)
+
+    def crash(event: str) -> None:
+        if event == crash_event:
+            raise RuntimeError(f"synthetic crash at {event}")
+
+    with pytest.raises((RuntimeError, ProspectiveAccessGateBlocked), match="synthetic crash|protected access started"):
+        _invoke(case, f"stage-{crash_event.lower()}", lambda: case["bundle"], event_hook=crash)
+    output = case["root"] / f"stage-{crash_event.lower()}"
+    if crash_event == "BEFORE_PREATTESTATION_WRITE":
+        assert not any(output.iterdir())
+        _invoke(case, f"stage-{crash_event.lower()}", lambda: case["bundle"])
+    else:
+        with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior|temporary output"):
+            _invoke(case, f"stage-{crash_event.lower()}", lambda: case["bundle"])
 
 
 def test_counter_99_blocks_before_loader_and_marker(tmp_path: Path) -> None:
@@ -687,6 +732,45 @@ def test_target_source_manifest_mutation_blocks_before_loader(tmp_path: Path) ->
         _invoke(case, "target-source-bad", lambda: case["bundle"])
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda manifest: manifest.update(future_target={"value": 1}),
+        lambda manifest: manifest.update(metadata={"nested": {"forward_return": 1}}),
+    ],
+)
+def test_score_manifest_forbidden_top_level_or_nested_metadata_blocks(
+    tmp_path: Path, mutation
+) -> None:
+    case = _fixture(tmp_path)
+    manifest_path = Path(case["kwargs"]["session_inventory"].iloc[0]["score_manifest_path"])
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    mutation(payload)
+    manifest_sha = _write_json(manifest_path, payload)
+    inventory = case["kwargs"]["session_inventory"].copy()
+    inventory.loc[inventory["score_manifest_path"] == str(manifest_path), "score_manifest_sha256"] = manifest_sha
+    case["kwargs"]["session_inventory"] = inventory
+    with pytest.raises(ProspectiveAccessGateBlocked, match="manifest"):
+        _invoke(case, "manifest-contamination", lambda: case["bundle"])
+
+
+def test_verified_input_rehash_blocks_mutation_after_preaccess_validation(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    called = False
+
+    def mutate_after_validation(event: str) -> None:
+        nonlocal called
+        if event == "PREATTESTATION_WRITTEN":
+            called = True
+            manifest_path = Path(case["kwargs"]["session_inventory"].iloc[0]["score_manifest_path"])
+            manifest_path.write_text(manifest_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    with pytest.raises(ProspectiveAccessGateBlocked, match="changed before marker publish"):
+        _invoke(case, "toctou", lambda: case["bundle"], event_hook=mutate_after_validation)
+    assert called is True
+    assert not (case["root"] / "toctou" / MARKER_FILENAME).exists()
+
+
 def test_execution_bundle_must_cover_all_sessions(tmp_path: Path) -> None:
     case = _fixture(tmp_path)
     bad_bundle = ProtectedEvaluationBundle(
@@ -865,6 +949,53 @@ print(json.dumps({"evaluation_id": result["evaluation_id"]}, sort_keys=True))
         assert hashes_before == {
             name: sha256_file(case["root"] / "cold-run" / name) for name in immutable_names
         }
+
+
+def test_two_first_run_processes_allow_only_one_loader_and_one_result(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    bundle_path = case["root"] / "race-bundle.pkl"
+    kwargs_path = case["root"] / "race-kwargs.pkl"
+    with bundle_path.open("wb") as handle:
+        pickle.dump(case["bundle"], handle)
+    with kwargs_path.open("wb") as handle:
+        pickle.dump(case["kwargs"], handle)
+    child = r'''
+import os
+import pickle
+import sys
+from pathlib import Path
+from idx_trade.prospective_evaluation_gate_v1 import run_protected_evaluation_once
+root = Path(sys.argv[1])
+with (root / "race-bundle.pkl").open("rb") as handle:
+    bundle = pickle.load(handle)
+with (root / "race-kwargs.pkl").open("rb") as handle:
+    kwargs = pickle.load(handle)
+def loader():
+    (root / f"loader-{os.getpid()}").write_text("called\n", encoding="utf-8")
+    return bundle
+run_protected_evaluation_once(
+    output_dir=root / "race-run",
+    protected_loader=loader,
+    **kwargs,
+)
+'''
+    env = os.environ.copy()
+    src_root = str(Path(__file__).resolve().parents[1] / "src")
+    env["PYTHONPATH"] = os.pathsep.join([src_root, env.get("PYTHONPATH", "")]).rstrip(os.pathsep)
+    processes = [
+        subprocess.Popen(
+            [sys.executable, "-c", child, str(case["root"])],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        for _ in range(2)
+    ]
+    results = [(process.wait(timeout=30), process.stdout.read(), process.stderr.read()) for process in processes]
+    assert sum(code == 0 for code, _, _ in results) == 1, results
+    assert len(list(case["root"].glob("loader-*"))) == 1
+    assert (case["root"] / "race-run" / FINAL_MANIFEST_FILENAME).is_file()
 
 
 def test_orphan_marker_fails_closed_without_loader(tmp_path: Path) -> None:

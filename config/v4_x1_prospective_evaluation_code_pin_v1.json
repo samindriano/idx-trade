@@ -18,8 +18,8 @@
   },
   "gate": {
     "path": "../src/idx_trade/prospective_evaluation_gate_v1.py",
-    "source_commit": "32bf47b86623b7ba0b551179c931ec0e45cec55e",
-    "git_blob_sha1": "65ae57249546264fe4f414cfc0be4a3396847d02"
+    "source_commit": "9df943123011d1dbdb6bf896eab7e0db76be7c3c",
+    "git_blob_sha1": "3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd"
   },
   "contract": {
     "path": "v4_x1_prospective_evaluation_contract_v1.json",

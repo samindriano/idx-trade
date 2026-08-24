@@ -17,6 +17,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from idx_trade.prospective_evaluation_gate_v1 import (
     ProspectiveAccessGateBlocked,
     inspect_persisted_access_status,
+    validate_preflight_bundle,
     validate_machine_readable_contract,
 )
 from idx_trade.provenance import sha256_file
@@ -33,6 +34,8 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("config/v4_x1_prospective_evaluation_contract_v1.json"),
     )
     parser.add_argument("--contract-sha256")
+    parser.add_argument("--preflight-bundle", type=Path)
+    parser.add_argument("--preflight-bundle-sha256")
     parser.add_argument("--output-dir", type=Path)
     return parser
 
@@ -65,6 +68,14 @@ def main(argv: list[str] | None = None) -> int:
             args.contract_sha256,
             require_resolved_target=True,
         )
+        if args.preflight_bundle is None or not args.preflight_bundle_sha256:
+            raise ProspectiveAccessGateBlocked("PREACCESS_ARTIFACT_BUNDLE_REQUIRED")
+        validate_preflight_bundle(
+            args.preflight_bundle,
+            args.preflight_bundle_sha256,
+            contract_path=contract,
+            contract_sha256=args.contract_sha256,
+        )
         result.update(
             {
                 "status": "PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT",
@@ -77,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     except ProspectiveAccessGateBlocked as exc:
         code = str(exc)
         if "CANONICAL_TARGET_IDENTITY_UNRESOLVED" not in code:
-            code = "INTEGRITY_FAILURE"
+            code = code if code == "PREACCESS_ARTIFACT_BUNDLE_REQUIRED" else "INTEGRITY_FAILURE"
         result.update({"status": "PRE_FLIGHT_BLOCKED", "blocker_codes": [code]})
         print(json.dumps(result, sort_keys=True, indent=2))
         return 0
