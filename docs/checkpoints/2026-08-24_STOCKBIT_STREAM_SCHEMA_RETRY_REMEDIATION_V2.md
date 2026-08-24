@@ -41,3 +41,22 @@ full pytest and `git diff --check` must pass. One controlled cloud run on the
 updated branch must verify that the PADI-style transient case can become
 `DATA_READY` when the bounded second response is valid, while persistent
 malformation remains `PARTIAL_FAILURE`.
+
+## Controlled cloud result
+
+Run `32722871440` on commit `d6b48fd6` completed successfully:
+
+- planned/completed calls: `200/200`;
+- response classifications: `OK=200`;
+- normalized rows: `5931`;
+- final status: `DATA_READY`;
+- `validation_diagnostics=[]`;
+- manifest SHA-256:
+  `3e160e6024c1fddb40109184205baf54ebc7c0d89f9ca1ab5fadaf7ec7343e1b`;
+- `model_accessed=false`;
+- `outcome_accessed=false`;
+- `counter_mutated=false`.
+
+This verifies that a transient PADI-style schema response can recover within
+the bounded second attempt while the strict final validator and all-ticker
+`DATA_READY` gate remain active.

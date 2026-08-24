@@ -35,3 +35,11 @@ Focused capture/archive tests, `py_compile`, full pytest, `git diff --check`,
 and one controlled workflow dispatch on the updated branch. Record the final
 run summary and manifest SHA for review. Only MAIN may update
 `coordination/TEAM_STATUS.md` or merge the PR.
+
+## Final cloud result
+
+Run `32722871440` on `d6b48fd6` passed with `DATA_READY`, `200/200` final `OK`
+responses, `5931` normalized rows, and an empty `validation_diagnostics`
+list. Manifest SHA-256:
+`3e160e6024c1fddb40109184205baf54ebc7c0d89f9ca1ab5fadaf7ec7343e1b`.
+Model, outcome, and counter flags were all false.
