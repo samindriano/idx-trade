@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: `5f1f1689240b43fe70eb2f6bb4b54dd901fa297c` (`origin/main`)
 branch: `fix/stockbit-stream-transient-reliability-main-v1`
-head_commit: pending commit
+head_commit: `03b21db1933351f16138d11b128680833c10217f`
 scope: Narrow main-line transplant of accepted Stockbit transient request reliability only.
 files_changed:
   - `src/idx_trade/stockbit_stream_capture_v2.py`
