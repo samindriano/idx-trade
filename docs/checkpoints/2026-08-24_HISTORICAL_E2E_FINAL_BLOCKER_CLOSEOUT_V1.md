@@ -72,11 +72,15 @@ does not establish a market-wide no-event ledger:
 - normalized manifest:
   `D:\Documents\Project\idx-historical-e2e-dividend-corpus-normalized-20260824-v1\NORMALIZED_MANIFEST.json`
   SHA-256 `a94a04b7d8c2dcefafbd8397e03e36059efbdeaab609068644d53371d1b6b167`
-- 347/347 ticker response files are present in the raw corpus;
+- 347 ticker response files are present in the raw corpus, but the raw
+  manifest remains `INCOMPLETE` for `BBTN`, `BJTM`, `CYBR`, and `RAJA`;
 - 53,637 official announcement rows are present;
 - 921 candidates: 844 cash, 60 ambiguous, 17 unsupported/non-cash;
 - 2,023 candidate attachment references exist;
 - 0 historical PDFs are preserved in this corpus;
+- the normalized derivative's `COMPLETE` status does not override the raw
+  manifest failure state; an independent reparse recovered 14 candidates
+  omitted from the raw candidate inventory (BBTN 4, BJTM 3, RAJA 7);
 - 11 bounded certified positive overlaps remain valid for BBCA/BBRI;
 - 4,384 exposure rows require attachment-level dividend semantics;
 - 1,298 exposure rows remain `NO_EVENT_PROOF_NOT_AUTHORIZED`;

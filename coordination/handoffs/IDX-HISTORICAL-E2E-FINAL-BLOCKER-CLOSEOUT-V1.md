@@ -57,6 +57,11 @@ The bounded dividend audit independently confirmed:
 - 11 positive certified overlap rows across BBCA and BBRI;
 - 4,384 rows requiring attachment semantics;
 - 1,298 rows with no-event proof not authorized;
+- the raw announcement manifest remains `INCOMPLETE` for BBTN, BJTM, CYBR,
+  and RAJA; the normalized `COMPLETE` label is not sufficient to override
+  that source-state failure;
+- an independent reparse recovered 14 candidates omitted from the raw
+  candidate inventory (BBTN 4, BJTM 3, RAJA 7);
 - 0 historical PDFs in the complete metadata corpus;
 - no defensible basis to promote title absence to a market-wide no-event pass.
 
