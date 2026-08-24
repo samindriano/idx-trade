@@ -165,6 +165,14 @@ class TransientRecoveryClient(Client):
         return super().stream(symbol)
 
 
+class MalformedClient(Client):
+    def stream(self, symbol):
+        self.calls.append(symbol)
+        item = {"id": f"{symbol}-1", "createdAt": "2026-08-21 12:00:00"}
+        raw = json.dumps({"data": {"count": 1, "items": [item], "symbol": symbol}}).encode()
+        return StreamResponse(), raw, datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+
+
 class RequestExceptionRecoveryClient(Client):
     def __init__(self, failures: int):
         super().__init__()
@@ -255,6 +263,24 @@ def test_capture_v2_retries_transient_5xx_once_and_recovers(tmp_path: Path):
     bbca = next(record for record in result["request_records"] if record["ticker"] == "BBCA")
     assert bbca["retry_recovered"] is True
     assert [attempt["http_status"] for attempt in bbca["provider_attempts"]] == [503, 200]
+
+
+def test_capture_v2_persistent_item_schema_error_remains_fail_closed(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    client = MalformedClient()
+    result = capture_stream_v2(client=client, archive=LocalLeanArchive(tmp_path), universe=universe, slot="midday", hmac_salt="salt", monthly_reserve=1)
+    record = result["request_records"][0]
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert result["provider_calls"] == 1
+    assert result["successful_responses"] == 0
+    assert client.calls == ["BBCA"]
+    assert record["response_classification"] == "ITEM_SCHEMA_ERROR"
+    assert record["validation_detail"] == "item[0].missing_content"
+    assert record["retry_recovered"] is False
+    assert len(record["provider_attempts"]) == 1
 
 
 def test_capture_v2_retries_request_exception_once_and_records_recovery(tmp_path: Path):

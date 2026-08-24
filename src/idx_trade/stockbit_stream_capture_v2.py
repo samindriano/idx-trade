@@ -24,7 +24,7 @@ from idx_trade.stockbit_stream_archive import (
     ZapiClient,
     canonical_json_bytes,
     normalize_post,
-    parse_stream_payload,
+    parse_stream_payload_detailed,
     sha256_bytes,
 )
 
@@ -449,6 +449,9 @@ def capture_stream_v2(
         response: requests.Response | None = None
         raw: bytes | None = None
         observed_at: datetime | None = None
+        classification: str | None = None
+        items: list[dict[str, Any]] = []
+        validation_detail: str | None = None
         for attempt_number in range(1, MAX_STREAM_ATTEMPTS + 1):
             provider_calls += 1
             try:
@@ -490,7 +493,7 @@ def capture_stream_v2(
             continue
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
-        classification, _, items = parse_stream_payload(raw, response.status_code, symbol)
+        classification, _, items, validation_detail = parse_stream_payload_detailed(raw, response.status_code, symbol)
         record = {
             "ticker": symbol,
             "activity_rank": selected["activity_rank"],
@@ -503,6 +506,8 @@ def capture_stream_v2(
             "provider_attempts": attempts,
             "retry_recovered": len(attempts) > 1 and classification == "OK",
         }
+        if validation_detail is not None:
+            record["validation_detail"] = validation_detail
         if classification == "OK":
             normalized = [normalize_post(item, symbol, "ROUTINE_TOP_VALUE", observed_at, hmac_salt) for item in items]
             normalized_bytes = b"".join(canonical_json_bytes(row) for row in sorted(normalized, key=lambda row: row["post_id"]))
