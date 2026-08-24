@@ -6,9 +6,9 @@ task_id: IDX-V4-X1-PROSPECTIVE-EVALUATION-GATE-AUDIT-V1
 model_used: GPT-5 Codex
 reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
-source_commit: 916ae24d2f77a1bbc37e3fdf664bf1f68e63eaab
+source_commit: 785d54eb6433ae005897c74980a7640c1a5a0265
 branch: research/idx-v4-x1-prospective-evaluation-protocol-v1
-head_commit: 916ae24d2f77a1bbc37e3fdf664bf1f68e63eaab
+head_commit: 785d54eb6433ae005897c74980a7640c1a5a0265
 scope: outcome-blind audit and hardening of the V4-X1 prospective protected-access gate
 files_changed:
   - src/idx_trade/prospective_evaluation_gate_v1.py
