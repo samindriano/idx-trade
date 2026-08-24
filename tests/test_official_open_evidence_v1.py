@@ -320,6 +320,30 @@ def test_transport_chain_retries_zapi_request_exception_once(monkeypatch, tmp_pa
     assert payload["transport_metadata"]["attempt_count"] == 2
 
 
+def test_transport_chain_direct_timeout_and_zapi_timeout_fail_closed(monkeypatch, tmp_path):
+    def direct_get(url, *, params, headers, timeout):
+        raise requests.ReadTimeout("idx direct timed out")
+
+    def zapi_get(url, *, params, headers, timeout):
+        raise requests.ReadTimeout("zapi timed out")
+
+    monkeypatch.setattr("idx_trade.official_open_evidence_v1.time.sleep", lambda _: None)
+    with pytest.raises(
+        OfficialOpenEvidenceError,
+        match="DIRECT=OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR:ReadTimeout:idx direct timed out",
+    ) as exc_info:
+        capture_official_open_with_transport_fallback(
+            "2026-06-12",
+            output_root=tmp_path,
+            zapi_api_key="key",
+            direct_get=direct_get,
+            zapi_get=zapi_get,
+        )
+    assert "ZAPI=OFFICIAL_OPEN_ZAPI_RAW_REQUEST_ERROR:ReadTimeout:zapi timed out" in str(
+        exc_info.value
+    )
+
+
 def test_transport_chain_does_not_retry_zapi_auth_failure(tmp_path):
     calls = 0
 

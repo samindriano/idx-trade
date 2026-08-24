@@ -152,6 +152,21 @@ class RequestExceptionRecoveryClient(Client):
         return super().stream(symbol)
 
 
+class Symbol37TimeoutClient(Client):
+    def __init__(self, failures: int):
+        super().__init__()
+        self.failures = failures
+        self.attempts = 0
+
+    def stream(self, symbol):
+        if symbol == "TICK37":
+            self.attempts += 1
+            if self.attempts <= self.failures:
+                self.calls.append(symbol)
+                raise requests.ReadTimeout("symbol 37 timeout")
+        return super().stream(symbol)
+
+
 class StreamResponse503:
     status_code = 503
     headers = {"content-type": "application/json"}
@@ -240,6 +255,60 @@ def test_capture_v2_marks_two_request_exceptions_partial(tmp_path: Path):
     record = result["request_records"][0]
     assert result["status"] == "PARTIAL_FAILURE"
     assert result["successful_responses"] == 0
+    assert record["response_classification"] == "REQUEST_EXCEPTION"
+    assert len(record["provider_attempts"]) == 2
+
+
+def test_capture_v2_symbol_37_timeout_once_recovers(tmp_path: Path):
+    rows = [
+        {
+            "ticker": f"TICK{i:02d}",
+            "company_name": f"TICK{i:02d}",
+            "listed_from": "2000",
+            "source_session": "2026-08-20",
+            "regular_value": float(1000 - i),
+            "activity_rank": i,
+        }
+        for i in range(1, 38)
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    result = capture_stream_v2(
+        client=Symbol37TimeoutClient(failures=1),
+        archive=LocalLeanArchive(tmp_path),
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    record = next(row for row in result["request_records"] if row["ticker"] == "TICK37")
+    assert result["status"] == "DATA_READY"
+    assert record["retry_recovered"] is True
+    assert len(record["provider_attempts"]) == 2
+
+
+def test_capture_v2_symbol_37_timeout_twice_is_partial(tmp_path: Path):
+    rows = [
+        {
+            "ticker": f"TICK{i:02d}",
+            "company_name": f"TICK{i:02d}",
+            "listed_from": "2000",
+            "source_session": "2026-08-20",
+            "regular_value": float(1000 - i),
+            "activity_rank": i,
+        }
+        for i in range(1, 38)
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    result = capture_stream_v2(
+        client=Symbol37TimeoutClient(failures=2),
+        archive=LocalLeanArchive(tmp_path),
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    record = next(row for row in result["request_records"] if row["ticker"] == "TICK37")
+    assert result["status"] == "PARTIAL_FAILURE"
     assert record["response_classification"] == "REQUEST_EXCEPTION"
     assert len(record["provider_attempts"]) == 2
 
