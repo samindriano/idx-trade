@@ -81,7 +81,7 @@ def run_same_session_official_open_capture(
     *,
     runtime_root: str | Path,
     now: datetime | None = None,
-    get: Callable[..., requests.Response] = requests.get,
+    get: Callable[..., requests.Response] | None = None,
     zapi_get: Callable[..., requests.Response] | None = None,
     zapi_api_key: str | None = None,
     timeout_seconds: float = 30.0,

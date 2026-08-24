@@ -3,6 +3,7 @@ import json
 
 import pandas as pd
 import pytest
+import requests
 
 from idx_trade.official_open_evidence_v1 import (
     AUTHORITY,
@@ -270,6 +271,78 @@ def test_transport_chain_falls_back_to_zapi_raw_on_direct_http_failure(tmp_path)
     assert payload["fallback_policy"] == "NONE"
     assert payload["transport_metadata"]["response_envelope"] == "data"
     assert payload["transport_metadata"]["primary_transport_error"] == "OFFICIAL_OPEN_DIRECT_IDX_HTTP_403"
+
+
+def test_transport_chain_falls_back_on_direct_timeout_with_safe_diagnostic(tmp_path):
+    def direct_get(url, *, params, headers, timeout):
+        raise requests.ReadTimeout("idx direct timed out")
+
+    def zapi_get(url, *, params, headers, timeout):
+        return _Response(_zapi_payload(_rows()))
+
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert payload["transport"] == ZAPI_RAW_TRANSPORT
+    assert payload["transport_metadata"]["primary_transport_error"].startswith(
+        "OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR:ReadTimeout:idx direct timed out"
+    )
+
+
+def test_transport_chain_retries_zapi_request_exception_once(monkeypatch, tmp_path):
+    calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(b"forbidden", status_code=403)
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise requests.ReadTimeout("zapi timed out")
+        return _Response(_zapi_payload(_rows()))
+
+    monkeypatch.setattr("idx_trade.official_open_evidence_v1.time.sleep", lambda _: None)
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert calls == 2
+    assert payload["transport_metadata"]["attempt_count"] == 2
+
+
+def test_transport_chain_does_not_retry_zapi_auth_failure(tmp_path):
+    calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(b"forbidden", status_code=403)
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal calls
+        calls += 1
+        return _Response(b"forbidden", status_code=403)
+
+    with pytest.raises(
+        OfficialOpenEvidenceError,
+        match="DIRECT=OFFICIAL_OPEN_DIRECT_IDX_HTTP_403:ZAPI=OFFICIAL_OPEN_ZAPI_RAW_HTTP_403",
+    ):
+        capture_official_open_with_transport_fallback(
+            "2026-06-12",
+            output_root=tmp_path,
+            zapi_api_key="key",
+            direct_get=direct_get,
+            zapi_get=zapi_get,
+        )
+    assert calls == 1
 
 
 def test_transport_chain_does_not_hide_direct_schema_failure_with_zapi(tmp_path):
