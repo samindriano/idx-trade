@@ -73,13 +73,21 @@ The 2026-08-24 natural run produced:
    `21780acf67677dcf88400446bd1be7f4c5c76edd`, while the external config
    still points to the primary dirty checkout and old commit. This must be
    reconciled before the scheduled E2E task can pass its bootstrap guard.
-2. The current official calendar has no future successor after 2026-08-24.
+2. The external config has now been repointed to the clean durable runtime
+   branch `runtime/idx-e2e-baseline-paper-v1@70da7968a1df27f8831bdad67799cc9ea771a697`.
+   Its new config SHA-256 is
+   `3a5d4e7a4e9dd7fdd4d37fe8e67f1a090606dca47fbc86886e13b1f8775b0724`.
+   The scheduled task still passes the old config argument SHA
+   `88cfe032c3953f6cc1742149bb7f5bdda880ca8bd9300c44df9413362f4a6dd5`,
+   so bootstrap remains correctly blocked until that argument is updated in
+   an Administrator context.
+3. The current official calendar has no future successor after 2026-08-24.
    No 2026-08-25 session may be fabricated; the next live proof is the first
    date subsequently present in the official calendar.
-3. The live paper runtime has no verified T0/prepared parent for 2026-08-24,
+4. The live paper runtime has no verified T0/prepared parent for 2026-08-24,
    so the missed-session transition was not applied to live state. Applying a
    synthetic parent would violate the continuity contract.
-4. Scheduler mutation requires an Administrator PowerShell context. No task
+5. Scheduler mutation requires an Administrator PowerShell context. No task
    was mutated in this checkpoint.
 
 ## Boundary

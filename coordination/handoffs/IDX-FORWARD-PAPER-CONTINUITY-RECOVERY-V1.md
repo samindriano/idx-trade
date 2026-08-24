@@ -6,9 +6,9 @@ task_id: IDX-FORWARD-PAPER-CONTINUITY-RECOVERY-V1
 model_used: Luna xhigh
 reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`
-source_commit: `21780acf67677dcf88400446bd1be7f4c5c76edd`
+source_commit: `70da7968a1df27f8831bdad67799cc9ea771a697`
 branch: `integration/idx-e2e-baseline-paper-v1`
-head_commit: pending commit
+head_commit: `70da7968a1df27f8831bdad67799cc9ea771a697`
 
 ## Scope
 
@@ -33,9 +33,14 @@ holiday-aware Official Open preflight and explicit no-successor handling.
   committed; the prospective counter is `2/100`.
 - Official Open for 2026-08-24 failed closed through both transports, with no
   certified artifact. This is not retroactively repaired.
-- E2E Paper failed at deployment identity bootstrap because config binds the
-  primary dirty checkout and old commit while the durable runtime worktree is
-  clean at `21780acf67677dcf88400446bd1be7f4c5c76edd`.
+- E2E Paper initially failed at deployment identity bootstrap because config
+  bound the primary dirty checkout and old commit. The config is now bound to
+  the clean durable runtime at `70da7968a1df27f8831bdad67799cc9ea771a697`
+  with sidecar SHA
+  `3a5d4e7a4e9dd7fdd4d37fe8e67f1a090606dca47fbc86886e13b1f8775b0724`.
+- The existing Windows task still passes the previous config SHA
+  `88cfe032c3953f6cc1742149bb7f5bdda880ca8bd9300c44df9413362f4a6dd5`;
+  one Administrator-only action-argument update remains.
 - The official calendar currently ends at 2026-08-24. 2026-08-25 is not an
   official session in the pinned file and no future successor is available.
 - The live paper runtime has no verified T0/prepared parent for 2026-08-24;
@@ -59,9 +64,9 @@ holiday-aware Official Open preflight and explicit no-successor handling.
 
 ## Blocking risks / required next action
 
-- MAIN must reconcile the external config to a clean, hash-pinned durable
-  runtime identity and, in an Administrator context, update the existing
-  `IDXTrade-E2E-Paper` task without creating a second scheduler.
+- In an Administrator context, MAIN must update only the existing
+  `IDXTrade-E2E-Paper` action's `--config-sha256` argument to the new sidecar
+  SHA, without creating a second scheduler or starting the task.
 - The calendar provider/sync must later publish the next official session
   before a next-session prepared execution can be created. The 2026-08-25
   holiday is expected to be a no-op, not a live proof.
