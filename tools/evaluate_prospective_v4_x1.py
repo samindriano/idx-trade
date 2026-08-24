@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from idx_trade.prospective_evaluation_gate_v1 import (
     ProspectiveAccessGateBlocked,
+    inspect_persisted_access_status,
     validate_machine_readable_contract,
 )
 from idx_trade.provenance import sha256_file
@@ -23,18 +24,28 @@ from idx_trade.provenance import sha256_file
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="V4-X1 prospective evaluation preflight")
-    parser.add_argument("--preflight-only", action="store_true", required=True)
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument("--preflight-only", action="store_true")
+    modes.add_argument("--status-only", action="store_true")
     parser.add_argument(
         "--contract",
         type=Path,
         default=Path("config/v4_x1_prospective_evaluation_contract_v1.json"),
     )
-    parser.add_argument("--contract-sha256", required=True)
+    parser.add_argument("--contract-sha256")
+    parser.add_argument("--output-dir", type=Path)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.status_only:
+        if args.output_dir is None:
+            print(json.dumps({"status": "INTEGRITY_FAILURE", "reason": "--output-dir is required"}, sort_keys=True))
+            return 2
+        print(json.dumps(inspect_persisted_access_status(args.output_dir), sort_keys=True, indent=2))
+        return 0
+
     result: dict[str, object] = {
         "schema_version": "v4_x1_prospective_evaluation_preflight_v1",
         "protected_outcomes_accessed": False,
@@ -44,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
         "paper_state_changed": False,
     }
     try:
+        if not args.contract_sha256:
+            raise ProspectiveAccessGateBlocked("--contract-sha256 is required for preflight")
         contract = args.contract.resolve()
         if not contract.is_file() or sha256_file(contract) != str(args.contract_sha256).lower():
             raise ProspectiveAccessGateBlocked("prospective evaluation contract sha256 mismatch")

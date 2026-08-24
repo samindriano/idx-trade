@@ -61,6 +61,35 @@ def test_preflight_cli_is_read_only_and_reports_target_blocker() -> None:
     assert payload["paper_state_changed"] is False
 
 
+def test_status_only_cli_distinguishes_empty_orphan_and_integrity(tmp_path: Path) -> None:
+    def run_status(path: Path) -> dict:
+        completed = subprocess.run(
+            [sys.executable, str(CLI), "--status-only", "--output-dir", str(path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(completed.stdout)
+
+    assert run_status(tmp_path / "empty")["status"] == "PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT"
+
+    orphan = tmp_path / "orphan"
+    orphan.mkdir()
+    (orphan / "outcome_access_marker.json").write_text("{}", encoding="utf-8")
+    assert run_status(orphan)["status"] == "ORPHAN_OR_INTERRUPTED_STATE"
+
+    integrity = tmp_path / "integrity"
+    integrity.mkdir()
+    for name in (
+        "pre_outcome_access_attestation.json",
+        "outcome_access_marker.json",
+        "prospective_evaluation_result.json",
+        "prospective_evaluation_result_manifest.json",
+    ):
+        (integrity / name).write_text("{}\n", encoding="utf-8")
+    assert run_status(integrity)["status"] == "INTEGRITY_FAILURE"
+
+
 def test_session_date_timezone_does_not_shift_civil_date() -> None:
     normalized = _normalize_dates(
         pd.Series(["2026-08-25T00:00:00+07:00"]), label="synthetic session"

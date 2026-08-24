@@ -24,6 +24,7 @@ from idx_trade.prospective_evaluation_gate_v1 import (
     RESULT_FILENAME,
     ProtectedEvaluationBundle,
     ProspectiveAccessGateBlocked,
+    _validate_paper,
     _write_json_exclusive,
     git_blob_sha1_file,
     run_protected_evaluation_once,
@@ -72,6 +73,7 @@ def _fixture(tmp_path: Path, *, paper_valid: bool = True, benchmark_status: str 
                 "model_id": MODEL_NAME,
                 "generation": MODEL_GENERATION,
                 "model_fingerprint": MODEL_FINGERPRINT,
+                "ranking": "alpha_consensus DESC, ticker ASC",
                 "session_date": date.date().isoformat(),
                 "status": "DONE",
                 "output": {
@@ -316,6 +318,140 @@ def test_rehearsal_writes_marker_before_loader_and_completes(tmp_path: Path) -> 
     assert not (case["root"] / "run" / FAILURE_FILENAME).exists()
 
 
+def test_fault_before_attestation_write_never_reaches_marker_or_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case = _fixture(tmp_path)
+    called = False
+
+    def loader():
+        nonlocal called
+        called = True
+        return case["bundle"]
+
+    def fail_write(path: Path, payload: dict) -> None:
+        if path.name == PREACCESS_FILENAME:
+            raise ProspectiveAccessGateBlocked("synthetic attestation write failure")
+        _write_json(path, payload)
+
+    monkeypatch.setattr("idx_trade.prospective_evaluation_gate_v1._write_json_exclusive", fail_write)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="attestation write failure"):
+        _invoke(case, "fault-before-attestation", loader)
+    assert called is False
+    assert not (case["root"] / "fault-before-attestation" / MARKER_FILENAME).exists()
+
+
+def test_fault_after_attestation_before_marker_blocks_future_resume(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    def stop(event: str) -> None:
+        if event == "PREATTESTATION_WRITTEN":
+            raise RuntimeError("synthetic before marker")
+
+    with pytest.raises(RuntimeError, match="before marker"):
+        _invoke(case, "fault-before-marker", lambda: case["bundle"], event_hook=stop)
+    assert (case["root"] / "fault-before-marker" / PREACCESS_FILENAME).exists()
+    assert not (case["root"] / "fault-before-marker" / MARKER_FILENAME).exists()
+    with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior"):
+        _invoke(case, "fault-before-marker", lambda: case["bundle"])
+
+
+def test_fault_during_marker_creation_blocks_future_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case = _fixture(tmp_path)
+    original_link = __import__("os").link
+    calls = 0
+
+    def fail_second_link(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("synthetic marker publish failure")
+        return original_link(source, destination)
+
+    monkeypatch.setattr("idx_trade.prospective_evaluation_gate_v1.os.link", fail_second_link)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="atomic publish unavailable"):
+        _invoke(case, "fault-marker", lambda: case["bundle"])
+    assert (case["root"] / "fault-marker" / PREACCESS_FILENAME).exists()
+    assert not (case["root"] / "fault-marker" / MARKER_FILENAME).exists()
+    monkeypatch.undo()
+    with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior"):
+        _invoke(case, "fault-marker", lambda: case["bundle"])
+
+
+def test_fault_immediately_before_loader_is_recorded_without_loader_call(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    called = False
+
+    def loader():
+        nonlocal called
+        called = True
+        return case["bundle"]
+
+    def stop(event: str) -> None:
+        if event == "LOADER_CALLED":
+            raise RuntimeError("synthetic before loader")
+
+    with pytest.raises(ProspectiveAccessGateBlocked, match="protected access started"):
+        _invoke(case, "fault-before-loader", loader, event_hook=stop)
+    assert called is False
+    assert (case["root"] / "fault-before-loader" / FAILURE_FILENAME).exists()
+
+
+def test_fault_during_result_serialization_locks_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case = _fixture(tmp_path)
+    original = __import__("idx_trade.prospective_evaluation_gate_v1", fromlist=["_write_json_exclusive"])._write_json_exclusive
+
+    def fail_result(path: Path, payload: dict) -> None:
+        if path.name == RESULT_FILENAME:
+            raise ProspectiveAccessGateBlocked("synthetic result serialization failure")
+        original(path, payload)
+
+    monkeypatch.setattr("idx_trade.prospective_evaluation_gate_v1._write_json_exclusive", fail_result)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="result serialization failure"):
+        _invoke(case, "fault-result", lambda: case["bundle"])
+    assert (case["root"] / "fault-result" / MARKER_FILENAME).exists()
+    assert (case["root"] / "fault-result" / FAILURE_FILENAME).exists()
+    monkeypatch.undo()
+    with pytest.raises(ProspectiveAccessGateBlocked, match="partial prior"):
+        _invoke(case, "fault-result", lambda: case["bundle"])
+
+
+def test_fault_during_final_manifest_write_locks_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case = _fixture(tmp_path)
+    original = __import__("idx_trade.prospective_evaluation_gate_v1", fromlist=["_write_json_exclusive"])._write_json_exclusive
+
+    def fail_manifest(path: Path, payload: dict) -> None:
+        if path.name == FINAL_MANIFEST_FILENAME:
+            raise ProspectiveAccessGateBlocked("synthetic final manifest failure")
+        original(path, payload)
+
+    monkeypatch.setattr("idx_trade.prospective_evaluation_gate_v1._write_json_exclusive", fail_manifest)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="final manifest failure"):
+        _invoke(case, "fault-final-manifest", lambda: case["bundle"])
+    assert (case["root"] / "fault-final-manifest" / RESULT_FILENAME).exists()
+    assert (case["root"] / "fault-final-manifest" / FAILURE_FILENAME).exists()
+
+
+def test_fault_after_final_result_write_locks_rerun(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+
+    def stop(event: str) -> None:
+        if event == "FINAL_RESULT_WRITTEN":
+            raise RuntimeError("synthetic after final result")
+
+    with pytest.raises(ProspectiveAccessGateBlocked, match="protected access started"):
+        _invoke(case, "fault-after-final", lambda: case["bundle"], event_hook=stop)
+    output = case["root"] / "fault-after-final"
+    assert (output / FINAL_MANIFEST_FILENAME).exists()
+    assert (output / FAILURE_FILENAME).exists()
+
+
 def test_counter_99_blocks_before_loader_and_marker(tmp_path: Path) -> None:
     case = _fixture(tmp_path)
     _, sha = _rewrite_attestation(case, "counter", lambda p: p.update(current=99))
@@ -366,6 +502,73 @@ def test_score_manifest_fingerprint_tamper_blocks_before_loader(tmp_path: Path) 
     inventory.loc[0, "score_manifest_sha256"] = new_sha
     with pytest.raises(ProspectiveAccessGateBlocked, match="identity mismatch"):
         _invoke(case, "fingerprint", lambda: case["bundle"], session_inventory=inventory)
+
+
+def test_score_artifact_hash_mutation_blocks_before_loader(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    inventory = case["inventory"].copy()
+    artifact = Path(inventory.iloc[0]["score_artifact_path"])
+    score = pd.read_csv(artifact)
+    score.loc[0, "alpha_consensus"] = 0.91
+    score.to_csv(artifact, index=False)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="score artifact sha256 mismatch"):
+        _invoke(case, "score-artifact-tamper", lambda: case["bundle"], session_inventory=inventory)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("model_id", "WRONG_MODEL"),
+        ("generation", "WRONG_GENERATION"),
+        ("ranking", "ticker ASC, alpha_consensus DESC"),
+    ],
+)
+def test_score_manifest_identity_and_ranking_mutation_blocks_before_loader(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    case = _fixture(tmp_path)
+    inventory = case["inventory"].copy()
+    manifest = Path(inventory.iloc[0]["score_manifest_path"])
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload[field] = value
+    inventory.loc[0, "score_manifest_sha256"] = _write_json(manifest, payload)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="identity mismatch"):
+        _invoke(case, f"manifest-{field}", lambda: case["bundle"], session_inventory=inventory)
+
+
+def test_inventory_above_100_and_duplicate_identity_block_before_loader(tmp_path: Path) -> None:
+    case = _fixture(tmp_path)
+    extra = case["inventory"].iloc[[0]].copy()
+    too_many = pd.concat([case["inventory"], extra], ignore_index=True)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="exactly 100"):
+        _invoke(case, "inventory101", lambda: case["bundle"], session_inventory=too_many)
+
+    duplicate = case["inventory"].copy()
+    duplicate.loc[1, "session_index"] = duplicate.loc[0, "session_index"]
+    with pytest.raises(ProspectiveAccessGateBlocked, match="duplicate date/index"):
+        _invoke(case, "inventory-duplicate", lambda: case["bundle"], session_inventory=duplicate)
+
+
+@pytest.mark.parametrize("mutation", ["gap", "duplicate"])
+def test_detailed_paperstate_transition_gap_or_duplicate_fails_closed(
+    tmp_path: Path, mutation: str
+) -> None:
+    case = _fixture(tmp_path)
+    path = case["paths"]["paper"]
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if mutation == "gap":
+        payload["transitions"][5]["forward_position"] = 7
+    else:
+        payload["transitions"][5]["session_date"] = payload["transitions"][4]["session_date"]
+    sha = _write_json(path, payload)
+    with pytest.raises(ProspectiveAccessGateBlocked, match="transition ledger"):
+        _validate_paper(
+            path,
+            sha,
+            expected_sessions=case["inventory"][["session_date", "session_index"]],
+            fixture_root=case["root"],
+            require_detailed_continuity=True,
+        )
 
 
 def test_neutral_extra_score_column_is_not_silently_ignored(tmp_path: Path) -> None:

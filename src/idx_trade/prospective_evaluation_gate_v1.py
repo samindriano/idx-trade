@@ -39,6 +39,7 @@ from .provenance import sha256_file
 
 ACCESS_GATE_SCHEMA = "v4_x1_prospective_protected_access_gate_v1"
 REQUIRED_SESSION_COUNT = 100
+RANKING_SEMANTICS = "alpha_consensus DESC, ticker ASC"
 PROSPECTIVE_CONTRACT_SCHEMA = "prospective_evaluation_contract_v1"
 PROSPECTIVE_CONTRACT_RELATIVE_PATH = "config/v4_x1_prospective_evaluation_contract_v1.json"
 CODE_PIN_MANIFEST_SCHEMA = "v4_x1_prospective_evaluation_code_pin_v1"
@@ -376,6 +377,7 @@ def _validate_score_manifest(
         "model_id": str(manifest.get("model_id") or "") == MODEL_NAME,
         "generation": str(manifest.get("generation") or "") == MODEL_GENERATION,
         "fingerprint": str(manifest.get("model_fingerprint") or "") == MODEL_FINGERPRINT,
+        "ranking": str(manifest.get("ranking") or "") == RANKING_SEMANTICS,
         "session_date": str(manifest.get("session_date") or "") == session_date.date().isoformat(),
     }
     failed = sorted(name for name, passed in checks.items() if not passed)
@@ -1383,6 +1385,93 @@ def _existing_result(
     raise ProspectiveAccessGateBlocked(
         "partial prior outcome-access state exists; fail closed for forensic recovery"
     )
+
+
+def inspect_persisted_access_status(output_dir: str | Path) -> dict[str, Any]:
+    """Inspect only durable access metadata; never load a result payload/value.
+
+    This is intentionally separate from the execution path. It lets an operator
+    distinguish an empty state, a completed immutable state, an interrupted
+    state, and an integrity failure without calling any loader.
+    """
+
+    destination = Path(output_dir).expanduser().resolve()
+    base = {
+        "schema_version": ACCESS_GATE_SCHEMA,
+        "output_dir": str(destination),
+        "protected_outcomes_accessed": False,
+        "real_protected_loader_called": False,
+        "real_outcome_access_marker_written": False,
+    }
+    if not destination.exists():
+        return {**base, "status": "PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT"}
+    if not destination.is_dir():
+        return {**base, "status": "INTEGRITY_FAILURE", "reason": "output path is not a directory"}
+
+    known = {
+        PREACCESS_FILENAME,
+        MARKER_FILENAME,
+        RESULT_FILENAME,
+        FINAL_MANIFEST_FILENAME,
+        FAILURE_FILENAME,
+    }
+    entries = list(destination.iterdir())
+    if not entries:
+        return {**base, "status": "PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT"}
+    if any(entry.name.startswith(".") and entry.name.endswith(".tmp") for entry in entries):
+        return {
+            **base,
+            "status": "ORPHAN_OR_INTERRUPTED_STATE",
+            "reason": "atomic temporary output exists",
+        }
+    if any(entry.name not in known for entry in entries):
+        return {**base, "status": "INTEGRITY_FAILURE", "reason": "unexpected output artifact exists"}
+
+    paths = {name: destination / name for name in known}
+    if paths[FAILURE_FILENAME].exists():
+        return {
+            **base,
+            "status": "ORPHAN_OR_INTERRUPTED_STATE",
+            "reason": "post-access failure evidence exists",
+        }
+    complete = all(paths[name].is_file() for name in (
+        PREACCESS_FILENAME,
+        MARKER_FILENAME,
+        RESULT_FILENAME,
+        FINAL_MANIFEST_FILENAME,
+    ))
+    if not complete:
+        return {**base, "status": "ORPHAN_OR_INTERRUPTED_STATE", "reason": "partial output state"}
+
+    try:
+        preaccess = _read_json(paths[PREACCESS_FILENAME], label="preaccess attestation")
+        marker = _read_json(paths[MARKER_FILENAME], label="outcome access marker")
+        final = _read_json(paths[FINAL_MANIFEST_FILENAME], label="final evaluation manifest")
+        if final.get("status") != "PROSPECTIVE_EVALUATION_COMPLETE":
+            raise ProspectiveAccessGateBlocked("final result status is not complete")
+        if marker.get("mode") != preaccess.get("mode") or final.get("mode") != marker.get("mode"):
+            raise ProspectiveAccessGateBlocked("persisted mode metadata differs")
+        if sha256_file(paths[PREACCESS_FILENAME]) != str(final.get("preaccess_attestation_sha256") or ""):
+            raise ProspectiveAccessGateBlocked("persisted preaccess hash differs")
+        if sha256_file(paths[MARKER_FILENAME]) != str(final.get("marker_sha256") or ""):
+            raise ProspectiveAccessGateBlocked("persisted marker hash differs")
+        if sha256_file(paths[RESULT_FILENAME]) != str(final.get("result_sha256") or ""):
+            raise ProspectiveAccessGateBlocked("persisted result hash differs")
+        if not str(preaccess.get("evaluation_id") or "").strip():
+            raise ProspectiveAccessGateBlocked("persisted evaluation identity is missing")
+        real = marker.get("mode") == MODE_PROTECTED_PROSPECTIVE and marker.get("marker") == REAL_ACCESS_MARKER
+        if marker.get("mode") == MODE_PROTECTED_PROSPECTIVE and not real:
+            raise ProspectiveAccessGateBlocked("real marker identity is invalid")
+        return {
+            **base,
+            "status": "REAL_ACCESS_ALREADY_COMPLETED" if real else "SYNTHETIC_REHEARSAL_COMPLETE",
+            "protected_outcomes_accessed": bool(real),
+            "real_protected_loader_called": bool(real),
+            "real_outcome_access_marker_written": bool(real),
+            "evaluation_id": str(preaccess["evaluation_id"]),
+        }
+    except (OSError, UnicodeError, json.JSONDecodeError, ProspectiveAccessGateBlocked) as exc:
+        return {**base, "status": "INTEGRITY_FAILURE", "reason": str(exc)}
 
 
 def run_protected_evaluation_once(
