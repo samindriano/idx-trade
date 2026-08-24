@@ -50,10 +50,17 @@ hashes, model identity, contract hash, and 40-hex source-commit identities.
 
 - preflight-only CLI emits explicit no-access booleans and blocks unresolved
   canonical target identity;
+- preflight-only CLI cannot claim readiness without a complete, hashed input
+  bundle; when supplied, the bundle reuses the same pure session/counter/
+  target/PaperState/benchmark/access-audit validators without loading outcomes;
 - real mode requires explicit authorization, a resolved target, exact 100/100
   maturity, the audited code-pin manifest, and exact target-source binding;
+- a future resolved target must carry an exact construction-code path, SHA-256,
+  and source-commit pin bound identically in the frozen contract and attestation;
 - score artifacts require the exact schema `date/session_date`, `ticker`,
   `alpha_consensus`; extra neutral or outcome-like columns are rejected;
+- score manifests reject unknown top-level fields and recursively reject
+  outcome-like metadata keys, including nested values;
 - session inventory, execution, and order frames require exact 100-session
   coverage and unique session keys;
 - PaperState detailed transition evidence, material-drag status, and rule id
@@ -62,8 +69,13 @@ hashes, model identity, contract hash, and 40-hex source-commit identities.
   `INCONCLUSIVE_STATISTICS` and cannot produce a positive verdict;
 - immutable JSON publication uses fsync + no-overwrite hard-link publication;
   temporary/orphan files and partial prior state fail closed;
+- every verified pre-access byte source is rehashed immediately before marker
+  publication, so post-validation replacement is fail-closed (Windows directory
+  fsync remains unavailable; file fsync and no-overwrite publication remain);
 - fresh-process A/B/C synthetic coverage proves durable completion reuse and
   identical immutable hashes without re-calling the loader.
+- explicit transaction-stage fault tests cover all 11 before/after boundaries,
+  and two simultaneous first-run processes prove only one loader/result wins.
 
 ## Validation
 
@@ -73,15 +85,25 @@ Focused gate/evaluator/preflight tests:
 python -m pytest -q tests/test_prospective_evaluation_gate_v1.py \
   tests/test_prospective_evaluation_v1.py \
   tests/test_prospective_evaluation_preflight_v1.py
-52 passed
+82 passed
 ```
 
 Additional checks:
 
 - `python -m py_compile` for the gate, evaluator, and preflight CLI: PASS;
 - `git diff --check`: PASS before publication;
-- full repository pytest: `128 passed`, exit code `0` on the final executable state;
+- full repository pytest: `158 passed`, exit code `0` on the final executable state;
 - no provider/network call and no protected artifact was loaded.
+
+Final executable/code identity:
+
+- branch HEAD: `f08445345bb2cfdc56c717ae1e999a94f70b60a7`;
+- code-pin manifest SHA-256:
+  `a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651`;
+- gate source commit: `c99c9dbe20993f50f422b0a215488c8d4c011227`;
+- gate Git blob: `3f2d5bef426bd4c7587a26e6a9ec077cdd55b0cd`;
+- frozen contract SHA-256 remains
+  `6d64c76dc60ef04f02e9a811e920e7351c00b94aaa2cc834f6019d4a648cb8ac`.
 
 ## Boundary flags
 

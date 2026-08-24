@@ -6,9 +6,9 @@ task_id: IDX-V4-X1-PROSPECTIVE-EVALUATION-GATE-AUDIT-V1
 model_used: GPT-5 Codex
 reasoning_level: high
 source_repository: C:\Users\Sam\OneDrive\Documents\Project\idx-trade
-source_commit: 3bee88314047e35e96fd495d5523658419ccf494
+source_commit: f08445345bb2cfdc56c717ae1e999a94f70b60a7
 branch: research/idx-v4-x1-prospective-evaluation-protocol-v1
-head_commit: 3bee88314047e35e96fd495d5523658419ccf494
+head_commit: f08445345bb2cfdc56c717ae1e999a94f70b60a7
 scope: outcome-blind audit and hardening of the V4-X1 prospective protected-access gate
 files_changed:
   - src/idx_trade/prospective_evaluation_gate_v1.py
@@ -23,6 +23,9 @@ files_changed:
 findings:
   - canonical target identity remains unresolved because retained historical lineage contains non-equivalent target metrics and no unique binding to the requested exact value;
   - the gate is now fail-closed on unresolved target identity and exact code/contract/source-manifest drift;
+  - preflight requires a complete hashed input bundle and reuses the same pure pre-access validators;
+  - nested/unknown score-manifest contamination, target-construction provenance, and final pre-marker TOCTOU drift are fail-closed;
+  - all 11 transaction-stage fault boundaries and a simultaneous first-run race are covered by synthetic tests;
   - score artifacts, execution/order evidence, PaperState transitions, bootstrap validity, and immutable publication are explicitly validated;
   - synthetic cold restart A/B/C proves disk-only resume and completed rerun without loader re-entry or hash drift;
   - no protected outcome, real loader, real marker, provider, scheduler, model, Decision, Sizing, Execution, or counter state was accessed or changed.
@@ -38,9 +41,9 @@ blocking_risks:
   - canonical target identity and exact source provenance are not uniquely resolved;
   - the branch must not be interpreted as a prospective performance result.
 validation_run:
-  - focused gate/evaluator/preflight pytest: PASS;
+  - focused gate/evaluator/preflight pytest: 82 passed;
   - py_compile gate/evaluator/preflight CLI: PASS;
   - git diff --check: PASS;
-  - full pytest: run after final documentation state and report separately;
+  - full pytest: 158 passed;
   - protected access: not attempted.
-recommended_next_action: keep PR #83 draft and obtain independent ChatGPT review; resolve the target identity blocker before any real protected loader authorization.
+recommended_next_action: keep PR #83 draft and obtain independent ChatGPT review; resolve the target identity blocker before any real protected loader authorization. Code-pin manifest SHA256: a9ebacd38ddfc44547bc8f0dbbb9ca9457b13adea771894b309a111abc77c651.

@@ -1,5 +1,10 @@
 # V4-X1 Prospective Protected Access Gate V1 — Checkpoint
 
+Superseded for current audit status by
+`docs/checkpoints/2026-08-25_V4_X1_PROSPECTIVE_EVALUATION_GATE_AUDIT_V1.md`.
+The protected-access boundary remains outcome-blind and real access remains
+blocked pending canonical target identity resolution.
+
 Date: 2026-08-24 (Asia/Jakarta)
 
 Status: `V4_X1_PROSPECTIVE_PROTECTED_GATE_V1_SYNTHETIC_VALIDATED_REAL_ACCESS_PENDING_100_OF_100`
