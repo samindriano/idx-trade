@@ -52,6 +52,27 @@ stdout summary containing only ticker, classification, and validation reason.
 This closes the observability gap without exposing post content, author
 identity, response bytes, or credentials.
 
+## Controlled cloud verification
+
+Run `32720866941` on commit `b9319645` reproduced the incident and exposed the
+exact safe diagnostic:
+
+- ticker: `PADI`;
+- classification: `ITEM_SCHEMA_ERROR`;
+- reason: `item[9].missing_content`;
+- planned/completed calls: `200/200`;
+- valid responses: `199`;
+- normalized rows: `5903`;
+- final status: `PARTIAL_FAILURE`;
+- manifest SHA-256: `ef8487f875c44575362aba3ca4f3b6cead9c3f9eff82681f4ea1d2ff0028a8a2`.
+
+The same bounded capture was not retried by the runner and no second provider
+attempt was introduced for the malformed response. The result confirms the
+remaining issue is an upstream PADI item-schema defect, not a scheduler,
+credential, quota, R2, model, outcome, or counter failure. PADI must not be
+silently dropped or synthesized; changing that policy requires a separate
+contract review.
+
 The capture runner continues to retry only the already accepted transport
 classes: request exceptions and the allowlisted transient HTTP 5xx statuses.
 It does **not** retry malformed/empty/schema-invalid 200 responses, does not

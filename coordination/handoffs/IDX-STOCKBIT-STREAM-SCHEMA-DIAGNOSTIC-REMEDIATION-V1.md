@@ -38,6 +38,17 @@ reasons are item object shape, `id`, string `createdAt`, or `content`.
   fail-closed with no schema retry or silent acceptance.
 - Added regression coverage for diagnostics and persistent schema failure.
 
+## Controlled cloud result
+
+Run `32720866941` on `b9319645` reproduced the single malformed response:
+`PADI`, `ITEM_SCHEMA_ERROR`, `item[9].missing_content`. The run completed
+`200/200` calls with `199` valid responses and `5903` normalized rows, then
+correctly remained `PARTIAL_FAILURE`. Manifest SHA-256:
+`ef8487f875c44575362aba3ca4f3b6cead9c3f9eff82681f4ea1d2ff0028a8a2`.
+
+This is an upstream item-schema defect. PADI is intentionally not silently
+dropped or synthesized; a policy change would need a separate contract review.
+
 ## Validation
 
 Run the focused capture/archive tests with an isolated pytest temp root,
