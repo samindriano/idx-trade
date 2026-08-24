@@ -47,6 +47,11 @@ non-sensitive `validation_detail` such as `item[0].missing_content` to the
 per-ticker request record. This makes the next incident actionable without
 persisting post content or author identity.
 
+The cloud runner also emits a `validation_diagnostics` list in its final
+stdout summary containing only ticker, classification, and validation reason.
+This closes the observability gap without exposing post content, author
+identity, response bytes, or credentials.
+
 The capture runner continues to retry only the already accepted transport
 classes: request exceptions and the allowlisted transient HTTP 5xx statuses.
 It does **not** retry malformed/empty/schema-invalid 200 responses, does not

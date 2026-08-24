@@ -30,6 +30,8 @@ reasons are item object shape, `id`, string `createdAt`, or `content`.
   API.
 - Added non-sensitive `validation_detail` to the final per-ticker request
   record.
+- Added a safe `validation_diagnostics` stdout summary for CI logs containing
+  only ticker, classification, and validation reason.
 - Kept transport/request retries and allowlisted transient HTTP 5xx retries
   unchanged.
 - Explicitly kept malformed, empty, duplicate, and schema-invalid responses

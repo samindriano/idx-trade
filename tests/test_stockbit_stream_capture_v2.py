@@ -8,7 +8,7 @@ from pathlib import Path
 import requests
 import pytest
 
-from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse
+from scripts.run_stockbit_stream_capture_v2 import _EnvelopeAwareResponse, safe_validation_diagnostics
 from idx_trade.stockbit_stream_archive import QuotaSnapshot, StreamArchiveError
 from idx_trade.stockbit_stream_capture_v2 import LocalLeanArchive, RuntimeUniverse, build_runtime_universe, capture_stream_v2
 
@@ -171,6 +171,27 @@ class MalformedClient(Client):
         item = {"id": f"{symbol}-1", "createdAt": "2026-08-21 12:00:00"}
         raw = json.dumps({"data": {"count": 1, "items": [item], "symbol": symbol}}).encode()
         return StreamResponse(), raw, datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+
+
+def test_runner_validation_diagnostics_are_safe_and_explicit() -> None:
+    result = {
+        "request_records": [
+            {
+                "ticker": "BBCA",
+                "response_classification": "ITEM_SCHEMA_ERROR",
+                "validation_detail": "item[0].missing_content",
+                "content": "must not be exposed",
+            },
+            {"ticker": "BBRI", "response_classification": "OK"},
+        ]
+    }
+    assert safe_validation_diagnostics(result) == [
+        {
+            "ticker": "BBCA",
+            "response_classification": "ITEM_SCHEMA_ERROR",
+            "validation_detail": "item[0].missing_content",
+        }
+    ]
 
 
 class RequestExceptionRecoveryClient(Client):
