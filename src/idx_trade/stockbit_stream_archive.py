@@ -323,27 +323,56 @@ def _parse_sse_json(text: str) -> dict[str, Any]:
     raise StreamArchiveError("Zapi MCP response did not contain a JSON-RPC message")
 
 
-def parse_stream_payload(raw: bytes, status_code: int, requested_symbol: str) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]]]:
+def parse_stream_payload_detailed(
+    raw: bytes,
+    status_code: int,
+    requested_symbol: str,
+) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]], str | None]:
     if status_code != 200:
-        return f"HTTP_{status_code}", None, []
+        return f"HTTP_{status_code}", None, [], None
     try:
         wrapper = json.loads(raw.decode("utf-8"))
         data = wrapper["data"]
         items = data["items"]
         symbol = data["symbol"]
         declared_count = int(data["count"])
-    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError):
-        return "SCHEMA_ERROR", None, []
+    except UnicodeDecodeError:
+        return "SCHEMA_ERROR", None, [], "response_not_utf8"
+    except json.JSONDecodeError:
+        return "SCHEMA_ERROR", None, [], "response_not_json"
+    except KeyError as exc:
+        return "SCHEMA_ERROR", None, [], f"missing_field:{exc.args[0]}"
+    except (TypeError, ValueError):
+        return "SCHEMA_ERROR", None, [], "invalid_response_metadata"
     if symbol != requested_symbol or not isinstance(items, list) or declared_count != len(items):
-        return "PARTIAL_OR_SYMBOL_MISMATCH", None, []
+        if symbol != requested_symbol:
+            detail = "symbol_mismatch"
+        elif not isinstance(items, list):
+            detail = "items_not_list"
+        else:
+            detail = f"count_mismatch:{declared_count}!={len(items)}"
+        return "PARTIAL_OR_SYMBOL_MISMATCH", None, [], detail
     if not items:
-        return "EMPTY_RESPONSE_FAIL_CLOSED", data, []
+        return "EMPTY_RESPONSE_FAIL_CLOSED", data, [], "items_empty"
     if len({str(item.get("id")) for item in items if isinstance(item, dict)}) != len(items):
-        return "DUPLICATE_POST_ID_FAIL_CLOSED", data, []
-    for item in items:
-        if not isinstance(item, dict) or item.get("id") in {None, ""} or not isinstance(item.get("createdAt"), str) or "content" not in item:
-            return "ITEM_SCHEMA_ERROR", data, []
-    return "OK", data, items
+        return "DUPLICATE_POST_ID_FAIL_CLOSED", data, [], "duplicate_post_id"
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            return "ITEM_SCHEMA_ERROR", data, [], f"item[{index}].not_object"
+        if item.get("id") in {None, ""}:
+            return "ITEM_SCHEMA_ERROR", data, [], f"item[{index}].missing_id"
+        if not isinstance(item.get("createdAt"), str):
+            return "ITEM_SCHEMA_ERROR", data, [], f"item[{index}].createdAt_not_string"
+        if "content" not in item:
+            return "ITEM_SCHEMA_ERROR", data, [], f"item[{index}].missing_content"
+    return "OK", data, items, None
+
+
+def parse_stream_payload(raw: bytes, status_code: int, requested_symbol: str) -> tuple[str, dict[str, Any] | None, list[dict[str, Any]]]:
+    """Parse a stream response while preserving the legacy three-value API."""
+
+    classification, data, items, _ = parse_stream_payload_detailed(raw, status_code, requested_symbol)
+    return classification, data, items
 
 
 def _created_at_metadata(raw_value: str) -> tuple[str | None, str]:

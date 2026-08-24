@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import requests
@@ -41,6 +42,23 @@ class _EnvelopeAwareSession:
 
     def get(self, *args, **kwargs):
         return _EnvelopeAwareResponse(self._session.get(*args, **kwargs))
+
+
+def safe_validation_diagnostics(result: dict[str, Any]) -> list[dict[str, str]]:
+    """Return only non-sensitive per-ticker schema diagnostics for CI logs."""
+
+    diagnostics: list[dict[str, str]] = []
+    for record in result.get("request_records", []):
+        if not isinstance(record, dict) or not record.get("validation_detail"):
+            continue
+        diagnostics.append(
+            {
+                "ticker": str(record.get("ticker", "")),
+                "response_classification": str(record.get("response_classification", "")),
+                "validation_detail": str(record["validation_detail"]),
+            }
+        )
+    return diagnostics
 
 
 def main() -> int:
@@ -83,6 +101,7 @@ def main() -> int:
             "successful_responses": result.get("successful_responses"),
             "normalized_post_rows": result.get("normalized_post_rows"),
             "response_classification_counts": result.get("response_classification_counts"),
+            "validation_diagnostics": safe_validation_diagnostics(result),
             "manifest_sha256": result.get("manifest_sha256"),
             "model_accessed": False,
             "outcome_accessed": False,

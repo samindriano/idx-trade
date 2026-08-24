@@ -16,6 +16,7 @@ from idx_trade.stockbit_stream_archive import (
     load_universe,
     normalize_post,
     parse_stream_payload,
+    parse_stream_payload_detailed,
     verify_universe_manifest,
 )
 
@@ -101,6 +102,12 @@ def test_stream_parser_rejects_empty_partial_and_duplicate_responses() -> None:
 
     status, _, _ = parse_stream_payload(_payload(items=[_item(), _item()]), 200, "BBCA")
     assert status == "DUPLICATE_POST_ID_FAIL_CLOSED"
+
+    malformed = _payload(items=[{"id": 1, "createdAt": "2026-08-21 08:50:40"}])
+    status, _, items, detail = parse_stream_payload_detailed(malformed, 200, "BBCA")
+    assert status == "ITEM_SCHEMA_ERROR"
+    assert items == []
+    assert detail == "item[0].missing_content"
 
 
 def test_normalization_hmacs_author_and_rejects_naive_source_timezone() -> None:
