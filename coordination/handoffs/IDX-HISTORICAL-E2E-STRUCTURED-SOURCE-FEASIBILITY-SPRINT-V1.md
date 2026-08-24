@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `C:\Users\Sam\OneDrive\Documents\Project\idx-trade-historical-e2e`
 source_commit: `6506d6db35bb36c748bebae8adcf7cbbe016ba36`
 branch: `research/idx-historical-e2e-replay-v1`
-head_commit: `711363fdff4c53af568daea70c027706ec0fe6d1`
+head_commit: `5af108682a008bdd1bf0a8197ffadf503ec7a477`
 
 ## Scope
 
