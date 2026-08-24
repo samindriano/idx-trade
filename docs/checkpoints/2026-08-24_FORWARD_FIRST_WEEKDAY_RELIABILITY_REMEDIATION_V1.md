@@ -94,6 +94,22 @@ The probe therefore confirms fail-closed behavior, not a successful official
 Open capture. The 16:47 Stockbit after-close run and the next weekday Official
 Open run remain the controlled proof points.
 
+## Policy decisions
+
+- `ttl=30` was **not adopted**. The existing raw Zapi contract does not expose
+  verified cache-control semantics for this endpoint, and TTL would not
+  replace transport retry. The remediation uses only bounded request/5xx
+  retries and preserves quota/provenance behavior.
+- The installed Official Open task was not replaced or reinstalled. Its
+  current retry policy remains 09:02, 09:07, 09:12, 09:17, 09:22 plus AtLogOn,
+  `StartWhenAvailable`, and `IgnoreNew`. This is a live operational policy
+  decision requiring separate review; this branch only tests and documents it.
+- The dependency boundary remains explicit: Stockbit is an archive lane;
+  Official Open is an execution-evidence lane. A Stockbit failure does not
+  mutate Official Open, PaperState, alpha EOD scoring, or Decision V2. An
+  Official Open failure produces pending/fail-closed status and no execution
+  artifact.
+
 ## Validation
 
 - Focused: `36 passed` using an isolated pytest temp root.
