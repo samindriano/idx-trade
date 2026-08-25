@@ -30,5 +30,5 @@ blocking_risks:
 - external provider/scheduler behavior still requires a genuine scheduled run;
 - no claim of live post-remediation proof is made here.
 
-validation_run: `python -m pytest tests/test_stockbit_stream_capture_v2.py tests/test_stockbit_stream_archive.py -q` (27 passed); py_compile; diff-check  
+validation_run: focused capture/archive suite (27 passed); full pytest (78 passed); py_compile; diff-check
 recommended_next_action: review/merge through the active operational lane only after independent diff review.

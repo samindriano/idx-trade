@@ -50,6 +50,7 @@ overwritten by this task.
 ## Validation
 
 - focused Stockbit capture/archive tests: 27 passed
+- full pytest on the current source lineage: 78 passed, 0 failed
 - `python -m py_compile src/idx_trade/stockbit_stream_capture_v2.py`: pass
 - `git diff --check`: pass
 - no provider call was made by this remediation
