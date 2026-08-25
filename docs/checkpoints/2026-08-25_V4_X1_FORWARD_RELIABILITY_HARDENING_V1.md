@@ -156,10 +156,10 @@ capture was made. Verdict: `FORWARD_RELIABILITY_REMEDIATED_NEXT_GENUINE_SESSION_
 
 ## CI and review state
 
-- PR #83: ready for review, CI pytest success run `32793898183`;
+- PR #83: ready for review; prior head CI success was `32793898183`, and the
+  current consolidated-doc head has CI run `32797068204` in progress;
 - PR #85: CI pytest success run `32796743113` at final head;
-- PR #84: CI run `32796883273` was in progress after final docs push at the
-  audit timestamp;
+- PR #84: CI pytest success run `32796883273` at final head;
 - PR #86: no GitHub check was reported; local focused/full validation passed.
 
 No PR was merged. `coordination/TEAM_STATUS.md` was not edited because root
