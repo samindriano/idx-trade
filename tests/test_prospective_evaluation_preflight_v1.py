@@ -123,7 +123,13 @@ def test_code_pin_manifest_binds_to_executing_gate_and_evaluator(tmp_path: Path)
             "git_blob_sha1": git_blob_sha1_file(GATE),
         },
         "contract": {"path": str(CONTRACT), "sha256": sha256_file(CONTRACT)},
-        "target_construction": dict(json.loads(CONTRACT.read_text(encoding="utf-8"))["target_identity"]["construction_code"]),
+        "target_construction": {
+            **dict(json.loads(CONTRACT.read_text(encoding="utf-8"))["target_identity"]["construction_code"]),
+            "path": str(
+                (CONTRACT.parent / json.loads(CONTRACT.read_text(encoding="utf-8"))["target_identity"]["construction_code"]["path"])
+                .resolve()
+            ),
+        },
     }
     manifest = tmp_path / "code-pins.json"
     manifest.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")

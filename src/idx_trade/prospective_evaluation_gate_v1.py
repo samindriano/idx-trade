@@ -823,8 +823,15 @@ def _validate_code_pin_manifest(
     if isinstance(contract_target, Mapping) and str(contract_target.get("status") or "").upper() == "RESOLVED":
         declared_target = payload.get("target_construction")
         expected_target = contract_target.get("construction_code")
-        if not isinstance(declared_target, Mapping) or dict(declared_target) != dict(expected_target or {}):
+        if not isinstance(declared_target, Mapping) or not isinstance(expected_target, Mapping):
             raise ProspectiveAccessGateBlocked("code pin target construction does not match frozen contract")
+        for key in ("source_commit", "git_blob_sha1", "sha256"):
+            if declared_target.get(key) != expected_target.get(key):
+                raise ProspectiveAccessGateBlocked("code pin target construction does not match frozen contract")
+        expected_path = _resolve_path(expected_target.get("path"), base_dir=contract_path.parent)
+        declared_path = _resolve_path(declared_target.get("path"), base_dir=path.parent)
+        if declared_path != expected_path:
+            raise ProspectiveAccessGateBlocked("code pin target construction path does not match frozen contract")
         target_path = _resolve_path(declared_target.get("path"), base_dir=path.parent)
         target_sha = str(declared_target.get("sha256") or "").lower()
         target_blob = str(declared_target.get("git_blob_sha1") or "").lower()
