@@ -34,6 +34,7 @@ from .prospective_evaluation_v1 import (
     validate_alpha_session_alignment,
     validate_exclusion_ledger,
 )
+from .v4_x1_canonical_target_v1 import CANONICAL_TARGET_ID
 from .provenance import sha256_file
 
 
@@ -43,7 +44,7 @@ RANKING_SEMANTICS = "alpha_consensus DESC, ticker ASC"
 PROSPECTIVE_CONTRACT_SCHEMA = "prospective_evaluation_contract_v1"
 PROSPECTIVE_CONTRACT_RELATIVE_PATH = "config/v4_x1_prospective_evaluation_contract_v1.json"
 CODE_PIN_MANIFEST_SCHEMA = "v4_x1_prospective_evaluation_code_pin_v1"
-FROZEN_CONTRACT_SHA256 = "6d64c76dc60ef04f02e9a811e920e7351c00b94aaa2cc834f6019d4a648cb8ac"
+FROZEN_CONTRACT_SHA256 = "7be7bd68b4a35e190cab547be2040e08e3548065f2ab3124ce3dfc19c9f4000c"
 
 # Frozen before this protected-access adapter was implemented.
 PROTOCOL_GIT_BLOB_SHA1 = "f76af5733db3c6a2c7a99b1e80268004ece1e616"
@@ -539,6 +540,118 @@ def _read_verified_json_attestation(
     return path, _read_json(path, label=label)
 
 
+_CANONICAL_TARGET_SOURCE_PINS = (
+    {
+        "path": "docs/checkpoints/2026-08-16_RANKING_V4_1_TARGET_CONTRACT_LOCKED.md",
+        "source_commit": "199d7705",
+        "git_blob_sha1": "afc4d171cf4f735839782d31256c8894283701f4",
+        "sha256": "db756c12574541c434e65866f2a0fd9c639c1e2c227d97cc402d6c02a049e59c",
+        "role": "frozen H5/H10 Open(t+1)-to-Close target semantics",
+    },
+    {
+        "path": "src/idx_trade/ranking_v4_3_target_execution.py",
+        "source_commit": "08233877",
+        "git_blob_sha1": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+        "sha256": "f344874c3619c08605d97058edb8331814cd74c430c60a275a5f96ca48899002",
+        "role": "retained target materializer and raw return/rank construction",
+    },
+    {
+        "path": "config/ranking_v4_x1_prospective_preregistration_v1.json",
+        "source_commit": "3db072a7",
+        "git_blob_sha1": "a483ebf8ea6618dbadf54b223b54a77435581b8e",
+        "sha256": "43cb147e7979cc77575d1fc28893519682e4476af3ff809cb6bd730ac1127750",
+        "role": "frozen X1 H5/H10 and 50/50 consensus preregistration",
+    },
+    {
+        "path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_INDEPENDENT_REVIEW.md",
+        "source_commit": "c4089a4d",
+        "git_blob_sha1": "442b9b438e1400dd77102cfef24bc8ab0eb3a02c",
+        "sha256": "34e701ee02c8de8534b41d8873be246099303dbda3a440165a064b7adf903892",
+        "role": "metric reconciliation and clean model lineage",
+    },
+    {
+        "path": "docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md",
+        "source_commit": "ed719dd6",
+        "git_blob_sha1": "f76af5733db3c6a2c7a99b1e80268004ece1e616",
+        "sha256": "f17bb558ee50ba8411fd63804c9eef8b984794e39d1a845a6794a144a32566c1",
+        "role": "prospective metric semantics and historical context-only policy",
+    },
+)
+
+
+def _validate_canonical_target_identity(
+    contract_payload: Mapping[str, Any], *, contract_path: Path
+) -> None:
+    """Validate target semantics and retained provenance independently of metrics."""
+
+    target = contract_payload.get("target_identity")
+    if not isinstance(target, Mapping):
+        raise ProspectiveAccessGateBlocked("prospective evaluation target identity is malformed")
+    if str(target.get("status") or "").upper() != "RESOLVED":
+        raise ProspectiveAccessGateBlocked("canonical target identity is not resolved")
+    if str(target.get("target_id") or "") != CANONICAL_TARGET_ID:
+        raise ProspectiveAccessGateBlocked("canonical target id is not the frozen V4-X1 identity")
+
+    spec_path = _resolve_path(target.get("target_spec_path"), base_dir=contract_path.parent)
+    expected_spec_sha = str(target.get("target_spec_sha256") or "").lower()
+    if len(expected_spec_sha) != 64 or not spec_path.is_file():
+        raise ProspectiveAccessGateBlocked("canonical target specification is missing")
+    if sha256_file(spec_path) != expected_spec_sha:
+        raise ProspectiveAccessGateBlocked("canonical target specification hash mismatch")
+    spec = _read_json(spec_path, label="canonical target specification")
+    if spec.get("schema_version") != "v4_x1_canonical_target_spec_v1":
+        raise ProspectiveAccessGateBlocked("canonical target specification schema mismatch")
+    if spec.get("canonical_target_id") != CANONICAL_TARGET_ID:
+        raise ProspectiveAccessGateBlocked("canonical target specification identity mismatch")
+
+    expected_horizon = {"h5": 5, "h10": 10}
+    expected_definition = {
+        "entry_price": "Open_(t+1)",
+        "h5": "Close_(t+5) / Open_(t+1) - 1",
+        "h10": "Close_(t+10) / Open_(t+1) - 1",
+    }
+    expected_transform = spec.get("relative_transform")
+    expected_support = spec.get("support_semantics")
+    if target.get("prediction") != spec.get("prediction"):
+        raise ProspectiveAccessGateBlocked("canonical target prediction field changed")
+    if target.get("horizon") != expected_horizon:
+        raise ProspectiveAccessGateBlocked("canonical target horizon semantics changed")
+    if target.get("definition") != expected_definition:
+        raise ProspectiveAccessGateBlocked("canonical target return definition changed")
+    if target.get("transform") != expected_transform:
+        raise ProspectiveAccessGateBlocked("canonical target rank/consensus transform changed")
+    if target.get("support") != expected_support:
+        raise ProspectiveAccessGateBlocked("canonical target support semantics changed")
+
+    construction = target.get("construction_code")
+    if target.get("construction_code_pin") is not True or not isinstance(construction, Mapping):
+        raise ProspectiveAccessGateBlocked("canonical target construction-code pin is missing")
+    construction_path = _resolve_path(construction.get("path"), base_dir=contract_path.parent)
+    construction_sha = str(construction.get("sha256") or "").lower()
+    construction_blob = str(construction.get("git_blob_sha1") or "").lower()
+    source_commit = str(construction.get("source_commit") or "").lower()
+    if not construction_path.is_file() or len(construction_sha) != 64:
+        raise ProspectiveAccessGateBlocked("canonical target construction source is missing")
+    if sha256_file(construction_path) != construction_sha:
+        raise ProspectiveAccessGateBlocked("canonical target construction source hash mismatch")
+    if git_blob_sha1_file(construction_path) != construction_blob:
+        raise ProspectiveAccessGateBlocked("canonical target construction Git blob mismatch")
+    if len(source_commit) != 40 or any(char not in "0123456789abcdef" for char in source_commit):
+        raise ProspectiveAccessGateBlocked("canonical target construction source commit is invalid")
+
+    hashes = target.get("hashes")
+    if not isinstance(hashes, Mapping) or {
+        "target_spec_sha256": expected_spec_sha,
+        "construction_code_sha256": construction_sha,
+        "construction_code_git_blob_sha1": construction_blob,
+    } != dict(hashes):
+        raise ProspectiveAccessGateBlocked("canonical target semantic hashes are inconsistent")
+
+    sources = target.get("provenance", {}).get("authoritative_sources") if isinstance(target.get("provenance"), Mapping) else None
+    if sources != list(_CANONICAL_TARGET_SOURCE_PINS):
+        raise ProspectiveAccessGateBlocked("canonical target provenance pins are incomplete or changed")
+
+
 def validate_machine_readable_contract(
     path_value: str | Path,
     sha_value: str,
@@ -599,11 +712,23 @@ def validate_machine_readable_contract(
     elif target_status != "RESOLVED":
         raise ProspectiveAccessGateBlocked("prospective evaluation target identity status is invalid")
     elif require_resolved_target:
-        required_target_fields = ("target_id", "horizon", "definition", "transform", "provenance", "hashes")
+        required_target_fields = (
+            "target_id",
+            "horizon",
+            "definition",
+            "transform",
+            "provenance",
+            "hashes",
+            "target_spec_path",
+            "target_spec_sha256",
+            "construction_code",
+        )
         if any(not target.get(key) for key in required_target_fields):
             raise ProspectiveAccessGateBlocked("resolved target identity is missing exact provenance fields")
         if target.get("construction_code_pin") is not True:
             raise ProspectiveAccessGateBlocked("resolved target lacks construction-code pin")
+    if target_status == "RESOLVED":
+        _validate_canonical_target_identity(payload, contract_path=path)
     for section_name, required_keys in {
         "required_pre_access_artifacts": {
             "session_inventory", "counter", "target", "paper_state", "benchmark", "prior_access_audit"
@@ -693,6 +818,23 @@ def _validate_code_pin_manifest(
         raise ProspectiveAccessGateBlocked("code pin contract path mismatch")
     if sha256_file(contract_path) != str(contract.get("sha256") or "").lower():
         raise ProspectiveAccessGateBlocked("code pin contract hash mismatch")
+    contract_payload = _read_json(contract_path, label="prospective evaluation contract")
+    contract_target = contract_payload.get("target_identity")
+    if isinstance(contract_target, Mapping) and str(contract_target.get("status") or "").upper() == "RESOLVED":
+        declared_target = payload.get("target_construction")
+        expected_target = contract_target.get("construction_code")
+        if not isinstance(declared_target, Mapping) or dict(declared_target) != dict(expected_target or {}):
+            raise ProspectiveAccessGateBlocked("code pin target construction does not match frozen contract")
+        target_path = _resolve_path(declared_target.get("path"), base_dir=path.parent)
+        target_sha = str(declared_target.get("sha256") or "").lower()
+        target_blob = str(declared_target.get("git_blob_sha1") or "").lower()
+        target_commit = str(declared_target.get("source_commit") or "").lower()
+        if not target_path.is_file() or sha256_file(target_path) != target_sha:
+            raise ProspectiveAccessGateBlocked("code pin target construction source hash mismatch")
+        if git_blob_sha1_file(target_path) != target_blob:
+            raise ProspectiveAccessGateBlocked("code pin target construction Git blob mismatch")
+        if len(target_commit) != 40 or any(char not in "0123456789abcdef" for char in target_commit):
+            raise ProspectiveAccessGateBlocked("code pin target construction source commit is invalid")
     return path, {"path": str(path), "sha256": str(sha_value).lower(), **payload}, protocol_blob, evaluator_blob, gate_blob
 
 
@@ -779,12 +921,19 @@ def _validate_target_against_contract(
         raise ProspectiveAccessGateBlocked("canonical target identity hash is not contract-bound")
     for target_key, contract_key in (
         ("horizon", "horizon"),
+        ("prediction", "prediction"),
         ("definition", "definition"),
         ("transform", "transform"),
+        ("support", "support"),
         ("provenance", "provenance"),
         ("target_hashes", "hashes"),
     ):
         if target.get(target_key) != contract_target.get(contract_key):
+            raise ProspectiveAccessGateBlocked(
+                f"canonical target {target_key} does not match frozen contract"
+            )
+    for target_key in ("target_spec_path", "target_spec_sha256"):
+        if target_key in contract_target and target.get(target_key) != contract_target.get(target_key):
             raise ProspectiveAccessGateBlocked(
                 f"canonical target {target_key} does not match frozen contract"
             )
@@ -794,12 +943,21 @@ def _validate_target_against_contract(
         raise ProspectiveAccessGateBlocked("resolved target construction-code pin is missing")
     if dict(target_pin) != dict(contract_pin):
         raise ProspectiveAccessGateBlocked("canonical target construction-code pin mismatch")
-    construction_path = _resolve_path(contract_pin.get("path"))
+    contract_path_value = contract_payload.get("path")
+    contract_base = (
+        Path(str(contract_path_value)).resolve().parent
+        if contract_path_value
+        else None
+    )
+    construction_path = _resolve_path(contract_pin.get("path"), base_dir=contract_base)
     construction_sha = str(contract_pin.get("sha256") or "").lower()
+    construction_blob = str(contract_pin.get("git_blob_sha1") or "").lower()
     if len(construction_sha) != 64 or not construction_path.is_file():
         raise ProspectiveAccessGateBlocked("resolved target construction-code artifact is unavailable")
     if sha256_file(construction_path) != construction_sha:
         raise ProspectiveAccessGateBlocked("resolved target construction-code artifact hash mismatch")
+    if git_blob_sha1_file(construction_path) != construction_blob:
+        raise ProspectiveAccessGateBlocked("resolved target construction-code Git blob mismatch")
     source_commit = str(contract_pin.get("source_commit") or "").lower()
     if len(source_commit) != 40 or any(char not in "0123456789abcdef" for char in source_commit):
         raise ProspectiveAccessGateBlocked("resolved target construction-code source commit is invalid")

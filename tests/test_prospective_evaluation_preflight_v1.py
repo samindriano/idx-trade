@@ -15,6 +15,7 @@ from idx_trade.prospective_evaluation_gate_v1 import (
     _canonical_hash,
     _validate_target_against_contract,
     _validate_code_pin_manifest,
+    _validate_canonical_target_identity,
     git_blob_sha1_file,
     validate_machine_readable_contract,
 )
@@ -29,13 +30,14 @@ EVALUATOR = Path("src/idx_trade/prospective_evaluation_v1.py").resolve()
 GATE = Path("src/idx_trade/prospective_evaluation_gate_v1.py").resolve()
 
 
-def test_machine_contract_explicitly_blocks_unresolved_canonical_target() -> None:
+def test_machine_contract_resolves_canonical_target_without_authorizing_access() -> None:
     contract_sha = sha256_file(CONTRACT)
-    with pytest.raises(ProspectiveAccessGateBlocked, match="CANONICAL_TARGET_IDENTITY_UNRESOLVED"):
-        validate_machine_readable_contract(CONTRACT, contract_sha, require_resolved_target=True)
+    _, payload = validate_machine_readable_contract(CONTRACT, contract_sha, require_resolved_target=True)
+    assert payload["target_identity"]["status"] == "RESOLVED"
+    assert payload["target_identity"]["target_id"] == "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1"
 
 
-def test_preflight_cli_is_read_only_and_reports_target_blocker() -> None:
+def test_preflight_cli_is_read_only_and_requires_preaccess_bundle() -> None:
     contract_sha = sha256_file(CONTRACT)
     completed = subprocess.run(
         [
@@ -53,7 +55,7 @@ def test_preflight_cli_is_read_only_and_reports_target_blocker() -> None:
     )
     payload = json.loads(completed.stdout)
     assert payload["status"] == "PRE_FLIGHT_BLOCKED"
-    assert payload["blocker_codes"] == ["CANONICAL_TARGET_IDENTITY_UNRESOLVED"]
+    assert payload["blocker_codes"] == ["PREACCESS_ARTIFACT_BUNDLE_REQUIRED"]
     assert payload["protected_outcomes_accessed"] is False
     assert payload["real_protected_loader_called"] is False
     assert payload["real_outcome_access_marker_written"] is False
@@ -121,6 +123,7 @@ def test_code_pin_manifest_binds_to_executing_gate_and_evaluator(tmp_path: Path)
             "git_blob_sha1": git_blob_sha1_file(GATE),
         },
         "contract": {"path": str(CONTRACT), "sha256": sha256_file(CONTRACT)},
+        "target_construction": dict(json.loads(CONTRACT.read_text(encoding="utf-8"))["target_identity"]["construction_code"]),
     }
     manifest = tmp_path / "code-pins.json"
     manifest.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
@@ -167,6 +170,7 @@ def test_resolved_target_must_match_contract_and_source_manifest(tmp_path: Path)
     construction_pin = {
         "path": str(construction.resolve()),
         "sha256": sha256_file(construction),
+        "git_blob_sha1": git_blob_sha1_file(construction),
         "source_commit": "a" * 40,
     }
     identity = {
