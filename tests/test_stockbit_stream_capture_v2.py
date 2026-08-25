@@ -262,6 +262,24 @@ class StreamResponse503:
     headers = {"content-type": "application/json"}
 
 
+class Http503ThenRequestExceptionClient(Client):
+    def __init__(self):
+        super().__init__()
+        self.attempts = 0
+
+    def stream(self, symbol):
+        self.attempts += 1
+        self.calls.append(symbol)
+        if self.attempts == 1:
+            return StreamResponse503(), b'{"error":"temporary"}', datetime(2026, 8, 21, 5, tzinfo=timezone.utc)
+        raise requests.ReadTimeout("final stream timeout")
+
+
+class TightQuotaTransientRecoveryClient(TransientRecoveryClient):
+    def get_usage(self):
+        return QuotaSnapshot("pro", 24997, 25000, 3, None, "TEST")
+
+
 class PostQuotaTimeoutClient(Client):
     def __init__(self):
         super().__init__()
@@ -318,6 +336,32 @@ def test_capture_v2_retries_transient_5xx_once_and_recovers(tmp_path: Path):
     bbca = next(record for record in result["request_records"] if record["ticker"] == "BBCA")
     assert bbca["retry_recovered"] is True
     assert [attempt["http_status"] for attempt in bbca["provider_attempts"]] == [503, 200]
+
+
+def test_capture_v2_mixed_http_then_exception_has_one_final_record_and_no_stale_acceptance(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    result = capture_stream_v2(
+        client=Http503ThenRequestExceptionClient(),
+        archive=LocalLeanArchive(tmp_path),
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    assert result["status"] == "PARTIAL_FAILURE"
+    assert len(result["request_records"]) == 1
+    record = result["request_records"][0]
+    assert record["response_classification"] == "REQUEST_EXCEPTION"
+    assert record["http_status"] is None
+    assert len(record["provider_attempts"]) == 2
+    assert [attempt["http_status"] for attempt in record["provider_attempts"]] == [503, None]
+    assert record["provider_attempts"][0]["raw_key"]
+    assert record["provider_attempts"][0]["raw_sha256"]
+    assert not (tmp_path / "normalized").exists()
+    assert len(list((tmp_path / "raw").rglob("*.json"))) == 1
 
 
 def test_capture_v2_persistent_item_schema_error_remains_fail_closed(tmp_path: Path):
@@ -438,6 +482,36 @@ def test_capture_v2_resumes_partial_under_new_immutable_namespace(tmp_path: Path
     assert second["run_id"] != first["run_id"]
     assert len(list((tmp_path / "manifests").rglob("*.json"))) == 2
     assert len(list((tmp_path / "normalized").rglob("*.jsonl"))) == 2
+
+
+def test_capture_v2_quota_budget_excludes_verified_resumed_ok_rows(tmp_path: Path):
+    rows = [
+        {"ticker": "BBCA", "company_name": "BBCA", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 500.0, "activity_rank": 1},
+        {"ticker": "BBRI", "company_name": "BBRI", "listed_from": "2000", "source_session": "2026-08-20", "regular_value": 300.0, "activity_rank": 2},
+    ]
+    universe = RuntimeUniverse("2026-08-21", "2026-08-20", rows, b"source", "a" * 64, "b" * 64)
+    archive = LocalLeanArchive(tmp_path)
+    first = capture_stream_v2(
+        client=PartialClient(),
+        archive=archive,
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    second = capture_stream_v2(
+        client=TightQuotaTransientRecoveryClient(),
+        archive=archive,
+        universe=universe,
+        slot="midday",
+        hmac_salt="salt",
+        monthly_reserve=1,
+    )
+    assert first["status"] == "PARTIAL_FAILURE"
+    assert second["status"] == "DATA_READY"
+    assert second["provider_call_budget"] == 2
+    assert second["provider_calls"] == 2
+    assert second["successful_responses"] == 2
 
 
 def test_capture_v2_preserves_ready_run_when_post_quota_telemetry_times_out(tmp_path: Path):
