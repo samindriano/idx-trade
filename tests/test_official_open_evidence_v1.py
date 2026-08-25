@@ -240,6 +240,40 @@ def test_transport_chain_prefers_direct_and_does_not_call_zapi_when_direct_works
     assert zapi_calls == 0
 
 
+def test_transport_chain_retries_transient_direct_failure_before_success(monkeypatch, tmp_path):
+    direct_calls = 0
+    zapi_calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        nonlocal direct_calls
+        direct_calls += 1
+        if direct_calls == 1:
+            return _Response(b"temporary", status_code=503)
+        return _Response(_payload(_rows()))
+
+    def zapi_get(*args, **kwargs):
+        nonlocal zapi_calls
+        zapi_calls += 1
+        raise AssertionError("Zapi must not run after direct retry recovery")
+
+    monkeypatch.setattr("idx_trade.official_open_evidence_v1.time.sleep", lambda _: None)
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert direct_calls == 2
+    assert zapi_calls == 0
+    assert payload["transport"] == DIRECT_TRANSPORT
+    assert payload["transport_metadata"]["attempt_count"] == 2
+    assert payload["transport_metadata"]["failed_attempts"][0]["error"] == (
+        "OFFICIAL_OPEN_DIRECT_IDX_HTTP_503"
+    )
+
+
 def test_transport_chain_falls_back_to_zapi_raw_on_direct_http_failure(tmp_path):
     direct_calls = 0
     zapi_calls = 0
@@ -320,6 +354,36 @@ def test_transport_chain_retries_zapi_request_exception_once(monkeypatch, tmp_pa
     assert payload["transport_metadata"]["attempt_count"] == 2
 
 
+def test_transport_chain_retries_zapi_transient_http_once(monkeypatch, tmp_path):
+    calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(b"forbidden", status_code=403)
+
+    def zapi_get(url, *, params, headers, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _Response(b"temporary", status_code=503)
+        return _Response(_zapi_payload(_rows()))
+
+    monkeypatch.setattr("idx_trade.official_open_evidence_v1.time.sleep", lambda _: None)
+    manifest = capture_official_open_with_transport_fallback(
+        "2026-06-12",
+        output_root=tmp_path,
+        zapi_api_key="key",
+        direct_get=direct_get,
+        zapi_get=zapi_get,
+    )
+    payload = json.loads(manifest.read_text())
+    assert calls == 2
+    assert payload["transport"] == ZAPI_RAW_TRANSPORT
+    assert payload["transport_metadata"]["attempt_count"] == 2
+    assert payload["transport_metadata"]["failed_attempts"][0]["error"] == (
+        "OFFICIAL_OPEN_ZAPI_RAW_HTTP_503"
+    )
+
+
 def test_transport_chain_direct_timeout_and_zapi_timeout_fail_closed(monkeypatch, tmp_path):
     def direct_get(url, *, params, headers, timeout):
         raise requests.ReadTimeout("idx direct timed out")
@@ -384,6 +448,31 @@ def test_transport_chain_does_not_hide_direct_schema_failure_with_zapi(tmp_path)
         return _Response(_zapi_payload(_rows()))
 
     with pytest.raises(OfficialOpenEvidenceError, match="FULL_SESSION_COUNT_MISMATCH"):
+        capture_official_open_with_transport_fallback(
+            "2026-06-12",
+            output_root=tmp_path,
+            zapi_api_key="key",
+            direct_get=direct_get,
+            zapi_get=zapi_get,
+        )
+    assert zapi_calls == 0
+
+
+def test_transport_chain_does_not_fallback_on_direct_empty_http_200(tmp_path):
+    zapi_calls = 0
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(b"", status_code=200)
+
+    def zapi_get(*args, **kwargs):
+        nonlocal zapi_calls
+        zapi_calls += 1
+        raise AssertionError("empty successful direct response must fail closed")
+
+    with pytest.raises(
+        OfficialOpenEvidenceError,
+        match="OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
+    ):
         capture_official_open_with_transport_fallback(
             "2026-06-12",
             output_root=tmp_path,

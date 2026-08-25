@@ -9,8 +9,10 @@ import pytest
 
 from idx_trade import official_trading_schedule_v1 as schedule_module
 from idx_trade.official_open_capture_runtime_v2 import (
+    STATUS_ALREADY_CAPTURED,
     STATUS_CAPTURED,
     STATUS_HOLIDAY_NO_SESSION,
+    STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED,
     run_same_session_official_open_capture_v2,
 )
 from idx_trade.official_trading_schedule_v1 import (
@@ -215,3 +217,42 @@ def test_official_open_uses_planned_schedule_not_observed_calendar(tmp_path):
     )
     assert captured["status"] == STATUS_CAPTURED
     assert calls == 1
+
+
+def test_official_open_existing_manifest_is_reverified_before_idempotent_status(tmp_path):
+    attestation, attestation_sha, _ = _write_schedule(tmp_path / "schedule")
+
+    def direct_get(url, *, params, headers, timeout):
+        return _Response(_idx_payload("2026-08-26"))
+
+    runtime = tmp_path / "runtime"
+    first = run_same_session_official_open_capture_v2(
+        runtime_root=runtime,
+        execution_schedule_attestation_path=attestation,
+        execution_schedule_attestation_sha256=attestation_sha,
+        now=datetime(2026, 8, 26, 9, 7, tzinfo=JAKARTA),
+        get=direct_get,
+    )
+    assert first["status"] == STATUS_CAPTURED
+    manifest = runtime / "official_open" / "2026-08-26" / "manifest.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["authority"] = "TAMPERED"
+    manifest.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    network_calls = 0
+
+    def must_not_call(*args, **kwargs):
+        nonlocal network_calls
+        network_calls += 1
+        raise AssertionError("tampered existing evidence must not recapture")
+
+    second = run_same_session_official_open_capture_v2(
+        runtime_root=runtime,
+        execution_schedule_attestation_path=attestation,
+        execution_schedule_attestation_sha256=attestation_sha,
+        now=datetime(2026, 8, 26, 9, 7, tzinfo=JAKARTA),
+        get=must_not_call,
+    )
+    assert second["status"] == STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED
+    assert "EXISTING_OFFICIAL_OPEN_MANIFEST_INVALID" in second["provider_error"]
+    assert network_calls == 0
