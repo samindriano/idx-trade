@@ -1,7 +1,7 @@
 # V4-X1 Prospective Evaluation Protocol V1
 
-Date: 2026-08-24 (Asia/Jakarta)
-Branch: `research/idx-v4-x1-prospective-evaluation-protocol-v1`
+Date: 2026-08-24 (Asia/Jakarta)  
+Branch: `research/idx-v4-x1-prospective-evaluation-protocol-v1`  
 Decision: `V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1_FROZEN_OUTCOME_BLIND`
 
 ## 0. Purpose and controlling scope

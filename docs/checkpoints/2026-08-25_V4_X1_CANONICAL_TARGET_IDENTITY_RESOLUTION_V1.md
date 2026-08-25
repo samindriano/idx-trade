@@ -1,7 +1,7 @@
 # V4-X1 Canonical Target Identity Resolution V1
 
-Date: 2026-08-25 (Asia/Jakarta)
-Branch: `research/idx-v4-x1-prospective-evaluation-protocol-v1`
+Date: 2026-08-25 (Asia/Jakarta)  
+Branch: `research/idx-v4-x1-prospective-evaluation-protocol-v1`  
 Status: `PROSPECTIVE_EVAL_GATE_V1_AUDITED_TARGET_IDENTITY_RESOLVED_REAL_ACCESS_BLOCKED`
 
 ## Scope and boundary

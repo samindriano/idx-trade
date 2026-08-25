@@ -1,10 +1,5 @@
 # Handoff
 
-Historical handoff note: the unresolved-target conclusion below was correct at
-the time of this handoff but is superseded by the outcome-blind resolution in
-`docs/checkpoints/2026-08-25_V4_X1_CANONICAL_TARGET_IDENTITY_RESOLUTION_V1.md`.
-Real protected access remains blocked.
-
 from: Codex
 to: MAIN / ChatGPT reviewer
 task_id: IDX-V4-X1-PROSPECTIVE-EVALUATION-GATE-AUDIT-V1
@@ -26,7 +21,7 @@ files_changed:
   - tests/test_prospective_evaluation_preflight_v1.py
   - docs/checkpoints/2026-08-25_V4_X1_PROSPECTIVE_EVALUATION_GATE_AUDIT_V1.md
 findings:
-  - at the time of this handoff, canonical target identity remained unresolved because retained historical lineage contained non-equivalent target metrics and no unique binding to the requested exact value;
+  - canonical target identity remains unresolved because retained historical lineage contains non-equivalent target metrics and no unique binding to the requested exact value;
   - the gate is now fail-closed on unresolved target identity and exact code/contract/source-manifest drift;
   - preflight requires a complete hashed input bundle and reuses the same pure pre-access validators;
   - nested/unknown score-manifest contamination, target-construction provenance, and final pre-marker TOCTOU drift are fail-closed;
@@ -35,7 +30,7 @@ findings:
   - synthetic cold restart A/B/C proves disk-only resume and completed rerun without loader re-entry or hash drift;
   - no protected outcome, real loader, real marker, provider, scheduler, model, Decision, Sizing, Execution, or counter state was accessed or changed.
 decisions_made:
-  - historical audit verdict was PROSPECTIVE_EVALUATION_GATE_V1_AUDITED_CANONICAL_TARGET_IDENTITY_BLOCKED;
+  - final audit verdict is PROSPECTIVE_EVALUATION_GATE_V1_AUDITED_CANONICAL_TARGET_IDENTITY_BLOCKED;
   - real protected access remains unauthorized and blocked;
   - unresolved target is not rescued with an alternate horizon, metric, or historical score;
   - TEAM_STATUS was not edited because MAIN is the sole owner.
@@ -52,4 +47,4 @@ validation_run:
   - full pytest: 158 passed;
   - independent adversarial re-review: PASS; no remaining P0/P1 findings;
   - protected access: not attempted.
-recommended_next_action: superseded; use the canonical target resolution checkpoint and current forward-reliability handoff. Keep real protected loader authorization separately blocked. Code-pin manifest SHA256: ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a.
+recommended_next_action: keep PR #83 draft and obtain independent ChatGPT review; resolve the target identity blocker before any real protected loader authorization. Code-pin manifest SHA256: ee260b46f9150f150e3280bc142370baf23615efc6fea90198382f470fc3f46a.
