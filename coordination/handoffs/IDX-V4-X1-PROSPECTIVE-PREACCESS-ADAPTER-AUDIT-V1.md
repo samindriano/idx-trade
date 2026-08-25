@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: be1bcb8b2ea25997f6da16a42b6bb733cf215025
 branch: ops/v4-x1-prospective-preaccess-readiness-v1
-head_commit: PENDING_COMMIT
+head_commit: a475b191
 scope: Outcome-blind production-shape adapters over the V4-X1 pre-access readiness core.
 files_changed:
   - src/idx_trade/prospective_preaccess_adapters_v1.py
@@ -33,8 +33,10 @@ blocking_risks:
   - Missing inventory-bound counter attestation.
   - Missing PaperState/session-audit and benchmark/prior-access attestations.
 validation_run:
-  - Focused adapter pytest: pending final run.
-  - Full pytest: pending final run.
+  - Focused adapter + core pytest: 22 passed.
+  - Full pytest: 200 passed.
+  - py_compile: PASS.
+  - git diff --check: PASS.
   - Provider calls: false.
   - Protected outcome access: false.
 recommended_next_action: Independently review adapter mappings and dependencies; do not run protected evaluation or create a target materializer in this lane.
