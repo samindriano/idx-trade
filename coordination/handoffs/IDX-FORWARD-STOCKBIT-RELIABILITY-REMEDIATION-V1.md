@@ -1,17 +1,18 @@
 # Handoff
 
-from: Codex  
-to: MAIN / independent reviewer  
-task_id: IDX-FORWARD-STOCKBIT-RELIABILITY-REMEDIATION-V1  
-model_used: GPT-5 Codex  
-reasoning_level: high  
-source_repository: `samindriano/idx-trade`  
-source_commit: `2be7160f20184e489f7a9f82a0d6aac890622c7e`  
-branch: `fix/idx-forward-reliability-v1`  
-head_commit: `85b6f317`  
+from: Codex
+to: MAIN / independent reviewer
+task_id: IDX-FORWARD-STOCKBIT-RELIABILITY-REMEDIATION-V1
+model_used: GPT-5 Codex
+reasoning_level: high
+source_repository: `samindriano/idx-trade`
+source_commit: `2be7160f20184e489f7a9f82a0d6aac890622c7e`
+branch: `fix/idx-forward-reliability-v1`
+head_commit: `2658a56dfe7a5c27f98ec2adaa95d89366f448ae`
+implementation_commit: `85b6f317`
 
-scope: narrow Stockbit retry bookkeeping and resumed-quota reliability fix  
-files_changed: `src/idx_trade/stockbit_stream_capture_v2.py`, `tests/test_stockbit_stream_capture_v2.py`, plus the checkpoint  
+scope: narrow Stockbit retry bookkeeping and resumed-quota reliability fix
+files_changed: `src/idx_trade/stockbit_stream_capture_v2.py`, `tests/test_stockbit_stream_capture_v2.py`, plus the checkpoint
 
 findings:
 - mixed HTTP-response then RequestException previously risked stale response state;
@@ -30,5 +31,5 @@ blocking_risks:
 - external provider/scheduler behavior still requires a genuine scheduled run;
 - no claim of live post-remediation proof is made here.
 
-validation_run: focused capture/archive suite (27 passed); full pytest (78 passed); py_compile; diff-check
-recommended_next_action: review/merge through the active operational lane only after independent diff review.
+validation_run: focused capture/archive suite (27 passed); full pytest (78 passed); py_compile; diff-check PASS on final branch head
+recommended_next_action: review/merge through the active operational lane only after independent diff review; genuine scheduled proof remains pending.

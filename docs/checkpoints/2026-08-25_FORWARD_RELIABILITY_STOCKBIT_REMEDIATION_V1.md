@@ -1,9 +1,11 @@
 # Stockbit Forward Reliability Remediation V1
 
-Date: 2026-08-25 Asia/Jakarta  
-Branch: `fix/idx-forward-reliability-v1`  
-Source main: `2be7160f20184e489f7a9f82a0d6aac890622c7e`  
+Date: 2026-08-25 Asia/Jakarta
+Branch: `fix/idx-forward-reliability-v1`
+Source main: `2be7160f20184e489f7a9f82a0d6aac890622c7e`
 Implementation commit: `85b6f317`
+
+Final branch head: `2658a56dfe7a5c27f98ec2adaa95d89366f448ae`
 
 ## Scope
 
