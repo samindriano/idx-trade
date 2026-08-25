@@ -3,6 +3,7 @@
 Date: 2026-08-25
 Branch: `ops/idx-forward-session-audit-v1`
 Parent reviewed HEAD: `da9560c606950797ef3b640e0bcf6cc4e4ba107b`
+Final implementation HEAD: `209d8dc36b32899675c34c29e9a8f5d89916ed6f`
 Status: merge-review-ready pending PR #87 CI and independent review
 
 ## Scope
