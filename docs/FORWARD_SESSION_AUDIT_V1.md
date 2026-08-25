@@ -173,6 +173,25 @@ must equal that execution date. The schedule-binding stage performs the
 complete accepted schedule-attestation proof from canonical metadata; it does
 not infer a next session from date subtraction.
 
+The calendar stage is independently proven from the hash-pinned
+`execution_schedule_attestation_path` / `execution_schedule_attestation_sha256`
+metadata. It derives `T in schedule.session_dates` and rejects contradictory
+or out-of-coverage `is_trading_session` claims. A calendar failure is included
+in the overall severity aggregation and cannot disappear behind passing
+downstream stages.
+
+When supplied, runtime and scheduler metadata are complete deployment proofs:
+runtime identity must bind observed HEAD to expected commit, certify equality
+and a clean checkout, while scheduler metadata must bind the exact task,
+runner, runtime-v2 module, retry triggers, `StartWhenAvailable`, `IgnoreNew`,
+and network requirement. A self-asserted runtime hash pair or incomplete
+scheduler record is not sufficient for `PASS`.
+
+Prepared state metadata and the resulting `PaperState(T)` must name the same
+verified prior runtime snapshot. Missed execution metadata must bind its
+`prior_runtime_snapshot_*` fields to that same parent. These checks use only
+paths, hashes, schema, and session identity; no parquet values are parsed.
+
 ## CLI examples
 
 Audit one session into an external runtime directory:
@@ -190,8 +209,11 @@ python scripts/audit_forward_session_v1.py `
   --scheduler-metadata "D:\external\scheduler\2026-08-27.json" `
   --prepared-metadata "D:\external\e2e_runtime\prepared\2026-08-26.json" `
   --schedule-binding-metadata "D:\external\e2e_runtime\prepared_schedule\2026-08-26.json" `
+  --reported-at-utc "2026-08-27T20:00:00Z" `
   --output "D:\external\audit\execution-session-2026-08-27.json"
 ```
 
-The command is manual and read-only. It must not be added to a scheduled task
-without a separately reviewed operational change.
+The command is manual and read-only. If `--reported-at-utc` is omitted, the
+auditor records the actual current UTC time; provide it for deterministic
+replay. It must not be added to a scheduled task without a separately reviewed
+operational change.

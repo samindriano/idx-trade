@@ -21,7 +21,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--schedule-binding-metadata")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--summary-output", type=Path)
-    parser.add_argument("--reported-at-utc", default="2026-01-01T00:00:00+00:00")
+    parser.add_argument(
+        "--reported-at-utc",
+        help="UTC-aware audit timestamp; omit to use the current UTC time",
+    )
     return parser
 
 

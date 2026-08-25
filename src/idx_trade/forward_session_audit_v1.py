@@ -28,6 +28,15 @@ from .official_trading_schedule_v1 import (
     next_planned_session,
 )
 from .e2e_paper_schedule_binding_v1 import verify_prepared_schedule_binding
+from .official_open_evidence_v1 import (
+    ALLOWED_TRANSPORTS,
+    AUTHORITY as OFFICIAL_OPEN_AUTHORITY,
+    FALLBACK_POLICY as OFFICIAL_OPEN_FALLBACK_POLICY,
+    FIELD_SEMANTICS as OFFICIAL_OPEN_FIELD_SEMANTICS,
+    SCHEMA_VERSION as OFFICIAL_OPEN_SCHEMA_VERSION,
+    TRANSPORT_POLICY as OFFICIAL_OPEN_TRANSPORT_POLICY,
+    UPSTREAM_PATH as OFFICIAL_OPEN_UPSTREAM_PATH,
+)
 
 
 SCHEMA_VERSION = "idx_trade_forward_session_audit_v1"
@@ -519,6 +528,36 @@ def _validate_prepared_contract(
         declared_next = payload.get("next_official_session_date")
         if declared_next is not None and declared_next != execution:
             notes.append("PREPARED_NEXT_OFFICIAL_SESSION_MISMATCH")
+        state_ref = payload.get("state")
+        if not isinstance(state_ref, Mapping):
+            notes.append("PREPARED_STATE_SNAPSHOT_REFERENCE_MISSING")
+        else:
+            state_path = state_ref.get("snapshot_path")
+            state_sha = state_ref.get("snapshot_sha256")
+            notes.extend(
+                _verify_file_reference(
+                    metadata_path,
+                    {"path": state_path, "sha256": state_sha},
+                    "PREPARED_STATE_SNAPSHOT",
+                )
+            )
+            if isinstance(state_path, str) and isinstance(state_sha, str):
+                try:
+                    state_file = _safe_path(
+                        Path(state_path)
+                        if Path(state_path).is_absolute()
+                        else metadata_path.parent / state_path
+                    )
+                    state_metadata = _json_object(state_file)
+                    notes.extend(
+                        _validate_runtime_snapshot(
+                            state_metadata.payload,
+                            snapshot_path=state_file,
+                            expected_session_date=decision,
+                        )
+                    )
+                except SessionAuditError as exc:
+                    notes.append(f"PREPARED_STATE_SNAPSHOT_INVALID:{exc}")
     if payload.get("status") != "PREPARED_EXECUTION":
         notes.append("PREPARED_STATUS_MISMATCH")
     eod_inputs = payload.get("eod_inputs")
@@ -772,6 +811,16 @@ def _validate_missed_execution_contract(
             {"path": runtime_path, "sha256": runtime_sha},
             "MISSED_EXECUTION_RUNTIME_SNAPSHOT",
         )
+    prior_path = payload.get("prior_runtime_snapshot_path")
+    prior_sha = payload.get("prior_runtime_snapshot_sha256")
+    if not isinstance(prior_path, str) or not isinstance(prior_sha, str):
+        yield "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_REFERENCE_MISSING"
+    else:
+        yield from _verify_file_reference(
+            Path(str(payload.get("prepared_path") or ".")).parent,
+            {"path": prior_path, "sha256": prior_sha},
+            "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT",
+        )
 
 
 def _cross_bind_terminal_runtime_snapshot(
@@ -798,6 +847,73 @@ def _cross_bind_terminal_runtime_snapshot(
         _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_PATH_MISMATCH")
     if runtime_sha.lower() != paperstate_metadata.sha256.lower():
         _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_SHA256_MISMATCH")
+
+
+def _cross_bind_prepared_parent_snapshot(
+    prepared_stage: dict[str, Any],
+    prepared_metadata: SafeMetadata | None,
+    paperstate_stage: dict[str, Any],
+    paperstate_metadata: SafeMetadata | None,
+) -> None:
+    """Bind prepared state and PaperState(T) to the exact same prior snapshot."""
+
+    if prepared_metadata is None or paperstate_metadata is None:
+        return
+    state_ref = prepared_metadata.payload.get("state")
+    previous = paperstate_metadata.payload.get("previous_snapshot")
+    if not isinstance(state_ref, Mapping):
+        _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_STATE_SNAPSHOT_REFERENCE_MISSING")
+        return
+    if not isinstance(previous, Mapping):
+        _set_stricter(
+            paperstate_stage,
+            PROVENANCE_INVALID,
+            "PAPERSTATE_PREVIOUS_SNAPSHOT_REFERENCE_MISSING",
+        )
+        return
+    prepared_path = state_ref.get("snapshot_path")
+    prepared_sha = state_ref.get("snapshot_sha256")
+    previous_path = previous.get("path")
+    previous_sha = previous.get("sha256")
+    if not all(isinstance(value, str) for value in (prepared_path, prepared_sha, previous_path, previous_sha)):
+        _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_STATE_SNAPSHOT_REFERENCE_INVALID")
+        return
+    if Path(str(prepared_path)).expanduser().resolve() != Path(str(previous_path)).expanduser().resolve():
+        _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_STATE_PREVIOUS_SNAPSHOT_PATH_MISMATCH")
+        return
+    if str(prepared_sha).lower() != str(previous_sha).lower():
+        _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_STATE_PREVIOUS_SNAPSHOT_SHA256_MISMATCH")
+
+
+def _cross_bind_missed_parent_snapshot(
+    execution_stage: dict[str, Any],
+    missed_metadata: SafeMetadata | None,
+    paperstate_stage: dict[str, Any],
+    paperstate_metadata: SafeMetadata | None,
+) -> None:
+    """Bind missed-execution prior-runtime identity to PaperState(T)'s parent."""
+
+    if missed_metadata is None or paperstate_metadata is None:
+        return
+    previous = paperstate_metadata.payload.get("previous_snapshot")
+    if not isinstance(previous, Mapping):
+        _set_stricter(
+            execution_stage,
+            PROVENANCE_INVALID,
+            "MISSED_EXECUTION_PAPERSTATE_PREVIOUS_SNAPSHOT_MISSING",
+        )
+        return
+    prior_path = missed_metadata.payload.get("prior_runtime_snapshot_path")
+    prior_sha = missed_metadata.payload.get("prior_runtime_snapshot_sha256")
+    previous_path = previous.get("path")
+    previous_sha = previous.get("sha256")
+    if not all(isinstance(value, str) for value in (prior_path, prior_sha, previous_path, previous_sha)):
+        _set_stricter(execution_stage, PROVENANCE_INVALID, "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_REFERENCE_INVALID")
+        return
+    if Path(str(prior_path)).expanduser().resolve() != Path(str(previous_path)).expanduser().resolve():
+        _set_stricter(execution_stage, PROVENANCE_INVALID, "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_PATH_MISMATCH")
+    if str(prior_sha).lower() != str(previous_sha).lower():
+        _set_stricter(execution_stage, PROVENANCE_INVALID, "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_SHA256_MISMATCH")
 
 
 def _find_prepared_parent(
@@ -989,15 +1105,19 @@ def _evidence_timestamp(payload: Mapping[str, Any]) -> str | None:
 
 def _validate_open_contract(payload: Mapping[str, Any]) -> Iterable[str]:
     expected = {
-        "authority": "IDX",
-        "upstream_path": "TradingSummary/GetStockSummary",
-        "field_semantics": "IDX_OFFICIAL_OPENPRICE",
-        "transport_policy": "DIRECT_IDX_THEN_ZAPI_RAW_V1",
-        "fallback_policy": "NONE",
+        "authority": OFFICIAL_OPEN_AUTHORITY,
+        "upstream_path": OFFICIAL_OPEN_UPSTREAM_PATH,
+        "field_semantics": OFFICIAL_OPEN_FIELD_SEMANTICS,
+        "transport_policy": OFFICIAL_OPEN_TRANSPORT_POLICY,
+        "fallback_policy": OFFICIAL_OPEN_FALLBACK_POLICY,
     }
     for key, value in expected.items():
         if payload.get(key) != value:
             yield f"OFFICIAL_OPEN_CONTRACT_MISMATCH:{key}"
+    if payload.get("schema_version") != OFFICIAL_OPEN_SCHEMA_VERSION:
+        yield "OFFICIAL_OPEN_SCHEMA_MISMATCH"
+    if payload.get("transport") not in ALLOWED_TRANSPORTS:
+        yield "OFFICIAL_OPEN_TRANSPORT_NOT_ALLOWED"
     if payload.get("execution_grade") is not True:
         yield "OFFICIAL_OPEN_EXECUTION_GRADE_MISSING"
     for key in ("execution_field", "open_field", "price_field"):
@@ -1016,6 +1136,56 @@ def _validate_open_contract(payload: Mapping[str, Any]) -> Iterable[str]:
             yield f"FORBIDDEN_OPEN_SEMANTIC:{forbidden}"
 
 
+def _prove_calendar_classification(
+    metadata: SafeMetadata,
+    *,
+    expected_session_date: str,
+) -> tuple[bool | None, list[str]]:
+    """Derive T's trading/non-trading state from a verified schedule attestation."""
+
+    payload = metadata.payload
+    attestation_raw = payload.get("execution_schedule_attestation_path")
+    attestation_sha = payload.get("execution_schedule_attestation_sha256")
+    notes: list[str] = []
+    if not isinstance(attestation_raw, str) or not isinstance(attestation_sha, str):
+        return None, ["CALENDAR_SCHEDULE_ATTESTATION_IDENTITY_MISSING"]
+    try:
+        attestation = _safe_path(attestation_raw)
+        schedule = load_verified_official_trading_schedule(
+            attestation,
+            expected_sha256=attestation_sha,
+        )
+    except (SessionAuditError, OfficialTradingScheduleError, OSError, ValueError) as exc:
+        return None, [f"CALENDAR_SCHEDULE_ATTESTATION_INVALID:{exc}"]
+
+    current = date.fromisoformat(expected_session_date)
+    if current < date.fromisoformat(schedule.coverage_start) or current > date.fromisoformat(schedule.coverage_end):
+        notes.append("CALENDAR_SESSION_OUTSIDE_VERIFIED_SCHEDULE_COVERAGE")
+    declared = payload.get("is_trading_session")
+    if not isinstance(declared, bool):
+        notes.append("CALENDAR_TRADING_CLASSIFICATION_MISSING")
+    derived = expected_session_date in schedule.session_dates
+    if isinstance(declared, bool) and declared != derived:
+        notes.append("CALENDAR_TRADING_CLASSIFICATION_CONTRADICTION")
+    classification = payload.get("classification")
+    if classification is not None:
+        normalized = str(classification).strip().upper()
+        trading_labels = {"REGULAR", "TRADING", "TRADING_SESSION", "SESSION"}
+        nontrading_labels = {
+            "HOLIDAY",
+            "NON_TRADING",
+            "NON_TRADING_SESSION",
+            "WEEKEND",
+            "NO_SESSION",
+            "CLOSED",
+        }
+        if (derived and normalized not in trading_labels) or (
+            not derived and normalized not in nontrading_labels
+        ):
+            notes.append("CALENDAR_CLASSIFICATION_LABEL_CONTRADICTION")
+    return (not derived if not notes else None), notes
+
+
 def _validate_runtime_identity(payload: Mapping[str, Any]) -> Iterable[str]:
     expected = payload.get("expected_runtime_sha256")
     observed = payload.get("runtime_sha256")
@@ -1023,6 +1193,24 @@ def _validate_runtime_identity(payload: Mapping[str, Any]) -> Iterable[str]:
         yield "RUNTIME_SHA256_MISMATCH"
     if payload.get("active_runtime_changed") is True:
         yield "ACTIVE_RUNTIME_CHANGED"
+    observed_head = payload.get("observed_head")
+    expected_commit = payload.get("expected_commit")
+    valid_commit = lambda value: (
+        isinstance(value, str)
+        and len(value) == 40
+        and all(character in "0123456789abcdefABCDEF" for character in value)
+    )
+    if not valid_commit(observed_head) or not valid_commit(expected_commit):
+        yield "RUNTIME_DEPLOYMENT_IDENTITY_MISSING"
+    else:
+        if observed_head.lower() != expected_commit.lower() or payload.get("head_equal") is not True:
+            yield "RUNTIME_DEPLOYMENT_HEAD_MISMATCH"
+    if payload.get("clean_checkout") is not True:
+        yield "RUNTIME_CHECKOUT_NOT_CERTIFIED_CLEAN"
+    if "expected_branch" in payload:
+        observed_branch = payload.get("observed_branch") or payload.get("current_branch") or payload.get("branch")
+        if not isinstance(observed_branch, str) or observed_branch != payload.get("expected_branch"):
+            yield "RUNTIME_DEPLOYMENT_BRANCH_MISMATCH"
 
 
 def _validate_scheduler(payload: Mapping[str, Any]) -> Iterable[str]:
@@ -1044,17 +1232,17 @@ def _validate_scheduler(payload: Mapping[str, Any]) -> Iterable[str]:
         yield "SCHEDULER_RUNNER_WRONG_VERSION"
     if "official_open_capture_runtime_v2" not in module:
         yield "SCHEDULER_RUNTIME_MODULE_BINDING_MISSING"
-    if payload.get("task_name") not in {None, "IDXTrade-E2E-OfficialOpen"}:
+    if payload.get("task_name") != "IDXTrade-E2E-OfficialOpen":
         yield "SCHEDULER_TASK_MISMATCH"
     required_times = {"09:02", "09:07", "09:12", "09:17", "09:22"}
     triggers = {str(item)[:5] for item in payload.get("triggers", [])} if isinstance(payload.get("triggers"), list) else set()
-    if triggers and not required_times.issubset(triggers):
+    if not required_times.issubset(triggers) or "AtLogOn" not in payload.get("triggers", []):
         yield "SCHEDULER_RETRY_TRIGGER_MISSING"
-    if payload.get("start_when_available") is False:
+    if payload.get("start_when_available") is not True:
         yield "SCHEDULER_START_WHEN_AVAILABLE_DISABLED"
-    if payload.get("multiple_instances") not in {None, "IgnoreNew"}:
+    if payload.get("multiple_instances") != "IgnoreNew":
         yield "SCHEDULER_MULTIPLE_INSTANCE_POLICY_MISMATCH"
-    if payload.get("network_required") is False:
+    if payload.get("network_required") is not True:
         yield "SCHEDULER_NETWORK_REQUIREMENT_MISSING"
 
 
@@ -1124,8 +1312,13 @@ def _is_clean_missed_execution_transition(stages: Sequence[Mapping[str, Any]]) -
     return True
 
 
-def _aggregate(calendar_status: str, stages: Sequence[Mapping[str, Any]]) -> tuple[str, list[str]]:
-    if calendar_status == LEGITIMATE_NOOP:
+def _aggregate(
+    calendar_status: str,
+    stages: Sequence[Mapping[str, Any]],
+    *,
+    calendar_nontrading: bool = False,
+) -> tuple[str, list[str]]:
+    if calendar_status == PASS and calendar_nontrading:
         return "NON_TRADING_SESSION", []
     statuses = [str(item["status"]) for item in stages]
     blockers = [
@@ -1160,7 +1353,7 @@ def audit_session(
     scheduler_metadata: str | Path | None = None,
     prepared_metadata: str | Path | None = None,
     schedule_binding_metadata: str | Path | None = None,
-    reported_at_utc: str = "2026-01-01T00:00:00+00:00",
+    reported_at_utc: str | None = None,
 ) -> dict[str, Any]:
     """Audit one execution session using the accepted decision t -> T graph.
 
@@ -1170,6 +1363,7 @@ def audit_session(
     """
 
     session = _session(execution_session_date)
+    report_timestamp = reported_at_utc or datetime.now(timezone.utc).isoformat()
     forward_root = Path(forward_monitoring_root).expanduser().resolve() if forward_monitoring_root else None
     e2e_root = Path(e2e_runtime_root).expanduser().resolve() if e2e_runtime_root else None
     calendar_stage, calendar_meta = _artifact_stage(
@@ -1180,6 +1374,24 @@ def audit_session(
         require_outcome_clean=False,
         extra_validator=lambda p: ("CALENDAR_SESSION_DATE_MISSING",) if "session_date" not in p else (),
     )
+    calendar_nontrading: bool | None = None
+    if calendar_stage["status"] == PASS and calendar_meta is not None:
+        calendar_nontrading, calendar_notes = _prove_calendar_classification(
+            calendar_meta,
+            expected_session_date=session,
+        )
+        for note in calendar_notes:
+            _set_stricter(calendar_stage, PROVENANCE_INVALID, note)
+        if not calendar_notes and calendar_nontrading is not None:
+            calendar_stage["observed"]["verified_is_trading_session"] = not calendar_nontrading
+            calendar_stage["observed"]["verified_schedule_attestation_path"] = str(
+                calendar_meta.payload["execution_schedule_attestation_path"]
+            )
+            calendar_stage["observed"]["verified_schedule_attestation_sha256"] = str(
+                calendar_meta.payload["execution_schedule_attestation_sha256"]
+            ).lower()
+        else:
+            calendar_nontrading = None
     stage_by_name: dict[str, dict[str, Any]] = {
         "official_trading_calendar": calendar_stage,
     }
@@ -1198,7 +1410,7 @@ def audit_session(
                 notes=("NON_TRADING_SESSION",),
             )
         stages = [stage_by_name[name] for name in STAGES]
-        return _report(session, "NON_TRADING_SESSION", stages, [], reported_at_utc, None)
+        return _report(session, "NON_TRADING_SESSION", stages, [], report_timestamp, None)
 
     runtime_stage, _ = _artifact_stage(
         stage="runtime_identity",
@@ -1472,6 +1684,19 @@ def audit_session(
         paperstate_path=paperstate_path,
         paperstate_metadata=paperstate_meta,
     )
+    _cross_bind_prepared_parent_snapshot(
+        prepared_stage,
+        prepared_meta,
+        paperstate_stage,
+        paperstate_meta,
+    )
+    if not existing_execution and existing_missed_execution:
+        _cross_bind_missed_parent_snapshot(
+            execution_stage,
+            execution_meta,
+            paperstate_stage,
+            paperstate_meta,
+        )
 
     if decision_noop:
         stage_by_name["forward_evidence_health"] = _stage(
@@ -1486,14 +1711,14 @@ def audit_session(
             item for item in discovered_for_decision
             if item.name in {"eod_manifest", "v4_x1_score_manifest"}
         )
-        health = evaluate_session(decision_date or session, health_specs, reported_at_utc=reported_at_utc)
+        health = evaluate_session(decision_date or session, health_specs, reported_at_utc=report_timestamp)
         stage_by_name["forward_evidence_health"] = _stage(
             "forward_evidence_health",
             "DECISION_SESSION_FORWARD_ARTIFACT_HEALTH",
             session,
             _map_health_status(str(health.get("overall_status"))),
             observed={"health_overall_status": health.get("overall_status"), "decision_session_date": decision_date},
-            evidence_timestamp=reported_at_utc,
+            evidence_timestamp=report_timestamp,
             notes=tuple(
                 f"{item.get('name')}:{item.get('status')}:{item.get('reason')}"
                 for item in health.get("artifacts", [])
@@ -1544,8 +1769,12 @@ def audit_session(
             _set_stricter(execution_stage, PROVENANCE_INVALID, "RETROACTIVE_FILL_REJECTED")
 
     stages = [stage_by_name[name] for name in STAGES]
-    overall, blockers = _aggregate(calendar_stage["status"], stages[1:])
-    return _report(session, overall, stages, blockers, reported_at_utc, decision_date)
+    overall, blockers = _aggregate(
+        calendar_stage["status"],
+        stages,
+        calendar_nontrading=calendar_nontrading is True,
+    )
+    return _report(session, overall, stages, blockers, report_timestamp, decision_date)
 
 
 def _stage_timestamp(stage: Mapping[str, Any]) -> str | None:

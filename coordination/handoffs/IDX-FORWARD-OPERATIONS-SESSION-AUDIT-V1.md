@@ -6,9 +6,9 @@ task_id: IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1-CANONICAL-COMPATIBILITY
 model_used: GPT-5
 reasoning_level: high
 source_repository: samindriano/idx-trade
-source_commit: 8625052a7c273a9d911722a4fb97e391525bbff6
+source_commit: da9560c606950797ef3b640e0bcf6cc4e4ba107b
 branch: ops/idx-forward-session-audit-v1
-head_commit: 594b86a43c9f9bc887b027341f41c7eec3f6ab45
+head_commit: PENDING_FINAL_COMMIT
 
 ## Scope
 
@@ -26,6 +26,7 @@ or scheduler wiring was performed.
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_REMEDIATION.md`
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_CANONICAL_COMPATIBILITY.md`
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_FINAL_HARDENING.md`
+- `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_CONTRACT_CORRECTNESS.md`
 - `coordination/handoffs/IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1.md`
 
 ## Contract decisions
@@ -71,6 +72,20 @@ or scheduler wiring was performed.
 - Runtime snapshot parent bytes/SHA/schema/date ordering and detectable
   self/cycle metadata are checked. Terminal execution and missed artifacts
   cross-bind their runtime snapshot path/SHA to the audited PaperState stage.
+- Calendar classification is independently derived from the hash-pinned
+  official schedule attestation for `T`; calendar failures are included in
+  overall aggregation and cannot be hidden by downstream PASS stages.
+- Official Open metadata requires the canonical schema and an allowed Direct
+  IDX or Zapi RAW transport in addition to the accepted field/authority/path/
+  policy/execution-grade contract.
+- Runtime identity requires observed HEAD/expected commit equality and clean
+  checkout; scheduler PASS requires complete task, runner, runtime-v2,
+  trigger, start-when-available, IgnoreNew, and network metadata.
+- Prepared state and `PaperState(T).previous_snapshot` must bind the exact
+  same prior runtime snapshot path/SHA. Missed execution prior-runtime
+  references are checked against that same parent.
+- CLI omitted `--reported-at-utc` uses actual current UTC; deterministic
+  replay supplies an explicit timestamp.
 
 ## Evidence and limitations
 
@@ -80,17 +95,23 @@ responses. If prepared metadata includes `next_official_session_date`, it must
 equal `T`; the canonical schedule-binding metadata now provides the complete
 schedule-attestation proof without date subtraction.
 
+The calendar input must carry
+`execution_schedule_attestation_path` and
+`execution_schedule_attestation_sha256`; a JSON holiday/trading label without
+that verified schedule proof is not sufficient.
+
 ## Validation
 
-- Session Audit tests: `52 passed`.
+- Session Audit tests: `78 passed`.
 - Relevant E2E/Open/schedule-binding/missed-continuity tests: `126 passed`.
-- Full pytest: `812 passed, 0 failed, 3 existing pandas FutureWarnings`.
+- Full pytest: `838 passed, 0 failed, 3 existing pandas FutureWarnings`.
 - py_compile/import smoke: PASS.
 - git diff --check: PASS.
 - Synthetic CLI valid t→t+1 smoke: `SESSION_HEALTHY`.
 - Synthetic CLI valid holiday smoke: `NON_TRADING_SESSION`.
 - Synthetic CLI missed-Open continuity smoke:
   `SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN`.
+- Synthetic CLI calendar-failure smoke: `SESSION_FAIL_CLOSED_EXTERNAL`.
 
 ## Guard state
 

@@ -103,6 +103,12 @@ def _fixture(
             session_date=EXECUTION,
             runtime_sha256="abc",
             expected_runtime_sha256="abc",
+            observed_head="a" * 40,
+            expected_commit="a" * 40,
+            head_equal=True,
+            clean_checkout=True,
+            expected_branch="integration/idx-e2e-baseline-paper-v1",
+            observed_branch="integration/idx-e2e-baseline-paper-v1",
             evidence_at_utc="2026-08-27T08:55:00+07:00",
         ),
     )
@@ -124,10 +130,11 @@ def _fixture(
     )
 
     schedule_source.write_bytes(b"official schedule source fixture")
+    schedule_holidays = [EXECUTION] if not calendar_trading else []
     schedule_sessions = list(derive_planned_sessions(
         coverage_start="2026-08-25",
         coverage_end="2026-08-28",
-        holiday_dates=[],
+        holiday_dates=schedule_holidays,
     ))
     schedule_payload: dict[str, object] = {
         "schema_version": "idx_official_trading_schedule_v1",
@@ -139,10 +146,14 @@ def _fixture(
         "source_document_sha256": hashlib.sha256(schedule_source.read_bytes()).hexdigest(),
         "coverage_start": "2026-08-25",
         "coverage_end": "2026-08-28",
-        "holiday_dates": [],
+        "holiday_dates": schedule_holidays,
         "session_dates": schedule_sessions,
     }
     _write(schedule_attestation, _set_payload_hash(schedule_payload))
+    calendar_payload = json.loads(calendar.read_text(encoding="utf-8"))
+    calendar_payload["execution_schedule_attestation_path"] = str(schedule_attestation.resolve())
+    calendar_payload["execution_schedule_attestation_sha256"] = hashlib.sha256(schedule_attestation.read_bytes()).hexdigest()
+    _write(calendar, calendar_payload)
 
     eod_dir = forward / "sessions" / DECISION
     snapshot = eod_dir / "model_input.bin"
@@ -180,6 +191,18 @@ def _fixture(
     # This state/decisions file is intentionally not the Decision authority;
     # the auditor must use the embedded prepared decision plan instead.
     _write(e2e / "state" / "decisions" / f"{DECISION}.json", {"not_decision_authority": True})
+
+    decision_snapshot_path = e2e / "forward_execution_v1_1" / "state_snapshots" / f"{DECISION}.json"
+    decision_snapshot_payload: dict[str, object] = {
+        "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
+        "session_date": DECISION,
+        "state": {"base_paper_state": {}, "dividend_ledger": {}},
+        "certified_dividend_registry": [],
+        "hashes": {"runtime_state_sha256": "decision-runtime-state"},
+        "previous_snapshot": None,
+    }
+    decision_snapshot_payload["snapshot_payload_sha256"] = _canonical_hash(decision_snapshot_payload)
+    decision_snapshot_sha = _write(decision_snapshot_path, decision_snapshot_payload)
 
     raw = e2e / "official_open" / EXECUTION / "raw.bin"
     normalized = e2e / "official_open" / EXECUTION / "normalized.bin"
@@ -247,7 +270,7 @@ def _fixture(
         "execution_session_date": prepared_execution,
         "bootstrap": False,
         "required_tickers": ["BBCA"],
-        "state": {"snapshot_path": str((e2e / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json").resolve()), "snapshot_sha256": "snapshot", "state_sha256": "state"},
+        "state": {"snapshot_path": str(decision_snapshot_path.resolve()), "snapshot_sha256": decision_snapshot_sha, "state_sha256": "state"},
         "decision_plan": decision_plan,
         "decision_plan_sha256": _canonical_hash(decision_plan),
         "execution_plan": execution_plan,
@@ -316,7 +339,11 @@ def _fixture(
         "state": {"base_paper_state": {}, "dividend_ledger": {}},
         "certified_dividend_registry": [],
         "hashes": {"runtime_state_sha256": "runtime-state"},
-        "previous_snapshot": None,
+        "previous_snapshot": {
+            "path": str(decision_snapshot_path.resolve()),
+            "sha256": decision_snapshot_sha,
+            "session_date": DECISION,
+        },
     }
     snapshot_payload["snapshot_payload_sha256"] = _canonical_hash(snapshot_payload)
     snapshot_path = e2e / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
@@ -363,6 +390,8 @@ def _by_name(report: dict[str, object]) -> dict[str, dict[str, object]]:
 def _write_missed_execution(paths: dict[str, Path]) -> None:
     snapshot = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
     snapshot_sha = hashlib.sha256(snapshot.read_bytes()).hexdigest()
+    prior_snapshot = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{DECISION}.json"
+    prior_snapshot_sha = hashlib.sha256(prior_snapshot.read_bytes()).hexdigest()
     binding_sha = hashlib.sha256(paths["binding"].read_bytes()).hexdigest()
     missed = {
         "schema_version": "idx_trade_e2e_paper_missed_execution_v1",
@@ -374,8 +403,8 @@ def _write_missed_execution(paths: dict[str, Path]) -> None:
         "prepared_sha256": hashlib.sha256(paths["prepared"].read_bytes()).hexdigest(),
         "schedule_binding_path": str(paths["binding"].resolve()),
         "schedule_binding_sha256": binding_sha,
-        "prior_runtime_snapshot_path": str(snapshot.resolve()),
-        "prior_runtime_snapshot_sha256": snapshot_sha,
+        "prior_runtime_snapshot_path": str(prior_snapshot.resolve()),
+        "prior_runtime_snapshot_sha256": prior_snapshot_sha,
         "runtime_snapshot_path": str(snapshot.resolve()),
         "runtime_snapshot_sha256": snapshot_sha,
         "open_manifest_present": False,
@@ -397,9 +426,8 @@ def test_complete_t_to_t_plus_one_chain_is_healthy(tmp_path: Path):
 
 
 def test_valid_holiday_is_non_trading_only_after_calendar_pass(tmp_path: Path):
-    calendar = tmp_path / "calendar.json"
-    _write(calendar, _guarded(session_date=EXECUTION, is_trading_session=False, classification="HOLIDAY"))
-    report = audit_session(EXECUTION, calendar_metadata=calendar, reported_at_utc="2026-08-27T20:00:00+07:00")
+    paths = _fixture(tmp_path, calendar_trading=False)
+    report = audit_session(EXECUTION, calendar_metadata=paths["calendar"], reported_at_utc="2026-08-27T20:00:00+07:00")
     assert report["overall_status"] == "NON_TRADING_SESSION"
     assert all(stage["status"] == NOT_APPLICABLE for stage in report["stages"][1:])
 
@@ -410,6 +438,106 @@ def test_invalid_calendar_cannot_become_holiday(tmp_path: Path):
     report = audit_session(EXECUTION, calendar_metadata=calendar, reported_at_utc="2026-08-27T20:00:00+07:00")
     assert report["overall_status"] != "NON_TRADING_SESSION"
     assert _by_name(report)["official_trading_calendar"]["status"] == FAIL_CLOSED_EXTERNAL
+
+
+@pytest.mark.parametrize(
+    ("calendar_status", "expected_overall"),
+    [
+        (FAIL_CLOSED_EXTERNAL, "SESSION_FAIL_CLOSED_EXTERNAL"),
+        (PROVENANCE_INVALID, "SESSION_PROVENANCE_INVALID"),
+        (IMPLEMENTATION_DEFECT, "SESSION_IMPLEMENTATION_DEFECT"),
+    ],
+)
+def test_calendar_failure_can_never_disappear_from_overall_status(
+    tmp_path: Path,
+    calendar_status: str,
+    expected_overall: str,
+):
+    paths = _fixture(tmp_path)
+    calendar = json.loads(paths["calendar"].read_text(encoding="utf-8"))
+    calendar["status"] = calendar_status
+    _write(paths["calendar"], calendar)
+    prepared = json.loads(paths["prepared"].read_text(encoding="utf-8"))
+    prepared["eod_inputs"]["calendar"]["sha256"] = hashlib.sha256(paths["calendar"].read_bytes()).hexdigest()  # type: ignore[index]
+    _write(paths["prepared"], _set_payload_hash(prepared))
+    prepared_sha = hashlib.sha256(paths["prepared"].read_bytes()).hexdigest()
+    binding = json.loads(paths["binding"].read_text(encoding="utf-8"))
+    binding["prepared_sha256"] = prepared_sha
+    binding["observed_calendar_sha256"] = hashlib.sha256(paths["calendar"].read_bytes()).hexdigest()
+    _write(paths["binding"], _set_payload_hash(binding))
+    execution = json.loads(paths["execution"].read_text(encoding="utf-8"))
+    execution["prepared_sha256"] = prepared_sha
+    _write(paths["execution"], _set_payload_hash(execution))
+    report = _audit(paths)
+    assert report["overall_status"] == expected_overall
+    assert _by_name(report)["official_trading_calendar"]["status"] == calendar_status
+
+
+def test_json_holiday_claim_without_verified_schedule_is_not_sufficient(tmp_path: Path):
+    calendar = tmp_path / "calendar.json"
+    _write(
+        calendar,
+        _guarded(
+            session_date=EXECUTION,
+            is_trading_session=False,
+            classification="HOLIDAY",
+        ),
+    )
+    report = audit_session(
+        EXECUTION,
+        calendar_metadata=calendar,
+        reported_at_utc="2026-08-27T20:00:00+07:00",
+    )
+    assert report["overall_status"] == "SESSION_PROVENANCE_INVALID"
+    assert "CALENDAR_SCHEDULE_ATTESTATION_IDENTITY_MISSING" in _by_name(report)["official_trading_calendar"]["causal_notes"]
+
+
+def test_calendar_claimed_holiday_but_verified_schedule_contains_session_is_invalid(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    calendar = json.loads(paths["calendar"].read_text(encoding="utf-8"))
+    calendar["is_trading_session"] = False
+    calendar["classification"] = "HOLIDAY"
+    _write(paths["calendar"], calendar)
+    stage = _by_name(_audit(paths))["official_trading_calendar"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "CALENDAR_TRADING_CLASSIFICATION_CONTRADICTION" in stage["causal_notes"]
+
+
+def test_calendar_claimed_trading_but_verified_schedule_excludes_session_is_invalid(tmp_path: Path):
+    paths = _fixture(tmp_path, calendar_trading=False)
+    calendar = json.loads(paths["calendar"].read_text(encoding="utf-8"))
+    calendar["is_trading_session"] = True
+    calendar["classification"] = "REGULAR"
+    _write(paths["calendar"], calendar)
+    stage = _by_name(_audit(paths))["official_trading_calendar"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "CALENDAR_TRADING_CLASSIFICATION_CONTRADICTION" in stage["causal_notes"]
+
+
+def test_calendar_schedule_attestation_tamper_is_invalid(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    calendar = json.loads(paths["calendar"].read_text(encoding="utf-8"))
+    calendar["execution_schedule_attestation_sha256"] = "0" * 64
+    _write(paths["calendar"], calendar)
+    stage = _by_name(_audit(paths))["official_trading_calendar"]
+    assert stage["status"] == PROVENANCE_INVALID
+
+
+def test_calendar_outside_verified_coverage_does_not_guess(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    calendar = json.loads(paths["calendar"].read_text(encoding="utf-8"))
+    calendar["session_date"] = "2026-08-29"
+    calendar["is_trading_session"] = False
+    calendar["classification"] = "HOLIDAY"
+    _write(paths["calendar"], calendar)
+    report = audit_session(
+        "2026-08-29",
+        calendar_metadata=paths["calendar"],
+        reported_at_utc="2026-08-29T20:00:00+07:00",
+    )
+    stage = _by_name(report)["official_trading_calendar"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "CALENDAR_SESSION_OUTSIDE_VERIFIED_SCHEDULE_COVERAGE" in stage["causal_notes"]
 
 
 def test_missing_open_without_execution_is_pending(tmp_path: Path):
@@ -564,6 +692,43 @@ def test_scheduler_accepts_actual_action_and_module_identity(tmp_path: Path):
     assert _by_name(_audit(_fixture(tmp_path)))["scheduler_task"]["status"] == PASS
 
 
+@pytest.mark.parametrize(
+    "field",
+    ["task_name", "triggers", "start_when_available", "multiple_instances", "network_required"],
+)
+def test_scheduler_pass_requires_complete_operational_proof(tmp_path: Path, field: str):
+    paths = _fixture(tmp_path)
+    scheduler = json.loads(paths["scheduler"].read_text(encoding="utf-8"))
+    scheduler.pop(field)
+    _write(paths["scheduler"], scheduler)
+    stage = _by_name(_audit(paths))["scheduler_task"]
+    assert stage["status"] == PROVENANCE_INVALID
+
+
+def test_runtime_identity_cannot_pass_from_self_asserted_runtime_pair(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    runtime = json.loads(paths["runtime"].read_text(encoding="utf-8"))
+    for field in ("observed_head", "expected_commit", "head_equal", "clean_checkout"):
+        runtime.pop(field, None)
+    _write(paths["runtime"], runtime)
+    stage = _by_name(_audit(paths))["runtime_identity"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "RUNTIME_DEPLOYMENT_IDENTITY_MISSING" in stage["causal_notes"]
+
+
+def test_runtime_identity_rejects_wrong_observed_head_or_dirty_checkout(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    runtime = json.loads(paths["runtime"].read_text(encoding="utf-8"))
+    runtime["observed_head"] = "b" * 40
+    runtime["head_equal"] = False
+    runtime["clean_checkout"] = False
+    _write(paths["runtime"], runtime)
+    stage = _by_name(_audit(paths))["runtime_identity"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "RUNTIME_DEPLOYMENT_HEAD_MISMATCH" in stage["causal_notes"]
+    assert "RUNTIME_CHECKOUT_NOT_CERTIFIED_CLEAN" in stage["causal_notes"]
+
+
 def test_legitimate_zero_trade_is_explicit_noop(tmp_path: Path):
     report = _audit(_fixture(tmp_path, decision_status="LEGITIMATE_NOOP", include_execution=False))
     stages = _by_name(report)
@@ -665,6 +830,40 @@ def test_unknown_status_on_statusless_canonical_open_is_not_accepted(tmp_path: P
     assert _by_name(_audit(paths))["official_open_evidence"]["status"] == PROVENANCE_INVALID
 
 
+def test_canonical_direct_open_transport_metadata_passes(tmp_path: Path):
+    stage = _by_name(_audit(_fixture(tmp_path)))["official_open_evidence"]
+    assert stage["status"] == PASS
+
+
+def test_canonical_zapi_raw_open_transport_metadata_passes(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    manifest = paths["e2e"] / "official_open" / EXECUTION / "manifest.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["transport"] = "ZAPI_IDX_RAW_PASSTHROUGH"
+    _write(manifest, payload)
+    execution = json.loads(paths["execution"].read_text(encoding="utf-8"))
+    execution["open_manifest_sha256"] = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    _write(paths["execution"], _set_payload_hash(execution))
+    assert _by_name(_audit(paths))["official_open_evidence"]["status"] == PASS
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("transport", "NOT_A_CANONICAL_TRANSPORT"), ("schema_version", "idx_official_open_evidence_v1")],
+)
+def test_open_transport_and_schema_are_fail_closed(tmp_path: Path, field: str, value: str):
+    paths = _fixture(tmp_path)
+    manifest = paths["e2e"] / "official_open" / EXECUTION / "manifest.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload[field] = value
+    _write(manifest, payload)
+    execution = json.loads(paths["execution"].read_text(encoding="utf-8"))
+    execution["open_manifest_sha256"] = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    _write(paths["execution"], _set_payload_hash(execution))
+    stage = _by_name(_audit(paths))["official_open_evidence"]
+    assert stage["status"] == PROVENANCE_INVALID
+
+
 def test_production_runtime_snapshot_without_status_is_accepted(tmp_path: Path):
     paths = _fixture(tmp_path)
     snapshot = json.loads((paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json").read_text())
@@ -697,6 +896,91 @@ def test_exact_prepared_schedule_open_execution_hash_chain_passes(tmp_path: Path
     assert stages["official_open_evidence"]["status"] == PASS
     assert stages["paper_execution"]["status"] == PASS
     assert stages["paper_execution"]["artifact_sha256"] == hashlib.sha256(paths["execution"].read_bytes()).hexdigest()
+
+
+def test_canonical_prepared_state_is_exact_paperstate_previous_snapshot(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    report = _audit(paths)
+    assert _by_name(report)["prepared_order"]["status"] == PASS
+    assert _by_name(report)["paperstate_continuity"]["status"] == PASS
+
+
+def _write_unrelated_prior_snapshot(paths: dict[str, Path], name: str = "unrelated-prior.json") -> tuple[Path, str]:
+    path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / name
+    payload: dict[str, object] = {
+        "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
+        "session_date": DECISION,
+        "state": {},
+        "hashes": {"runtime_state_sha256": "unrelated-runtime-state"},
+        "previous_snapshot": None,
+    }
+    payload["snapshot_payload_sha256"] = _canonical_hash(payload)
+    return path, _write(path, payload)
+
+
+def test_prepared_state_parent_path_mismatch_fails_closed(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    alternate, alternate_sha = _write_unrelated_prior_snapshot(paths)
+    prepared = json.loads(paths["prepared"].read_text(encoding="utf-8"))
+    prepared["state"]["snapshot_path"] = str(alternate.resolve())  # type: ignore[index]
+    prepared["state"]["snapshot_sha256"] = alternate_sha  # type: ignore[index]
+    _write(paths["prepared"], _set_payload_hash(prepared))
+    binding = json.loads(paths["binding"].read_text(encoding="utf-8"))
+    binding["prepared_sha256"] = hashlib.sha256(paths["prepared"].read_bytes()).hexdigest()
+    _write(paths["binding"], _set_payload_hash(binding))
+    execution = json.loads(paths["execution"].read_text(encoding="utf-8"))
+    execution["prepared_sha256"] = hashlib.sha256(paths["prepared"].read_bytes()).hexdigest()
+    _write(paths["execution"], _set_payload_hash(execution))
+    stage = _by_name(_audit(paths))["prepared_order"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "PREPARED_STATE_PREVIOUS_SNAPSHOT_PATH_MISMATCH" in stage["causal_notes"]
+
+
+def test_prepared_state_parent_sha_mismatch_fails_closed(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    prepared = json.loads(paths["prepared"].read_text(encoding="utf-8"))
+    prepared["state"]["snapshot_sha256"] = "0" * 64  # type: ignore[index]
+    _write(paths["prepared"], _set_payload_hash(prepared))
+    stage = _by_name(_audit(paths))["prepared_order"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "PREPARED_STATE_SNAPSHOT_SHA256_MISMATCH" in stage["causal_notes"]
+
+
+def test_missed_prior_runtime_parent_mismatch_fails_closed(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    alternate, alternate_sha = _write_unrelated_prior_snapshot(paths)
+    missed = json.loads(paths["missed"].read_text(encoding="utf-8"))
+    missed["prior_runtime_snapshot_path"] = str(alternate.resolve())
+    missed["prior_runtime_snapshot_sha256"] = alternate_sha
+    _write(paths["missed"], _set_payload_hash(missed))
+    stage = _by_name(_audit(paths))["paper_execution"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_PATH_MISMATCH" in stage["causal_notes"]
+
+
+def test_missed_prior_runtime_parent_sha_mismatch_fails_closed(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    missed = json.loads(paths["missed"].read_text(encoding="utf-8"))
+    missed["prior_runtime_snapshot_sha256"] = "0" * 64
+    _write(paths["missed"], _set_payload_hash(missed))
+    stage = _by_name(_audit(paths))["paper_execution"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "MISSED_EXECUTION_PRIOR_RUNTIME_SNAPSHOT_SHA256_MISMATCH" in stage["causal_notes"]
+
+
+def test_valid_but_unrelated_missed_prior_snapshot_fails_closed(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    alternate, alternate_sha = _write_unrelated_prior_snapshot(paths, "valid-unrelated-prior.json")
+    missed = json.loads(paths["missed"].read_text(encoding="utf-8"))
+    missed["prior_runtime_snapshot_path"] = str(alternate.resolve())
+    missed["prior_runtime_snapshot_sha256"] = alternate_sha
+    _write(paths["missed"], _set_payload_hash(missed))
+    report = _audit(paths)
+    assert report["overall_status"] == "SESSION_PROVENANCE_INVALID"
+    assert _by_name(report)["paper_execution"]["status"] == PROVENANCE_INVALID
 
 
 def test_wrong_next_planned_session_fails_closed(tmp_path: Path):
@@ -796,6 +1080,7 @@ def _attach_valid_runtime_parent(paths: dict[str, Path]) -> Path:
     parent_payload: dict[str, object] = {
         "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
         "session_date": DECISION,
+        "hashes": {"runtime_state_sha256": "parent-runtime-state"},
         "previous_snapshot": None,
     }
     parent_payload["snapshot_payload_sha256"] = _canonical_hash(parent_payload)
@@ -942,6 +1227,15 @@ def test_production_shape_offline_smoke_is_healthy(tmp_path: Path):
     report = _audit(_fixture(tmp_path))
     assert report["overall_status"] == "SESSION_HEALTHY"
     assert report["guards"]["protected_outcomes_accessed"] is False
+
+
+def test_omitted_report_timestamp_is_not_static_january_default(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    report = audit_session(
+        EXECUTION,
+        calendar_metadata=paths["calendar"],
+    )
+    assert report["reported_at_utc"] != "2026-01-01T00:00:00+00:00"
 
 
 @pytest.mark.parametrize("status", ["FAIL_CLOSED_EXTERNAL", "IMPLEMENTATION_DEFECT", "MYSTERY_STATUS"])
