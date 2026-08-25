@@ -396,9 +396,22 @@ def capture_stream_v2(
             raise StreamArchiveError(
                 f"resume namespace already has a non-ready manifest: {run_id}"
             )
-    quota_before = client.get_usage()
     planned_calls = len(universe.rows)
-    provider_call_budget = planned_calls * MAX_STREAM_ATTEMPTS
+    prior_records = {}
+    if prior:
+        prior_records = {
+            str(record.get("ticker")): record
+            for record in prior.get("request_records", [])
+            if isinstance(record, dict)
+        }
+    reusable_ok_count = sum(
+        1
+        for selected in universe.rows
+        if prior_records.get(selected["ticker"], {}).get("response_classification") == "OK"
+    )
+    pending_calls = planned_calls - reusable_ok_count
+    provider_call_budget = pending_calls * MAX_STREAM_ATTEMPTS
+    quota_before = client.get_usage()
     if quota_before.remaining - provider_call_budget < monthly_reserve:
         return {
             "status": "QUOTA_BLOCKED_BEFORE_STREAM_REQUEST",
@@ -417,14 +430,6 @@ def capture_stream_v2(
     total_rows = 0
     ok_responses = 0
     provider_calls = 0
-    prior_records = {}
-    if prior:
-        prior_records = {
-            str(record.get("ticker")): record
-            for record in prior.get("request_records", [])
-            if isinstance(record, dict)
-        }
-
     for selected in universe.rows:
         symbol = selected["ticker"]
         prior_record = prior_records.get(symbol)
@@ -455,6 +460,12 @@ def capture_stream_v2(
         validation_detail: str | None = None
         for attempt_number in range(1, MAX_STREAM_ATTEMPTS + 1):
             provider_calls += 1
+            # A failed call must clear the previous candidate.  Otherwise a
+            # prior HTTP response can be mistaken for the final response when
+            # the next physical attempt raises RequestException.
+            response = None
+            raw = None
+            observed_at = None
             try:
                 response, raw, observed_at = client.stream(symbol)
             except requests.RequestException as exc:
@@ -469,16 +480,6 @@ def capture_stream_v2(
                     }
                 )
                 if attempt_number == MAX_STREAM_ATTEMPTS:
-                    request_records.append(
-                        {
-                            "ticker": symbol,
-                            "activity_rank": selected["activity_rank"],
-                            "response_classification": "REQUEST_EXCEPTION",
-                            "http_status": None,
-                            "provider_attempts": attempts,
-                            "retry_recovered": False,
-                        }
-                    )
                     break
                 time.sleep(0.25 * attempt_number)
                 continue
@@ -503,7 +504,7 @@ def capture_stream_v2(
                     or classification in RETRYABLE_STREAM_VALIDATION_CLASSIFICATIONS
                 )
             )
-            if should_retry and classification in RETRYABLE_STREAM_VALIDATION_CLASSIFICATIONS:
+            if should_retry:
                 diagnostic_key = f"raw/{run_id}/{quote(symbol, safe='')}/attempt-{attempt_number}.json"
                 attempt["raw_key"] = diagnostic_key
                 archive.put_immutable(
@@ -516,6 +517,17 @@ def capture_stream_v2(
                 break
             time.sleep(0.25 * attempt_number)
         if response is None or raw is None or observed_at is None:
+            if attempts and attempts[-1].get("http_status") is None:
+                request_records.append(
+                    {
+                        "ticker": symbol,
+                        "activity_rank": selected["activity_rank"],
+                        "response_classification": "REQUEST_EXCEPTION",
+                        "http_status": None,
+                        "provider_attempts": attempts,
+                        "retry_recovered": False,
+                    }
+                )
             continue
         raw_key = f"raw/{run_id}/{quote(symbol, safe='')}.json"
         raw_sha = archive.put_immutable(raw_key, raw, response.headers.get("content-type", "application/json"))
