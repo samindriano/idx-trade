@@ -8,13 +8,14 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: be1bcb8b2ea25997f6da16a42b6bb733cf215025
 branch: ops/v4-x1-prospective-preaccess-readiness-v1
-head_commit: e26db7b1ff28c46907386048952e10ea2962a86b
+head_commit: 8f9896b2d39e3519b0e2bd0e57bc27d3a0f6ac8c
 scope: Outcome-blind production-shape adapters over the V4-X1 pre-access readiness core.
 files_changed:
   - src/idx_trade/prospective_preaccess_adapters_v1.py
   - scripts/audit_v4_x1_preaccess_runtime.py
   - tests/test_prospective_preaccess_adapters_v1.py
   - docs/checkpoints/2026-08-25_V4_X1_PROSPECTIVE_PREACCESS_ADAPTER_AUDIT_V1.md
+  - docs/checkpoints/2026-08-25_V4_X1_PROSPECTIVE_PREACCESS_ADAPTER_REMEDIATION_V1.md
   - coordination/handoffs/IDX-V4-X1-PROSPECTIVE-PREACCESS-ADAPTER-AUDIT-V1.md
 findings:
   - Real clean V4-X1 score manifests are discoverable and can be byte-rehashed without loading score rows.
@@ -39,4 +40,36 @@ validation_run:
   - git diff --check: PASS.
   - Provider calls: false.
   - Protected outcome access: false.
-recommended_next_action: Independently review adapter mappings and dependencies; do not run protected evaluation or create a target materializer in this lane.
+recommended_next_action: Review the remediation; do not run protected evaluation, publish a real score projection, or create a target materializer in this lane.
+
+## Remediation addendum
+
+remediation_verdict: V4_X1_PREACCESS_ADAPTER_V1_REMEDIATED_REVIEW_READY
+remediation_commit: 8f9896b2d39e3519b0e2bd0e57bc27d3a0f6ac8c
+
+The adapter now separates `rolling_partial_inventory_sha256` from the exact
+final-gate `gate_shape_inventory_sha256`, cross-binds runtime counter sessions
+and counts to discovered production score sessions, and classifies an
+unattested runtime 100/100 as `PENDING_EXPECTED` rather than `READY`.
+Calendar admission verifies the actual ordered CSV against declared count,
+boundaries, and session-list SHA. Code pins verify schema/status/model/access
+policy, Git blob SHA-1, contract/target SHA-256, target spec, and source
+commit metadata. Exact score discovery avoids unrelated model manifests and
+protected subtrees are skipped before content reads.
+
+Production score manifests are accepted as production evidence but the current
+extra-column score artifact shape is explicitly `score_gate_admission:
+NOT_AVAILABLE`; a future exact date/ticker/alpha-consensus projection is
+designed but was not run against real score rows. The historical
+`ranking_v4_3_target_execution.py` is not promoted; no sealed target producer
+or public target attestation was found. Target values remain
+`PROTECTED_NOT_READ`.
+
+remediation_validation:
+  - focused adapter tests: 20 passed
+  - focused adapter/core/gate/preflight/evaluator/target tests: 137 passed
+  - full pytest: 215 passed, exit 0
+  - py_compile: PASS
+  - git diff --check: PASS
+  - provider_calls: false
+  - protected_outcome_accessed: false
