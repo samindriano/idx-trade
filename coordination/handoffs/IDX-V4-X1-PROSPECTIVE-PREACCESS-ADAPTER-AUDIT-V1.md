@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: be1bcb8b2ea25997f6da16a42b6bb733cf215025
 branch: ops/v4-x1-prospective-preaccess-readiness-v1
-head_commit: a475b191
+head_commit: e26db7b1ff28c46907386048952e10ea2962a86b
 scope: Outcome-blind production-shape adapters over the V4-X1 pre-access readiness core.
 files_changed:
   - src/idx_trade/prospective_preaccess_adapters_v1.py
