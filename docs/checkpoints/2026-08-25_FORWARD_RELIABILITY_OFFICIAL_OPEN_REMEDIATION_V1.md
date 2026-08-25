@@ -30,6 +30,9 @@ mechanics, counter, or protected outcome was changed.
 - Zapi raw transport retries the same bounded transient classes and records
   failed physical attempts in transport metadata. Provider/project/path
   validation remains mandatory.
+- The existing headless runner now invokes `official_open_capture_runtime_v2`,
+  so the deployed scheduler entrypoint is bound to the remediated replay
+  verification and retry implementation rather than the legacy v1 runtime.
 
 ## 2026-08-24 read-only operational evidence
 
@@ -47,10 +50,27 @@ The registered task remains the existing `IDXTrade-E2E-OfficialOpen`; this
 lane does not reinstall or alter the task. Its deployed task definition is
 read-only evidence and retains the existing 09:02–09:22 retries, logon
 trigger, `StartWhenAvailable`, `IgnoreNew`, and network requirement.
+The task currently points to a separate runtime checkout, so this code-path
+binding takes effect only after the branch is independently integrated and the
+runtime checkout is updated; no live proof is claimed here.
+
+## Same-day retry and late-evidence policy
+
+The execution-grade capture window remains 09:02–09:22 Asia/Jakarta. A later
+scheduled invocation must not create or alter an order from newly observed
+OpenPrice data. The existing paper orchestration expires a missed prepared
+order without fills and preserves a deterministic `no_retroactive_execution`
+record. Therefore this remediation does not widen the execution-grade window
+or add a second late-trade scheduler. Extending source polling after 09:22 is
+safe only as a separately reviewed evidence-resolution contract that requires
+an already hash-bound pre-open prepared order and distinct processing/economic
+timestamps; until that contract is integrated, late status remains pending and
+fail-closed.
 
 ## Validation
 
-- focused Official Open/E2E/Paper tests: 87 passed after the final remediation
+- focused Official Open/E2E/Paper tests: 61 passed after the final remediation
+- full pytest: 760 passed, 3 pre-existing pandas FutureWarnings
 - `python -m py_compile` for changed modules: pass
 - `git diff --check`: pass
 - no Direct IDX, Zapi, Stockbit, or protected-outcome call was made by the

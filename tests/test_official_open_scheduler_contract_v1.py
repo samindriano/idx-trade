@@ -20,7 +20,8 @@ def test_official_open_task_has_only_post_auction_retry_triggers_and_logon_catch
 def test_headless_runner_invokes_only_same_session_official_open_runtime():
     root = Path(__file__).parents[1]
     text = (root / "scripts" / "run_official_open_capture.ps1").read_text(encoding="utf-8")
-    assert "idx_trade.official_open_capture_runtime_v1" in text
+    assert "idx_trade.official_open_capture_runtime_v2" in text
+    assert "idx_trade.official_open_capture_runtime_v1" not in text
     assert "finance:idx" not in text
     assert "finance:stockbit" not in text
     assert "forward_open_archive" not in text
