@@ -1,0 +1,78 @@
+# Forward Evidence Health V1
+
+Date: 2026-08-25 Asia/Jakarta  
+Branch: `fix/idx-forward-evidence-health-v1`  
+Parent reliability head: `839fa77b1e1c4bc6351679ef99d3e4bdd87689ab`  
+
+## Contract
+
+The layer is an outcome-blind completeness/readiness diagnostic. It checks
+declared artifact existence, SHA-256, session identity, selected safe manifest
+fields, and explicit outcome-blind guard flags. It never loads parquet values,
+labels, realized outcomes, protected vault content, or a protected loader.
+
+Missing required evidence is `PENDING_EXPECTED`; it is never silently promoted
+to `COMPLETE`. Hash/identity/guard failures are `PROVENANCE_INVALID`.
+
+The safe rolling summary reports current session, forward-counter availability,
+Stockbit status, Official Open status, Decision state, prepared-order state,
+PaperState continuity, CA/dividend readiness, blockers, and next action. The
+counter is reported as `NOT_READ` unless an explicitly safe caller supplies it.
+
+## Known safe artifact graph
+
+For a session the discovery path checks only:
+
+- canonical EOD `manifest.json`;
+- V4-X1 score `manifest.json`;
+- Official Open manifest;
+- Decision V2 result metadata;
+- prepared order;
+- execution result;
+- PaperState snapshot;
+- non-protected operational status metadata.
+
+Paths whose components contain `outcome`, `label`, `realized`, or `vault` are
+refused before reading. The report always includes
+`PROTECTED_NOT_READ`, `accessed=false`, and `values_loaded=false`.
+
+## Outcome-blind run against 2026-08-24
+
+Inputs were existing external artifacts only:
+
+- forward monitoring root:
+  `D:\Documents\Project\idx-trade-data-gate-20260808v\forward_monitoring`
+- E2E runtime root:
+  `C:\Users\Sam\AppData\Local\IDXTrade\e2e_baseline_paper_v1`
+- Stockbit summary:
+  `D:\Documents\Project\idx-trade-data-gate-20260808v\stockbit_intraday_recurring_v1\sessions\2026-08-24\final\run_summary.json`
+
+Result: `PENDING_EXPECTED`.
+
+- EOD manifest: `COMPLETE`
+- V4-X1 score manifest: `COMPLETE`
+- Stockbit: `COMPLETE_SHADOW`
+- Official Open: `PENDING_EXPECTED` (no certified manifest after transport failure)
+- Decision V2: `PENDING_EXPECTED`
+- prepared order: `PENDING_EXPECTED`
+- execution result: `PENDING_EXPECTED`
+- PaperState: `PENDING_EXPECTED`
+- CA/dividend state: `PENDING_EXPECTED`
+- protected outcomes: not read
+
+External report path:
+`C:\Users\Sam\AppData\Local\Temp\idx-forward-health-20260824-v2-0c0da064ade4404a919198c466543088.json`
+
+Report SHA-256:
+`ffafb51396ec896dde9ff0b498cf73f67e9fd420608d98f4865d31d4ea89fd57`
+
+The result is intentionally not a prospective evaluation result and does not
+change any model or counter.
+
+## Validation
+
+- focused health tests: 8 passed
+- py_compile: pass
+- `git diff --check`: pass
+- no provider call, model run, protected loader, outcome marker, or outcome
+  value access
