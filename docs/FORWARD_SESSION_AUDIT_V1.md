@@ -1,6 +1,6 @@
 # IDX Forward Operations / Session Audit V1
 
-Status: implementation-ready, outcome-blind, read-only
+Status: remediation-ready-for-review, outcome-blind, read-only
 
 ## Purpose
 
@@ -13,6 +13,14 @@ The auditor never starts a capture, scorer, executor, scheduler, or provider
 client. It reads JSON metadata and hashes declared sibling bytes only. It does
 not open parquet values, labels, returns, an outcome vault, or a protected
 forward artifact.
+
+The ledger is anchored on the execution session `T`, not the decision session.
+For `T`, the auditor finds the prepared parent whose declared
+`execution_session_date` is `T`, derives decision session `t` from that parent,
+and then binds EOD, score, and Decision to `t`. Official Open, execution,
+corporate-action metadata, PaperState, and scheduler evidence remain bound to
+`T`. The relationship is read from verified metadata; the auditor never
+guesses `t` by subtracting one calendar day.
 
 The audit is deliberately separate from the model and counter contracts. A
 `PASS` means that the declared operational evidence passed the checks in this
@@ -63,7 +71,8 @@ Overall statuses are `NON_TRADING_SESSION`, `SESSION_HEALTHY`,
 
 The auditor checks exact session identity wherever it is declared, timezone-
 aware timestamps, declared sibling SHA-256 values, stale/retroactive flags,
-execution duplicates, and prepared-before-executed ordering. It refuses paths
+execution duplicates, parent path/SHA bindings, and prepared-before-executed
+ordering. It refuses paths
 whose components contain protected outcome/label/realized/vault tokens and
 requires explicit outcome-blind guards when a source declares them.
 
@@ -83,11 +92,15 @@ declared raw/normalized bytes, or a relabelled transport are rejected. The
 auditor does not parse raw rows to reconstruct Open values; the existing
 official Open verifier remains the value-level authority.
 
-On a non-trading session, all downstream stages are `NOT_APPLICABLE`. When a
-decision is an explicit legitimate no-op, order and execution stages are not
-required. When an order exists but official Open is unavailable, execution is
-`PENDING_EXPECTED`; it is never treated as certified merely because an
-execution-shaped JSON file exists.
+On a non-trading session, all downstream stages are `NOT_APPLICABLE`, but only
+after the official calendar itself passes. When a decision is an explicit
+legitimate no-op, order and execution stages are not required. When an order
+exists but official Open is unavailable, execution is `PENDING_EXPECTED`; it is
+never treated as certified merely because an execution-shaped JSON file exists.
+If a successful execution is present without certified Open, the audit reports
+`IMPLEMENTATION_DEFECT`. A stricter existing failure is never downgraded by a
+later cross-stage check. Unknown or malformed statuses are
+`PROVENANCE_INVALID`, never `PASS`.
 
 ## Metadata-only boundary
 
@@ -97,11 +110,28 @@ load `model_input.parquet`, labels, realized returns, or protected forward
 outcomes. A future value-level audit must be a separately authorized tool with
 its own contract.
 
-The summary contains only operational counts: healthy/incomplete/fail-closed
-and provenance/implementation defects, latest healthy session, consecutive
-provider failures, official Open transport distribution, missing-stage
-frequency, and PaperState continuity. No return, IC, PnL, target, or score
-metric is emitted.
+The summary contains only operational counts: healthy trading sessions,
+non-trading sessions, incomplete/fail-closed/provenance/implementation
+defects, latest healthy trading session, a specifically named consecutive
+Stockbit provider-failure streak, official Open transport distribution,
+missing-stage frequency, and PaperState continuity for applicable trading
+sessions. A later healthy trading session resets the Stockbit streak; a
+holiday neither counts as healthy nor breaks PaperState continuity. No return,
+IC, PnL, target, or score metric is emitted.
+
+The accepted scheduler action is `scripts/run_official_open_capture.ps1`; that
+runner internally invokes `idx_trade.official_open_capture_runtime_v2`. The
+audit rejects the invented `run_official_open_capture_v2.ps1` action and also
+requires an explicit runtime-module identity when scheduler metadata is used.
+If a caller supplies only task-action metadata, the module binding cannot be
+proven and the scheduler stage remains fail-closed.
+
+The prepared payload's persisted execution date is the authoritative parent
+identity. If a caller additionally supplies `next_official_session_date`, it
+must equal that execution date. This metadata-only auditor does not infer a
+next session from a date subtraction; a complete schedule-attestation proof
+requires the caller to provide the corresponding prepared/schedule-binding
+metadata from the accepted E2E contract.
 
 ## CLI examples
 
@@ -110,14 +140,15 @@ Audit one session into an external runtime directory:
 ```powershell
 $env:PYTHONPATH = "C:\path\to\idx-trade\src"
 python scripts/audit_forward_session_v1.py `
-  --session-date 2026-08-26 `
+  --session-date 2026-08-27 `
   --forward-monitoring-root "D:\external\forward_monitoring" `
   --e2e-runtime-root "D:\external\e2e_runtime" `
   --calendar-metadata "D:\external\calendar\2026-08-26.json" `
   --runtime-identity "D:\external\runtime\2026-08-26.json" `
   --stockbit-capture "D:\external\stockbit\2026-08-26.json" `
-  --ca-dividend "D:\external\ca\2026-08-26.json" `
-  --scheduler-metadata "D:\external\scheduler\2026-08-26.json" `
+  --ca-dividend "D:\external\ca\2026-08-27.json" `
+  --scheduler-metadata "D:\external\scheduler\2026-08-27.json" `
+  --prepared-metadata "D:\external\e2e_runtime\prepared\2026-08-26.json" `
   --output "D:\external\audit\2026-08-26.json"
 ```
 

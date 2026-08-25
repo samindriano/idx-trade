@@ -17,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stockbit-capture")
     parser.add_argument("--ca-dividend")
     parser.add_argument("--scheduler-metadata")
+    parser.add_argument("--prepared-metadata")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--summary-output", type=Path)
     parser.add_argument("--reported-at-utc", default="2026-01-01T00:00:00+00:00")
@@ -34,6 +35,7 @@ def main() -> int:
         stockbit_capture=args.stockbit_capture,
         ca_dividend=args.ca_dividend,
         scheduler_metadata=args.scheduler_metadata,
+        prepared_metadata=args.prepared_metadata,
         reported_at_utc=args.reported_at_utc,
     )
     output, output_sha = write_json(args.output, ledger)

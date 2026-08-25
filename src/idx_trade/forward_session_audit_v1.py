@@ -80,6 +80,16 @@ _SAFE_TIMESTAMP_FIELDS = (
     "official_open_at_utc",
     "run_at_jakarta",
 )
+_SEVERITY = {
+    PASS: 0,
+    LEGITIMATE_NOOP: 0,
+    NOT_APPLICABLE: 0,
+    NOT_READ: 1,
+    PENDING_EXPECTED: 1,
+    FAIL_CLOSED_EXTERNAL: 2,
+    PROVENANCE_INVALID: 3,
+    IMPLEMENTATION_DEFECT: 4,
+}
 _SESSION_FIELDS = (
     "session_date",
     "execution_session_date",
@@ -97,6 +107,7 @@ _SUCCESS_STATUSES = frozenset(
         "READY",
         "SUCCESS",
         "EXECUTION_COMPLETE",
+        "PREPARED_EXECUTION",
         "ALREADY_CAPTURED",
     }
 )
@@ -217,6 +228,23 @@ def _metadata_identity(payload: Mapping[str, Any], session_date: str) -> str | N
     return session_date
 
 
+def _metadata_identity_for_fields(
+    payload: Mapping[str, Any],
+    expected_session_date: str,
+    fields: Sequence[str],
+) -> str | None:
+    present: list[str] = []
+    for key in fields:
+        if key not in payload or payload[key] is None:
+            continue
+        present.append(_session(payload[key]))
+    if not present:
+        return None
+    if any(value != expected_session_date for value in present):
+        raise SessionAuditError("SESSION_IDENTITY_MISMATCH")
+    return expected_session_date
+
+
 def _status(payload: Mapping[str, Any]) -> str | None:
     for key in ("status", "state", "result", "capture_status", "stage_status"):
         value = payload.get(key)
@@ -263,6 +291,34 @@ def _stage(
         "evidence_timestamp_utc": evidence_timestamp,
         "causal_notes": list(notes),
     }
+
+
+def _set_stricter(stage: dict[str, Any], status: str, note: str) -> None:
+    """Apply cross-stage evidence without ever downgrading severity."""
+
+    current = str(stage.get("status"))
+    if _SEVERITY.get(status, 99) >= _SEVERITY.get(current, 99):
+        stage["status"] = status
+    else:
+        stage.setdefault("causal_notes", []).append(
+            f"DOWNGRADE_REFUSED:{current}->{status}"
+        )
+    if note not in stage.setdefault("causal_notes", []):
+        stage["causal_notes"].append(note)
+
+
+def _resolve_noop(stage: dict[str, Any], note: str) -> None:
+    """Resolve only an unstarted/pending stage after a certified no-op.
+
+    A legitimate no-trade decision can make a downstream artifact genuinely
+    not applicable.  Existing external failures, provenance failures, and
+    implementation defects remain immutable and are never downgraded.
+    """
+
+    if stage.get("status") in {NOT_READ, PENDING_EXPECTED, PASS, LEGITIMATE_NOOP, NOT_APPLICABLE}:
+        stage["status"] = NOT_APPLICABLE
+    if note not in stage.setdefault("causal_notes", []):
+        stage["causal_notes"].append(note)
 
 
 def _safe_observed(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -312,6 +368,184 @@ def _verify_declared_hashes(metadata: SafeMetadata) -> list[str]:
     return failures
 
 
+def _canonical_hash(payload: Mapping[str, Any]) -> str:
+    body = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ) + "\n"
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _verify_payload_hash(payload: Mapping[str, Any], label: str) -> str | None:
+    declared = payload.get("payload_sha256")
+    if not isinstance(declared, str) or not declared:
+        return f"{label}_PAYLOAD_HASH_MISSING"
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    if _canonical_hash(body) != declared.lower():
+        return f"{label}_PAYLOAD_HASH_MISMATCH"
+    return None
+
+
+def _verify_file_reference(
+    metadata_path: Path,
+    reference: object,
+    label: str,
+) -> list[str]:
+    if not isinstance(reference, Mapping):
+        return [f"{label}_REFERENCE_MISSING"]
+    raw_path = reference.get("path")
+    declared_sha = reference.get("sha256")
+    if not isinstance(raw_path, str) or not isinstance(declared_sha, str):
+        return [f"{label}_REFERENCE_INVALID"]
+    try:
+        child = _safe_path(
+            Path(raw_path)
+            if Path(raw_path).is_absolute()
+            else metadata_path.parent / raw_path
+        )
+    except SessionAuditError as exc:
+        return [f"{label}_{exc}"]
+    if not child.is_file():
+        return [f"{label}_MISSING"]
+    if sha256_file(child) != declared_sha.lower():
+        return [f"{label}_SHA256_MISMATCH"]
+    return []
+
+
+def _validate_prepared_contract(
+    payload: Mapping[str, Any],
+    *,
+    execution_session_date: str,
+    metadata_path: Path,
+) -> Iterable[str]:
+    notes: list[str] = []
+    hash_failure = _verify_payload_hash(payload, "PREPARED")
+    if hash_failure:
+        notes.append(hash_failure)
+    if payload.get("schema_version") != "idx_trade_e2e_paper_prepared_execution_v1":
+        notes.append("PREPARED_SCHEMA_MISMATCH")
+    decision_value = payload.get("decision_session_date")
+    execution_value = payload.get("execution_session_date")
+    try:
+        decision = _session(decision_value)
+        execution = _session(execution_value)
+    except SessionAuditError:
+        notes.append("PREPARED_SESSION_IDENTITY_INVALID")
+    else:
+        if execution != execution_session_date:
+            notes.append("PREPARED_EXECUTION_SESSION_MISMATCH")
+        if decision == execution:
+            notes.append("DECISION_AND_EXECUTION_SESSION_MUST_DIFFER")
+        decision_plan = payload.get("decision_plan")
+        if isinstance(decision_plan, Mapping):
+            if decision_plan.get("decision_session_date") != decision:
+                notes.append("PREPARED_DECISION_PARENT_MISMATCH")
+        else:
+            notes.append("PREPARED_DECISION_PARENT_MISSING")
+        current_score = payload.get("current_score")
+        if isinstance(current_score, Mapping):
+            if current_score.get("session_date") != decision:
+                notes.append("PREPARED_SCORE_DECISION_SESSION_MISMATCH")
+            score_path = current_score.get("manifest_path") or current_score.get("path")
+            score_sha = current_score.get("manifest_sha256") or current_score.get("sha256")
+            if score_path is None or score_sha is None:
+                notes.append("PREPARED_SCORE_PARENT_REFERENCE_MISSING")
+            else:
+                notes.extend(
+                    _verify_file_reference(
+                        metadata_path,
+                        {"path": score_path, "sha256": score_sha},
+                        "PREPARED_SCORE",
+                    )
+                )
+                try:
+                    score_file = _safe_path(
+                        Path(score_path)
+                        if Path(score_path).is_absolute()
+                        else metadata_path.parent / str(score_path)
+                    )
+                    score_metadata = _json_object(score_file)
+                    _metadata_identity_for_fields(
+                        score_metadata.payload,
+                        decision,
+                        ("decision_session_date", "session_date"),
+                    )
+                except SessionAuditError as exc:
+                    notes.append(f"PREPARED_SCORE_PARENT_IDENTITY:{exc}")
+        else:
+            notes.append("PREPARED_SCORE_PARENT_MISSING")
+        declared_next = payload.get("next_official_session_date")
+        if declared_next is not None and declared_next != execution:
+            notes.append("PREPARED_NEXT_OFFICIAL_SESSION_MISMATCH")
+    if payload.get("status") != "PREPARED_EXECUTION":
+        notes.append("PREPARED_STATUS_MISMATCH")
+    eod_inputs = payload.get("eod_inputs")
+    if not isinstance(eod_inputs, Mapping):
+        notes.append("PREPARED_EOD_PARENT_MISSING")
+    else:
+        for key in ("calendar", "ohlcv", "model_input"):
+            notes.extend(_verify_file_reference(metadata_path, eod_inputs.get(key), f"PREPARED_EOD_{key.upper()}"))
+    return notes
+
+
+def _validate_execution_contract(
+    payload: Mapping[str, Any],
+    *,
+    prepared_path: Path | None,
+    prepared_sha256: str | None,
+    decision_session_date: str | None,
+    execution_session_date: str,
+    open_metadata: SafeMetadata | None,
+) -> Iterable[str]:
+    notes: list[str] = []
+    if payload.get("status") == "EXECUTION_COMPLETE":
+        hash_failure = _verify_payload_hash(payload, "EXECUTION")
+        if hash_failure:
+            notes.append(hash_failure)
+    if payload.get("execution_session_date") != execution_session_date:
+        notes.append("EXECUTION_SESSION_MISMATCH")
+    if decision_session_date is not None and payload.get("decision_session_date") != decision_session_date:
+        notes.append("EXECUTION_DECISION_SESSION_MISMATCH")
+    if prepared_path is not None:
+        if payload.get("prepared_path") != str(prepared_path.resolve()):
+            notes.append("EXECUTION_PREPARED_PATH_MISMATCH")
+        if prepared_sha256 and payload.get("prepared_sha256") != prepared_sha256:
+            notes.append("EXECUTION_PREPARED_SHA256_MISMATCH")
+    elif payload.get("status") == "EXECUTION_COMPLETE":
+        notes.append("EXECUTION_PREPARED_PARENT_UNAVAILABLE")
+    if open_metadata is not None:
+        if "open_manifest_path" in payload and payload.get("open_manifest_path") != str(open_metadata.path.resolve()):
+            notes.append("EXECUTION_OPEN_MANIFEST_PATH_MISMATCH")
+        if "open_manifest_sha256" in payload and payload.get("open_manifest_sha256") != open_metadata.sha256:
+            notes.append("EXECUTION_OPEN_MANIFEST_SHA256_MISMATCH")
+    return notes
+
+
+def _find_prepared_parent(
+    e2e_root: Path | None,
+    execution_session_date: str,
+    explicit_path: str | Path | None,
+) -> Path | None:
+    if explicit_path is not None:
+        return _safe_path(explicit_path)
+    if e2e_root is None:
+        return None
+    candidates: list[Path] = []
+    for path in sorted((e2e_root / "prepared").glob("*.json")):
+        try:
+            metadata = _json_object(path)
+        except SessionAuditError:
+            continue
+        if metadata.payload.get("execution_session_date") == execution_session_date:
+            candidates.append(path)
+    if len(candidates) > 1:
+        raise SessionAuditError("PREPARED_PARENT_AMBIGUOUS")
+    return candidates[0] if candidates else None
+
+
 def _artifact_stage(
     *,
     stage: str,
@@ -321,6 +555,7 @@ def _artifact_stage(
     required: bool = True,
     expected_status: str | None = None,
     expected_fields: Sequence[tuple[str, object]] = (),
+    session_fields: Sequence[str] = ("session_date",),
     require_outcome_clean: bool = True,
     extra_validator: Any = None,
 ) -> tuple[dict[str, Any], SafeMetadata | None]:
@@ -338,13 +573,28 @@ def _artifact_stage(
                 required=required,
                 expected_status=expected_status,
                 expected_fields=tuple(expected_fields),
+                session_fields=tuple(session_fields),
                 require_outcome_clean=require_outcome_clean,
             ),
             session_date=session_date,
         )
         observed_status = result["status"]
         if observed_status == "COMPLETE":
-            observed_status = _status(_json_object(safe).payload) or PASS
+            mapped_status = _status(_json_object(safe).payload)
+            if mapped_status is None:
+                return (
+                    _stage(
+                        stage,
+                        expected,
+                        session_date,
+                        PROVENANCE_INVALID,
+                        path=safe,
+                        sha256=result.get("observed_sha256"),
+                        notes=("STATUS_MISSING_OR_UNKNOWN",),
+                    ),
+                    None,
+                )
+            observed_status = mapped_status
         elif observed_status == "PENDING_EXPECTED":
             observed_status = PENDING_EXPECTED
         elif observed_status == "PROVENANCE_INVALID":
@@ -367,7 +617,7 @@ def _artifact_stage(
                 None,
             )
         metadata = _json_object(safe)
-        _metadata_identity(metadata.payload, session_date)
+        _metadata_identity_for_fields(metadata.payload, session_date, session_fields)
         timestamp = _evidence_timestamp(metadata.payload)
         notes: list[str] = []
         declared_failures = _verify_declared_hashes(metadata)
@@ -410,7 +660,7 @@ def _artifact_stage(
                 stage,
                 expected,
                 session_date,
-                observed_status if observed_status in {PASS, LEGITIMATE_NOOP, PENDING_EXPECTED} else PASS,
+                observed_status,
                 observed=_safe_observed(metadata.payload),
                 path=metadata.path,
                 sha256=metadata.sha256,
@@ -473,6 +723,8 @@ def _validate_open_contract(payload: Mapping[str, Any]) -> Iterable[str]:
         value = payload.get(key)
         if isinstance(value, int) and value > 0:
             yield f"DUPLICATE_OFFICIAL_OPEN_KEYS:{key}"
+    if payload.get("retroactive_fill") is True or payload.get("backdated_fill") is True:
+        yield "RETROACTIVE_OFFICIAL_OPEN_REJECTED"
     text = json.dumps(payload, sort_keys=True).lower()
     for forbidden in ("firsttrade", "iep", "iev", "generic_ohlc"):
         if forbidden in text:
@@ -489,9 +741,24 @@ def _validate_runtime_identity(payload: Mapping[str, Any]) -> Iterable[str]:
 
 
 def _validate_scheduler(payload: Mapping[str, Any]) -> Iterable[str]:
-    runner = str(payload.get("runner") or payload.get("module") or "")
-    if "run_official_open_capture_v2.ps1" not in runner and "official_open_capture_runtime_v2" not in runner:
+    runner = str(
+        payload.get("runner")
+        or payload.get("action")
+        or payload.get("task_action")
+        or ""
+    )
+    module = str(
+        payload.get("module")
+        or payload.get("runtime_module")
+        or payload.get("python_module")
+        or ""
+    )
+    if "scripts/run_official_open_capture.ps1" not in runner.replace("\\", "/"):
         yield "SCHEDULER_RUNNER_MISMATCH"
+    if "run_official_open_capture_v2.ps1" in runner.replace("\\", "/"):
+        yield "SCHEDULER_RUNNER_WRONG_VERSION"
+    if "official_open_capture_runtime_v2" not in module:
+        yield "SCHEDULER_RUNTIME_MODULE_BINDING_MISSING"
     if payload.get("task_name") not in {None, "IDXTrade-E2E-OfficialOpen"}:
         yield "SCHEDULER_TASK_MISMATCH"
     required_times = {"09:02", "09:07", "09:12", "09:17", "09:22"}
@@ -515,6 +782,19 @@ def _validate_state_lineage(payload: Mapping[str, Any]) -> Iterable[str]:
     for key in ("artifact_session_date", "produced_for_session_date"):
         if key in payload and payload[key] != payload.get("session_date", payload.get("execution_session_date")):
             yield "STALE_OR_WRONG_SESSION_ARTIFACT"
+
+
+def _validate_decision_execution_link(
+    payload: Mapping[str, Any],
+    *,
+    decision_session_date: str | None,
+    execution_session_date: str,
+) -> Iterable[str]:
+    if decision_session_date is not None and payload.get("decision_session_date") not in {None, decision_session_date}:
+        yield "DECISION_EXECUTION_PARENT_MISMATCH"
+    declared_execution = payload.get("execution_session_date", payload.get("session_date"))
+    if declared_execution != execution_session_date:
+        yield "EXECUTION_SESSION_MISMATCH"
 
 
 def _known_path(root: Path | None, *parts: str) -> Path | None:
@@ -557,7 +837,7 @@ def _aggregate(calendar_status: str, stages: Sequence[Mapping[str, Any]]) -> tup
 
 
 def audit_session(
-    session_date: str,
+    execution_session_date: str,
     *,
     forward_monitoring_root: str | Path | None = None,
     e2e_runtime_root: str | Path | None = None,
@@ -566,13 +846,19 @@ def audit_session(
     stockbit_capture: str | Path | None = None,
     ca_dividend: str | Path | None = None,
     scheduler_metadata: str | Path | None = None,
+    prepared_metadata: str | Path | None = None,
     reported_at_utc: str = "2026-01-01T00:00:00+00:00",
 ) -> dict[str, Any]:
-    session = _session(session_date)
+    """Audit one execution session using the accepted decision t -> T graph.
+
+    ``execution_session_date`` is the ledger anchor.  A verified prepared
+    parent identifies decision session ``t`` and is the only authority used to
+    bind EOD, score, and Decision artifacts to that earlier session.
+    """
+
+    session = _session(execution_session_date)
     forward_root = Path(forward_monitoring_root).expanduser().resolve() if forward_monitoring_root else None
     e2e_root = Path(e2e_runtime_root).expanduser().resolve() if e2e_runtime_root else None
-    stages: list[dict[str, Any]] = []
-
     calendar_stage, calendar_meta = _artifact_stage(
         stage="official_trading_calendar",
         expected="EXACT_OFFICIAL_CALENDAR_CLASSIFICATION",
@@ -581,15 +867,25 @@ def audit_session(
         require_outcome_clean=False,
         extra_validator=lambda p: ("CALENDAR_SESSION_DATE_MISSING",) if "session_date" not in p else (),
     )
-    stages.append(calendar_stage)
-    is_trading = bool(calendar_meta and calendar_meta.payload.get("is_trading_session") is True)
-    is_nontrading = bool(calendar_meta and calendar_meta.payload.get("is_trading_session") is False)
-    if calendar_meta and is_nontrading:
+    stage_by_name: dict[str, dict[str, Any]] = {
+        "official_trading_calendar": calendar_stage,
+    }
+    is_nontrading = bool(
+        calendar_stage["status"] == PASS
+        and calendar_meta
+        and calendar_meta.payload.get("is_trading_session") is False
+    )
+    if is_nontrading:
         for stage_name in STAGES[1:]:
-            stages.append(_stage(stage_name, "NOT_RUN_ON_NON_TRADING_SESSION", session, NOT_APPLICABLE, notes=("NON_TRADING_SESSION",)))
-        return _report(session, "NON_TRADING_SESSION", stages, [], reported_at_utc)
-    if calendar_meta and calendar_stage["status"] == PASS and not is_trading:
-        calendar_stage["status"] = PROVENANCE_INVALID
+            stage_by_name[stage_name] = _stage(
+                stage_name,
+                "NOT_RUN_ON_NON_TRADING_SESSION",
+                session,
+                NOT_APPLICABLE,
+                notes=("NON_TRADING_SESSION",),
+            )
+        stages = [stage_by_name[name] for name in STAGES]
+        return _report(session, "NON_TRADING_SESSION", stages, [], reported_at_utc, None)
 
     runtime_stage, _ = _artifact_stage(
         stage="runtime_identity",
@@ -599,7 +895,7 @@ def audit_session(
         require_outcome_clean=False,
         extra_validator=_validate_runtime_identity,
     )
-    stages.append(runtime_stage)
+    stage_by_name["runtime_identity"] = runtime_stage
     stockbit_stage, _ = _artifact_stage(
         stage="stockbit_scheduled_capture",
         expected="SCHEDULED_STOCKBIT_CAPTURE_METADATA",
@@ -607,132 +903,216 @@ def audit_session(
         path=stockbit_capture,
         require_outcome_clean=True,
     )
-    stages.append(stockbit_stage)
+    stage_by_name["stockbit_scheduled_capture"] = stockbit_stage
 
-    discovered: tuple[ArtifactSpec, ...] = ()
-    if forward_root is not None and e2e_root is not None:
-        discovered = discover_session_artifacts(
+    try:
+        selected_prepared = _find_prepared_parent(e2e_root, session, prepared_metadata)
+        prepared_resolution_error = None
+    except SessionAuditError as exc:
+        selected_prepared = None
+        prepared_resolution_error = str(exc)
+
+    if prepared_resolution_error:
+        prepared_stage = _stage(
+            "prepared_order",
+            "PREPARED_ORDER_BOUND_TO_EXECUTION_SESSION",
+            session,
+            PROVENANCE_INVALID,
+            notes=(prepared_resolution_error,),
+        )
+        prepared_meta = None
+    else:
+        prepared_stage, prepared_meta = _artifact_stage(
+            stage="prepared_order",
+            expected="PREPARED_ORDER_BOUND_TO_EXECUTION_SESSION",
+            session_date=session,
+            path=selected_prepared,
+            session_fields=("execution_session_date",),
+            extra_validator=(
+                None
+                if selected_prepared is None
+                else lambda payload: _validate_prepared_contract(
+                    payload,
+                    execution_session_date=session,
+                    metadata_path=selected_prepared,
+                )
+            ),
+        )
+        if selected_prepared is None:
+            _set_stricter(prepared_stage, PENDING_EXPECTED, "PREPARED_PARENT_NOT_FOUND_FOR_EXECUTION_SESSION")
+    stage_by_name["prepared_order"] = prepared_stage
+
+    decision_date: str | None = None
+    if prepared_stage["status"] == PASS and prepared_meta is not None:
+        try:
+            decision_date = _session(prepared_meta.payload.get("decision_session_date"))
+        except SessionAuditError:
+            _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_DECISION_SESSION_INVALID")
+        else:
+            if selected_prepared is not None and selected_prepared.stem != decision_date:
+                _set_stricter(prepared_stage, PROVENANCE_INVALID, "PREPARED_PATH_DECISION_SESSION_MISMATCH")
+
+    discovered_for_decision: tuple[ArtifactSpec, ...] = ()
+    if decision_date and forward_root is not None and e2e_root is not None:
+        discovered_for_decision = discover_session_artifacts(
             forward_monitoring_root=forward_root,
             e2e_runtime_root=e2e_root,
-            session_date=session,
+            session_date=decision_date,
         )
-    by_name = {item.name: item for item in discovered}
-    eod_stage, _ = _artifact_stage(
-        stage="canonical_eod_capture",
-        expected="DATA_READY_CANONICAL_EOD_MANIFEST",
-        session_date=session,
-        path=by_name.get("eod_manifest").path if by_name.get("eod_manifest") else None,
-        expected_status="DATA_READY",
-    )
-    stages.append(eod_stage)
-    score_stage, _ = _artifact_stage(
-        stage="v4_x1_scoring",
-        expected="DONE_OUTCOME_BLIND_V4_X1_SCORE_MANIFEST",
-        session_date=session,
-        path=by_name.get("v4_x1_score_manifest").path if by_name.get("v4_x1_score_manifest") else None,
-        expected_status="DONE",
-    )
-    stages.append(score_stage)
+    by_name = {item.name: item for item in discovered_for_decision}
 
-    decision_path = _known_path(e2e_root, "state", "decisions", f"{session}.json")
-    decision_stage, decision_meta = _artifact_stage(
-        stage="decision_v2",
-        expected="DECISION_V2_METADATA",
-        session_date=session,
-        path=decision_path,
-    )
-    stages.append(decision_stage)
-    decision_noop = decision_stage["status"] == LEGITIMATE_NOOP or bool(
-        decision_meta and decision_meta.payload.get("trade_count") == 0
+    if decision_date is None:
+        for name, expected in (
+            ("canonical_eod_capture", "DATA_READY_CANONICAL_EOD_MANIFEST"),
+            ("v4_x1_scoring", "DONE_OUTCOME_BLIND_V4_X1_SCORE_MANIFEST"),
+            ("decision_v2", "DECISION_V2_METADATA"),
+        ):
+            stage_by_name[name] = _stage(name, expected, session, PENDING_EXPECTED, notes=("DECISION_PARENT_NOT_CERTIFIED",))
+        decision_meta = None
+    else:
+        eod_stage, _ = _artifact_stage(
+            stage="canonical_eod_capture",
+            expected="DATA_READY_CANONICAL_EOD_MANIFEST_FOR_DECISION_SESSION",
+            session_date=decision_date,
+            path=by_name.get("eod_manifest").path if by_name.get("eod_manifest") else None,
+            expected_status="DATA_READY",
+        )
+        score_stage, _ = _artifact_stage(
+            stage="v4_x1_scoring",
+            expected="DONE_OUTCOME_BLIND_V4_X1_SCORE_MANIFEST_FOR_DECISION_SESSION",
+            session_date=decision_date,
+            path=by_name.get("v4_x1_score_manifest").path if by_name.get("v4_x1_score_manifest") else None,
+            expected_status="DONE",
+        )
+        decision_path = _known_path(e2e_root, "state", "decisions", f"{decision_date}.json")
+        decision_stage, decision_meta = _artifact_stage(
+            stage="decision_v2",
+            expected="DECISION_V2_METADATA_FOR_DECISION_SESSION",
+            session_date=decision_date,
+            path=decision_path,
+            session_fields=("decision_session_date", "session_date"),
+        )
+        stage_by_name["canonical_eod_capture"] = eod_stage
+        stage_by_name["v4_x1_scoring"] = score_stage
+        stage_by_name["decision_v2"] = decision_stage
+
+    decision_noop = bool(
+        stage_by_name.get("decision_v2", {}).get("status") == LEGITIMATE_NOOP
+        or decision_meta and decision_meta.payload.get("trade_count") == 0
     )
 
-    prepared_path = by_name.get("prepared_order").path if by_name.get("prepared_order") else _known_path(e2e_root, "prepared", f"{session}.json")
-    prepared_stage, prepared_meta = _artifact_stage(
-        stage="prepared_order",
-        expected="PREPARED_ORDER_OR_EXPLICIT_NOOP",
-        session_date=session,
-        path=prepared_path,
-    )
-    if decision_noop and prepared_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
-        prepared_stage["status"] = NOT_APPLICABLE
-        prepared_stage["causal_notes"] = ["DECISION_V2_LEGITIMATE_NOOP"]
-    stages.append(prepared_stage)
-
-    open_path = by_name.get("official_open_manifest").path if by_name.get("official_open_manifest") else _known_path(e2e_root, "official_open", session, "manifest.json")
+    open_path = _known_path(e2e_root, "official_open", session, "manifest.json")
     open_stage, open_meta = _artifact_stage(
         stage="official_open_evidence",
-        expected="IDX_OPENPRICE_EXECUTION_GRADE_MANIFEST",
+        expected="IDX_OPENPRICE_EXECUTION_GRADE_MANIFEST_FOR_EXECUTION_SESSION",
         session_date=session,
         path=open_path,
+        session_fields=("session_date", "execution_session_date"),
         require_outcome_clean=False,
         extra_validator=_validate_open_contract,
     )
-    stages.append(open_stage)
+    stage_by_name["official_open_evidence"] = open_stage
 
-    execution_path = by_name.get("execution_result").path if by_name.get("execution_result") else _known_path(e2e_root, "executions", f"{session}.json")
+    execution_path = _known_path(e2e_root, "executions", f"{session}.json")
     execution_stage, execution_meta = _artifact_stage(
         stage="paper_execution",
-        expected="EXECUTION_OR_LEGITIMATE_NOOP_OR_PENDING",
+        expected="EXECUTION_BOUND_TO_PREPARED_PARENT_OR_PENDING",
         session_date=session,
         path=execution_path,
-        extra_validator=_validate_state_lineage,
+        session_fields=("execution_session_date", "session_date"),
+        extra_validator=lambda payload: (
+            [*_validate_state_lineage(payload)]
+            + [*_validate_execution_contract(
+                payload,
+                prepared_path=selected_prepared,
+                prepared_sha256=prepared_meta.sha256 if prepared_meta else None,
+                decision_session_date=decision_date,
+                execution_session_date=session,
+                open_metadata=open_meta,
+            )]
+        ),
     )
-    stages.append(execution_stage)
-    if decision_noop and execution_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
-        execution_stage["status"] = NOT_APPLICABLE
-        execution_stage["causal_notes"] = ["DECISION_V2_LEGITIMATE_NOOP"]
-    elif not decision_noop and open_stage["status"] not in {PASS, LEGITIMATE_NOOP}:
-        execution_stage["status"] = PENDING_EXPECTED
-        execution_stage["causal_notes"].append("OFFICIAL_OPEN_UNAVAILABLE_BEFORE_EXECUTION")
+    stage_by_name["paper_execution"] = execution_stage
+
+    if decision_noop:
+        _resolve_noop(prepared_stage, "DECISION_V2_LEGITIMATE_NOOP")
+        if execution_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
+            _resolve_noop(execution_stage, "DECISION_V2_LEGITIMATE_NOOP")
+        elif execution_stage["status"] == PASS:
+            _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_AFTER_LEGITIMATE_NOOP")
+    elif open_stage["status"] not in {PASS, LEGITIMATE_NOOP}:
+        if execution_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
+            _set_stricter(execution_stage, PENDING_EXPECTED, "OFFICIAL_OPEN_UNAVAILABLE_BEFORE_EXECUTION")
+        elif execution_stage["status"] in {PASS, LEGITIMATE_NOOP}:
+            _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "SUCCESSFUL_EXECUTION_WITHOUT_CERTIFIED_OPEN")
 
     ca_path = ca_dividend or _known_path(e2e_root, "dividend_acquisition_v1", "journals", f"{session}.json")
     ca_stage, _ = _artifact_stage(
         stage="ca_dividend",
-        expected="CA_DIVIDEND_OPERATIONAL_METADATA",
+        expected="CA_DIVIDEND_OPERATIONAL_METADATA_FOR_EXECUTION_SESSION",
         session_date=session,
         path=ca_path,
+        session_fields=("execution_session_date", "session_date"),
+        extra_validator=lambda payload: _validate_decision_execution_link(
+            payload,
+            decision_session_date=decision_date,
+            execution_session_date=session,
+        ),
     )
-    stages.append(ca_stage)
-    paperstate_path = by_name.get("paper_state_snapshot").path if by_name.get("paper_state_snapshot") else _known_path(e2e_root, "forward_execution_v1_1", "state_snapshots", f"{session}.json")
+    stage_by_name["ca_dividend"] = ca_stage
+
+    paperstate_path = _known_path(e2e_root, "forward_execution_v1_1", "state_snapshots", f"{session}.json")
     paperstate_stage, _ = _artifact_stage(
         stage="paperstate_continuity",
-        expected="PAPERSTATE_CONTINUITY_METADATA",
+        expected="PAPERSTATE_CONTINUITY_METADATA_FOR_EXECUTION_SESSION",
         session_date=session,
         path=paperstate_path,
+        session_fields=("execution_session_date", "session_date"),
         extra_validator=_validate_state_lineage,
     )
-    stages.append(paperstate_stage)
+    stage_by_name["paperstate_continuity"] = paperstate_stage
 
     if decision_noop:
-        stages.append(
-            _stage(
-                "forward_evidence_health",
-                "NO_DOWNSTREAM_FORWARD_EVIDENCE_REQUIRED_AFTER_LEGITIMATE_NOOP",
-                session,
-                NOT_APPLICABLE,
-                notes=("DECISION_V2_LEGITIMATE_NOOP",),
-            )
+        stage_by_name["forward_evidence_health"] = _stage(
+            "forward_evidence_health",
+            "NO_DOWNSTREAM_FORWARD_EVIDENCE_REQUIRED_AFTER_LEGITIMATE_NOOP",
+            session,
+            NOT_APPLICABLE,
+            notes=("DECISION_V2_LEGITIMATE_NOOP",),
         )
-    elif discovered:
-        health = evaluate_session(session, discovered, reported_at_utc=reported_at_utc)
-        health_status = _map_health_status(str(health.get("overall_status")))
-        stages.append(
-            _stage(
-                "forward_evidence_health",
-                "ALL_DECLARED_SAFE_FORWARD_ARTIFACTS_HASH_AND_IDENTITY_VALID",
-                session,
-                health_status,
-                observed={"health_overall_status": health.get("overall_status")},
-                evidence_timestamp=reported_at_utc,
-                notes=tuple(
-                    f"{item.get('name')}:{item.get('status')}:{item.get('reason')}"
-                    for item in health.get("artifacts", [])
-                    if item.get("status") != "COMPLETE"
-                ),
-            )
+    elif discovered_for_decision:
+        health_specs = tuple(
+            item for item in discovered_for_decision
+            if item.name in {"eod_manifest", "v4_x1_score_manifest"}
+        ) + (
+            ArtifactSpec(
+                "decision_v2_result",
+                _known_path(e2e_root, "state", "decisions", f"{decision_date}.json"),
+                session_fields=("decision_session_date", "session_date"),
+            ),
+        )
+        health = evaluate_session(decision_date or session, health_specs, reported_at_utc=reported_at_utc)
+        stage_by_name["forward_evidence_health"] = _stage(
+            "forward_evidence_health",
+            "DECISION_SESSION_FORWARD_ARTIFACT_HEALTH",
+            session,
+            _map_health_status(str(health.get("overall_status"))),
+            observed={"health_overall_status": health.get("overall_status"), "decision_session_date": decision_date},
+            evidence_timestamp=reported_at_utc,
+            notes=tuple(
+                f"{item.get('name')}:{item.get('status')}:{item.get('reason')}"
+                for item in health.get("artifacts", [])
+                if item.get("status") != "COMPLETE"
+            ),
         )
     else:
-        stages.append(_stage("forward_evidence_health", "SAFE_HEALTH_REPORT", session, NOT_READ, notes=("ROOTS_NOT_DECLARED",)))
+        stage_by_name["forward_evidence_health"] = _stage(
+            "forward_evidence_health",
+            "DECISION_SESSION_FORWARD_ARTIFACT_HEALTH",
+            session,
+            NOT_READ,
+            notes=("DECISION_PARENT_NOT_CERTIFIED",),
+        )
 
     scheduler_stage, _ = _artifact_stage(
         stage="scheduler_task",
@@ -740,36 +1120,62 @@ def audit_session(
         session_date=session,
         path=scheduler_metadata,
         require_outcome_clean=False,
+        session_fields=("session_date", "execution_session_date"),
         extra_validator=_validate_scheduler,
     )
-    stages.append(scheduler_stage)
+    stage_by_name["scheduler_task"] = scheduler_stage
 
-    # Cross-stage ordering is metadata-only.  It deliberately never opens a data file.
+    # Cross-stage ordering is metadata-only and uses immutable parent identity.
     prepared_ts = _stage_timestamp(prepared_stage)
+    decision_stage = stage_by_name.get("decision_v2", {})
+    decision_ts = _stage_timestamp(decision_stage)
+    open_ts = _stage_timestamp(open_stage)
     execution_ts = _stage_timestamp(execution_stage)
-    if prepared_ts and execution_ts and execution_ts < prepared_ts:
-        execution_stage["status"] = IMPLEMENTATION_DEFECT
-        execution_stage["causal_notes"].append("EXECUTION_BEFORE_PREPARED_ORDER")
+    if decision_stage.get("status") == PASS and prepared_stage["status"] == PASS:
+        if not decision_ts or not prepared_ts:
+            _set_stricter(prepared_stage, PROVENANCE_INVALID, "DECISION_PREPARED_CAUSAL_TIMESTAMP_PROOF_MISSING")
+        elif decision_ts >= prepared_ts:
+            _set_stricter(prepared_stage, PROVENANCE_INVALID, "DECISION_NOT_BEFORE_PREPARED")
+    if execution_stage["status"] == PASS:
+        if not prepared_ts or not open_ts or not execution_ts:
+            _set_stricter(execution_stage, PROVENANCE_INVALID, "CAUSAL_TIMESTAMP_PROOF_MISSING")
+        else:
+            if prepared_ts >= open_ts:
+                _set_stricter(execution_stage, PROVENANCE_INVALID, "PREPARED_AFTER_OFFICIAL_OPEN")
+            if open_ts > execution_ts:
+                _set_stricter(execution_stage, PROVENANCE_INVALID, "OFFICIAL_OPEN_AFTER_EXECUTION")
+            if execution_ts < prepared_ts:
+                _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_BEFORE_PREPARED_ORDER")
     if execution_meta:
         duplicate_count = execution_meta.payload.get("duplicate_count", 0)
         if isinstance(duplicate_count, int) and duplicate_count > 0:
-            execution_stage["status"] = IMPLEMENTATION_DEFECT
-            execution_stage["causal_notes"].append("DUPLICATE_EXECUTION_EVIDENCE")
+            _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "DUPLICATE_EXECUTION_EVIDENCE")
         if execution_meta.payload.get("retroactive_fill") is True or execution_meta.payload.get("backdated_fill") is True:
-            execution_stage["status"] = PROVENANCE_INVALID
-            execution_stage["causal_notes"].append("RETROACTIVE_FILL_REJECTED")
+            _set_stricter(execution_stage, PROVENANCE_INVALID, "RETROACTIVE_FILL_REJECTED")
+
+    stages = [stage_by_name[name] for name in STAGES]
     overall, blockers = _aggregate(calendar_stage["status"], stages[1:])
-    return _report(session, overall, stages, blockers, reported_at_utc)
+    return _report(session, overall, stages, blockers, reported_at_utc, decision_date)
 
 
 def _stage_timestamp(stage: Mapping[str, Any]) -> str | None:
     return stage.get("evidence_timestamp_utc") or stage.get("scheduled_timestamp_utc")
 
 
-def _report(session: str, overall: str, stages: Sequence[Mapping[str, Any]], blockers: Sequence[str], reported_at_utc: str) -> dict[str, Any]:
+def _report(
+    session: str,
+    overall: str,
+    stages: Sequence[Mapping[str, Any]],
+    blockers: Sequence[str],
+    reported_at_utc: str,
+    decision_session_date: str | None,
+) -> dict[str, Any]:
     return {
         "schema": SCHEMA_VERSION,
+        "ledger_anchor": "execution_session_date",
         "session_date": session,
+        "execution_session_date": session,
+        "decision_session_date": decision_session_date,
         "overall_status": overall,
         "runtime_identity": next((dict(item["observed"]) for item in stages if item["stage"] == "runtime_identity"), {}),
         "stages": [dict(item) for item in stages],
@@ -787,17 +1193,23 @@ def _report(session: str, overall: str, stages: Sequence[Mapping[str, Any]], blo
 
 
 def summarize_ledgers(ledgers: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    statuses = [str(item.get("overall_status")) for item in ledgers]
-    healthy = {"SESSION_HEALTHY", "SESSION_HEALTHY_LEGITIMATE_NOOP", "NON_TRADING_SESSION"}
+    ordered = sorted(ledgers, key=lambda item: str(item.get("execution_session_date", item.get("session_date", ""))))
+    statuses = [str(item.get("overall_status")) for item in ordered]
+    healthy_trading = {"SESSION_HEALTHY", "SESSION_HEALTHY_LEGITIMATE_NOOP"}
     transports: dict[str, int] = {}
     missing: dict[str, int] = {}
-    provider_failures: list[bool] = []
-    continuity: list[str] = []
+    continuity: list[tuple[str, str]] = []
     latest_healthy: str | None = None
-    for ledger in ledgers:
-        session = str(ledger.get("session_date"))
-        if ledger.get("overall_status") in healthy and (latest_healthy is None or session > latest_healthy):
+    non_trading_count = 0
+    consecutive_stockbit_failures = 0
+    for ledger in ordered:
+        session = str(ledger.get("execution_session_date", ledger.get("session_date")))
+        overall = str(ledger.get("overall_status"))
+        if overall == "NON_TRADING_SESSION":
+            non_trading_count += 1
+        if overall in healthy_trading and (latest_healthy is None or session > latest_healthy):
             latest_healthy = session
+        stockbit_status: str | None = None
         for stage in ledger.get("stages", []):
             name = str(stage.get("stage"))
             status = str(stage.get("status"))
@@ -807,28 +1219,35 @@ def summarize_ledgers(ledgers: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                 transport = stage.get("observed", {}).get("transport")
                 if transport:
                     transports[str(transport)] = transports.get(str(transport), 0) + 1
-            if name == "stockbit_scheduled_capture" and status == FAIL_CLOSED_EXTERNAL:
-                provider_failures.append(True)
+            if name == "stockbit_scheduled_capture":
+                stockbit_status = status
             if name == "paperstate_continuity":
-                continuity.append(status)
-    consecutive = 0
-    for failed in reversed(provider_failures):
-        if not failed:
-            break
-        consecutive += 1
+                continuity.append((overall, status))
+        if overall == "NON_TRADING_SESSION":
+            continue
+        if stockbit_status == FAIL_CLOSED_EXTERNAL:
+            consecutive_stockbit_failures += 1
+        elif stockbit_status == PASS:
+            consecutive_stockbit_failures = 0
     return {
         "schema": SUMMARY_SCHEMA_VERSION,
-        "session_count": len(ledgers),
-        "healthy_count": sum(status in healthy for status in statuses),
+        "session_count": len(ordered),
+        "healthy_count": sum(status in healthy_trading for status in statuses),
+        "non_trading_count": non_trading_count,
         "incomplete_count": sum(status == "SESSION_PENDING_EXPECTED" for status in statuses),
         "fail_closed_count": sum(status == "SESSION_FAIL_CLOSED_EXTERNAL" for status in statuses),
         "provenance_invalid_count": sum(status == "SESSION_PROVENANCE_INVALID" for status in statuses),
         "implementation_defect_count": sum(status == "SESSION_IMPLEMENTATION_DEFECT" for status in statuses),
         "latest_healthy_session": latest_healthy,
-        "consecutive_provider_failures": consecutive,
+        "consecutive_stockbit_provider_failures": consecutive_stockbit_failures,
         "official_open_transport_distribution": transports,
         "missing_stage_frequency": missing,
-        "paperstate_continuity_status": "PASS" if continuity and all(value == PASS for value in continuity) else ("PENDING_EXPECTED" if not continuity else "FAIL_CLOSED_EXTERNAL"),
+        "paperstate_continuity_status": (
+            "PASS"
+            if any(overall != "NON_TRADING_SESSION" for overall, _ in continuity)
+            and all(status == PASS for overall, status in continuity if overall != "NON_TRADING_SESSION")
+            else ("NOT_APPLICABLE" if continuity and all(overall == "NON_TRADING_SESSION" for overall, _ in continuity) else "PENDING_EXPECTED" if not continuity else "FAIL_CLOSED_EXTERNAL")
+        ),
         "guards": {"protected_outcomes_accessed": False, "provider_capture_triggered": False},
     }
 
