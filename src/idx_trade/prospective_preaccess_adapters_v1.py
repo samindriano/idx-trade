@@ -36,6 +36,11 @@ MODEL_RUN_DIRECTORY = "v4_x1_clean_geometry3_prospective_v1"
 GATE_SCORE_COLUMNS = frozenset({"ticker", "alpha_consensus"})
 GATE_SCORE_DATE_COLUMNS = frozenset({"date", "session_date"})
 _RANKING_PROOF_FORMULA = "0.5*H5_WITHIN_DATE_PERCENTILE_RANK+0.5*H10_WITHIN_DATE_PERCENTILE_RANK"
+
+# Independent operator trust anchor.  This is intentionally duplicated here
+# rather than imported from a downstream gate module: adapter discovery must
+# reject a rewritten pin manifest before trusting any declarations inside it.
+CODE_PIN_MANIFEST_SHA256 = "0012dc4822f676388c427e018c63873b9450ee6cc6067cd67638a439a7f0f65b"
 _DISCOVERY_PROTECTED_TOKENS = frozenset(
     {"outcome", "outcomes", "label", "labels", "realized", "vault", "protected"}
 )
@@ -99,18 +104,33 @@ def _session_hash(session_dates: Iterable[str]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _forbidden_metadata_paths(value: object, *, path: str = "manifest") -> list[str]:
+def _forbidden_metadata_paths(
+    value: object,
+    *,
+    path: str = "manifest",
+    ignored_keys: frozenset[str] = frozenset(),
+) -> list[str]:
     found: list[str] = []
     if isinstance(value, Mapping):
         for key, child in value.items():
             key_text = str(key).strip().lower()
             child_path = f"{path}.{key}"
-            if key_text in _FORBIDDEN_METADATA_TOKENS:
+            if key_text in ignored_keys:
+                continue
+            if any(token in key_text for token in _FORBIDDEN_METADATA_TOKENS):
                 found.append(child_path)
-            found.extend(_forbidden_metadata_paths(child, path=child_path))
+            found.extend(
+                _forbidden_metadata_paths(
+                    child, path=child_path, ignored_keys=ignored_keys
+                )
+            )
     elif isinstance(value, (list, tuple)):
         for index, child in enumerate(value):
-            found.extend(_forbidden_metadata_paths(child, path=f"{path}[{index}]"))
+            found.extend(
+                _forbidden_metadata_paths(
+                    child, path=f"{path}[{index}]", ignored_keys=ignored_keys
+                )
+            )
     return found
 
 
@@ -356,7 +376,11 @@ def _validate_score_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
     ]
     if forbidden:
         raise ProductionAdapterError(f"SCORE_MANIFEST_FORBIDDEN_COLUMNS:{','.join(forbidden)}")
-    forbidden_metadata = sorted(_forbidden_metadata_paths(manifest))
+    # Guard flags are safety attestations, not outcome-bearing score metadata;
+    # their names intentionally contain protected/outcome tokens.
+    forbidden_metadata = sorted(
+        _forbidden_metadata_paths(manifest, ignored_keys=frozenset({"guards"}))
+    )
     if forbidden_metadata:
         raise ProductionAdapterError(
             f"SCORE_MANIFEST_FORBIDDEN_METADATA:{','.join(forbidden_metadata)}"
@@ -501,7 +525,11 @@ def gate_shape_inventory_sha256(inventory: pd.DataFrame) -> str:
     return _canonical_hash(records)
 
 
-def project_score_frame_to_gate_shape(frame: pd.DataFrame) -> pd.DataFrame:
+def project_score_frame_to_gate_shape(
+    frame: pd.DataFrame,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+) -> pd.DataFrame:
     """Project score-side columns only; never rerank or transform scores.
 
     This pure helper is intentionally not wired to the real runtime in this
@@ -512,19 +540,42 @@ def project_score_frame_to_gate_shape(frame: pd.DataFrame) -> pd.DataFrame:
 
     if not isinstance(frame, pd.DataFrame):
         raise ProductionAdapterError("SCORE_PROJECTION_FRAME_REQUIRED")
+    column_names = [str(column) for column in frame.columns]
+    if len(set(column_names)) != len(column_names):
+        raise ProductionAdapterError("SCORE_PROJECTION_DUPLICATE_COLUMNS")
     date_columns = [column for column in frame.columns if str(column) in GATE_SCORE_DATE_COLUMNS]
     if len(date_columns) != 1:
         raise ProductionAdapterError("SCORE_PROJECTION_DATE_COLUMN_AMBIGUOUS")
     date_column = date_columns[0]
-    expected = {date_column, *GATE_SCORE_COLUMNS}
-    if set(frame.columns) != expected:
-        raise ProductionAdapterError("SCORE_PROJECTION_SCHEMA_NOT_EXACT")
+    missing = sorted(GATE_SCORE_COLUMNS - set(column_names))
+    if missing:
+        raise ProductionAdapterError(f"SCORE_PROJECTION_REQUIRED_COLUMN_MISSING:{','.join(missing)}")
+    forbidden = [
+        column
+        for column in column_names
+        if any(token in column.strip().lower() for token in _FORBIDDEN_METADATA_TOKENS)
+    ]
+    if forbidden:
+        raise ProductionAdapterError(
+            f"SCORE_PROJECTION_FORBIDDEN_COLUMNS:{','.join(forbidden)}"
+        )
+    if metadata is not None:
+        forbidden_metadata = sorted(
+            _forbidden_metadata_paths(metadata, path="production_score_metadata")
+        )
+        if forbidden_metadata:
+            raise ProductionAdapterError(
+                "SCORE_PROJECTION_FORBIDDEN_METADATA:" + ",".join(forbidden_metadata)
+            )
     if frame.empty:
         raise ProductionAdapterError("SCORE_PROJECTION_EMPTY")
+    parsed_dates = pd.to_datetime(frame[date_column], errors="coerce")
+    if parsed_dates.isna().any() or parsed_dates.dt.normalize().nunique() != 1:
+        raise ProductionAdapterError("SCORE_PROJECTION_SESSION_IDENTITY_INVALID")
     projected = frame[[date_column, "ticker", "alpha_consensus"]].copy()
     if projected["ticker"].astype(str).str.strip().eq("").any():
         raise ProductionAdapterError("SCORE_PROJECTION_TICKER_INVALID")
-    if projected["ticker"].astype(str).duplicated().any():
+    if projected["ticker"].astype(str).str.strip().duplicated().any():
         raise ProductionAdapterError("SCORE_PROJECTION_DUPLICATE_TICKER")
     scores = pd.to_numeric(projected["alpha_consensus"], errors="coerce")
     if scores.isna().any() or not scores.map(lambda value: math.isfinite(float(value))).all():
@@ -568,10 +619,23 @@ def adapt_runtime_counter(
     *,
     inventory_sha256: str | None = None,
     discovered_inventory: pd.DataFrame | None = None,
+    production_source_gate_shape_sha256: str | None = None,
+    canonical_admitted_gate_inventory_sha256: str | None = None,
+    # Backward-compatible input alias; it is never emitted as a canonical
+    # identity and is normalized to the explicitly named source identity.
     gate_shape_inventory_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Map runtime status and cross-bind it to discovered score sessions."""
 
+    if (
+        production_source_gate_shape_sha256 is not None
+        and gate_shape_inventory_sha256 is not None
+        and production_source_gate_shape_sha256 != gate_shape_inventory_sha256
+    ):
+        return _component_invalid("counter", "COUNTER_SOURCE_GATE_IDENTITY_CONFLICT")
+    if production_source_gate_shape_sha256 is None:
+        production_source_gate_shape_sha256 = gate_shape_inventory_sha256
+    canonical_identity = canonical_admitted_gate_inventory_sha256 or "NOT_AVAILABLE"
     path = _resolve_reference(pipeline_status_path, label="COUNTER_STATUS")
     payload, source_sha = _read_json(path, label="COUNTER_STATUS")
     counter = payload.get("x1_counter")
@@ -633,7 +697,9 @@ def adapt_runtime_counter(
         "artifact_verification": counter.get("artifact_verification"),
         "inventory_sha256_binding": False,
         "rolling_partial_inventory_sha256": inventory_sha256,
-        "observed_gate_shape_inventory_sha256": gate_shape_inventory_sha256,
+        "production_source_gate_shape_sha256": production_source_gate_shape_sha256,
+        "canonical_admitted_gate_inventory_sha256": canonical_identity,
+        "canonical_inventory_sha256_binding": canonical_identity != "NOT_AVAILABLE",
         "canonical_attestation_present": False,
         "discovered_score_session_count": len(expected_sessions) if expected_sessions is not None else None,
         "protected_outcome_accessed": False,
@@ -768,7 +834,11 @@ def _adapt_code_pins_verified(path: Path, payload: Mapping[str, Any], source_sha
 
     target_identity = payload.get("target_identity")
     target_spec_path = None
-    if not isinstance(target_identity, Mapping) or target_identity.get("status") != "RESOLVED":
+    if (
+        not isinstance(target_identity, Mapping)
+        or target_identity.get("status") != "RESOLVED"
+        or target_identity.get("canonical_target_id") != CANONICAL_TARGET_ID
+    ):
         raise ProductionAdapterError("CODE_PIN_TARGET_IDENTITY_UNRESOLVED")
     target_spec_path = _resolve_reference(
         target_identity.get("target_spec_path"), base_dir=path.parent, label="TARGET_SPEC"
@@ -806,6 +876,15 @@ def adapt_code_pins(repo_root: str | Path) -> dict[str, Any]:
         return _component_missing("code_pins", "CODE_PIN_MANIFEST_MISSING")
     try:
         payload, source_sha = _read_json(path, label="CODE_PIN_MANIFEST")
+        if source_sha != CODE_PIN_MANIFEST_SHA256:
+            return _component_invalid(
+                "code_pins",
+                "CODE_PIN_MANIFEST_TRUST_ANCHOR_MISMATCH",
+                source_path=str(path),
+                expected_sha256=CODE_PIN_MANIFEST_SHA256,
+                observed_sha256=source_sha,
+                verification_scope="METADATA_ONLY_FINAL_GATE_REVALIDATES_TOCTOU_AND_ACCESS",
+            )
         return _adapt_code_pins_verified(path, payload, source_sha)
     except (OSError, ProductionAdapterError, PreAccessReadinessError) as exc:
         return _component_invalid(
@@ -845,7 +924,8 @@ def build_production_readiness(
         monitoring / "eod_automation" / "v4_x1_pipeline" / "latest.json",
         inventory_sha256=rolling_inventory_sha or None,
         discovered_inventory=inventory,
-        gate_shape_inventory_sha256=gate_inventory_sha or None,
+        production_source_gate_shape_sha256=gate_inventory_sha or None,
+        canonical_admitted_gate_inventory_sha256=None,
     )
     target = discover_sealed_target_producer(repo_root=repo, data_root=root)
     paper = discover_named_component(
@@ -895,7 +975,8 @@ def build_production_readiness(
     readiness["inventory"]["rolling_partial_inventory_sha256"] = readiness["inventory"].get(
         "partial_inventory_sha256"
     )
-    readiness["inventory"]["gate_shape_inventory_sha256"] = gate_inventory_sha or None
+    readiness["inventory"]["production_source_gate_shape_sha256"] = gate_inventory_sha or None
+    readiness["inventory"]["canonical_admitted_gate_inventory_sha256"] = "NOT_AVAILABLE"
     score_gate_admission = inventory_source.get(
         "score_gate_admission",
         {"status": "NOT_AVAILABLE", "reason": "SCORE_GATE_ADMISSION_NOT_COMPUTED"},
@@ -908,9 +989,6 @@ def build_production_readiness(
     if score_gate_admission.get("status") == "PROVENANCE_INVALID":
         readiness["overall_status"] = "PREACCESS_PROVENANCE_INVALID"
         readiness["existing_gate_preflight_eligible"] = False
-    elif score_gate_admission.get("status") != "READY":
-        readiness["overall_status"] = "PREACCESS_REQUIREMENTS_INCOMPLETE"
-        readiness["existing_gate_preflight_eligible"] = False
     return {
         "schema_version": ADAPTER_SCHEMA_VERSION,
         "audit_mode": "OUTCOME_BLIND_LOCAL_PRODUCTION_SHAPE_AUDIT",
@@ -922,7 +1000,8 @@ def build_production_readiness(
             "inventory": inventory_source,
             "inventory_identities": {
                 "rolling_partial_inventory_sha256": rolling_inventory_sha or None,
-                "gate_shape_inventory_sha256": gate_inventory_sha or None,
+                "production_source_gate_shape_sha256": gate_inventory_sha or None,
+                "canonical_admitted_gate_inventory_sha256": "NOT_AVAILABLE",
             },
             "counter": counter,
             "target_discovery": target,

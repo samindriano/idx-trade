@@ -197,6 +197,83 @@ def test_gate_shape_inventory_hash_matches_frozen_gate_formula(tmp_path: Path) -
     assert source["score_gate_admission"]["status"] == "READY"
 
 
+def test_project_production_v4_x1_superset_to_exact_gate_shape() -> None:
+    frame = pd.DataFrame(
+        {
+            "ticker": ["ZZZ", "AAA"],
+            "date": ["2026-08-21", "2026-08-21"],
+            "raw_control_h5": [0.01, 0.02],
+            "alpha_control_h5": [0.1, 0.2],
+            "raw_control_h10": [0.03, 0.04],
+            "alpha_control_h10": [0.3, 0.4],
+            "alpha_control_consensus": [0.2, 0.3],
+            "raw_challenger_h5": [0.05, 0.06],
+            "alpha_h5": [0.5, 0.6],
+            "raw_challenger_h10": [0.07, 0.08],
+            "alpha_h10": [0.7, 0.8],
+            "alpha_consensus": [0.9, 0.8],
+            "rank_consensus": [1, 2],
+            "rank_control_consensus": [2, 1],
+        }
+    )
+    projected = project_score_frame_to_gate_shape(frame)
+    assert list(projected.columns) == ["date", "ticker", "alpha_consensus"]
+    assert projected["ticker"].tolist() == ["ZZZ", "AAA"]
+    assert projected["alpha_consensus"].tolist() == [0.9, 0.8]
+
+
+def test_projection_rejects_ambiguous_session_and_forbidden_metadata() -> None:
+    frame = pd.DataFrame(
+        {
+            "date": ["2026-08-21"],
+            "session_date": ["2026-08-21"],
+            "ticker": ["AAA"],
+            "alpha_consensus": [0.5],
+        }
+    )
+    with pytest.raises(ProductionAdapterError, match="DATE_COLUMN_AMBIGUOUS"):
+        project_score_frame_to_gate_shape(frame)
+    valid = frame.drop(columns=["session_date"])
+    with pytest.raises(ProductionAdapterError, match="FORBIDDEN_METADATA"):
+        project_score_frame_to_gate_shape(valid, metadata={"outcome_statistics": {}})
+
+
+def test_projection_rejects_multiple_sessions_and_duplicate_tickers() -> None:
+    multi = pd.DataFrame(
+        {
+            "date": ["2026-08-21", "2026-08-24"],
+            "ticker": ["AAA", "BBB"],
+            "alpha_consensus": [0.1, 0.2],
+        }
+    )
+    with pytest.raises(ProductionAdapterError, match="SESSION_IDENTITY_INVALID"):
+        project_score_frame_to_gate_shape(multi)
+    duplicate = multi.iloc[[0, 0]].copy()
+    with pytest.raises(ProductionAdapterError, match="DUPLICATE_TICKER"):
+        project_score_frame_to_gate_shape(duplicate)
+
+
+def test_projected_artifact_or_manifest_hash_changes_change_gate_identity(tmp_path: Path) -> None:
+    frame = pd.DataFrame(
+        {
+            "forward_position": [1],
+            "session_index": [1],
+            "session_date": ["2026-08-21"],
+            "score_artifact_path": [str(tmp_path / "score.parquet")],
+            "score_artifact_sha256": ["a" * 64],
+            "score_manifest_path": [str(tmp_path / "manifest.json")],
+            "score_manifest_sha256": ["b" * 64],
+        }
+    )
+    base = gate_shape_inventory_sha256(frame)
+    artifact_changed = frame.copy()
+    artifact_changed.loc[0, "score_artifact_sha256"] = "c" * 64
+    manifest_changed = frame.copy()
+    manifest_changed.loc[0, "score_manifest_sha256"] = "d" * 64
+    assert gate_shape_inventory_sha256(artifact_changed) != base
+    assert gate_shape_inventory_sha256(manifest_changed) != base
+
+
 def test_path_only_changes_do_not_change_gate_shape_hash(tmp_path: Path) -> None:
     data_root, monitoring = _runtime(tmp_path)
     _add_manifest(data_root, "2026-08-21")
@@ -363,9 +440,108 @@ def test_dirty_access_policy_fails_closed(tmp_path: Path) -> None:
     payload = json.loads(pin_path.read_text(encoding="utf-8"))
     payload["access_policy"]["real_loader_allowed"] = True
     _write_json(pin_path, payload)
+    real_read_json = adapters._read_json
+
+    def anchored_read_json(path: Path, *, label: str) -> tuple[dict, str]:
+        payload_value, observed_sha = real_read_json(path, label=label)
+        if path == pin_path:
+            return payload_value, adapters.CODE_PIN_MANIFEST_SHA256
+        return payload_value, observed_sha
+
+    # Keep this test focused on policy semantics; the independent trust-anchor
+    # behavior is covered separately below.
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(adapters, "_read_json", anchored_read_json)
     result = adapt_code_pins(target_repo)
+    monkeypatch.undo()
     assert result["status"] == "PROVENANCE_INVALID"
     assert "ACCESS_POLICY_DIRTY" in result["reason"]
+
+
+def test_code_pin_manifest_internal_rewrite_fails_independent_trust_anchor(tmp_path: Path) -> None:
+    source_repo = Path(__file__).resolve().parents[1]
+    pin_path = tmp_path / "config" / "v4_x1_prospective_evaluation_code_pin_v1.json"
+    pin_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        source_repo / "config/v4_x1_prospective_evaluation_code_pin_v1.json", pin_path
+    )
+    payload = json.loads(pin_path.read_text(encoding="utf-8"))
+    payload["model"]["fingerprint"] = payload["model"]["fingerprint"]
+    payload["operator_note"] = "internally consistent rewrite"
+    _write_json(pin_path, payload)
+    result = adapt_code_pins(tmp_path)
+    assert result["status"] == "PROVENANCE_INVALID"
+    assert "TRUST_ANCHOR_MISMATCH" in result["reason"]
+
+
+def _stub_build_readiness_for_score_status(
+    monkeypatch: pytest.MonkeyPatch,
+    inventory: pd.DataFrame,
+    score_status: str,
+) -> dict:
+    dates = inventory["session_date"].tolist()
+    if len(inventory) == 100:
+        dates = [value.date().isoformat() for value in pd.date_range("2026-01-01", periods=110)]
+        inventory = inventory.copy()
+    monkeypatch.setattr(
+        adapters,
+        "load_official_schedule",
+        lambda *args, **kwargs: (dates, {"status": "READY"}),
+    )
+    monkeypatch.setattr(
+        adapters,
+        "discover_score_inventory",
+        lambda *args, **kwargs: (
+            inventory,
+            {"score_gate_admission": {"status": score_status, "reason": "TEST"}},
+        ),
+    )
+    monkeypatch.setattr(
+        adapters,
+        "adapt_runtime_counter",
+        lambda *args, **kwargs: {
+            "name": "counter",
+            "status": "ACCUMULATING" if len(inventory) < 100 else "PENDING_EXPECTED",
+        },
+    )
+    monkeypatch.setattr(
+        adapters,
+        "discover_sealed_target_producer",
+        lambda **kwargs: {"name": "target_attestation", "status": "NOT_AVAILABLE"},
+    )
+    monkeypatch.setattr(
+        adapters,
+        "discover_named_component",
+        lambda *, name, **kwargs: {"name": name, "status": "READY"},
+    )
+    monkeypatch.setattr(
+        adapters,
+        "adapt_code_pins",
+        lambda *args, **kwargs: {"name": "code_pins", "status": "READY"},
+    )
+    monkeypatch.setattr(
+        adapters,
+        "inspect_access_state",
+        lambda **kwargs: {"status": "READY"},
+    )
+    return build_production_readiness(
+        repo_root=Path.cwd(), data_root=Path.cwd(), as_of_session="2026-12-31"
+    )
+
+
+def test_short_accumulation_overrides_missing_score_admission(monkeypatch: pytest.MonkeyPatch) -> None:
+    report = _stub_build_readiness_for_score_status(monkeypatch, _inventory_100().head(2), "NOT_AVAILABLE")
+    assert report["readiness"]["overall_status"] == "ACCUMULATING_OUTCOME_BLIND"
+
+
+def test_mature_inventory_missing_score_admission_is_incomplete(monkeypatch: pytest.MonkeyPatch) -> None:
+    report = _stub_build_readiness_for_score_status(monkeypatch, _inventory_100(), "NOT_AVAILABLE")
+    assert report["readiness"]["overall_status"] == "PREACCESS_REQUIREMENTS_INCOMPLETE"
+
+
+def test_short_accumulation_provenance_invalid_score_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    report = _stub_build_readiness_for_score_status(monkeypatch, _inventory_100().head(2), "PROVENANCE_INVALID")
+    assert report["readiness"]["overall_status"] == "PREACCESS_PROVENANCE_INVALID"
 
 
 def test_protected_subtree_is_skipped_without_reading_content(tmp_path: Path) -> None:
