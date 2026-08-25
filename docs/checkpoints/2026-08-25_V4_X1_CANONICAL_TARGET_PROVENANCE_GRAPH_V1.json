@@ -1,0 +1,163 @@
+{
+  "schema_version": "v4_x1_canonical_target_provenance_graph_v1",
+  "status": "AUDITED_TARGET_IDENTITY_RESOLVED_HISTORICAL_REFERENCE_CONTEXT_ONLY",
+  "outcome_accessed": false,
+  "model": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "generation": "V4-X1-CLEAN",
+    "fingerprint": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "ranking": "alpha_consensus DESC, ticker ASC"
+  },
+  "canonical_target": {
+    "target_id": "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1",
+    "prediction_field": "alpha_consensus",
+    "grouping_key": "decision session t cross-section",
+    "raw_targets": {
+      "h5": {
+        "entry": "Open_(t+1)",
+        "terminal": "Close_(t+5)",
+        "formula": "Close_(t+5) / Open_(t+1) - 1"
+      },
+      "h10": {
+        "entry": "Open_(t+1)",
+        "terminal": "Close_(t+10)",
+        "formula": "Close_(t+10) / Open_(t+1) - 1"
+      }
+    },
+    "raw_rank": {
+      "method": "average",
+      "ascending": true,
+      "normalized_formula": "(rank - 1) / (n - 1)",
+      "single_finite_value": 0.5
+    },
+    "realized_consensus": {
+      "formula": "0.5 * target_rank_h5 + 0.5 * target_rank_h10",
+      "weights": {"h5": 0.5, "h10": 0.5},
+      "requires": "both H5 and H10 target ranks available"
+    },
+    "final_target": {
+      "field": "realized_consensus",
+      "rank_transform": "none; evaluator Spearman ranks both inputs"
+    },
+    "support": {
+      "finite_raw_returns_required": true,
+      "official_open_t1_required": true,
+      "missing_values_are_not_zero": true,
+      "metric_requires_at_least_two_finite_pairs": true,
+      "session_aggregation": "one IC per decision session, then the frozen evaluator aggregation"
+    }
+  },
+  "implementation_semantics": {
+    "spearman": {
+      "method": "average ranks for ties followed by Pearson correlation of ranks",
+      "source": {
+        "path": "src/idx_trade/prospective_evaluation_v1.py",
+        "source_commit": "b4acde476deba2aec86ebe2c2af44d14e0952885",
+        "git_blob_sha1": "2e9bf76501dcab46594b611efd149ee64f3e7999",
+        "sha256": "98658814531367cf779af71698c2db77ae454900c1f86b84ddf1db0ca834108"
+      }
+    },
+    "session_grouping": "session_date, sorted deterministically",
+    "nonfinite_filter": "finite numeric pairs only; empty/constant/under-two support fails closed",
+    "missing_value_policy": "no zero fill or synthetic target values",
+    "minimum_cross_section": 2
+  },
+  "authoritative_sources": [
+    {
+      "path": "docs/checkpoints/2026-08-16_RANKING_V4_1_TARGET_CONTRACT_LOCKED.md",
+      "source_commit": "199d770520edcd4a7b4537c75d5edaba2b0aa349",
+      "git_blob_sha1": "afc4d171cf4f735839782d31256c8894283701f4",
+      "sha256": "db756c12574541c434e65866f2a0fd9c639c1e2c227d97cc402d6c02a049e59c",
+      "semantic_role": "frozen V4-1 Open(t+1) and H5/H10 target contract"
+    },
+    {
+      "path": "src/idx_trade/ranking_v4_3_target_execution.py",
+      "source_commit": "08233877eb1f94e0ddefcd4f35409923f1c7dda5",
+      "git_blob_sha1": "9b82a0fe8bf06134a06e4a4bfdec15fd10b2bdf4",
+      "sha256": "f344874c3619c08605d97058edb8331814cd74c430c60a275a5f96ca48899002",
+      "semantic_role": "retained target materializer and percentile-rank construction"
+    },
+    {
+      "path": "config/ranking_v4_x1_prospective_preregistration_v1.json",
+      "source_commit": "3db072a7852e7781d49491d91e939cf844c73352",
+      "git_blob_sha1": "a483ebf8ea6618dbadf54b223b54a77435581b8e",
+      "sha256": "43cb147e7979cc77575d1fc28893519682e4476af3ff809cb6bd730ac1127750",
+      "semantic_role": "frozen X1 model/ranking and 50/50 consensus preregistration"
+    },
+    {
+      "path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_INDEPENDENT_REVIEW.md",
+      "source_commit": "c4089a4d2e0a4ba8f3cd4e5312bc98c9381902fc",
+      "git_blob_sha1": "442b9b438e1400dd77102cfef24bc8ab0eb3a02c",
+      "sha256": "34e701ee02c8de8534b41d8873be246099303dbda3a440165a064b7adf903892",
+      "semantic_role": "accepted clean historical lineage and metric nomenclature"
+    },
+    {
+      "path": "docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md",
+      "source_commit": "ed719dd67ae93b6b20f02579df80fd67eec331dd",
+      "git_blob_sha1": "f76af5733db3c6a2c7a99b1e80268004ece1e616",
+      "sha256": "f17bb558ee50ba8411fd63804c9eef8b984794e39d1a845a6794a144a32566c1",
+      "semantic_role": "prospective metric semantics and historical-reference context-only rule"
+    },
+    {
+      "path": "config/v4_x1_canonical_target_spec_v1.json",
+      "source_commit": "fa8d03fd69ae6534de492e8053e17dbfff821bab",
+      "git_blob_sha1": "ed7a335442c4ca36c1f03d4e5fb354f0337f0f15",
+      "sha256": "98d6530d0db21da91a6f32524c142d423c73d796cbb2e7c7f0269b558c6acb23",
+      "semantic_role": "machine-readable canonical target identity"
+    },
+    {
+      "path": "src/idx_trade/v4_x1_canonical_target_v1.py",
+      "source_commit": "fa8d03fd69ae6534de492e8053e17dbfff821bab",
+      "git_blob_sha1": "4bec8e216467bf391797f8d523dbdf09b9a5453e",
+      "sha256": "04846c2a195e4aef7eceffad6c5becd7301224e182fa87bf2fd198c3ce1eeb6a",
+      "semantic_role": "canonical target construction pin"
+    }
+  ],
+  "historical_metric_reconciliation": [
+    {
+      "value": 0.097554036,
+      "source_path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_INDEPENDENT_REVIEW.md",
+      "source_commit": "c4089a4d2e0a4ba8f3cd4e5312bc98c9381902fc",
+      "statistic": "clean common-support Spearman",
+      "support": "600/600 admitted clean dates; common observable support re-ranked before Spearman",
+      "identity_class": "same canonical target semantics; alternate support/aggregation presentation",
+      "provenance_status": "VERIFIED_STATISTIC_NOT_TARGET_ID"
+    },
+    {
+      "value": 0.09805414600339561,
+      "source_path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_INDEPENDENT_REVIEW.md",
+      "source_commit": "c4089a4d2e0a4ba8f3cd4e5312bc98c9381902fc",
+      "statistic": "frozen evaluator CHALLENGER_CONSENSUS_MEDIAN_FOLD_MEAN_DAILY_IC headline",
+      "support": "accepted frozen evaluator result; not interchangeable with common-support Spearman",
+      "identity_class": "same target semantics; different frozen evaluator statistic",
+      "provenance_status": "VERIFIED_STATISTIC_NOT_TARGET_ID"
+    },
+    {
+      "value": 0.099248615,
+      "source_path": "docs/checkpoints/2026-08-20_V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_INDEPENDENT_REVIEW.md",
+      "source_commit": "c4089a4d2e0a4ba8f3cd4e5312bc98c9381902fc",
+      "statistic": "mean frozen-formula IC across 600 admitted clean dates",
+      "support": "read-only comparison calculation on accepted clean artifacts",
+      "identity_class": "same target semantics; alternate aggregation/statistical presentation",
+      "provenance_status": "VERIFIED_STATISTIC_NOT_TARGET_ID"
+    },
+    {
+      "value": 0.0980538834688018,
+      "source_path": "config/v4_x1_prospective_evaluation_contract_v1.json",
+      "source_commit": "6c4e30c8",
+      "source_blob_sha1": "95c58197d9c37708df984121ff26e0ceb8399144",
+      "source_sha256": "6d64c76dc60ef04f02e9a811e920e7351c00b94aaa2cc834f6019d4a648cb8ac",
+      "statistic": "requested historical point estimate retained in prospective contract",
+      "support": "exact support/derivation not found in audited retained refs",
+      "identity_class": "historical reference provenance unresolved; not used to define target semantics",
+      "provenance_status": "UNRESOLVED_CONTEXT_ONLY"
+    }
+  ],
+  "conclusion": {
+    "target_semantic_identity": "RESOLVED",
+    "historical_point_estimate_0_0980538834688018": "NOT_PROVEN_AS_EXACT_SOURCE",
+    "prospective_access": "REMAINS_BLOCKED_BY_EXISTING_AUTHORIZATION_AND_PREACCESS_ARTIFACT_GATES",
+    "scientific_changes": false,
+    "protected_outcomes_accessed": false
+  }
+}

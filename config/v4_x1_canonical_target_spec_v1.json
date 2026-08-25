@@ -1,0 +1,53 @@
+{
+  "schema_version": "v4_x1_canonical_target_spec_v1",
+  "canonical_target_id": "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1",
+  "prediction": {
+    "field": "alpha_consensus",
+    "ranking": "alpha_consensus DESC, ticker ASC",
+    "provenance": "frozen V4-X1 model score artifact"
+  },
+  "raw_targets": {
+    "h5": {
+      "signal_session": "t",
+      "entry_price": "Open_(t+1)",
+      "terminal_price": "Close_(t+5)",
+      "formula": "Close_(t+5) / Open_(t+1) - 1"
+    },
+    "h10": {
+      "signal_session": "t",
+      "entry_price": "Open_(t+1)",
+      "terminal_price": "Close_(t+10)",
+      "formula": "Close_(t+10) / Open_(t+1) - 1"
+    }
+  },
+  "relative_transform": {
+    "grouping": "decision session t cross-section",
+    "raw_target_rank": {
+      "method": "average",
+      "ascending": true,
+      "normalized_formula": "(rank - 1) / (n - 1)",
+      "single_finite_value": 0.5
+    },
+    "realized_consensus": {
+      "formula": "0.5 * target_rank_h5 + 0.5 * target_rank_h10",
+      "weights": {
+        "h5": 0.5,
+        "h10": 0.5
+      },
+      "requires": "both H5 and H10 target ranks available"
+    },
+    "final_target": {
+      "field": "realized_consensus",
+      "rank_transform": "none; evaluator Spearman ranks alpha_consensus and realized_consensus"
+    }
+  },
+  "support_semantics": {
+    "finite_raw_returns_required": true,
+    "entry_source_is_official_open_t1": true,
+    "missing_values_are_not_zero": true,
+    "metric_group_key": "session_date",
+    "metric_requires_at_least_two_finite_pairs": true,
+    "date_support_gate": "frozen evaluator contract; not part of target identity"
+  },
+  "provenance_role": "semantic target identity; historical metric values are contextual references only"
+}

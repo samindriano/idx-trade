@@ -1,0 +1,54 @@
+{
+  "schema_version": "v4_x1_prospective_evaluation_code_pin_v1",
+  "status": "AUDITED_SYNTHETIC_ONLY_REAL_ACCESS_BLOCKED",
+  "model": {
+    "model_id": "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1",
+    "generation": "V4-X1-CLEAN",
+    "fingerprint": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf"
+  },
+  "protocol": {
+    "path": "../docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md",
+    "source_commit": "ed719dd67ae93b6b20f02579df80fd67eec331dd",
+    "git_blob_sha1": "f76af5733db3c6a2c7a99b1e80268004ece1e616"
+  },
+  "evaluator": {
+    "path": "../src/idx_trade/prospective_evaluation_v1.py",
+    "source_commit": "b4acde477f2d4e895c0e38ddccde94d6d783f43c",
+    "git_blob_sha1": "2e9bf76501dcab46594b611efd149ee64f3e7999"
+  },
+  "gate": {
+    "path": "../src/idx_trade/prospective_evaluation_gate_v1.py",
+    "source_commit": "45a2ea98351824247f873545e577b081df7e10e6",
+    "git_blob_sha1": "7ccc5df1f68e15f35005e075e1a1a4966cc34d08"
+  },
+  "contract": {
+    "path": "v4_x1_prospective_evaluation_contract_v1.json",
+    "sha256": "7be7bd68b4a35e190cab547be2040e08e3548065f2ab3124ce3dfc19c9f4000c"
+  },
+  "target_identity": {
+    "status": "RESOLVED",
+    "canonical_target_id": "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1",
+    "target_spec_path": "v4_x1_canonical_target_spec_v1.json",
+    "target_spec_sha256": "98d6530d0db21da91a6f32524c142d423c73d796cbb2e7c7f0269b558c6acb23",
+    "construction_code": {
+      "path": "../src/idx_trade/v4_x1_canonical_target_v1.py",
+      "source_commit": "fa8d03fd69ae6534de492e8053e17dbfff821bab",
+      "git_blob_sha1": "4bec8e216467bf391797f8d523dbdf09b9a5453e",
+      "sha256": "04846c2a195e4aef7eceffad6c5becd7301224e182fa87bf2fd198c3ce1eeb6a"
+    },
+    "historical_reference_provenance_status": "UNRESOLVED_CONTEXT_ONLY"
+  },
+  "target_construction": {
+    "path": "../src/idx_trade/v4_x1_canonical_target_v1.py",
+    "source_commit": "fa8d03fd69ae6534de492e8053e17dbfff821bab",
+    "git_blob_sha1": "4bec8e216467bf391797f8d523dbdf09b9a5453e",
+    "sha256": "04846c2a195e4aef7eceffad6c5becd7301224e182fa87bf2fd198c3ce1eeb6a"
+  },
+  "access_policy": {
+    "real_loader_allowed": false,
+    "real_outcome_marker_allowed": false,
+    "protected_outcomes_accessed": false,
+    "synthetic_rehearsal_allowed": true,
+    "requires_explicit_human_authorization": true
+  }
+}
