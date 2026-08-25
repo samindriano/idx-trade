@@ -16,8 +16,8 @@ artifacts:
 
 | Session | Source rows | Source artifact SHA | Source manifest SHA | Projected artifact SHA | Projected manifest SHA |
 |---|---:|---|---|---|---|
-| 2026-08-21 | 294 | `fdb851aa13dfab7ac3501404352c6701c50dd6e79c79450c6995686b00a889a1` | `92a7e23542b11ae98d49bb0cb84feb35b897734887ee31237945b0a575fe0946` | `89d0f5e2eec5f10127616a3a73fef327c7db49c85a30b16672d0baf7e7aa5354` | `9e9a002281452216634dfaef3f171ee4b8f67925491d8be168ed584398411fc9` |
-| 2026-08-24 | 292 | `e8a50886fe7efd68017432a57896f50173a359f72ec066c38a2ae88d4cdcfd72` | `76b4727bd1eb1947b5d96f075aefbd3d0c108cb71383d2d4dfddc88f9c96d32b` | `2ac5736279719aa65db884cf98fcc55efecd19466ed38e8ec7eedf9b80deadac` | `e5e467e72e4779e9d5e9467e026d81d3d158b605873fbb6c8524ab8deedbe86e` |
+| 2026-08-21 | 294 | `fdb851aa13dfab7ac3501404352c6701c50dd6e79c79450c6995686b00a889a1` | `92a7e23542b11ae98d49bb0cb84feb35b897734887ee31237945b0a575fe0946` | `89d0f5e2eec5f10127616a3a73fef327c7db49c85a30b16672d0baf7e7aa5354` | `459d7149196e7e9dd26b767b878cba0ca316cf2f4ca2f450b4ff26406bbf7a70` |
+| 2026-08-24 | 292 | `e8a50886fe7efd68017432a57896f50173a359f72ec066c38a2ae88d4cdcfd72` | `76b4727bd1eb1947b5d96f075aefbd3d0c108cb71383d2d4dfddc88f9c96d32b` | `2ac5736279719aa65db884cf98fcc55efecd19466ed38e8ec7eedf9b80deadac` | `ed2892ab8204ba45e188d286d20c062de9783b71d4e238fa47010d228f81d7db` |
 
 Projection rule: `V4_X1_EXACT_DATE_TICKER_ALPHA_CONSENSUS_NO_RERANK_NO_TRANSFORM_V1`.
 The producer preserves source row order, ticker values, date values, and
@@ -30,7 +30,9 @@ The current real inventory remains two sessions:
 
 - raw rolling partial identity: `3510e5b73189e97bc6f40fd96190164d193aceb45d969d55099e0e70221b89ee`;
 - raw production-source gate-shape identity: `5d829936646e2cf2acc1e2ea3d8c8352fd2bf9e18e10c1d858244d869e6d8cff`;
-- projected partial admitted gate-shape identity: `44cb0d4cd54a38515f41cc0c6589288f21cc8051aade4d674e61fe78e450d165`;
+- projected partial admitted gate-shape identity: `f636d4da2a4523f914f5da2fffaa1a8190e9ed1125cb5b64edd6b38319fa8a53`;
+- fresh admitted inventory bytes SHA: `442bcfd57d944813534eec7955e1fb4d3acd4f3eccfe46382585072c9cae7d7e`;
+- fresh admitted inventory manifest SHA: `13bf4720fbd3e3538165ca805b4b5aca7ba22a2bb50dd8cb1f07898c353b15cc`;
 - canonical admitted 100-session inventory identity: `NOT_AVAILABLE`.
 
 The raw production-source SHA is not treated as the canonical admitted gate identity. The
@@ -53,16 +55,38 @@ admitted sessions and remains `ACCUMULATING`.
 - Sealed target attestation/materializer: dependency remains `NOT_AVAILABLE`; no target value
   or protected target artifact was read or created.
 
+## Final adapter remediation
+
+The completion layer now also contains a bounded consumer for a normalized,
+public Session Audit/PaperState bridge. It verifies source bytes, terminal-state
+exclusivity, PaperState payload/parent hashes, predecessor chronology, and emits
+only the existing frozen PaperState attestation shape. A legitimate
+`MISSED_EXECUTION_NO_CERTIFIED_OPEN` remains preclassified invalidity rather
+than being relabeled as an implementation defect.
+
+The prior-access adapter reuses the existing status-only inspector and refuses
+to infer a clean state from an arbitrary empty directory. With no explicitly
+configured canonical output root, it reports
+`PRIOR_ACCESS_AUDIT_NOT_AVAILABLE_CANONICAL_ROOT_UNSET`.
+
+A deterministic public IDX Composite benchmark builder is available over the
+existing EOD `idx_index_summary.csv` evidence. It emits a gate-compatible
+artifact only when the predecessor and all requested sessions are present; the
+current real coverage remains partial and carries no publication-time claim.
+
+The future sealed target producer remains design-only. See
+`2026-08-26_V4_X1_SEALED_PROSPECTIVE_TARGET_PRODUCER_V1_DESIGN.md`.
+
 ## Synthetic 100-session rehearsal
 
 An external synthetic fixture (not committed) passed the existing gate end-to-end:
 
 - 100/100 exact session inventory and frozen inventory identity:
-  `e6f089704980cefd14011220bce3619aa7a9f78e929cc860f82d671cbb319db7`;
+  `91d466d064c88c9a3da7de967a772729e43fabe0ca5449061d6d89a55711e629`;
 - synthetic counter attestation SHA:
-  `ee494e6891aa92a0995442b0e962e4135ab2a4dc77898a429a2abfe69b645dc3`;
+  `702c1c836c42b947a5d3b8418480f6efabd03e6a8f46ab170ee0f563da4f487e`;
 - preflight bundle SHA:
-  `b32786fafa0341c88da948f524a67f1c32dbcc1d3d45985a225a8ee41b159070`;
+  `00fe81a6b1ae148c1810401b9e2117719426a17ef0a405cf42465bd328d6c8ad`;
 - existing evaluator CLI returned exactly
   `PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT` with all protected-access flags false.
 
@@ -72,11 +96,15 @@ attestation, and bundle hashes. It is not real forward evidence.
 ## Validation
 
 - focused completion + adapters/readiness/gate/preflight/evaluator/target suites: PASS;
-- full applicable pytest suite: PASS (228 collected tests after adding the completion tests);
+- full applicable pytest suite: PASS (236 collected tests after adding the completion tests);
 - `py_compile`: PASS;
 - `git diff --check`: PASS;
-- real metadata-only completion report SHA:
-  `16de3bde21324ff8ca4355666423aa5a06fcf0e3c27e18a820bdc3ea8987bb14`.
+- real metadata-only completion report SHA (fresh external root):
+  `e66b642a5fa034130882023a744dce3fb94903bf9c55257072f7e8013910e35b`;
+- fresh synthetic rehearsal report SHA:
+  `24756174d8bea39c76e13c46d2aa27619ef925b092a37282b559ffe82cd86ce9`;
+- existing evaluator CLI on that synthetic bundle: exact
+  `PRE_FLIGHT_READY_BUT_HUMAN_AUTHORIZATION_ABSENT`, with protected loader,
+  marker, PaperState, and counter-change flags false.
 
 Final lane verdict: `V4_X1_PREACCESS_ARTIFACT_COMPLETION_V1_REVIEW_READY`.
-

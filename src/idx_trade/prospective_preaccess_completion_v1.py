@@ -21,6 +21,7 @@ from idx_trade.prospective_evaluation_gate_v1 import (
     CANONICAL_TARGET_ID,
     RANKING_SEMANTICS,
     _load_score_artifact,
+    inspect_persisted_access_status,
     _validate_score_manifest,
     validate_session_inventory,
 )
@@ -46,10 +47,380 @@ PAPER_ATTESTATION_SCHEMA = "v4_x1_paper_continuity_attestation_v1"
 BENCHMARK_ATTESTATION_SCHEMA = "v4_x1_benchmark_attestation_v1"
 ACCESS_AUDIT_SCHEMA = "v4_x1_preaccess_audit_v1"
 TARGET_ATTESTATION_SCHEMA = "v4_x1_target_attestation_v1"
+SAFE_SESSION_AUDIT_SCHEMA = "idx_trade_forward_session_audit_safe_input_v1"
+SAFE_SESSION_AUDIT_ATTESTATION_SCHEMA = "v4_x1_paper_continuity_attestation_v1"
+
+_SAFE_AUDIT_FORBIDDEN_TOKENS = frozenset(
+    {"outcome", "realized", "label", "vault", "nav", "pnl", "return", "target", "score", "alpha"}
+)
+_SAFE_AUDIT_TOP_KEYS = frozenset({"schema_version", "outcome_blind", "sessions", "source_reference"})
+_SAFE_AUDIT_SESSION_KEYS = frozenset(
+    {
+        "session_date",
+        "forward_position",
+        "terminal_state",
+        "continuity_valid",
+        "execution_provenance_valid",
+        "preclassified_invalidity",
+        "invalidity_reason",
+        "execution_material_drag",
+        "material_drag_rule_id",
+        "paperstate_path",
+        "paperstate_sha256",
+        "execution_path",
+        "execution_sha256",
+        "missed_execution_path",
+        "missed_execution_sha256",
+    }
+)
 
 
 class CompletionArtifactError(ProductionAdapterError):
     """Raised when a completion artifact cannot be created safely."""
+
+
+def _canonical_payload_sha(payload: Mapping[str, Any], field: str) -> str:
+    body = dict(payload)
+    body.pop(field, None)
+    return sha256_bytes(_json_bytes(body))
+
+
+def _safe_audit_key_check(value: object, *, path: str = "safe_audit") -> None:
+    """Reject outcome-bearing metadata before any paper artifact is built."""
+
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            key_text = str(key).strip().lower()
+            if key_text != "outcome_blind" and any(token in key_text for token in _SAFE_AUDIT_FORBIDDEN_TOKENS):
+                raise CompletionArtifactError(f"SAFE_AUDIT_FORBIDDEN_METADATA:{path}.{key}")
+            _safe_audit_key_check(child, path=f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _safe_audit_key_check(child, path=f"{path}[{index}]")
+
+
+def _safe_metadata_path(value: str | Path, *, label: str, root: Path | None = None) -> Path:
+    path = Path(value).expanduser().resolve()
+    lowered = str(path).replace("\\", "/").lower()
+    if any(token in part for part in lowered.split("/") for token in ("outcome", "realized", "label", "vault")):
+        raise CompletionArtifactError(f"{label}_PROTECTED_PATH_REFUSED")
+    if root is not None and path != root.resolve() and root.resolve() not in path.parents:
+        raise CompletionArtifactError(f"{label}_OUTSIDE_EVIDENCE_ROOT")
+    if not path.is_file():
+        raise CompletionArtifactError(f"{label}_MISSING")
+    return path
+
+
+def _verified_safe_json(path: str | Path, *, expected_sha256: str | None, label: str, root: Path | None = None) -> tuple[Path, dict[str, Any], str]:
+    safe = _safe_metadata_path(path, label=label, root=root)
+    actual = sha256_file(safe)
+    if expected_sha256 is not None and actual != str(expected_sha256).lower():
+        raise CompletionArtifactError(f"{label}_SHA256_MISMATCH")
+    try:
+        payload = json.loads(safe.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise CompletionArtifactError(f"{label}_UNREADABLE") from exc
+    if not isinstance(payload, dict):
+        raise CompletionArtifactError(f"{label}_NOT_OBJECT")
+    _safe_audit_key_check(payload, path=label.lower())
+    return safe, payload, actual
+
+
+def _verify_paperstate_snapshot(
+    path_value: str,
+    sha_value: str,
+    *,
+    expected_session: str,
+    expected_parent: tuple[str, str] | None,
+    evidence_root: Path,
+) -> tuple[Path, str]:
+    path, payload, actual = _verified_safe_json(
+        path_value, expected_sha256=sha_value, label="PAPERSTATE", root=evidence_root
+    )
+    if payload.get("schema_version") != "idx_trade_forward_dividend_runtime_state_v1_1":
+        raise CompletionArtifactError("PAPERSTATE_SCHEMA_MISMATCH")
+    if payload.get("session_date") != expected_session:
+        raise CompletionArtifactError("PAPERSTATE_SESSION_MISMATCH")
+    if not isinstance(payload.get("state"), Mapping) or not isinstance(payload.get("hashes"), Mapping):
+        raise CompletionArtifactError("PAPERSTATE_REQUIRED_METADATA_MISSING")
+    declared_payload_sha = str(payload.get("snapshot_payload_sha256") or "").lower()
+    if not declared_payload_sha or _canonical_payload_sha(payload, "snapshot_payload_sha256") != declared_payload_sha:
+        raise CompletionArtifactError("PAPERSTATE_PAYLOAD_SHA256_MISMATCH")
+    previous = payload.get("previous_snapshot")
+    if not isinstance(previous, Mapping):
+        raise CompletionArtifactError("PAPERSTATE_PARENT_REFERENCE_MISSING")
+    parent_path = previous.get("path")
+    parent_sha = previous.get("sha256")
+    parent_date = previous.get("session_date")
+    if not all(isinstance(value, str) and value for value in (parent_path, parent_sha, parent_date)):
+        raise CompletionArtifactError("PAPERSTATE_PARENT_REFERENCE_INVALID")
+    if str(parent_date) >= expected_session:
+        raise CompletionArtifactError("PAPERSTATE_PARENT_NOT_PRIOR")
+    parent = _safe_metadata_path(parent_path, label="PAPERSTATE_PARENT", root=evidence_root)
+    if sha256_file(parent) != str(parent_sha).lower():
+        raise CompletionArtifactError("PAPERSTATE_PARENT_SHA256_MISMATCH")
+    if expected_parent is not None:
+        expected_path, expected_sha = expected_parent
+        if parent != Path(expected_path).resolve() or str(parent_sha).lower() != str(expected_sha).lower():
+            raise CompletionArtifactError("PAPERSTATE_PARENT_CHAIN_MISMATCH")
+    return path, actual
+
+
+def produce_paper_attestation_from_safe_audit(
+    source_path: str | Path,
+    *,
+    output_path: str | Path,
+    expected_sessions: Iterable[str],
+    predecessor_session_date: str,
+    evidence_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Consume a normalized Session Audit/PaperState ledger without runtime imports.
+
+    The input is a public, metadata-only bridge produced by the E2E audit lane.
+    It is intentionally narrower than the E2E auditor: only immutable paths,
+    hashes, terminal state, and PaperState parent identity cross this boundary.
+    """
+
+    source, payload, source_sha = _verified_safe_json(
+        source_path, expected_sha256=None, label="SESSION_AUDIT"
+    )
+    root = Path(evidence_root).expanduser().resolve() if evidence_root is not None else source.parent
+    if source != root and root not in source.parents:
+        raise CompletionArtifactError("SESSION_AUDIT_OUTSIDE_EVIDENCE_ROOT")
+    if payload.get("schema_version") != SAFE_SESSION_AUDIT_SCHEMA or payload.get("outcome_blind") is not True:
+        raise CompletionArtifactError("SESSION_AUDIT_SCHEMA_OR_SCOPE_INVALID")
+    if set(payload) - _SAFE_AUDIT_TOP_KEYS:
+        raise CompletionArtifactError("SESSION_AUDIT_UNDECLARED_TOP_LEVEL_FIELD")
+    raw_sessions = payload.get("sessions")
+    if not isinstance(raw_sessions, list):
+        raise CompletionArtifactError("SESSION_AUDIT_SESSIONS_MISSING")
+    expected = [str(value) for value in expected_sessions]
+    if expected != sorted(set(expected)):
+        raise CompletionArtifactError("EXPECTED_SESSION_BLOCK_INVALID")
+    observed_dates = [str(item.get("session_date")) for item in raw_sessions if isinstance(item, Mapping)]
+    if len(raw_sessions) != len(observed_dates) or observed_dates != sorted(set(observed_dates)):
+        raise CompletionArtifactError("SESSION_AUDIT_DUPLICATE_OR_MALFORMED_SESSION")
+    if observed_dates != expected:
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason": "SESSION_AUDIT_INCOMPLETE_OR_NONCONTIGUOUS",
+            "source_path": str(source),
+            "source_sha256": source_sha,
+            "observed_session_count": len(observed_dates),
+            "required_session_count": len(expected),
+        }
+
+    normalized: list[dict[str, Any]] = []
+    previous_snapshot: tuple[str, str] | None = None
+    missed_count = 0
+    for position, item in enumerate(raw_sessions, start=1):
+        if not isinstance(item, Mapping) or set(item) - _SAFE_AUDIT_SESSION_KEYS:
+            raise CompletionArtifactError("SESSION_AUDIT_UNDECLARED_SESSION_FIELD")
+        if item.get("forward_position") != position:
+            raise CompletionArtifactError("SESSION_AUDIT_POSITION_GAP_OR_DUPLICATE")
+        state = str(item.get("terminal_state") or "")
+        if state not in {"EXECUTION", "MISSED_EXECUTION_NO_CERTIFIED_OPEN"}:
+            raise CompletionArtifactError("SESSION_AUDIT_TERMINAL_STATE_INVALID")
+        if item.get("continuity_valid") is not True:
+            raise CompletionArtifactError("SESSION_AUDIT_CONTINUITY_INVALID")
+        if item.get("implementation_defect") is True or item.get("provenance_invalid") is True:
+            raise CompletionArtifactError("SESSION_AUDIT_INVALIDITY_NOT_ADMISSIBLE")
+        paper_path = item.get("paperstate_path")
+        paper_sha = item.get("paperstate_sha256")
+        if not isinstance(paper_path, str) or not isinstance(paper_sha, str):
+            raise CompletionArtifactError("SESSION_AUDIT_PAPERSTATE_REFERENCE_MISSING")
+        verified_paper_path, verified_paper_sha = _verify_paperstate_snapshot(
+            paper_path,
+            paper_sha,
+            expected_session=observed_dates[position - 1],
+            expected_parent=previous_snapshot,
+            evidence_root=root,
+        )
+        previous_snapshot = (str(verified_paper_path), verified_paper_sha)
+        if state == "EXECUTION":
+            if item.get("execution_provenance_valid") is not True:
+                raise CompletionArtifactError("SESSION_AUDIT_EXECUTION_PROVENANCE_INVALID")
+            if item.get("missed_execution_path") is not None or item.get("missed_execution_sha256") is not None:
+                raise CompletionArtifactError("SESSION_AUDIT_EXECUTION_AND_MISSED_BOTH_PRESENT")
+            terminal_path, terminal_sha = item.get("execution_path"), item.get("execution_sha256")
+            if not isinstance(terminal_path, str) or not isinstance(terminal_sha, str):
+                raise CompletionArtifactError("SESSION_AUDIT_EXECUTION_REFERENCE_MISSING")
+            _verified_safe_json(terminal_path, expected_sha256=terminal_sha, label="EXECUTION", root=root)
+            if item.get("preclassified_invalidity") is True:
+                raise CompletionArtifactError("SESSION_AUDIT_EXECUTION_PRECLASSIFIED_INVALID")
+        else:
+            missed_count += 1
+            if item.get("execution_provenance_valid") is not False:
+                raise CompletionArtifactError("SESSION_AUDIT_MISSED_EXECUTION_PROVENANCE_INVALID")
+            if item.get("execution_path") is not None or item.get("execution_sha256") is not None:
+                raise CompletionArtifactError("SESSION_AUDIT_EXECUTION_AND_MISSED_BOTH_PRESENT")
+            terminal_path, terminal_sha = item.get("missed_execution_path"), item.get("missed_execution_sha256")
+            if not isinstance(terminal_path, str) or not isinstance(terminal_sha, str):
+                raise CompletionArtifactError("SESSION_AUDIT_MISSED_REFERENCE_MISSING")
+            _, missed_payload, _ = _verified_safe_json(
+                terminal_path, expected_sha256=terminal_sha, label="MISSED_EXECUTION", root=root
+            )
+            if missed_payload.get("status") != "MISSED_EXECUTION_NO_CERTIFIED_OPEN":
+                raise CompletionArtifactError("SESSION_AUDIT_MISSED_STATUS_INVALID")
+            if item.get("preclassified_invalidity") is not True or not str(item.get("invalidity_reason") or "").strip():
+                raise CompletionArtifactError("SESSION_AUDIT_MISSED_INVALIDITY_NOT_PRECLASSIFIED")
+        normalized.append(
+            {
+                "session_date": observed_dates[position - 1],
+                "forward_position": position,
+                "terminal_state": state,
+                "paperstate_path": str(verified_paper_path),
+                "paperstate_sha256": verified_paper_sha,
+            }
+        )
+
+    output = Path(output_path).resolve()
+    paper_payload = {
+        "schema_version": PAPER_ATTESTATION_SCHEMA,
+        "predecessor_session_date": str(predecessor_session_date),
+        "session_count": len(normalized),
+        "first_session_date": normalized[0]["session_date"],
+        "last_session_date": normalized[-1]["session_date"],
+        "continuity_valid": True,
+        "execution_provenance_valid": missed_count == 0,
+        "preclassified_invalidity": missed_count > 0,
+        "invalidity_reason": "MISSED_EXECUTION_NO_CERTIFIED_OPEN" if missed_count else "",
+        "execution_material_drag": False,
+        "material_drag_rule_id": "SESSION_AUDIT_METADATA_ONLY_NO_ECONOMIC_VALUES",
+        "transitions": [
+            {"session_date": row["session_date"], "forward_position": row["forward_position"]}
+            for row in normalized
+        ],
+        "source_session_audit_path": str(source),
+        "source_session_audit_sha256": source_sha,
+        "missed_execution_count": missed_count,
+        "outcome_scope": "NO_NAV_NO_RETURNS_NO_PNL_NO_OUTCOMES",
+    }
+    paper_sha = _atomic_json(output, paper_payload)
+    return {
+        "status": "READY_FOR_FINAL_GATE_REVALIDATION",
+        "paper_attestation_path": str(output),
+        "paper_attestation_sha256": paper_sha,
+        "source_session_audit_path": str(source),
+        "source_session_audit_sha256": source_sha,
+        "session_count": len(normalized),
+        "missed_execution_count": missed_count,
+    }
+
+
+def build_prior_access_audit(
+    canonical_output_root: str | Path | None,
+    *,
+    output_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Map the existing status-only inspector without declaring arbitrary emptiness clean."""
+
+    if canonical_output_root is None:
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason": "PRIOR_ACCESS_AUDIT_NOT_AVAILABLE_CANONICAL_ROOT_UNSET",
+            "protected_outcomes_accessed": False,
+        }
+    root = Path(canonical_output_root).expanduser().resolve()
+    inspection = inspect_persisted_access_status(root)
+    status = str(inspection.get("status") or "")
+    if status == "SYNTHETIC_REHEARSAL_COMPLETE":
+        payload = {
+            "schema_version": ACCESS_AUDIT_SCHEMA,
+            "review_complete": True,
+            "unauthorized_access_known": False,
+            "prior_access_marker_exists": False,
+            "source_status_path": str(root),
+            "source_status": status,
+            "scope": "EXPLICIT_SYNTHETIC_REHEARSAL_ONLY",
+        }
+        if output_path is None:
+            raise CompletionArtifactError("PRIOR_ACCESS_OUTPUT_REQUIRED")
+        sha = _atomic_json(Path(output_path).resolve(), payload)
+        return {"status": "READY", "path": str(Path(output_path).resolve()), "sha256": sha, **payload}
+    if status in {"REAL_ACCESS_ALREADY_COMPLETED", "INTEGRITY_FAILURE", "ORPHAN_OR_INTERRUPTED_STATE"}:
+        return {"status": "PROVENANCE_INVALID", "reason": f"PERSISTED_ACCESS_STATUS:{status}", **inspection}
+    return {
+        "status": "NOT_AVAILABLE",
+        "reason": "PRIOR_ACCESS_AUDIT_REQUIRES_EXPLICIT_NONEMPTY_CANONICAL_STATUS",
+        "persisted_status": status,
+        "protected_outcomes_accessed": False,
+    }
+
+
+def build_local_composite_benchmark(
+    data_root: str | Path,
+    *,
+    sessions: Iterable[str],
+    predecessor_session_date: str,
+    output_root: str | Path,
+) -> dict[str, Any]:
+    """Build only the public IDX Composite artifact from existing EOD evidence."""
+
+    root = Path(data_root).resolve()
+    output = Path(output_root).resolve()
+    requested = [str(predecessor_session_date), *[str(value) for value in sessions]]
+    if requested != sorted(set(requested)):
+        raise CompletionArtifactError("BENCHMARK_SESSION_ORDER_INVALID")
+    rows: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for session in requested:
+        source_file = root / "forward_monitoring" / "sessions" / session / "idx_index_summary.csv"
+        if not source_file.is_file():
+            missing.append(session)
+            continue
+        try:
+            frame = pd.read_csv(source_file)
+        except Exception as exc:
+            raise CompletionArtifactError(f"BENCHMARK_SOURCE_UNREADABLE:{session}") from exc
+        required = {"session_date", "index_code", "close", "source", "source_ref", "source_sha256", "source_retrieved_at"}
+        if not required.issubset(frame.columns):
+            raise CompletionArtifactError(f"BENCHMARK_SOURCE_SCHEMA_INVALID:{session}")
+        selected = frame[frame["index_code"].astype(str).str.upper().eq("COMPOSITE")]
+        if len(selected) != 1 or str(selected.iloc[0]["session_date"]) != session:
+            raise CompletionArtifactError(f"BENCHMARK_COMPOSITE_IDENTITY_INVALID:{session}")
+        row = selected.iloc[0]
+        close = pd.to_numeric(pd.Series([row["close"]]), errors="coerce").iloc[0]
+        if pd.isna(close) or float(close) <= 0:
+            raise CompletionArtifactError(f"BENCHMARK_CLOSE_INVALID:{session}")
+        rows.append({
+            "session_date": session,
+            "benchmark_close": float(close),
+            "source": str(row["source"]),
+            "source_ref": str(row["source_ref"]),
+            "source_sha256": str(row["source_sha256"]),
+            "source_csv_sha256": sha256_file(source_file),
+            "source_retrieved_at": str(row["source_retrieved_at"]),
+        })
+    result: dict[str, Any] = {
+        "status": "PARTIAL_NOT_GATE_READY" if missing else "READY_FOR_FINAL_GATE_REVALIDATION",
+        "benchmark_identity": "IDX_OFFICIAL_INDEX_SUMMARY_COMPOSITE",
+        "requested_session_count": len(requested),
+        "session_count": len(rows),
+        "missing_sessions": missing,
+        "publication_time_claim": "NONE",
+        "rows": rows,
+    }
+    if missing:
+        return result
+    artifact = output / "benchmark.parquet"
+    frame = pd.DataFrame(rows)[["session_date", "benchmark_close"]]
+    artifact_sha = _atomic_immutable_bytes(artifact, _parquet_bytes(frame))
+    attestation = output / "benchmark_attestation.json"
+    attestation_sha = _atomic_json(
+        attestation,
+        {
+            "schema_version": BENCHMARK_ATTESTATION_SCHEMA,
+            "status": "PINNED",
+            "benchmark_identity": "IDX_OFFICIAL_INDEX_SUMMARY_COMPOSITE",
+            "artifact_path": str(artifact),
+            "artifact_sha256": artifact_sha,
+            "source_rows": rows,
+            "publication_time_claim": "NONE",
+        },
+    )
+    result.update({"artifact_path": str(artifact), "artifact_sha256": artifact_sha, "attestation_path": str(attestation), "attestation_sha256": attestation_sha})
+    return result
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
@@ -604,8 +975,12 @@ def write_synthetic_attestations(
 __all__ = [
     "CompletionArtifactError",
     "PROJECTION_RULE_ID",
+    "SAFE_SESSION_AUDIT_SCHEMA",
     "build_admitted_inventory",
+    "build_local_composite_benchmark",
+    "build_prior_access_audit",
     "project_verified_score_session",
+    "produce_paper_attestation_from_safe_audit",
     "reconcile_runtime_counter",
     "sha256_bytes",
     "write_preflight_bundle",
