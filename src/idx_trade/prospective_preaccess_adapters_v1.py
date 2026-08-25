@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -24,10 +26,35 @@ from idx_trade.prospective_preaccess_readiness_v1 import (
     PreAccessReadinessError,
     build_readiness_report,
     inspect_access_state,
+    validate_partial_session_inventory,
 )
 
 
 ADAPTER_SCHEMA_VERSION = "v4_x1_prospective_preaccess_adapters_v1"
+PRODUCTION_SCORE_MANIFEST_SCHEMA = "v4_x1_prospective_score_manifest_v2"
+MODEL_RUN_DIRECTORY = "v4_x1_clean_geometry3_prospective_v1"
+GATE_SCORE_COLUMNS = frozenset({"ticker", "alpha_consensus"})
+GATE_SCORE_DATE_COLUMNS = frozenset({"date", "session_date"})
+_RANKING_PROOF_FORMULA = "0.5*H5_WITHIN_DATE_PERCENTILE_RANK+0.5*H10_WITHIN_DATE_PERCENTILE_RANK"
+_DISCOVERY_PROTECTED_TOKENS = frozenset(
+    {"outcome", "outcomes", "label", "labels", "realized", "vault", "protected"}
+)
+_FORBIDDEN_METADATA_TOKENS = frozenset(
+    {
+        "canonical_target",
+        "realized_return",
+        "forward_return",
+        "outcome",
+        "label",
+        "target",
+        "nav",
+        "pnl",
+        "dividend",
+        "payoff",
+        "profit",
+        "loss",
+    }
+)
 _SCORE_GUARDS = (
     "historical_prediction_generated",
     "model_refit",
@@ -53,6 +80,38 @@ _FORBIDDEN_COLUMNS = (
 
 class ProductionAdapterError(PreAccessReadinessError):
     """Raised when a real production artifact cannot be mapped safely."""
+
+
+def _canonical_hash(payload: object) -> str:
+    encoded = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _git_blob_sha1_file(path: str | Path) -> str:
+    payload = Path(path).read_bytes()
+    return hashlib.sha1(f"blob {len(payload)}\0".encode("ascii") + payload).hexdigest()
+
+
+def _session_hash(session_dates: Iterable[str]) -> str:
+    canonical = "\n".join(str(value) for value in session_dates)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _forbidden_metadata_paths(value: object, *, path: str = "manifest") -> list[str]:
+    found: list[str] = []
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            key_text = str(key).strip().lower()
+            child_path = f"{path}.{key}"
+            if key_text in _FORBIDDEN_METADATA_TOKENS:
+                found.append(child_path)
+            found.extend(_forbidden_metadata_paths(child, path=child_path))
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            found.extend(_forbidden_metadata_paths(child, path=f"{path}[{index}]"))
+    return found
 
 
 def sha256_file(path: str | Path) -> str:
@@ -113,6 +172,43 @@ def _component_missing(name: str, reason: str) -> dict[str, Any]:
     }
 
 
+def _component_invalid(name: str, reason: str, **details: Any) -> dict[str, Any]:
+    return {
+        "name": name,
+        "status": "PROVENANCE_INVALID",
+        "reason": reason,
+        "source_discovery": "READ_ONLY_LOCAL_ARTIFACT_AUDIT",
+        **details,
+    }
+
+
+def _is_protected_component(name: str) -> bool:
+    lowered = str(name).strip().lower()
+    return any(token in lowered for token in _DISCOVERY_PROTECTED_TOKENS)
+
+
+def _iter_safe_files(root: Path) -> Iterable[Path]:
+    """Enumerate metadata candidates without entering protected subtrees."""
+
+    if not root.is_dir():
+        return
+    pending = [root]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError as exc:
+            raise ProductionAdapterError(f"DISCOVERY_DIRECTORY_UNREADABLE:{current}") from exc
+        for entry in sorted(entries, key=lambda item: item.name.lower()):
+            if _is_protected_component(entry.name):
+                continue
+            candidate = Path(entry.path)
+            if entry.is_dir(follow_symlinks=False):
+                pending.append(candidate)
+            elif entry.is_file(follow_symlinks=False):
+                yield candidate
+
+
 def load_official_schedule(
     calendar_path: str | Path,
     *,
@@ -141,9 +237,21 @@ def load_official_schedule(
     parsed = pd.to_datetime(frame[date_column], errors="coerce")
     if parsed.isna().any() or parsed.duplicated().any():
         raise ProductionAdapterError("CALENDAR_DATES_INVALID_OR_DUPLICATED")
-    dates = [value.date().isoformat() for value in parsed.sort_values().tolist()]
+    dates = [value.date().isoformat() for value in parsed.tolist()]
     if dates != sorted(dates) or not dates:
         raise ProductionAdapterError("CALENDAR_ORDER_INVALID")
+    declared_count = summary_payload.get("exchange_sessions", summary_payload.get("session_count"))
+    if not isinstance(declared_count, int) or declared_count != len(dates):
+        raise ProductionAdapterError("CALENDAR_DECLARED_COUNT_MISMATCH")
+    declared_first = summary_payload.get("first_session")
+    declared_last = summary_payload.get("last_session")
+    if declared_first is not None and str(declared_first) != dates[0]:
+        raise ProductionAdapterError("CALENDAR_DECLARED_FIRST_SESSION_MISMATCH")
+    if declared_last is not None and str(declared_last) != dates[-1]:
+        raise ProductionAdapterError("CALENDAR_DECLARED_LAST_SESSION_MISMATCH")
+    declared_sessions_sha = str(summary_payload.get("sessions_sha256") or "").lower()
+    if declared_sessions_sha != _session_hash(dates):
+        raise ProductionAdapterError("CALENDAR_SESSIONS_SHA256_MISMATCH")
     return dates, {
         "status": "READY",
         "source": str(summary_payload.get("source")),
@@ -152,7 +260,7 @@ def load_official_schedule(
         "calendar_sha256": sha256_file(calendar),
         "summary_path": str(summary),
         "summary_sha256": summary_sha,
-        "summary_sessions_sha256": summary_payload.get("sessions_sha256"),
+        "summary_sessions_sha256": declared_sessions_sha,
         "session_count": len(dates),
         "first_session": dates[0],
         "last_session": dates[-1],
@@ -160,7 +268,67 @@ def load_official_schedule(
     }
 
 
-def _validate_score_manifest(manifest: Mapping[str, Any]) -> None:
+def _ranking_evidence(manifest: Mapping[str, Any], columns: list[object]) -> dict[str, Any]:
+    declared = manifest.get("ranking")
+    if declared == RANKING_SEMANTICS:
+        return {"status": "READY", "kind": "DIRECT_MANIFEST_RANKING"}
+    science = manifest.get("science")
+    if (
+        isinstance(science, Mapping)
+        and science.get("consensus_formula") == _RANKING_PROOF_FORMULA
+        and {"alpha_consensus", "rank_consensus"}.issubset(
+            {str(column) for column in columns}
+        )
+    ):
+        return {
+            "status": "READY",
+            "kind": "DETERMINISTIC_FROZEN_PRODUCTION_CONTRACT_PROOF",
+            "formula": _RANKING_PROOF_FORMULA,
+        }
+    return {
+        "status": "NOT_AVAILABLE",
+        "kind": "RANKING_SEMANTICS_UNPROVEN",
+    }
+
+
+def _score_gate_admission(manifest: Mapping[str, Any], columns: list[object]) -> dict[str, Any]:
+    column_names = [str(column) for column in columns]
+    date_columns = [column for column in column_names if column in GATE_SCORE_DATE_COLUMNS]
+    exact_shape = len(date_columns) == 1 and set(column_names) == {
+        date_columns[0],
+        *GATE_SCORE_COLUMNS,
+    }
+    ranking = _ranking_evidence(manifest, columns)
+    if not exact_shape:
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason": "PRODUCTION_SCORE_SCHEMA_NOT_GATE_COMPATIBLE",
+            "observed_columns": column_names,
+            "required_columns": sorted(GATE_SCORE_COLUMNS | GATE_SCORE_DATE_COLUMNS),
+            "projection_required": True,
+            "ranking_evidence": ranking,
+        }
+    if ranking["status"] != "READY":
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason": "PRODUCTION_SCORE_RANKING_SEMANTICS_NOT_PROVEN",
+            "observed_columns": column_names,
+            "projection_required": True,
+            "ranking_evidence": ranking,
+        }
+    return {
+        "status": "READY",
+        "reason": "PRODUCTION_SCORE_SHAPE_GATE_COMPATIBLE_REQUIRES_FINAL_GATE_REVALIDATION",
+        "observed_columns": column_names,
+        "projection_required": False,
+        "ranking_evidence": ranking,
+        "final_gate_revalidation_required": True,
+    }
+
+
+def _validate_score_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    if manifest.get("schema_version") != PRODUCTION_SCORE_MANIFEST_SCHEMA:
+        raise ProductionAdapterError("SCORE_MANIFEST_SCHEMA_MISMATCH")
     if manifest.get("model_id") != MODEL_NAME:
         raise ProductionAdapterError("SCORE_MANIFEST_MODEL_ID_MISMATCH")
     if manifest.get("generation") != MODEL_GENERATION:
@@ -188,6 +356,18 @@ def _validate_score_manifest(manifest: Mapping[str, Any]) -> None:
     ]
     if forbidden:
         raise ProductionAdapterError(f"SCORE_MANIFEST_FORBIDDEN_COLUMNS:{','.join(forbidden)}")
+    forbidden_metadata = sorted(_forbidden_metadata_paths(manifest))
+    if forbidden_metadata:
+        raise ProductionAdapterError(
+            f"SCORE_MANIFEST_FORBIDDEN_METADATA:{','.join(forbidden_metadata)}"
+        )
+    ranking = _ranking_evidence(manifest, columns)
+    return {
+        "production_evidence_status": "READY",
+        "ranking_evidence": ranking,
+        "score_gate_admission": _score_gate_admission(manifest, columns),
+        "observed_columns": [str(column) for column in columns],
+    }
 
 
 def discover_score_inventory(
@@ -202,15 +382,22 @@ def discover_score_inventory(
     root = _resolve_reference(data_root, label="DATA_ROOT")
     schedule = list(official_sessions)
     session_index = {value: index + 1 for index, value in enumerate(schedule)}
-    candidates = sorted(runs_root.rglob("manifest.json"))
+    # The exact model-run directory is the discovery boundary. Do not open
+    # unrelated model manifests merely to inspect their identity.
+    candidates = sorted(runs_root.glob(f"*/{MODEL_RUN_DIRECTORY}/manifest.json"))
     rows: list[dict[str, Any]] = []
     inspected = 0
+    score_admissions: list[dict[str, Any]] = []
     for manifest_path in candidates:
         manifest, manifest_sha = _read_json(manifest_path, label="SCORE_MANIFEST")
-        if manifest.get("model_id") != MODEL_NAME:
-            continue
         inspected += 1
-        _validate_score_manifest(manifest)
+        disposition = _validate_score_manifest(manifest)
+        score_admissions.append(
+            {
+                "session_date": str(manifest.get("session_date") or ""),
+                **disposition,
+            }
+        )
         session_date = str(manifest.get("session_date") or "")
         if session_date not in session_index:
             raise ProductionAdapterError("SCORE_MANIFEST_SESSION_NOT_IN_OFFICIAL_CALENDAR")
@@ -239,6 +426,8 @@ def discover_score_inventory(
                 "score_manifest_path": str(manifest_path.resolve()),
                 "score_manifest_sha256": manifest_sha,
                 "score_rows_declared": row_count,
+                "production_evidence_status": disposition["production_evidence_status"],
+                "score_gate_admission_status": disposition["score_gate_admission"]["status"],
             }
         )
 
@@ -267,6 +456,110 @@ def discover_score_inventory(
         "verified_session_count": len(rows),
         "artifact_values_loaded": False,
         "artifact_bytes_rehashed": True,
+        "production_evidence_status": "READY" if rows else "ACCUMULATING",
+        "score_gate_admission": {
+            "status": (
+                "PROVENANCE_INVALID"
+                if any(item["score_gate_admission"]["status"] == "PROVENANCE_INVALID" for item in score_admissions)
+                else (
+                    "READY"
+                    if score_admissions and all(
+                        item["score_gate_admission"]["status"] == "READY"
+                        for item in score_admissions
+                    )
+                    else "NOT_AVAILABLE"
+                )
+            ),
+            "reason": (
+                "ALL_PRODUCTION_SCORE_MANIFESTS_GATE_COMPATIBLE_REQUIRES_FINAL_GATE_REVALIDATION"
+                if score_admissions and all(
+                    item["score_gate_admission"]["status"] == "READY"
+                    for item in score_admissions
+                )
+                else "PRODUCTION_SCORE_MANIFESTS_REQUIRE_DETERMINISTIC_GATE_SHAPE_PROJECTION"
+            ),
+            "projection_contract": "EXACT_DATE_TICKER_ALPHA_CONSENSUS_NO_RERANK_NO_TRANSFORM",
+            "sessions": score_admissions,
+        },
+    }
+
+
+def gate_shape_inventory_sha256(inventory: pd.DataFrame) -> str:
+    """Compute the exact final-gate inventory identity, excluding local paths."""
+
+    partial = validate_partial_session_inventory(inventory)
+    records = [
+        {
+            "forward_position": int(row["forward_position"]),
+            "session_index": int(row["session_index"]),
+            "session_date": str(row["session_date"]),
+            "score_artifact_sha256": str(row["score_artifact_sha256"]).lower(),
+            "score_manifest_sha256": str(row["score_manifest_sha256"]).lower(),
+        }
+        for row in partial["rows"]
+    ]
+    return _canonical_hash(records)
+
+
+def project_score_frame_to_gate_shape(frame: pd.DataFrame) -> pd.DataFrame:
+    """Project score-side columns only; never rerank or transform scores.
+
+    This pure helper is intentionally not wired to the real runtime in this
+    lane. A future producer must verify the immutable production manifest and
+    artifact hash before calling it, then publish a separately hashed
+    gate-compatible artifact/manifest bound back to those source hashes.
+    """
+
+    if not isinstance(frame, pd.DataFrame):
+        raise ProductionAdapterError("SCORE_PROJECTION_FRAME_REQUIRED")
+    date_columns = [column for column in frame.columns if str(column) in GATE_SCORE_DATE_COLUMNS]
+    if len(date_columns) != 1:
+        raise ProductionAdapterError("SCORE_PROJECTION_DATE_COLUMN_AMBIGUOUS")
+    date_column = date_columns[0]
+    expected = {date_column, *GATE_SCORE_COLUMNS}
+    if set(frame.columns) != expected:
+        raise ProductionAdapterError("SCORE_PROJECTION_SCHEMA_NOT_EXACT")
+    if frame.empty:
+        raise ProductionAdapterError("SCORE_PROJECTION_EMPTY")
+    projected = frame[[date_column, "ticker", "alpha_consensus"]].copy()
+    if projected["ticker"].astype(str).str.strip().eq("").any():
+        raise ProductionAdapterError("SCORE_PROJECTION_TICKER_INVALID")
+    if projected["ticker"].astype(str).duplicated().any():
+        raise ProductionAdapterError("SCORE_PROJECTION_DUPLICATE_TICKER")
+    scores = pd.to_numeric(projected["alpha_consensus"], errors="coerce")
+    if scores.isna().any() or not scores.map(lambda value: math.isfinite(float(value))).all():
+        raise ProductionAdapterError("SCORE_PROJECTION_SCORE_INVALID")
+    return projected
+
+
+def describe_gate_score_projection(
+    production_manifest: Mapping[str, Any],
+    *,
+    projected_artifact_sha256: str,
+    source_artifact_sha256: str,
+    source_manifest_sha256: str,
+) -> dict[str, Any]:
+    """Return the future projection binding contract without writing files."""
+
+    columns = production_manifest.get("output", {}).get("columns")
+    if not isinstance(columns, list):
+        raise ProductionAdapterError("SCORE_PROJECTION_SOURCE_COLUMNS_MISSING")
+    disposition = _validate_score_manifest(production_manifest)
+    return {
+        "schema_version": "v4_x1_gate_score_projection_descriptor_v1",
+        "status": "DESIGNED_NOT_PUBLISHED",
+        "projection": {
+            "columns": ["date", "ticker", "alpha_consensus"],
+            "operation": "EXACT_COLUMN_SELECTION_NO_RERANK_NO_TRANSFORM",
+        },
+        "source": {
+            "artifact_sha256": str(source_artifact_sha256).lower(),
+            "manifest_sha256": str(source_manifest_sha256).lower(),
+            "production_evidence_status": disposition["production_evidence_status"],
+        },
+        "projected_artifact_sha256": str(projected_artifact_sha256).lower(),
+        "outcome_blind": True,
+        "final_gate_revalidation_required": True,
     }
 
 
@@ -274,8 +567,10 @@ def adapt_runtime_counter(
     pipeline_status_path: str | Path,
     *,
     inventory_sha256: str | None = None,
+    discovered_inventory: pd.DataFrame | None = None,
+    gate_shape_inventory_sha256: str | None = None,
 ) -> dict[str, Any]:
-    """Map the current pipeline status; never call it a canonical attestation."""
+    """Map runtime status and cross-bind it to discovered score sessions."""
 
     path = _resolve_reference(pipeline_status_path, label="COUNTER_STATUS")
     payload, source_sha = _read_json(path, label="COUNTER_STATUS")
@@ -292,12 +587,42 @@ def adapt_runtime_counter(
     if not isinstance(sessions, list) or not all(isinstance(value, str) for value in sessions):
         raise ProductionAdapterError("COUNTER_STATUS_SESSION_LIST_INVALID")
     if completed != len(sessions) or target != 100 or remaining != target - completed:
-        raise ProductionAdapterError("COUNTER_STATUS_INTERNAL_COUNTS_INVALID")
-    status = "ACCUMULATING" if completed < target else "PROVENANCE_INVALID"
+        return _component_invalid("counter", "COUNTER_STATUS_INTERNAL_COUNTS_INVALID")
+    if len(set(sessions)) != len(sessions):
+        return _component_invalid("counter", "COUNTER_STATUS_DUPLICATE_SESSIONS")
+    parsed_sessions = pd.to_datetime(sessions, errors="coerce")
+    if parsed_sessions.isna().any() or not parsed_sessions.is_monotonic_increasing:
+        return _component_invalid("counter", "COUNTER_STATUS_CHRONOLOGY_INVALID")
+
+    expected_sessions: list[str] | None = None
+    if discovered_inventory is not None:
+        validated = validate_partial_session_inventory(discovered_inventory)
+        expected_sessions = [str(row["session_date"]) for row in validated["rows"]]
+        if sessions != expected_sessions:
+            return _component_invalid(
+                "counter",
+                "COUNTER_STATUS_SESSIONS_DO_NOT_MATCH_DISCOVERED_SCORE_SESSIONS",
+                observed_session_dates=list(sessions),
+                discovered_session_dates=expected_sessions,
+            )
+        if completed != len(expected_sessions):
+            return _component_invalid(
+                "counter",
+                "COUNTER_STATUS_COMPLETED_DOES_NOT_MATCH_DISCOVERED_SCORE_COUNT",
+                completed=completed,
+                discovered_score_session_count=len(expected_sessions),
+            )
+
+    if completed < target:
+        status = "ACCUMULATING"
+        reason = "RUNTIME_STATUS_ONLY_NOT_CANONICAL_ATTESTATION"
+    else:
+        status = "PENDING_EXPECTED"
+        reason = "RUNTIME_100_COMPLETED_BUT_CANONICAL_COUNTER_ATTESTATION_MISSING"
     return {
         "name": "counter",
         "status": status,
-        "reason": "RUNTIME_STATUS_ONLY_NOT_CANONICAL_ATTESTATION",
+        "reason": reason,
         "source_path": str(path),
         "source_sha256": source_sha,
         "source_kind": "V4_X1_PIPELINE_LATEST_STATUS",
@@ -307,7 +632,10 @@ def adapt_runtime_counter(
         "session_dates": list(sessions),
         "artifact_verification": counter.get("artifact_verification"),
         "inventory_sha256_binding": False,
-        "observed_inventory_sha256": inventory_sha256,
+        "rolling_partial_inventory_sha256": inventory_sha256,
+        "observed_gate_shape_inventory_sha256": gate_shape_inventory_sha256,
+        "canonical_attestation_present": False,
+        "discovered_score_session_count": len(expected_sessions) if expected_sessions is not None else None,
         "protected_outcome_accessed": False,
     }
 
@@ -327,29 +655,24 @@ def discover_sealed_target_producer(
 
     repo = _resolve_reference(repo_root, label="REPO_ROOT")
     root = _resolve_reference(data_root, label="DATA_ROOT")
-    producer = repo / "src" / "idx_trade" / "ranking_v4_3_target_execution.py"
+    semantic_source = repo / "src" / "idx_trade" / "v4_x1_canonical_target_v1.py"
     target_names = sorted(
         path.name
-        for path in root.rglob("*")
-        if path.is_file()
-        and any(token in path.name.lower() for token in ("target_attestation", "target_manifest"))
+        for path in _iter_safe_files(root)
+        if any(token in path.name.lower() for token in ("target_attestation", "target_manifest"))
     )
-    if not producer.is_file() or not target_names:
-        return {
-            "name": "target_attestation",
-            "status": "NOT_AVAILABLE",
-            "reason": "SEALED_PROSPECTIVE_TARGET_MATERIALIZER_OR_ATTESTATION_NOT_FOUND",
-            "producer_reference": "src/idx_trade/ranking_v4_3_target_execution.py",
-            "producer_path_exists": producer.is_file(),
-            "persisted_target_attestation_filenames": target_names,
-            "target_values": PROTECTED_STATUS,
-        }
     return {
         "name": "target_attestation",
-        "status": "PENDING_EXPECTED",
-        "reason": "PRODUCER_AND_ATTESTATION_DISCOVERED_REQUIRES_SEPARATE_REVIEW",
-        "producer_reference": "src/idx_trade/ranking_v4_3_target_execution.py",
-        "producer_path_exists": True,
+        "status": "NOT_AVAILABLE",
+        "reason": "SEALED_PROSPECTIVE_TARGET_MATERIALIZER_OR_ATTESTATION_NOT_FOUND",
+        "producer_reference": "src/idx_trade/v4_x1_canonical_target_v1.py",
+        "producer_path_exists": semantic_source.is_file(),
+        "historical_materializer_reference": "src/idx_trade/ranking_v4_3_target_execution.py",
+        "historical_materializer_promotion_allowed": False,
+        "future_architecture": (
+            "RETAINED_PINNED_HISTORICAL_TARGET_SEMANTICS->ISOLATED_SEALED_PRODUCER->"
+            "PROTECTED_TARGET_STORE->PUBLIC_METADATA_ONLY_ATTESTATION"
+        ),
         "persisted_target_attestation_filenames": target_names,
         "target_values": PROTECTED_STATUS,
     }
@@ -366,8 +689,8 @@ def discover_named_component(
     root = _resolve_reference(data_root, label="DATA_ROOT")
     names = sorted(
         path.name
-        for path in root.rglob("*")
-        if path.is_file() and all(token.lower() in path.name.lower() for token in filename_tokens)
+        for path in _iter_safe_files(root)
+        if all(token.lower() in path.name.lower() for token in filename_tokens)
     )
     if not names:
         return _component_missing(name, f"NO_{name.upper()}_ARTIFACT_DISCOVERED")
@@ -379,14 +702,11 @@ def discover_named_component(
     }
 
 
-def adapt_code_pins(repo_root: str | Path) -> dict[str, Any]:
-    """Read the frozen pin manifest as metadata; final gate revalidates blobs."""
-
-    repo = _resolve_reference(repo_root, label="REPO_ROOT")
-    path = repo / "config" / "v4_x1_prospective_evaluation_code_pin_v1.json"
-    if not path.is_file():
-        return _component_missing("code_pins", "CODE_PIN_MANIFEST_MISSING")
-    payload, source_sha = _read_json(path, label="CODE_PIN_MANIFEST")
+def _adapt_code_pins_verified(path: Path, payload: Mapping[str, Any], source_sha: str) -> dict[str, Any]:
+    if payload.get("schema_version") != "v4_x1_prospective_evaluation_code_pin_v1":
+        raise ProductionAdapterError("CODE_PIN_SCHEMA_MISMATCH")
+    if payload.get("status") != "AUDITED_SYNTHETIC_ONLY_REAL_ACCESS_BLOCKED":
+        raise ProductionAdapterError("CODE_PIN_STATUS_NOT_FROZEN_BLOCKED")
     model = payload.get("model")
     if not isinstance(model, Mapping) or any(
         model.get(key) != expected
@@ -397,49 +717,103 @@ def adapt_code_pins(repo_root: str | Path) -> dict[str, Any]:
         }.items()
     ):
         raise ProductionAdapterError("CODE_PIN_MODEL_IDENTITY_MISMATCH")
+
+    access_policy = payload.get("access_policy")
+    if not isinstance(access_policy, Mapping):
+        raise ProductionAdapterError("CODE_PIN_ACCESS_POLICY_MISSING")
+    policy_checks = {
+        "real_loader_allowed": False,
+        "real_outcome_marker_allowed": False,
+        "protected_outcomes_accessed": False,
+        "requires_explicit_human_authorization": True,
+    }
+    bad_policy = [key for key, expected in policy_checks.items() if access_policy.get(key) is not expected]
+    if bad_policy:
+        raise ProductionAdapterError(f"CODE_PIN_ACCESS_POLICY_DIRTY:{','.join(bad_policy)}")
+
     sections = ("protocol", "evaluator", "gate", "contract", "target_construction")
-    missing = []
     section_summary: dict[str, Any] = {}
     for section_name in sections:
         section = payload.get(section_name)
         if not isinstance(section, Mapping):
-            missing.append(section_name)
-            continue
+            raise ProductionAdapterError(f"CODE_PIN_SECTION_MISSING:{section_name}")
         declared_path = section.get("path")
-        if declared_path:
-            resolved = _resolve_reference(declared_path, base_dir=path.parent, label="CODE_PIN")
-            section_summary[section_name] = {
-                "path": str(resolved),
-                "exists": resolved.is_file(),
-                "source_commit": section.get("source_commit"),
-                "git_blob_sha1": section.get("git_blob_sha1"),
-            }
-            if not resolved.is_file():
-                missing.append(section_name)
-        else:
-            missing.append(section_name)
-    if missing:
-        return {
-            "name": "code_pins",
-            "status": "PROVENANCE_INVALID",
-            "reason": f"CODE_PIN_REFERENCES_MISSING:{','.join(missing)}",
-            "source_path": str(path),
-            "source_sha256": source_sha,
-            "section_summary": section_summary,
-            "verification_scope": "METADATA_ONLY_FINAL_GATE_REVALIDATES_GIT_BLOBS",
+        resolved = _resolve_reference(declared_path, base_dir=path.parent, label="CODE_PIN")
+        if not resolved.is_file():
+            raise ProductionAdapterError(f"CODE_PIN_FILE_MISSING:{section_name}")
+        entry: dict[str, Any] = {
+            "path": str(resolved),
+            "exists": True,
         }
+        if section_name in {"protocol", "evaluator", "gate", "target_construction"}:
+            source_commit = str(section.get("source_commit") or "").lower()
+            if len(source_commit) != 40 or any(char not in "0123456789abcdef" for char in source_commit):
+                raise ProductionAdapterError(f"CODE_PIN_SOURCE_COMMIT_INVALID:{section_name}")
+            entry["source_commit"] = source_commit
+        if section_name in {"protocol", "evaluator", "gate", "target_construction"}:
+            declared_blob = str(section.get("git_blob_sha1") or "").lower()
+            if len(declared_blob) != 40 or any(char not in "0123456789abcdef" for char in declared_blob):
+                raise ProductionAdapterError(f"CODE_PIN_GIT_BLOB_INVALID:{section_name}")
+            actual_blob = _git_blob_sha1_file(resolved)
+            if actual_blob != declared_blob:
+                raise ProductionAdapterError(f"CODE_PIN_GIT_BLOB_MISMATCH:{section_name}")
+            entry.update({"git_blob_sha1": actual_blob, "git_blob_verified": True})
+        if section_name in {"contract", "target_construction"}:
+            declared_sha = str(section.get("sha256") or "").lower()
+            actual_sha = sha256_file(resolved)
+            if actual_sha != declared_sha:
+                raise ProductionAdapterError(f"CODE_PIN_SHA256_MISMATCH:{section_name}")
+            entry.update({"sha256": actual_sha, "sha256_verified": True})
+        section_summary[section_name] = entry
+
+    target_identity = payload.get("target_identity")
+    target_spec_path = None
+    if not isinstance(target_identity, Mapping) or target_identity.get("status") != "RESOLVED":
+        raise ProductionAdapterError("CODE_PIN_TARGET_IDENTITY_UNRESOLVED")
+    target_spec_path = _resolve_reference(
+        target_identity.get("target_spec_path"), base_dir=path.parent, label="TARGET_SPEC"
+    )
+    target_spec_sha = str(target_identity.get("target_spec_sha256") or "").lower()
+    if not target_spec_path.is_file() or sha256_file(target_spec_path) != target_spec_sha:
+        raise ProductionAdapterError("CODE_PIN_TARGET_SPEC_SHA256_MISMATCH")
+    section_summary["target_identity"] = {
+        "canonical_target_id": target_identity.get("canonical_target_id"),
+        "target_spec_path": str(target_spec_path),
+        "target_spec_sha256": target_spec_sha,
+        "target_spec_verified": True,
+    }
     return {
         "name": "code_pins",
         "status": "READY",
-        "reason": "FROZEN_CODE_PIN_MANIFEST_METADATA_PRESENT",
+        "reason": "FROZEN_CODE_PIN_MANIFEST_AND_BLOBS_VERIFIED_OUTCOME_BLIND",
         "source_path": str(path),
         "source_sha256": source_sha,
         "schema_version": payload.get("schema_version"),
         "pin_status": payload.get("status"),
         "section_summary": section_summary,
-        "verification_scope": "METADATA_ONLY_FINAL_GATE_REVALIDATES_GIT_BLOBS",
+        "verification_scope": "METADATA_ONLY_FINAL_GATE_REVALIDATES_TOCTOU_AND_ACCESS",
+        "explicit_human_authorization_required": True,
         "protected_outcome_accessed": False,
     }
+
+
+def adapt_code_pins(repo_root: str | Path) -> dict[str, Any]:
+    """Verify frozen code pins and access policy without opening outcomes."""
+
+    repo = _resolve_reference(repo_root, label="REPO_ROOT")
+    path = repo / "config" / "v4_x1_prospective_evaluation_code_pin_v1.json"
+    if not path.is_file():
+        return _component_missing("code_pins", "CODE_PIN_MANIFEST_MISSING")
+    try:
+        payload, source_sha = _read_json(path, label="CODE_PIN_MANIFEST")
+        return _adapt_code_pins_verified(path, payload, source_sha)
+    except (OSError, ProductionAdapterError, PreAccessReadinessError) as exc:
+        return _component_invalid(
+            "code_pins",
+            str(exc),
+            source_path=str(path),
+            verification_scope="METADATA_ONLY_FINAL_GATE_REVALIDATES_TOCTOU_AND_ACCESS",
+        )
 
 
 def build_production_readiness(
@@ -459,15 +833,19 @@ def build_production_readiness(
     inventory, inventory_source = discover_score_inventory(
         monitoring / "model_runs", official_sessions=official_sessions, data_root=root
     )
-    inventory_sha = ""
+    rolling_inventory_sha = ""
+    gate_inventory_sha = ""
     if not inventory.empty:
-        # The pure core is the authority for the canonical inventory identity.
-        from idx_trade.prospective_preaccess_readiness_v1 import validate_partial_session_inventory
-
-        inventory_sha = validate_partial_session_inventory(inventory)["partial_inventory_sha256"]
+        # The pure core remains authoritative for the rolling/path-aware hash;
+        # the final gate identity deliberately excludes filesystem paths.
+        partial = validate_partial_session_inventory(inventory)
+        rolling_inventory_sha = partial["partial_inventory_sha256"]
+        gate_inventory_sha = gate_shape_inventory_sha256(inventory)
     counter = adapt_runtime_counter(
         monitoring / "eod_automation" / "v4_x1_pipeline" / "latest.json",
-        inventory_sha256=inventory_sha or None,
+        inventory_sha256=rolling_inventory_sha or None,
+        discovered_inventory=inventory,
+        gate_shape_inventory_sha256=gate_inventory_sha or None,
     )
     target = discover_sealed_target_producer(repo_root=repo, data_root=root)
     paper = discover_named_component(
@@ -514,6 +892,25 @@ def build_production_readiness(
         prior_access_audit=prior_access,
         code_pins=code_pins,
     )
+    readiness["inventory"]["rolling_partial_inventory_sha256"] = readiness["inventory"].get(
+        "partial_inventory_sha256"
+    )
+    readiness["inventory"]["gate_shape_inventory_sha256"] = gate_inventory_sha or None
+    score_gate_admission = inventory_source.get(
+        "score_gate_admission",
+        {"status": "NOT_AVAILABLE", "reason": "SCORE_GATE_ADMISSION_NOT_COMPUTED"},
+    )
+    readiness["score_gate_admission"] = score_gate_admission
+    readiness["components"]["score_gate_admission"] = {
+        "name": "score_gate_admission",
+        **score_gate_admission,
+    }
+    if score_gate_admission.get("status") == "PROVENANCE_INVALID":
+        readiness["overall_status"] = "PREACCESS_PROVENANCE_INVALID"
+        readiness["existing_gate_preflight_eligible"] = False
+    elif score_gate_admission.get("status") != "READY":
+        readiness["overall_status"] = "PREACCESS_REQUIREMENTS_INCOMPLETE"
+        readiness["existing_gate_preflight_eligible"] = False
     return {
         "schema_version": ADAPTER_SCHEMA_VERSION,
         "audit_mode": "OUTCOME_BLIND_LOCAL_PRODUCTION_SHAPE_AUDIT",
@@ -523,6 +920,10 @@ def build_production_readiness(
         "sources": {
             "schedule": schedule,
             "inventory": inventory_source,
+            "inventory_identities": {
+                "rolling_partial_inventory_sha256": rolling_inventory_sha or None,
+                "gate_shape_inventory_sha256": gate_inventory_sha or None,
+            },
             "counter": counter,
             "target_discovery": target,
             "paper_discovery": paper,
