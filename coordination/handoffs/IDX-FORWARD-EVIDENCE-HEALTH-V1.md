@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `samindriano/idx-trade`  
 source_commit: `839fa77b1e1c4bc6351679ef99d3e4bdd87689ab`  
 branch: `fix/idx-forward-evidence-health-v1`  
-head_commit: pending final docs commit  
+head_commit: `1ffeadb01159ce1cf8f6882757c01f133907b37b`  
 
 scope: metadata/hash-only forward session evidence health and safe operational summary  
 files_changed: `src/idx_trade/forward_evidence_health_v1.py`, `scripts/report_forward_evidence_health_v1.py`, `tests/test_forward_evidence_health_v1.py`, plus the checkpoint  
