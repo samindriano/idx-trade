@@ -61,10 +61,10 @@ Result: `PENDING_EXPECTED`.
 - protected outcomes: not read
 
 External report path:
-`C:\Users\Sam\AppData\Local\Temp\idx-forward-health-20260824-v2-0c0da064ade4404a919198c466543088.json`
+`C:\Users\Sam\AppData\Local\Temp\idx-forward-health-20260824-final-936b6e5ca19748c187c35205f0a02566.json`
 
 Report SHA-256:
-`ffafb51396ec896dde9ff0b498cf73f67e9fd420608d98f4865d31d4ea89fd57`
+`922163578e424c509981d39ce99e963b992e29be2a52ba4660884ee54f1a2560`
 
 The result is intentionally not a prospective evaluation result and does not
 change any model or counter.
@@ -72,6 +72,8 @@ change any model or counter.
 ## Validation
 
 - focused health tests: 8 passed
+- explicit outcome-access/guard hardening tests: 2 added; focused health tests: 10 passed
+- full pytest: passed (760 tests, 3 pre-existing pandas FutureWarnings)
 - py_compile: pass
 - `git diff --check`: pass
 - no provider call, model run, protected loader, outcome marker, or outcome

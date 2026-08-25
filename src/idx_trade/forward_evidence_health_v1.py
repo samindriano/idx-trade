@@ -194,12 +194,22 @@ def check_artifact(spec: ArtifactSpec, *, session_date: str) -> dict[str, object
                     return base
             if spec.require_outcome_clean:
                 outcome_blind = metadata.get("outcome_blind")
-                if outcome_blind is not True:
-                    guards = metadata.get("guards")
-                    if not isinstance(guards, Mapping) or any(
-                        guards.get(key) is not False for key in _PROTECTED_FLAG_KEYS
-                        if key in guards
+                if outcome_blind is True:
+                    if (
+                        "forward_outcomes_accessed" not in metadata
+                        or metadata.get("forward_outcomes_accessed") is not False
                     ):
+                        base["status"] = "PROVENANCE_INVALID"
+                        base["reason"] = "OUTCOME_ACCESS_FLAG_MISSING_OR_TRUE"
+                        return base
+                else:
+                    guards = metadata.get("guards")
+                    if not isinstance(guards, Mapping):
+                        base["status"] = "PROVENANCE_INVALID"
+                        base["reason"] = "OUTCOME_BLIND_ATTESTATION_MISSING"
+                        return base
+                    guard_keys = tuple(key for key in _PROTECTED_FLAG_KEYS if key in guards)
+                    if not guard_keys or any(guards.get(key) is not False for key in guard_keys):
                         base["status"] = "PROVENANCE_INVALID"
                         base["reason"] = "OUTCOME_BLIND_ATTESTATION_MISSING"
                         return base
@@ -349,6 +359,8 @@ def discover_session_artifacts(
                 ("authority", "IDX"),
                 ("upstream_path", "TradingSummary/GetStockSummary"),
                 ("field_semantics", "IDX_OFFICIAL_OPENPRICE"),
+                ("transport_policy", "DIRECT_IDX_THEN_ZAPI_RAW_V1"),
+                ("fallback_policy", "NONE"),
             ),
         ),
         ArtifactSpec("decision_v2_result", e2e / "state" / "decisions" / f"{session}.json"),

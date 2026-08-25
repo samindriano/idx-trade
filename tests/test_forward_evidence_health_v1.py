@@ -33,11 +33,11 @@ def _core(tmp_path: Path) -> list[ArtifactSpec]:
     open_manifest = tmp_path / "open" / "manifest.json"
     _write_json(eod, {"status": "DATA_READY", "session_date": SESSION, "outcome_blind": True, "forward_outcomes_accessed": False})
     _write_json(score, {"status": "DONE", "session_date": SESSION, "guards": {"protected_outcome_accessed": False, "realized_forward_outcome_loaded": False}})
-    _write_json(open_manifest, {"session_date": SESSION, "authority": "IDX", "upstream_path": "TradingSummary/GetStockSummary", "field_semantics": "IDX_OFFICIAL_OPENPRICE"})
+    _write_json(open_manifest, {"session_date": SESSION, "authority": "IDX", "upstream_path": "TradingSummary/GetStockSummary", "field_semantics": "IDX_OFFICIAL_OPENPRICE", "transport_policy": "DIRECT_IDX_THEN_ZAPI_RAW_V1", "fallback_policy": "NONE"})
     return [
         ArtifactSpec("eod", eod, expected_status="DATA_READY", require_outcome_clean=True),
         ArtifactSpec("score", score, expected_status="DONE", require_outcome_clean=True),
-        ArtifactSpec("open", open_manifest, expected_fields=(("authority", "IDX"), ("upstream_path", "TradingSummary/GetStockSummary"), ("field_semantics", "IDX_OFFICIAL_OPENPRICE"))),
+        ArtifactSpec("open", open_manifest, expected_fields=(("authority", "IDX"), ("upstream_path", "TradingSummary/GetStockSummary"), ("field_semantics", "IDX_OFFICIAL_OPENPRICE"), ("transport_policy", "DIRECT_IDX_THEN_ZAPI_RAW_V1"), ("fallback_policy", "NONE"))),
     ]
 
 
@@ -75,6 +75,35 @@ def test_session_identity_and_outcome_guard_fail_closed(tmp_path: Path):
     result = check_artifact(ArtifactSpec("score", path, expected_status="DONE", require_outcome_clean=True), session_date=SESSION)
     assert result["status"] == "PROVENANCE_INVALID"
     assert result["reason"] in {"SESSION_IDENTITY_MISMATCH", "FORWARD_HEALTH_OUTCOME_GUARD_NOT_CLEAN"}
+
+
+def test_explicit_access_flag_is_required(tmp_path: Path):
+    path = tmp_path / "eod" / "manifest.json"
+    _write_json(path, {"status": "DATA_READY", "session_date": SESSION, "outcome_blind": True})
+    result = check_artifact(
+        ArtifactSpec("eod", path, expected_status="DATA_READY", require_outcome_clean=True),
+        session_date=SESSION,
+    )
+    assert result["status"] == "PROVENANCE_INVALID"
+    assert result["reason"] == "OUTCOME_ACCESS_FLAG_MISSING_OR_TRUE"
+
+
+def test_relevant_guard_key_is_required(tmp_path: Path):
+    path = tmp_path / "score" / "manifest.json"
+    _write_json(
+        path,
+        {
+            "status": "DONE",
+            "session_date": SESSION,
+            "guards": {"unrelated_guard": False},
+        },
+    )
+    result = check_artifact(
+        ArtifactSpec("score", path, expected_status="DONE", require_outcome_clean=True),
+        session_date=SESSION,
+    )
+    assert result["status"] == "PROVENANCE_INVALID"
+    assert result["reason"] == "OUTCOME_BLIND_ATTESTATION_MISSING"
 
 
 def test_protected_path_is_refused_before_read(tmp_path: Path):
