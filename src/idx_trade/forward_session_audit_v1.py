@@ -573,7 +573,12 @@ def _validate_execution_contract(
     return notes
 
 
-def _validate_runtime_snapshot(payload: Mapping[str, Any]) -> Iterable[str]:
+def _validate_runtime_snapshot(
+    payload: Mapping[str, Any],
+    *,
+    snapshot_path: Path | None = None,
+    expected_session_date: str | None = None,
+) -> Iterable[str]:
     if payload.get("schema_version") != "idx_trade_forward_dividend_runtime_state_v1_1":
         yield "RUNTIME_SNAPSHOT_SCHEMA_MISMATCH"
     if not isinstance(payload.get("state"), Mapping):
@@ -583,6 +588,75 @@ def _validate_runtime_snapshot(payload: Mapping[str, Any]) -> Iterable[str]:
     failure = _verify_named_payload_hash(payload, "snapshot_payload_sha256", "RUNTIME_SNAPSHOT")
     if failure:
         yield failure
+    if expected_session_date is not None:
+        try:
+            _metadata_identity_for_fields(payload, expected_session_date, ("session_date",))
+        except SessionAuditError as exc:
+            yield f"RUNTIME_SNAPSHOT_SESSION_INVALID:{exc}"
+
+    previous = payload.get("previous_snapshot")
+    if previous is None:
+        return
+    if not isinstance(previous, Mapping):
+        yield "RUNTIME_SNAPSHOT_PARENT_INVALID"
+        return
+    raw_parent_path = previous.get("path")
+    parent_sha = previous.get("sha256")
+    parent_session = previous.get("session_date")
+    if not isinstance(raw_parent_path, str) or not isinstance(parent_sha, str) or not isinstance(parent_session, str):
+        yield "RUNTIME_SNAPSHOT_PARENT_REFERENCE_INVALID"
+        return
+    try:
+        parent_path = _safe_path(raw_parent_path)
+    except SessionAuditError as exc:
+        yield f"RUNTIME_SNAPSHOT_PARENT_{exc}"
+        return
+    if snapshot_path is not None and parent_path == snapshot_path.resolve():
+        yield "RUNTIME_SNAPSHOT_PARENT_SELF_REFERENCE"
+    if not parent_path.is_file():
+        yield "RUNTIME_SNAPSHOT_PARENT_MISSING"
+        return
+    if sha256_file(parent_path) != parent_sha.lower():
+        yield "RUNTIME_SNAPSHOT_PARENT_SHA256_MISMATCH"
+        return
+    try:
+        parent = _json_object(parent_path)
+    except SessionAuditError as exc:
+        yield f"RUNTIME_SNAPSHOT_PARENT_INVALID:{exc}"
+        return
+    if parent.payload.get("schema_version") != "idx_trade_forward_dividend_runtime_state_v1_1":
+        yield "RUNTIME_SNAPSHOT_PARENT_SCHEMA_MISMATCH"
+    parent_hash_failure = _verify_named_payload_hash(
+        parent.payload, "snapshot_payload_sha256", "RUNTIME_SNAPSHOT_PARENT"
+    )
+    if parent_hash_failure:
+        yield parent_hash_failure
+    try:
+        parent_date = _session(parent.payload.get("session_date"))
+    except SessionAuditError:
+        yield "RUNTIME_SNAPSHOT_PARENT_SESSION_INVALID"
+    else:
+        if parent_date != parent_session:
+            yield "RUNTIME_SNAPSHOT_PARENT_DATE_MISMATCH"
+        if expected_session_date is not None and parent_date >= expected_session_date:
+            yield "RUNTIME_SNAPSHOT_PARENT_DATE_NOT_PRIOR"
+    nested = parent.payload.get("previous_snapshot")
+    if nested is not None and not isinstance(nested, Mapping):
+        yield "RUNTIME_SNAPSHOT_PARENT_NESTED_REFERENCE_INVALID"
+    elif isinstance(nested, Mapping):
+        nested_raw_path = nested.get("path")
+        if not isinstance(nested_raw_path, str):
+            yield "RUNTIME_SNAPSHOT_PARENT_NESTED_REFERENCE_INVALID"
+        else:
+            try:
+                nested_path = _safe_path(nested_raw_path)
+            except SessionAuditError:
+                nested_path = None
+            cycle_targets = {parent_path}
+            if snapshot_path is not None:
+                cycle_targets.add(snapshot_path.resolve())
+            if nested_path is not None and nested_path in cycle_targets:
+                yield "RUNTIME_SNAPSHOT_PARENT_CYCLE"
 
 
 def _validate_schedule_binding(
@@ -688,6 +762,42 @@ def _validate_missed_execution_contract(
         yield "MISSED_EXECUTION_RETROACTIVE_OR_OPEN_FLAG_INVALID"
     if payload.get("fills") != 0 or payload.get("gross_turnover_idr") != 0.0 or payload.get("costs_idr") != 0.0:
         yield "MISSED_EXECUTION_NONZERO_EXECUTION_VALUES"
+    runtime_path = payload.get("runtime_snapshot_path")
+    runtime_sha = payload.get("runtime_snapshot_sha256")
+    if not isinstance(runtime_path, str) or not isinstance(runtime_sha, str):
+        yield "MISSED_EXECUTION_RUNTIME_SNAPSHOT_REFERENCE_MISSING"
+    else:
+        yield from _verify_file_reference(
+            Path(str(payload.get("prepared_path") or ".")).parent,
+            {"path": runtime_path, "sha256": runtime_sha},
+            "MISSED_EXECUTION_RUNTIME_SNAPSHOT",
+        )
+
+
+def _cross_bind_terminal_runtime_snapshot(
+    stage: dict[str, Any],
+    metadata: SafeMetadata | None,
+    *,
+    paperstate_path: Path | None,
+    paperstate_metadata: SafeMetadata | None,
+) -> None:
+    """Require terminal execution/missed evidence to name audited PaperState bytes."""
+
+    if metadata is None:
+        return
+    payload = metadata.payload
+    runtime_path = payload.get("runtime_snapshot_path")
+    runtime_sha = payload.get("runtime_snapshot_sha256")
+    if not isinstance(runtime_path, str) or not isinstance(runtime_sha, str):
+        _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_REFERENCE_MISSING")
+        return
+    if paperstate_path is None or paperstate_metadata is None:
+        _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_PAPERSTATE_UNAVAILABLE")
+        return
+    if Path(runtime_path).expanduser().resolve() != paperstate_path.resolve():
+        _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_PATH_MISMATCH")
+    if runtime_sha.lower() != paperstate_metadata.sha256.lower():
+        _set_stricter(stage, PROVENANCE_INVALID, "TERMINAL_RUNTIME_SNAPSHOT_SHA256_MISMATCH")
 
 
 def _find_prepared_parent(
@@ -989,6 +1099,31 @@ def _map_health_status(value: str) -> str:
     }.get(value, PENDING_EXPECTED)
 
 
+def _is_clean_missed_execution_transition(stages: Sequence[Mapping[str, Any]]) -> bool:
+    """Return true only for a complete, canonical missed-execution chain."""
+
+    by_name = {str(item.get("stage")): item for item in stages}
+    execution = by_name.get("paper_execution")
+    open_stage = by_name.get("official_open_evidence")
+    if not execution or not open_stage:
+        return False
+    if execution.get("status") != LEGITIMATE_NOOP:
+        return False
+    if execution.get("observed", {}).get("continuity_transition") != "MISSED_EXECUTION_NO_CERTIFIED_OPEN":
+        return False
+    # The expected absence of Open is the only pending condition subsumed by
+    # this transition. Every other required stage must be independently valid.
+    if open_stage.get("status") != PENDING_EXPECTED:
+        return False
+    for item in stages:
+        name = str(item.get("stage"))
+        if name in {"official_open_evidence", "paper_execution"}:
+            continue
+        if item.get("status") not in {PASS, LEGITIMATE_NOOP, NOT_APPLICABLE}:
+            return False
+    return True
+
+
 def _aggregate(calendar_status: str, stages: Sequence[Mapping[str, Any]]) -> tuple[str, list[str]]:
     if calendar_status == LEGITIMATE_NOOP:
         return "NON_TRADING_SESSION", []
@@ -1002,11 +1137,7 @@ def _aggregate(calendar_status: str, stages: Sequence[Mapping[str, Any]]) -> tup
         return "SESSION_IMPLEMENTATION_DEFECT", blockers
     if PROVENANCE_INVALID in statuses:
         return "SESSION_PROVENANCE_INVALID", blockers
-    if any(
-        item.get("observed", {}).get("continuity_transition") == "MISSED_EXECUTION_NO_CERTIFIED_OPEN"
-        for item in stages
-        if isinstance(item.get("observed"), Mapping)
-    ):
+    if _is_clean_missed_execution_transition(stages):
         return "SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN", blockers
     if FAIL_CLOSED_EXTERNAL in statuses:
         return "SESSION_FAIL_CLOSED_EXTERNAL", blockers
@@ -1237,6 +1368,7 @@ def audit_session(
     execution_path = _known_path(e2e_root, "executions", f"{session}.json")
     missed_path = _known_path(e2e_root, "missed_executions", f"{session}.json")
     existing_execution = execution_path is not None and execution_path.is_file()
+    existing_missed_execution = missed_path is not None and missed_path.is_file()
     execution_stage, execution_meta = _artifact_stage(
         stage="paper_execution",
         expected="EXECUTION_BOUND_TO_PREPARED_PARENT_OR_PENDING",
@@ -1264,7 +1396,24 @@ def audit_session(
             )])
         ),
     )
-    if not existing_execution and execution_stage["status"] == LEGITIMATE_NOOP:
+    if existing_execution and existing_missed_execution:
+        _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_AND_MISSED_EXECUTION_BOTH_EXIST")
+    if (
+        not existing_execution
+        and existing_missed_execution
+        and open_stage["status"] == PASS
+    ):
+        _set_stricter(
+            execution_stage,
+            PROVENANCE_INVALID,
+            "MISSED_EXECUTION_WITH_CERTIFIED_OPEN_MANIFEST",
+        )
+    if (
+        not existing_execution
+        and existing_missed_execution
+        and execution_stage["status"] == LEGITIMATE_NOOP
+        and open_stage["status"] != PASS
+    ):
         execution_stage["observed"]["continuity_transition"] = "MISSED_EXECUTION_NO_CERTIFIED_OPEN"
         execution_stage.setdefault("causal_notes", []).append("MISSED_EXECUTION_CONTINUITY")
     stage_by_name["paper_execution"] = execution_stage
@@ -1298,7 +1447,7 @@ def audit_session(
     stage_by_name["ca_dividend"] = ca_stage
 
     paperstate_path = _known_path(e2e_root, "forward_execution_v1_1", "state_snapshots", f"{session}.json")
-    paperstate_stage, _ = _artifact_stage(
+    paperstate_stage, paperstate_meta = _artifact_stage(
         stage="paperstate_continuity",
         expected="PAPERSTATE_CONTINUITY_METADATA_FOR_EXECUTION_SESSION",
         session_date=session,
@@ -1308,10 +1457,21 @@ def audit_session(
         status_required=False,
         extra_validator=lambda payload: [
             *_validate_state_lineage(payload),
-            *_validate_runtime_snapshot(payload),
+            *_validate_runtime_snapshot(
+                payload,
+                snapshot_path=paperstate_path,
+                expected_session_date=session,
+            ),
         ],
     )
     stage_by_name["paperstate_continuity"] = paperstate_stage
+
+    _cross_bind_terminal_runtime_snapshot(
+        execution_stage,
+        execution_meta,
+        paperstate_path=paperstate_path,
+        paperstate_metadata=paperstate_meta,
+    )
 
     if decision_noop:
         stage_by_name["forward_evidence_health"] = _stage(

@@ -127,6 +127,21 @@ zero fills/turnover/costs, and `no_retroactive_execution=true` is legitimate
 continuity evidence but is not a successful executed cycle. An explicit empty
 canonical execution plan may be a legitimate no-op; a zero intent count in
 unrelated metadata never is, and pending orders prevent no-op resolution.
+If both `executions/<T>.json` and `missed_executions/<T>.json` exist, the
+ledger reports `IMPLEMENTATION_DEFECT` rather than choosing one. A missed
+execution is also rejected as provenance-invalid when a certified
+`official_open/<T>/manifest.json` exists. The special missed overall status is
+emitted only by an explicit clean predicate: the missed artifact is valid, the
+Official Open absence is the sole expected pending condition, and every other
+required stage is independently valid. Stockbit, scheduler, EOD/score,
+schedule-binding, PaperState, and other unrelated failures therefore retain
+their own severity.
+
+The canonical PaperState snapshot verifies its own payload hash and, when
+present, the immediate previous snapshot path, bytes/SHA, session ordering,
+self/cycle identity, and parent payload hash. Successful and missed terminal
+artifacts must name the exact canonical PaperState path and SHA audited for
+`T`; a cross-stage mismatch is provenance-invalid.
 
 ## Metadata-only boundary
 
@@ -168,14 +183,14 @@ python scripts/audit_forward_session_v1.py `
   --session-date 2026-08-27 `
   --forward-monitoring-root "D:\external\forward_monitoring" `
   --e2e-runtime-root "D:\external\e2e_runtime" `
-  --calendar-metadata "D:\external\calendar\2026-08-26.json" `
-  --runtime-identity "D:\external\runtime\2026-08-26.json" `
-  --stockbit-capture "D:\external\stockbit\2026-08-26.json" `
+  --calendar-metadata "D:\external\calendar\2026-08-27.json" `
+  --runtime-identity "D:\external\runtime\2026-08-27.json" `
+  --stockbit-capture "D:\external\stockbit\2026-08-27.json" `
   --ca-dividend "D:\external\ca\2026-08-27.json" `
   --scheduler-metadata "D:\external\scheduler\2026-08-27.json" `
   --prepared-metadata "D:\external\e2e_runtime\prepared\2026-08-26.json" `
   --schedule-binding-metadata "D:\external\e2e_runtime\prepared_schedule\2026-08-26.json" `
-  --output "D:\external\audit\2026-08-26.json"
+  --output "D:\external\audit\execution-session-2026-08-27.json"
 ```
 
 The command is manual and read-only. It must not be added to a scheduled task

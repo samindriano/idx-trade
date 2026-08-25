@@ -335,28 +335,57 @@ def _fixture(
         "scheduler": scheduler,
         "prepared": prepared_path,
         "execution": execution_path,
+        "missed": e2e / "missed_executions" / f"{EXECUTION}.json",
         "binding": binding_path,
         "schedule_attestation": schedule_attestation,
     }
 
 
 def _audit(paths: dict[str, Path], **kwargs: object) -> dict[str, object]:
-    return audit_session(
-        EXECUTION,
-        forward_monitoring_root=paths["forward"],
-        e2e_runtime_root=paths["e2e"],
-        calendar_metadata=paths["calendar"],
-        runtime_identity=paths["runtime"],
-        stockbit_capture=paths["stockbit"],
-        ca_dividend=paths["ca"],
-        scheduler_metadata=paths["scheduler"],
-        reported_at_utc="2026-08-27T20:00:00+07:00",
-        **kwargs,
-    )
+    arguments: dict[str, object] = {
+        "forward_monitoring_root": paths["forward"],
+        "e2e_runtime_root": paths["e2e"],
+        "calendar_metadata": paths["calendar"],
+        "runtime_identity": paths["runtime"],
+        "stockbit_capture": paths["stockbit"],
+        "ca_dividend": paths["ca"],
+        "scheduler_metadata": paths["scheduler"],
+        "reported_at_utc": "2026-08-27T20:00:00+07:00",
+    }
+    arguments.update(kwargs)
+    return audit_session(EXECUTION, **arguments)
 
 
 def _by_name(report: dict[str, object]) -> dict[str, dict[str, object]]:
     return {str(stage["stage"]): stage for stage in report["stages"]}  # type: ignore[index]
+
+
+def _write_missed_execution(paths: dict[str, Path]) -> None:
+    snapshot = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
+    snapshot_sha = hashlib.sha256(snapshot.read_bytes()).hexdigest()
+    binding_sha = hashlib.sha256(paths["binding"].read_bytes()).hexdigest()
+    missed = {
+        "schema_version": "idx_trade_e2e_paper_missed_execution_v1",
+        "status": "MISSED_EXECUTION_NO_CERTIFIED_OPEN",
+        "decision_session_date": DECISION,
+        "execution_session_date": EXECUTION,
+        "reason": "NO_CERTIFIED_OFFICIAL_OPEN",
+        "prepared_path": str(paths["prepared"].resolve()),
+        "prepared_sha256": hashlib.sha256(paths["prepared"].read_bytes()).hexdigest(),
+        "schedule_binding_path": str(paths["binding"].resolve()),
+        "schedule_binding_sha256": binding_sha,
+        "prior_runtime_snapshot_path": str(snapshot.resolve()),
+        "prior_runtime_snapshot_sha256": snapshot_sha,
+        "runtime_snapshot_path": str(snapshot.resolve()),
+        "runtime_snapshot_sha256": snapshot_sha,
+        "open_manifest_present": False,
+        "fills": 0,
+        "gross_turnover_idr": 0.0,
+        "costs_idr": 0.0,
+        "no_retroactive_execution": True,
+        "outcome_access": False,
+    }
+    _write(paths["missed"], _set_payload_hash(missed))
 
 
 def test_complete_t_to_t_plus_one_chain_is_healthy(tmp_path: Path):
@@ -708,36 +737,187 @@ def test_pending_order_prevents_false_noop_resolution(tmp_path: Path):
 
 def test_missed_execution_is_legitimate_continuity_not_success(tmp_path: Path):
     paths = _fixture(tmp_path, include_open=False, include_execution=False)
-    snapshot = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
-    snapshot_sha = hashlib.sha256(snapshot.read_bytes()).hexdigest()
-    binding_sha = hashlib.sha256(paths["binding"].read_bytes()).hexdigest()
-    missed = {
-        "schema_version": "idx_trade_e2e_paper_missed_execution_v1",
-        "status": "MISSED_EXECUTION_NO_CERTIFIED_OPEN",
-        "decision_session_date": DECISION,
-        "execution_session_date": EXECUTION,
-        "reason": "NO_CERTIFIED_OFFICIAL_OPEN",
-        "prepared_path": str(paths["prepared"].resolve()),
-        "prepared_sha256": hashlib.sha256(paths["prepared"].read_bytes()).hexdigest(),
-        "schedule_binding_path": str(paths["binding"].resolve()),
-        "schedule_binding_sha256": binding_sha,
-        "prior_runtime_snapshot_path": str(snapshot.resolve()),
-        "prior_runtime_snapshot_sha256": snapshot_sha,
-        "runtime_snapshot_path": str(snapshot.resolve()),
-        "runtime_snapshot_sha256": snapshot_sha,
-        "open_manifest_present": False,
-        "fills": 0,
-        "gross_turnover_idr": 0.0,
-        "costs_idr": 0.0,
-        "no_retroactive_execution": True,
-        "outcome_access": False,
-    }
-    missed_path = paths["e2e"] / "missed_executions" / f"{EXECUTION}.json"
-    _write(missed_path, _set_payload_hash(missed))
+    _write_missed_execution(paths)
     report = _audit(paths)
     stages = _by_name(report)
     assert stages["paper_execution"]["status"] == LEGITIMATE_NOOP
     assert report["overall_status"] == "SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN"
+
+
+def test_missed_execution_with_certified_open_is_provenance_invalid(tmp_path: Path):
+    paths = _fixture(tmp_path, include_execution=False)
+    _write_missed_execution(paths)
+    report = _audit(paths)
+    stage = _by_name(report)["paper_execution"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "MISSED_EXECUTION_WITH_CERTIFIED_OPEN_MANIFEST" in stage["causal_notes"]
+    assert report["overall_status"] == "SESSION_PROVENANCE_INVALID"
+
+
+def test_missed_execution_and_execution_artifacts_are_implementation_defect(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    _write_missed_execution(paths)
+    report = _audit(paths)
+    stage = _by_name(report)["paper_execution"]
+    assert stage["status"] == IMPLEMENTATION_DEFECT
+    assert "EXECUTION_AND_MISSED_EXECUTION_BOTH_EXIST" in stage["causal_notes"]
+    assert report["overall_status"] == "SESSION_IMPLEMENTATION_DEFECT"
+
+
+def test_missed_open_does_not_mask_stockbit_failure(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    payload = json.loads(paths["stockbit"].read_text(encoding="utf-8"))
+    payload["status"] = "FAIL_CLOSED_EXTERNAL"
+    _write(paths["stockbit"], payload)
+    report = _audit(paths)
+    assert report["overall_status"] == "SESSION_FAIL_CLOSED_EXTERNAL"
+
+
+def test_missed_open_does_not_mask_schedule_binding_provenance_failure(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    payload = json.loads(paths["binding"].read_text(encoding="utf-8"))
+    payload["execution_session_date"] = "2026-08-28"
+    _write(paths["binding"], _set_payload_hash(payload))
+    report = _audit(paths)
+    assert report["overall_status"] == "SESSION_PROVENANCE_INVALID"
+
+
+def test_missed_open_with_unread_required_stage_remains_pending(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    report = _audit(paths, stockbit_capture=None)
+    assert report["overall_status"] == "SESSION_PENDING_EXPECTED"
+
+
+def _attach_valid_runtime_parent(paths: dict[str, Path]) -> Path:
+    parent_path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{DECISION}.json"
+    parent_payload: dict[str, object] = {
+        "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
+        "session_date": DECISION,
+        "previous_snapshot": None,
+    }
+    parent_payload["snapshot_payload_sha256"] = _canonical_hash(parent_payload)
+    parent_sha = _write(parent_path, parent_payload)
+    current_path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["previous_snapshot"] = {
+        "path": str(parent_path.resolve()),
+        "sha256": parent_sha,
+        "session_date": DECISION,
+    }
+    current_body = dict(current)
+    current_body.pop("snapshot_payload_sha256", None)
+    current["snapshot_payload_sha256"] = _canonical_hash(current_body)
+    _write(current_path, current)
+    return current_path
+
+
+@pytest.mark.parametrize("tamper", ["path", "sha256"])
+def test_runtime_snapshot_parent_path_and_sha_tamper_fail_closed(tmp_path: Path, tamper: str):
+    paths = _fixture(tmp_path)
+    current_path = _attach_valid_runtime_parent(paths)
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    if tamper == "path":
+        current["previous_snapshot"]["path"] = str((tmp_path / "missing-parent.json").resolve())
+    else:
+        current["previous_snapshot"]["sha256"] = "0" * 64
+    current_body = dict(current)
+    current_body.pop("snapshot_payload_sha256", None)
+    current["snapshot_payload_sha256"] = _canonical_hash(current_body)
+    _write(current_path, current)
+    stage = _by_name(_audit(paths))["paperstate_continuity"]
+    assert stage["status"] == PROVENANCE_INVALID
+
+
+def test_terminal_execution_runtime_snapshot_must_match_paperstate(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    alternate = paths["e2e"] / "alternate-runtime-snapshot.json"
+    alternate_sha = _write(alternate, {"alternate": True})
+    execution = json.loads(paths["execution"].read_text(encoding="utf-8"))
+    execution["runtime_snapshot_path"] = str(alternate.resolve())
+    execution["runtime_snapshot_sha256"] = alternate_sha
+    _write(paths["execution"], _set_payload_hash(execution))
+    report = _audit(paths)
+    stage = _by_name(report)["paper_execution"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "TERMINAL_RUNTIME_SNAPSHOT_PATH_MISMATCH" in stage["causal_notes"]
+
+
+def test_terminal_missed_runtime_snapshot_must_match_paperstate(tmp_path: Path):
+    paths = _fixture(tmp_path, include_open=False, include_execution=False)
+    _write_missed_execution(paths)
+    alternate = paths["e2e"] / "alternate-missed-runtime-snapshot.json"
+    alternate_sha = _write(alternate, {"alternate": True})
+    missed = json.loads(paths["missed"].read_text(encoding="utf-8"))
+    missed["runtime_snapshot_path"] = str(alternate.resolve())
+    missed["runtime_snapshot_sha256"] = alternate_sha
+    _write(paths["missed"], _set_payload_hash(missed))
+    report = _audit(paths)
+    stage = _by_name(report)["paper_execution"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "TERMINAL_RUNTIME_SNAPSHOT_PATH_MISMATCH" in stage["causal_notes"]
+
+
+def test_runtime_snapshot_rejects_self_parent_and_non_prior_parent(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    current_path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["previous_snapshot"] = {
+        "path": str(current_path.resolve()),
+        "sha256": hashlib.sha256(current_path.read_bytes()).hexdigest(),
+        "session_date": EXECUTION,
+    }
+    current_body = dict(current)
+    current_body.pop("snapshot_payload_sha256", None)
+    current["snapshot_payload_sha256"] = _canonical_hash(current_body)
+    _write(current_path, current)
+    stage = _by_name(_audit(paths))["paperstate_continuity"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "RUNTIME_SNAPSHOT_PARENT_SELF_REFERENCE" in stage["causal_notes"]
+
+    paths = _fixture(tmp_path / "non-prior")
+    parent = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / "same-session-parent.json"
+    parent_payload: dict[str, object] = {
+        "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
+        "session_date": EXECUTION,
+        "previous_snapshot": None,
+    }
+    parent_payload["snapshot_payload_sha256"] = _canonical_hash(parent_payload)
+    parent_sha = _write(parent, parent_payload)
+    current_path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["previous_snapshot"] = {"path": str(parent.resolve()), "sha256": parent_sha, "session_date": EXECUTION}
+    current_body = dict(current)
+    current_body.pop("snapshot_payload_sha256", None)
+    current["snapshot_payload_sha256"] = _canonical_hash(current_body)
+    _write(current_path, current)
+    stage = _by_name(_audit(paths))["paperstate_continuity"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "RUNTIME_SNAPSHOT_PARENT_DATE_NOT_PRIOR" in stage["causal_notes"]
+
+
+def test_runtime_snapshot_rejects_immediate_parent_cycle(tmp_path: Path):
+    paths = _fixture(tmp_path)
+    current_path = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / f"{EXECUTION}.json"
+    parent = paths["e2e"] / "forward_execution_v1_1" / "state_snapshots" / "cycle-parent.json"
+    parent_payload: dict[str, object] = {
+        "schema_version": "idx_trade_forward_dividend_runtime_state_v1_1",
+        "session_date": DECISION,
+        "previous_snapshot": {"path": str(current_path.resolve()), "sha256": "not-used", "session_date": EXECUTION},
+    }
+    parent_payload["snapshot_payload_sha256"] = _canonical_hash(parent_payload)
+    parent_sha = _write(parent, parent_payload)
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["previous_snapshot"] = {"path": str(parent.resolve()), "sha256": parent_sha, "session_date": DECISION}
+    current_body = dict(current)
+    current_body.pop("snapshot_payload_sha256", None)
+    current["snapshot_payload_sha256"] = _canonical_hash(current_body)
+    _write(current_path, current)
+    stage = _by_name(_audit(paths))["paperstate_continuity"]
+    assert stage["status"] == PROVENANCE_INVALID
+    assert "RUNTIME_SNAPSHOT_PARENT_CYCLE" in stage["causal_notes"]
 
 
 def test_successful_execution_requires_exact_open_and_prepared_parents(tmp_path: Path):

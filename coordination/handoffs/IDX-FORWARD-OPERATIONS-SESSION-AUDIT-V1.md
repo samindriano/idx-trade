@@ -6,9 +6,9 @@ task_id: IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1-CANONICAL-COMPATIBILITY
 model_used: GPT-5
 reasoning_level: high
 source_repository: samindriano/idx-trade
-source_commit: 402fca4b27e91cf8c82d21ff1394ba2d6da73656
+source_commit: 8625052a7c273a9d911722a4fb97e391525bbff6
 branch: ops/idx-forward-session-audit-v1
-head_commit: pending final commit
+head_commit: pending final hardening commit
 
 ## Scope
 
@@ -25,6 +25,7 @@ or scheduler wiring was performed.
 - `docs/FORWARD_SESSION_AUDIT_V1.md`
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_REMEDIATION.md`
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_CANONICAL_COMPATIBILITY.md`
+- `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_FINAL_HARDENING.md`
 - `coordination/handoffs/IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1.md`
 
 ## Contract decisions
@@ -60,6 +61,16 @@ or scheduler wiring was performed.
 - Canonical missed execution is a separate legitimate continuity state, not a
   successful execution; implementation defects take precedence over
   provenance-invalid status in aggregate output.
+- Simultaneous `executions/<T>.json` and `missed_executions/<T>.json` is an
+  `IMPLEMENTATION_DEFECT` with causal note
+  `EXECUTION_AND_MISSED_EXECUTION_BOTH_EXIST`.
+- A missed execution with a certified Official Open manifest is
+  `PROVENANCE_INVALID`; the clean missed overall status is emitted only by an
+  explicit predicate where the Open absence is the sole expected pending
+  condition and all other required stages pass.
+- Runtime snapshot parent bytes/SHA/schema/date ordering and detectable
+  self/cycle metadata are checked. Terminal execution and missed artifacts
+  cross-bind their runtime snapshot path/SHA to the audited PaperState stage.
 
 ## Evidence and limitations
 
@@ -71,9 +82,9 @@ schedule-attestation proof without date subtraction.
 
 ## Validation
 
-- Session Audit tests: `41 passed`.
-- Relevant E2E/Open/Evidence Health/scheduler tests: `150 passed`.
-- Full pytest: `801 passed, 0 failed, 3 existing pandas FutureWarnings`.
+- Session Audit tests: `52 passed`.
+- Relevant E2E/Open/schedule-binding/missed-continuity tests: `126 passed`.
+- Full pytest: `812 passed, 0 failed, 3 existing pandas FutureWarnings`.
 - py_compile/import smoke: PASS.
 - git diff --check: PASS.
 - Synthetic CLI valid t→t+1 smoke: `SESSION_HEALTHY`.
@@ -99,5 +110,7 @@ schedule-attestation proof without date subtraction.
 `HISTORICAL_E2E_REOPENED=FALSE`
 `MONTE_CARLO_REOPENED=FALSE`
 
-recommended_next_action: independent review; do not merge or schedule this
-manual auditor from this lane.
+recommended_next_action: open/update a clean PR against the accepted E2E
+integration lineage, obtain CI on the exact final HEAD, and wait for
+independent review; do not merge or schedule this manual auditor from this
+lane.
