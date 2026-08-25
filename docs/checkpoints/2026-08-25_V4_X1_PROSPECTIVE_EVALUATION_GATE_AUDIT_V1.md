@@ -1,8 +1,13 @@
 # V4-X1 Prospective Evaluation Gate V1 — Audit Remediation Checkpoint
 
+Historical status note: this checkpoint records the pre-resolution gate state.
+It is superseded by `2026-08-25_V4_X1_CANONICAL_TARGET_IDENTITY_RESOLUTION_V1.md`
+and must not be read as the current target-status record. Real protected access
+remains blocked.
+
 Date: 2026-08-25 (Asia/Jakarta)
 
-Status: `PROSPECTIVE_EVALUATION_GATE_V1_AUDITED_CANONICAL_TARGET_IDENTITY_BLOCKED`
+Status at time of record: `PROSPECTIVE_EVALUATION_GATE_V1_AUDITED_CANONICAL_TARGET_IDENTITY_BLOCKED`
 
 ## Scope
 
@@ -11,8 +16,8 @@ V4-X1 prospective-evaluation access boundary. It does not open protected
 outcomes, call the real protected loader, write the real access marker, alter
 the forward counter, or change the model/Decision/Sizing/Execution contracts.
 
-The branch remains an isolated draft-PR review lane. `coordination/TEAM_STATUS.md`
-was not edited because MAIN owns that file.
+At the time of this record the branch was an isolated draft-PR review lane.
+`coordination/TEAM_STATUS.md` was not edited because MAIN owns that file.
 
 ## Canonical identity finding
 
@@ -122,9 +127,8 @@ EXECUTION_CHANGED=false
 SCHEDULER_CHANGED=false
 ```
 
-## Next action
+## Historical next action (superseded)
 
-MAIN/ChatGPT review must first resolve and freeze one canonical target
-identity, including exact target definition, horizon, transform, source
-manifest, and hashes. Only then may a separately authorized real 100/100 run
-be considered. This branch does not authorize that run.
+The next action recorded at the time was for MAIN/ChatGPT to resolve and freeze
+one canonical target identity. That action was later completed in the superseding
+resolution checkpoint. This branch still does not authorize a real 100/100 run.
