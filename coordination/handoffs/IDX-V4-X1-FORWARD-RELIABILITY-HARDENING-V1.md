@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `samindriano/idx-trade`
 source_commit: `2be7160f20184e489f7a9f82a0d6aac890622c7e`
 branch: `research/idx-v4-x1-prospective-evaluation-protocol-v1`
-head_commit: `PENDING_THIS_DOC_COMMIT`
+head_commit: `2eba462c78888b1034f5e979306f1aaaf66b43f8`
 
 scope: sequential PR #83 target provenance resolution plus separate Stockbit,
 Official Open, and outcome-blind evidence-health reliability lanes
