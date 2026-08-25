@@ -33,4 +33,3 @@ def normalized_percentile_rank_definition() -> str:
     """Describe the retained average-tie normalized percentile transform."""
 
     return "(rank(method='average', ascending=True) - 1) / (n - 1); n=1 -> 0.5"
-
