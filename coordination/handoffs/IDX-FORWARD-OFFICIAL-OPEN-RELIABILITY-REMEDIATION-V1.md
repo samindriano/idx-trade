@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `samindriano/idx-trade`  
 source_commit: `32eaaa8e50d0521de7faef98faa8081219bc667b`  
 branch: `fix/idx-e2e-forward-reliability-v1`  
-head_commit: `PENDING_FINAL_COMMIT`
+head_commit: `e0e8a52d059594d3a974672944fe4a8fc7444cfc`
 
 scope: Official Open transport retry/fallback hardening and idempotent manifest replay verification  
 files_changed: `src/idx_trade/official_open_evidence_v1.py`, `src/idx_trade/official_open_capture_runtime_v2.py`, `scripts/run_official_open_capture.ps1`, `tests/test_official_open_evidence_v1.py`, `tests/test_e2e_dual_calendar_contract_v1.py`, `tests/test_official_open_scheduler_contract_v1.py`, plus the checkpoint
