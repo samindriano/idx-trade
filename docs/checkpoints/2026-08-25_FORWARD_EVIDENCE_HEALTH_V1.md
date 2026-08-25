@@ -1,8 +1,10 @@
 # Forward Evidence Health V1
 
-Date: 2026-08-25 Asia/Jakarta  
-Branch: `fix/idx-forward-evidence-health-v1`  
-Parent reliability head: `839fa77b1e1c4bc6351679ef99d3e4bdd87689ab`  
+Date: 2026-08-25 Asia/Jakarta
+Branch: `fix/idx-forward-evidence-health-v1`
+Parent reliability head: `839fa77b1e1c4bc6351679ef99d3e4bdd87689ab`
+Final branch head: `3bef0060ffaf7a480d9a627c24d492340442bd99`
+Integration base: `integration/idx-e2e-baseline-paper-v1@cb0f9f5680b608be16e4fd09999ae2da8991e4a4`
 
 ## Contract
 

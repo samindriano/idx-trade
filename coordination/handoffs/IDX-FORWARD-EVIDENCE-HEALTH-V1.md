@@ -1,17 +1,19 @@
 # Handoff
 
-from: Codex  
-to: MAIN / independent reviewer  
-task_id: IDX-FORWARD-EVIDENCE-HEALTH-V1  
-model_used: GPT-5 Codex  
-reasoning_level: high  
-source_repository: `samindriano/idx-trade`  
+from: Codex
+to: MAIN / independent reviewer
+task_id: IDX-FORWARD-EVIDENCE-HEALTH-V1
+model_used: GPT-5 Codex
+reasoning_level: high
+source_repository: `samindriano/idx-trade`
 source_commit: `839fa77b1e1c4bc6351679ef99d3e4bdd87689ab`
 branch: `fix/idx-forward-evidence-health-v1`
-head_commit: `708ae759110e2beb5606b1168cdf7468cabb4401`
+head_commit: `3bef0060ffaf7a480d9a627c24d492340442bd99`
+base_branch: `integration/idx-e2e-baseline-paper-v1`
+base_head_at_review: `cb0f9f5680b608be16e4fd09999ae2da8991e4a4`
 
-scope: metadata/hash-only forward session evidence health and safe operational summary  
-files_changed: `src/idx_trade/forward_evidence_health_v1.py`, `scripts/report_forward_evidence_health_v1.py`, `tests/test_forward_evidence_health_v1.py`, plus the checkpoint  
+scope: metadata/hash-only forward session evidence health and safe operational summary
+files_changed: `src/idx_trade/forward_evidence_health_v1.py`, `scripts/report_forward_evidence_health_v1.py`, `tests/test_forward_evidence_health_v1.py`, plus the checkpoint
 
 findings:
 - EOD and V4-X1 score metadata for 2026-08-24 are present and outcome-blind;
