@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: 8625052a7c273a9d911722a4fb97e391525bbff6
 branch: ops/idx-forward-session-audit-v1
-head_commit: pending final hardening commit
+head_commit: 594b86a43c9f9bc887b027341f41c7eec3f6ab45
 
 ## Scope
 
