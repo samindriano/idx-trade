@@ -37,6 +37,7 @@ DIRECT_WARMUP_URLS = (
 )
 DIRECT_API_REFERER = DIRECT_WARMUP_URLS[1]
 MAX_ZAPI_ATTEMPTS = 2
+MAX_DIRECT_ATTEMPTS = 2
 RETRYABLE_HTTP_STATUSES = frozenset({500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526})
 
 
@@ -462,10 +463,16 @@ def capture_direct_idx_official_open(
 def _direct_transport_failure(message: str) -> bool:
     return message.startswith("OFFICIAL_OPEN_DIRECT_IDX_HTTP_") or message.startswith(
         "OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR"
-    ) or message in {
-        "OFFICIAL_OPEN_DIRECT_IDX_EMPTY_RESPONSE",
-        "OFFICIAL_OPEN_DIRECT_IDX_BROWSER_TRANSPORT_UNAVAILABLE",
-    }
+    ) or message == "OFFICIAL_OPEN_DIRECT_IDX_BROWSER_TRANSPORT_UNAVAILABLE"
+
+
+def _direct_retryable_failure(message: str) -> bool:
+    if message.startswith("OFFICIAL_OPEN_DIRECT_IDX_REQUEST_ERROR:"):
+        return True
+    return any(
+        message == f"OFFICIAL_OPEN_DIRECT_IDX_HTTP_{status}"
+        for status in RETRYABLE_HTTP_STATUSES
+    )
 
 
 def _zapi_retryable_failure(message: str) -> bool:
@@ -490,29 +497,48 @@ def capture_official_open_with_transport_fallback(
 
     session = _session(session_date)
     folder = Path(output_root) / "official_open" / session
-    try:
-        raw, metadata = fetch_direct_idx_stock_summary(
-            session,
-            get=direct_get,
-            timeout_seconds=timeout_seconds,
-        )
-        return certify_official_open_raw_response(
-            raw,
-            session_date=session,
-            output_dir=folder,
-            transport=DIRECT_TRANSPORT,
-            transport_metadata=metadata,
-        )
-    except OfficialOpenEvidenceError as exc:
-        direct_error = str(exc)
-        if not _direct_transport_failure(direct_error):
-            raise
+    direct_attempts: list[dict[str, object]] = []
+    direct_error: str | None = None
+    for attempt in range(1, MAX_DIRECT_ATTEMPTS + 1):
+        try:
+            raw, metadata = fetch_direct_idx_stock_summary(
+                session,
+                get=direct_get,
+                timeout_seconds=timeout_seconds,
+            )
+            metadata = {
+                **metadata,
+                "attempt_count": attempt,
+                "failed_attempts": direct_attempts,
+            }
+            return certify_official_open_raw_response(
+                raw,
+                session_date=session,
+                output_dir=folder,
+                transport=DIRECT_TRANSPORT,
+                transport_metadata=metadata,
+            )
+        except OfficialOpenEvidenceError as exc:
+            direct_error = str(exc)
+            direct_attempts.append({"attempt": attempt, "error": direct_error})
+            if (
+                attempt < MAX_DIRECT_ATTEMPTS
+                and _direct_retryable_failure(direct_error)
+            ):
+                time.sleep(0.25 * attempt)
+                continue
+            if not _direct_transport_failure(direct_error):
+                raise
+            break
+
+    assert direct_error is not None  # loop either returns or records a failure
 
     if not zapi_api_key:
         raise OfficialOpenEvidenceError(
             f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI=NOT_CONFIGURED"
         )
     zapi_error: str | None = None
+    zapi_attempts: list[dict[str, object]] = []
     for attempt in range(1, MAX_ZAPI_ATTEMPTS + 1):
         try:
             raw, metadata = fetch_zapi_raw_idx_stock_summary(
@@ -521,10 +547,15 @@ def capture_official_open_with_transport_fallback(
                 get=zapi_get or requests.get,
                 timeout_seconds=timeout_seconds,
             )
-            metadata = {**metadata, "attempt_count": attempt}
+            metadata = {
+                **metadata,
+                "attempt_count": attempt,
+                "failed_attempts": zapi_attempts,
+            }
             break
         except OfficialOpenEvidenceError as exc:
             zapi_error = str(exc)
+            zapi_attempts.append({"attempt": attempt, "error": zapi_error})
             if attempt == MAX_ZAPI_ATTEMPTS or not _zapi_retryable_failure(zapi_error):
                 raise OfficialOpenEvidenceError(
                     f"OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED:DIRECT={direct_error}:ZAPI={zapi_error}"
@@ -540,7 +571,11 @@ def capture_official_open_with_transport_fallback(
         session_date=session,
         output_dir=folder,
         transport=ZAPI_RAW_TRANSPORT,
-        transport_metadata={**metadata, "primary_transport_error": direct_error},
+        transport_metadata={
+            **metadata,
+            "primary_transport_error": direct_error,
+            "primary_transport_attempts": direct_attempts,
+        },
     )
 
 

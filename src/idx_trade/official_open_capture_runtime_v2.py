@@ -23,6 +23,7 @@ from .official_trading_schedule_v1 import (
     OfficialTradingScheduleError,
     load_verified_official_trading_schedule,
 )
+from .v4_x1_execution_v1_verify import DecisionV1Error, verify_open_execution_inputs
 
 
 STATUS_CAPTURED = "CAPTURED"
@@ -182,13 +183,31 @@ def run_same_session_official_open_capture_v2(
 
     folder, raw_path, normalized_path, manifest_path = _session_paths(root, session_date)
     if manifest_path.is_file():
-        transport, policy = _manifest_transport(manifest_path)
+        try:
+            verified = verify_open_execution_inputs(
+                execution_session_date=session_date,
+                manifest_path=manifest_path,
+            )
+        except (DecisionV1Error, OSError, ValueError) as exc:
+            return finish(
+                STATUS_PARTIAL_EVIDENCE_FAIL_CLOSED,
+                manifest_path=str(manifest_path),
+                evidence_folder=str(folder),
+                provider_error=f"EXISTING_OFFICIAL_OPEN_MANIFEST_INVALID:{exc}",
+            )
+        transport = verified.transport
+        policy = verified.transport_policy
         return finish(
             STATUS_ALREADY_CAPTURED,
             manifest_path=str(manifest_path),
             evidence_folder=str(folder),
             transport=transport,
             transport_policy=policy,
+            manifest_sha256=verified.manifest_sha256,
+            raw_artifact_sha256=verified.raw_source_sha256,
+            normalized_artifact_sha256=verified.ohlcv_artifact_sha256,
+            execution_schedule_attestation_path=str(schedule.attestation_path),
+            execution_schedule_attestation_sha256=schedule.attestation_sha256,
         )
     partial = [str(path) for path in (raw_path, normalized_path) if path.exists()]
     if partial or folder.exists():

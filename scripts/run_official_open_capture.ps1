@@ -20,7 +20,7 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logPath = Join-Path $logRoot "official-open-$stamp.log"
 
 $args = @(
-  "-m", "idx_trade.official_open_capture_runtime_v1",
+  "-m", "idx_trade.official_open_capture_runtime_v2",
   "--runtime-root", $resolvedRuntime,
   "--timeout-seconds", $TimeoutSeconds
 )
