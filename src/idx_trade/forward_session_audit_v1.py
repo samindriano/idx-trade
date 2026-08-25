@@ -22,6 +22,12 @@ from .forward_evidence_health_v1 import (
     evaluate_session,
     sha256_file,
 )
+from .official_trading_schedule_v1 import (
+    OfficialTradingScheduleError,
+    load_verified_official_trading_schedule,
+    next_planned_session,
+)
+from .e2e_paper_schedule_binding_v1 import verify_prepared_schedule_binding
 
 
 SCHEMA_VERSION = "idx_trade_forward_session_audit_v1"
@@ -44,6 +50,7 @@ STAGES = (
     "v4_x1_scoring",
     "decision_v2",
     "prepared_order",
+    "prepared_order_schedule_binding",
     "official_open_evidence",
     "paper_execution",
     "ca_dividend",
@@ -79,6 +86,8 @@ _SAFE_TIMESTAMP_FIELDS = (
     "execution_timestamp_utc",
     "official_open_at_utc",
     "run_at_jakarta",
+    "capture_timestamp_jakarta",
+    "issued_at_jakarta",
 )
 _SEVERITY = {
     PASS: 0,
@@ -121,6 +130,7 @@ _NOOP_STATUSES = frozenset(
         "WEEKEND_NO_SESSION",
         "HOLIDAY_NO_SESSION",
         "WEEKEND_OR_HOLIDAY_NOOP",
+        "MISSED_EXECUTION_NO_CERTIFIED_OPEN",
     }
 )
 _PENDING_STATUSES = frozenset(
@@ -389,6 +399,19 @@ def _verify_payload_hash(payload: Mapping[str, Any], label: str) -> str | None:
     return None
 
 
+def _verify_named_payload_hash(
+    payload: Mapping[str, Any], field: str, label: str
+) -> str | None:
+    declared = payload.get(field)
+    if not isinstance(declared, str) or not declared:
+        return f"{label}_HASH_MISSING"
+    body = dict(payload)
+    body.pop(field, None)
+    if _canonical_hash(body) != declared.lower():
+        return f"{label}_HASH_MISMATCH"
+    return None
+
+
 def _verify_file_reference(
     metadata_path: Path,
     reference: object,
@@ -422,6 +445,8 @@ def _validate_prepared_contract(
     metadata_path: Path,
 ) -> Iterable[str]:
     notes: list[str] = []
+    if payload.get("outcome_access") is not False:
+        notes.append("PREPARED_OUTCOME_ACCESS_GUARD_INVALID")
     hash_failure = _verify_payload_hash(payload, "PREPARED")
     if hash_failure:
         notes.append(hash_failure)
@@ -443,8 +468,22 @@ def _validate_prepared_contract(
         if isinstance(decision_plan, Mapping):
             if decision_plan.get("decision_session_date") != decision:
                 notes.append("PREPARED_DECISION_PARENT_MISMATCH")
+            declared_decision_hash = payload.get("decision_plan_sha256")
+            if not isinstance(declared_decision_hash, str) or _canonical_hash(decision_plan) != declared_decision_hash.lower():
+                notes.append("PREPARED_DECISION_PLAN_SHA256_MISMATCH")
         else:
             notes.append("PREPARED_DECISION_PARENT_MISSING")
+        execution_plan = payload.get("execution_plan")
+        if not isinstance(execution_plan, Mapping):
+            notes.append("PREPARED_EXECUTION_PLAN_MISSING")
+        else:
+            if execution_plan.get("decision_session_date") != decision:
+                notes.append("PREPARED_EXECUTION_PLAN_DECISION_MISMATCH")
+            if execution_plan.get("execution_session_date") != execution:
+                notes.append("PREPARED_EXECUTION_PLAN_EXECUTION_MISMATCH")
+            declared_execution_hash = payload.get("execution_plan_sha256")
+            if not isinstance(declared_execution_hash, str) or _canonical_hash(execution_plan) != declared_execution_hash.lower():
+                notes.append("PREPARED_EXECUTION_PLAN_SHA256_MISMATCH")
         current_score = payload.get("current_score")
         if isinstance(current_score, Mapping):
             if current_score.get("session_date") != decision:
@@ -501,6 +540,8 @@ def _validate_execution_contract(
     open_metadata: SafeMetadata | None,
 ) -> Iterable[str]:
     notes: list[str] = []
+    if payload.get("schema_version") != "idx_trade_e2e_paper_execution_v1":
+        notes.append("EXECUTION_SCHEMA_MISMATCH")
     if payload.get("status") == "EXECUTION_COMPLETE":
         hash_failure = _verify_payload_hash(payload, "EXECUTION")
         if hash_failure:
@@ -517,11 +558,136 @@ def _validate_execution_contract(
     elif payload.get("status") == "EXECUTION_COMPLETE":
         notes.append("EXECUTION_PREPARED_PARENT_UNAVAILABLE")
     if open_metadata is not None:
-        if "open_manifest_path" in payload and payload.get("open_manifest_path") != str(open_metadata.path.resolve()):
+        if payload.get("open_manifest_path") != str(open_metadata.path.resolve()):
             notes.append("EXECUTION_OPEN_MANIFEST_PATH_MISMATCH")
-        if "open_manifest_sha256" in payload and payload.get("open_manifest_sha256") != open_metadata.sha256:
+        if payload.get("open_manifest_sha256") != open_metadata.sha256:
             notes.append("EXECUTION_OPEN_MANIFEST_SHA256_MISMATCH")
+    elif payload.get("status") == "EXECUTION_COMPLETE":
+        notes.append("EXECUTION_OPEN_PARENT_UNAVAILABLE")
+    runtime_path = payload.get("runtime_snapshot_path")
+    runtime_sha = payload.get("runtime_snapshot_sha256")
+    if not isinstance(runtime_path, str) or not isinstance(runtime_sha, str):
+        notes.append("EXECUTION_RUNTIME_SNAPSHOT_REFERENCE_MISSING")
+    else:
+        notes.extend(_verify_file_reference(Path(str(payload.get("prepared_path") or ".")).parent, {"path": runtime_path, "sha256": runtime_sha}, "EXECUTION_RUNTIME_SNAPSHOT"))
     return notes
+
+
+def _validate_runtime_snapshot(payload: Mapping[str, Any]) -> Iterable[str]:
+    if payload.get("schema_version") != "idx_trade_forward_dividend_runtime_state_v1_1":
+        yield "RUNTIME_SNAPSHOT_SCHEMA_MISMATCH"
+    if not isinstance(payload.get("state"), Mapping):
+        yield "RUNTIME_SNAPSHOT_STATE_MISSING"
+    if not isinstance(payload.get("hashes"), Mapping):
+        yield "RUNTIME_SNAPSHOT_HASHES_MISSING"
+    failure = _verify_named_payload_hash(payload, "snapshot_payload_sha256", "RUNTIME_SNAPSHOT")
+    if failure:
+        yield failure
+
+
+def _validate_schedule_binding(
+    payload: Mapping[str, Any],
+    *,
+    binding_path: Path,
+    prepared_path: Path,
+    prepared_payload: Mapping[str, Any],
+    execution_session_date: str,
+) -> Iterable[str]:
+    notes: list[str] = []
+    if payload.get("schema_version") != "idx_trade_e2e_prepared_schedule_binding_v1":
+        notes.append("PREPARED_SCHEDULE_BINDING_SCHEMA_MISMATCH")
+    failure = _verify_payload_hash(payload, "SCHEDULE_BINDING")
+    if failure:
+        notes.append(failure)
+    decision = prepared_payload.get("decision_session_date")
+    if payload.get("decision_session_date") != decision or payload.get("execution_session_date") != execution_session_date:
+        notes.append("PREPARED_SCHEDULE_BINDING_SESSION_MISMATCH")
+    if payload.get("prepared_path") != str(prepared_path.resolve()) or payload.get("prepared_sha256") != sha256_file(prepared_path):
+        notes.append("PREPARED_SCHEDULE_BINDING_PREPARED_PARENT_MISMATCH")
+    eod_inputs = prepared_payload.get("eod_inputs")
+    observed_calendar = eod_inputs.get("calendar") if isinstance(eod_inputs, Mapping) else None
+    if not isinstance(observed_calendar, Mapping):
+        notes.append("PREPARED_SCHEDULE_BINDING_CALENDAR_REFERENCE_MISSING")
+    else:
+        if payload.get("observed_calendar_path") != str(Path(str(observed_calendar.get("path") or "")).resolve()):
+            notes.append("PREPARED_SCHEDULE_BINDING_OBSERVED_CALENDAR_PATH_MISMATCH")
+        if payload.get("observed_calendar_sha256") != observed_calendar.get("sha256"):
+            notes.append("PREPARED_SCHEDULE_BINDING_OBSERVED_CALENDAR_SHA256_MISMATCH")
+        if not Path(str(observed_calendar.get("path") or "")).is_file() or sha256_file(Path(str(observed_calendar.get("path") or ""))) != observed_calendar.get("sha256"):
+            notes.append("PREPARED_SCHEDULE_BINDING_OBSERVED_CALENDAR_BYTES_MISMATCH")
+    attestation_raw = payload.get("execution_schedule_attestation_path")
+    attestation_sha = payload.get("execution_schedule_attestation_sha256")
+    try:
+        attestation = _safe_path(str(attestation_raw))
+        canonical_binding_path = binding_path.parent.parent / "prepared_schedule" / f"{decision}.json"
+        if binding_path != canonical_binding_path.resolve():
+            notes.append("PREPARED_SCHEDULE_BINDING_PATH_NONCANONICAL")
+        verify_prepared_schedule_binding(
+            binding_path.parent.parent,
+            prepared_path=prepared_path,
+            expected_schedule_attestation_path=attestation,
+            expected_schedule_attestation_sha256=str(attestation_sha or ""),
+        )
+        schedule = load_verified_official_trading_schedule(attestation, expected_sha256=str(attestation_sha or ""))
+        if next_planned_session(schedule, str(decision)) != execution_session_date:
+            notes.append("PREPARED_SCHEDULE_BINDING_NEXT_SESSION_MISMATCH")
+        if payload.get("execution_schedule_source_path") != str(schedule.source_document_path.resolve()):
+            notes.append("PREPARED_SCHEDULE_BINDING_SOURCE_PATH_MISMATCH")
+        if payload.get("execution_schedule_source_sha256") != schedule.source_document_sha256:
+            notes.append("PREPARED_SCHEDULE_BINDING_SOURCE_SHA256_MISMATCH")
+        if payload.get("execution_schedule_source_reference") != schedule.source_reference:
+            notes.append("PREPARED_SCHEDULE_BINDING_SOURCE_REFERENCE_MISMATCH")
+    except (SessionAuditError, OfficialTradingScheduleError, OSError, ValueError) as exc:
+        notes.append(f"PREPARED_SCHEDULE_BINDING_SCHEDULE_INVALID:{exc}")
+    return notes
+
+
+def _decision_has_no_operational_work(payload: Mapping[str, Any]) -> bool:
+    """Return true only for an explicit empty canonical execution plan."""
+
+    plan = payload.get("execution_plan")
+    if not isinstance(plan, Mapping):
+        return False
+    for key in ("pending_buys", "pending_sells", "pending_orders", "open_orders"):
+        value = plan.get(key)
+        if value not in (None, [], {}):
+            return False
+    for key in ("sells", "effective_buy_intents", "target_positions"):
+        if plan.get(key) != []:
+            return False
+    sizing = plan.get("sizing_plan")
+    if not isinstance(sizing, Mapping) or sizing.get("entries") != []:
+        return False
+    return True
+
+
+def _validate_missed_execution_contract(
+    payload: Mapping[str, Any],
+    *,
+    prepared_path: Path | None,
+    prepared_sha256: str | None,
+    expected_binding_path: Path | None,
+    execution_session_date: str,
+) -> Iterable[str]:
+    if payload.get("schema_version") != "idx_trade_e2e_paper_missed_execution_v1":
+        yield "MISSED_EXECUTION_SCHEMA_MISMATCH"
+    if payload.get("status") != "MISSED_EXECUTION_NO_CERTIFIED_OPEN":
+        yield "MISSED_EXECUTION_STATUS_MISMATCH"
+    failure = _verify_payload_hash(payload, "MISSED_EXECUTION")
+    if failure:
+        yield failure
+    if payload.get("execution_session_date") != execution_session_date:
+        yield "MISSED_EXECUTION_SESSION_MISMATCH"
+    if prepared_path is None or payload.get("prepared_path") != str(prepared_path.resolve()) or payload.get("prepared_sha256") != prepared_sha256:
+        yield "MISSED_EXECUTION_PREPARED_PARENT_MISMATCH"
+    if expected_binding_path is None or payload.get("schedule_binding_path") != str(expected_binding_path.resolve()):
+        yield "MISSED_EXECUTION_SCHEDULE_BINDING_PARENT_MISMATCH"
+    if payload.get("reason") != "NO_CERTIFIED_OFFICIAL_OPEN":
+        yield "MISSED_EXECUTION_REASON_MISMATCH"
+    if payload.get("open_manifest_present") is not False or payload.get("no_retroactive_execution") is not True:
+        yield "MISSED_EXECUTION_RETROACTIVE_OR_OPEN_FLAG_INVALID"
+    if payload.get("fills") != 0 or payload.get("gross_turnover_idr") != 0.0 or payload.get("costs_idr") != 0.0:
+        yield "MISSED_EXECUTION_NONZERO_EXECUTION_VALUES"
 
 
 def _find_prepared_parent(
@@ -557,6 +723,7 @@ def _artifact_stage(
     expected_fields: Sequence[tuple[str, object]] = (),
     session_fields: Sequence[str] = ("session_date",),
     require_outcome_clean: bool = True,
+    status_required: bool = True,
     extra_validator: Any = None,
 ) -> tuple[dict[str, Any], SafeMetadata | None]:
     if path is None:
@@ -580,20 +747,27 @@ def _artifact_stage(
         )
         observed_status = result["status"]
         if observed_status == "COMPLETE":
-            mapped_status = _status(_json_object(safe).payload)
+            stage_payload = _json_object(safe).payload
+            mapped_status = _status(stage_payload)
             if mapped_status is None:
-                return (
-                    _stage(
-                        stage,
-                        expected,
-                        session_date,
-                        PROVENANCE_INVALID,
-                        path=safe,
-                        sha256=result.get("observed_sha256"),
-                        notes=("STATUS_MISSING_OR_UNKNOWN",),
-                    ),
-                    None,
+                status_declared = any(
+                    isinstance(stage_payload.get(key), str)
+                    for key in ("status", "state", "result", "capture_status", "stage_status")
                 )
+                if status_required or status_declared:
+                    return (
+                        _stage(
+                            stage,
+                            expected,
+                            session_date,
+                            PROVENANCE_INVALID,
+                            path=safe,
+                            sha256=result.get("observed_sha256"),
+                            notes=("STATUS_MISSING_OR_UNKNOWN",),
+                        ),
+                        None,
+                    )
+                mapped_status = PASS
             observed_status = mapped_status
         elif observed_status == "PENDING_EXPECTED":
             observed_status = PENDING_EXPECTED
@@ -694,6 +868,7 @@ def _evidence_timestamp(payload: Mapping[str, Any]) -> str | None:
         ("captured_at_utc", "capture_timestamp_utc"),
         ("evidence_at_utc", "observed_at_utc", "recorded_at_utc", "created_at_utc"),
         ("run_at_jakarta",),
+        ("capture_timestamp_jakarta", "issued_at_jakarta"),
         ("scheduled_at_utc", "scheduled_timestamp_utc", "scheduled_at"),
     ):
         value = _timestamp_for(payload, *keys)
@@ -823,10 +998,16 @@ def _aggregate(calendar_status: str, stages: Sequence[Mapping[str, Any]]) -> tup
         for item in stages
         if item["status"] not in {PASS, LEGITIMATE_NOOP, NOT_APPLICABLE}
     ]
-    if PROVENANCE_INVALID in statuses:
-        return "SESSION_PROVENANCE_INVALID", blockers
     if IMPLEMENTATION_DEFECT in statuses:
         return "SESSION_IMPLEMENTATION_DEFECT", blockers
+    if PROVENANCE_INVALID in statuses:
+        return "SESSION_PROVENANCE_INVALID", blockers
+    if any(
+        item.get("observed", {}).get("continuity_transition") == "MISSED_EXECUTION_NO_CERTIFIED_OPEN"
+        for item in stages
+        if isinstance(item.get("observed"), Mapping)
+    ):
+        return "SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN", blockers
     if FAIL_CLOSED_EXTERNAL in statuses:
         return "SESSION_FAIL_CLOSED_EXTERNAL", blockers
     if PENDING_EXPECTED in statuses or NOT_READ in statuses:
@@ -847,6 +1028,7 @@ def audit_session(
     ca_dividend: str | Path | None = None,
     scheduler_metadata: str | Path | None = None,
     prepared_metadata: str | Path | None = None,
+    schedule_binding_metadata: str | Path | None = None,
     reported_at_utc: str = "2026-01-01T00:00:00+00:00",
 ) -> dict[str, Any]:
     """Audit one execution session using the accepted decision t -> T graph.
@@ -928,6 +1110,7 @@ def audit_session(
             session_date=session,
             path=selected_prepared,
             session_fields=("execution_session_date",),
+            require_outcome_clean=False,
             extra_validator=(
                 None
                 if selected_prepared is None
@@ -984,22 +1167,59 @@ def audit_session(
             path=by_name.get("v4_x1_score_manifest").path if by_name.get("v4_x1_score_manifest") else None,
             expected_status="DONE",
         )
-        decision_path = _known_path(e2e_root, "state", "decisions", f"{decision_date}.json")
-        decision_stage, decision_meta = _artifact_stage(
-            stage="decision_v2",
-            expected="DECISION_V2_METADATA_FOR_DECISION_SESSION",
-            session_date=decision_date,
-            path=decision_path,
-            session_fields=("decision_session_date", "session_date"),
+        decision_meta = prepared_meta
+        decision_status = PASS if prepared_stage["status"] == PASS else prepared_stage["status"]
+        decision_stage = _stage(
+            "decision_v2",
+            "CANONICAL_DECISION_PLAN_EMBEDDED_IN_PREPARED_EXECUTION",
+            decision_date,
+            decision_status,
+            path=selected_prepared,
+            sha256=prepared_meta.sha256 if prepared_meta else None,
+            observed={"decision_source": "prepared_execution_payload"},
+            notes=("CANONICAL_DECISION_PLAN_FROM_PREPARED",),
         )
         stage_by_name["canonical_eod_capture"] = eod_stage
         stage_by_name["v4_x1_scoring"] = score_stage
         stage_by_name["decision_v2"] = decision_stage
 
     decision_noop = bool(
-        stage_by_name.get("decision_v2", {}).get("status") == LEGITIMATE_NOOP
-        or decision_meta and decision_meta.payload.get("trade_count") == 0
+        prepared_meta is not None
+        and prepared_stage["status"] == PASS
+        and _decision_has_no_operational_work(prepared_meta.payload)
     )
+
+    binding_path = None
+    if selected_prepared is not None and decision_date is not None:
+        binding_path = _safe_path(schedule_binding_metadata) if schedule_binding_metadata else _known_path(e2e_root, "prepared_schedule", f"{decision_date}.json")
+    if binding_path is not None and prepared_meta is not None:
+        binding_stage, _ = _artifact_stage(
+            stage="prepared_order_schedule_binding",
+            expected="PREPARED_ORDER_BOUND_TO_OFFICIAL_SCHEDULE",
+            session_date=session,
+            path=binding_path,
+            session_fields=("execution_session_date",),
+            require_outcome_clean=False,
+            status_required=False,
+            extra_validator=lambda payload: _validate_schedule_binding(
+                payload,
+                binding_path=binding_path,
+                prepared_path=selected_prepared,
+                prepared_payload=prepared_meta.payload,
+                execution_session_date=session,
+            ),
+        )
+        if binding_stage["status"] == PASS:
+            binding_stage["observed"]["binding_path"] = str(binding_path)
+    else:
+        binding_stage = _stage(
+            "prepared_order_schedule_binding",
+            "PREPARED_ORDER_BOUND_TO_OFFICIAL_SCHEDULE",
+            session,
+            PENDING_EXPECTED if prepared_stage["status"] == PASS else NOT_READ,
+            notes=("PREPARED_SCHEDULE_BINDING_NOT_DECLARED",),
+        )
+    stage_by_name["prepared_order_schedule_binding"] = binding_stage
 
     open_path = _known_path(e2e_root, "official_open", session, "manifest.json")
     open_stage, open_meta = _artifact_stage(
@@ -1009,41 +1229,57 @@ def audit_session(
         path=open_path,
         session_fields=("session_date", "execution_session_date"),
         require_outcome_clean=False,
+        status_required=False,
         extra_validator=_validate_open_contract,
     )
     stage_by_name["official_open_evidence"] = open_stage
 
     execution_path = _known_path(e2e_root, "executions", f"{session}.json")
+    missed_path = _known_path(e2e_root, "missed_executions", f"{session}.json")
+    existing_execution = execution_path is not None and execution_path.is_file()
     execution_stage, execution_meta = _artifact_stage(
         stage="paper_execution",
         expected="EXECUTION_BOUND_TO_PREPARED_PARENT_OR_PENDING",
         session_date=session,
-        path=execution_path,
+        path=execution_path if existing_execution else missed_path,
+        expected_status="EXECUTION_COMPLETE" if existing_execution else "MISSED_EXECUTION_NO_CERTIFIED_OPEN",
         session_fields=("execution_session_date", "session_date"),
+        require_outcome_clean=False,
+        status_required=True,
         extra_validator=lambda payload: (
             [*_validate_state_lineage(payload)]
-            + [*_validate_execution_contract(
+            + ([*_validate_execution_contract(
                 payload,
                 prepared_path=selected_prepared,
                 prepared_sha256=prepared_meta.sha256 if prepared_meta else None,
                 decision_session_date=decision_date,
                 execution_session_date=session,
                 open_metadata=open_meta,
-            )]
+            )] if existing_execution else [*_validate_missed_execution_contract(
+                payload,
+                prepared_path=selected_prepared,
+                prepared_sha256=prepared_meta.sha256 if prepared_meta else None,
+                expected_binding_path=binding_path,
+                execution_session_date=session,
+            )])
         ),
     )
+    if not existing_execution and execution_stage["status"] == LEGITIMATE_NOOP:
+        execution_stage["observed"]["continuity_transition"] = "MISSED_EXECUTION_NO_CERTIFIED_OPEN"
+        execution_stage.setdefault("causal_notes", []).append("MISSED_EXECUTION_CONTINUITY")
     stage_by_name["paper_execution"] = execution_stage
 
     if decision_noop:
-        _resolve_noop(prepared_stage, "DECISION_V2_LEGITIMATE_NOOP")
+        stage_by_name["decision_v2"]["status"] = LEGITIMATE_NOOP
+        stage_by_name["decision_v2"].setdefault("causal_notes", []).append("DECISION_V2_EXPLICIT_EMPTY_EXECUTION_PLAN")
         if execution_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
             _resolve_noop(execution_stage, "DECISION_V2_LEGITIMATE_NOOP")
         elif execution_stage["status"] == PASS:
             _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_AFTER_LEGITIMATE_NOOP")
-    elif open_stage["status"] not in {PASS, LEGITIMATE_NOOP}:
+    elif open_stage["status"] not in {PASS, LEGITIMATE_NOOP} and existing_execution:
         if execution_stage["status"] in {NOT_READ, PENDING_EXPECTED}:
             _set_stricter(execution_stage, PENDING_EXPECTED, "OFFICIAL_OPEN_UNAVAILABLE_BEFORE_EXECUTION")
-        elif execution_stage["status"] in {PASS, LEGITIMATE_NOOP}:
+        elif execution_stage["status"] in {PASS, LEGITIMATE_NOOP} or "EXECUTION_OPEN_PARENT_UNAVAILABLE" in execution_stage.get("causal_notes", []):
             _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "SUCCESSFUL_EXECUTION_WITHOUT_CERTIFIED_OPEN")
 
     ca_path = ca_dividend or _known_path(e2e_root, "dividend_acquisition_v1", "journals", f"{session}.json")
@@ -1068,7 +1304,12 @@ def audit_session(
         session_date=session,
         path=paperstate_path,
         session_fields=("execution_session_date", "session_date"),
-        extra_validator=_validate_state_lineage,
+        require_outcome_clean=False,
+        status_required=False,
+        extra_validator=lambda payload: [
+            *_validate_state_lineage(payload),
+            *_validate_runtime_snapshot(payload),
+        ],
     )
     stage_by_name["paperstate_continuity"] = paperstate_stage
 
@@ -1084,12 +1325,6 @@ def audit_session(
         health_specs = tuple(
             item for item in discovered_for_decision
             if item.name in {"eod_manifest", "v4_x1_score_manifest"}
-        ) + (
-            ArtifactSpec(
-                "decision_v2_result",
-                _known_path(e2e_root, "state", "decisions", f"{decision_date}.json"),
-                session_fields=("decision_session_date", "session_date"),
-            ),
         )
         health = evaluate_session(decision_date or session, health_specs, reported_at_utc=reported_at_utc)
         stage_by_name["forward_evidence_health"] = _stage(
@@ -1132,20 +1367,15 @@ def audit_session(
     open_ts = _stage_timestamp(open_stage)
     execution_ts = _stage_timestamp(execution_stage)
     if decision_stage.get("status") == PASS and prepared_stage["status"] == PASS:
-        if not decision_ts or not prepared_ts:
-            _set_stricter(prepared_stage, PROVENANCE_INVALID, "DECISION_PREPARED_CAUSAL_TIMESTAMP_PROOF_MISSING")
-        elif decision_ts >= prepared_ts:
+        if decision_ts and prepared_ts and decision_ts >= prepared_ts:
             _set_stricter(prepared_stage, PROVENANCE_INVALID, "DECISION_NOT_BEFORE_PREPARED")
     if execution_stage["status"] == PASS:
-        if not prepared_ts or not open_ts or not execution_ts:
-            _set_stricter(execution_stage, PROVENANCE_INVALID, "CAUSAL_TIMESTAMP_PROOF_MISSING")
-        else:
-            if prepared_ts >= open_ts:
-                _set_stricter(execution_stage, PROVENANCE_INVALID, "PREPARED_AFTER_OFFICIAL_OPEN")
-            if open_ts > execution_ts:
-                _set_stricter(execution_stage, PROVENANCE_INVALID, "OFFICIAL_OPEN_AFTER_EXECUTION")
-            if execution_ts < prepared_ts:
-                _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_BEFORE_PREPARED_ORDER")
+        if prepared_ts and open_ts and prepared_ts >= open_ts:
+            _set_stricter(execution_stage, PROVENANCE_INVALID, "PREPARED_AFTER_OFFICIAL_OPEN")
+        if open_ts and execution_ts and open_ts > execution_ts:
+            _set_stricter(execution_stage, PROVENANCE_INVALID, "OFFICIAL_OPEN_AFTER_EXECUTION")
+        if execution_ts and prepared_ts and execution_ts < prepared_ts:
+            _set_stricter(execution_stage, IMPLEMENTATION_DEFECT, "EXECUTION_BEFORE_PREPARED_ORDER")
     if execution_meta:
         duplicate_count = execution_meta.payload.get("duplicate_count", 0)
         if isinstance(duplicate_count, int) and duplicate_count > 0:
@@ -1201,12 +1431,15 @@ def summarize_ledgers(ledgers: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     continuity: list[tuple[str, str]] = []
     latest_healthy: str | None = None
     non_trading_count = 0
+    missed_execution_count = 0
     consecutive_stockbit_failures = 0
     for ledger in ordered:
         session = str(ledger.get("execution_session_date", ledger.get("session_date")))
         overall = str(ledger.get("overall_status"))
         if overall == "NON_TRADING_SESSION":
             non_trading_count += 1
+        if overall == "SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN":
+            missed_execution_count += 1
         if overall in healthy_trading and (latest_healthy is None or session > latest_healthy):
             latest_healthy = session
         stockbit_status: str | None = None
@@ -1234,6 +1467,7 @@ def summarize_ledgers(ledgers: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "session_count": len(ordered),
         "healthy_count": sum(status in healthy_trading for status in statuses),
         "non_trading_count": non_trading_count,
+        "missed_execution_count": missed_execution_count,
         "incomplete_count": sum(status == "SESSION_PENDING_EXPECTED" for status in statuses),
         "fail_closed_count": sum(status == "SESSION_FAIL_CLOSED_EXTERNAL" for status in statuses),
         "provenance_invalid_count": sum(status == "SESSION_PROVENANCE_INVALID" for status in statuses),

@@ -2,7 +2,7 @@
 
 from: Codex
 to: MAIN / ChatGPT independent review
-task_id: IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1-REMEDIATION
+task_id: IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1-CANONICAL-COMPATIBILITY
 model_used: GPT-5
 reasoning_level: high
 source_repository: samindriano/idx-trade
@@ -24,6 +24,7 @@ or scheduler wiring was performed.
 - `tests/test_forward_session_audit_v1.py`
 - `docs/FORWARD_SESSION_AUDIT_V1.md`
 - `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_REMEDIATION.md`
+- `docs/checkpoints/2026-08-25_FORWARD_OPERATIONS_SESSION_AUDIT_V1_CANONICAL_COMPATIBILITY.md`
 - `coordination/handoffs/IDX-FORWARD-OPERATIONS-SESSION-AUDIT-V1.md`
 
 ## Contract decisions
@@ -50,25 +51,35 @@ or scheduler wiring was performed.
 - Scheduler action is `scripts/run_official_open_capture.ps1`, whose module
   identity is `idx_trade.official_open_capture_runtime_v2`; the invented v2
   PowerShell action is rejected.
+- Official Open and dividend runtime snapshots are accepted through their
+  canonical schema/hash contracts without invented generic status fields.
+- Decision V2 comes from prepared `decision_plan`/`execution_plan`; state
+  decisions are optional lineage metadata only.
+- Prepared schedule binding is verified against the official schedule source
+  and `next_planned_session(schedule, t) == T`.
+- Canonical missed execution is a separate legitimate continuity state, not a
+  successful execution; implementation defects take precedence over
+  provenance-invalid status in aggregate output.
 
 ## Evidence and limitations
 
 The auditor reads JSON metadata and hashes declared sibling bytes only. It does
 not read parquet values, labels, returns, protected outcomes, or provider
 responses. If prepared metadata includes `next_official_session_date`, it must
-equal `T`; a complete official schedule-attestation proof requires the caller
-to provide that accepted schedule-binding metadata because the base prepared
-payload does not persist every schedule object inline.
+equal `T`; the canonical schedule-binding metadata now provides the complete
+schedule-attestation proof without date subtraction.
 
 ## Validation
 
-- Session Audit tests: `28 passed`.
-- Relevant E2E/Open/Evidence Health/scheduler tests: `75 passed`.
-- Full pytest: `788 passed, 0 failed, 3 existing pandas FutureWarnings`.
+- Session Audit tests: `41 passed`.
+- Relevant E2E/Open/Evidence Health/scheduler tests: `150 passed`.
+- Full pytest: `801 passed, 0 failed, 3 existing pandas FutureWarnings`.
 - py_compile/import smoke: PASS.
 - git diff --check: PASS.
 - Synthetic CLI valid t→t+1 smoke: `SESSION_HEALTHY`.
 - Synthetic CLI valid holiday smoke: `NON_TRADING_SESSION`.
+- Synthetic CLI missed-Open continuity smoke:
+  `SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN`.
 
 ## Guard state
 

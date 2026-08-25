@@ -1,6 +1,6 @@
 # IDX Forward Operations / Session Audit V1
 
-Status: remediation-ready-for-review, outcome-blind, read-only
+Status: compatibility-remediated-ready-for-review, outcome-blind, read-only
 
 ## Purpose
 
@@ -38,12 +38,13 @@ Each ledger has one row for each stage, in this order:
 5. `v4_x1_scoring`
 6. `decision_v2`
 7. `prepared_order`
-8. `official_open_evidence`
-9. `paper_execution`
-10. `ca_dividend`
-11. `paperstate_continuity`
-12. `forward_evidence_health`
-13. `scheduler_task`
+8. `prepared_order_schedule_binding`
+9. `official_open_evidence`
+10. `paper_execution`
+11. `ca_dividend`
+12. `paperstate_continuity`
+13. `forward_evidence_health`
+14. `scheduler_task`
 
 The stage status vocabulary is:
 
@@ -65,7 +66,9 @@ The stage status vocabulary is:
 Overall statuses are `NON_TRADING_SESSION`, `SESSION_HEALTHY`,
 `SESSION_HEALTHY_LEGITIMATE_NOOP`, `SESSION_PENDING_EXPECTED`,
 `SESSION_FAIL_CLOSED_EXTERNAL`, `SESSION_PROVENANCE_INVALID`, and
-`SESSION_IMPLEMENTATION_DEFECT`.
+`SESSION_IMPLEMENTATION_DEFECT`, and
+`SESSION_MISSED_EXECUTION_NO_CERTIFIED_OPEN` for a valid continuity transition
+where no execution was produced because no certified Open was available.
 
 ## Fail-closed checks
 
@@ -92,6 +95,23 @@ declared raw/normalized bytes, or a relabelled transport are rejected. The
 auditor does not parse raw rows to reconstruct Open values; the existing
 official Open verifier remains the value-level authority.
 
+Official Open is a canonical schema without a generic `status` field, and the
+forward dividend runtime snapshot is likewise validated by its
+`idx_trade_forward_dividend_runtime_state_v1_1` schema and
+`snapshot_payload_sha256`. These stages use stage-specific schema validation
+instead of inventing a status field. The Decision V2 authority is the
+hash-bound `decision_plan` embedded in `prepared/<t>.json`; a
+`state/decisions/<t>.json` file is optional lineage metadata and is never
+classified as the Decision artifact.
+
+Prepared execution is additionally bound to canonical
+`prepared_schedule/<t>.json`: exact prepared path/SHA, observed calendar
+path/SHA, schedule attestation path/SHA, and
+`next_planned_session(schedule, t) == T` must all pass. Prepared and execution
+schemas do not require synthetic preparation/execution timestamps; ordering is
+checked only when canonical timestamps exist, while the immutable hash/session
+graph is always required.
+
 On a non-trading session, all downstream stages are `NOT_APPLICABLE`, but only
 after the official calendar itself passes. When a decision is an explicit
 legitimate no-op, order and execution stages are not required. When an order
@@ -100,7 +120,13 @@ never treated as certified merely because an execution-shaped JSON file exists.
 If a successful execution is present without certified Open, the audit reports
 `IMPLEMENTATION_DEFECT`. A stricter existing failure is never downgraded by a
 later cross-stage check. Unknown or malformed statuses are
-`PROVENANCE_INVALID`, never `PASS`.
+`PROVENANCE_INVALID`, never `PASS`. A canonical
+`missed_executions/<T>.json` with status
+`MISSED_EXECUTION_NO_CERTIFIED_OPEN`, exact prepared/schedule/runtime parents,
+zero fills/turnover/costs, and `no_retroactive_execution=true` is legitimate
+continuity evidence but is not a successful executed cycle. An explicit empty
+canonical execution plan may be a legitimate no-op; a zero intent count in
+unrelated metadata never is, and pending orders prevent no-op resolution.
 
 ## Metadata-only boundary
 
@@ -128,10 +154,9 @@ proven and the scheduler stage remains fail-closed.
 
 The prepared payload's persisted execution date is the authoritative parent
 identity. If a caller additionally supplies `next_official_session_date`, it
-must equal that execution date. This metadata-only auditor does not infer a
-next session from a date subtraction; a complete schedule-attestation proof
-requires the caller to provide the corresponding prepared/schedule-binding
-metadata from the accepted E2E contract.
+must equal that execution date. The schedule-binding stage performs the
+complete accepted schedule-attestation proof from canonical metadata; it does
+not infer a next session from date subtraction.
 
 ## CLI examples
 
@@ -149,6 +174,7 @@ python scripts/audit_forward_session_v1.py `
   --ca-dividend "D:\external\ca\2026-08-27.json" `
   --scheduler-metadata "D:\external\scheduler\2026-08-27.json" `
   --prepared-metadata "D:\external\e2e_runtime\prepared\2026-08-26.json" `
+  --schedule-binding-metadata "D:\external\e2e_runtime\prepared_schedule\2026-08-26.json" `
   --output "D:\external\audit\2026-08-26.json"
 ```
 
