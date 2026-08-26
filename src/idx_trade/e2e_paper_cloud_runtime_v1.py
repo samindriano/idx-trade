@@ -16,10 +16,11 @@ is accepted.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 import hashlib
 import io
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -44,6 +45,7 @@ INPUT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_inputs_v1"
 SNAPSHOT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_snapshot_v1"
 STAGE_COMMIT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_stage_commit_v1"
 CONTRACT_VERSION = "CLOUD_FIRST_E2E_PAPER_V1"
+OFFICIAL_OPEN_EXECUTION_END = time(9, 22, 59)
 UTC = timezone.utc
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 STAGE_NAMES = ("NOOP", "POST_EOD", "PREOPEN")
@@ -133,6 +135,16 @@ def _require_aware_timestamp(value: object, *, label: str) -> None:
         raise CloudPaperRuntimeError(f"{label}_TIMESTAMP_INVALID") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise CloudPaperRuntimeError(f"{label}_TIMESTAMP_NOT_TIMEZONE_AWARE")
+
+
+def _aware_timestamp(value: object, *, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(str(value or ""))
+    except (TypeError, ValueError) as exc:
+        raise CloudPaperRuntimeError(f"{label}_TIMESTAMP_INVALID") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise CloudPaperRuntimeError(f"{label}_TIMESTAMP_NOT_TIMEZONE_AWARE")
+    return parsed
 
 
 def _json_object(payload: bytes, *, label: str) -> dict[str, Any]:
@@ -752,7 +764,11 @@ class CloudPaperArchive:
         for session in sessions:
             if date.fromisoformat(session) > cutoff:
                 continue
-            for stage in ("PREOPEN", "POST_EOD"):
+            # PREOPEN is the first lifecycle state for a session; POST_EOD is
+            # the later committed state.  Within the newest session, inspect
+            # the later lifecycle state first so D+1 recovery cannot restore a
+            # stale D PREOPEN snapshot over D POST_EOD.
+            for stage in ("POST_EOD", "PREOPEN"):
                 commit = self._load_commit(session, stage)
                 if commit is None or commit.snapshot_key is None or commit.snapshot_sha256 is None:
                     continue
@@ -807,63 +823,211 @@ def materialize_official_open_from_cloud(
     *,
     session_date: str,
     target_root: str | Path,
+    eligibility_now: datetime,
 ) -> dict[str, Any] | None:
-    """Copy the first valid committed Official Open slot to the local consumer root."""
+    """Admit and copy one prospective Official Open slot.
+
+    The producer deliberately records ``CAPTURE_ONLY_NOT_EXECUTION_ADMITTED``.
+    This consumer-side boundary is the only place where a committed cloud
+    capture can become usable by the prospective PREOPEN path, and it remains
+    fail-closed for manual/late/future evidence.
+    """
+
+    from .official_open_cloud_archive_v1 import (
+        AUTHORITY as OPEN_AUTHORITY,
+        EXECUTION_ADMISSION as OPEN_EXECUTION_ADMISSION,
+        FIELD_SEMANTICS as OPEN_FIELD_SEMANTICS,
+        SCHEMA_VERSION as OPEN_SCHEMA_VERSION,
+        SLOT_TIMES as OPEN_SLOT_TIMES,
+        TRANSPORT_POLICY as OPEN_TRANSPORT_POLICY,
+        UPSTREAM_PATH as OPEN_UPSTREAM_PATH,
+    )
+    from .official_open_evidence_v1 import JAKARTA as OPEN_JAKARTA
 
     session = date.fromisoformat(session_date).isoformat()
+    current = _aware_timestamp(
+        eligibility_now, label="OFFICIAL_OPEN_ELIGIBILITY_NOW"
+    ).astimezone(OPEN_JAKARTA)
+    if current.date().isoformat() != session:
+        raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ELIGIBILITY_DATE_MISMATCH")
+    hard_deadline = datetime.combine(
+        date.fromisoformat(session), OFFICIAL_OPEN_EXECUTION_END, tzinfo=OPEN_JAKARTA
+    )
+    if current > hard_deadline:
+        raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_EXECUTION_WINDOW_CLOSED")
+
+    admitted: list[tuple[str, bytes, dict[str, Any], dict[str, bytes]]] = []
     for slot in ("0902", "0912", "0922"):
         commit_key = f"session_date={session}/slot={slot}/slot_manifest.json"
         raw_commit = store.read(commit_key)
         if raw_commit is None:
             continue
         commit = _json_object(raw_commit, label="OFFICIAL_OPEN_CLOUD_COMMIT")
-        if commit.get("commit_state") != "COMMITTED" or commit.get("session_date") != session or commit.get("slot") != slot:
-            raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_COMMIT_INVALID")
+        expected_outer = {
+            "schema_version": OPEN_SCHEMA_VERSION,
+            "commit_state": "COMMITTED",
+            "session_date": session,
+            "slot": slot,
+            "execution_admission": OPEN_EXECUTION_ADMISSION,
+            "authority": OPEN_AUTHORITY,
+            "upstream_path": OPEN_UPSTREAM_PATH,
+            "field_semantics": OPEN_FIELD_SEMANTICS,
+            "source_execution_grade": True,
+        }
+        for field, expected in expected_outer.items():
+            if commit.get(field) != expected:
+                raise CloudPaperRuntimeError(
+                    f"OFFICIAL_OPEN_CLOUD_ADMISSION_INVALID:{field}"
+                )
+        capture_id = commit.get("capture_id")
+        if not isinstance(capture_id, str) or not capture_id.strip():
+            raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ADMISSION_CAPTURE_ID_INVALID")
+        scheduled = _aware_timestamp(
+            commit.get("scheduled_capture_timestamp_jakarta"),
+            label="OFFICIAL_OPEN_CLOUD_SCHEDULED_CAPTURE",
+        ).astimezone(OPEN_JAKARTA)
+        expected_scheduled = datetime.combine(
+            date.fromisoformat(session), OPEN_SLOT_TIMES[slot], tzinfo=OPEN_JAKARTA
+        )
+        if scheduled != expected_scheduled:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_SCHEDULE_MISMATCH"
+            )
+        captured = _aware_timestamp(
+            commit.get("source_capture_timestamp_jakarta"),
+            label="OFFICIAL_OPEN_CLOUD_SOURCE_CAPTURE",
+        ).astimezone(OPEN_JAKARTA)
+        if captured.date().isoformat() != session:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_SOURCE_SESSION_MISMATCH"
+            )
+        if captured < scheduled or captured > hard_deadline:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_OUTSIDE_PROSPECTIVE_WINDOW"
+            )
+        if captured > current:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_FUTURE_CAPTURE"
+            )
+        try:
+            declared_lag = float(commit.get("capture_lag_seconds"))
+        except (TypeError, ValueError) as exc:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_CAPTURE_LAG_INVALID"
+            ) from exc
+        actual_lag = (captured - scheduled).total_seconds()
+        if not math.isfinite(declared_lag) or declared_lag < 0 or abs(declared_lag - actual_lag) > 1e-6:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_CAPTURE_LAG_MISMATCH"
+            )
+        if commit.get("source_transport_policy") != OPEN_TRANSPORT_POLICY:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_TRANSPORT_POLICY_INVALID"
+            )
+        runner = commit.get("runner_provenance")
+        if (
+            not isinstance(runner, dict)
+            or runner.get("runner") != "GITHUB_ACTIONS"
+            or runner.get("github_event_name") != "schedule"
+        ):
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_MANUAL_CAPTURE_FORBIDDEN"
+            )
+        guards = commit.get("guards")
+        required_false = (
+            "model_accessed",
+            "outcome_accessed",
+            "paper_state_mutated",
+            "forward_counter_mutated",
+            "order_created",
+            "fill_created",
+            "retroactive_execution_authorized",
+        )
+        if not isinstance(guards, dict) or any(guards.get(key) is not False for key in required_false):
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_GUARDS_INVALID"
+            )
         artifacts = commit.get("artifacts")
         if not isinstance(artifacts, dict):
             raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ARTIFACT_REFS_MISSING")
         loaded: dict[str, bytes] = {}
+        loaded_keys: list[str] = []
         for name in ("raw_response", "open_prices", "source_manifest"):
             ref = artifacts.get(name)
             if not isinstance(ref, dict):
                 raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ARTIFACT_REF_INVALID:" + name)
             key = _safe_key(str(ref.get("key") or ""))
+            prefix = f"session_date={session}/slot={slot}/captures/"
+            if not key.startswith(prefix):
+                raise CloudPaperRuntimeError(
+                    "OFFICIAL_OPEN_CLOUD_ARTIFACT_SESSION_OR_SLOT_MISMATCH:" + name
+                )
             expected = _required_sha(ref.get("sha256"), label="OFFICIAL_OPEN_CLOUD_ARTIFACT")
             payload = store.read(key)
             if payload is None or sha256_bytes(payload) != expected:
                 raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ARTIFACT_SHA_MISMATCH:" + name)
             loaded[name] = payload
+            loaded_keys.append(key)
+        capture_roots = {key.rsplit("/", 1)[0] for key in loaded_keys}
+        if len(capture_roots) != 1:
+            raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_ARTIFACT_CAPTURE_ID_MISMATCH")
         source = _json_object(loaded["source_manifest"], label="OFFICIAL_OPEN_SOURCE_MANIFEST")
-        if source.get("session_date") != session or source.get("execution_grade") is not True:
+        if (
+            source.get("session_date") != session
+            or source.get("execution_grade") is not True
+            or source.get("authority") != OPEN_AUTHORITY
+            or source.get("upstream_path") != OPEN_UPSTREAM_PATH
+            or source.get("field_semantics") != OPEN_FIELD_SEMANTICS
+            or source.get("transport_policy") != OPEN_TRANSPORT_POLICY
+            or commit.get("source_transport") != source.get("transport")
+            or commit.get("source_transport_policy") != source.get("transport_policy")
+        ):
             raise CloudPaperRuntimeError("OFFICIAL_OPEN_SOURCE_MANIFEST_INVALID")
-        target = Path(target_root).expanduser().resolve() / session
-        target.mkdir(parents=True, exist_ok=True)
-        filenames = {
-            "raw_response": "raw_response.json",
-            "open_prices": "open_prices.parquet",
-            "source_manifest": "manifest.json",
-        }
-        for name, filename in filenames.items():
-            destination = target / filename
-            payload = loaded[name]
-            if destination.exists() and destination.read_bytes() != payload:
-                raise CloudPaperRuntimeError("OFFICIAL_OPEN_LOCAL_COLLISION:" + name)
-            if not destination.exists():
-                destination.write_bytes(payload)
-        try:
-            from .official_open_cloud_archive_v1 import _verify_source_bundle
+        source_captured = _aware_timestamp(
+            source.get("capture_timestamp_jakarta"),
+            label="OFFICIAL_OPEN_CLOUD_SOURCE_CAPTURE",
+        ).astimezone(OPEN_JAKARTA)
+        if source_captured != captured:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_ADMISSION_SOURCE_CAPTURE_MISMATCH"
+            )
+        admitted.append((slot, raw_commit, commit, loaded))
 
-            _verify_source_bundle(target / "manifest.json", expected_session=session)
-        except Exception as exc:
-            raise CloudPaperRuntimeError("OFFICIAL_OPEN_SOURCE_BUNDLE_INVALID") from exc
-        return {
-            "session_date": session,
-            "slot": slot,
-            "slot_manifest_sha256": sha256_bytes(raw_commit),
-            "source_manifest_sha256": sha256_bytes(loaded["source_manifest"]),
-            "local_manifest": str((target / "manifest.json").resolve()),
-        }
-    return None
+    if not admitted:
+        return None
+    slot, raw_commit, commit, loaded = admitted[0]
+    # All present slot commits were validated before any local materialisation.
+    # This prevents a valid early slot from masking a malformed later retry.
+    del commit
+    target = Path(target_root).expanduser().resolve() / session
+    target.mkdir(parents=True, exist_ok=True)
+    filenames = {
+        "raw_response": "raw_response.json",
+        "open_prices": "open_prices.parquet",
+        "source_manifest": "manifest.json",
+    }
+    for name, filename in filenames.items():
+        destination = target / filename
+        payload = loaded[name]
+        if destination.exists() and destination.read_bytes() != payload:
+            raise CloudPaperRuntimeError("OFFICIAL_OPEN_LOCAL_COLLISION:" + name)
+        if not destination.exists():
+            destination.write_bytes(payload)
+    try:
+        from .official_open_cloud_archive_v1 import _verify_source_bundle
+
+        _verify_source_bundle(target / "manifest.json", expected_session=session)
+    except Exception as exc:
+        raise CloudPaperRuntimeError("OFFICIAL_OPEN_SOURCE_BUNDLE_INVALID") from exc
+    return {
+        "session_date": session,
+        "slot": slot,
+        "slot_manifest_sha256": sha256_bytes(raw_commit),
+        "source_manifest_sha256": sha256_bytes(loaded["source_manifest"]),
+        "local_manifest": str((target / "manifest.json").resolve()),
+        "execution_admitted": True,
+        "admission_window_end_jakarta": hard_deadline.isoformat(),
+    }
 
 
 __all__ = [
@@ -875,6 +1039,7 @@ __all__ = [
     "CloudPaperRuntimeError",
     "CloudStageCommit",
     "ConditionalS3Store",
+    "OFFICIAL_OPEN_EXECUTION_END",
     "INPUT_SCHEMA_VERSION",
     "LocalConditionalStore",
     "SNAPSHOT_SCHEMA_VERSION",

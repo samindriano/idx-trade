@@ -27,6 +27,7 @@ def _runner_provenance() -> dict[str, object]:
         "github_repository": env.get("GITHUB_REPOSITORY", ""),
         "github_sha": env.get("GITHUB_SHA", ""),
         "github_workflow": env.get("GITHUB_WORKFLOW", ""),
+        "github_event_name": env.get("GITHUB_EVENT_NAME", ""),
         "github_run_id": env.get("GITHUB_RUN_ID", ""),
         "github_run_attempt": env.get("GITHUB_RUN_ATTEMPT", ""),
         "capture_code_ref": env.get("OFFICIAL_OPEN_CAPTURE_CODE_REF", ""),

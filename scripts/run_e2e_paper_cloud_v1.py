@@ -10,7 +10,7 @@ session, and exits non-zero for a fail-closed state.
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -18,6 +18,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time as clock
+from typing import Callable
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -28,6 +30,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from idx_trade.e2e_paper_cloud_runtime_v1 import (  # noqa: E402
     CONTRACT_VERSION,
+    CloudObjectStore,
     CloudInputBundle,
     CloudPaperArchive,
     CloudPaperRuntimeError,
@@ -35,6 +38,7 @@ from idx_trade.e2e_paper_cloud_runtime_v1 import (  # noqa: E402
     build_runtime_snapshot,
     load_schedule_from_bundle,
     materialize_official_open_from_cloud,
+    OFFICIAL_OPEN_EXECUTION_END,
     restore_runtime_snapshot,
     sha256_bytes,
 )
@@ -100,6 +104,55 @@ def _resolve_phase(current: datetime) -> str:
     if (current.time().hour, current.time().minute) >= (9, 2) and current.time().hour == 9:
         return "PREOPEN"
     raise CloudPaperRuntimeError("CLOUD_E2E_OUTSIDE_SCHEDULED_PHASE_WINDOW")
+
+
+def wait_for_official_open_from_cloud(
+    store: CloudObjectStore,
+    *,
+    session_date: str,
+    target_root: Path,
+    now_fn: Callable[[], datetime] = _now,
+    sleep_fn: Callable[[float], None] = clock.sleep,
+    poll_interval_seconds: float = 5.0,
+    max_wait_seconds: float = 90.0,
+) -> dict[str, object] | None:
+    """Poll briefly for a same-window producer commit without extending PREOPEN."""
+
+    started = now_fn()
+    if started.tzinfo is None:
+        raise CloudPaperRuntimeError("CLOUD_E2E_CLOCK_NOT_TIMEZONE_AWARE")
+    started = started.astimezone(JAKARTA)
+    hard_deadline = datetime.combine(
+        started.date(), OFFICIAL_OPEN_EXECUTION_END, tzinfo=JAKARTA
+    )
+    wait_until = min(
+        hard_deadline,
+        started + timedelta(seconds=max(0.0, float(max_wait_seconds))),
+    )
+    while True:
+        current = now_fn()
+        if current.tzinfo is None:
+            raise CloudPaperRuntimeError("CLOUD_E2E_CLOCK_NOT_TIMEZONE_AWARE")
+        current = current.astimezone(JAKARTA)
+        if current > hard_deadline:
+            return None
+        result = materialize_official_open_from_cloud(
+            store,
+            session_date=session_date,
+            target_root=target_root,
+            eligibility_now=current,
+        )
+        if result is not None:
+            return result
+        if current >= wait_until:
+            return None
+        remaining = min(
+            (wait_until - current).total_seconds(),
+            (hard_deadline - current).total_seconds(),
+        )
+        if remaining <= 0:
+            return None
+        sleep_fn(min(float(poll_interval_seconds), remaining))
 
 
 def _controller_config(
@@ -282,13 +335,14 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
             "E2E_CLOUD_OFFICIAL_OPEN_PREFIX", "official-open-v1"
         )
         official_store = build_cloud_store_from_env(official_env)
-        materialize_official_open_from_cloud(
+        wait_for_official_open_from_cloud(
             official_store,
             session_date=session,
             target_root=roots["official_open"],
         )
 
-    started = now
+    effective_now = _now()
+    started = effective_now
     if chosen == "POST_EOD":
         model_root = roles["model_manifest"].parent
         run_clean_eod_pipeline(
@@ -297,9 +351,9 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
             clean_panel=roles["clean_panel"],
             clean_security_master=roles["clean_security_master"],
             repo_root=REPO_ROOT,
-            observed_by=now.astimezone(UTC).isoformat(),
+            observed_by=effective_now.astimezone(UTC).isoformat(),
         )
-    status = run_operational_cycle_v2(config, now=now)
+    status = run_operational_cycle_v2(config, now=effective_now)
     finished = _now()
     controller_status = str(status.get("controller_status") or "FAIL_CLOSED")
     result = _result_payload(

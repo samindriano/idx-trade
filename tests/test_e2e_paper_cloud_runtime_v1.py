@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+import io
 import json
 from pathlib import Path
 from types import SimpleNamespace
+import zipfile
 
 import pytest
 
@@ -14,6 +16,7 @@ from idx_trade.e2e_paper_cloud_runtime_v1 import (
     CloudPaperArchive,
     CloudPaperRuntimeError,
     LocalConditionalStore,
+    OFFICIAL_OPEN_EXECUTION_END,
     build_runtime_snapshot,
     canonical_json_bytes,
     load_schedule_from_bundle,
@@ -27,6 +30,11 @@ from idx_trade.official_open_evidence_v1 import (
     FIELD_SEMANTICS,
     TRANSPORT_POLICY,
     UPSTREAM_PATH,
+)
+from idx_trade.official_open_cloud_archive_v1 import (
+    EXECUTION_ADMISSION as OPEN_CLOUD_EXECUTION_ADMISSION,
+    SCHEMA_VERSION as OPEN_CLOUD_SCHEMA_VERSION,
+    SLOT_TIMES as OPEN_CLOUD_SLOT_TIMES,
 )
 
 
@@ -96,6 +104,88 @@ def _input_manifest(store: LocalConditionalStore, tmp_path: Path) -> tuple[str, 
     store.put_if_absent("inputs/manifest.json", raw, "application/json")
     manifest = CloudInputBundle.load(store, "inputs/manifest.json")
     return manifest.manifest_sha256, manifest.materialize(store, tmp_path / "materialized")
+
+
+def _write_official_open_cloud_slot(
+    store: LocalConditionalStore,
+    *,
+    session: str = "2026-08-24",
+    slot: str = "0912",
+    capture_at: datetime | None = None,
+    commit_overrides: dict[str, object] | None = None,
+    source_overrides: dict[str, object] | None = None,
+    corrupt_child: str | None = None,
+) -> dict[str, object]:
+    raw = b"{}\n"
+    open_prices = b"parquet-placeholder"
+    if capture_at is None:
+        capture_at = datetime.fromisoformat(f"{session}T09:13:00+07:00")
+    source = {
+        "session_date": session,
+        "authority": AUTHORITY,
+        "upstream_path": UPSTREAM_PATH,
+        "field_semantics": FIELD_SEMANTICS,
+        "transport": "DIRECT_IDX",
+        "transport_policy": TRANSPORT_POLICY,
+        "execution_grade": True,
+        "raw_artifact_path": "raw_response.json",
+        "normalized_artifact_path": "open_prices.parquet",
+        "raw_artifact_sha256": sha256_bytes(raw),
+        "normalized_artifact_sha256": sha256_bytes(open_prices),
+        "capture_timestamp_jakarta": capture_at.isoformat(),
+    }
+    source.update(source_overrides or {})
+    source_bytes = canonical_json_bytes(source)
+    capture_root = f"session_date={session}/slot={slot}/captures/c1"
+    artifacts: dict[str, dict[str, object]] = {}
+    for name, payload in (
+        ("raw_response", raw),
+        ("open_prices", open_prices),
+        ("source_manifest", source_bytes),
+    ):
+        key = f"{capture_root}/{name}.bin"
+        store.put_if_absent(key, payload, "application/octet-stream")
+        artifacts[name] = {"key": key, "sha256": sha256_bytes(payload)}
+    if corrupt_child is not None:
+        store._path(str(artifacts[corrupt_child]["key"])).write_bytes(b"corrupt")
+    scheduled = datetime.combine(
+        date.fromisoformat(session), OPEN_CLOUD_SLOT_TIMES[slot], tzinfo=cloud_runner.JAKARTA
+    )
+    commit: dict[str, object] = {
+        "schema_version": OPEN_CLOUD_SCHEMA_VERSION,
+        "commit_state": "COMMITTED",
+        "session_date": session,
+        "slot": slot,
+        "capture_id": "20260824T091300Z-c1",
+        "scheduled_capture_timestamp_jakarta": scheduled.isoformat(),
+        "source_capture_timestamp_jakarta": capture_at.isoformat(),
+        "capture_lag_seconds": (capture_at - scheduled).total_seconds(),
+        "authority": AUTHORITY,
+        "upstream_path": UPSTREAM_PATH,
+        "field_semantics": FIELD_SEMANTICS,
+        "source_transport": "DIRECT_IDX",
+        "source_transport_policy": TRANSPORT_POLICY,
+        "source_execution_grade": True,
+        "execution_admission": OPEN_CLOUD_EXECUTION_ADMISSION,
+        "artifacts": artifacts,
+        "runner_provenance": {
+            "runner": "GITHUB_ACTIONS",
+            "github_event_name": "schedule",
+        },
+        "guards": {
+            "model_accessed": False,
+            "outcome_accessed": False,
+            "paper_state_mutated": False,
+            "forward_counter_mutated": False,
+            "order_created": False,
+            "fill_created": False,
+            "retroactive_execution_authorized": False,
+        },
+    }
+    commit.update(commit_overrides or {})
+    key = f"session_date={session}/slot={slot}/slot_manifest.json"
+    store.put_if_absent(key, canonical_json_bytes(commit), "application/json")
+    return commit
 
 
 def test_local_conditional_store_is_create_only(tmp_path: Path) -> None:
@@ -239,48 +329,176 @@ def test_stage_commit_rejects_existing_schedule_or_input_identity_conflict(
         )
 
 
+def test_latest_snapshot_prefers_later_post_eod_state_for_next_preopen_restore(
+    tmp_path: Path,
+) -> None:
+    store = LocalConditionalStore(tmp_path / "store")
+    archive = CloudPaperArchive(store)
+    common = {
+        "schedule_attestation_sha256": "1" * 64,
+        "input_manifest_sha256": "2" * 64,
+        "code_identity": {"commit": "3" * 40},
+    }
+    snapshots: dict[str, tuple[bytes, str]] = {}
+
+    def commit_snapshot(stage: str, marker: str) -> str:
+        root = tmp_path / marker
+        root.mkdir()
+        (root / "state.txt").write_text(marker, encoding="utf-8")
+        snapshot, snapshot_sha, metadata = build_runtime_snapshot({"paper": root})
+        committed = archive.commit_stage(
+            session_date="2026-08-24",
+            stage=stage,
+            status="EXECUTION_COMPLETE" if stage == "PREOPEN" else "POST_EOD_PREPARED",
+            run_id=marker,
+            snapshot_bytes=snapshot,
+            snapshot_sha256=snapshot_sha,
+            snapshot_metadata=metadata,
+            result_payload={
+                "observed_started_at_utc": "2026-08-24T02:00:00+00:00",
+                "observed_finished_at_utc": "2026-08-24T02:01:00+00:00",
+            },
+            **common,
+        )
+        snapshots[stage] = (snapshot, snapshot_sha)
+        return committed.snapshot_sha256 or ""
+
+    pre_sha = commit_snapshot("PREOPEN", "d0-preopen")
+    post_sha = commit_snapshot("POST_EOD", "d0-post-eod")
+    replay = archive.commit_stage(
+        session_date="2026-08-24",
+        stage="POST_EOD",
+        status="POST_EOD_PREPARED",
+        run_id="d0-post-eod-retry",
+        snapshot_bytes=snapshots["POST_EOD"][0],
+        snapshot_sha256=snapshots["POST_EOD"][1],
+        snapshot_metadata={},
+        result_payload={
+            "observed_started_at_utc": "2026-08-24T02:00:00+00:00",
+            "observed_finished_at_utc": "2026-08-24T02:01:00+00:00",
+        },
+        **common,
+    )
+    assert replay.snapshot_sha256 == post_sha
+    assert post_sha != pre_sha
+
+    # This is the D+1 PREOPEN restore point: D1 has no committed state yet,
+    # so D0 POST_EOD must be the newest lifecycle state.
+    restored = archive.latest_snapshot(
+        ["2026-08-24", "2026-08-25"], before_or_equal="2026-08-25"
+    )
+    assert restored is not None
+    restored_bytes, restored_sha, _ = restored
+    assert restored_sha == post_sha
+    with zipfile.ZipFile(io.BytesIO(restored_bytes)) as bundle:
+        names = bundle.namelist()
+        assert any(name.endswith("state.txt") for name in names)
+        state_name = next(name for name in names if name.endswith("state.txt"))
+        assert bundle.read(state_name) == b"d0-post-eod"
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("wrong_schema", "ADMISSION_INVALID:schema_version"),
+        ("wrong_admission", "ADMISSION_INVALID:execution_admission"),
+        ("missing_guards", "ADMISSION_GUARDS_INVALID"),
+        ("source_session_mismatch", "SOURCE_MANIFEST_INVALID"),
+        ("malformed_capture_timestamp", "SOURCE_CAPTURE_TIMESTAMP_INVALID"),
+        ("outside_window", "OUTSIDE_PROSPECTIVE_WINDOW"),
+        ("corrupt_child", "ARTIFACT_SHA_MISMATCH:open_prices"),
+        ("manual_capture", "MANUAL_CAPTURE_FORBIDDEN"),
+        ("future_capture", "FUTURE_CAPTURE"),
+    ],
+)
+def test_official_open_cloud_admission_rejects_invalid_outer_or_timing_contract(
+    tmp_path: Path, kind: str, expected: str
+) -> None:
+    store = LocalConditionalStore(tmp_path / "official")
+    overrides: dict[str, object] = {}
+    source_overrides: dict[str, object] = {}
+    capture_at = datetime.fromisoformat("2026-08-24T09:13:00+07:00")
+    now = datetime.fromisoformat("2026-08-24T09:14:00+07:00")
+    corrupt_child = None
+    if kind == "wrong_schema":
+        overrides["schema_version"] = "wrong-schema"
+    elif kind == "wrong_admission":
+        overrides["execution_admission"] = "EXECUTION_ADMITTED"
+    elif kind == "missing_guards":
+        overrides["guards"] = {}
+    elif kind == "source_session_mismatch":
+        source_overrides["session_date"] = "2026-08-23"
+    elif kind == "malformed_capture_timestamp":
+        source_overrides["capture_timestamp_jakarta"] = "not-a-timestamp"
+    elif kind == "outside_window":
+        capture_at = datetime.fromisoformat("2026-08-24T09:23:00+07:00")
+        overrides["slot"] = "0922"
+    elif kind == "corrupt_child":
+        corrupt_child = "open_prices"
+    elif kind == "manual_capture":
+        overrides["runner_provenance"] = {
+            "runner": "GITHUB_ACTIONS",
+            "github_event_name": "workflow_dispatch",
+        }
+    elif kind == "future_capture":
+        now = datetime.fromisoformat("2026-08-24T09:12:30+07:00")
+
+    _write_official_open_cloud_slot(
+        store,
+        slot=str(overrides.pop("slot", "0912")),
+        capture_at=capture_at,
+        commit_overrides=overrides,
+        source_overrides=source_overrides,
+        corrupt_child=corrupt_child,
+    )
+    with pytest.raises(CloudPaperRuntimeError, match=expected):
+        materialize_official_open_from_cloud(
+            store,
+            session_date="2026-08-24",
+            target_root=tmp_path / "local-open",
+            eligibility_now=now,
+        )
+
+
+def test_old_1800_capture_is_not_execution_admissible(tmp_path: Path) -> None:
+    store = LocalConditionalStore(tmp_path / "official")
+    _write_official_open_cloud_slot(
+        store,
+        capture_at=datetime.fromisoformat("2026-08-24T18:00:00+07:00"),
+    )
+    with pytest.raises(CloudPaperRuntimeError, match="EXECUTION_WINDOW_CLOSED"):
+        materialize_official_open_from_cloud(
+            store,
+            session_date="2026-08-24",
+            target_root=tmp_path / "local-open",
+            eligibility_now=datetime.fromisoformat("2026-08-24T18:01:00+07:00"),
+        )
+
+
+def test_valid_scheduled_official_open_cloud_capture_is_admitted(tmp_path: Path) -> None:
+    store = LocalConditionalStore(tmp_path / "official")
+    _write_official_open_cloud_slot(store)
+    result = materialize_official_open_from_cloud(
+        store,
+        session_date="2026-08-24",
+        target_root=tmp_path / "local-open",
+        eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+    )
+    assert result is not None
+    assert result["execution_admitted"] is True
+
+
 def test_official_open_cloud_materialization_verifies_referenced_artifacts(tmp_path: Path) -> None:
     store = LocalConditionalStore(tmp_path / "official")
-    raw = b"{}\n"
-    open_prices = b"parquet-placeholder"
-    source_manifest = canonical_json_bytes(
-        {
-            "session_date": "2026-08-24",
-            "authority": AUTHORITY,
-            "upstream_path": UPSTREAM_PATH,
-            "field_semantics": FIELD_SEMANTICS,
-            "transport_policy": TRANSPORT_POLICY,
-            "execution_grade": True,
-            "raw_artifact_path": "raw_response.json",
-            "normalized_artifact_path": "open_prices.parquet",
-            "raw_artifact_sha256": sha256_bytes(raw),
-            "normalized_artifact_sha256": sha256_bytes(open_prices),
-            "capture_timestamp_jakarta": "2026-08-24T18:00:00+07:00",
-        }
-    )
-    artifacts = {}
+    commit = _write_official_open_cloud_slot(store)
+    artifacts = commit["artifacts"]
+    assert isinstance(artifacts, dict)
     slot = "0912"
-    for name, payload in (
-        ("raw_response", raw),
-        ("open_prices", open_prices),
-        ("source_manifest", source_manifest),
-    ):
-        key = f"session_date=2026-08-24/slot={slot}/captures/c1/{name}.bin"
-        store.put_if_absent(key, payload, "application/octet-stream")
-        artifacts[name] = {"key": key, "sha256": sha256_bytes(payload)}
-    commit = {
-        "commit_state": "COMMITTED",
-        "session_date": "2026-08-24",
-        "slot": slot,
-        "artifacts": artifacts,
-    }
-    store.put_if_absent(
-        f"session_date=2026-08-24/slot={slot}/slot_manifest.json",
-        canonical_json_bytes(commit),
-        "application/json",
-    )
     result = materialize_official_open_from_cloud(
-        store, session_date="2026-08-24", target_root=tmp_path / "local-open"
+        store,
+        session_date="2026-08-24",
+        target_root=tmp_path / "local-open",
+        eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
     )
     assert result is not None
     assert result["slot"] == slot
@@ -289,7 +507,10 @@ def test_official_open_cloud_materialization_verifies_referenced_artifacts(tmp_p
     store._path(artifacts["open_prices"]["key"]).write_bytes(b"changed")
     with pytest.raises(CloudPaperRuntimeError, match="ARTIFACT_SHA_MISMATCH"):
         materialize_official_open_from_cloud(
-            store, session_date="2026-08-24", target_root=tmp_path / "other-open"
+            store,
+            session_date="2026-08-24",
+            target_root=tmp_path / "other-open",
+            eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
         )
 
 
@@ -389,6 +610,7 @@ def test_open_unavailable_keeps_preopen_outcome_uncommitted(
     )
     monkeypatch.setattr(cloud_runner, "build_cloud_store_from_env", lambda *a, **k: store)
     monkeypatch.setattr(cloud_runner, "materialize_official_open_from_cloud", lambda *a, **k: None)
+    monkeypatch.setattr(cloud_runner, "wait_for_official_open_from_cloud", lambda *a, **k: None)
     monkeypatch.setattr(
         cloud_runner,
         "_controller_config",
@@ -505,3 +727,144 @@ def test_controller_failure_does_not_create_terminal_stage_commit(
     with pytest.raises(RuntimeError, match="controller crash"):
         cloud_runner.run_once(phase="POST_EOD", session_date="2026-08-24")
     assert CloudPaperArchive(store).existing_commit("2026-08-24", "POST_EOD") is None
+
+
+def test_preopen_wait_accepts_producer_commit_after_consumer_starts(
+    tmp_path: Path,
+) -> None:
+    current = [datetime.fromisoformat("2026-08-24T09:12:00+07:00")]
+    calls = {"materialize": 0}
+
+    def now() -> datetime:
+        return current[0]
+
+    def sleep(seconds: float) -> None:
+        current[0] += timedelta(seconds=seconds)
+
+    def materialize(*args: object, **kwargs: object) -> dict[str, object] | None:
+        del args, kwargs
+        calls["materialize"] += 1
+        if calls["materialize"] == 1:
+            return None
+        return {"execution_admitted": True}
+
+    original = cloud_runner.materialize_official_open_from_cloud
+    cloud_runner.materialize_official_open_from_cloud = materialize  # type: ignore[assignment]
+    try:
+        result = cloud_runner.wait_for_official_open_from_cloud(
+            LocalConditionalStore(tmp_path / "store"),
+            session_date="2026-08-24",
+            target_root=tmp_path / "open",
+            now_fn=now,
+            sleep_fn=sleep,
+            poll_interval_seconds=5,
+            max_wait_seconds=30,
+        )
+    finally:
+        cloud_runner.materialize_official_open_from_cloud = original
+    assert result == {"execution_admitted": True}
+    assert calls["materialize"] == 2
+    assert current[0] == datetime.fromisoformat("2026-08-24T09:12:05+07:00")
+
+
+def test_preopen_final_slot_wait_accepts_commit_before_hard_deadline(
+    tmp_path: Path,
+) -> None:
+    current = [datetime.fromisoformat("2026-08-24T09:22:55+07:00")]
+    calls = {"materialize": 0}
+
+    def now() -> datetime:
+        return current[0]
+
+    def sleep(seconds: float) -> None:
+        current[0] += timedelta(seconds=seconds)
+
+    def materialize(*args: object, **kwargs: object) -> dict[str, object] | None:
+        del args, kwargs
+        calls["materialize"] += 1
+        return None if calls["materialize"] == 1 else {"execution_admitted": True}
+
+    original = cloud_runner.materialize_official_open_from_cloud
+    cloud_runner.materialize_official_open_from_cloud = materialize  # type: ignore[assignment]
+    try:
+        result = cloud_runner.wait_for_official_open_from_cloud(
+            LocalConditionalStore(tmp_path / "store"),
+            session_date="2026-08-24",
+            target_root=tmp_path / "open",
+            now_fn=now,
+            sleep_fn=sleep,
+            poll_interval_seconds=5,
+            max_wait_seconds=30,
+        )
+    finally:
+        cloud_runner.materialize_official_open_from_cloud = original
+    assert result == {"execution_admitted": True}
+    assert current[0] == datetime.fromisoformat("2026-08-24T09:22:59+07:00")
+
+
+def test_preopen_wait_does_not_poll_after_hard_deadline(tmp_path: Path) -> None:
+    current = [datetime.fromisoformat("2026-08-24T09:22:58+07:00")]
+    calls = {"materialize": 0}
+
+    def now() -> datetime:
+        return current[0]
+
+    def sleep(seconds: float) -> None:
+        current[0] += timedelta(seconds=seconds)
+
+    def materialize(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        calls["materialize"] += 1
+        return None
+
+    original = cloud_runner.materialize_official_open_from_cloud
+    cloud_runner.materialize_official_open_from_cloud = materialize  # type: ignore[assignment]
+    try:
+        result = cloud_runner.wait_for_official_open_from_cloud(
+            LocalConditionalStore(tmp_path / "store"),
+            session_date="2026-08-24",
+            target_root=tmp_path / "open",
+            now_fn=now,
+            sleep_fn=sleep,
+            poll_interval_seconds=5,
+            max_wait_seconds=30,
+        )
+    finally:
+        cloud_runner.materialize_official_open_from_cloud = original
+    assert result is None
+    assert calls["materialize"] == 2
+    assert current[0].time().isoformat() == OFFICIAL_OPEN_EXECUTION_END.isoformat()
+
+
+def test_preopen_wait_stops_when_producer_never_commits(tmp_path: Path) -> None:
+    current = [datetime.fromisoformat("2026-08-24T09:13:00+07:00")]
+    calls = {"materialize": 0}
+
+    def now() -> datetime:
+        return current[0]
+
+    def sleep(seconds: float) -> None:
+        current[0] += timedelta(seconds=seconds)
+
+    def materialize(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        calls["materialize"] += 1
+        return None
+
+    original = cloud_runner.materialize_official_open_from_cloud
+    cloud_runner.materialize_official_open_from_cloud = materialize  # type: ignore[assignment]
+    try:
+        result = cloud_runner.wait_for_official_open_from_cloud(
+            LocalConditionalStore(tmp_path / "store"),
+            session_date="2026-08-24",
+            target_root=tmp_path / "open",
+            now_fn=now,
+            sleep_fn=sleep,
+            poll_interval_seconds=5,
+            max_wait_seconds=10,
+        )
+    finally:
+        cloud_runner.materialize_official_open_from_cloud = original
+    assert result is None
+    assert calls["materialize"] == 3
+    assert current[0] == datetime.fromisoformat("2026-08-24T09:13:10+07:00")

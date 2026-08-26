@@ -2,9 +2,12 @@ name: E2E Paper cloud orchestration
 
 on:
   schedule:
-    # GitHub cron is UTC: 09:02/09:12/09:22 and 18:35/19:05/19:35 Asia/Jakarta.
-    - cron: "2 2 * * 1-5"
-    - cron: "12 2 * * 1-5"
+    # GitHub cron is UTC: consumer retries at 09:03/09:13/09:22 and
+    # 18:35/19:05/19:35 Asia/Jakarta.  The first two retries are deliberately
+    # offset from the Official Open producer's 09:02/09:12 slots; the final
+    # 09:22 retry remains inside the hard PREOPEN deadline.
+    - cron: "3 2 * * 1-5"
+    - cron: "13 2 * * 1-5"
     - cron: "22 2 * * 1-5"
     - cron: "35 11 * * 1-5"
     - cron: "5 12 * * 1-5"
@@ -92,7 +95,7 @@ jobs:
             phase="auto"
           else
             case "$E2E_CLOUD_EVENT_SCHEDULE" in
-              "2 2 * * 1-5"|"12 2 * * 1-5"|"22 2 * * 1-5") phase="PREOPEN" ;;
+              "3 2 * * 1-5"|"13 2 * * 1-5"|"22 2 * * 1-5") phase="PREOPEN" ;;
               "35 11 * * 1-5"|"5 12 * * 1-5"|"35 12 * * 1-5") phase="POST_EOD" ;;
               *) echo "Unknown scheduled phase: $E2E_CLOUD_EVENT_SCHEDULE" >&2; exit 2 ;;
             esac
