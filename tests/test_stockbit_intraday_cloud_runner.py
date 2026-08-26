@@ -4,11 +4,15 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from idx_trade.e2e_paper_cloud_runtime_v1 import LocalConditionalStore
 from idx_trade.official_trading_schedule_v1 import VerifiedOfficialTradingSchedule
-from idx_trade.stockbit_intraday_cloud_archive import StockbitIntradayCloudArchive
+from idx_trade.stockbit_intraday_cloud_archive import (
+    StockbitIntradayCloudArchive,
+    StockbitIntradayCloudError,
+)
 from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot
+from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
 from idx_trade.stockbit_intraday_eod_context import VerifiedIntradayEodContext
 from idx_trade.stockbit_intraday_eod_gate import VerifiedEodGate
 from idx_trade.stockbit_intraday_runtime import JAKARTA
@@ -249,6 +253,40 @@ def test_existing_final_slot_repairs_missing_policy_checkpoint_without_provider_
     assert replay.commit_sha256 == final.commit_sha256
     assert called is False
     assert archive.load_policy_checkpoint(SESSION) is not None
+
+
+def test_earlier_slot_after_later_commit_is_blocked_before_provider_call(tmp_path: Path):
+    _, archive = _archive(tmp_path)
+    archive.commit_slot(
+        session_date=SESSION,
+        slot="1930",
+        status="WAITING_CANONICAL_EOD_GATE",
+        snapshot_bytes=b"later",
+        result_payload={"status": "WAITING_CANONICAL_EOD_GATE"},
+        code_identity={"commit": "5" * 40},
+        eod_manifest_sha256=None,
+        session_manifest_sha256=None,
+    )
+    called = False
+
+    def requester(_: str):
+        nonlocal called
+        called = True
+        raise AssertionError("out-of-order slot must not call provider")
+
+    with pytest.raises(StockbitIntradayCloudError, match="LATER_SLOT_ALREADY_COMMITTED:1930"):
+        run_cloud_slot(
+            expected_date=SESSION,
+            slot="1830",
+            now=datetime(2026, 8, 26, 20, 0, tzinfo=JAKARTA),
+            schedule=_schedule(),
+            context=_context(tmp_path),
+            archive=archive,
+            journal_root=tmp_path / "journal-order",
+            requester=requester,
+            code_identity={"commit": "5" * 40},
+        )
+    assert called is False
 
 
 def test_holiday_cloud_slot_is_noop_and_zero_provider_calls(tmp_path: Path):
