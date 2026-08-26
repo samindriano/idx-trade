@@ -5,7 +5,10 @@ from pathlib import Path, PurePosixPath
 import re
 from typing import Any
 
+import pandas as pd
+
 from .provenance import sha256_file
+from .stockbit_intraday_recovery import NO_CHART_404, SKIPPED_IDX_NO_ACTIVITY, SUCCESS
 from .stockbit_intraday_runtime import SessionJournal
 from .stockbit_intraday_session_v2 import (
     SESSION_SCHEMA,
@@ -26,7 +29,84 @@ _REQUIRED_BOUND_FILES = {
 }
 
 
-def _verify_shadow_metrics(payload: dict[str, Any]) -> None:
+def _provider_observations_before_gate_reconciliation(
+    journal: SessionJournal,
+) -> dict[str, dict[str, Any]]:
+    """Reconstruct the final provider observation for every SHADOW ticker.
+
+    In SHADOW/SHADOW_RECHECK a zero-activity ticker is still queried. A
+    provider ``NO_CHART_404`` may then be followed by an immutable
+    ``SKIPPED_IDX_NO_ACTIVITY`` reconciliation event. Rollout metrics must be
+    recomputed from the provider observation immediately before that gate
+    event, not from the reconciled latest status.
+    """
+
+    universe = journal.load_universe()
+    result: dict[str, dict[str, Any]] = {}
+    for raw_ticker in universe["ticker"].astype(str):
+        ticker = raw_ticker.upper()
+        provider_status: dict[str, Any] | None = None
+        for attempt_dir in journal._attempt_dirs(ticker):
+            status = journal._verify_attempt(attempt_dir)
+            observed_ticker = str(status.get("ticker") or "").upper()
+            if observed_ticker != ticker:
+                raise StockbitIntradaySessionError(
+                    f"SESSION_MANIFEST_ATTEMPT_TICKER_MISMATCH:{ticker}"
+                )
+            if str(status.get("status") or "").upper() == SKIPPED_IDX_NO_ACTIVITY:
+                continue
+            provider_status = status
+        if provider_status is not None:
+            result[ticker] = provider_status
+    return result
+
+
+def _recompute_shadow_metrics(journal: SessionJournal) -> dict[str, Any]:
+    decisions_path = journal.root / "gate" / "decisions.csv"
+    decisions = pd.read_csv(decisions_path)
+    required = {"ticker", "gate_decision"}
+    if decisions.empty or required - set(decisions.columns):
+        raise StockbitIntradaySessionError("SESSION_MANIFEST_SHADOW_GATE_DECISIONS_INVALID")
+    decisions["ticker"] = decisions["ticker"].astype(str).str.upper()
+    if decisions["ticker"].duplicated().any():
+        raise StockbitIntradaySessionError("SESSION_MANIFEST_SHADOW_GATE_TICKER_DUPLICATE")
+
+    provider_statuses = _provider_observations_before_gate_reconciliation(journal)
+    false_negative = 0
+    false_positive = 0
+    actual_success = 0
+    actual_no_chart_404 = 0
+    certification_eligible = True
+
+    for _, row in decisions.iterrows():
+        ticker = str(row["ticker"])
+        observed = str((provider_statuses.get(ticker) or {}).get("status") or "").upper()
+        predicted_fetch = str(row["gate_decision"]) != "SKIP_NO_ACTIVITY"
+        success = observed == SUCCESS
+        if success:
+            actual_success += 1
+        elif observed == NO_CHART_404:
+            actual_no_chart_404 += 1
+        else:
+            certification_eligible = False
+        if not predicted_fetch and success:
+            false_negative += 1
+        if predicted_fetch and not success:
+            false_positive += 1
+
+    if len(provider_statuses) != len(decisions):
+        certification_eligible = False
+
+    return {
+        "false_negative": false_negative,
+        "false_positive": false_positive,
+        "actual_success": actual_success,
+        "actual_no_chart_404": actual_no_chart_404,
+        "certification_eligible": certification_eligible,
+    }
+
+
+def _verify_shadow_metrics(payload: dict[str, Any], journal: SessionJournal) -> None:
     mode = str(payload.get("run_mode") or "")
     metrics = payload.get("shadow_metrics")
     if mode == "ENFORCE":
@@ -41,6 +121,9 @@ def _verify_shadow_metrics(payload: dict[str, Any]) -> None:
             raise StockbitIntradaySessionError(f"SESSION_MANIFEST_SHADOW_METRIC_INVALID:{field}")
     if metrics.get("certification_eligible") not in {True, False}:
         raise StockbitIntradaySessionError("SESSION_MANIFEST_CERTIFICATION_ELIGIBLE_INVALID")
+    recomputed = _recompute_shadow_metrics(journal)
+    if metrics != recomputed:
+        raise StockbitIntradaySessionError("SESSION_MANIFEST_SHADOW_METRICS_RECOMPUTE_MISMATCH")
 
 
 def load_verified_session_manifest(journal: SessionJournal) -> tuple[dict[str, Any], str] | None:
@@ -108,5 +191,5 @@ def load_verified_session_manifest(journal: SessionJournal) -> tuple[dict[str, A
     recomputed = journal.summary()
     if recomputed != completion:
         raise StockbitIntradaySessionError("SESSION_MANIFEST_COMPLETION_RECOMPUTE_MISMATCH")
-    _verify_shadow_metrics(payload)
+    _verify_shadow_metrics(payload, journal)
     return payload, sha256_file(path)
