@@ -26,7 +26,25 @@ The earlier draft PR #100 was accidentally based on `main`, which only carries t
 - checkpoint result child must carry all no-outcome/no-PaperState/no-order/no-fill guards as false;
 - code identity binds repo, exact commit, and runner SHA;
 - one-shot session iterables are materialized once before parent snapshot lookup;
-- divergent immutable checkpoint reruns fail closed.
+- divergent immutable checkpoint reruns fail closed;
+- checkpoint child writes are content-addressed so an interrupted pre-commit attempt cannot poison the next retry;
+- the E PREOPEN acquisition journal is independently rebound to the exact D POST_EOD parent path, file SHA, journal SHA, date, and phase;
+- the accepted PREOPEN execution consumer is regression-locked to reconcile CA as D->E, not E->E;
+- synthetic fresh-runner replay now exercises D prepare -> E PREOPEN_CA checkpoint -> ephemeral-disk loss/restore -> E PREOPEN execution -> exact idempotent rerun.
+
+## Validation surface
+
+Targeted regression coverage is carried by:
+
+- `tests/test_e2e_paper_preopen_ca_cloud_v1.py`;
+- `tests/test_e2e_paper_cloud_v3.py`;
+- `tests/test_e2e_preopen_ca_checkpoint_recovery_v1.py`;
+- `tests/test_e2e_preopen_ca_consumer_scope_v1.py`;
+- `tests/test_e2e_preopen_ca_integrated_replay_v1.py`.
+
+The integrated replay is synthetic-only: no provider call, no production R2 prefix, no protected outcome read, and no production PaperState/counter mutation.
+
+Exact-head full pytest and PR merge-ref CI remain mandatory before integration merge. A transient GitHub Actions runner-assignment failure on the earlier head produced a workflow-level failure with zero executed steps; it is not counted as implementation evidence and must be replaced by a genuine completed pytest run.
 
 ## Boundaries
 
