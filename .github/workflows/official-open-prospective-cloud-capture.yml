@@ -36,7 +36,7 @@ jobs:
     env:
       # Pin the evidence implementation independently of the default-branch
       # launcher. Update this only through reviewed provenance change.
-      OFFICIAL_OPEN_CAPTURE_CODE_REF: 3de6aac4a168cc9348345e40aa30c485743a9ff0
+      OFFICIAL_OPEN_CAPTURE_CODE_REF: f5a785bee4da174bfd121e31697ed3d29884ea94
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       OFFICIAL_OPEN_STORAGE_BACKEND: s3
       OFFICIAL_OPEN_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
