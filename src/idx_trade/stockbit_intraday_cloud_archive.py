@@ -18,6 +18,7 @@ from .stockbit_stream_archive import StorageImmutabilityConflict
 
 SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_slot_v1"
 POLICY_SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_policy_v1"
+PRODUCTION_STORAGE_PREFIX = "stockbit-intraday-v1"
 SLOTS = ("1830", "1930", "2030")
 
 
@@ -70,12 +71,15 @@ def build_intraday_store_from_env(env: Mapping[str, str] | None = None) -> Cloud
         return LocalConditionalStore(root)
     if backend != "s3":
         raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_STORAGE_BACKEND_INVALID")
+    prefix = str(values.get("STOCKBIT_INTRADAY_STORAGE_PREFIX", PRODUCTION_STORAGE_PREFIX)).strip("/")
+    if prefix != PRODUCTION_STORAGE_PREFIX:
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_STORAGE_PREFIX_INVALID")
     return ConditionalS3Store(
         str(values.get("STOCKBIT_INTRADAY_S3_ENDPOINT", "")).strip(),
         str(values.get("STOCKBIT_INTRADAY_S3_BUCKET", "")).strip(),
         str(values.get("STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID", "")).strip(),
         str(values.get("STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY", "")).strip(),
-        str(values.get("STOCKBIT_INTRADAY_STORAGE_PREFIX", "stockbit-intraday-v1")).strip("/"),
+        PRODUCTION_STORAGE_PREFIX,
     )
 
 
@@ -168,11 +172,7 @@ class StockbitIntradayCloudArchive:
             payload=payload,
         )
 
-    def latest_committed_slot_before(
-        self,
-        session_date: str | date,
-        slot: str,
-    ) -> IntradaySlotCommit | None:
+    def latest_committed_slot_before(self, session_date: str | date, slot: str) -> IntradaySlotCommit | None:
         target = _slot(slot)
         index = SLOTS.index(target)
         for candidate in reversed(SLOTS[:index]):
@@ -181,11 +181,7 @@ class StockbitIntradayCloudArchive:
                 return found
         return None
 
-    def later_committed_slot_after(
-        self,
-        session_date: str | date,
-        slot: str,
-    ) -> IntradaySlotCommit | None:
+    def later_committed_slot_after(self, session_date: str | date, slot: str) -> IntradaySlotCommit | None:
         target = _slot(slot)
         index = SLOTS.index(target)
         for candidate in SLOTS[index + 1 :]:
@@ -196,17 +192,9 @@ class StockbitIntradayCloudArchive:
 
     @staticmethod
     def _expected_slot_payload(
-        *,
-        session: str,
-        slot: str,
-        status: str,
-        snapshot_sha: str,
-        snapshot_key: str,
-        result_sha: str,
-        result_key: str,
-        code_identity: Mapping[str, Any],
-        eod_manifest_sha256: str | None,
-        session_manifest_sha256: str | None,
+        *, session: str, slot: str, status: str, snapshot_sha: str, snapshot_key: str,
+        result_sha: str, result_key: str, code_identity: Mapping[str, Any],
+        eod_manifest_sha256: str | None, session_manifest_sha256: str | None,
     ) -> dict[str, Any]:
         return {
             "schema_version": SCHEMA_VERSION,
@@ -219,62 +207,30 @@ class StockbitIntradayCloudArchive:
             "eod_manifest_sha256": eod_manifest_sha256,
             "session_manifest_sha256": session_manifest_sha256,
             "code_identity": dict(code_identity),
-            "guards": {
-                "synthetic_fill_used": False,
-                "retroactive_capture_used": False,
-                "outcome_accessed": False,
-            },
+            "guards": {"synthetic_fill_used": False, "retroactive_capture_used": False, "outcome_accessed": False},
         }
 
     def commit_slot(
-        self,
-        *,
-        session_date: str | date,
-        slot: str,
-        status: str,
-        snapshot_bytes: bytes,
-        result_payload: Mapping[str, Any],
-        code_identity: Mapping[str, Any],
-        eod_manifest_sha256: str | None,
-        session_manifest_sha256: str | None,
+        self, *, session_date: str | date, slot: str, status: str, snapshot_bytes: bytes,
+        result_payload: Mapping[str, Any], code_identity: Mapping[str, Any],
+        eod_manifest_sha256: str | None, session_manifest_sha256: str | None,
     ) -> IntradaySlotCommit:
         session = _session(session_date)
         slot = _slot(slot)
         snapshot_sha = sha256_bytes(snapshot_bytes)
-        result = {
-            **dict(result_payload),
-            "session_date": session,
-            "slot": slot,
-            "status": str(status),
-            "synthetic_fill_used": False,
-            "retroactive_capture_used": False,
-            "outcome_accessed": False,
-        }
+        result = {**dict(result_payload), "session_date": session, "slot": slot, "status": str(status), "synthetic_fill_used": False, "retroactive_capture_used": False, "outcome_accessed": False}
         result_bytes = canonical_json_bytes(result)
         result_sha = sha256_bytes(result_bytes)
         snapshot_key = self.snapshot_key(session, slot, snapshot_sha)
         result_key = self.result_key(session, slot, result_sha)
-        payload = self._expected_slot_payload(
-            session=session,
-            slot=slot,
-            status=status,
-            snapshot_sha=snapshot_sha,
-            snapshot_key=snapshot_key,
-            result_sha=result_sha,
-            result_key=result_key,
-            code_identity=code_identity,
-            eod_manifest_sha256=eod_manifest_sha256,
-            session_manifest_sha256=session_manifest_sha256,
-        )
+        payload = self._expected_slot_payload(session=session, slot=slot, status=status, snapshot_sha=snapshot_sha, snapshot_key=snapshot_key, result_sha=result_sha, result_key=result_key, code_identity=code_identity, eod_manifest_sha256=eod_manifest_sha256, session_manifest_sha256=session_manifest_sha256)
         encoded = canonical_json_bytes(payload)
         expected_commit_sha = sha256_bytes(encoded)
-
         existing = self.existing_slot(session, slot)
         if existing is not None:
             if existing.commit_sha256 != expected_commit_sha:
                 raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_EXISTING_IDENTITY_CONFLICT")
             return existing
-
         self.store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
         self.store.put_if_absent(result_key, result_bytes, "application/json")
         commit_key = self.commit_key(session, slot)
@@ -298,23 +254,14 @@ class StockbitIntradayCloudArchive:
         if raw is None:
             return None
         payload = _json(raw, label="STOCKBIT_INTRADAY_POLICY")
-        if (
-            payload.get("schema_version") != POLICY_SCHEMA_VERSION
-            or payload.get("session_date") != session
-            or not isinstance(payload.get("policy"), dict)
-        ):
+        if payload.get("schema_version") != POLICY_SCHEMA_VERSION or payload.get("session_date") != session or not isinstance(payload.get("policy"), dict):
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_POLICY_INVALID")
         manifest_sha = str(payload.get("session_manifest_sha256") or "")
         if len(manifest_sha) != 64:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_POLICY_MANIFEST_SHA_INVALID")
         return payload
 
-    def latest_policy_checkpoint(
-        self,
-        session_dates: Sequence[str],
-        *,
-        before_or_equal: str | date,
-    ) -> dict[str, Any] | None:
+    def latest_policy_checkpoint(self, session_dates: Sequence[str], *, before_or_equal: str | date) -> dict[str, Any] | None:
         boundary = _session(before_or_equal)
         candidates = sorted({str(value) for value in session_dates if str(value) <= boundary})
         for session in reversed(candidates):
@@ -323,22 +270,11 @@ class StockbitIntradayCloudArchive:
                 return checkpoint
         return None
 
-    def commit_policy_checkpoint(
-        self,
-        *,
-        session_date: str | date,
-        session_manifest_sha256: str,
-        policy: Mapping[str, Any],
-    ) -> dict[str, Any]:
+    def commit_policy_checkpoint(self, *, session_date: str | date, session_manifest_sha256: str, policy: Mapping[str, Any]) -> dict[str, Any]:
         session = _session(session_date)
         if len(str(session_manifest_sha256)) != 64:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_POLICY_SESSION_MANIFEST_SHA_INVALID")
-        payload = {
-            "schema_version": POLICY_SCHEMA_VERSION,
-            "session_date": session,
-            "session_manifest_sha256": str(session_manifest_sha256).lower(),
-            "policy": dict(policy),
-        }
+        payload = {"schema_version": POLICY_SCHEMA_VERSION, "session_date": session, "session_manifest_sha256": str(session_manifest_sha256).lower(), "policy": dict(policy)}
         encoded = canonical_json_bytes(payload)
         key = self.policy_key(session)
         self.store.put_if_absent(key, encoded, "application/json")
