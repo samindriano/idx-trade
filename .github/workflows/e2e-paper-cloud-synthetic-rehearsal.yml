@@ -1,0 +1,87 @@
+name: E2E Paper synthetic cloud rehearsal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: idx-trade-e2e-paper-synthetic-cloud-rehearsal-v1
+  cancel-in-progress: false
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ACCEPTED_RUNTIME_REF: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+      EXPECTED_INPUT_MANIFEST_SHA256: 858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee
+      E2E_CLOUD_STORAGE_BACKEND: s3
+      E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+      E2E_CLOUD_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
+      E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
+
+    steps:
+      - name: Checkout rehearsal harness
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout accepted E2E implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ACCEPTED_RUNTIME_REF }}
+          path: accepted-runtime
+          persist-credentials: false
+
+      - name: Verify accepted implementation pin
+        shell: bash
+        run: test "$(git -C accepted-runtime rev-parse HEAD)" = "$ACCEPTED_RUNTIME_REF"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install accepted runtime and test runner
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./accepted-runtime[archive]" pytest
+
+      - name: Validate rehearsal harness guards
+        shell: bash
+        run: python -m pytest -q tests/test_e2e_cloud_synthetic_rehearsal_v1.py
+
+      - name: Run accepted cloud adversarial contracts
+        working-directory: accepted-runtime
+        shell: bash
+        run: |
+          python -m pytest -q \
+            tests/test_e2e_paper_cloud_runtime_v1.py \
+            tests/test_e2e_cloud_preopen_terminal_admission_guard.py \
+            tests/test_e2e_cloud_conditional_s3_smoke.py
+
+      - name: Run isolated full-cloud rehearsal
+        shell: bash
+        run: |
+          prefix="e2e-paper-synthetic-rehearsal-v1/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python scripts/run_e2e_cloud_synthetic_rehearsal_v1.py \
+            --accepted-runtime-root "$GITHUB_WORKSPACE/accepted-runtime" \
+            --output-dir "$RUNNER_TEMP/e2e-cloud-synthetic-rehearsal" \
+            --throwaway-prefix "$prefix" \
+            --accepted-implementation-sha "$ACCEPTED_RUNTIME_REF" \
+            --expected-input-manifest-sha256 "$EXPECTED_INPUT_MANIFEST_SHA256"
+
+      - name: Upload non-secret rehearsal report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-cloud-synthetic-rehearsal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-cloud-synthetic-rehearsal/rehearsal_manifest.json
+          if-no-files-found: error
+          retention-days: 30
