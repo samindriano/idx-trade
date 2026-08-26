@@ -99,6 +99,9 @@ def run_cloud_slot(
 ) -> IntradaySlotCommit:
     """Run one prospective cloud slot with deterministic restart semantics."""
 
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_CLOUD_CLOCK_NOT_TIMEZONE_AWARE")
+
     existing = archive.existing_slot(expected_date, slot)
     if existing is not None:
         _repair_policy_from_existing_final(archive, existing)
