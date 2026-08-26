@@ -1,0 +1,59 @@
+name: Stockbit Intraday E2E preflight PR95
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-preflight:
+    if: >-
+      github.event.pull_request.number == 95 &&
+      github.event.pull_request.head.ref == 'ops/stockbit-intraday-cloud-migration-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      STOCKBIT_INTRADAY_E2E_PREFIX: e2e-paper-v1
+      STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY: inputs/manifest.json
+      STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT: ${{ github.workspace }}/accepted-e2e
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Verify exact PR head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Checkout exact accepted E2E runtime
+        uses: actions/checkout@v4
+        with:
+          ref: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+          path: accepted-e2e
+          persist-credentials: false
+
+      - name: Verify accepted E2E checkout
+        shell: bash
+        run: |
+          test "$(git -C accepted-e2e rev-parse HEAD)" = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
+          test -z "$(git -C accepted-e2e status --porcelain=v1 --untracked-files=all)"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install read dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[archive]"
+
+      - name: Run read-only accepted-E2E preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_stockbit_intraday_cloud_preflight_v1.py
