@@ -5,6 +5,7 @@ from datetime import date, datetime, time
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -75,7 +76,11 @@ def _validate_slot_clock(slot: str, *, now: datetime) -> None:
 def _verify_code_pin() -> str:
     actual = _git_head()
     expected = os.getenv("STOCKBIT_INTRADAY_EXPECTED_IMPLEMENTATION_REF", "").strip().lower()
-    if expected and actual != expected:
+    if not expected:
+        raise RuntimeError("STOCKBIT_INTRADAY_IMPLEMENTATION_REF_REQUIRED")
+    if not re.fullmatch(r"[0-9a-f]{40}", expected):
+        raise RuntimeError("STOCKBIT_INTRADAY_IMPLEMENTATION_REF_INVALID")
+    if actual != expected:
         raise RuntimeError("STOCKBIT_INTRADAY_IMPLEMENTATION_REF_MISMATCH")
     return actual
 
