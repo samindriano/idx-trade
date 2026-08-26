@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+import hashlib
 import json
 
 import numpy as np
@@ -80,8 +81,13 @@ def evaluate_integrity_gate(
     if duplicated:
         raise ValueError(f"Duplicate integrity check IDs: {duplicated}")
 
+    required_ids = list(required_check_ids)
+    duplicated_required = sorted({value for value in required_ids if required_ids.count(value) > 1})
+    if duplicated_required:
+        raise ValueError(f"Duplicate required integrity check IDs: {duplicated_required}")
+
     by_id = {check.check_id: check for check in materialized}
-    for check_id in required_check_ids:
+    for check_id in required_ids:
         if check_id not in by_id:
             missing = IntegrityCheck(
                 check_id=check_id,
@@ -94,7 +100,7 @@ def evaluate_integrity_gate(
             materialized.append(missing)
             by_id[check_id] = missing
 
-    required_set = set(required_check_ids)
+    required_set = set(required_ids)
     if required_set:
         normalized: list[IntegrityCheck] = []
         for check in materialized:
@@ -229,8 +235,10 @@ def check_nonnegative(
         )
     bad_mask = pd.Series(False, index=frame.index)
     for column in columns:
-        numeric = pd.to_numeric(frame[column], errors="coerce")
+        source = frame[column]
+        numeric = pd.to_numeric(source, errors="coerce")
         bad_mask |= numeric.lt(0)
+        bad_mask |= numeric.isna() & source.notna()
         if not allow_na:
             bad_mask |= numeric.isna()
     count = int(bad_mask.sum())
@@ -238,9 +246,121 @@ def check_nonnegative(
         check_id=check_id,
         category="VALUE_DOMAIN",
         status=IntegrityStatus.FAIL if count else IntegrityStatus.PASS,
-        summary="Numeric domain is valid." if not count else "Invalid negative or missing values detected.",
+        summary="Numeric domain is valid." if not count else "Invalid negative, non-numeric, or disallowed missing values detected.",
         required=required,
         evidence={"invalid_rows": count, "columns": list(columns), "allow_na": allow_na},
+    )
+
+
+def check_allowed_values(
+    frame: pd.DataFrame,
+    column: str,
+    allowed_values: Sequence[Any],
+    *,
+    allow_na: bool = False,
+    check_id: str = "units.contract",
+    category: str = "UNITS_CONTRACT",
+    required: bool = True,
+) -> IntegrityCheck:
+    if column not in frame.columns:
+        return IntegrityCheck(
+            check_id=check_id,
+            category=category,
+            status=IntegrityStatus.UNKNOWN,
+            summary="Allowed-values check cannot run because the column is missing.",
+            required=required,
+            evidence={"missing_column": column},
+        )
+    series = frame[column]
+    allowed = list(allowed_values)
+    invalid = ~series.isin(allowed)
+    if allow_na:
+        invalid &= series.notna()
+    count = int(invalid.sum())
+    examples = series.loc[invalid].astype(str).drop_duplicates().head(10).tolist()
+    return IntegrityCheck(
+        check_id=check_id,
+        category=category,
+        status=IntegrityStatus.FAIL if count else IntegrityStatus.PASS,
+        summary="Values satisfy the declared contract." if not count else "Values outside the declared contract were detected.",
+        required=required,
+        evidence={
+            "column": column,
+            "allowed_values": allowed,
+            "allow_na": allow_na,
+            "invalid_rows": count,
+            "invalid_examples": examples,
+        },
+    )
+
+
+def check_session_membership(
+    frame: pd.DataFrame,
+    official_sessions: Sequence[Any] | pd.DatetimeIndex,
+    *,
+    session_column: str,
+    check_id: str = "calendar.session_membership",
+    required: bool = True,
+) -> IntegrityCheck:
+    if session_column not in frame.columns:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="SESSION_CALENDAR",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Session-membership check cannot run because the session column is missing.",
+            required=required,
+            evidence={"missing_column": session_column},
+        )
+    observed = pd.to_datetime(frame[session_column], errors="coerce")
+    observed_keys = observed.dt.strftime("%Y-%m-%d")
+    official = pd.to_datetime(pd.Index(official_sessions), errors="coerce")
+    official_keys = set(pd.Series(official).dropna().dt.strftime("%Y-%m-%d").tolist())
+    invalid = observed.isna() | ~observed_keys.isin(official_keys)
+    count = int(invalid.sum())
+    examples = frame.loc[invalid, session_column].astype(str).drop_duplicates().head(10).tolist()
+    return IntegrityCheck(
+        check_id=check_id,
+        category="SESSION_CALENDAR",
+        status=IntegrityStatus.FAIL if count else IntegrityStatus.PASS,
+        summary="All observations map to accepted official sessions." if not count else "Non-session or invalid session observations detected.",
+        required=required,
+        evidence={"invalid_rows": count, "invalid_examples": examples, "session_column": session_column},
+    )
+
+
+def check_missingness_policy(
+    frame: pd.DataFrame,
+    max_missing_fraction: Mapping[str, float],
+    *,
+    check_id: str = "missingness.policy",
+    required: bool = True,
+) -> IntegrityCheck:
+    missing_columns = sorted(set(max_missing_fraction) - set(frame.columns))
+    if missing_columns:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="MISSINGNESS_POLICY",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Missingness policy cannot run because governed columns are missing.",
+            required=required,
+            evidence={"missing_columns": missing_columns},
+        )
+    violations: dict[str, dict[str, float]] = {}
+    observed: dict[str, float] = {}
+    for column, limit in max_missing_fraction.items():
+        if not 0.0 <= float(limit) <= 1.0:
+            raise ValueError(f"Missingness limit must be in [0, 1]: {column}={limit}")
+        fraction = float(frame[column].isna().mean()) if len(frame) else 0.0
+        observed[column] = fraction
+        if fraction > float(limit):
+            violations[column] = {"observed": fraction, "limit": float(limit)}
+    return IntegrityCheck(
+        check_id=check_id,
+        category="MISSINGNESS_POLICY",
+        status=IntegrityStatus.FAIL if violations else IntegrityStatus.PASS,
+        summary="Missingness is within the declared policy." if not violations else "Missingness policy violations detected.",
+        required=required,
+        evidence={"observed_missing_fraction": observed, "violations": violations},
     )
 
 
@@ -363,4 +483,55 @@ def check_knowledge_time(
             "decision_column": decision_column,
             "allow_equal": allow_equal,
         },
+    )
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def check_file_hashes(
+    expected_sha256: Mapping[str | Path, str],
+    *,
+    check_id: str = "provenance.hashes",
+    required: bool = True,
+) -> IntegrityCheck:
+    missing: list[str] = []
+    mismatches: list[dict[str, str]] = []
+    verified: list[dict[str, str]] = []
+    for raw_path, expected in expected_sha256.items():
+        path = Path(raw_path)
+        expected_normalized = str(expected).lower()
+        if len(expected_normalized) != 64 or any(char not in "0123456789abcdef" for char in expected_normalized):
+            raise ValueError(f"Invalid SHA-256 expectation for {path}")
+        if not path.is_file():
+            missing.append(str(path))
+            continue
+        actual = _sha256_file(path)
+        row = {"path": str(path), "expected_sha256": expected_normalized, "actual_sha256": actual}
+        if actual != expected_normalized:
+            mismatches.append(row)
+        else:
+            verified.append(row)
+
+    if mismatches:
+        status = IntegrityStatus.FAIL
+        summary = "Artifact hash mismatches detected."
+    elif missing:
+        status = IntegrityStatus.UNKNOWN
+        summary = "Expected artifacts are missing; provenance cannot be certified."
+    else:
+        status = IntegrityStatus.PASS
+        summary = "Artifact hashes match immutable expectations."
+    return IntegrityCheck(
+        check_id=check_id,
+        category="PROVENANCE_HASHES",
+        status=status,
+        summary=summary,
+        required=required,
+        evidence={"missing_paths": missing, "mismatches": mismatches, "verified": verified},
     )
