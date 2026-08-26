@@ -17,13 +17,8 @@ from .stockbit_stream_archive import (
 
 
 FORBIDDEN_SNAPSHOT_PARTS = {
-    ".env",
-    "credentials",
-    "secrets",
-    "tokens",
-    "outcomes",
-    "outcome_vault",
-    "realized_outcomes",
+    ".env", "credentials", "secrets", "tokens", "outcomes",
+    "outcome_vault", "realized_outcomes",
 }
 
 
@@ -41,26 +36,35 @@ def sha256_bytes(payload: bytes) -> str:
 
 
 def canonical_json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        + "\n"
-    ).encode("utf-8")
+    return (json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def _raw_parts(value: str) -> list[str]:
+    return value.replace("\\", "/").split("/") if value else []
 
 
 def _safe_key(key: str) -> str:
     value = str(key).replace("\\", "/")
     path = PurePosixPath(value)
-    if not value or value.startswith("/") or ".." in path.parts:
+    if (
+        not value
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in _raw_parts(value))
+    ):
         raise IntradayCloudStorageError("STOCKBIT_INTRADAY_CLOUD_KEY_UNSAFE")
-    return str(path)
+    return value
 
 
 def _safe_relative(value: object, *, label: str) -> str:
     raw = str(value or "").replace("\\", "/")
     path = PurePosixPath(raw)
-    if not raw or path.is_absolute() or ".." in path.parts or "." in path.parts:
+    if (
+        not raw
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in _raw_parts(raw))
+    ):
         raise IntradayCloudStorageError(f"{label}_PATH_INVALID")
-    return str(path)
+    return raw
 
 
 class LocalConditionalStore:
@@ -108,14 +112,7 @@ class LocalConditionalStore:
 class ConditionalS3Store:
     """R2/S3 store requiring create-only If-None-Match semantics."""
 
-    def __init__(
-        self,
-        endpoint_url: str,
-        bucket: str,
-        access_key_id: str,
-        secret_access_key: str,
-        prefix: str = "",
-    ):
+    def __init__(self, endpoint_url: str, bucket: str, access_key_id: str, secret_access_key: str, prefix: str = ""):
         try:
             import boto3
         except ImportError as exc:  # pragma: no cover - deployment only
