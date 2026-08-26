@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -15,7 +16,12 @@ from idx_trade.stockbit_intraday_cloud_archive import (
 )
 from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot
 from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
-from idx_trade.stockbit_intraday_e2e_bridge import _child_env
+from idx_trade.stockbit_intraday_e2e_bridge import (
+    StockbitIntradayE2EBridgeError,
+    _child_env,
+    _require_within,
+    _safe_manifest_key,
+)
 
 
 SESSION = date(2026, 8, 26)
@@ -85,19 +91,40 @@ def test_dry_run_requires_no_cloud_or_provider_environment():
     assert payload["outcome_access_authorized"] is False
 
 
-def test_e2e_bridge_child_does_not_inherit_provider_credentials(tmp_path: Path):
+def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(tmp_path: Path):
     values = {
+        "PATH": os.environ.get("PATH", "test-path"),
+        "HOME": "/tmp/test-home",
         "STOCKBIT_INTRADAY_S3_ENDPOINT": "https://example.invalid",
         "STOCKBIT_INTRADAY_S3_BUCKET": "bucket",
         "STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID": "access",
         "STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY": "secret",
         "ZAPI_API_KEY": "must-not-cross",
         "IDX_API_KEY": "must-not-cross-either",
-        "PYTHONPATH": "existing-path",
+        "UNRELATED_ACCOUNT_SECRET": "also-must-not-cross",
+        "PYTHONPATH": "malicious-parent-path",
     }
-    child = _child_env(values, tmp_path / "accepted")
+    accepted = tmp_path / "accepted"
+    child = _child_env(values, accepted)
     assert "ZAPI_API_KEY" not in child
     assert "IDX_API_KEY" not in child
+    assert "UNRELATED_ACCOUNT_SECRET" not in child
     assert child["E2E_CLOUD_STORAGE_BACKEND"] == "s3"
     assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v1"
-    assert child["PYTHONPATH"].split(__import__("os").pathsep)[0].endswith("accepted/src")
+    assert child["PYTHONPATH"] == str(accepted / "src")
+    assert child["PYTHONNOUSERSITE"] == "1"
+    assert child["PATH"] == values["PATH"]
+    assert child["HOME"] == values["HOME"]
+
+
+def test_e2e_bridge_manifest_key_and_materialized_paths_fail_closed(tmp_path: Path):
+    assert _safe_manifest_key("inputs/manifest.json") == "inputs/manifest.json"
+    for value in ("", "../manifest.json", "/inputs/manifest.json", "inputs/./manifest.json"):
+        with pytest.raises(StockbitIntradayE2EBridgeError):
+            _safe_manifest_key(value)
+
+    root = tmp_path / "readback"
+    inside = root / "inputs" / "schedule.csv"
+    assert _require_within(inside, root, label="TEST") == inside.resolve()
+    with pytest.raises(StockbitIntradayE2EBridgeError, match="OUTSIDE_MATERIALIZATION_ROOT"):
+        _require_within(tmp_path / "escape" / "schedule.csv", root, label="TEST")
