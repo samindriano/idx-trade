@@ -1,9 +1,12 @@
 # Repository Hygiene V2 — Retained Lineage Map
 
 Date: 2026-08-22 Asia/Jakarta
-Status: `POST_CLEANUP_CANONICAL_MAP`
+Original status: `POST_CLEANUP_CANONICAL_MAP`
+Current interpretation after 2026-08-26 capture-hygiene review: `HISTORICAL_V2_SNAPSHOT_WITH_CURRENT_CAPTURE_SUPERSESSION`
 
-Purpose: after aggressive branch pruning, identify the small set of live branches that matter without reconstructing 200+ historical branches.
+Purpose: preserve the exact post-Hygiene-V2 survivor state without forcing future agents to reconstruct 200+ historical branches.
+
+> **2026-08-26 update:** sections describing the exact 50-branch survivor set remain historical evidence of the 2026-08-22 cleanup. They are not a current authorization list. For current acquisition/runtime ownership, use `docs/repository_hygiene/CAPTURE_RUNTIME_REGISTRY_V1.md` and `coordination/TEAM_STATUS.md`. Several branches retained on 2026-08-22 have since been merged, superseded, or certified for archive/delete.
 
 Repository state immediately after destructive Hygiene V2 apply:
 
@@ -17,9 +20,9 @@ The temporary post-cleanup docs branch is not part of the 50-branch frozen clean
 
 ## 1. Canonical coordination / governance
 
-Primary anchors:
+Primary anchors at the V2 snapshot:
 - `main` — canonical shared coordination authority.
-- `chore/repository-hygiene-v2-aggressive` — exact cleanup implementation/pre-destructive evidence; keep until a future hygiene pass deliberately archives it.
+- `chore/repository-hygiene-v2-aggressive` — exact cleanup implementation/pre-destructive evidence.
 - `codex/artifact-governance-v1`
 - `codex/data-source-provenance-registry-v1`
 - `codex/frozen-lineage-impact-audit-v1`
@@ -32,14 +35,15 @@ Documentation/UI anchors:
 
 ## 2. Alpha / clean model lineage
 
-Live anchors:
+Durable anchors:
 - `research/idx-ranking-v2-spec-v1` — durable V2 HGB_XS_MARKET parent/runtime lineage.
 - `codex/pit-safe-v2-v3b-o2-reproduction-research-v1` — clean PIT-safe historical adjudication; V3-B/O2 contamination conclusions.
 - `research/idx-v4-x1-clean-historical-oos-replay-v1` — clean V4-X1 historical evidence anchor.
 - `research/idx-v4-x1-clean-phase-b-final-refit-prep-v1` — final clean refit lineage.
 - `data/v4-x-clean-data-consolidation-v1-final-input-freeze-v1` — final consolidated clean input freeze.
 - `integration/v4-x1-clean-prospective-score-v1` — prospective clean scorer deployment lineage.
-- `integration/v4-x1-eod-auto-score-v1` — EOD scoring integration.
+
+`integration/v4-x1-eod-auto-score-v1` was a live integration anchor at the V2 snapshot but is now contained in the accepted E2E integration lineage and is certified branch-ref redundant by Capture Runtime Registry V1.
 
 Forward evaluation:
 - `research/idx-forward-evaluation-protocol-v1`
@@ -48,7 +52,7 @@ Forward evaluation:
 
 ## 3. Decision lineage — final
 
-Live anchors only:
+Durable anchors only:
 - `research/idx-decision-v2-minimal-implementation-v1` — incumbent Decision V2 implementation.
 - `research/idx-decision-economic-comparison-v1` — frozen development-set economic evidence supporting V2.
 - `audit/idx-decision-v4-refill-decoupling-result-v1` — final Decision closure / V4 structural reject anchor.
@@ -62,42 +66,48 @@ Binding state:
 
 The separate accepted Decision V2 implementation audit is preserved as an `archive/hygiene-v2/*` tag rather than a live branch.
 
-## 4. E2E downstream stack
+## 4. E2E downstream stack — current capture interpretation
 
-Primary downstream implementation anchor:
-- `integration/forward-ca-attestation-v1`
+Accepted E2E implementation anchor as of 2026-08-26:
 
-This lineage already contains source required for E2E, including:
-- Sizing V1;
-- Execution V1 engine/allocator/contract/verifier;
-- dividend execution/runtime;
-- persistent CA-aware forward/paper-state foundations;
-- canonical EOD/CA attestation support.
+- `integration/idx-e2e-baseline-paper-v1@043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`
 
-Additional live E2E anchors:
-- `integration/forward-eod-automation-monitoring`
-- `data/idx-forward-calendar-extension-v1`
-- `data/idx-v4-corporate-action-continuity-gate-v1`
-- `data/idx-v4-ca-voluntary-conversion-semantics-remediation-v1`
-- `integration/idx-v4-ca-target-continuity-bridge-v1`
-- `data/idx-open-official-stock-summary-recovery-v1`
-- `ops/idx-forward-open-archive-v1`
-- `data/market-index-forward-eod-v1-monitoring`
+The accepted lineage contains the cloud-first adapter plus existing downstream science/runtime foundations. Current capture terminology is deliberately smaller:
 
-Next engineering objective:
+- **Official Open Capture** — execution-grade IDX `OpenPrice`, cloud archived.
+- **EOD Market Capture** — one post-close Stock EOD/OHLCV + Market/Index context transaction.
+- **Corporate Action Capture** — integrated forward CA evidence/attestation.
+- **Stockbit Stream Capture**.
+- **Stockbit Intraday Capture**.
 
-`clean prospective score -> Decision V2 -> fixed ~10% seats -> Execution V1 -> CA-aware persistent paper state -> restart-safe E2E orchestrator`
+Important V2-era branch disposition updates:
 
-## 5. Active Stockbit operational lineages
+- `integration/forward-eod-automation-monitoring` — now fully contained by accepted E2E ancestry; certified branch-ref redundant.
+- `integration/v4-x1-eod-auto-score-v1` — now fully contained by accepted E2E ancestry; certified branch-ref redundant.
+- `ops/idx-forward-open-archive-v1` — historical source-blocked generic Open scaffold; superseded by Official Open, exact head must be archived before branch deletion.
+- `data/market-index-forward-eod-v1-monitoring` — **retain for now**; unique commits remain and must be audited/absorbed into canonical EOD Market Capture first.
+- CA clean/continuity anchors remain durable because they provide current accounting/execution semantics rather than competing acquisition hierarchies.
 
-Protected live heads:
-- `fix/stockbit-intraday-postclose-fix-v1`
-- `data/stockbit-stream-prospective-archive-v1`
-- `fix/stockbit-stream-zapi-envelope-v1` — PR #35 head.
-- `audit/stockbit-stream-v2-red-team-v1` — PR #36 head.
-- `ops/stockbit-stream-observable-smoke-v1`
+## 5. Stockbit operational lineage — current interpretation
 
-Superseded Stockbit ancestors were removed when their relevant code was contained in retained descendants.
+Current production authority is the Stockbit Stream workflow/runtime on `main`, not the old branch chain.
+
+Certified branch-ref redundant after successful merges:
+- `fix/stockbit-stream-zapi-envelope-v1` — PR #35 merged.
+- `fix/stockbit-stream-daily-capture-v1` — PR #72 merged.
+- `fix/stockbit-stream-transient-reliability-main-v1` — PR #79 merged.
+- `fix/stockbit-stream-schema-diagnostics-v1` — PR #81 merged.
+- `fix/stockbit-r2-retention-v1` — retention remediation and activation closure merged.
+
+Unique but superseded heads requiring forensic archive before deletion:
+- `data/stockbit-stream-prospective-archive-v1@009be16e5db8a7a9899cff73f10f53dfc8a3fe6c` — early generation base.
+- `ops/stockbit-stream-observable-smoke-v1@17803978c1e145dbe084c828e45bed5247c13aa6` — validation-only smoke; PR #34 intentionally closed unmerged.
+
+Protected / do not delete yet:
+- `audit/stockbit-stream-v2-red-team-v1` — PR #36 remains open/draft with unique adversarial work.
+- `fix/stockbit-intraday-postclose-fix-v1` — current Stockbit Intraday operational implementation and future cloud-migration target.
+
+See `CAPTURE_RUNTIME_REGISTRY_V1.md` for the exact audited delete/archive table and runtime-safety checks.
 
 ## 6. Retained parallel research/data lanes
 
@@ -112,6 +122,8 @@ Foreign Flow:
 - `data/idx-foreign-flow-forward-capture-v1`
 - `data/idx-foreign-flow-historical-acquisition-v1`
 
+The Foreign Flow forward lane is not automatically a separate canonical collector: current capture registry treats representation derived from canonical Stock Summary raw as a downstream sidecar unless a future explicit acquisition contract changes that.
+
 Price / Trend:
 - `research/idx-price-trend-confirmation-state-v1`
 - `integration/price-trend-state-forward-sidecar-v1`
@@ -124,14 +136,14 @@ Price-basis cleanup:
 - `data/price-basis-remediation-v1`
 - `research/price-basis-clean-refit-v1`
 
-Final live TradingView remediation anchor:
+Final historical TradingView remediation anchor:
 - `data/tradingview-historical-price-path-v2-1-remediation`
 
-These are **retained**, not automatically active priorities. `TEAM_STATUS.md` controls current ownership/status.
+These are **retained evidence/research lanes**, not automatically active priorities or canonical capture systems. `TEAM_STATUS.md` controls current ownership/status.
 
-## 7. Exact 50-branch cleanup survivor set
+## 7. Exact 50-branch cleanup survivor set — historical snapshot
 
-The atomic Hygiene V2 cleanup retained exactly these 50 remote branches:
+The atomic Hygiene V2 cleanup retained exactly these 50 remote branches on 2026-08-22. This list is intentionally preserved unchanged as historical evidence; it must not be read as the current live-branch authorization set.
 
 1. `audit/idx-decision-v4-refill-decoupling-result-v1`
 2. `audit/stockbit-stream-v2-red-team-v1`
@@ -199,16 +211,19 @@ Hygiene V2 created 45 lightweight archive tags for selected exact historical hea
 
 Archive tags are forensic recovery references, not active work authorization.
 
-The exact branch-to-SHA cleanup map is preserved in annotated tag:
+The exact branch-to-SHA V2 cleanup map is preserved in annotated tag:
 
 `archive/hygiene-v2/deletion-plan-40c3c21e565fa613`
+
+Capture Hygiene V3 uses the same principle: unique superseded capture heads must receive exact forensic refs before their live branch refs are removed.
 
 ## 9. Tombstoned/deleted means closed, not forgotten
 
 A removed branch must not be recreated simply because it no longer appears in the branch list. Before reopening an old idea, read:
 - `docs/repository_hygiene/EXPERIMENT_TOMBSTONES_V2.md`;
+- `docs/repository_hygiene/CAPTURE_RUNTIME_REGISTRY_V1.md` for acquisition/runtime work;
 - surviving canonical checkpoints;
 - the closed PR history;
-- relevant `archive/hygiene-v2/*` tag when exact code is needed.
+- relevant `archive/hygiene-v2/*` evidence when exact old code is needed.
 
-The branch list should represent **what can still be acted on**. Docs/tags preserve **what was learned**.
+The branch list should represent **what can still be acted on**. Docs/archive refs preserve **what was learned**.
