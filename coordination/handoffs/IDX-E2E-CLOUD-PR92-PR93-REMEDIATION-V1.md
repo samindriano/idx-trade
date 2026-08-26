@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 9ebb595b3294a8fd0c36df383ea63b0b892ab78f
 branch: integration/e2e-cloud-first-orchestration-v1
-head_commit: 64cb263044e071cce78dd57287f2c90dde336c4d
+head_commit: 7423e9acd2bb56d40646aed7ff80646335022ef9
 scope: >-
   Minimal correctness remediation for PR #92/#93 cloud-first E2E orchestration:
   snapshot lifecycle chronology, downstream Official Open cloud admission,
@@ -57,8 +57,8 @@ blocking_risks:
     proven in this remediation.
   - Windows/manual retirement remains out of scope and unauthorized.
 validation_run: >-
-  focused cloud/Official Open/conditional-store tests 35 passed; relevant
-  E2E/Official Open regression group 148 passed; full pytest passed with 3
+  focused cloud/Official Open/conditional-store tests 36 passed; relevant
+  E2E/Official Open regression group 149 passed; full pytest passed with 3
   pre-existing FutureWarnings; py_compile, YAML parse, and git diff --check
   passed.
 recommended_next_action: >-

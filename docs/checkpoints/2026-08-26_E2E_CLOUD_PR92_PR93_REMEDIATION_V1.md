@@ -47,8 +47,8 @@ provenance only and does not authorize execution by the producer.
 ## Validation
 
 - Cloud runtime, Official Open cloud, and conditional-store focused tests:
-  PASS (35 collected, 35 passed).
-- Relevant E2E/Official Open regression group: PASS (148 collected, 148
+  PASS (36 collected, 36 passed).
+- Relevant E2E/Official Open regression group: PASS (149 collected, 149
   passed).
 - Full pytest: PASS (all collected tests passed; 3 pre-existing FutureWarnings
   in curated identity/tradability-anchor tests).
