@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `samindriano/idx-trade`
 source_commit: `8a96a3d9caebfbd2c0235234e9394afc04693efa`
 branch: `integration/e2e-cloud-first-orchestration-v1`
-head_commit: pending until implementation commit
+head_commit: `d49ad9498df43b8a0f424dce4749198252369fa6`
 scope: cloud-first E2E Paper durability/orchestration adapter and synthetic tests only
 
 ## Files changed
@@ -62,7 +62,9 @@ scope: cloud-first E2E Paper durability/orchestration adapter and synthetic test
 
 - `python -m py_compile src/idx_trade/e2e_paper_cloud_runtime_v1.py scripts/run_e2e_paper_cloud_v1.py`: PASS
 - `python -m pytest -q tests/test_e2e_paper_cloud_runtime_v1.py`: 13 passed (fresh basetemp)
-- `git diff --check`: PASS at last run
+- Relevant E2E/Official Open regression group: PASS (fresh basetemp)
+- `python -m pytest -q`: PASS, 100% completed, 3 existing FutureWarnings
+- `git diff --check`: PASS
 - No provider/network calls, model fit/rescore, or protected outcome access.
 
 ## Recommended next action
