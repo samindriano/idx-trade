@@ -604,12 +604,16 @@ def build_prior_access_audit(
         return {"status": "READY", "path": str(Path(output_path).resolve()), "sha256": sha, **payload}
     if status == "SYNTHETIC_REHEARSAL_COMPLETE":
         return {
+            **inspection,
             "status": "PROVENANCE_INVALID",
             "reason": "SYNTHETIC_STATE_CONTAMINATES_REAL_ACCESS_ROOT",
-            **inspection,
         }
     if status in {"REAL_ACCESS_ALREADY_COMPLETED", "INTEGRITY_FAILURE", "ORPHAN_OR_INTERRUPTED_STATE"}:
-        return {"status": "PROVENANCE_INVALID", "reason": f"PERSISTED_ACCESS_STATUS:{status}", **inspection}
+        return {
+            **inspection,
+            "status": "PROVENANCE_INVALID",
+            "reason": f"PERSISTED_ACCESS_STATUS:{status}",
+        }
     return {
         "status": "NOT_AVAILABLE",
         "reason": f"PRIOR_ACCESS_AUDIT_UNHANDLED_STATUS:{status}",
@@ -1078,7 +1082,7 @@ def write_synthetic_score_session(
     artifact = directory / "score_artifact.parquet"
     manifest = directory / "manifest.json"
     artifact_sha = _atomic_immutable_bytes(artifact, _parquet_bytes(frame))
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": PRODUCTION_SCORE_MANIFEST_SCHEMA,
         "model_id": MODEL_NAME,
         "generation": MODEL_GENERATION,
@@ -1086,7 +1090,6 @@ def write_synthetic_score_session(
         "ranking": RANKING_SEMANTICS,
         "session_date": session_date,
         "status": "DONE",
-        "rows": row_count,
         "output": {
             "artifact_path": str(artifact.resolve()),
             "artifact_sha256": artifact_sha,
@@ -1105,6 +1108,8 @@ def write_synthetic_score_session(
             )
         },
     }
+    if production_shape:
+        payload["rows"] = row_count
     manifest_sha = _atomic_json(manifest, payload)
     return {
         "session_date": session_date,
