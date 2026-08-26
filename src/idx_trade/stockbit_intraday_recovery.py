@@ -11,6 +11,9 @@ from typing import Any, Mapping, Sequence
 SUCCESS = "SUCCESS"
 SKIPPED_IDX_NO_ACTIVITY = "SKIPPED_IDX_NO_ACTIVITY"
 REQUEST_ERROR = "REQUEST_ERROR"
+NO_CHART_404 = "NO_CHART_404"
+REQUEST_TERMINAL_ERROR = "REQUEST_TERMINAL_ERROR"
+QUOTA_EXHAUSTED = "QUOTA_EXHAUSTED"
 
 ADMISSIBLE_TERMINAL_STATUSES = frozenset(
     {
@@ -19,6 +22,10 @@ ADMISSIBLE_TERMINAL_STATUSES = frozenset(
     }
 )
 
+# REQUEST_ERROR is deliberately reserved for failures that can plausibly
+# recover later in the same session (transport failure, exhausted bounded 5xx
+# retries, bounded short-window 429, etc.). Permanent/session-terminal request
+# failures have explicit blocking statuses below.
 RETRYABLE_STATUSES = frozenset(
     {
         REQUEST_ERROR,
@@ -27,6 +34,9 @@ RETRYABLE_STATUSES = frozenset(
 
 BLOCKING_TERMINAL_STATUSES = frozenset(
     {
+        NO_CHART_404,
+        REQUEST_TERMINAL_ERROR,
+        QUOTA_EXHAUSTED,
         "EMPTY_SESSION",
         "NO_VALID_POINTS",
         "NON_CURRENT_SESSION",
