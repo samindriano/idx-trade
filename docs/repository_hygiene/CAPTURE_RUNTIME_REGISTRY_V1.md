@@ -1,7 +1,7 @@
 # IDX-Trade Capture Runtime Registry V1
 
 Date: 2026-08-26 Asia/Jakarta
-Status: `CAPTURE_SURFACE_CANONICALIZED_DELETE_PLAN_PENDING_APPLY`
+Status: `CAPTURE_SURFACE_CANONICALIZED_MARKET_INDEX_AUDITED_DELETE_PLAN_PENDING_APPLY`
 
 Purpose: define the small set of data-acquisition systems that are allowed to remain conceptually active. A branch named `capture`, `forward`, `archive`, or `monitoring` is not automatically a canonical collector.
 
@@ -19,6 +19,7 @@ Exactly five capture families are recognized:
    - one canonical post-close transaction, not competing collectors.
    - **Stock EOD**: per-security OHLCV / Stock Summary inputs needed by clean scoring and paper runtime.
    - **Market + Index EOD context**: benchmark/index context belonging to the same EOD market transaction.
+   - accepted E2E integration already contains the official IDX Index Summary provider, exact raw/hash capture, completeness validation, normalized context artifacts, manifest binding, and hardened artifact recovery.
    - cloud-first POST_EOD orchestration is the intended replacement for the Windows-hosted operational path after first genuine cloud proof.
 
 3. **Corporate Action Capture**
@@ -81,12 +82,14 @@ These contain unique unmerged commits, but their runtime purpose is superseded. 
 | `ops/idx-forward-open-archive-v1` | `dc5e84b589eebe040119f48f9f69538d398a9d36` | PR #12 closed unmerged; source remained `BLOCKED_SOURCE_NOT_FROZEN`; never execution-grade; superseded by Official IDX `OpenPrice`. |
 | `data/stockbit-stream-prospective-archive-v1` | `009be16e5db8a7a9899cff73f10f53dfc8a3fe6c` | four unique early-generation archive/workflow commits; production functionality is superseded by the evolved `main` Stockbit V2 path. |
 | `ops/stockbit-stream-observable-smoke-v1` | `17803978c1e145dbe084c828e45bed5247c13aa6` | PR #34 intentionally closed unmerged after validation-only five-ticker smoke; relevant envelope/runtime change subsequently promoted through PR #35. |
+| `data/market-index-forward-eod-v1-monitoring` | `8c94f56b0025ad68b254476aaddb73be81bfb0bc` | two commits remain graph-unique, but their substantive Index Summary/context behavior is present and hardened in accepted E2E `043003ee`: complete `length=1000` source request, strict finite/integer metadata validation, raw/hash provenance, normalized index artifact, manifest binding, semantic recovery verification and tests. The old branch is no longer an operational authority. |
 
 Because the current GitHub connector exposes branch-ref creation but not tag-ref creation/deletion, temporary exact-head forensic refs were created under:
 
 - `archive/capture-hygiene-v3/forward-open-scaffold-dc5e84b5`
 - `archive/capture-hygiene-v3/stockbit-v1-base-009be16e`
 - `archive/capture-hygiene-v3/stockbit-observable-smoke-17803978`
+- `archive/capture-hygiene-v3/market-index-eod-8c94f56b`
 
 A local/API-capable hygiene apply should preferably convert these to lightweight/annotated `archive/capture-hygiene-v3/*` tags and then remove both the original branches and temporary archive branches atomically.
 
@@ -95,12 +98,22 @@ A local/API-capable hygiene apply should preferably convert these to lightweight
 | Branch | Reason |
 |---|---|
 | `audit/stockbit-stream-v2-red-team-v1` | PR #36 remains open/draft and contains unique adversarial work. |
-| `data/market-index-forward-eod-v1-monitoring` | still has unique commits relative to current E2E integration; must audit/absorb EOD index-context behavior first. |
 | `fix/stockbit-intraday-postclose-fix-v1` | current Stockbit intraday operational implementation; future cloud migration target. |
 | `ops/e2e-paper-cloud-launcher-v1` | active cloud launcher PR #93 lane. |
 | `integration/idx-e2e-baseline-paper-v1` | current accepted E2E implementation anchor. |
 
 Historical/research branches outside the capture surface are intentionally out of scope for this pass.
+
+## Market/Index EOD branch audit detail
+
+The old Market/Index branch was not deleted merely because its commit graph diverged. Its actual implementation was checked against the accepted integration:
+
+- old `idx_index_summary.py` used the official `GetIndexSummary` endpoint and introduced the core context contract;
+- accepted `043003ee` still contains that provider and strengthens it with explicit `length=1000&start=0`, finite/non-boolean integer count validation, strict complete-row validation, raw SHA and observation timestamps;
+- accepted `forward_monitoring.py` verifies Stock Summary raw/normalized, Index Summary raw/normalized, session OHLCV and calendar hashes, semantic session/identity uniqueness, snapshot/evidence dates, and model-input/OHLCV consistency;
+- accepted `tests/test_forward_market_context.py` retains and extends the source/completeness/immutability coverage.
+
+Therefore the two graph-unique commits are valuable forensic lineage, but not unique production capability.
 
 ## Runtime deletion safety
 
@@ -114,7 +127,7 @@ Branch cleanup is not scheduler retirement.
 ## Next hygiene gate
 
 1. merge this registry/documentation cleanup;
-2. audit the two unique `data/market-index-forward-eod-v1-monitoring` commits against the accepted EOD market transaction;
-3. close/integrate PR #36 before deciding its branch disposition;
-4. using a local/API-capable atomic ref operation, create permanent archive tags for the three exact unique heads and delete only branches certified above;
+2. close/integrate PR #36 before deciding its branch disposition;
+3. using a local/API-capable atomic ref operation, create permanent archive tags for the four exact unique heads and delete only branches certified above;
+4. remove the temporary archive branches after tag verification;
 5. verify default-branch workflows and pinned-SHA workflows remain unchanged after branch deletion.
