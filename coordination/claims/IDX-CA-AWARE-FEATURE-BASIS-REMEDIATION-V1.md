@@ -5,6 +5,7 @@ Date: 2026-08-27 Asia/Jakarta
 
 Implementation branch: `data/ca-aware-feature-basis-remediation-v1`
 Draft stacked PR: `#108`
+Implementation HEAD: `faa42315b8efe41dea21da9d19fa7fd15db0a8bb`
 Base / controlling QA lane: `audit/research-integrity-data-qa-gate-v1` / PR `#103`
 Incident: `INC-001 — Historical CA / backward feature price-basis integrity`
 
@@ -17,7 +18,9 @@ Current implementation checkpoint:
 
 Validated implementation primitives include exact backward dependency geometry, resolved basis epochs, bounded/unbounded transition fail-closed handling, explicit CA no-event coverage admission, event semantic certification, and safe strict-census / coverage adapters.
 
-PR #108 CI at implementation head ancestry: `282 passed, 0 failed` on run `32995968505`.
+PR #108 exact-head CI for `faa42315...`: **282 passed, 0 failed**, run `32996260760`. Four warnings are pre-existing tradability NumPy timedelta deprecation warnings.
+
+An earlier pre-fix run exposed a faulty synthetic test fixture for rolling-60 recovery: the transition was placed before a complete 60-observation pre-event warmup. The fixture was corrected without weakening admission logic.
 
 ## Current boundary
 
