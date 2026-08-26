@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 
 SCRIPT = Path(__file__).resolve().with_name("run_e2e_paper_production_replay_v1.py")
@@ -27,14 +28,41 @@ def main() -> int:
     if root.exists() and any(root.iterdir()):
         raise SystemExit(f"COLD_RESTART_OUTPUT_NOT_EMPTY:{root}")
 
-    first = subprocess.run(
-        [sys.executable, str(SCRIPT), "--output-dir", str(root), "--stop-after", "2"],
-        check=False,
+    first = subprocess.Popen(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--output-dir",
+            str(root),
+            "--stop-after",
+            "2",
+            "--hold-after",
+        ]
     )
-    if first.returncode != 0:
-        raise SystemExit(first.returncode)
-
+    deadline = time.monotonic() + 60.0
     progress = root / "replay_progress.json"
+    while time.monotonic() < deadline:
+        if first.poll() is not None:
+            raise SystemExit("COLD_RESTART_CHILD_EXITED_BEFORE_KILL")
+        if progress.is_file():
+            payload = json.loads(progress.read_text(encoding="utf-8"))
+            if payload.get("completed_session_count") == 2:
+                break
+        time.sleep(0.1)
+    else:
+        first.kill()
+        first.wait(timeout=10)
+        raise SystemExit("COLD_RESTART_PARTIAL_PROGRESS_TIMEOUT")
+
+    first.terminate()
+    try:
+        first.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        first.kill()
+        first.wait(timeout=10)
+    if first.returncode == 0:
+        raise SystemExit("COLD_RESTART_CHILD_WAS_NOT_INTERRUPTED")
+
     if not progress.is_file():
         raise SystemExit(f"COLD_RESTART_PROGRESS_NOT_WRITTEN:{progress}")
 

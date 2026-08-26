@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import shutil
 
-from idx_trade import forward_dividend_runtime_v1_1 as dividend_runtime
 from idx_trade.e2e_paper_cloud_runtime_v1 import (
     LocalConditionalStore,
     build_runtime_snapshot,
@@ -10,11 +9,21 @@ from idx_trade.e2e_paper_cloud_runtime_v1 import (
 )
 from idx_trade.e2e_paper_orchestration_v1 import (
     bootstrap_t0,
+    derive_required_execution_tickers,
     execute_preopen,
+    load_score_manifest,
     prepare_post_eod,
 )
+from idx_trade.forward_dividend_execution_v1_1 import (
+    reconcile_corporate_action_attestation_v1_2_journal,
+    verify_cash_dividend_evidence_for_execution,
+)
+from idx_trade.v4_x1_execution_v1_verify import (
+    verify_eod_execution_inputs,
+    verify_open_execution_inputs,
+)
 import idx_trade.e2e_paper_preopen_ca_cloud_v1 as preopen_ca
-from scripts import run_e2e_paper_synthetic_replay_v1 as synthetic
+from scripts import run_e2e_paper_production_replay_v1 as production
 
 
 DECISION = "2026-08-27"
@@ -38,14 +47,50 @@ def _guards() -> dict[str, bool]:
 
 
 def test_synthetic_fresh_runner_d_to_e_checkpoint_then_preopen_execution(tmp_path) -> None:
+    """Exercise the D->E boundary with real artifact verifiers.
+
+    Fixtures remain synthetic, but every score/EOD/Open/CA/dividend input is
+    loaded through the public verifiers used by the production replay.  This
+    acceptance path must not mint private-token Verified objects or monkeypatch
+    a production verifier.
+    """
     paper = (tmp_path / "paper-runtime").resolve()
     paper.mkdir(parents=True)
-    (paper / "fixtures").mkdir()
     bootstrap_t0(paper, session_date=DECISION)
 
-    current_score = synthetic._score(paper, DECISION, 3)
-    eod = synthetic._eod(paper, DECISION, EXECUTION)
-    prepared_ca = synthetic._ca(paper, DECISION, EXECUTION, event=False)
+    # Use the initial deterministic score fixture so the production CA fixture's
+    # T00 evidence is inside the exact required execution universe.
+    score_manifest = production._score_fixture(paper, DECISION, 0)
+    current_score = load_score_manifest(score_manifest)
+    ohlcv, model_input, calendar = production._eod_fixture(paper, DECISION, EXECUTION)
+    eod = verify_eod_execution_inputs(
+        session_ohlcv_path=ohlcv,
+        model_input_path=model_input,
+        official_calendar_path=calendar,
+        decision_session_date=DECISION,
+        required_tickers=production.TICKERS,
+    )
+    required = derive_required_execution_tickers(
+        paper,
+        current_score=current_score,
+        previous_score=None,
+        eod_inputs=eod,
+    )
+    post_attestation, post_journal, _ = production._ca_fixture(
+        paper,
+        DECISION,
+        EXECUTION,
+        required,
+        include_event=False,
+        capture_phase="POST_EOD",
+    )
+    prepared_ca = reconcile_corporate_action_attestation_v1_2_journal(
+        attestation_path=post_attestation,
+        journal_path=post_journal,
+        expected_from_session_date=DECISION,
+        expected_through_session_date=EXECUTION,
+        required_tickers=required,
+    )
     prepared = prepare_post_eod(
         paper,
         current_score=current_score,
@@ -57,14 +102,32 @@ def test_synthetic_fresh_runner_d_to_e_checkpoint_then_preopen_execution(tmp_pat
     # Fresh PREOPEN evidence arrives on E and extends the D->E CA view.  It is
     # evidence only at checkpoint time; no execution/PaperState transition is
     # authorized before Official Open admission.
-    current_ca = synthetic._ca(
+    preopen_attestation, preopen_journal, verified_dividend = production._ca_fixture(
         paper,
         DECISION,
         EXECUTION,
-        event=True,
-        event_id="DIV-T01",
+        required,
+        include_event=True,
+        capture_phase="PREOPEN",
+        capture_timestamp_utc=f"{EXECUTION}T01:00:00+00:00",
+        announcement="2026-08-27T18:00:00",
+        event_schedule=("2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"),
     )
-    evidence = tuple(synthetic._evidence(paper, event) for event in current_ca.certified_events)
+    assert verified_dividend is not None
+    current_ca = reconcile_corporate_action_attestation_v1_2_journal(
+        attestation_path=preopen_attestation,
+        journal_path=preopen_journal,
+        expected_from_session_date=DECISION,
+        expected_through_session_date=EXECUTION,
+        required_tickers=required,
+    )
+    evidence = (
+        verify_cash_dividend_evidence_for_execution(
+            review_path=verified_dividend.review_path,
+            attachment_dir=verified_dividend.review_path.parent,
+        ),
+    )
+    assert evidence[0].event == current_ca.certified_events[0]
     execution_path = paper / "executions" / f"{EXECUTION}.json"
     assert not execution_path.exists()
 
@@ -112,40 +175,29 @@ def test_synthetic_fresh_runner_d_to_e_checkpoint_then_preopen_execution(tmp_pat
     assert prepared.path.is_file()
     assert not execution_path.exists()
 
-    open_inputs = synthetic._open(paper, EXECUTION, missing=set())
-    evidence_by_path = {
-        str(row.review_path.resolve()): row
-        for row in evidence
-    }
-    original_gate = dividend_runtime.gate.verify_cash_dividend_evidence_for_execution
-    try:
-        dividend_runtime.gate.verify_cash_dividend_evidence_for_execution = (
-            lambda **kwargs: evidence_by_path[
-                str(__import__("pathlib").Path(kwargs["review_path"]).expanduser().resolve())
-            ]
-        )
-        result = execute_preopen(
-            paper,
-            prepared_path=prepared.path,
-            current_score=current_score,
-            previous_score=None,
-            eod_inputs=eod,
-            open_inputs=open_inputs,
-            ca_reconciliation=current_ca,
-            dividend_evidence=evidence,
-        )
-        rerun = execute_preopen(
-            paper,
-            prepared_path=prepared.path,
-            current_score=current_score,
-            previous_score=None,
-            eod_inputs=eod,
-            open_inputs=open_inputs,
-            ca_reconciliation=current_ca,
-            dividend_evidence=evidence,
-        )
-    finally:
-        dividend_runtime.gate.verify_cash_dividend_evidence_for_execution = original_gate
+    open_manifest = production._open_fixture(paper, EXECUTION)
+    open_inputs = verify_open_execution_inputs(
+        execution_session_date=EXECUTION,
+        manifest_path=open_manifest,
+    )
+    result = execute_preopen(
+        paper,
+        prepared_path=prepared.path,
+        current_score=current_score,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=open_inputs,
+        ca_reconciliation=current_ca,
+    )
+    rerun = execute_preopen(
+        paper,
+        prepared_path=prepared.path,
+        current_score=current_score,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=open_inputs,
+        ca_reconciliation=current_ca,
+    )
 
     assert result.status == "EXECUTION_COMPLETE"
     assert execution_path.is_file()
