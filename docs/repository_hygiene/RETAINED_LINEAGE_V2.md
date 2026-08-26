@@ -85,8 +85,10 @@ Important V2-era branch disposition updates:
 - `integration/forward-eod-automation-monitoring` — now fully contained by accepted E2E ancestry; certified branch-ref redundant.
 - `integration/v4-x1-eod-auto-score-v1` — now fully contained by accepted E2E ancestry; certified branch-ref redundant.
 - `ops/idx-forward-open-archive-v1` — historical source-blocked generic Open scaffold; superseded by Official Open, exact head must be archived before branch deletion.
-- `data/market-index-forward-eod-v1-monitoring` — **retain for now**; unique commits remain and must be audited/absorbed into canonical EOD Market Capture first.
+- `data/market-index-forward-eod-v1-monitoring@8c94f56b0025ad68b254476aaddb73be81bfb0bc` — graph-unique historical head, but its substantive Index Summary/context capability is present and hardened in accepted `043003ee`; archive exact head then remove the live branch ref.
 - CA clean/continuity anchors remain durable because they provide current accounting/execution semantics rather than competing acquisition hierarchies.
+
+The Market/Index audit compared source and verification behavior, not only commit ancestry. Accepted `043003ee` retains the official `GetIndexSummary` provider and strengthens it with explicit complete-page parameters, stricter numeric/count validation, raw/hash provenance, normalized context, manifest binding, semantic artifact recovery, and current tests. The old branch therefore preserves forensic lineage but no unique production capability.
 
 ## 5. Stockbit operational lineage — current interpretation
 
@@ -215,7 +217,7 @@ The exact branch-to-SHA V2 cleanup map is preserved in annotated tag:
 
 `archive/hygiene-v2/deletion-plan-40c3c21e565fa613`
 
-Capture Hygiene V3 uses the same principle: unique superseded capture heads must receive exact forensic refs before their live branch refs are removed.
+Capture Hygiene V3 uses the same principle: unique superseded capture heads must receive exact forensic refs before their live branch refs are removed. Temporary exact-head branch refs exist for Forward Open scaffold, Stockbit V1 base, Stockbit observable smoke, and Market/Index EOD until a tag-capable atomic cleanup converts/removes them.
 
 ## 9. Tombstoned/deleted means closed, not forgotten
 
