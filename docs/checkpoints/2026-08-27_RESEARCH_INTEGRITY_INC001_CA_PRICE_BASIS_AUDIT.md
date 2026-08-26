@@ -1,10 +1,11 @@
 # Research Integrity / Data QA Gate V1 — INC-001 Audit
 
-Date: 2026-08-27 Asia/Jakarta  
-Branch: `audit/research-integrity-data-qa-gate-v1`  
-Audit PR: `#103`  
-Audit HEAD: `4a2cfbe3f4332aad4431b65931bfaf01bbb4979b` before this checkpoint  
+Date: 2026-08-27 Asia/Jakarta
+Branch: `audit/research-integrity-data-qa-gate-v1`
+Audit PR: `#103`
+Audit HEAD: `4a2cfbe3f4332aad4431b65931bfaf01bbb4979b` before this checkpoint
 Current `origin/main` observed during finalization: `30d725ffba1175b64b62617ec0265c6c5792b800`
+Latest `origin/main` observed before final handoff publication: `8769949caa59b340aa8c4c0abfa49c8ab5c0b7be`.
 
 ## Scope and safety
 

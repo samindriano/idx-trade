@@ -6,9 +6,9 @@ task_id: RESEARCH-INTEGRITY-INC-001-CA-PRICE-BASIS-AUDIT-V1
 model_used: gpt-5.6-luna workers; main integration
 reasoning_level: xhigh
 source_repository: samindriano/idx-trade
-source_commit: 4a2cfbe3f4332aad4431b65931bfaf01bbb4979b
+source_commit: 540a129c350b4bce62a5304e80a9cba30c4771af
 branch: audit/research-integrity-data-qa-gate-v1
-head_commit: pending after checkpoint commit
+head_commit: pending final documentation commit
 scope: Phase-1 integrity-gate validation/hardening and Phase-2 outcome-blind HEAVY QA audit of INC-001 historical corporate-action / backward feature price-basis integrity
 files_changed:
   - src/idx_trade/research_integrity_gate_v1.py
