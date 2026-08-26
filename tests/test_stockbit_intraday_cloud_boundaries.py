@@ -19,6 +19,7 @@ from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot
 from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
 from idx_trade.stockbit_intraday_e2e_bridge import (
     StockbitIntradayE2EBridgeError,
+    _CHILD_CODE,
     _child_env,
     _require_within,
     _safe_manifest_key,
@@ -92,12 +93,7 @@ def test_dry_run_requires_no_cloud_or_provider_environment():
 
 
 def test_production_intraday_store_rejects_noncanonical_prefix_before_network():
-    for prefix in (
-        "e2e-paper-v1",
-        "stockbit-intraday-smoke-v1/run-1",
-        "other-prefix",
-        "../stockbit-intraday-v1",
-    ):
+    for prefix in ("e2e-paper-v1", "stockbit-intraday-smoke-v1/run-1", "other-prefix", "../stockbit-intraday-v1"):
         values = _storage_values()
         values["STOCKBIT_INTRADAY_STORAGE_PREFIX"] = prefix
         with pytest.raises(StockbitIntradayCloudError, match="STORAGE_PREFIX_INVALID"):
@@ -114,26 +110,26 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
         "UNRELATED_ACCOUNT_SECRET": "also-must-not-cross",
         "PYTHONPATH": "malicious-parent-path",
     }
-    accepted = tmp_path / "accepted"
-    child = _child_env(values, accepted)
+    child = _child_env(values, tmp_path / "accepted")
     assert "ZAPI_API_KEY" not in child
     assert "IDX_API_KEY" not in child
     assert "UNRELATED_ACCOUNT_SECRET" not in child
+    assert "PYTHONPATH" not in child
+    assert "PYTHONNOUSERSITE" not in child
     assert child["E2E_CLOUD_STORAGE_BACKEND"] == "s3"
     assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v1"
-    assert child["PYTHONPATH"] == str(accepted / "src")
-    assert child["PYTHONNOUSERSITE"] == "1"
     assert child["PATH"] == values["PATH"]
     assert child["HOME"] == values["HOME"]
+    assert "STOCKBIT_INTRADAY_E2E_BRIDGE_WRITE_FORBIDDEN" in _CHILD_CODE
+    assert "ReadOnlyStore" in _CHILD_CODE
 
 
 def test_e2e_bridge_rejects_noncanonical_read_prefix_before_child_launch(tmp_path: Path):
     values = _storage_values()
-    accepted = tmp_path / "accepted"
     for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "../e2e-paper-v1"):
         values["STOCKBIT_INTRADAY_E2E_PREFIX"] = prefix
         with pytest.raises(StockbitIntradayE2EBridgeError, match="E2E_PREFIX_INVALID"):
-            _child_env(values, accepted)
+            _child_env(values, tmp_path / "accepted")
 
 
 def test_e2e_bridge_manifest_key_and_materialized_paths_fail_closed(tmp_path: Path):
