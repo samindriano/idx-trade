@@ -26,11 +26,7 @@ ADMISSIBLE_TERMINAL_STATUSES = frozenset(
 # recover later in the same session (transport failure, exhausted bounded 5xx
 # retries, bounded short-window 429, etc.). Permanent/session-terminal request
 # failures have explicit blocking statuses below.
-RETRYABLE_STATUSES = frozenset(
-    {
-        REQUEST_ERROR,
-    }
-)
+RETRYABLE_STATUSES = frozenset({REQUEST_ERROR})
 
 BLOCKING_TERMINAL_STATUSES = frozenset(
     {
@@ -60,14 +56,7 @@ class RecoveryPlan:
 
     @property
     def pending(self) -> tuple[str, ...]:
-        """Tickers that may be fetched on a recovery run.
-
-        Missing tickers were never attempted and retryable tickers had a
-        transient request failure. Blocking/unknown statuses are intentionally
-        excluded; callers must surface them rather than silently refetching or
-        treating them as success.
-        """
-
+        """Only never-attempted or explicitly transient-failure tickers."""
         return self.missing + self.retry
 
 
@@ -92,14 +81,6 @@ def build_recovery_plan(
     tickers: Sequence[str],
     status_by_ticker: Mapping[str, object],
 ) -> RecoveryPlan:
-    """Classify a frozen same-session universe for deterministic recovery.
-
-    `status_by_ticker` values may be status strings or mappings containing a
-    `status` field. Unknown statuses fail closed as blocking. Duplicate ticker
-    identities in the frozen universe are rejected because recovery order and
-    completeness would otherwise be ambiguous.
-    """
-
     ordered = [str(ticker).strip().upper() for ticker in tickers]
     if len(set(ordered)) != len(ordered):
         raise ValueError("duplicate ticker in frozen intraday universe")
@@ -115,11 +96,7 @@ def build_recovery_plan(
             missing.append(ticker)
             continue
         raw = status_by_ticker[ticker]
-        if isinstance(raw, Mapping):
-            status = _normalise_status(raw.get("status"))
-        else:
-            status = _normalise_status(raw)
-
+        status = _normalise_status(raw.get("status")) if isinstance(raw, Mapping) else _normalise_status(raw)
         if status in ADMISSIBLE_TERMINAL_STATUSES:
             admissible.append(ticker)
         elif status in RETRYABLE_STATUSES:
@@ -189,16 +166,14 @@ def apply_policy_event_once(
     shadow_sessions_required: int = 3,
     recheck_every: int = 10,
 ) -> tuple[dict[str, Any], bool]:
-    """Apply at most one rollout-policy transition per admitted session.
+    """Apply at most one rollout transition per *admitted complete* session.
 
-    Identical replay of the same `(session_date, manifest_sha256, event)` is a
-    no-op. Reusing the same session date with different admitted evidence or a
-    different event is a hard conflict. This closes the crash window where a
-    policy update could be persisted before the final daily summary.
+    Intermediate 18:30/19:30 retry states are not policy events and return a
+    no-op without requiring a final manifest. Once complete, an identical
+    `(session_date, manifest_sha256, event)` replay is a no-op; conflicting
+    evidence for the same session is a hard error.
     """
 
-    if not manifest_sha256 or len(manifest_sha256) < 16:
-        raise ValueError("manifest_sha256 is required for policy idempotency")
     if shadow_sessions_required <= 0 or recheck_every <= 0:
         raise ValueError("shadow/recheck thresholds must be positive")
     if false_negative is not None and false_negative < 0:
@@ -214,11 +189,19 @@ def apply_policy_event_once(
     if updated["mode"] not in {"SHADOW", "ENFORCE"}:
         raise ValueError("invalid Stockbit intraday policy mode")
 
+    # A retry slot is operational state, not a scientific/policy observation.
+    # Do not consume the date before the final admissible session exists.
+    if not complete:
+        return updated, False
+
+    if not manifest_sha256 or len(manifest_sha256) < 16:
+        raise ValueError("manifest_sha256 is required for policy idempotency")
+
     session_text = session_date.isoformat()
     event_core = {
         "session_date": session_text,
         "run_mode": run_mode,
-        "complete": bool(complete),
+        "complete": True,
         "false_negative": false_negative,
         "certification_eligible": certification_eligible,
         "manifest_sha256": manifest_sha256,
@@ -231,9 +214,9 @@ def apply_policy_event_once(
         raise ValueError(f"conflicting Stockbit intraday policy event for {session_text}")
 
     prior_mode = str(updated["mode"])
-    reason = "INCOMPLETE_NO_TRANSITION"
+    reason = "COMPLETE_NO_TRANSITION"
 
-    if complete and run_mode in {"SHADOW", "SHADOW_RECHECK"} and certification_eligible is True:
+    if run_mode in {"SHADOW", "SHADOW_RECHECK"} and certification_eligible is True:
         if false_negative == 0:
             if run_mode == "SHADOW":
                 updated["consecutive_zero_fn_shadow_sessions"] = int(
@@ -254,10 +237,10 @@ def apply_policy_event_once(
             updated["consecutive_zero_fn_shadow_sessions"] = 0
             updated["enforced_sessions_since_recheck"] = 0
             reason = "FALSE_NEGATIVE_REVERT_TO_SHADOW"
-    elif complete and run_mode == "ENFORCE":
+    elif run_mode == "ENFORCE":
         updated["enforced_sessions_since_recheck"] = int(updated.get("enforced_sessions_since_recheck") or 0) + 1
         reason = "ENFORCE_SESSION_COMPLETE"
-    elif complete and certification_eligible is False:
+    elif certification_eligible is False:
         if run_mode in {"SHADOW", "SHADOW_RECHECK"}:
             updated["mode"] = "SHADOW"
             updated["consecutive_zero_fn_shadow_sessions"] = 0
