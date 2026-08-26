@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-26 07:44 Asia/Jakarta
+Last coordinated update: 2026-08-26 10:48 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -46,6 +46,7 @@ Repository Hygiene V2 completed on 2026-08-22.
 | Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** V4 refill-decoupling structurally rejected; no V4.1/V5/rescue or V4 economic comparison. |
 | Sizing + Execution + CA-aware paper foundations | `DONE` | `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1` | Frozen Sizing V1 and Execution V1 plus cash-dividend/persistent CA-aware state foundations are retained. Unsupported CA remains fail-closed. |
 | E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1`; integrated HEAD `b5265295` (PR #87) | Decision V2 → Sizing V1 and Decision V2 → Execution V1 adapters are accepted. Execution-grade official IDX `OpenPrice` evidence is accepted with `DIRECT_IDX_THEN_ZAPI_RAW_V1`. PR #85 (Open runtime hardening), PR #86 (outcome-blind evidence-health audit), and PR #87 (read-only session audit / missed-execution continuity hardening) are merged into the integration lineage. Windows task `IDXTrade-E2E-OfficialOpen` remains the active scheduled path. First genuine weekday same-session capture remains pending; no retroactive capture or protected-outcome access is authorized. |
+| E2E Paper cloud-first orchestration | `REVIEW` | `integration/e2e-cloud-first-orchestration-v1@d49ad949`; launcher `ops/e2e-paper-cloud-launcher-v1@97d251bd` | Cloud durability adapter and pinned default-branch launcher are prepared with synthetic tests. Private input-bundle provisioning, live R2/provider verification, and one future live session remain pending. Windows/manual retirement is not authorized until those gates pass. |
 
 ---
 
