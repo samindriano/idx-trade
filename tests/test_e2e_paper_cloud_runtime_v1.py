@@ -38,6 +38,9 @@ from idx_trade.official_open_cloud_archive_v1 import (
 )
 
 
+PRODUCER_CAPTURE_CODE_REF = "4" * 40
+
+
 def _write_schedule(tmp_path: Path) -> tuple[bytes, str]:
     source = tmp_path / "official-source.pdf"
     source.write_bytes(b"official source")
@@ -171,6 +174,7 @@ def _write_official_open_cloud_slot(
         "runner_provenance": {
             "runner": "GITHUB_ACTIONS",
             "github_event_name": "schedule",
+            "capture_code_ref": PRODUCER_CAPTURE_CODE_REF,
         },
         "guards": {
             "model_accessed": False,
@@ -408,6 +412,10 @@ def test_latest_snapshot_prefers_later_post_eod_state_for_next_preopen_restore(
         ("outside_window", "OUTSIDE_PROSPECTIVE_WINDOW"),
         ("corrupt_child", "ARTIFACT_SHA_MISMATCH:open_prices"),
         ("manual_capture", "MANUAL_CAPTURE_FORBIDDEN"),
+        ("old_provenance", "MANUAL_CAPTURE_FORBIDDEN"),
+        ("missing_capture_code_ref", "CAPTURE_CODE_REF_GIT_SHA_INVALID"),
+        ("malformed_capture_code_ref", "CAPTURE_CODE_REF_GIT_SHA_INVALID"),
+        ("wrong_capture_code_ref", "CAPTURE_CODE_REF_MISMATCH"),
         ("future_capture", "FUTURE_CAPTURE"),
     ],
 )
@@ -440,6 +448,28 @@ def test_official_open_cloud_admission_rejects_invalid_outer_or_timing_contract(
             "runner": "GITHUB_ACTIONS",
             "github_event_name": "workflow_dispatch",
         }
+    elif kind == "old_provenance":
+        overrides["runner_provenance"] = {
+            "runner": "GITHUB_ACTIONS",
+            "capture_code_ref": "8a96a3d9caebfbd2c0235234e9394afc04693efa",
+        }
+    elif kind == "missing_capture_code_ref":
+        overrides["runner_provenance"] = {
+            "runner": "GITHUB_ACTIONS",
+            "github_event_name": "schedule",
+        }
+    elif kind == "malformed_capture_code_ref":
+        overrides["runner_provenance"] = {
+            "runner": "GITHUB_ACTIONS",
+            "github_event_name": "schedule",
+            "capture_code_ref": "not-a-commit-sha",
+        }
+    elif kind == "wrong_capture_code_ref":
+        overrides["runner_provenance"] = {
+            "runner": "GITHUB_ACTIONS",
+            "github_event_name": "schedule",
+            "capture_code_ref": "5" * 40,
+        }
     elif kind == "future_capture":
         now = datetime.fromisoformat("2026-08-24T09:12:30+07:00")
 
@@ -457,6 +487,7 @@ def test_official_open_cloud_admission_rejects_invalid_outer_or_timing_contract(
             session_date="2026-08-24",
             target_root=tmp_path / "local-open",
             eligibility_now=now,
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
         )
 
 
@@ -472,6 +503,7 @@ def test_old_1800_capture_is_not_execution_admissible(tmp_path: Path) -> None:
             session_date="2026-08-24",
             target_root=tmp_path / "local-open",
             eligibility_now=datetime.fromisoformat("2026-08-24T18:01:00+07:00"),
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
         )
 
 
@@ -483,6 +515,7 @@ def test_valid_scheduled_official_open_cloud_capture_is_admitted(tmp_path: Path)
         session_date="2026-08-24",
         target_root=tmp_path / "local-open",
         eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+        expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
     )
     assert result is not None
     assert result["execution_admitted"] is True
@@ -499,6 +532,7 @@ def test_official_open_cloud_materialization_verifies_referenced_artifacts(tmp_p
         session_date="2026-08-24",
         target_root=tmp_path / "local-open",
         eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+        expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
     )
     assert result is not None
     assert result["slot"] == slot
@@ -511,6 +545,20 @@ def test_official_open_cloud_materialization_verifies_referenced_artifacts(tmp_p
             session_date="2026-08-24",
             target_root=tmp_path / "other-open",
             eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
+        )
+
+
+def test_official_open_cloud_admission_requires_expected_producer_pin(tmp_path: Path) -> None:
+    store = LocalConditionalStore(tmp_path / "official")
+    _write_official_open_cloud_slot(store)
+    with pytest.raises(CloudPaperRuntimeError, match="EXPECTED_CAPTURE_CODE_REF_GIT_SHA_INVALID"):
+        materialize_official_open_from_cloud(
+            store,
+            session_date="2026-08-24",
+            target_root=tmp_path / "local-open",
+            eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+            expected_capture_code_ref="",
         )
 
 
@@ -755,6 +803,7 @@ def test_preopen_wait_accepts_producer_commit_after_consumer_starts(
             LocalConditionalStore(tmp_path / "store"),
             session_date="2026-08-24",
             target_root=tmp_path / "open",
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
             now_fn=now,
             sleep_fn=sleep,
             poll_interval_seconds=5,
@@ -791,6 +840,7 @@ def test_preopen_final_slot_wait_accepts_commit_before_hard_deadline(
             LocalConditionalStore(tmp_path / "store"),
             session_date="2026-08-24",
             target_root=tmp_path / "open",
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
             now_fn=now,
             sleep_fn=sleep,
             poll_interval_seconds=5,
@@ -824,6 +874,7 @@ def test_preopen_wait_does_not_poll_after_hard_deadline(tmp_path: Path) -> None:
             LocalConditionalStore(tmp_path / "store"),
             session_date="2026-08-24",
             target_root=tmp_path / "open",
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
             now_fn=now,
             sleep_fn=sleep,
             poll_interval_seconds=5,
@@ -855,6 +906,7 @@ def test_producer_commit_after_hard_deadline_is_not_consumed(tmp_path: Path) -> 
             LocalConditionalStore(tmp_path / "store"),
             session_date="2026-08-24",
             target_root=tmp_path / "open",
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
             now_fn=now,
             sleep_fn=lambda _: None,
         )
@@ -886,6 +938,7 @@ def test_preopen_wait_stops_when_producer_never_commits(tmp_path: Path) -> None:
             LocalConditionalStore(tmp_path / "store"),
             session_date="2026-08-24",
             target_root=tmp_path / "open",
+            expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
             now_fn=now,
             sleep_fn=sleep,
             poll_interval_seconds=5,

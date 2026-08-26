@@ -111,6 +111,7 @@ def wait_for_official_open_from_cloud(
     *,
     session_date: str,
     target_root: Path,
+    expected_capture_code_ref: str,
     now_fn: Callable[[], datetime] = _now,
     sleep_fn: Callable[[float], None] = clock.sleep,
     poll_interval_seconds: float = 5.0,
@@ -141,6 +142,7 @@ def wait_for_official_open_from_cloud(
             session_date=session_date,
             target_root=target_root,
             eligibility_now=current,
+            expected_capture_code_ref=expected_capture_code_ref,
         )
         if result is not None:
             return result
@@ -339,6 +341,9 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
             official_store,
             session_date=session,
             target_root=roots["official_open"],
+            expected_capture_code_ref=os.getenv(
+                "E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF", ""
+            ),
         )
 
     effective_now = _now()

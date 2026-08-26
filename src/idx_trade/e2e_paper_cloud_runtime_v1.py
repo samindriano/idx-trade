@@ -824,6 +824,7 @@ def materialize_official_open_from_cloud(
     session_date: str,
     target_root: str | Path,
     eligibility_now: datetime,
+    expected_capture_code_ref: str,
 ) -> dict[str, Any] | None:
     """Admit and copy one prospective Official Open slot.
 
@@ -844,6 +845,10 @@ def materialize_official_open_from_cloud(
     )
     from .official_open_evidence_v1 import JAKARTA as OPEN_JAKARTA
 
+    expected_producer_ref = _required_git_sha(
+        expected_capture_code_ref,
+        label="OFFICIAL_OPEN_CLOUD_EXPECTED_CAPTURE_CODE_REF",
+    )
     session = date.fromisoformat(session_date).isoformat()
     current = _aware_timestamp(
         eligibility_now, label="OFFICIAL_OPEN_ELIGIBILITY_NOW"
@@ -932,6 +937,14 @@ def materialize_official_open_from_cloud(
         ):
             raise CloudPaperRuntimeError(
                 "OFFICIAL_OPEN_CLOUD_ADMISSION_MANUAL_CAPTURE_FORBIDDEN"
+            )
+        capture_code_ref = _required_git_sha(
+            runner.get("capture_code_ref"),
+            label="OFFICIAL_OPEN_CLOUD_CAPTURE_CODE_REF",
+        )
+        if capture_code_ref != expected_producer_ref:
+            raise CloudPaperRuntimeError(
+                "OFFICIAL_OPEN_CLOUD_CAPTURE_CODE_REF_MISMATCH"
             )
         guards = commit.get("guards")
         required_false = (
