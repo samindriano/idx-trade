@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: d2e1a6313775f5077ec16d2fbe3283b1340b125f
 branch: integration/e2e-cloud-first-orchestration-v1
-head_commit: see pushed branch tip for this remediation
+head_commit: bd3c581183ada449cf3d9b8d8a32e38c901cfddf
 scope: >-
   Persist the already-validated Official Open cloud admission return in the
   immutable PREOPEN cloud stage result and protect it through existing stage
