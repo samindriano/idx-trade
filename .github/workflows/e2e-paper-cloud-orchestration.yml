@@ -36,9 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # Exact reviewed implementation accepted into the E2E integration baseline.
+      # Exact reviewed successor implementation accepted into the E2E integration baseline.
       # Change only through a reviewed provenance update.
-      E2E_CLOUD_IMPLEMENTATION_REF: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+      E2E_CLOUD_IMPLEMENTATION_REF: 6a906c5ea8681e07b8e9c47a256f85144c34951e
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
@@ -46,7 +46,7 @@ jobs:
       E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
       E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1
-      # Must equal the same accepted producer implementation SHA.
+      # Must equal the accepted Official Open producer implementation SHA.
       E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
       E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
       E2E_CLOUD_PROVIDER_CHECKOUT: ${{ github.workspace }}/idx-bei-provider
@@ -117,4 +117,4 @@ jobs:
           if [[ -n "$E2E_CLOUD_DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$E2E_CLOUD_DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_e2e_paper_cloud_v1.py "${args[@]}"
+          python scripts/run_e2e_paper_cloud_v2.py "${args[@]}"
