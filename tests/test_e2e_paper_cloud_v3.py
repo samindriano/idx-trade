@@ -123,3 +123,52 @@ def test_preopen_ca_phase_dispatch_does_not_delegate_to_v2(monkeypatch: pytest.M
         lambda **kwargs: (_ for _ in ()).throw(AssertionError("V2 must not run PREOPEN_CA")),
     )
     assert v3.run_once(phase="PREOPEN_CA") == expected
+
+
+class _TerminalArchive:
+    def __init__(self, terminal_stage: str | None):
+        self.terminal_stage = terminal_stage
+        self.verified = []
+
+    def existing_commit(self, session: str, stage: str):
+        if stage == self.terminal_stage:
+            return SimpleNamespace(session_date=session, status="EXECUTION_COMPLETE")
+        return None
+
+    def verify_existing_identity(self, commit, **kwargs):
+        self.verified.append((commit, kwargs))
+
+
+def test_checkpoint_creation_is_forbidden_after_same_session_preopen_terminal() -> None:
+    archive = _TerminalArchive("PREOPEN")
+    with pytest.raises(Exception, match="AFTER_TERMINAL_STAGE_FORBIDDEN:PREOPEN"):
+        v3._assert_no_same_session_terminal_stage(
+            archive,
+            session="2026-08-28",
+            schedule_sha256=SCHEDULE_SHA,
+            input_manifest_sha256=INPUT_SHA,
+        )
+    assert len(archive.verified) == 1
+
+
+def test_checkpoint_creation_is_forbidden_after_same_session_post_eod_terminal() -> None:
+    archive = _TerminalArchive("POST_EOD")
+    with pytest.raises(Exception, match="AFTER_TERMINAL_STAGE_FORBIDDEN:POST_EOD"):
+        v3._assert_no_same_session_terminal_stage(
+            archive,
+            session="2026-08-28",
+            schedule_sha256=SCHEDULE_SHA,
+            input_manifest_sha256=INPUT_SHA,
+        )
+    assert len(archive.verified) == 1
+
+
+def test_checkpoint_creation_allowed_when_no_same_session_terminal_exists() -> None:
+    archive = _TerminalArchive(None)
+    v3._assert_no_same_session_terminal_stage(
+        archive,
+        session="2026-08-28",
+        schedule_sha256=SCHEDULE_SHA,
+        input_manifest_sha256=INPUT_SHA,
+    )
+    assert archive.verified == []
