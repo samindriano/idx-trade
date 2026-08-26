@@ -3,6 +3,11 @@
 Status: REVIEW pending independent review; no merge, scheduler mutation, live
 provider, R2, model, or outcome execution was performed.
 
+Implementation branch checkpoint: `integration/e2e-cloud-first-orchestration-v1`
+at implementation commit `f38ef328e90857d94daa27d01655e095b7a0acca` before
+this documentation update. PR #93 is repinned to that exact current PR #92
+head for the pending, unmerged integration lineage.
+
 ## P1 root cause
 
 The downstream Official Open cloud admission gate already required
@@ -55,3 +60,9 @@ workflow-dispatch, absent/malformed/wrong producer code refs, correct event +
 correct pin admission, and the existing late/future timing rejection tests.
 No real cloud capture, provider call, scheduler call, model access, outcome
 access, or merge was performed.
+
+Final local validation after the implementation change: focused cloud tests
+`36 passed`; E2E/Official Open regression `149 passed`; full pytest `879
+passed`, `0 failed`, `0 skipped`, with the same 3 pre-existing FutureWarnings;
+all changed Python entrypoints compiled/imported, both workflow YAML files
+parsed, and `git diff --check` passed.
