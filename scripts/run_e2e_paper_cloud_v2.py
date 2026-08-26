@@ -11,14 +11,23 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+from datetime import datetime
 import json
 from pathlib import Path
+import sys
 from typing import Any, Callable, Iterator
 
-from idx_trade.e2e_cloud_security_master_v1 import (
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from idx_trade.e2e_cloud_security_master_v1 import (  # noqa: E402
     refresh_cloud_runtime_security_master,
 )
-from scripts import run_e2e_paper_cloud_v1 as v1
+from scripts import run_e2e_paper_cloud_v1 as v1  # noqa: E402
 
 
 _LAST_SECURITY_MASTER_REFRESH: dict[str, object] | None = None
@@ -35,7 +44,7 @@ def _with_runtime_security_master(
     observed_by = str(kwargs.get("observed_by") or "")
     if not observed_by:
         raise RuntimeError("CLOUD_RUNTIME_SECURITY_MASTER_OBSERVED_AT_MISSING")
-    observed_at = v1.datetime.fromisoformat(observed_by)
+    observed_at = datetime.fromisoformat(observed_by)
     if observed_at.tzinfo is None:
         raise RuntimeError("CLOUD_RUNTIME_SECURITY_MASTER_OBSERVED_AT_NOT_TIMEZONE_AWARE")
     baseline_master = kwargs.get("clean_security_master")
