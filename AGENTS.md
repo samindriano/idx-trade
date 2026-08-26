@@ -76,6 +76,67 @@ Parallelize orthogonal work **inside** the current authorized milestone when saf
 
 Do not parallelize downstream experiments whose definition should depend on the current result. Never alter a frozen target, candidate definition, source, fold, holdout, metric, threshold, or acceptance gate after seeing results merely to rescue a failure.
 
+## Data QA / Research Integrity orchestration mode
+
+When the user asks to **QA, audit, verify, validate, red-team, or trace data/model-input integrity**, treat it as a dedicated integrity workflow rather than an ordinary implementation task.
+
+Read `docs/research_integrity/DATA_QA_ORCHESTRATION_V1.md` and `docs/research_integrity/RESEARCH_INTEGRITY_DATA_QA_GATE_V1.md` when they exist on the active branch.
+
+### Default execution shape
+
+Use `HEAVY` by default for market-wide, lineage-wide, model-impacting, or decision-changing integrity audits. Use `LIGHT` only for genuinely bounded scopes. Use `DIRECT` only when there is no useful independent audit frontier.
+
+For a material QA task, MAIN should allocate independent lanes covering as applicable:
+
+1. **source semantics / data contract** — meaning, unit, source authority, adjustment basis, publication/revision semantics;
+2. **structural / coverage integrity** — schema, keys, calendar, listing/tradability, missingness, value identities;
+3. **PIT / causality / provenance** — knowledge time, decision cutoff, leakage, revision lineage, immutable hashes;
+4. **economic / event semantics** — CA, adjustment logic, share-count events, suspensions, listings/delistings, event-specific behavior;
+5. **anomaly / distribution census** — search for unexplained extremes and regime breaks rather than checking only expected cases;
+6. **independent recomputation / blast radius** — recompute critical quantities through an implementation independent of the possibly faulty production helper and trace exact downstream identities;
+7. **adversarial falsification** — actively try to prove the suspected bug harmless and try to falsify any proposed remediation.
+
+The same worker should not both establish a decision-changing ground-truth claim and certify its independent falsification when independent capacity is available.
+
+### Integrity-specific safety
+
+Unless separately authorized by the user and controlling scientific contracts, a QA task does **not** authorize:
+
+- protected outcome/holdout access;
+- model tuning or refit;
+- frozen-science modification;
+- prospective counter mutation/reset;
+- retroactive trade/fill creation;
+- production capture/runtime activation;
+- production provider writes;
+- treating ambiguous evidence as a pass.
+
+### Fail-closed verdict rule
+
+Use the Research Integrity Gate vocabulary. For any required check:
+
+`PASS` may proceed; `FAIL` blocks; `UNKNOWN` also blocks.
+
+A missing required check must be materialized as `UNKNOWN`, never silently omitted.
+
+### Incident conversion rule
+
+A confirmed integrity defect is not closed merely because rows/code were fixed. Closure requires:
+
+- root cause;
+- bounded blast radius;
+- remediation/quarantine verification when authorized;
+- a permanent invariant or golden/adversarial case;
+- an automated regression test where feasible;
+- independent red-team confirmation;
+- re-run of the controlling gate.
+
+The objective is that a bug class discovered once becomes materially harder to reintroduce silently.
+
+### MAIN owns final judgment
+
+Workers produce evidence. MAIN owns scope protection, reconciliation, materiality judgment, final gate verdict, and whether remediation is actually authorized.
+
 ## Status freshness
 
 A branch must bootstrap from its newest authoritative project/status documents, not from stale orchestration snapshots. When `docs/CURRENT_STATUS.md` exists, treat it as the first-read status layer unless a newer branch-local checkpoint explicitly supersedes it.
