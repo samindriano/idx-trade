@@ -27,41 +27,36 @@ jobs:
       - name: Install package
         run: python -m pip install -e .
 
-      - name: Live official IDX identity-source diagnostic
+      - name: Live official IDX identity-source acceptance smoke
         shell: bash
         run: |
           python - <<'PY'
+          from datetime import date
           import json
 
-          from idx_trade.e2e_cloud_security_master_v1 import fetch_complete_active_listings
-          from idx_trade.providers.idx import IDX_DELISTING_URL, _get_json
+          from idx_trade.e2e_cloud_security_master_v1 import (
+              fetch_complete_active_listings,
+              fetch_complete_delisted_listings,
+          )
 
           active = fetch_complete_active_listings()
-          params = {
-              "urlName": "LINK_DELISTING",
-              "periodYear": 2026,
-              "periodMonth": 1,
-              "periodType": "monthly",
-              "isPrint": "False",
-              "cumulative": "false",
-              "pageSize": 9999,
-              "pageNumber": 1,
-              "orderBy": "",
-          }
-          payload = _get_json(IDX_DELISTING_URL, params)
-          rows = payload.get("data") if isinstance(payload, dict) else None
-          meta = payload.get("meta") if isinstance(payload, dict) else None
+          delisted = fetch_complete_delisted_listings(2026, end=date.today())
+
+          assert not active.empty
+          assert active['ticker'].nunique() == len(active)
+          if not delisted.empty:
+              assert not delisted.duplicated(['ticker', 'listed_from', 'listed_to']).any()
+
           print(json.dumps({
-              "status": "LIVE_IDX_IDENTITY_SOURCE_META_DIAGNOSTIC",
-              "active_rows": int(len(active)),
-              "active_unique_tickers": int(active["ticker"].nunique()),
-              "delisting_top_level_keys": sorted(payload.keys()) if isinstance(payload, dict) else [],
-              "delisting_meta": meta,
-              "delisting_row_count": len(rows) if isinstance(rows, list) else None,
-              "delisting_first_row_keys": sorted(rows[0].keys()) if isinstance(rows, list) and rows and isinstance(rows[0], dict) else [],
-              "outcome_accessed": False,
-              "protected_forward_accessed": False,
-              "model_refit": False,
-              "r2_writes": 0,
-          }, sort_keys=True, default=str))
+              'status': 'LIVE_IDX_IDENTITY_SOURCE_SMOKE_PASS',
+              'active_rows': int(len(active)),
+              'active_unique_tickers': int(active['ticker'].nunique()),
+              'delisted_rows_post_freeze': int(len(delisted)),
+              'delisted_unique_tickers_post_freeze': int(delisted['ticker'].nunique()) if not delisted.empty else 0,
+              'outcome_accessed': False,
+              'protected_forward_accessed': False,
+              'model_refit': False,
+              'paper_state_mutated': False,
+              'r2_writes': 0,
+          }, sort_keys=True))
           PY
