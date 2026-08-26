@@ -2,12 +2,12 @@
 
 The accepted clean scorer deliberately keeps a frozen historical identity
 baseline while allowing only genuinely post-freeze listing identities from the
-mutable canonical runtime master.  Local/Windows runtimes historically had
-that runtime master on disk.  A fresh GitHub runner does not, so cloud POST_EOD
+mutable canonical runtime master. Local/Windows runtimes historically had
+that runtime master on disk. A fresh GitHub runner does not, so cloud POST_EOD
 must materialize the mutable identity reference explicitly before the existing
 canonical EOD engine starts.
 
-This module uses only official IDX identity/reference endpoints.  It does not
+This module uses only official IDX identity/reference endpoints. It does not
 read model targets, outcomes, paper state, or protected forward artifacts.
 """
 
@@ -53,7 +53,9 @@ def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
     if data["ticker"].eq("").any() or data["listed_from"].isna().any():
         raise CloudSecurityMasterError(f"{label}_INVALID_IDENTITY")
     if data["ticker"].duplicated().any():
-        duplicates = sorted(data.loc[data["ticker"].duplicated(keep=False), "ticker"].unique())[:10]
+        duplicates = sorted(
+            data.loc[data["ticker"].duplicated(keep=False), "ticker"].unique()
+        )[:10]
         raise CloudSecurityMasterError(f"{label}_DUPLICATE_TICKER:{duplicates}")
     return data.sort_values("ticker", kind="mergesort").reset_index(drop=True)
 
@@ -68,10 +70,10 @@ def refresh_cloud_runtime_security_master(
 ) -> dict[str, object]:
     """Refresh the mutable runtime listing reference from official IDX data.
 
-    The frozen clean baseline is never rewritten.  It is used only as a
+    The frozen clean baseline is never rewritten. It is used only as a
     completeness anchor: every security that was live at the model freeze must
     still be represented by either the current active listing response or the
-    post-freeze delisting history.  Any identity absent from the baseline is
+    post-freeze delisting history. Any identity absent from the baseline is
     admissible only when its official ``listed_from`` is strictly after the
     freeze date, matching the clean scorer's preregistered future-IPO rule.
     """
@@ -85,7 +87,9 @@ def refresh_cloud_runtime_security_master(
 
     baseline_path = Path(baseline_master).expanduser().resolve()
     if not baseline_path.is_file():
-        raise CloudSecurityMasterError(f"RUNTIME_SECURITY_MASTER_BASELINE_MISSING:{baseline_path}")
+        raise CloudSecurityMasterError(
+            f"RUNTIME_SECURITY_MASTER_BASELINE_MISSING:{baseline_path}"
+        )
     baseline = _normalize_identity(
         pd.read_csv(baseline_path),
         label="RUNTIME_SECURITY_MASTER_BASELINE",
@@ -93,8 +97,11 @@ def refresh_cloud_runtime_security_master(
 
     active = active_fetcher()
     delisted = delisted_fetcher(FREEZE_LOCAL_DATE.year, end=local_observed.date())
-    current = build_security_master(active, delisted)
-    current = _normalize_identity(current, label="RUNTIME_SECURITY_MASTER_CURRENT")
+    current_full = build_security_master(active, delisted).loc[:, list(SECURITY_COLUMNS)]
+    current = _normalize_identity(
+        current_full,
+        label="RUNTIME_SECURITY_MASTER_CURRENT",
+    )
 
     baseline_live_at_freeze = baseline[
         baseline["listed_from"].le(FREEZE_LOCAL_DATE)
@@ -104,7 +111,8 @@ def refresh_cloud_runtime_security_master(
     missing_live = sorted(set(baseline_live_at_freeze["ticker"]) - current_tickers)
     if missing_live:
         raise CloudSecurityMasterError(
-            "RUNTIME_SECURITY_MASTER_BASELINE_LIVE_IDENTITY_MISSING:" + ",".join(missing_live[:20])
+            "RUNTIME_SECURITY_MASTER_BASELINE_LIVE_IDENTITY_MISSING:"
+            + ",".join(missing_live[:20])
         )
 
     baseline_tickers = set(baseline["ticker"])
@@ -118,9 +126,6 @@ def refresh_cloud_runtime_security_master(
             + sample.head(20).to_json(orient="records")
         )
 
-    # Preserve the canonical full schema produced by build_security_master.
-    # Reindexing is defensive against accidental column-order drift.
-    current_full = build_security_master(active, delisted).loc[:, list(SECURITY_COLUMNS)]
     output = runtime_paths(runtime_root).listings_root / "security_master.csv"
     write_csv_atomic(current_full, output)
     artifact_sha = sha256_file(output)
