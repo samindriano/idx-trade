@@ -288,6 +288,54 @@ def commit_preopen_ca_checkpoint(
     return loaded
 
 
+def _verify_preopen_parent_binding(
+    *,
+    decision: str,
+    execution: str,
+    required_tickers: Sequence[str],
+    batch: Path,
+    journal: Path,
+    prior: Path,
+) -> None:
+    """Bind the E PREOPEN artifacts to the exact immutable D POST_EOD parent."""
+
+    decision_session = date.fromisoformat(decision).isoformat()
+    execution_session = date.fromisoformat(execution).isoformat()
+    expected_tickers = tuple(
+        sorted({str(value).strip().upper() for value in required_tickers if str(value).strip()})
+    )
+    prior_doc = load_journal_document(prior)
+    current_doc = load_journal_document(journal)
+    if (
+        prior_doc.journal.as_of_date != decision_session
+        or prior_doc.journal.capture_phase != POST_EOD
+        or current_doc.journal.as_of_date != execution_session
+        or current_doc.journal.capture_phase != PREOPEN
+        or current_doc.previous_path != prior.resolve()
+        or current_doc.previous_file_sha256 != prior_doc.file_sha256
+    ):
+        raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_PARENT_JOURNAL_MISMATCH")
+
+    manifest = v1._read_json(batch / "BATCH_MANIFEST.json")
+    prior_meta = manifest.get("prior_journal")
+    if not isinstance(prior_meta, Mapping):
+        raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_BATCH_PARENT_MISSING")
+    if (
+        manifest.get("status") != "COMPLETE"
+        or manifest.get("as_of_date") != execution_session
+        or manifest.get("capture_phase") != PREOPEN
+        or tuple(manifest.get("required_tickers") or ()) != expected_tickers
+        or Path(str(manifest.get("batch_root") or "")).expanduser().resolve() != batch.resolve()
+        or Path(str(manifest.get("journal_target") or "")).expanduser().resolve() != journal.resolve()
+        or Path(str(prior_meta.get("path") or "")).expanduser().resolve() != prior.resolve()
+        or str(prior_meta.get("file_sha256") or "") != prior_doc.file_sha256
+        or str(prior_meta.get("journal_sha256") or "") != prior_doc.journal_sha256
+        or str(prior_meta.get("as_of_date") or "") != decision_session
+        or str(prior_meta.get("capture_phase") or "") != POST_EOD
+    ):
+        raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_BATCH_PARENT_MISMATCH")
+
+
 def _ensure_preopen_ca_phase(
     config: v1.OperationalControllerConfig,
     *,
@@ -315,6 +363,7 @@ def _ensure_preopen_ca_phase(
 
     batch, journal = v1._journal_paths(config, phase_session, PREOPEN)
     sidecar = v1._phase_sidecar_path(config, phase_session, PREOPEN)
+    prior = v1._journal_paths(config, decision, POST_EOD)[1]
     if sidecar.is_file():
         payload = v1._verify_phase_sidecar(
             config,
@@ -332,6 +381,14 @@ def _ensure_preopen_ca_phase(
             expected_through_session_date=execution,
             required_tickers=tickers,
         )
+        _verify_preopen_parent_binding(
+            decision=decision,
+            execution=execution,
+            required_tickers=tickers,
+            batch=batch,
+            journal=journal,
+            prior=prior,
+        )
         return "REUSED"
     if journal.exists() or batch.exists():
         raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
@@ -339,7 +396,6 @@ def _ensure_preopen_ca_phase(
     missing = v1._config_missing(config)
     if missing:
         raise v1.E2EOperationalGuardError(missing)
-    prior = v1._journal_paths(config, decision, POST_EOD)[1]
     if not prior.is_file():
         raise v1.E2EOperationalGuardError("E2E_PREOPEN_POST_EOD_JOURNAL_MISSING")
     prior_doc = load_journal_document(prior)
@@ -442,6 +498,14 @@ def _ensure_preopen_ca_phase(
     )
     if verified.get("from_session_date") != decision:
         raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_PARENT_SCOPE_MISMATCH")
+    _verify_preopen_parent_binding(
+        decision=decision,
+        execution=execution,
+        required_tickers=tickers,
+        batch=batch,
+        journal=journal,
+        prior=prior,
+    )
     return "CAPTURED"
 
 
