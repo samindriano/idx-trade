@@ -10,6 +10,7 @@ import uuid
 from .official_trading_schedule_v1 import VerifiedOfficialTradingSchedule
 from .stockbit_intraday_cloud_archive import (
     IntradaySlotCommit,
+    SLOTS,
     StockbitIntradayCloudArchive,
     StockbitIntradayCloudError,
 )
@@ -47,6 +48,24 @@ def restore_intraday_snapshot(
         raw,
         {INTRADAY_ROOT_NAME: Path(journal_root).resolve()},
         expected_sha256=commit.snapshot_sha256,
+    )
+
+
+def restore_progress_snapshot(
+    progress: tuple[dict[str, Any], bytes],
+    journal_root: str | Path,
+) -> None:
+    payload, raw = progress
+    snapshot = payload.get("snapshot")
+    if not isinstance(snapshot, dict):
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_SNAPSHOT_INVALID")
+    expected_sha256 = str(snapshot.get("sha256") or "").lower()
+    if len(expected_sha256) != 64:
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_SNAPSHOT_INVALID")
+    restore_runtime_snapshot(
+        raw,
+        {INTRADAY_ROOT_NAME: Path(journal_root).resolve()},
+        expected_sha256=expected_sha256,
     )
 
 
@@ -117,8 +136,34 @@ def run_cloud_slot(
         )
 
     root = Path(journal_root).resolve()
+    current_claim = archive.existing_claim(expected_date, slot)
+    current_progress = archive.latest_progress(expected_date, slot)
     prior = archive.latest_committed_slot_before(expected_date, slot)
-    if prior is not None:
+    progress_source_slot = slot
+    progress = current_progress
+    if current_claim is not None:
+        claim_payload, current_claim_sha = current_claim
+        if claim_payload.get("code_identity") != dict(code_identity):
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_CLAIM_CODE_IDENTITY_MISMATCH")
+        if progress is not None:
+            if progress[0].get("claim_sha256") != current_claim_sha:
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_CLAIM_MISMATCH")
+        progress_source_slot = slot
+    elif progress is None and prior is None:
+        prior_progress = archive.latest_progress_before(expected_date, slot)
+        if prior_progress is not None:
+            progress = prior_progress
+            progress_source_slot = str(progress[0].get("slot") or "")
+            if progress_source_slot not in SLOTS:
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_SOURCE_SLOT_INVALID")
+            source_claim = archive.existing_claim(expected_date, progress_source_slot)
+            if source_claim is None or source_claim[1] != str(progress[0].get("claim_sha256") or ""):
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_SOURCE_CLAIM_MISMATCH")
+            if progress[0].get("code_identity") != dict(code_identity):
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_CODE_IDENTITY_MISMATCH")
+    if progress is not None:
+        restore_progress_snapshot(progress, root)
+    elif prior is not None:
         restore_intraday_snapshot(archive, prior, root)
 
     policy = _policy_for_session(archive, schedule.session_dates, expected_date)
@@ -128,7 +173,56 @@ def run_cloud_slot(
         claimed_at_utc=now.astimezone(timezone.utc).isoformat(),
         code_identity=code_identity,
         claim_id=uuid.uuid4().hex,
+        resume_if_stale=current_claim is not None,
     )
+    evidence_slot = progress_source_slot
+    evidence_claim_sha256 = (
+        str(progress[0].get("claim_sha256") or "") if progress is not None else claim_sha256
+    )
+    next_progress_sequence = int(progress[0].get("sequence") or -1) + 1 if progress is not None and progress_source_slot == slot else 0
+
+    def checkpoint() -> None:
+        nonlocal next_progress_sequence
+        root.mkdir(parents=True, exist_ok=True)
+        snapshot_bytes, _, _ = build_runtime_snapshot({INTRADAY_ROOT_NAME: root})
+        archive.persist_progress(
+            session_date=expected_date,
+            slot=slot,
+            snapshot_bytes=snapshot_bytes,
+            sequence=next_progress_sequence,
+            captured_at_utc=now.astimezone(timezone.utc).isoformat(),
+            claim_sha256=claim_sha256,
+            code_identity=code_identity,
+            source_slot=slot,
+        )
+        next_progress_sequence += 1
+
+    def durable_requester(ticker: str):
+        nonlocal evidence_slot, evidence_claim_sha256
+        saved = archive.latest_provider_evidence(
+            expected_date,
+            evidence_slot,
+            ticker,
+            claim_sha256=evidence_claim_sha256,
+            code_identity=code_identity,
+        )
+        if saved is not None:
+            return saved.get("payload"), dict(saved.get("request_meta") or {})
+        payload, request_meta = requester(ticker)
+        archive.persist_provider_evidence(
+            session_date=expected_date,
+            slot=slot,
+            ticker=ticker,
+            payload=payload,
+            request_meta=request_meta,
+            captured_at_utc=now.astimezone(timezone.utc).isoformat(),
+            claim_sha256=claim_sha256,
+            code_identity=code_identity,
+        )
+        evidence_slot = slot
+        evidence_claim_sha256 = claim_sha256
+        return payload, request_meta
+
     journal: SessionJournal | None = None
     if context is not None or (root / "session_manifest.json").exists() or (root / "day_metadata.json").exists():
         journal = SessionJournal(root, expected_date=expected_date)
@@ -140,11 +234,12 @@ def run_cloud_slot(
         context=context,
         journal=journal,
         policy=policy,
-        requester=requester,
+        requester=durable_requester,
         max_new_tickers=max_new_tickers,
         monthly_quota_reserve=monthly_quota_reserve,
         shadow_sessions_required=shadow_sessions_required,
         recheck_every=recheck_every,
+        checkpoint=checkpoint,
     )
     root.mkdir(parents=True, exist_ok=True)
     snapshot_bytes, _, _ = build_runtime_snapshot({INTRADAY_ROOT_NAME: root})

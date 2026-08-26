@@ -729,6 +729,7 @@ def run_recovery_batch(
     now: datetime,
     max_new_tickers: int = 1_200,
     monthly_quota_reserve: int = DEFAULT_MONTHLY_QUOTA_RESERVE,
+    checkpoint: Callable[[], None] | None = None,
 ) -> BatchResult:
     validate_capture_window(expected_date=journal.expected_date, now=now)
     if max_new_tickers <= 0:
@@ -745,9 +746,13 @@ def run_recovery_batch(
     request_attempts = retries = rate_limit_events = 0
     remaining_month: int | None = None
     stop_reason = "COMPLETED_PENDING_SET"
+    if checkpoint is not None:
+        checkpoint()
     for index, ticker in enumerate(pending):
         payload, meta = requester(ticker)
         journal.record_provider_attempt(ticker, payload=payload, request_meta=meta, captured_at=now)
+        if checkpoint is not None:
+            checkpoint()
         attempted.append(ticker)
         request_attempts += int(meta.get("attempts") or 0)
         retries += int(meta.get("retries") or 0)

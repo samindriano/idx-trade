@@ -19,6 +19,7 @@ from idx_trade.stockbit_intraday_runtime import JAKARTA
 from tests.test_stockbit_intraday_cloud_runner import (
     SESSION,
     _context,
+    _not_found,
     _payload,
     _schedule,
 )
@@ -61,6 +62,53 @@ def test_same_slot_claim_allows_one_provider_stage_only(tmp_path: Path) -> None:
     assert len(calls) > 0
     replay = StockbitIntradayCloudArchive(store).existing_slot(SESSION, "1930")
     assert replay is not None
+
+
+def test_fresh_process_resumes_durable_mid_batch_progress_without_refetch(tmp_path: Path) -> None:
+    store = LocalConditionalStore(tmp_path / "cloud")
+    archive = StockbitIntradayCloudArchive(store)
+    first_calls: list[str] = []
+
+    def interrupted_request(ticker: str):
+        first_calls.append(ticker)
+        if ticker == "ZERO":
+            raise RuntimeError("PROCESS_KILLED_AFTER_ONE_PROVIDER_RESPONSE")
+        return _payload(ticker), {"status": 200, "classification": "SUCCESS"}
+
+    with pytest.raises(RuntimeError, match="PROCESS_KILLED"):
+        run_cloud_slot(
+            expected_date=SESSION,
+            slot="1830",
+            now=datetime(2026, 8, 26, 18, 30, tzinfo=JAKARTA),
+            schedule=_schedule(),
+            context=_context(tmp_path),
+            archive=archive,
+            journal_root=tmp_path / "journal-a",
+            requester=interrupted_request,
+            code_identity={"commit": "d" * 40},
+        )
+    assert first_calls == ["BBCA", "ZERO"]
+    assert archive.latest_progress(SESSION, "1830") is not None
+
+    resumed_calls: list[str] = []
+
+    def resumed_request(ticker: str):
+        resumed_calls.append(ticker)
+        return None, _not_found()
+
+    resumed = run_cloud_slot(
+        expected_date=SESSION,
+        slot="1830",
+        now=datetime(2026, 8, 26, 22, 31, tzinfo=JAKARTA),
+        schedule=_schedule(),
+        context=_context(tmp_path),
+        archive=StockbitIntradayCloudArchive(store),
+        journal_root=tmp_path / "journal-b",
+        requester=resumed_request,
+        code_identity={"commit": "d" * 40},
+    )
+    assert resumed.status == "ADMISSIBLE_COMPLETE"
+    assert resumed_calls == ["ZERO"]
 
 
 def test_existing_slot_rejects_noncanonical_child_keys(tmp_path: Path) -> None:

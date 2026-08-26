@@ -29,6 +29,7 @@ class IntradayCloudStorageError(RuntimeError):
 class CloudObjectStore(Protocol):
     def read(self, key: str) -> bytes | None: ...
     def put_if_absent(self, key: str, payload: bytes, content_type: str) -> PutResult: ...
+    def list_keys(self, prefix: str) -> list[str]: ...
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -108,6 +109,23 @@ class LocalConditionalStore:
             raise
         return PutResult(key, digest, True)
 
+    def list_keys(self, prefix: str) -> list[str]:
+        safe_prefix = str(prefix).replace("\\", "/")
+        if safe_prefix and any(part in {"", ".", ".."} for part in _raw_parts(safe_prefix.rstrip("/"))):
+            raise IntradayCloudStorageError("STOCKBIT_INTRADAY_CLOUD_PREFIX_UNSAFE")
+        if safe_prefix.startswith("/"):
+            raise IntradayCloudStorageError("STOCKBIT_INTRADAY_CLOUD_PREFIX_UNSAFE")
+        if not self.root.exists():
+            return []
+        result: list[str] = []
+        for path in self.root.rglob("*"):
+            if not path.is_file():
+                continue
+            key = path.relative_to(self.root).as_posix()
+            if key.startswith(safe_prefix):
+                result.append(key)
+        return sorted(result)
+
 
 class ConditionalS3Store:
     """R2/S3 store requiring create-only If-None-Match semantics."""
@@ -168,6 +186,22 @@ class ConditionalS3Store:
         if confirmed is None or sha256_bytes(confirmed) != digest:
             raise IntradayCloudStorageError("STOCKBIT_INTRADAY_CLOUD_WRITE_VERIFICATION_FAILED")
         return PutResult(key, digest, True)
+
+    def list_keys(self, prefix: str) -> list[str]:
+        safe_prefix = str(prefix).strip("/")
+        if safe_prefix:
+            _safe_key(safe_prefix)
+        result: list[str] = []
+        paginator = self.client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=self._key(safe_prefix) if safe_prefix else f"{self.prefix}/"):
+            for item in page.get("Contents") or []:
+                key = str(item.get("Key") or "")
+                prefix_text = f"{self.prefix}/" if self.prefix else ""
+                if prefix_text and key.startswith(prefix_text):
+                    key = key[len(prefix_text):]
+                if key.startswith(safe_prefix):
+                    result.append(key)
+        return sorted(set(result))
 
 
 def _blocked_snapshot_path(path: str) -> bool:

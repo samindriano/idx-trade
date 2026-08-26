@@ -295,6 +295,7 @@ def run_daily_cycle(
     monthly_quota_reserve: int = 3_000,
     shadow_sessions_required: int = 3,
     recheck_every: int = 10,
+    checkpoint: Callable[[], None] | None = None,
 ) -> DailyCycleResult:
     session = expected_date.isoformat()
     policy_copy = json.loads(json.dumps(dict(policy)))
@@ -372,6 +373,7 @@ def run_daily_cycle(
         now=now,
         max_new_tickers=max_new_tickers,
         monthly_quota_reserve=monthly_quota_reserve,
+        checkpoint=checkpoint,
     )
 
     metrics: ShadowMetrics | None = None
@@ -396,6 +398,8 @@ def run_daily_cycle(
             )
         metrics = _shadow_metrics(context.gate.decisions, pre_reconcile)
         _reconcile_shadow_404s(journal, context, statuses=pre_reconcile, now=now)
+        if checkpoint is not None:
+            checkpoint()
 
     summary = journal.summary()
     if summary.get("admissible_complete") is not True:
@@ -419,6 +423,8 @@ def run_daily_cycle(
         journal,
         shadow_metrics=metrics_payload,
     )
+    if checkpoint is not None:
+        checkpoint()
     updated_policy, policy_applied = apply_policy_event_once(
         policy_copy,
         session_date=expected_date,
