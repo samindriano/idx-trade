@@ -6,6 +6,8 @@ Audit PR: `#103`
 Audit HEAD: `4a2cfbe3f4332aad4431b65931bfaf01bbb4979b` before this checkpoint
 Current `origin/main` observed during finalization: `30d725ffba1175b64b62617ec0265c6c5792b800`
 Latest `origin/main` observed before final handoff publication: `8769949caa59b340aa8c4c0abfa49c8ab5c0b7be`.
+Canonical `TEAM_STATUS.md` review update was published to `main` at
+`77d61288c18eb4aaed833f45903abe7c89e91815`.
 
 ## Scope and safety
 

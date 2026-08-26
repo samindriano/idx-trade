@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: samindriano/idx-trade
 source_commit: 540a129c350b4bce62a5304e80a9cba30c4771af
 branch: audit/research-integrity-data-qa-gate-v1
-head_commit: 2bd00d7630a95343f4f3c9da67c3d20a9d970657
+head_commit: 932d35dd103da8d143318750781eea4a6a29cdb0
 scope: Phase-1 integrity-gate validation/hardening and Phase-2 outcome-blind HEAVY QA audit of INC-001 historical corporate-action / backward feature price-basis integrity
 files_changed:
   - src/idx_trade/research_integrity_gate_v1.py
