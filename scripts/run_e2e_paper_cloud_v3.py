@@ -67,8 +67,6 @@ def _patched_v1_continuity() -> Iterator[None]:
 
     class CheckpointAwareArchive(original_archive):
         def latest_snapshot(self, planned_sessions, *, before_or_equal):  # type: ignore[override]
-            # Materialize once. The parent accepts any iterable and consumes it;
-            # consuming a generator twice here would silently hide PREOPEN_CA.
             sessions = tuple(planned_sessions)
             standard = super().latest_snapshot(
                 sessions,
@@ -90,8 +88,6 @@ def _patched_v1_continuity() -> Iterator[None]:
                 return standard
             if standard is not None:
                 standard_payload = standard[2]
-                # A canonical same-session scientific terminal state is later
-                # than the operational checkpoint and must always win.
                 if (
                     str(standard_payload.get("session_date") or "") == session
                     and str(standard_payload.get("stage") or "") in {"PREOPEN", "POST_EOD"}
@@ -146,6 +142,29 @@ def _guard_result() -> dict[str, bool]:
     }
 
 
+def _assert_no_same_session_terminal_stage(
+    archive,
+    *,
+    session: str,
+    schedule_sha256: str,
+    input_manifest_sha256: str,
+) -> None:
+    """Never create a checkpoint causally after a same-session terminal stage."""
+
+    for stage in ("PREOPEN", "POST_EOD"):
+        existing = archive.existing_commit(session, stage)
+        if existing is None:
+            continue
+        archive.verify_existing_identity(
+            existing,
+            schedule_attestation_sha256=schedule_sha256,
+            input_manifest_sha256=input_manifest_sha256,
+        )
+        raise CloudPaperRuntimeError(
+            "CLOUD_PREOPEN_CA_AFTER_TERMINAL_STAGE_FORBIDDEN:" + stage
+        )
+
+
 def _run_preopen_ca_once(*, session_date: str | None = None) -> dict[str, object]:
     now = v1._now()
     session = now.date().isoformat()
@@ -194,6 +213,12 @@ def _run_preopen_ca_once(*, session_date: str | None = None) -> dict[str, object
 
     roots = v1._roots()
     archive = v1.CloudPaperArchive(store)
+    _assert_no_same_session_terminal_stage(
+        archive,
+        session=session,
+        schedule_sha256=schedule_sha,
+        input_manifest_sha256=input_sha,
+    )
     prior = archive.latest_snapshot(schedule.session_dates, before_or_equal=session)
     if prior is not None:
         snapshot_bytes, snapshot_sha, _ = prior
