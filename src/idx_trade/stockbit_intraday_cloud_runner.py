@@ -6,25 +6,19 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from .e2e_paper_cloud_runtime_v1 import (
-    CloudObjectStore,
-    CloudPaperArchive,
-    build_runtime_snapshot,
-    restore_runtime_snapshot,
-)
 from .official_trading_schedule_v1 import VerifiedOfficialTradingSchedule
 from .stockbit_intraday_cloud_archive import (
     IntradaySlotCommit,
     StockbitIntradayCloudArchive,
     StockbitIntradayCloudError,
 )
+from .stockbit_intraday_cloud_storage import build_runtime_snapshot, restore_runtime_snapshot
 from .stockbit_intraday_daily_v2 import DailyCycleResult, default_policy, run_daily_cycle
-from .stockbit_intraday_eod_context import VerifiedIntradayEodContext, load_verified_intraday_eod_context
+from .stockbit_intraday_eod_context import VerifiedIntradayEodContext
 from .stockbit_intraday_runtime import SessionJournal
 
 
 INTRADAY_ROOT_NAME = "intraday"
-E2E_SNAPSHOT_ROOTS = ("paper", "forward", "official_open", "ca")
 
 
 def _slot_result_payload(archive: StockbitIntradayCloudArchive, commit: IntradaySlotCommit) -> dict[str, Any]:
@@ -53,33 +47,6 @@ def restore_intraday_snapshot(
         {INTRADAY_ROOT_NAME: Path(journal_root).resolve()},
         expected_sha256=commit.snapshot_sha256,
     )
-
-
-def materialize_eod_context_from_e2e(
-    *,
-    store: CloudObjectStore,
-    session_date: date,
-    target_root: str | Path,
-) -> VerifiedIntradayEodContext | None:
-    """Read only the already-committed canonical E2E POST_EOD snapshot."""
-
-    archive = CloudPaperArchive(store)
-    commit = archive.existing_commit(session_date.isoformat(), "POST_EOD")
-    if commit is None:
-        return None
-    if commit.snapshot_key is None or commit.snapshot_sha256 is None:
-        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_E2E_POST_EOD_SNAPSHOT_MISSING")
-    raw = store.read(commit.snapshot_key)
-    if raw is None:
-        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_E2E_POST_EOD_SNAPSHOT_MISSING")
-
-    root = Path(target_root).resolve()
-    roots = {name: root / name for name in E2E_SNAPSHOT_ROOTS}
-    restore_runtime_snapshot(raw, roots, expected_sha256=commit.snapshot_sha256)
-    session_dir = roots["forward"] / "forward_monitoring" / "sessions" / session_date.isoformat()
-    if not session_dir.is_dir():
-        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_CANONICAL_EOD_SESSION_MISSING")
-    return load_verified_intraday_eod_context(session_dir, expected_date=session_date)
 
 
 def _policy_for_session(
@@ -136,6 +103,14 @@ def run_cloud_slot(
     if existing is not None:
         _repair_policy_from_existing_final(archive, existing)
         return existing
+
+    # Do not permit a delayed/manual earlier slot to run after a later slot has
+    # already committed. That would create an alternate provider-call history.
+    later = archive.later_committed_slot_after(expected_date, slot)
+    if later is not None:
+        raise StockbitIntradayCloudError(
+            f"STOCKBIT_INTRADAY_LATER_SLOT_ALREADY_COMMITTED:{later.slot}"
+        )
 
     root = Path(journal_root).resolve()
     prior = archive.latest_committed_slot_before(expected_date, slot)
