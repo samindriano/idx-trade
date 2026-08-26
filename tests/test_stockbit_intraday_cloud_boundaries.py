@@ -13,6 +13,7 @@ from idx_trade.official_trading_schedule_v1 import VerifiedOfficialTradingSchedu
 from idx_trade.stockbit_intraday_cloud_archive import (
     StockbitIntradayCloudArchive,
     StockbitIntradayCloudError,
+    build_intraday_store_from_env,
 )
 from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot
 from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
@@ -42,6 +43,15 @@ def _schedule() -> VerifiedOfficialTradingSchedule:
     )
 
 
+def _storage_values() -> dict[str, str]:
+    return {
+        "STOCKBIT_INTRADAY_S3_ENDPOINT": "https://example.invalid",
+        "STOCKBIT_INTRADAY_S3_BUCKET": "bucket",
+        "STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID": "access",
+        "STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY": "secret",
+    }
+
+
 def test_cloud_slot_rejects_naive_clock_before_provider_call(tmp_path: Path):
     archive = StockbitIntradayCloudArchive(LocalConditionalStore(tmp_path / "cloud"))
     called = False
@@ -68,18 +78,8 @@ def test_cloud_slot_rejects_naive_clock_before_provider_call(tmp_path: Path):
 
 def test_dry_run_requires_no_cloud_or_provider_environment():
     completed = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "run_stockbit_intraday_cloud_v1.py"),
-            "--slot",
-            "1830",
-            "--dry-run",
-        ],
-        cwd=str(REPO_ROOT),
-        env={},
-        check=False,
-        capture_output=True,
-        text=True,
+        [sys.executable, str(REPO_ROOT / "scripts" / "run_stockbit_intraday_cloud_v1.py"), "--slot", "1830", "--dry-run"],
+        cwd=str(REPO_ROOT), env={}, check=False, capture_output=True, text=True,
     )
     assert completed.returncode == 0, completed.stderr
     payload = json.loads(completed.stdout)
@@ -91,14 +91,24 @@ def test_dry_run_requires_no_cloud_or_provider_environment():
     assert payload["outcome_access_authorized"] is False
 
 
+def test_production_intraday_store_rejects_noncanonical_prefix_before_network():
+    for prefix in (
+        "e2e-paper-v1",
+        "stockbit-intraday-smoke-v1/run-1",
+        "other-prefix",
+        "../stockbit-intraday-v1",
+    ):
+        values = _storage_values()
+        values["STOCKBIT_INTRADAY_STORAGE_PREFIX"] = prefix
+        with pytest.raises(StockbitIntradayCloudError, match="STORAGE_PREFIX_INVALID"):
+            build_intraday_store_from_env(values)
+
+
 def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(tmp_path: Path):
     values = {
+        **_storage_values(),
         "PATH": os.environ.get("PATH", "test-path"),
         "HOME": "/tmp/test-home",
-        "STOCKBIT_INTRADAY_S3_ENDPOINT": "https://example.invalid",
-        "STOCKBIT_INTRADAY_S3_BUCKET": "bucket",
-        "STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID": "access",
-        "STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY": "secret",
         "ZAPI_API_KEY": "must-not-cross",
         "IDX_API_KEY": "must-not-cross-either",
         "UNRELATED_ACCOUNT_SECRET": "also-must-not-cross",
@@ -115,6 +125,15 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
     assert child["PYTHONNOUSERSITE"] == "1"
     assert child["PATH"] == values["PATH"]
     assert child["HOME"] == values["HOME"]
+
+
+def test_e2e_bridge_rejects_noncanonical_read_prefix_before_child_launch(tmp_path: Path):
+    values = _storage_values()
+    accepted = tmp_path / "accepted"
+    for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "../e2e-paper-v1"):
+        values["STOCKBIT_INTRADAY_E2E_PREFIX"] = prefix
+        with pytest.raises(StockbitIntradayE2EBridgeError, match="E2E_PREFIX_INVALID"):
+            _child_env(values, accepted)
 
 
 def test_e2e_bridge_manifest_key_and_materialized_paths_fail_closed(tmp_path: Path):
