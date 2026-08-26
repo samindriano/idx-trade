@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import pandas as pd
 from pypdf import PdfWriter
@@ -643,7 +644,13 @@ def _production_session_oracle(index: int) -> dict[str, object]:
     }
 
 
-def run(root: Path, *, stop_after: int | None = None, resume: bool = False) -> Path | None:
+def run(
+    root: Path,
+    *,
+    stop_after: int | None = None,
+    resume: bool = False,
+    hold_after: bool = False,
+) -> Path | None:
     resume_anchor: dict[str, object] | None = None
     if resume:
         if not root.is_dir() or (root / "acceptance_summary.json").exists():
@@ -826,6 +833,17 @@ def run(root: Path, *, stop_after: int | None = None, resume: bool = False) -> P
         previous = score_manifest
         _write_progress(root, rows=rows, last_score_manifest=score_manifest)
         if stop_after is not None and len(rows) >= stop_after:
+            if hold_after:
+                print(
+                    {
+                        "status": "PARTIAL_REPLAY_HOLD",
+                        "completed_sessions": len(rows),
+                        "outcome_access": False,
+                    },
+                    flush=True,
+                )
+                while True:
+                    time.sleep(1.0)
             return None
     body = {
         "schema_version": "idx_trade_e2e_paper_production_replay_v1",
@@ -951,6 +969,7 @@ def main() -> int:
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--rerun-complete", action="store_true")
     parser.add_argument("--session-index", type=int, default=0)
+    parser.add_argument("--hold-after", action="store_true")
     args = parser.parse_args()
     root = Path(args.output_dir).expanduser().resolve()
     if args.rerun_complete:
@@ -961,7 +980,12 @@ def main() -> int:
         _resume_probe(root)
         print({"status": "RESUME_PROBE_PASS", "outcome_access": False})
         return 0
-    summary = run(root, stop_after=args.stop_after, resume=args.resume)
+    summary = run(
+        root,
+        stop_after=args.stop_after,
+        resume=args.resume,
+        hold_after=args.hold_after,
+    )
     if summary is None:
         print({"status": "PARTIAL_REPLAY_STOPPED", "completed_sessions": args.stop_after, "outcome_access": False})
         return 0
