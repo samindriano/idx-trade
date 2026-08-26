@@ -2,10 +2,12 @@ name: E2E Paper cloud orchestration
 
 on:
   schedule:
-    # GitHub cron is UTC: consumer retries at 09:03/09:13/09:22 and
-    # 18:35/19:05/19:35 Asia/Jakarta. The first two retries are deliberately
-    # offset from the Official Open producer's 09:02/09:12 slots; the final
-    # 09:22 retry remains inside the hard PREOPEN deadline.
+    # GitHub cron is UTC. PREOPEN_CA retries at 08:30/08:45/08:55 WIB,
+    # all before the hard 09:02 WIB checkpoint cutoff. The later PREOPEN
+    # retries and POST_EOD retries retain their existing schedule.
+    - cron: "30 1 * * 1-5"
+    - cron: "45 1 * * 1-5"
+    - cron: "55 1 * * 1-5"
     - cron: "3 2 * * 1-5"
     - cron: "13 2 * * 1-5"
     - cron: "22 2 * * 1-5"
@@ -18,7 +20,7 @@ on:
         description: Cloud E2E phase
         required: true
         type: choice
-        options: [auto, PREOPEN, POST_EOD]
+        options: [auto, PREOPEN_CA, PREOPEN, POST_EOD]
       session_date:
         description: Optional current Jakarta session date
         required: false
@@ -28,7 +30,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: idx-trade-e2e-paper-cloud-v1
+  # PREOPEN_CA retries share one serialized group, but are isolated from the
+  # PREOPEN group. A hung/late CA attempt therefore cannot queue-block the
+  # valid PREOPEN consumer. The V3 runner independently enforces the 09:02
+  # Jakarta cutoff and fails closed after it.
+  group: >-
+    idx-trade-e2e-paper-cloud-v3-${{
+      (inputs.phase == 'PREOPEN_CA' || github.event.schedule == '30 1 * * 1-5' || github.event.schedule == '45 1 * * 1-5' || github.event.schedule == '55 1 * * 1-5') && 'preopen-ca' ||
+      (inputs.phase == 'PREOPEN' || github.event.schedule == '3 2 * * 1-5' || github.event.schedule == '13 2 * * 1-5' || github.event.schedule == '22 2 * * 1-5') && 'preopen' ||
+      (inputs.phase == 'POST_EOD' || github.event.schedule == '35 11 * * 1-5' || github.event.schedule == '5 12 * * 1-5' || github.event.schedule == '35 12 * * 1-5') && 'post-eod' ||
+      inputs.phase || 'manual'
+    }}
   cancel-in-progress: false
 
 jobs:
@@ -100,6 +112,7 @@ jobs:
             phase="auto"
           else
             case "$E2E_CLOUD_EVENT_SCHEDULE" in
+              "30 1 * * 1-5"|"45 1 * * 1-5"|"55 1 * * 1-5") phase="PREOPEN_CA" ;;
               "3 2 * * 1-5"|"13 2 * * 1-5"|"22 2 * * 1-5") phase="PREOPEN" ;;
               "35 11 * * 1-5"|"5 12 * * 1-5"|"35 12 * * 1-5") phase="POST_EOD" ;;
               *) echo "Unknown scheduled phase: $E2E_CLOUD_EVENT_SCHEDULE" >&2; exit 2 ;;
@@ -117,4 +130,4 @@ jobs:
           if [[ -n "$E2E_CLOUD_DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$E2E_CLOUD_DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_e2e_paper_cloud_v2.py "${args[@]}"
+          python scripts/run_e2e_paper_cloud_v3.py "${args[@]}"
