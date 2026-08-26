@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import math
+import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time as dt_time
@@ -17,7 +18,10 @@ import requests
 from .provenance import sha256_file
 from .security_master import normalise_ticker
 from .stockbit_intraday_recovery import (
+    NO_CHART_404,
+    QUOTA_EXHAUSTED,
     REQUEST_ERROR,
+    REQUEST_TERMINAL_ERROR,
     SKIPPED_IDX_NO_ACTIVITY,
     SUCCESS,
     build_recovery_plan,
@@ -32,6 +36,7 @@ DEFAULT_MONTHLY_QUOTA_RESERVE = 3_000
 MAX_ATTEMPTS = 3
 MAX_RETRY_AFTER_SECONDS = 30.0
 REQUEST_DELAY_SECONDS = 0.05
+_ATTEMPT_NAME = re.compile(r"^attempt-(\d{4})$")
 
 
 @dataclass(frozen=True)
@@ -258,8 +263,9 @@ def parse_chart_payload(ticker: str, payload: object, *, expected_date: date) ->
         "latest_timestamp": frame["timestamp"].iloc[-1],
         "last_price": float(frame["price"].iloc[-1]),
         "duplicate_exact_rows_dropped": duplicate_exact,
-        # SUCCESS here means the provider identity and exact-session path are valid.
-        # It deliberately does not claim that every exchange minute is represented.
+        # SUCCESS proves identity + exact-session provider-path validity only.
+        # Illiquid stocks can legitimately stop printing early, so V2 does not
+        # invent a last-minute completeness threshold.
         "coverage_claim": "EXACT_SESSION_PROVIDER_PATH_ONLY",
     }
     return ParsedChart(frame, status)
@@ -366,6 +372,32 @@ def request_chart(
     raise AssertionError("unreachable")
 
 
+def classify_request_failure(meta: Mapping[str, Any]) -> str:
+    """Map a no-payload request result to deterministic recovery semantics."""
+
+    safe = dict(meta.get("safe_headers") or {})
+    try:
+        http_status = int(safe.get("http_status") or 0)
+    except (TypeError, ValueError):
+        http_status = 0
+    window = str(meta.get("rate_limit_window") or "").strip().casefold()
+    errors = [str(value) for value in meta.get("errors") or []]
+
+    if http_status == 404 or any("HTTP_404" in value for value in errors):
+        return NO_CHART_404
+    if (http_status == 429 and window == "month") or any("HTTP_429:month" in value for value in errors):
+        return QUOTA_EXHAUSTED
+    # 408/425/429 may be transient within the same provider session. 5xx and
+    # transport/no-status failures are likewise eligible for the later
+    # 19:30/20:30 recovery slots.
+    if http_status in {0, 408, 425, 429} or http_status >= 500:
+        return REQUEST_ERROR
+    if http_status and http_status != 200:
+        return REQUEST_TERMINAL_ERROR
+    # A 200 response with invalid JSON can still recover on a later slot.
+    return REQUEST_ERROR
+
+
 def _canonical_json_bytes(value: object) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, default=str) + "\n").encode("utf-8")
 
@@ -418,12 +450,11 @@ def canonical_current_universe(frame: pd.DataFrame, *, expected_date: date) -> p
 
 
 class SessionJournal:
-    """Local immutable journal for one prospective Stockbit intraday session.
+    """Immutable local journal for one prospective Stockbit intraday session.
 
-    Every provider/gate observation is stored under a new per-ticker attempt
-    directory. Recovery therefore never overwrites the evidence that caused a
-    previous retry. This layout is intentionally compatible with a later
-    conditional-write R2 implementation.
+    Every provider/gate observation is a new per-ticker attempt. Recovery never
+    overwrites earlier evidence. The shape is intentionally portable to the
+    later conditional-write R2 store.
     """
 
     def __init__(self, root: Path, *, expected_date: date):
@@ -488,12 +519,23 @@ class SessionJournal:
         root = self._ticker_root(ticker)
         if not root.exists():
             return []
-        return sorted(path for path in root.iterdir() if path.is_dir() and path.name.startswith("attempt-"))
+        attempts: list[tuple[int, Path]] = []
+        for path in root.iterdir():
+            if not path.is_dir():
+                continue
+            match = _ATTEMPT_NAME.fullmatch(path.name)
+            if match is None:
+                raise ValueError(f"unexpected Stockbit intraday attempt directory: {path}")
+            attempts.append((int(match.group(1)), path))
+        attempts.sort(key=lambda item: item[0])
+        numbers = [number for number, _ in attempts]
+        if numbers != list(range(1, len(numbers) + 1)):
+            raise ValueError(f"non-contiguous Stockbit intraday attempts for {normalise_ticker(ticker).upper()}")
+        return [path for _, path in attempts]
 
     def _next_attempt_dir(self, ticker: str) -> Path:
         attempts = self._attempt_dirs(ticker)
-        index = len(attempts) + 1
-        path = self._ticker_root(ticker) / f"attempt-{index:04d}"
+        path = self._ticker_root(ticker) / f"attempt-{len(attempts) + 1:04d}"
         if path.exists():
             raise FileExistsError(f"Stockbit intraday attempt id collision: {path}")
         path.mkdir(parents=True, exist_ok=False)
@@ -505,20 +547,76 @@ class SessionJournal:
         if not manifest_path.exists() or not status_path.exists():
             raise FileNotFoundError(f"incomplete Stockbit intraday attempt: {attempt_dir}")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("schema") != "idx_trade_stockbit_intraday_attempt_v2":
+            raise ValueError(f"Stockbit intraday attempt schema mismatch: {attempt_dir}")
+        if manifest.get("session_date") != self.expected_date.isoformat():
+            raise ValueError(f"Stockbit intraday attempt session mismatch: {attempt_dir}")
+        if manifest.get("attempt_id") != attempt_dir.name:
+            raise ValueError(f"Stockbit intraday attempt identity mismatch: {attempt_dir}")
         for relative, expected_sha in dict(manifest.get("files") or {}).items():
             path = attempt_dir / relative
             if not path.exists() or sha256_file(path) != expected_sha:
                 raise ValueError(f"Stockbit intraday attempt hash mismatch: {path}")
-        return json.loads(status_path.read_text(encoding="utf-8"))
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        if normalise_ticker(str(status.get("ticker") or "")).upper() != str(manifest.get("ticker") or "").upper():
+            raise ValueError(f"Stockbit intraday status ticker mismatch: {attempt_dir}")
+        return status
+
+    def _latest_status(self, ticker: str) -> dict[str, Any] | None:
+        attempts = self._attempt_dirs(ticker)
+        return self._verify_attempt(attempts[-1]) if attempts else None
 
     def latest_status_by_ticker(self) -> dict[str, dict[str, Any]]:
         universe = self.load_universe()
         result: dict[str, dict[str, Any]] = {}
         for ticker in universe["ticker"].astype(str):
-            attempts = self._attempt_dirs(ticker)
-            if attempts:
-                result[ticker] = self._verify_attempt(attempts[-1])
+            status = self._latest_status(ticker)
+            if status is not None:
+                result[ticker] = status
         return result
+
+    def _assert_provider_attempt_allowed(self, ticker: str) -> None:
+        prior = self._latest_status(ticker)
+        if prior is None:
+            return
+        prior_status = str(prior.get("status") or "").upper()
+        if prior_status != REQUEST_ERROR:
+            raise RuntimeError(
+                f"Stockbit intraday provider refetch blocked for {ticker}: prior status {prior_status or 'UNKNOWN'}"
+            )
+
+    def _write_attempt(
+        self,
+        ticker: str,
+        *,
+        status: Mapping[str, Any],
+        payload: object | None = None,
+        rows: pd.DataFrame | None = None,
+    ) -> None:
+        attempt_dir = self._next_attempt_dir(ticker)
+        files: dict[str, str] = {}
+        if payload is not None:
+            raw = _canonical_json_bytes({"ticker": ticker, "payload": payload})
+            _write_once(attempt_dir / "raw.json", raw)
+            files["raw.json"] = _sha256_bytes(raw)
+        if rows is not None and not rows.empty:
+            row_bytes = _csv_bytes(rows)
+            _write_once(attempt_dir / "rows.csv", row_bytes)
+            files["rows.csv"] = _sha256_bytes(row_bytes)
+        status_bytes = _canonical_json_bytes(dict(status))
+        _write_once(attempt_dir / "status.json", status_bytes)
+        files["status.json"] = _sha256_bytes(status_bytes)
+        manifest = {
+            "schema": "idx_trade_stockbit_intraday_attempt_v2",
+            "session_date": self.expected_date.isoformat(),
+            "ticker": ticker,
+            "attempt_id": attempt_dir.name,
+            "files": files,
+        }
+        # Manifest is deliberately written last: an interrupted attempt is not
+        # admissible and blocks future recovery until inspected/repaired.
+        _write_once(attempt_dir / "manifest.json", _canonical_json_bytes(manifest))
+        self._verify_attempt(attempt_dir)
 
     def record_provider_attempt(
         self,
@@ -529,12 +627,13 @@ class SessionJournal:
         captured_at: datetime,
     ) -> dict[str, Any]:
         ticker = normalise_ticker(ticker).upper()
+        self._assert_provider_attempt_allowed(ticker)
         if payload is None:
             parsed = ParsedChart(
                 pd.DataFrame(),
                 {
                     "ticker": ticker,
-                    "status": REQUEST_ERROR,
+                    "status": classify_request_failure(request_meta),
                     "points": 0,
                     "errors": list(request_meta.get("errors") or []),
                     "coverage_claim": "NONE",
@@ -553,28 +652,7 @@ class SessionJournal:
                 "safe_headers": dict(request_meta.get("safe_headers") or {}),
             }
         )
-        attempt_dir = self._next_attempt_dir(ticker)
-        files: dict[str, str] = {}
-        if payload is not None:
-            raw = _canonical_json_bytes({"ticker": ticker, "payload": payload})
-            _write_once(attempt_dir / "raw.json", raw)
-            files["raw.json"] = _sha256_bytes(raw)
-        if not parsed.rows.empty:
-            rows = _csv_bytes(parsed.rows)
-            _write_once(attempt_dir / "rows.csv", rows)
-            files["rows.csv"] = _sha256_bytes(rows)
-        status_bytes = _canonical_json_bytes(status)
-        _write_once(attempt_dir / "status.json", status_bytes)
-        files["status.json"] = _sha256_bytes(status_bytes)
-        manifest = {
-            "schema": "idx_trade_stockbit_intraday_attempt_v2",
-            "session_date": self.expected_date.isoformat(),
-            "ticker": ticker,
-            "attempt_id": attempt_dir.name,
-            "files": files,
-        }
-        _write_once(attempt_dir / "manifest.json", _canonical_json_bytes(manifest))
-        self._verify_attempt(attempt_dir)
+        self._write_attempt(ticker, status=status, payload=payload, rows=parsed.rows)
         return status
 
     def record_gate_skip(
@@ -585,6 +663,20 @@ class SessionJournal:
         gate_evidence: Mapping[str, Any],
     ) -> dict[str, Any]:
         ticker = normalise_ticker(ticker).upper()
+        if gate_evidence.get("activity_or") is not False:
+            raise ValueError("Stockbit intraday gate skip requires explicit activity_or=false")
+        prior = self._latest_status(ticker)
+        if prior is not None:
+            prior_status = str(prior.get("status") or "").upper()
+            if prior_status == SKIPPED_IDX_NO_ACTIVITY:
+                return prior
+            # A Stockbit 404 observed in SHADOW may subsequently be reconciled
+            # by exact-session official IDX zero-activity evidence. Preserve the
+            # 404 attempt and append the gate decision as a new immutable event.
+            if prior_status != NO_CHART_404:
+                raise RuntimeError(
+                    f"Stockbit intraday gate skip cannot replace prior status for {ticker}: {prior_status or 'UNKNOWN'}"
+                )
         status = {
             "ticker": ticker,
             "status": SKIPPED_IDX_NO_ACTIVITY,
@@ -593,18 +685,7 @@ class SessionJournal:
             "coverage_claim": "OFFICIAL_IDX_NO_ACTIVITY_GATE",
             "gate_evidence": dict(gate_evidence),
         }
-        attempt_dir = self._next_attempt_dir(ticker)
-        status_bytes = _canonical_json_bytes(status)
-        _write_once(attempt_dir / "status.json", status_bytes)
-        manifest = {
-            "schema": "idx_trade_stockbit_intraday_attempt_v2",
-            "session_date": self.expected_date.isoformat(),
-            "ticker": ticker,
-            "attempt_id": attempt_dir.name,
-            "files": {"status.json": _sha256_bytes(status_bytes)},
-        }
-        _write_once(attempt_dir / "manifest.json", _canonical_json_bytes(manifest))
-        self._verify_attempt(attempt_dir)
+        self._write_attempt(ticker, status=status)
         return status
 
     def recovery_plan(self):
@@ -623,17 +704,14 @@ class SessionJournal:
             status = str(value.get("status") or "UNKNOWN")
             counts[status] = counts.get(status, 0) + 1
             normalized_points += int(value.get("points") or 0)
-        result = {
+        return {
             **asdict(state),
             "status_counts": counts,
             "normalized_points": normalized_points,
-            # The legacy runtime used attempted==universe as complete. V2 does
-            # not expose that ambiguous meaning: complete == admissible_complete.
             "complete": state.admissible_complete,
             "synthetic_fill_used": False,
             "minute_volume_available": False,
         }
-        return result
 
 
 def _remaining_month(meta: Mapping[str, Any]) -> int | None:
