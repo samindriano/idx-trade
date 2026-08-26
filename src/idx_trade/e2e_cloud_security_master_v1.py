@@ -24,13 +24,7 @@ import pandas as pd
 
 from .forward_monitoring import runtime_paths
 from .provenance import sha256_file, write_manifest_atomic
-from .providers.idx import (
-    IDX_DELISTING_URL,
-    IDX_STOCK_LIST_URL,
-    _get_json,
-    fetch_active_listings,
-    fetch_delisted_listings,
-)
+from .providers.idx import IDX_DELISTING_URL, IDX_STOCK_LIST_URL, _get_json, fetch_active_listings
 from .security_master import SECURITY_COLUMNS, build_security_master, normalise_ticker
 from .storage import write_csv_atomic
 
@@ -38,6 +32,8 @@ from .storage import write_csv_atomic
 SCHEMA_VERSION = "idx_e2e_cloud_runtime_security_master_v1"
 FREEZE_LOCAL_DATE = pd.Timestamp("2026-08-20")
 JAKARTA = ZoneInfo("Asia/Jakarta")
+DELISTING_PAGE_SIZE = 9999
+MAX_DELISTING_PAGES_PER_MONTH = 1000
 
 
 class CloudSecurityMasterError(RuntimeError):
@@ -60,33 +56,31 @@ def _integer_metadata(payload: Mapping[str, object], name: str, *, label: str) -
     return parsed
 
 
-def _validate_complete_payload(
-    payload: Mapping[str, object],
-    *,
-    label: str,
-    require_unfiltered: bool,
-    allow_empty: bool,
-) -> int:
+def _required_integer_metadata(payload: Mapping[str, object], name: str, *, label: str) -> int:
+    value = _integer_metadata(payload, name, label=label)
+    if value is None:
+        raise CloudSecurityMasterError(f"{label}_{name}_MISSING")
+    return value
+
+
+def _validate_complete_active_payload(payload: Mapping[str, object]) -> int:
+    label = "IDX_ACTIVE_LISTINGS"
     rows = payload.get("data")
     if not isinstance(rows, list):
         raise CloudSecurityMasterError(f"{label}_DATA_NOT_LIST")
-    records_total = _integer_metadata(payload, "recordsTotal", label=label)
-    if records_total is None:
-        raise CloudSecurityMasterError(f"{label}_RECORDS_TOTAL_MISSING")
+    records_total = _required_integer_metadata(payload, "recordsTotal", label=label)
     records_filtered = _integer_metadata(payload, "recordsFiltered", label=label)
     if records_filtered is not None and records_filtered > records_total:
         raise CloudSecurityMasterError(f"{label}_RECORDS_FILTERED_EXCEEDS_TOTAL")
-    if require_unfiltered and records_filtered is not None and records_filtered != records_total:
+    if records_filtered is not None and records_filtered != records_total:
         raise CloudSecurityMasterError(f"{label}_UNEXPECTED_FILTERED_RESPONSE")
-    expected = records_filtered if records_filtered is not None else records_total
-    if len(rows) != expected:
-        raise CloudSecurityMasterError(
-            f"{label}_PARTIAL_RESPONSE:rows={len(rows)} expected={expected} "
-            f"recordsTotal={records_total} recordsFiltered={records_filtered}"
-        )
-    if expected == 0 and not allow_empty:
+    if records_total == 0:
         raise CloudSecurityMasterError(f"{label}_EMPTY_RESPONSE")
-    return expected
+    if len(rows) != records_total:
+        raise CloudSecurityMasterError(
+            f"{label}_PARTIAL_RESPONSE:rows={len(rows)} recordsTotal={records_total}"
+        )
+    return records_total
 
 
 def fetch_complete_active_listings() -> pd.DataFrame:
@@ -101,57 +95,146 @@ def fetch_complete_active_listings() -> pd.DataFrame:
         "language": "en-us",
     }
     payload = _get_json(IDX_STOCK_LIST_URL, params)
-    expected = _validate_complete_payload(
-        payload,
-        label="IDX_ACTIVE_LISTINGS",
-        require_unfiltered=True,
-        allow_empty=False,
-    )
+    if not isinstance(payload, Mapping):
+        raise CloudSecurityMasterError("IDX_ACTIVE_LISTINGS_PAYLOAD_NOT_OBJECT")
+    expected = _validate_complete_active_payload(payload)
     frame = fetch_active_listings(get_json=lambda _url, _params: dict(payload))
     if len(frame) != expected:
         raise CloudSecurityMasterError(
             f"IDX_ACTIVE_LISTINGS_NORMALIZATION_DROPPED_ROWS:{len(frame)}!={expected}"
         )
+    if frame["ticker"].duplicated().any():
+        raise CloudSecurityMasterError("IDX_ACTIVE_LISTINGS_DUPLICATE_TICKER")
     return frame
 
 
-def fetch_complete_delisted_listings(start_year: int, *, end: date) -> pd.DataFrame:
-    """Fetch monthly IDX delisting history with per-response count proof."""
+def _validate_delisting_row(row: object, *, label: str, position: int) -> dict[str, object]:
+    required = {"code", "issuerName", "ListingDate", "DeListingDate"}
+    if not isinstance(row, Mapping) or not required.issubset(row.keys()):
+        raise CloudSecurityMasterError(f"{label}_ROW_SCHEMA_INVALID:{position}")
+    ticker = normalise_ticker(row.get("code"))
+    listed_from = pd.to_datetime(row.get("ListingDate"), errors="coerce")
+    listed_to = pd.to_datetime(row.get("DeListingDate"), errors="coerce")
+    if (
+        not ticker
+        or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}", na=False).iloc[0]
+        or pd.isna(listed_from)
+        or pd.isna(listed_to)
+    ):
+        raise CloudSecurityMasterError(f"{label}_ROW_IDENTITY_INVALID:{position}")
+    return dict(row)
 
-    def strict_get_json(url: str, params: dict[str, object]) -> dict[str, object]:
-        payload = _get_json(url, params)
-        _validate_complete_payload(
-            payload,
-            label=(
-                "IDX_DELISTINGS_"
-                f"{int(params.get('periodYear', 0)):04d}_"
-                f"{int(params.get('periodMonth', 0)):02d}"
-            ),
-            require_unfiltered=False,
-            allow_empty=True,
+
+def _fetch_complete_delisting_month(year: int, month: int) -> list[dict[str, object]]:
+    """Exhaust one official monthly delisting result using ``meta.totalItems``."""
+
+    label = f"IDX_DELISTINGS_{year:04d}_{month:02d}"
+    accumulated: list[dict[str, object]] = []
+    expected_total: int | None = None
+    page_number = 1
+
+    while True:
+        if page_number > MAX_DELISTING_PAGES_PER_MONTH:
+            raise CloudSecurityMasterError(f"{label}_MAX_PAGE_GUARD_EXCEEDED")
+        params = {
+            "urlName": "LINK_DELISTING",
+            "periodYear": year,
+            "periodMonth": month,
+            "periodType": "monthly",
+            "isPrint": "False",
+            "cumulative": "false",
+            "pageSize": DELISTING_PAGE_SIZE,
+            "pageNumber": page_number,
+            "orderBy": "",
+        }
+        payload = _get_json(IDX_DELISTING_URL, params)
+        if not isinstance(payload, Mapping):
+            raise CloudSecurityMasterError(f"{label}_PAYLOAD_NOT_OBJECT")
+        rows = payload.get("data")
+        meta = payload.get("meta")
+        if not isinstance(rows, list):
+            raise CloudSecurityMasterError(f"{label}_DATA_NOT_LIST")
+        if not isinstance(meta, Mapping):
+            raise CloudSecurityMasterError(f"{label}_META_NOT_OBJECT")
+
+        meta_page = _required_integer_metadata(meta, "pageNumber", label=label)
+        meta_page_size = _required_integer_metadata(meta, "pageSize", label=label)
+        total_items = _required_integer_metadata(meta, "totalItems", label=label)
+        if meta_page != page_number:
+            raise CloudSecurityMasterError(
+                f"{label}_PAGE_NUMBER_MISMATCH:requested={page_number} returned={meta_page}"
+            )
+        if meta_page_size != DELISTING_PAGE_SIZE:
+            raise CloudSecurityMasterError(
+                f"{label}_PAGE_SIZE_MISMATCH:requested={DELISTING_PAGE_SIZE} returned={meta_page_size}"
+            )
+        if expected_total is None:
+            expected_total = total_items
+        elif total_items != expected_total:
+            raise CloudSecurityMasterError(
+                f"{label}_TOTAL_ITEMS_CHANGED:{expected_total}->{total_items}"
+            )
+
+        if expected_total == 0:
+            if rows:
+                raise CloudSecurityMasterError(f"{label}_ZERO_TOTAL_WITH_NONEMPTY_DATA")
+            return []
+        if not rows:
+            raise CloudSecurityMasterError(
+                f"{label}_EMPTY_PAGE_BEFORE_TOTAL:accumulated={len(accumulated)} total={expected_total}"
+            )
+        if len(rows) > DELISTING_PAGE_SIZE:
+            raise CloudSecurityMasterError(f"{label}_PAGE_EXCEEDS_REQUESTED_SIZE")
+
+        offset = len(accumulated)
+        accumulated.extend(
+            _validate_delisting_row(row, label=label, position=offset + index)
+            for index, row in enumerate(rows)
         )
-        rows = payload.get("data") or []
-        required = {"code", "issuerName", "ListingDate", "DeListingDate"}
-        for position, row in enumerate(rows):
-            if not isinstance(row, Mapping) or not required.issubset(row.keys()):
-                raise CloudSecurityMasterError(
-                    f"IDX_DELISTINGS_ROW_SCHEMA_INVALID:{position}"
-                )
-            ticker = normalise_ticker(row.get("code"))
-            listed_from = pd.to_datetime(row.get("ListingDate"), errors="coerce")
-            listed_to = pd.to_datetime(row.get("DeListingDate"), errors="coerce")
-            if (
-                not ticker
-                or not pd.Series([ticker]).str.fullmatch(r"[A-Z0-9]{4}", na=False).iloc[0]
-                or pd.isna(listed_from)
-                or pd.isna(listed_to)
-            ):
-                raise CloudSecurityMasterError(
-                    f"IDX_DELISTINGS_ROW_IDENTITY_INVALID:{position}"
-                )
-        return dict(payload)
+        if len(accumulated) > expected_total:
+            raise CloudSecurityMasterError(
+                f"{label}_ACCUMULATED_EXCEEDS_TOTAL:{len(accumulated)}>{expected_total}"
+            )
+        if len(accumulated) == expected_total:
+            return accumulated
+        page_number += 1
 
-    return fetch_delisted_listings(start_year, end=end, get_json=strict_get_json)
+
+def fetch_complete_delisted_listings(start_year: int, *, end: date) -> pd.DataFrame:
+    """Fetch post-freeze monthly IDX delisting history with exhaustive pagination."""
+
+    if end < FREEZE_LOCAL_DATE.date():
+        return pd.DataFrame(
+            columns=["ticker", "company_name", "listed_from", "listed_to", "source"]
+        )
+    effective_start_year = max(int(start_year), FREEZE_LOCAL_DATE.year)
+    records: list[dict[str, object]] = []
+    for year in range(effective_start_year, end.year + 1):
+        first_month = FREEZE_LOCAL_DATE.month if year == FREEZE_LOCAL_DATE.year else 1
+        last_month = end.month if year == end.year else 12
+        if first_month > last_month:
+            continue
+        for month in range(first_month, last_month + 1):
+            records.extend(_fetch_complete_delisting_month(year, month))
+
+    if not records:
+        return pd.DataFrame(
+            columns=["ticker", "company_name", "listed_from", "listed_to", "source"]
+        )
+    rows = pd.DataFrame(records)
+    result = pd.DataFrame(
+        {
+            "ticker": rows["code"].map(normalise_ticker),
+            "company_name": rows["issuerName"].astype(str).str.strip(),
+            "listed_from": pd.to_datetime(rows["ListingDate"], errors="coerce").dt.normalize(),
+            "listed_to": pd.to_datetime(rows["DeListingDate"], errors="coerce").dt.normalize(),
+            "source": "IDX_DIGITAL_STATISTIC_DELISTING",
+        }
+    )
+    duplicate_events = result.duplicated(["ticker", "listed_from", "listed_to"], keep=False)
+    if duplicate_events.any():
+        raise CloudSecurityMasterError("IDX_DELISTINGS_DUPLICATE_EVENT_ACROSS_MONTHS")
+    return result.sort_values(["listed_to", "ticker"], kind="mergesort").reset_index(drop=True)
 
 
 def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
@@ -256,7 +339,8 @@ def refresh_cloud_runtime_security_master(
         "active_completeness": "RECORDS_TOTAL_EXACT_SINGLE_RESPONSE",
         "delisting_source": IDX_DELISTING_URL,
         "delisting_start_year": int(FREEZE_LOCAL_DATE.year),
-        "delisting_completeness": "MONTHLY_RECORDS_FILTERED_OR_TOTAL_EXACT",
+        "delisting_start_month": int(FREEZE_LOCAL_DATE.month),
+        "delisting_completeness": "MONTHLY_META_TOTAL_ITEMS_EXHAUSTIVE_PAGINATION",
         "active_rows": int(len(active)),
         "delisted_rows": int(len(delisted)),
         "runtime_rows": int(len(current_full)),
