@@ -157,6 +157,86 @@ def _json_object(payload: bytes, *, label: str) -> dict[str, Any]:
     return value
 
 
+def _validate_persisted_official_open_admission(
+    value: object,
+    *,
+    session: str,
+) -> None:
+    """Validate the immutable summary returned by the cloud admission path.
+
+    This is deliberately a shape/identity check, not a second admission
+    implementation. ``materialize_official_open_from_cloud`` remains the
+    authority for deciding admission; this guard makes sure that a PREOPEN
+    result cannot persist a malformed or altered copy of that decision.
+    Missing metadata is accepted for genuinely older PREOPEN results. New
+    runner results always include the field, with ``None`` meaning no Open was
+    admitted.
+    """
+
+    if value is None:
+        return
+    if not isinstance(value, Mapping):
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_ADMISSION_INVALID")
+    if value.get("session_date") != session:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_ADMISSION_SESSION_MISMATCH")
+    if value.get("slot") not in {"0902", "0912", "0922"}:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_ADMISSION_SLOT_INVALID")
+    _required_sha(
+        value.get("slot_manifest_sha256"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_SLOT_MANIFEST",
+    )
+    _required_sha(
+        value.get("source_manifest_sha256"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_SOURCE_MANIFEST",
+    )
+    expected_ref = _required_git_sha(
+        value.get("expected_producer_capture_code_ref"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_EXPECTED_CAPTURE_CODE_REF",
+    )
+    actual_ref = _required_git_sha(
+        value.get("actual_producer_capture_code_ref"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_ACTUAL_CAPTURE_CODE_REF",
+    )
+    if expected_ref != actual_ref:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_CAPTURE_CODE_REF_MISMATCH")
+    from .official_open_cloud_archive_v1 import EXECUTION_ADMISSION as OPEN_EXECUTION_ADMISSION
+    from .official_open_evidence_v1 import JAKARTA as OPEN_JAKARTA
+
+    if value.get("producer_execution_admission") != OPEN_EXECUTION_ADMISSION:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_PRODUCER_ADMISSION_INVALID")
+    if value.get("producer_runner") != "GITHUB_ACTIONS":
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_RUNNER_INVALID")
+    if value.get("producer_github_event_name") != "schedule":
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_EVENT_INVALID")
+    if value.get("execution_admitted") is not True:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_EXECUTION_NOT_ADMITTED")
+    scheduled = _aware_timestamp(
+        value.get("scheduled_capture_timestamp_jakarta"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_SCHEDULED_CAPTURE",
+    ).astimezone(OPEN_JAKARTA)
+    captured = _aware_timestamp(
+        value.get("source_capture_timestamp_jakarta"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_SOURCE_CAPTURE",
+    ).astimezone(OPEN_JAKARTA)
+    window_start = _aware_timestamp(
+        value.get("admission_window_start_jakarta"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_WINDOW_START",
+    ).astimezone(OPEN_JAKARTA)
+    window_end = _aware_timestamp(
+        value.get("admission_window_end_jakarta"),
+        label="CLOUD_STAGE_OFFICIAL_OPEN_WINDOW_END",
+    ).astimezone(OPEN_JAKARTA)
+    if window_start != scheduled or captured < scheduled or captured > window_end:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_WINDOW_INVALID")
+    try:
+        declared_lag = float(value.get("capture_lag_seconds"))
+    except (TypeError, ValueError) as exc:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_CAPTURE_LAG_INVALID") from exc
+    actual_lag = (captured - scheduled).total_seconds()
+    if not math.isfinite(declared_lag) or declared_lag < 0 or abs(declared_lag - actual_lag) > 1e-6:
+        raise CloudPaperRuntimeError("CLOUD_STAGE_OFFICIAL_OPEN_CAPTURE_LAG_MISMATCH")
+
+
 class LocalConditionalStore:
     """Local test store with atomic create-only semantics."""
 
@@ -566,6 +646,15 @@ class CloudPaperArchive:
             or result_payload.get("model_refit") is not False
         ):
             raise CloudPaperRuntimeError("CLOUD_STAGE_RESULT_GUARDS_INVALID")
+        if stage == "PREOPEN":
+            controller_result = result_payload.get("controller_result")
+            if not isinstance(controller_result, dict):
+                raise CloudPaperRuntimeError("CLOUD_STAGE_RESULT_CONTROLLER_RESULT_INVALID")
+            if "official_open_cloud_admission" in controller_result:
+                _validate_persisted_official_open_admission(
+                    controller_result.get("official_open_cloud_admission"),
+                    session=session_date,
+                )
         _require_aware_timestamp(
             result_payload.get("observed_started_at_utc"),
             label="CLOUD_STAGE_RESULT_STARTED",
@@ -697,6 +786,11 @@ class CloudPaperArchive:
             "protected_forward_accessed": False,
             "model_refit": False,
         }
+        if stage == "PREOPEN":
+            _validate_persisted_official_open_admission(
+                result_body["controller_result"].get("official_open_cloud_admission"),
+                session=session,
+            )
         _require_aware_timestamp(
             result_body["observed_started_at_utc"], label="CLOUD_STAGE_RESULT_STARTED"
         )
@@ -861,7 +955,7 @@ def materialize_official_open_from_cloud(
     if current > hard_deadline:
         raise CloudPaperRuntimeError("OFFICIAL_OPEN_CLOUD_EXECUTION_WINDOW_CLOSED")
 
-    admitted: list[tuple[str, bytes, dict[str, Any], dict[str, bytes]]] = []
+    admitted: list[tuple[bytes, dict[str, bytes], dict[str, Any]]] = []
     for slot in ("0902", "0912", "0922"):
         commit_key = f"session_date={session}/slot={slot}/slot_manifest.json"
         raw_commit = store.read(commit_key)
@@ -1004,14 +1098,35 @@ def materialize_official_open_from_cloud(
             raise CloudPaperRuntimeError(
                 "OFFICIAL_OPEN_CLOUD_ADMISSION_SOURCE_CAPTURE_MISMATCH"
             )
-        admitted.append((slot, raw_commit, commit, loaded))
+        admitted.append(
+            (
+                raw_commit,
+                loaded,
+                {
+                    "session_date": session,
+                    "slot": slot,
+                    "slot_manifest_sha256": sha256_bytes(raw_commit),
+                    "source_manifest_sha256": sha256_bytes(loaded["source_manifest"]),
+                    "expected_producer_capture_code_ref": expected_producer_ref,
+                    "actual_producer_capture_code_ref": capture_code_ref,
+                    "producer_runner": runner["runner"],
+                    "producer_github_event_name": runner["github_event_name"],
+                    "scheduled_capture_timestamp_jakarta": scheduled.isoformat(),
+                    "source_capture_timestamp_jakarta": captured.isoformat(),
+                    "capture_lag_seconds": declared_lag,
+                    "producer_execution_admission": OPEN_EXECUTION_ADMISSION,
+                    "execution_admitted": True,
+                    "admission_window_start_jakarta": scheduled.isoformat(),
+                    "admission_window_end_jakarta": hard_deadline.isoformat(),
+                },
+            )
+        )
 
     if not admitted:
         return None
-    slot, raw_commit, commit, loaded = admitted[0]
+    raw_commit, loaded, admission = admitted[0]
     # All present slot commits were validated before any local materialisation.
     # This prevents a valid early slot from masking a malformed later retry.
-    del commit
     target = Path(target_root).expanduser().resolve() / session
     target.mkdir(parents=True, exist_ok=True)
     filenames = {
@@ -1032,15 +1147,8 @@ def materialize_official_open_from_cloud(
         _verify_source_bundle(target / "manifest.json", expected_session=session)
     except Exception as exc:
         raise CloudPaperRuntimeError("OFFICIAL_OPEN_SOURCE_BUNDLE_INVALID") from exc
-    return {
-        "session_date": session,
-        "slot": slot,
-        "slot_manifest_sha256": sha256_bytes(raw_commit),
-        "source_manifest_sha256": sha256_bytes(loaded["source_manifest"]),
-        "local_manifest": str((target / "manifest.json").resolve()),
-        "execution_admitted": True,
-        "admission_window_end_jakarta": hard_deadline.isoformat(),
-    }
+    admission["local_manifest"] = str((target / "manifest.json").resolve())
+    return admission
 
 
 __all__ = [

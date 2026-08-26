@@ -192,6 +192,64 @@ def _write_official_open_cloud_slot(
     return commit
 
 
+def _run_synthetic_preopen_capture(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[LocalConditionalStore, dict[str, object], object]:
+    store = LocalConditionalStore(tmp_path / "store")
+    _input_manifest(store, tmp_path)
+    _write_official_open_cloud_slot(store)
+    admission = materialize_official_open_from_cloud(
+        store,
+        session_date="2026-08-24",
+        target_root=tmp_path / "admitted-open",
+        eligibility_now=datetime.fromisoformat("2026-08-24T09:14:00+07:00"),
+        expected_capture_code_ref=PRODUCER_CAPTURE_CODE_REF,
+    )
+    assert admission is not None
+    monkeypatch.setenv("E2E_CLOUD_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("E2E_CLOUD_LOCAL_ROOT", str(tmp_path / "store"))
+    monkeypatch.setenv("E2E_CLOUD_INPUT_MANIFEST_KEY", "inputs/manifest.json")
+    monkeypatch.setenv("E2E_CLOUD_INPUT_ROOT", str(tmp_path / "inputs"))
+    monkeypatch.setattr(cloud_runner, "build_cloud_store_from_env", lambda *a, **k: store)
+    monkeypatch.setattr(
+        cloud_runner,
+        "_roots",
+        lambda: {
+            "paper": tmp_path / "paper",
+            "forward": tmp_path / "forward",
+            "official_open": tmp_path / "official-open",
+            "ca": tmp_path / "ca",
+        },
+    )
+    monkeypatch.setattr(
+        cloud_runner,
+        "wait_for_official_open_from_cloud",
+        lambda *a, **k: dict(admission),
+    )
+    monkeypatch.setattr(
+        cloud_runner,
+        "_controller_config",
+        lambda **kwargs: SimpleNamespace(base=object()),
+    )
+    monkeypatch.setattr(cloud_runner, "_config_missing", lambda config: None)
+    monkeypatch.setattr(
+        cloud_runner,
+        "_now",
+        lambda: datetime(2026, 8, 24, 9, 14, tzinfo=cloud_runner.JAKARTA),
+    )
+    monkeypatch.setattr(
+        cloud_runner,
+        "run_operational_cycle_v2",
+        lambda *a, **k: {"controller_status": "EXECUTION_COMPLETE"},
+    )
+    result = cloud_runner.run_once(phase="PREOPEN", session_date="2026-08-24")
+    assert result["status"] == "COMMITTED"
+    commit = CloudPaperArchive(store).existing_commit("2026-08-24", "PREOPEN")
+    assert commit is not None
+    return store, admission, commit
+
+
 def test_local_conditional_store_is_create_only(tmp_path: Path) -> None:
     store = LocalConditionalStore(tmp_path / "store")
     first = store.put_if_absent("a/b.bin", b"one", "application/octet-stream")
@@ -678,7 +736,48 @@ def test_open_unavailable_keeps_preopen_outcome_uncommitted(
 
     result = cloud_runner.run_once(phase="PREOPEN", session_date="2026-08-24")
     assert result["status"] == "WAITING"
+    assert result["official_open_cloud_admission"] is None
     assert CloudPaperArchive(store).existing_commit("2026-08-24", "PREOPEN") is None
+
+
+def test_preopen_commit_persists_and_replays_exact_official_open_admission(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store, admission, commit = _run_synthetic_preopen_capture(tmp_path, monkeypatch)
+    raw_result = store.read(commit.result_key)
+    assert raw_result is not None
+    result_payload = json.loads(raw_result.decode("utf-8"))
+    persisted = result_payload["controller_result"]["official_open_cloud_admission"]
+    assert persisted == admission
+    assert persisted["session_date"] == "2026-08-24"
+    assert persisted["slot"] == "0912"
+    assert persisted["execution_admitted"] is True
+    assert persisted["expected_producer_capture_code_ref"] == PRODUCER_CAPTURE_CODE_REF
+    assert persisted["actual_producer_capture_code_ref"] == PRODUCER_CAPTURE_CODE_REF
+    assert persisted["scheduled_capture_timestamp_jakarta"] == "2026-08-24T09:12:00+07:00"
+    assert persisted["source_capture_timestamp_jakarta"] == "2026-08-24T09:13:00+07:00"
+    assert persisted["capture_lag_seconds"] == 60.0
+    replay = CloudPaperArchive(store).existing_commit("2026-08-24", "PREOPEN")
+    assert replay is not None
+    replay_result = json.loads(store.read(replay.result_key).decode("utf-8"))
+    assert replay_result["controller_result"]["official_open_cloud_admission"] == persisted
+
+    retry = cloud_runner.run_once(phase="PREOPEN", session_date="2026-08-24")
+    assert retry["status"] == "ALREADY_COMMITTED"
+    assert retry["commit_sha256"] == commit.commit_sha256
+
+
+def test_preopen_admission_identity_tampering_fails_closed_on_replay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store, _, commit = _run_synthetic_preopen_capture(tmp_path, monkeypatch)
+    raw_result = store.read(commit.result_key)
+    assert raw_result is not None
+    result_payload = json.loads(raw_result.decode("utf-8"))
+    result_payload["controller_result"]["official_open_cloud_admission"]["slot"] = "0902"
+    store._path(commit.result_key).write_bytes(canonical_json_bytes(result_payload))
+    with pytest.raises(CloudPaperRuntimeError, match="CLOUD_STAGE_COMMIT_RESULT_INVALID"):
+        CloudPaperArchive(store).existing_commit("2026-08-24", "PREOPEN")
 
 
 def test_runner_rejects_retroactive_explicit_session_without_side_effects(

@@ -205,8 +205,9 @@ def _result_payload(
     started: datetime,
     finished: datetime,
     status: dict[str, object],
+    official_open_admission: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    return {
+    result: dict[str, object] = {
         "schema_version": CONTRACT_VERSION,
         "session_date": session,
         "stage": stage,
@@ -219,6 +220,11 @@ def _result_payload(
         "protected_forward_accessed": False,
         "model_refit": False,
     }
+    if stage == "PREOPEN":
+        result["official_open_cloud_admission"] = (
+            dict(official_open_admission) if official_open_admission is not None else None
+        )
+    return result
 
 
 def run_once(*, phase: str | None = None, session_date: str | None = None) -> dict[str, object]:
@@ -331,13 +337,14 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
     if missing_config:
         raise CloudPaperRuntimeError("CLOUD_OPERATIONAL_PREREQUISITE:" + missing_config)
 
+    official_open_admission: dict[str, object] | None = None
     if chosen == "PREOPEN":
         official_env = dict(os.environ)
         official_env["E2E_CLOUD_STORAGE_PREFIX"] = os.getenv(
             "E2E_CLOUD_OFFICIAL_OPEN_PREFIX", "official-open-v1"
         )
         official_store = build_cloud_store_from_env(official_env)
-        wait_for_official_open_from_cloud(
+        official_open_admission = wait_for_official_open_from_cloud(
             official_store,
             session_date=session,
             target_root=roots["official_open"],
@@ -367,6 +374,7 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
         started=started,
         finished=finished,
         status=status,
+        official_open_admission=official_open_admission,
     )
     if controller_status in EXPECTED_TERMINAL:
         snapshot, snapshot_sha, snapshot_meta = build_runtime_snapshot(roots)
