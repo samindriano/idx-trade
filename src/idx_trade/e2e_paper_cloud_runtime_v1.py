@@ -731,6 +731,11 @@ class CloudPaperArchive:
         existing = self._load_commit(session, stage)
         if existing is None:
             raise CloudPaperRuntimeError("CLOUD_STAGE_COMMIT_NOT_READABLE")
+        self.verify_existing_identity(
+            existing,
+            schedule_attestation_sha256=schedule_sha,
+            input_manifest_sha256=input_sha,
+        )
         return existing
 
     def latest_snapshot(
