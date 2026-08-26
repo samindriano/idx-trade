@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: `samindriano/idx-trade`
 source_commit: `8a96a3d9caebfbd2c0235234e9394afc04693efa`
 branch: `integration/e2e-cloud-first-orchestration-v1`
-head_commit: `d49ad9498df43b8a0f424dce4749198252369fa6`
+head_commit: `f94adbc4569afeab061eb35da1de8fef1f1c45d3`
 scope: cloud-first E2E Paper durability/orchestration adapter and synthetic tests only
 
 ## Files changed
