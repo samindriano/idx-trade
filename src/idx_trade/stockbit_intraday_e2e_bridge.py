@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 from typing import Mapping
@@ -22,6 +22,24 @@ from .stockbit_intraday_eod_context import (
 ACCEPTED_E2E_IMPLEMENTATION_SHA = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
 DEFAULT_E2E_PREFIX = "e2e-paper-v1"
 DEFAULT_INPUT_MANIFEST_KEY = "inputs/manifest.json"
+_PASSTHROUGH_ENV = (
+    "PATH",
+    "HOME",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "WINDIR",
+    "COMSPEC",
+    "TEMP",
+    "TMP",
+    "LANG",
+    "LC_ALL",
+    "SSL_CERT_FILE",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+)
 
 
 class StockbitIntradayE2EBridgeError(RuntimeError):
@@ -72,7 +90,16 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
         raise StockbitIntradayE2EBridgeError(
             "STOCKBIT_INTRADAY_E2E_BRIDGE_STORAGE_ENV_MISSING:" + ",".join(missing)
         )
-    child = dict(values)
+
+    # The accepted E2E checkout gets only process essentials plus the exact R2
+    # credentials it needs for read-only CloudInputBundle/POST_EOD access.
+    # Do not inherit arbitrary repository/provider/account secrets or a parent
+    # PYTHONPATH that could shadow the pinned accepted package.
+    child = {
+        name: str(values[name])
+        for name in _PASSTHROUGH_ENV
+        if name in values and str(values[name]).strip()
+    }
     child["E2E_CLOUD_STORAGE_BACKEND"] = "s3"
     child["E2E_CLOUD_S3_ENDPOINT"] = str(values["STOCKBIT_INTRADAY_S3_ENDPOINT"]).strip()
     child["E2E_CLOUD_S3_BUCKET"] = str(values["STOCKBIT_INTRADAY_S3_BUCKET"]).strip()
@@ -81,21 +108,31 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
     child["E2E_CLOUD_STORAGE_PREFIX"] = str(
         values.get("STOCKBIT_INTRADAY_E2E_PREFIX", DEFAULT_E2E_PREFIX)
     ).strip("/")
-    # The child is read-only and never receives provider credentials.
-    child.pop("ZAPI_API_KEY", None)
-    child.pop("IDX_API_KEY", None)
-    existing_pythonpath = str(child.get("PYTHONPATH", "")).strip()
-    accepted_src = str(accepted / "src")
-    child["PYTHONPATH"] = (
-        accepted_src + os.pathsep + existing_pythonpath if existing_pythonpath else accepted_src
-    )
+    child["PYTHONPATH"] = str(accepted / "src")
+    child["PYTHONNOUSERSITE"] = "1"
+    child["PYTHONDONTWRITEBYTECODE"] = "1"
     return child
+
+
+def _safe_manifest_key(value: object) -> str:
+    raw = str(value or "").strip().replace("\\", "/")
+    path = PurePosixPath(raw)
+    if not raw or path.is_absolute() or ".." in path.parts or "." in path.parts:
+        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY_INVALID")
+    return str(path)
+
+
+def _require_within(path: Path, root: Path, *, label: str) -> Path:
+    target = path.expanduser().resolve()
+    boundary = root.expanduser().resolve()
+    if target != boundary and boundary not in target.parents:
+        raise StockbitIntradayE2EBridgeError(f"{label}_OUTSIDE_MATERIALIZATION_ROOT")
+    return target
 
 
 _CHILD_CODE = r'''
 from __future__ import annotations
 import json
-import os
 from pathlib import Path
 import sys
 
@@ -162,9 +199,9 @@ def materialize_accepted_e2e_context(
     destination = Path(output_root).expanduser().resolve()
     values = dict(os.environ if env is None else env)
     child_env = _child_env(values, accepted)
-    manifest_key = str(
+    manifest_key = _safe_manifest_key(
         values.get("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY", DEFAULT_INPUT_MANIFEST_KEY)
-    ).strip()
+    )
     completed = subprocess.run(
         [
             sys.executable,
@@ -194,7 +231,11 @@ def materialize_accepted_e2e_context(
     if not isinstance(payload, dict):
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_BRIDGE_OUTPUT_INVALID")
 
-    schedule_path = Path(str(payload.get("schedule_path") or "")).resolve()
+    schedule_path = _require_within(
+        Path(str(payload.get("schedule_path") or "")),
+        destination / "inputs",
+        label="STOCKBIT_INTRADAY_E2E_SCHEDULE_PATH",
+    )
     schedule_sha = str(payload.get("schedule_sha256") or "").strip().lower()
     schedule = load_verified_official_trading_schedule(
         schedule_path,
@@ -214,7 +255,11 @@ def materialize_accepted_e2e_context(
         commit_sha = str(payload.get("post_eod_commit_sha256") or "").strip().lower()
         if not raw_dir or len(commit_sha) != 64:
             raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_EOD_REFERENCE_INVALID")
-        session_dir = Path(raw_dir).resolve()
+        session_dir = _require_within(
+            Path(raw_dir),
+            destination / "e2e" / "forward",
+            label="STOCKBIT_INTRADAY_E2E_EOD_SESSION_DIR",
+        )
         if not session_dir.is_dir():
             raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_EOD_SESSION_DIR_MISSING")
         eod = load_verified_intraday_eod_context(session_dir, expected_date=session_date)
