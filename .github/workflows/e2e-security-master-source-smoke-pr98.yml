@@ -1,0 +1,55 @@
+name: E2E security-master source smoke PR98
+
+on:
+  pull_request:
+    branches:
+      - integration/idx-e2e-baseline-paper-v1
+
+permissions:
+  contents: read
+
+jobs:
+  source-smoke:
+    if: github.head_ref == 'fix/e2e-cloud-runtime-security-master-bootstrap-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Live official IDX identity-source smoke
+        shell: bash
+        run: |
+          python - <<'PY'
+          from datetime import date
+          import json
+
+          from idx_trade.e2e_cloud_security_master_v1 import (
+              fetch_complete_active_listings,
+              fetch_complete_delisted_listings,
+          )
+
+          active = fetch_complete_active_listings()
+          delisted = fetch_complete_delisted_listings(2026, end=date.today())
+          print(json.dumps({
+              "status": "LIVE_IDX_IDENTITY_SOURCE_SMOKE_PASS",
+              "active_rows": int(len(active)),
+              "delisted_rows_2026_ytd": int(len(delisted)),
+              "active_unique_tickers": int(active["ticker"].nunique()),
+              "delisted_unique_tickers_2026_ytd": int(delisted["ticker"].nunique()) if not delisted.empty else 0,
+              "outcome_accessed": False,
+              "protected_forward_accessed": False,
+              "model_refit": False,
+              "r2_writes": 0,
+          }, sort_keys=True))
+          PY
