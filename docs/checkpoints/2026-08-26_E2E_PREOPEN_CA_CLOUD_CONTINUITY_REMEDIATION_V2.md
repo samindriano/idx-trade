@@ -46,6 +46,8 @@ The integrated replay is synthetic-only: no provider call, no production R2 pref
 
 Exact-head full pytest and PR merge-ref CI remain mandatory before integration merge. A transient GitHub Actions runner-assignment failure on the earlier head produced a workflow-level failure with zero executed steps; it is not counted as implementation evidence and must be replaced by a genuine completed pytest run.
 
+A close/reopen cycle did not enqueue a replacement run for the latest head. This documentation synchronization commit is intentionally used to emit a fresh `pull_request/synchronize` event without changing runtime, science, workflow, provider, storage, or scheduling semantics; only the resulting genuine pytest execution counts as CI evidence.
+
 ## Boundaries
 
 No model/refit/rescore/science change. No outcome/protected-forward access. No Decision/Sizing/Execution policy change. No retroactive execution. No production workflow/schedule change. No live provider/R2 write from tests. Production remains pinned to `6a906c...` and V2 until this successor passes exact-head and merge-ref review and a separate activation PR is explicitly authorized.
