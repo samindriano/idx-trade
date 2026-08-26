@@ -17,19 +17,15 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from idx_trade.e2e_paper_cloud_runtime_v1 import (  # noqa: E402
-    CloudInputBundle,
-    ConditionalS3Store,
-    load_schedule_from_bundle,
-)
 from idx_trade.stockbit_intraday_cloud_archive import (  # noqa: E402
     SLOTS,
     StockbitIntradayCloudArchive,
     build_intraday_store_from_env,
 )
-from idx_trade.stockbit_intraday_cloud_runner import (  # noqa: E402
-    materialize_eod_context_from_e2e,
-    run_cloud_slot,
+from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot  # noqa: E402
+from idx_trade.stockbit_intraday_e2e_bridge import (  # noqa: E402
+    ACCEPTED_E2E_IMPLEMENTATION_SHA,
+    materialize_accepted_e2e_context,
 )
 from idx_trade.stockbit_intraday_runtime import JAKARTA, request_chart  # noqa: E402
 
@@ -45,6 +41,11 @@ def _now() -> datetime:
     return datetime.now(tz=JAKARTA)
 
 
+def _require_aware(now: datetime) -> None:
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise RuntimeError("STOCKBIT_INTRADAY_CLOCK_NOT_TIMEZONE_AWARE")
+
+
 def _git_head() -> str:
     return subprocess.run(
         ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
@@ -55,6 +56,7 @@ def _git_head() -> str:
 
 
 def _require_current_session(value: str | None, *, now: datetime) -> date:
+    _require_aware(now)
     current = now.astimezone(JAKARTA).date()
     requested = date.fromisoformat(value) if value else current
     if requested != current:
@@ -63,6 +65,7 @@ def _require_current_session(value: str | None, *, now: datetime) -> date:
 
 
 def _validate_slot_clock(slot: str, *, now: datetime) -> None:
+    _require_aware(now)
     local = now.astimezone(JAKARTA)
     minimum = SLOT_MINIMUMS[slot]
     if local.time().replace(tzinfo=None) < minimum:
@@ -77,15 +80,11 @@ def _verify_code_pin() -> str:
     return actual
 
 
-def _e2e_store_from_intraday_env() -> ConditionalS3Store:
-    env = os.environ
-    return ConditionalS3Store(
-        env.get("STOCKBIT_INTRADAY_S3_ENDPOINT", "").strip(),
-        env.get("STOCKBIT_INTRADAY_S3_BUCKET", "").strip(),
-        env.get("STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID", "").strip(),
-        env.get("STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY", "").strip(),
-        env.get("STOCKBIT_INTRADAY_E2E_PREFIX", "e2e-paper-v1").strip("/"),
-    )
+def _accepted_e2e_root() -> Path:
+    raw = os.getenv("STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT", "").strip()
+    if not raw:
+        raise RuntimeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT_REQUIRED")
+    return Path(raw).expanduser().resolve()
 
 
 def _result_payload(archive: StockbitIntradayCloudArchive, commit) -> dict[str, Any]:
@@ -106,26 +105,17 @@ def run_once(*, slot: str, session_date: str | None = None) -> dict[str, Any]:
 
     intraday_store = build_intraday_store_from_env()
     intraday_archive = StockbitIntradayCloudArchive(intraday_store)
-    e2e_store = _e2e_store_from_intraday_env()
 
     with tempfile.TemporaryDirectory(prefix="idx-trade-stockbit-intraday-") as raw_tmp:
         tmp = Path(raw_tmp)
-        bundle = CloudInputBundle.load(
-            e2e_store,
-            os.getenv("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY", "inputs/manifest.json"),
+        accepted = materialize_accepted_e2e_context(
+            accepted_runtime_root=_accepted_e2e_root(),
+            output_root=tmp / "accepted-e2e-readback",
+            session_date=session,
         )
-        roles = bundle.materialize(e2e_store, tmp / "inputs")
-        schedule = load_schedule_from_bundle(bundle, roles)
+        schedule = accepted.schedule
         if session.isoformat() < schedule.coverage_start or session.isoformat() > schedule.coverage_end:
             raise RuntimeError("STOCKBIT_INTRADAY_SESSION_OUTSIDE_SCHEDULE_COVERAGE")
-
-        context = None
-        if session.isoformat() in schedule.session_dates:
-            context = materialize_eod_context_from_e2e(
-                store=e2e_store,
-                session_date=session,
-                target_root=tmp / "e2e-post-eod",
-            )
 
         http = requests.Session()
         api_key = os.getenv("ZAPI_API_KEY", "").strip()
@@ -140,13 +130,16 @@ def run_once(*, slot: str, session_date: str | None = None) -> dict[str, Any]:
             slot=slot,
             now=now,
             schedule=schedule,
-            context=context,
+            context=accepted.eod,
             archive=intraday_archive,
             journal_root=tmp / "journal",
             requester=requester,
             code_identity={
                 "repo": "samindriano/idx-trade",
                 "commit": code_ref,
+                "accepted_e2e_runtime": ACCEPTED_E2E_IMPLEMENTATION_SHA,
+                "e2e_input_manifest_sha256": accepted.input_manifest_sha256,
+                "e2e_post_eod_commit_sha256": accepted.post_eod_commit_sha256,
             },
         )
         result = _result_payload(intraday_archive, commit)
@@ -160,6 +153,9 @@ def run_once(*, slot: str, session_date: str | None = None) -> dict[str, Any]:
             "result_sha256": commit.result_sha256,
             "provider_calls_attempted": result.get("provider_calls_attempted"),
             "session_manifest_sha256": result.get("session_manifest_sha256"),
+            "accepted_e2e_runtime_sha": ACCEPTED_E2E_IMPLEMENTATION_SHA,
+            "e2e_input_manifest_sha256": accepted.input_manifest_sha256,
+            "e2e_post_eod_commit_sha256": accepted.post_eod_commit_sha256,
             "outcome_accessed": False,
             "retroactive_capture_used": False,
             "synthetic_fill_used": False,
@@ -185,6 +181,7 @@ def main(argv: list[str] | None = None) -> int:
                     "session_date": args.session_date or "CURRENT_ASIA_JAKARTA_DATE",
                     "storage_prefix": "stockbit-intraday-v1",
                     "e2e_source_prefix": "e2e-paper-v1",
+                    "accepted_e2e_runtime_sha": ACCEPTED_E2E_IMPLEMENTATION_SHA,
                     "provider_calls": 0,
                     "r2_calls": 0,
                     "retroactive_capture_authorized": False,
