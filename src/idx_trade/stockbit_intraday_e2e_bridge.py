@@ -23,22 +23,9 @@ ACCEPTED_E2E_IMPLEMENTATION_SHA = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
 DEFAULT_E2E_PREFIX = "e2e-paper-v1"
 DEFAULT_INPUT_MANIFEST_KEY = "inputs/manifest.json"
 _PASSTHROUGH_ENV = (
-    "PATH",
-    "HOME",
-    "USERPROFILE",
-    "SYSTEMROOT",
-    "WINDIR",
-    "COMSPEC",
-    "TEMP",
-    "TMP",
-    "LANG",
-    "LC_ALL",
-    "SSL_CERT_FILE",
-    "REQUESTS_CA_BUNDLE",
-    "CURL_CA_BUNDLE",
-    "HTTP_PROXY",
-    "HTTPS_PROXY",
-    "NO_PROXY",
+    "PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR", "COMSPEC",
+    "TEMP", "TMP", "LANG", "LC_ALL", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
 )
 
 
@@ -57,9 +44,7 @@ class MaterializedE2EContext:
 def _git_head(root: Path) -> str:
     completed = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
+        check=False, capture_output=True, text=True,
     )
     if completed.returncode != 0:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_GIT_HEAD_UNAVAILABLE")
@@ -90,11 +75,10 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
         raise StockbitIntradayE2EBridgeError(
             "STOCKBIT_INTRADAY_E2E_BRIDGE_STORAGE_ENV_MISSING:" + ",".join(missing)
         )
+    e2e_prefix = str(values.get("STOCKBIT_INTRADAY_E2E_PREFIX", DEFAULT_E2E_PREFIX)).strip("/")
+    if e2e_prefix != DEFAULT_E2E_PREFIX:
+        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_PREFIX_INVALID")
 
-    # The accepted E2E checkout gets only process essentials plus the exact R2
-    # credentials it needs for read-only CloudInputBundle/POST_EOD access.
-    # Do not inherit arbitrary repository/provider/account secrets or a parent
-    # PYTHONPATH that could shadow the pinned accepted package.
     child = {
         name: str(values[name])
         for name in _PASSTHROUGH_ENV
@@ -105,9 +89,7 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
     child["E2E_CLOUD_S3_BUCKET"] = str(values["STOCKBIT_INTRADAY_S3_BUCKET"]).strip()
     child["E2E_CLOUD_S3_ACCESS_KEY_ID"] = str(values["STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID"]).strip()
     child["E2E_CLOUD_S3_SECRET_ACCESS_KEY"] = str(values["STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY"]).strip()
-    child["E2E_CLOUD_STORAGE_PREFIX"] = str(
-        values.get("STOCKBIT_INTRADAY_E2E_PREFIX", DEFAULT_E2E_PREFIX)
-    ).strip("/")
+    child["E2E_CLOUD_STORAGE_PREFIX"] = DEFAULT_E2E_PREFIX
     child["PYTHONPATH"] = str(accepted / "src")
     child["PYTHONNOUSERSITE"] = "1"
     child["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -135,15 +117,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
-
 from idx_trade.e2e_paper_cloud_runtime_v1 import (
-    CloudInputBundle,
-    CloudPaperArchive,
-    build_cloud_store_from_env,
-    load_schedule_from_bundle,
-    restore_runtime_snapshot,
+    CloudInputBundle, CloudPaperArchive, build_cloud_store_from_env,
+    load_schedule_from_bundle, restore_runtime_snapshot,
 )
-
 session = sys.argv[1]
 root = Path(sys.argv[2]).resolve()
 manifest_key = sys.argv[3]
@@ -181,19 +158,14 @@ if session in schedule.session_dates:
         restore_runtime_snapshot(raw, roots, expected_sha256=commit.snapshot_sha256)
         result["eod_available"] = True
         result["post_eod_commit_sha256"] = commit.commit_sha256
-        result["eod_session_dir"] = str(
-            roots["forward"] / "forward_monitoring" / "sessions" / session
-        )
+        result["eod_session_dir"] = str(roots["forward"] / "forward_monitoring" / "sessions" / session)
 print(json.dumps(result, sort_keys=True))
 '''
 
 
 def materialize_accepted_e2e_context(
-    *,
-    accepted_runtime_root: str | Path,
-    output_root: str | Path,
-    session_date: date,
-    env: Mapping[str, str] | None = None,
+    *, accepted_runtime_root: str | Path, output_root: str | Path,
+    session_date: date, env: Mapping[str, str] | None = None,
 ) -> MaterializedE2EContext:
     accepted = validate_accepted_e2e_checkout(accepted_runtime_root)
     destination = Path(output_root).expanduser().resolve()
@@ -203,27 +175,12 @@ def materialize_accepted_e2e_context(
         values.get("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY", DEFAULT_INPUT_MANIFEST_KEY)
     )
     completed = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            _CHILD_CODE,
-            session_date.isoformat(),
-            str(destination),
-            manifest_key,
-        ],
-        cwd=str(accepted),
-        env=child_env,
-        check=False,
-        capture_output=True,
-        text=True,
+        [sys.executable, "-c", _CHILD_CODE, session_date.isoformat(), str(destination), manifest_key],
+        cwd=str(accepted), env=child_env, check=False, capture_output=True, text=True,
     )
     if completed.returncode != 0:
-        # Never include environment values in the error. Child stderr is bounded
-        # to code/contract failures and must not print credentials by contract.
         tail = completed.stderr.strip()[-2000:]
-        raise StockbitIntradayE2EBridgeError(
-            "STOCKBIT_INTRADAY_ACCEPTED_E2E_BRIDGE_FAILED:" + tail
-        )
+        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_BRIDGE_FAILED:" + tail)
     try:
         payload = json.loads(completed.stdout.strip())
     except json.JSONDecodeError as exc:
@@ -232,15 +189,11 @@ def materialize_accepted_e2e_context(
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_BRIDGE_OUTPUT_INVALID")
 
     schedule_path = _require_within(
-        Path(str(payload.get("schedule_path") or "")),
-        destination / "inputs",
+        Path(str(payload.get("schedule_path") or "")), destination / "inputs",
         label="STOCKBIT_INTRADAY_E2E_SCHEDULE_PATH",
     )
     schedule_sha = str(payload.get("schedule_sha256") or "").strip().lower()
-    schedule = load_verified_official_trading_schedule(
-        schedule_path,
-        expected_sha256=schedule_sha,
-    )
+    schedule = load_verified_official_trading_schedule(schedule_path, expected_sha256=schedule_sha)
     if (
         schedule.coverage_start != payload.get("schedule_coverage_start")
         or schedule.coverage_end != payload.get("schedule_coverage_end")
@@ -256,8 +209,7 @@ def materialize_accepted_e2e_context(
         if not raw_dir or len(commit_sha) != 64:
             raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_EOD_REFERENCE_INVALID")
         session_dir = _require_within(
-            Path(raw_dir),
-            destination / "e2e" / "forward",
+            Path(raw_dir), destination / "e2e" / "forward",
             label="STOCKBIT_INTRADAY_E2E_EOD_SESSION_DIR",
         )
         if not session_dir.is_dir():
@@ -270,8 +222,6 @@ def materialize_accepted_e2e_context(
     if len(manifest_sha) != 64:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_SHA_INVALID")
     return MaterializedE2EContext(
-        schedule=schedule,
-        eod=eod,
-        input_manifest_sha256=manifest_sha,
+        schedule=schedule, eod=eod, input_manifest_sha256=manifest_sha,
         post_eod_commit_sha256=commit_sha,
     )
