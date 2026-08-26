@@ -356,14 +356,28 @@ def test_preopen_ca_capture_wires_d_post_eod_parent_and_d_to_e_attestation(
     prior = controller_v1._journal_paths(config, decision, "POST_EOD")[1]
     prior.parent.mkdir(parents=True)
     prior.write_text("prior\n", encoding="utf-8")
+    prior_file_sha = "1" * 64
+    prior_journal_sha = "2" * 64
 
     def fake_journal(path):
-        text = str(path)
-        if text.endswith(f"{decision}_POST_EOD.json"):
-            journal = SimpleNamespace(as_of_date=decision, capture_phase="POST_EOD")
-        else:
-            journal = SimpleNamespace(as_of_date=execution, capture_phase="PREOPEN")
-        return SimpleNamespace(journal=journal)
+        resolved = Path(path).resolve()
+        if resolved == prior.resolve():
+            return SimpleNamespace(
+                path=resolved,
+                file_sha256=prior_file_sha,
+                journal_sha256=prior_journal_sha,
+                previous_path=None,
+                previous_file_sha256=None,
+                journal=SimpleNamespace(as_of_date=decision, capture_phase="POST_EOD"),
+            )
+        return SimpleNamespace(
+            path=resolved,
+            file_sha256="3" * 64,
+            journal_sha256="4" * 64,
+            previous_path=prior.resolve(),
+            previous_file_sha256=prior_file_sha,
+            journal=SimpleNamespace(as_of_date=execution, capture_phase="PREOPEN"),
+        )
 
     monkeypatch.setattr(preopen_ca, "load_journal_document", fake_journal)
     monkeypatch.setattr(preopen_ca.v1, "_config_missing", lambda cfg: None)
@@ -387,6 +401,26 @@ def test_preopen_ca_capture_wires_d_post_eod_parent_and_d_to_e_attestation(
             batch.mkdir(parents=True)
             journal.parent.mkdir(parents=True, exist_ok=True)
             journal.write_text("journal\n", encoding="utf-8")
+            (batch / "BATCH_MANIFEST.json").write_text(
+                json.dumps(
+                    {
+                        "status": "COMPLETE",
+                        "batch_root": str(batch.resolve()),
+                        "journal_target": str(journal.resolve()),
+                        "as_of_date": execution,
+                        "capture_phase": "PREOPEN",
+                        "required_tickers": ["BBCA", "BBRI"],
+                        "prior_journal": {
+                            "path": str(prior.resolve()),
+                            "file_sha256": prior_file_sha,
+                            "journal_sha256": prior_journal_sha,
+                            "as_of_date": decision,
+                            "capture_phase": "POST_EOD",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
 
     monkeypatch.setattr(preopen_ca.v1, "_run_child", fake_run_child)
     monkeypatch.setattr(
@@ -419,3 +453,138 @@ def test_preopen_ca_capture_wires_d_post_eod_parent_and_d_to_e_attestation(
     assert sidecar["from_session_date"] == decision
     assert sidecar["through_session_date"] == execution
     assert not (config.runtime_root / "executions" / f"{execution}.json").exists()
+
+
+def test_preopen_parent_binding_rejects_wrong_journal_parent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decision = "2026-08-27"
+    execution = "2026-08-28"
+    prior = tmp_path / "prior.json"
+    current = tmp_path / "current.json"
+    wrong = tmp_path / "wrong.json"
+    batch = tmp_path / "batch"
+    for path in (prior, current, wrong):
+        path.write_text("stub\n", encoding="utf-8")
+    batch.mkdir()
+    prior_file_sha = "1" * 64
+    prior_journal_sha = "2" * 64
+    (batch / "BATCH_MANIFEST.json").write_text(
+        json.dumps(
+            {
+                "status": "COMPLETE",
+                "batch_root": str(batch.resolve()),
+                "journal_target": str(current.resolve()),
+                "as_of_date": execution,
+                "capture_phase": "PREOPEN",
+                "required_tickers": ["BBCA"],
+                "prior_journal": {
+                    "path": str(prior.resolve()),
+                    "file_sha256": prior_file_sha,
+                    "journal_sha256": prior_journal_sha,
+                    "as_of_date": decision,
+                    "capture_phase": "POST_EOD",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_journal(path):
+        resolved = Path(path).resolve()
+        if resolved == prior.resolve():
+            return SimpleNamespace(
+                path=resolved,
+                file_sha256=prior_file_sha,
+                journal_sha256=prior_journal_sha,
+                previous_path=None,
+                previous_file_sha256=None,
+                journal=SimpleNamespace(as_of_date=decision, capture_phase="POST_EOD"),
+            )
+        return SimpleNamespace(
+            path=resolved,
+            file_sha256="3" * 64,
+            journal_sha256="4" * 64,
+            previous_path=wrong.resolve(),
+            previous_file_sha256=prior_file_sha,
+            journal=SimpleNamespace(as_of_date=execution, capture_phase="PREOPEN"),
+        )
+
+    monkeypatch.setattr(preopen_ca, "load_journal_document", fake_journal)
+    with pytest.raises(Exception, match="PARENT_JOURNAL_MISMATCH"):
+        preopen_ca._verify_preopen_parent_binding(
+            decision=decision,
+            execution=execution,
+            required_tickers=("BBCA",),
+            batch=batch,
+            journal=current,
+            prior=prior,
+        )
+
+
+def test_preopen_parent_binding_rejects_wrong_batch_parent_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decision = "2026-08-27"
+    execution = "2026-08-28"
+    prior = tmp_path / "prior.json"
+    current = tmp_path / "current.json"
+    batch = tmp_path / "batch"
+    prior.write_text("stub\n", encoding="utf-8")
+    current.write_text("stub\n", encoding="utf-8")
+    batch.mkdir()
+    prior_file_sha = "1" * 64
+    prior_journal_sha = "2" * 64
+    (batch / "BATCH_MANIFEST.json").write_text(
+        json.dumps(
+            {
+                "status": "COMPLETE",
+                "batch_root": str(batch.resolve()),
+                "journal_target": str(current.resolve()),
+                "as_of_date": execution,
+                "capture_phase": "PREOPEN",
+                "required_tickers": ["BBCA"],
+                "prior_journal": {
+                    "path": str(prior.resolve()),
+                    "file_sha256": "f" * 64,
+                    "journal_sha256": prior_journal_sha,
+                    "as_of_date": decision,
+                    "capture_phase": "POST_EOD",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_journal(path):
+        resolved = Path(path).resolve()
+        if resolved == prior.resolve():
+            return SimpleNamespace(
+                path=resolved,
+                file_sha256=prior_file_sha,
+                journal_sha256=prior_journal_sha,
+                previous_path=None,
+                previous_file_sha256=None,
+                journal=SimpleNamespace(as_of_date=decision, capture_phase="POST_EOD"),
+            )
+        return SimpleNamespace(
+            path=resolved,
+            file_sha256="3" * 64,
+            journal_sha256="4" * 64,
+            previous_path=prior.resolve(),
+            previous_file_sha256=prior_file_sha,
+            journal=SimpleNamespace(as_of_date=execution, capture_phase="PREOPEN"),
+        )
+
+    monkeypatch.setattr(preopen_ca, "load_journal_document", fake_journal)
+    with pytest.raises(Exception, match="BATCH_PARENT_MISMATCH"):
+        preopen_ca._verify_preopen_parent_binding(
+            decision=decision,
+            execution=execution,
+            required_tickers=("BBCA",),
+            batch=batch,
+            journal=current,
+            prior=prior,
+        )
