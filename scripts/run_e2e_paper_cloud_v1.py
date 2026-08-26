@@ -70,6 +70,7 @@ EXPECTED_TERMINAL = {
     "ALREADY_COMPLETE",
     "MISSED_EXECUTION_NO_CERTIFIED_OPEN",
 }
+PREOPEN_EXECUTION_TERMINAL = {"EXECUTION_COMPLETE", "ALREADY_COMPLETE"}
 
 
 def _now() -> datetime:
@@ -227,6 +228,24 @@ def _result_payload(
     return result
 
 
+def _require_terminal_preopen_admission(
+    *,
+    stage: str,
+    controller_status: str,
+    official_open_admission: dict[str, object] | None,
+) -> None:
+    """Do not durably claim a cloud PREOPEN execution without cloud admission."""
+
+    if (
+        stage == "PREOPEN"
+        and controller_status in PREOPEN_EXECUTION_TERMINAL
+        and official_open_admission is None
+    ):
+        raise CloudPaperRuntimeError(
+            "CLOUD_E2E_PREOPEN_TERMINAL_WITHOUT_OFFICIAL_OPEN_ADMISSION"
+        )
+
+
 def run_once(*, phase: str | None = None, session_date: str | None = None) -> dict[str, object]:
     now = _now()
     if session_date:
@@ -368,6 +387,11 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
     status = run_operational_cycle_v2(config, now=effective_now)
     finished = _now()
     controller_status = str(status.get("controller_status") or "FAIL_CLOSED")
+    _require_terminal_preopen_admission(
+        stage=chosen,
+        controller_status=controller_status,
+        official_open_admission=official_open_admission,
+    )
     result = _result_payload(
         session=session,
         stage=chosen,
