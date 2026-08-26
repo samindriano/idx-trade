@@ -1,0 +1,120 @@
+name: E2E Paper cloud orchestration
+
+on:
+  schedule:
+    # GitHub cron is UTC: consumer retries at 09:03/09:13/09:22 and
+    # 18:35/19:05/19:35 Asia/Jakarta. The first two retries are deliberately
+    # offset from the Official Open producer's 09:02/09:12 slots; the final
+    # 09:22 retry remains inside the hard PREOPEN deadline.
+    - cron: "3 2 * * 1-5"
+    - cron: "13 2 * * 1-5"
+    - cron: "22 2 * * 1-5"
+    - cron: "35 11 * * 1-5"
+    - cron: "5 12 * * 1-5"
+    - cron: "35 12 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Cloud E2E phase
+        required: true
+        type: choice
+        options: [auto, PREOPEN, POST_EOD]
+      session_date:
+        description: Optional current Jakarta session date
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: idx-trade-e2e-paper-cloud-v1
+  cancel-in-progress: false
+
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # Exact reviewed successor implementation accepted into the E2E integration baseline.
+      # Change only through a reviewed provenance update.
+      E2E_CLOUD_IMPLEMENTATION_REF: 6a906c5ea8681e07b8e9c47a256f85144c34951e
+      E2E_CLOUD_STORAGE_BACKEND: s3
+      E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+      E2E_CLOUD_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
+      E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1
+      # Must equal the accepted Official Open producer implementation SHA.
+      E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
+      E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
+      E2E_CLOUD_PROVIDER_CHECKOUT: ${{ github.workspace }}/idx-bei-provider
+      E2E_CLOUD_PROVIDER_COMMIT: 75d6c0f74fa360d225794c70c383348977de6798
+      E2E_CLOUD_EXPECTED_BRANCH: cloud-pinned-runtime
+      E2E_CLOUD_DISPATCH_PHASE: ${{ inputs.phase || '' }}
+      E2E_CLOUD_DISPATCH_SESSION_DATE: ${{ inputs.session_date || '' }}
+      E2E_CLOUD_EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+
+    steps:
+      - name: Checkout pinned implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.E2E_CLOUD_IMPLEMENTATION_REF }}
+          persist-credentials: false
+
+      - name: Verify pinned implementation
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$E2E_CLOUD_IMPLEMENTATION_REF"
+
+      - name: Create stable runtime branch identity
+        shell: bash
+        run: git switch -c "$E2E_CLOUD_EXPECTED_BRANCH"
+
+      - name: Checkout pinned IDX provider
+        uses: actions/checkout@v4
+        with:
+          repository: nichsedge/idx-bei
+          ref: ${{ env.E2E_CLOUD_PROVIDER_COMMIT }}
+          path: idx-bei-provider
+          persist-credentials: false
+
+      - name: Setup Python and uv
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install cloud runner
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[archive]"
+
+      - name: Resolve scheduled phase
+        shell: bash
+        run: |
+          if [[ -n "$E2E_CLOUD_DISPATCH_PHASE" && "$E2E_CLOUD_DISPATCH_PHASE" != "auto" ]]; then
+            phase="$E2E_CLOUD_DISPATCH_PHASE"
+          elif [[ -n "$E2E_CLOUD_DISPATCH_PHASE" ]]; then
+            phase="auto"
+          else
+            case "$E2E_CLOUD_EVENT_SCHEDULE" in
+              "3 2 * * 1-5"|"13 2 * * 1-5"|"22 2 * * 1-5") phase="PREOPEN" ;;
+              "35 11 * * 1-5"|"5 12 * * 1-5"|"35 12 * * 1-5") phase="POST_EOD" ;;
+              *) echo "Unknown scheduled phase: $E2E_CLOUD_EVENT_SCHEDULE" >&2; exit 2 ;;
+            esac
+          fi
+          echo "E2E_CLOUD_PHASE=$phase" >> "$GITHUB_ENV"
+
+      - name: Run one cloud E2E stage
+        env:
+          ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
+        shell: bash
+        run: |
+          set -o pipefail
+          args=(--phase "$E2E_CLOUD_PHASE")
+          if [[ -n "$E2E_CLOUD_DISPATCH_SESSION_DATE" ]]; then
+            args+=(--session-date "$E2E_CLOUD_DISPATCH_SESSION_DATE")
+          fi
+          python scripts/run_e2e_paper_cloud_v2.py "${args[@]}"
