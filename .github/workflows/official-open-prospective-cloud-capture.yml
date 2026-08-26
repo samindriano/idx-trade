@@ -35,8 +35,9 @@ jobs:
     timeout-minutes: 10
     env:
       # Pin the evidence implementation independently of the default-branch
-      # launcher. Update this only through reviewed provenance change.
-      OFFICIAL_OPEN_CAPTURE_CODE_REF: 8a96a3d9caebfbd2c0235234e9394afc04693efa
+      # launcher. The repository variable is intentionally repinnable only
+      # after PR #92 has an accepted integration merge SHA.
+      OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       OFFICIAL_OPEN_STORAGE_BACKEND: s3
       OFFICIAL_OPEN_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
@@ -49,6 +50,12 @@ jobs:
       EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
 
     steps:
+      - name: Require accepted producer implementation pin
+        shell: bash
+        run: |
+          test -n "$OFFICIAL_OPEN_CAPTURE_CODE_REF"
+          [[ "$OFFICIAL_OPEN_CAPTURE_CODE_REF" =~ ^[0-9a-f]{40}$ ]]
+
       - name: Checkout pinned capture implementation
         uses: actions/checkout@v4
         with:
