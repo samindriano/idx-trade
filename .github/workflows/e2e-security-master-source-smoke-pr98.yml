@@ -50,20 +50,15 @@ jobs:
           }
           payload = _get_json(IDX_DELISTING_URL, params)
           rows = payload.get("data") if isinstance(payload, dict) else None
-          scalars = {
-              str(key): value
-              for key, value in payload.items()
-              if key != "data" and isinstance(value, (str, int, float, bool, type(None)))
-          } if isinstance(payload, dict) else {}
-          first_row_keys = sorted(rows[0].keys()) if isinstance(rows, list) and rows and isinstance(rows[0], dict) else []
+          meta = payload.get("meta") if isinstance(payload, dict) else None
           print(json.dumps({
-              "status": "LIVE_IDX_IDENTITY_SOURCE_DIAGNOSTIC",
+              "status": "LIVE_IDX_IDENTITY_SOURCE_META_DIAGNOSTIC",
               "active_rows": int(len(active)),
               "active_unique_tickers": int(active["ticker"].nunique()),
               "delisting_top_level_keys": sorted(payload.keys()) if isinstance(payload, dict) else [],
-              "delisting_scalar_metadata": scalars,
+              "delisting_meta": meta,
               "delisting_row_count": len(rows) if isinstance(rows, list) else None,
-              "delisting_first_row_keys": first_row_keys,
+              "delisting_first_row_keys": sorted(rows[0].keys()) if isinstance(rows, list) and rows and isinstance(rows[0], dict) else [],
               "outcome_accessed": False,
               "protected_forward_accessed": False,
               "model_refit": False,
