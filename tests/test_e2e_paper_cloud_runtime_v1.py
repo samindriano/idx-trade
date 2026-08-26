@@ -836,6 +836,34 @@ def test_preopen_wait_does_not_poll_after_hard_deadline(tmp_path: Path) -> None:
     assert current[0].time().isoformat() == OFFICIAL_OPEN_EXECUTION_END.isoformat()
 
 
+def test_producer_commit_after_hard_deadline_is_not_consumed(tmp_path: Path) -> None:
+    current = [datetime.fromisoformat("2026-08-24T09:23:00+07:00")]
+    calls = {"materialize": 0}
+
+    def now() -> datetime:
+        return current[0]
+
+    def materialize(*args: object, **kwargs: object) -> dict[str, object]:
+        del args, kwargs
+        calls["materialize"] += 1
+        return {"execution_admitted": True}
+
+    original = cloud_runner.materialize_official_open_from_cloud
+    cloud_runner.materialize_official_open_from_cloud = materialize  # type: ignore[assignment]
+    try:
+        result = cloud_runner.wait_for_official_open_from_cloud(
+            LocalConditionalStore(tmp_path / "store"),
+            session_date="2026-08-24",
+            target_root=tmp_path / "open",
+            now_fn=now,
+            sleep_fn=lambda _: None,
+        )
+    finally:
+        cloud_runner.materialize_official_open_from_cloud = original
+    assert result is None
+    assert calls["materialize"] == 0
+
+
 def test_preopen_wait_stops_when_producer_never_commits(tmp_path: Path) -> None:
     current = [datetime.fromisoformat("2026-08-24T09:13:00+07:00")]
     calls = {"materialize": 0}
