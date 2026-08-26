@@ -7,7 +7,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from idx_trade.stockbit_intraday_capture import JAKARTA if False else None
 from idx_trade.stockbit_intraday_runtime import (
     JAKARTA,
     SessionJournal,
