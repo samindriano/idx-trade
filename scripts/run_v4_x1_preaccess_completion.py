@@ -12,6 +12,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
@@ -77,15 +78,27 @@ def _previous_official_session(schedule: list[str], first: str) -> str | None:
     return schedule[index - 1] if index > 0 else None
 
 
-def _overall_state(*, readiness: dict[str, object], counter: dict[str, object], prior: dict[str, object]) -> str:
-    statuses: list[str] = []
-    for value in (readiness, counter, prior):
-        status = str(value.get("status") or "") if isinstance(value, dict) else ""
-        statuses.append(status)
-    if any(status in {"IMPLEMENTATION_DEFECT", "ACCESS_CONTAMINATED"} for status in statuses):
+def _collect_status_tokens(value: object) -> list[str]:
+    tokens: list[str] = []
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if str(key) in {"status", "overall_status", "verdict"} and isinstance(child, str):
+                tokens.append(child.upper())
+            tokens.extend(_collect_status_tokens(child))
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            tokens.extend(_collect_status_tokens(child))
+    return tokens
+
+
+def _overall_state(*components: object) -> str:
+    statuses = _collect_status_tokens(components)
+    if any("IMPLEMENTATION_DEFECT" in status or "ACCESS_CONTAMINATED" in status for status in statuses):
         return "IMPLEMENTATION_DEFECT"
-    if any(status == "PROVENANCE_INVALID" for status in statuses):
+    if any("PROVENANCE_INVALID" in status or status == "INTEGRITY_FAILURE" for status in statuses):
         return "PROVENANCE_INVALID"
+    if any(status in {"REAL_ACCESS_ALREADY_COMPLETED", "ORPHAN_OR_INTERRUPTED_STATE"} for status in statuses):
+        return "ACCESS_CONTAMINATED"
     return "ACCUMULATING_OUTCOME_BLIND"
 
 
@@ -100,6 +113,63 @@ def _audit_local_index_archive(root: Path, sessions: list[str]) -> dict[str, obj
         "calendar_archive_session_count": len(sessions),
         "calendar_archive_available_count": len(available),
         "calendar_archive_missing_sessions": missing,
+    }
+
+
+def _audit_benchmark_boundary_read_only(
+    root: Path,
+    *,
+    sessions: list[str],
+    predecessor_session_date: str,
+) -> dict[str, object]:
+    requested = [predecessor_session_date, *sessions]
+    if requested != sorted(set(requested)):
+        raise CompletionArtifactError("BENCHMARK_SESSION_ORDER_INVALID")
+    available: list[str] = []
+    missing: list[str] = []
+    rows: list[dict[str, object]] = []
+    for session in requested:
+        path = root / "forward_monitoring" / "sessions" / session / "idx_index_summary.csv"
+        if not path.is_file():
+            missing.append(session)
+            continue
+        frame = pd.read_csv(path)
+        required = {"session_date", "index_code", "close", "source", "source_ref", "source_sha256", "source_retrieved_at"}
+        if not required.issubset(frame.columns):
+            raise CompletionArtifactError(f"BENCHMARK_SOURCE_SCHEMA_INVALID:{session}")
+        selected = frame[frame["index_code"].astype(str).str.upper().eq("COMPOSITE")]
+        if len(selected) != 1 or str(selected.iloc[0]["session_date"]) != session:
+            raise CompletionArtifactError(f"BENCHMARK_COMPOSITE_IDENTITY_INVALID:{session}")
+        row = selected.iloc[0]
+        source_name = str(row["source"])
+        if not source_name.upper().startswith("IDX"):
+            raise CompletionArtifactError(f"BENCHMARK_SOURCE_NOT_IDX:{session}")
+        close = pd.to_numeric(pd.Series([row["close"]]), errors="coerce").iloc[0]
+        if pd.isna(close) or float(close) <= 0:
+            raise CompletionArtifactError(f"BENCHMARK_CLOSE_INVALID:{session}")
+        available.append(session)
+        rows.append(
+            {
+                "session_date": session,
+                "benchmark_close": float(close),
+                "source": source_name,
+                "source_ref": str(row["source_ref"]),
+                "source_sha256": str(row["source_sha256"]),
+                "source_csv_sha256": sha256_file(path),
+                "source_retrieved_at": str(row["source_retrieved_at"]),
+            }
+        )
+    return {
+        "status": "PARTIAL_NOT_GATE_READY" if missing else "BOUNDARY_COMPLETE_ARTIFACT_NOT_PUBLISHED",
+        "benchmark_identity": "IDX_OFFICIAL_INDEX_SUMMARY_COMPOSITE",
+        "required_boundary_dates": requested,
+        "available_boundary_dates": available,
+        "missing_boundary_dates": missing,
+        "prospective_session_count": len(sessions),
+        "gate_ready": False,
+        "publication_time_claim": "NONE",
+        "audit_only": True,
+        "rows": rows,
     }
 
 
@@ -154,12 +224,19 @@ def _real_audit(args: argparse.Namespace, *, project: bool) -> dict[str, object]
         _previous_official_session(sessions, prospective_dates[0]) if prospective_dates else None
     )
     if predecessor and prospective_dates:
-        benchmark = build_local_composite_benchmark(
-            data_root,
-            sessions=prospective_dates,
-            predecessor_session_date=predecessor,
-            output_root=output if project else Path.cwd() / ".unused-preaccess-audit-output",
-        )
+        if project:
+            benchmark = build_local_composite_benchmark(
+                data_root,
+                sessions=prospective_dates,
+                predecessor_session_date=predecessor,
+                output_root=output,
+            )
+        else:
+            benchmark = _audit_benchmark_boundary_read_only(
+                data_root,
+                sessions=prospective_dates,
+                predecessor_session_date=predecessor,
+            )
     else:
         benchmark = {
             "status": "NOT_AVAILABLE",
@@ -187,7 +264,9 @@ def _real_audit(args: argparse.Namespace, *, project: bool) -> dict[str, object]
         paper = {"status": "NOT_AVAILABLE", "reason": "SESSION_AUDIT_BRIDGE_NOT_CONFIGURED"}
 
     current_readiness = readiness["readiness"]
-    overall = _overall_state(readiness=current_readiness, counter=counter, prior=prior)
+    code_pins = adapt_code_pins(repo)
+    target = {"status": "NOT_AVAILABLE", "reason": "SEALED_TARGET_PRODUCER_NOT_RUN"}
+    overall = _overall_state(current_readiness, counter, prior, paper, benchmark, code_pins)
     report = {
         "schema_version": "v4_x1_preaccess_artifact_completion_report_v2",
         "mode": "PROJECT_SCORES" if project else "AUDIT_ONLY",
@@ -208,8 +287,8 @@ def _real_audit(args: argparse.Namespace, *, project: bool) -> dict[str, object]
         "benchmark_archive_diagnostic": benchmark_archive,
         "paper_state": paper,
         "prior_access": prior,
-        "code_pins": adapt_code_pins(repo),
-        "target_attestation": {"status": "NOT_AVAILABLE", "reason": "SEALED_TARGET_PRODUCER_NOT_RUN"},
+        "code_pins": code_pins,
+        "target_attestation": target,
         "current_readiness": current_readiness,
         "overall_status": overall,
         "real_preflight_status": "PRE_FLIGHT_BLOCKED",
