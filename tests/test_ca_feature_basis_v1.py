@@ -81,9 +81,11 @@ def test_resolved_split_never_crosses_one_feature_epoch() -> None:
 
 
 def test_exact_v4_dependency_recovery_is_geometry_based_not_blanket_60() -> None:
-    days = sessions(90)
+    # Put the transition after a complete pre-event 60-observation warmup so
+    # the test measures recovery geometry rather than natural feature maturity.
+    days = sessions(140)
     ids = pd.DataFrame({"ticker": "TEST", "date": days})
-    transition = days[25]
+    transition = days[65]
     events = pd.DataFrame([event(transition_session=transition)])
 
     result = evaluate_feature_basis_admission(ids, events, days)
