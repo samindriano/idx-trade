@@ -11,6 +11,7 @@ from idx_trade.e2e_cloud_security_master_v1 import (
     CloudSecurityMasterError,
     refresh_cloud_runtime_security_master,
 )
+from idx_trade.forward_monitoring import _load_security_master, runtime_paths
 from idx_trade.security_master import SECURITY_COLUMNS
 
 
@@ -52,7 +53,9 @@ def _delisted(rows: list[tuple[str, str, str]]) -> pd.DataFrame:
     )
 
 
-def test_fresh_cloud_bootstrap_writes_canonical_runtime_master_and_manifest(tmp_path: Path) -> None:
+def test_fresh_cloud_bootstrap_satisfies_exact_canonical_eod_discovery_boundary(
+    tmp_path: Path,
+) -> None:
     baseline = tmp_path / "baseline.csv"
     _write_baseline(
         baseline,
@@ -65,8 +68,9 @@ def test_fresh_cloud_bootstrap_writes_canonical_runtime_master_and_manifest(tmp_
         calls["end"] = end
         return _delisted([])
 
+    runtime_root = tmp_path / "runtime"
     result = refresh_cloud_runtime_security_master(
-        tmp_path / "runtime",
+        runtime_root,
         baseline_master=baseline,
         observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
         active_fetcher=lambda: _active([("AAAA", "2020-01-01"), ("NEWW", "2026-08-21")]),
@@ -78,6 +82,11 @@ def test_fresh_cloud_bootstrap_writes_canonical_runtime_master_and_manifest(tmp_
     frame = pd.read_csv(output)
     assert list(frame.columns) == list(SECURITY_COLUMNS)
     assert set(frame["ticker"]) == {"AAAA", "NEWW"}
+
+    # This is the exact loader that raised in genuine scheduled run 32966156577.
+    loaded = _load_security_master(runtime_paths(runtime_root))
+    assert set(loaded["ticker"]) == {"AAAA", "NEWW"}
+
     assert result["post_freeze_new_tickers"] == ["NEWW"]
     assert result["guards"]["outcome_accessed"] is False
     assert manifest.is_file()
