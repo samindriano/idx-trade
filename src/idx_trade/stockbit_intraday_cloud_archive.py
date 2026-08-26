@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from datetime import date
 import json
 import os
-from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .e2e_paper_cloud_runtime_v1 import (
+from .stockbit_intraday_cloud_storage import (
     CloudObjectStore,
     ConditionalS3Store,
     LocalConditionalStore,
@@ -83,9 +82,10 @@ def build_intraday_store_from_env(env: Mapping[str, str] | None = None) -> Cloud
 class StockbitIntradayCloudArchive:
     """Known-key, append-only cloud archive for post-close intraday slots.
 
-    Snapshot/result objects are written first and verified by the conditional
-    store. ``commit.json`` is written last and is the only durable admission
-    marker for a slot. Existing commits are always re-read and hash-verified.
+    Snapshot/result objects are written first and hash-verified. ``commit.json``
+    is written last and is the durable admission marker. A pre-existing commit
+    is accepted only when it is byte-equivalent to the caller's recomputation;
+    divergent concurrent runners fail closed.
     """
 
     def __init__(self, store: CloudObjectStore):
@@ -121,6 +121,14 @@ class StockbitIntradayCloudArchive:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_NOT_COMMITTED")
         if payload.get("session_date") != session or payload.get("slot") != slot:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_IDENTITY_MISMATCH")
+        guards = payload.get("guards")
+        if (
+            not isinstance(guards, dict)
+            or guards.get("synthetic_fill_used") is not False
+            or guards.get("retroactive_capture_used") is not False
+            or guards.get("outcome_accessed") is not False
+        ):
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_COMMIT_GUARD_INVALID")
         snapshot = payload.get("snapshot")
         result = payload.get("result")
         if not isinstance(snapshot, dict) or not isinstance(result, dict):
@@ -173,40 +181,34 @@ class StockbitIntradayCloudArchive:
                 return found
         return None
 
-    def commit_slot(
+    def later_committed_slot_after(
         self,
-        *,
         session_date: str | date,
         slot: str,
+    ) -> IntradaySlotCommit | None:
+        target = _slot(slot)
+        index = SLOTS.index(target)
+        for candidate in SLOTS[index + 1 :]:
+            found = self.existing_slot(session_date, candidate)
+            if found is not None:
+                return found
+        return None
+
+    @staticmethod
+    def _expected_slot_payload(
+        *,
+        session: str,
+        slot: str,
         status: str,
-        snapshot_bytes: bytes,
-        result_payload: Mapping[str, Any],
+        snapshot_sha: str,
+        snapshot_key: str,
+        result_sha: str,
+        result_key: str,
         code_identity: Mapping[str, Any],
         eod_manifest_sha256: str | None,
         session_manifest_sha256: str | None,
-    ) -> IntradaySlotCommit:
-        session = _session(session_date)
-        slot = _slot(slot)
-        existing = self.existing_slot(session, slot)
-        if existing is not None:
-            return existing
-        snapshot_sha = sha256_bytes(snapshot_bytes)
-        result = {
-            **dict(result_payload),
-            "session_date": session,
-            "slot": slot,
-            "status": str(status),
-            "synthetic_fill_used": False,
-            "retroactive_capture_used": False,
-            "outcome_accessed": False,
-        }
-        result_bytes = canonical_json_bytes(result)
-        result_sha = sha256_bytes(result_bytes)
-        snapshot_key = self.snapshot_key(session, slot, snapshot_sha)
-        result_key = self.result_key(session, slot, result_sha)
-        self.store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
-        self.store.put_if_absent(result_key, result_bytes, "application/json")
-        payload = {
+    ) -> dict[str, Any]:
+        return {
             "schema_version": SCHEMA_VERSION,
             "commit_state": "COMMITTED",
             "session_date": session,
@@ -223,20 +225,70 @@ class StockbitIntradayCloudArchive:
                 "outcome_accessed": False,
             },
         }
+
+    def commit_slot(
+        self,
+        *,
+        session_date: str | date,
+        slot: str,
+        status: str,
+        snapshot_bytes: bytes,
+        result_payload: Mapping[str, Any],
+        code_identity: Mapping[str, Any],
+        eod_manifest_sha256: str | None,
+        session_manifest_sha256: str | None,
+    ) -> IntradaySlotCommit:
+        session = _session(session_date)
+        slot = _slot(slot)
+        snapshot_sha = sha256_bytes(snapshot_bytes)
+        result = {
+            **dict(result_payload),
+            "session_date": session,
+            "slot": slot,
+            "status": str(status),
+            "synthetic_fill_used": False,
+            "retroactive_capture_used": False,
+            "outcome_accessed": False,
+        }
+        result_bytes = canonical_json_bytes(result)
+        result_sha = sha256_bytes(result_bytes)
+        snapshot_key = self.snapshot_key(session, slot, snapshot_sha)
+        result_key = self.result_key(session, slot, result_sha)
+        payload = self._expected_slot_payload(
+            session=session,
+            slot=slot,
+            status=status,
+            snapshot_sha=snapshot_sha,
+            snapshot_key=snapshot_key,
+            result_sha=result_sha,
+            result_key=result_key,
+            code_identity=code_identity,
+            eod_manifest_sha256=eod_manifest_sha256,
+            session_manifest_sha256=session_manifest_sha256,
+        )
         encoded = canonical_json_bytes(payload)
+        expected_commit_sha = sha256_bytes(encoded)
+
+        existing = self.existing_slot(session, slot)
+        if existing is not None:
+            if existing.commit_sha256 != expected_commit_sha:
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_EXISTING_IDENTITY_CONFLICT")
+            return existing
+
+        self.store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
+        self.store.put_if_absent(result_key, result_bytes, "application/json")
         commit_key = self.commit_key(session, slot)
         try:
             self.store.put_if_absent(commit_key, encoded, "application/json")
         except StorageImmutabilityConflict:
-            # A concurrent runner won. Accept only its fully verified commit.
             concurrent = self.existing_slot(session, slot)
-            if concurrent is None:
-                raise
+            if concurrent is None or concurrent.commit_sha256 != expected_commit_sha:
+                raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_CONCURRENT_IDENTITY_CONFLICT")
             return concurrent
         committed = self.existing_slot(session, slot)
         if committed is None:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_COMMIT_READBACK_MISSING")
-        if committed.commit_sha256 != sha256_bytes(encoded):
+        if committed.commit_sha256 != expected_commit_sha:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_COMMIT_CONFLICT")
         return committed
 
@@ -252,6 +304,9 @@ class StockbitIntradayCloudArchive:
             or not isinstance(payload.get("policy"), dict)
         ):
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_POLICY_INVALID")
+        manifest_sha = str(payload.get("session_manifest_sha256") or "")
+        if len(manifest_sha) != 64:
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_POLICY_MANIFEST_SHA_INVALID")
         return payload
 
     def latest_policy_checkpoint(
@@ -261,7 +316,7 @@ class StockbitIntradayCloudArchive:
         before_or_equal: str | date,
     ) -> dict[str, Any] | None:
         boundary = _session(before_or_equal)
-        candidates = [str(value) for value in session_dates if str(value) <= boundary]
+        candidates = sorted({str(value) for value in session_dates if str(value) <= boundary})
         for session in reversed(candidates):
             checkpoint = self.load_policy_checkpoint(session)
             if checkpoint is not None:
