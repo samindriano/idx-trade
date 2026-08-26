@@ -40,6 +40,21 @@ architecture contracts remain unchanged.
    first write, identical replay, conflicting write rejection, and read-back
    SHA verification. It was not activated in this remediation.
 
+The documented manual dispatch is from a clean checkout with the existing
+`E2E_CLOUD_STORAGE_BACKEND=s3`, `E2E_CLOUD_S3_ENDPOINT`,
+`E2E_CLOUD_S3_BUCKET`, `E2E_CLOUD_S3_ACCESS_KEY_ID`, and
+`E2E_CLOUD_S3_SECRET_ACCESS_KEY` environment variables set:
+
+```powershell
+$env:E2E_CLOUD_STORAGE_BACKEND = "s3"
+python scripts/smoke_e2e_cloud_conditional_s3_v1.py `
+  --activate RUN_LIVE_CONDITIONAL_S3_SMOKE_V1 `
+  --prefix "smoke/e2e-conditional-s3-YYYYMMDDTHHMMSSZ"
+```
+
+The prefix must be new and throwaway; the script intentionally does not
+delete the probe object. This command is documented only and was not run.
+
 The Official Open producer now records `GITHUB_EVENT_NAME` so downstream
 admission can distinguish scheduled capture from manual dispatch. This is
 provenance only and does not authorize execution by the producer.

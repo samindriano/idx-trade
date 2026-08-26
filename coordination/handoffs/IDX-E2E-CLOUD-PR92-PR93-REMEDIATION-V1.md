@@ -49,6 +49,10 @@ decisions_made:
     retry; do not modify the producer schedule.
   - >-
     Provide but do not activate live R2 smoke; no live cloud call was made.
+  - >-
+    Document the opt-in smoke dispatch using the existing E2E_CLOUD_STORAGE_
+    BACKEND=s3 and E2E_CLOUD_S3_* environment variables, the exact activation
+    RUN_LIVE_CONDITIONAL_S3_SMOKE_V1, and a new throwaway --prefix.
 decisions_needed:
   - Independent review of final implementation and PR pin update.
 blocking_risks:
