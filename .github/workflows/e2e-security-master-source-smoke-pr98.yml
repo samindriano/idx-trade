@@ -27,29 +27,46 @@ jobs:
       - name: Install package
         run: python -m pip install -e .
 
-      - name: Live official IDX identity-source smoke
+      - name: Live official IDX identity-source diagnostic
         shell: bash
         run: |
           python - <<'PY'
-          from datetime import date
           import json
 
-          from idx_trade.e2e_cloud_security_master_v1 import (
-              fetch_complete_active_listings,
-              fetch_complete_delisted_listings,
-          )
+          from idx_trade.e2e_cloud_security_master_v1 import fetch_complete_active_listings
+          from idx_trade.providers.idx import IDX_DELISTING_URL, _get_json
 
           active = fetch_complete_active_listings()
-          delisted = fetch_complete_delisted_listings(2026, end=date.today())
+          params = {
+              "urlName": "LINK_DELISTING",
+              "periodYear": 2026,
+              "periodMonth": 1,
+              "periodType": "monthly",
+              "isPrint": "False",
+              "cumulative": "false",
+              "pageSize": 9999,
+              "pageNumber": 1,
+              "orderBy": "",
+          }
+          payload = _get_json(IDX_DELISTING_URL, params)
+          rows = payload.get("data") if isinstance(payload, dict) else None
+          scalars = {
+              str(key): value
+              for key, value in payload.items()
+              if key != "data" and isinstance(value, (str, int, float, bool, type(None)))
+          } if isinstance(payload, dict) else {}
+          first_row_keys = sorted(rows[0].keys()) if isinstance(rows, list) and rows and isinstance(rows[0], dict) else []
           print(json.dumps({
-              "status": "LIVE_IDX_IDENTITY_SOURCE_SMOKE_PASS",
+              "status": "LIVE_IDX_IDENTITY_SOURCE_DIAGNOSTIC",
               "active_rows": int(len(active)),
-              "delisted_rows_2026_ytd": int(len(delisted)),
               "active_unique_tickers": int(active["ticker"].nunique()),
-              "delisted_unique_tickers_2026_ytd": int(delisted["ticker"].nunique()) if not delisted.empty else 0,
+              "delisting_top_level_keys": sorted(payload.keys()) if isinstance(payload, dict) else [],
+              "delisting_scalar_metadata": scalars,
+              "delisting_row_count": len(rows) if isinstance(rows, list) else None,
+              "delisting_first_row_keys": first_row_keys,
               "outcome_accessed": False,
               "protected_forward_accessed": False,
               "model_refit": False,
               "r2_writes": 0,
-          }, sort_keys=True))
+          }, sort_keys=True, default=str))
           PY
