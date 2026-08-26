@@ -51,12 +51,24 @@ def _git_head(root: Path) -> str:
     return completed.stdout.strip().lower()
 
 
+def _git_status(root: Path) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"],
+        check=False, capture_output=True, text=True,
+    )
+    if completed.returncode != 0:
+        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_GIT_STATUS_UNAVAILABLE")
+    return completed.stdout.strip()
+
+
 def validate_accepted_e2e_checkout(root: str | Path) -> Path:
     accepted = Path(root).expanduser().resolve()
     if not accepted.is_dir():
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT_MISSING")
     if _git_head(accepted) != ACCEPTED_E2E_IMPLEMENTATION_SHA:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_HEAD_MISMATCH")
+    if _git_status(accepted):
+        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_WORKTREE_DIRTY")
     module = accepted / "src" / "idx_trade" / "e2e_paper_cloud_runtime_v1.py"
     if not module.is_file():
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_CLOUD_MODULE_MISSING")
@@ -64,6 +76,7 @@ def validate_accepted_e2e_checkout(root: str | Path) -> Path:
 
 
 def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
+    del accepted
     required = (
         "STOCKBIT_INTRADAY_S3_ENDPOINT",
         "STOCKBIT_INTRADAY_S3_BUCKET",
@@ -78,7 +91,6 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
     e2e_prefix = str(values.get("STOCKBIT_INTRADAY_E2E_PREFIX", DEFAULT_E2E_PREFIX)).strip("/")
     if e2e_prefix != DEFAULT_E2E_PREFIX:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_PREFIX_INVALID")
-
     child = {
         name: str(values[name])
         for name in _PASSTHROUGH_ENV
@@ -90,9 +102,6 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
     child["E2E_CLOUD_S3_ACCESS_KEY_ID"] = str(values["STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID"]).strip()
     child["E2E_CLOUD_S3_SECRET_ACCESS_KEY"] = str(values["STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY"]).strip()
     child["E2E_CLOUD_STORAGE_PREFIX"] = DEFAULT_E2E_PREFIX
-    child["PYTHONPATH"] = str(accepted / "src")
-    child["PYTHONNOUSERSITE"] = "1"
-    child["PYTHONDONTWRITEBYTECODE"] = "1"
     return child
 
 
@@ -117,15 +126,24 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
+accepted_src = Path(sys.argv[4]).resolve()
+sys.path.insert(0, str(accepted_src))
 from idx_trade.e2e_paper_cloud_runtime_v1 import (
     CloudInputBundle, CloudPaperArchive, build_cloud_store_from_env,
     load_schedule_from_bundle, restore_runtime_snapshot,
 )
+class ReadOnlyStore:
+    def __init__(self, inner):
+        self.inner = inner
+    def read(self, key):
+        return self.inner.read(key)
+    def put_if_absent(self, key, payload, content_type):
+        raise RuntimeError("STOCKBIT_INTRADAY_E2E_BRIDGE_WRITE_FORBIDDEN")
 session = sys.argv[1]
 root = Path(sys.argv[2]).resolve()
 manifest_key = sys.argv[3]
 root.mkdir(parents=True, exist_ok=True)
-store = build_cloud_store_from_env()
+store = ReadOnlyStore(build_cloud_store_from_env())
 bundle = CloudInputBundle.load(store, manifest_key)
 roles = bundle.materialize(store, root / "inputs")
 schedule = load_schedule_from_bundle(bundle, roles)
@@ -139,6 +157,7 @@ result = {
     "eod_available": False,
     "post_eod_commit_sha256": None,
     "eod_session_dir": None,
+    "read_only_store_guard": True,
 }
 if session in schedule.session_dates:
     archive = CloudPaperArchive(store)
@@ -175,17 +194,21 @@ def materialize_accepted_e2e_context(
         values.get("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY", DEFAULT_INPUT_MANIFEST_KEY)
     )
     completed = subprocess.run(
-        [sys.executable, "-c", _CHILD_CODE, session_date.isoformat(), str(destination), manifest_key],
+        [
+            sys.executable, "-I", "-c", _CHILD_CODE,
+            session_date.isoformat(), str(destination), manifest_key, str(accepted / "src"),
+        ],
         cwd=str(accepted), env=child_env, check=False, capture_output=True, text=True,
     )
     if completed.returncode != 0:
-        tail = completed.stderr.strip()[-2000:]
-        raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_ACCEPTED_E2E_BRIDGE_FAILED:" + tail)
+        raise StockbitIntradayE2EBridgeError(
+            f"STOCKBIT_INTRADAY_ACCEPTED_E2E_BRIDGE_FAILED:exit={completed.returncode}"
+        )
     try:
         payload = json.loads(completed.stdout.strip())
     except json.JSONDecodeError as exc:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_BRIDGE_OUTPUT_INVALID") from exc
-    if not isinstance(payload, dict):
+    if not isinstance(payload, dict) or payload.get("read_only_store_guard") is not True:
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_BRIDGE_OUTPUT_INVALID")
 
     schedule_path = _require_within(
