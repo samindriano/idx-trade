@@ -11,11 +11,11 @@ from typing import Any, Callable, Mapping
 import pandas as pd
 
 from .official_trading_schedule_v1 import VerifiedOfficialTradingSchedule
+from .stockbit_intraday_admission import load_verified_session_manifest
 from .stockbit_intraday_eod_context import VerifiedIntradayEodContext
 from .stockbit_intraday_eod_gate import gate_skip_evidence
 from .stockbit_intraday_recovery import (
     NO_CHART_404,
-    REQUEST_ERROR,
     SUCCESS,
     apply_policy_event_once,
     build_recovery_plan,
@@ -218,6 +218,70 @@ def _reconcile_shadow_404s(
         )
 
 
+def _replay_verified_final(
+    *,
+    journal: SessionJournal,
+    schedule: VerifiedOfficialTradingSchedule,
+    context: VerifiedIntradayEodContext | None,
+    policy: Mapping[str, Any],
+    expected_date: date,
+    shadow_sessions_required: int,
+    recheck_every: int,
+) -> DailyCycleResult | None:
+    loaded = load_verified_session_manifest(journal)
+    if loaded is None:
+        return None
+    payload, session_manifest_sha = loaded
+    if payload.get("schedule_attestation_sha256") != schedule.attestation_sha256:
+        raise StockbitIntradaySessionError("FINAL_SESSION_SCHEDULE_IDENTITY_MISMATCH")
+    if context is not None and payload.get("eod_manifest_sha256") != context.eod_manifest_sha256:
+        raise StockbitIntradaySessionError("FINAL_SESSION_EOD_IDENTITY_MISMATCH")
+
+    run_mode = str(payload["run_mode"])
+    metrics_payload = payload.get("shadow_metrics")
+    false_negative: int | None = None
+    certification_eligible: bool | None = None
+    if run_mode in {"SHADOW", "SHADOW_RECHECK"}:
+        if not isinstance(metrics_payload, dict):
+            raise StockbitIntradaySessionError("FINAL_SESSION_SHADOW_METRICS_MISSING")
+        try:
+            false_negative = int(metrics_payload["false_negative"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise StockbitIntradaySessionError("FINAL_SESSION_FALSE_NEGATIVE_INVALID") from exc
+        certification_eligible = metrics_payload.get("certification_eligible")
+        if certification_eligible not in {True, False}:
+            raise StockbitIntradaySessionError("FINAL_SESSION_CERTIFICATION_ELIGIBLE_INVALID")
+    elif metrics_payload is not None:
+        raise StockbitIntradaySessionError("FINAL_SESSION_ENFORCE_SHADOW_METRICS_PRESENT")
+
+    updated_policy, policy_applied = apply_policy_event_once(
+        policy,
+        session_date=expected_date,
+        run_mode=run_mode,
+        complete=True,
+        false_negative=false_negative,
+        certification_eligible=certification_eligible,
+        manifest_sha256=session_manifest_sha,
+        shadow_sessions_required=shadow_sessions_required,
+        recheck_every=recheck_every,
+    )
+    completion = payload.get("completion")
+    if not isinstance(completion, dict):
+        raise StockbitIntradaySessionError("FINAL_SESSION_COMPLETION_INVALID")
+    return DailyCycleResult(
+        status="ADMISSIBLE_COMPLETE",
+        session_date=expected_date.isoformat(),
+        run_mode=run_mode,
+        provider_calls_attempted=0,
+        summary=dict(completion),
+        shadow_metrics=dict(metrics_payload) if isinstance(metrics_payload, dict) else None,
+        session_manifest_sha256=session_manifest_sha,
+        policy=updated_policy,
+        policy_event_applied=policy_applied,
+        stop_reason="ALREADY_FINALIZED_VERIFIED",
+    )
+
+
 def run_daily_cycle(
     *,
     expected_date: date,
@@ -251,6 +315,21 @@ def run_daily_cycle(
         )
 
     validate_capture_window(expected_date=expected_date, now=now)
+    if journal is not None:
+        if journal.expected_date != expected_date:
+            raise ValueError("Stockbit intraday journal session mismatch")
+        replay = _replay_verified_final(
+            journal=journal,
+            schedule=schedule,
+            context=context,
+            policy=policy_copy,
+            expected_date=expected_date,
+            shadow_sessions_required=shadow_sessions_required,
+            recheck_every=recheck_every,
+        )
+        if replay is not None:
+            return replay
+
     if context is None:
         return DailyCycleResult(
             status="WAITING_CANONICAL_EOD_GATE",
@@ -266,7 +345,7 @@ def run_daily_cycle(
         )
     if journal is None:
         raise ValueError("journal is required once canonical EOD context is available")
-    if journal.expected_date != expected_date or context.session_date != session:
+    if context.session_date != session:
         raise ValueError("Stockbit intraday daily identity mismatch")
 
     freeze_context_universe(journal, context, captured_at=now)
