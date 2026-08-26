@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from idx_trade.e2e_paper_cloud_runtime_v1 import LocalConditionalStore
 from idx_trade.stockbit_intraday_cloud_archive import (
     StockbitIntradayCloudArchive,
     StockbitIntradayCloudError,
 )
+from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
 from idx_trade.stockbit_stream_archive import StorageImmutabilityConflict
 
 
@@ -52,11 +52,36 @@ def test_slot_commit_is_write_last_readback_verified_and_idempotent(tmp_path: Pa
     assert second.commit_sha256 == first.commit_sha256
 
 
-def test_latest_prior_slot_uses_known_slot_order_not_listing(tmp_path: Path):
+def test_divergent_same_slot_recomputation_fails_closed(tmp_path: Path):
     archive = _archive(tmp_path)
     archive.commit_slot(
         session_date=SESSION,
         slot="1830",
+        status="WAITING_RECOVERY_RETRY",
+        snapshot_bytes=b"snapshot-one",
+        result_payload=_result("WAITING_RECOVERY_RETRY"),
+        code_identity={"commit": "a" * 40},
+        eod_manifest_sha256="b" * 64,
+        session_manifest_sha256=None,
+    )
+    with pytest.raises(StockbitIntradayCloudError, match="EXISTING_IDENTITY_CONFLICT"):
+        archive.commit_slot(
+            session_date=SESSION,
+            slot="1830",
+            status="ADMISSIBLE_COMPLETE",
+            snapshot_bytes=b"different-snapshot",
+            result_payload=_result("ADMISSIBLE_COMPLETE"),
+            code_identity={"commit": "a" * 40},
+            eod_manifest_sha256="b" * 64,
+            session_manifest_sha256="c" * 64,
+        )
+
+
+def test_known_slot_order_works_without_bucket_listing(tmp_path: Path):
+    archive = _archive(tmp_path)
+    archive.commit_slot(
+        session_date=SESSION,
+        slot="1930",
         status="WAITING_RECOVERY_RETRY",
         snapshot_bytes=b"s1",
         result_payload=_result("WAITING_RECOVERY_RETRY"),
@@ -65,8 +90,10 @@ def test_latest_prior_slot_uses_known_slot_order_not_listing(tmp_path: Path):
         session_manifest_sha256=None,
     )
     assert archive.latest_committed_slot_before(SESSION, "1830") is None
-    assert archive.latest_committed_slot_before(SESSION, "1930").slot == "1830"
-    assert archive.latest_committed_slot_before(SESSION, "2030").slot == "1830"
+    assert archive.latest_committed_slot_before(SESSION, "1930") is None
+    assert archive.latest_committed_slot_before(SESSION, "2030").slot == "1930"
+    assert archive.later_committed_slot_after(SESSION, "1830").slot == "1930"
+    assert archive.later_committed_slot_after(SESSION, "1930") is None
 
 
 def test_slot_read_fails_closed_when_snapshot_is_tampered(tmp_path: Path):
