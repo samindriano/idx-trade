@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-26 14:40 Asia/Jakarta
+Last coordinated update: 2026-08-26 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -34,6 +34,8 @@ Repository Hygiene V2 completed on 2026-08-22.
 
 **Rule after V2:** do not recreate historical experiment branches merely for convenience. Recover exact old code from an archive tag when needed; otherwise use the durable tombstone/checkpoint conclusion.
 
+Capture/runtime terminology is now governed by `docs/repository_hygiene/CAPTURE_RUNTIME_REGISTRY_V1.md`: only Official Open, EOD Market, Corporate Actions, Stockbit Stream, and Stockbit Intraday are canonical capture families. Derived sidecars are not separate collectors.
+
 ---
 
 ## Current critical path
@@ -41,66 +43,83 @@ Repository Hygiene V2 completed on 2026-08-22.
 | Lane | Status | Canonical branch / anchor | Current boundary / next action |
 |---|---|---|---|
 | V4-X1 Clean alpha | `DONE` | `research/idx-v4-x1-clean-historical-oos-replay-v1`; `research/idx-v4-x1-clean-phase-b-final-refit-prep-v1` | Alpha science is frozen. Do not retune V4-X1 as part of downstream engineering. |
-| Fresh EOD + prospective V4-X1 scoring | `BLOCKED` | `integration/v4-x1-clean-prospective-score-v1`; `integration/v4-x1-eod-auto-score-v1`; `integration/forward-eod-automation-monitoring` | Science/runtime preparation exists. Last deployment attempt failed closed at Windows Administrator requirement before scheduler mutation. Resolve as operational deployment work only; no retroactive prospective scoring. |
-| 100-session prospective alpha evaluation | `REVIEW` | `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1`; `research/idx-v4-x1-prospective-evaluation-protocol-v1`; merged PR #83 (`bd251c1c`); merged pre-access readiness/adapter PR #88 (`68894b97`); completion PR #89 `ops/v4-x1-preaccess-artifact-completion-v1` @ `1c4c6d17` | Frozen evaluator/access-gate science remains unchanged. Outcome-blind readiness core plus production adapters are merged. Real production score evidence remains `2/100`; runtime counter remains `2/100`; official schedule and independently anchored code pins are `READY`; canonical admitted 100-session inventory and sealed target attestation remain `NOT_AVAILABLE`; real protected preflight remains blocked. PR #89 is retargeted to `main` and exact-head CI is green, but independent review found a fail-closed status-propagation defect in `_overall_state`: `ACCESS_CONTAMINATION` / `PREACCESS_ACCESS_CONTAMINATED` can be misclassified or fall through to `ACCUMULATING_OUTCOME_BLIND`. Remediate and add regression coverage before merge, then run the hardened outcome-blind two-session local replay on a fresh isolated staging root. No target materialization, counter/runtime/scheduler mutation, protected outcome access, provider call, or protected-loader authorization is permitted. |
-| Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** V4 refill-decoupling structurally rejected; no V4.1/V5/rescue or V4 economic comparison. |
-| Sizing + Execution + CA-aware paper foundations | `DONE` | `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1` | Frozen Sizing V1 and Execution V1 plus cash-dividend/persistent CA-aware state foundations are retained. Unsupported CA remains fail-closed. |
-| E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1`; integrated HEAD `b5265295` (PR #87) | Decision V2 → Sizing V1 and Decision V2 → Execution V1 adapters are accepted. Execution-grade official IDX `OpenPrice` evidence is accepted with `DIRECT_IDX_THEN_ZAPI_RAW_V1`. PR #85 (Open runtime hardening), PR #86 (outcome-blind evidence-health audit), and PR #87 (read-only session audit / missed-execution continuity hardening) are merged into the integration lineage. Windows task `IDXTrade-E2E-OfficialOpen` remains the active scheduled path. First genuine weekday same-session capture remains pending; no retroactive capture or protected-outcome access is authorized. |
-| E2E Paper cloud-first orchestration | `REVIEW` | `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`; implementation `integration/idx-e2e-baseline-paper-v1@043003ee`; launcher `ops/e2e-paper-cloud-launcher-v1@32a63ff4` | Offline manifest and all 10 required child hashes validated; schedule/model bundle validation passed. ConditionalS3 smoke and production `e2e-paper-v1/inputs` provisioning are blocked because local `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` are unavailable. GitHub secret names exist but values were not read. No provider/R2 production bundle, scheduler, model, outcome, counter, or live E2E cycle was touched. |
+| EOD Market Capture + prospective V4-X1 scoring | `REVIEW` | accepted E2E integration `integration/idx-e2e-baseline-paper-v1@043003ee`; clean scorer lineage retained in history | Canonical post-close stock EOD/OHLCV plus scoring are carried by the accepted E2E POST_EOD path. Windows remains fallback until first genuine cloud proof. Do not create a competing standalone EOD collector. `data/market-index-forward-eod-v1-monitoring` still has unique index-context commits and must be audited before branch cleanup. |
+| 100-session prospective alpha evaluation | `REVIEW` | `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1`; `research/idx-v4-x1-prospective-evaluation-protocol-v1`; merged PR #83 (`bd251c1c`); merged pre-access readiness/adapter PR #88 (`68894b97`); completion PR #89 `ops/v4-x1-preaccess-artifact-completion-v1` @ `1c4c6d17` | Frozen evaluator/access-gate science remains unchanged. Outcome-blind readiness core plus production adapters are merged. Real production score evidence remains `2/100`; runtime counter remains `2/100`; official schedule and independently anchored code pins are `READY`; canonical admitted 100-session inventory and sealed target attestation remain `NOT_AVAILABLE`; real protected preflight remains blocked. PR #89 remains a separate evaluation-completion lane; do not mix it with capture cleanup. |
+| Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** No V4.1/V5/rescue search. |
+| Sizing + Execution + CA-aware paper foundations | `DONE` | `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1` | Frozen Sizing V1 and Execution V1 plus cash-dividend/persistent CA-aware state foundations are retained. Unsupported CA remains fail-closed. Corporate Action Capture is part of this integrated path, not a second standalone collector. |
+| E2E Baseline Paper V1 integration | `ACTIVE` | `integration/idx-e2e-baseline-paper-v1@043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2` | Accepted Decision V2 → Sizing V1 → Execution V1, execution-grade Official IDX OpenPrice, EOD/CA-aware persistent state, and cloud-first adapter are now in the integration lineage. Windows paper/EOD paths remain fallback only until cloud live proof. No retroactive capture or protected-outcome access. |
+| E2E Paper cloud-first orchestration | `REVIEW` | input provisioning `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`; implementation `integration/idx-e2e-baseline-paper-v1@043003ee`; launcher `ops/e2e-paper-cloud-launcher-v1@32a63ff4` | Offline manifest and all 10 required child hashes validated; schedule/model bundle validation passed. ConditionalS3 smoke and production `e2e-paper-v1/inputs` provisioning are currently blocked because local R2 credential values are unavailable to that worktree. No provider/R2 production bundle, scheduler activation, model, outcome, counter, or live E2E cycle was touched. |
+| Capture/runtime repository hygiene V3 | `REVIEW` | `chore/capture-runtime-hygiene-v3` | Registry defines exactly five capture families and audits stale capture branches before deletion. Ten merged/contained heads are certified branch-ref redundant; three unique superseded heads require forensic archive refs first; Market/Index EOD and open Stockbit red-team remain protected pending audit/closure. No runtime/scheduler deletion in this lane. |
+
+---
+
+## Canonical capture surface
+
+The project recognizes exactly these acquisition families:
+
+1. **Official Open Capture** — IDX `OpenPrice`, GitHub Actions -> private R2, strict downstream admission.
+2. **EOD Market Capture** — one post-close transaction containing Stock EOD/OHLCV plus Market/Index EOD context.
+3. **Corporate Action Capture** — official prospective CA evidence integrated with CA-aware E2E accounting/execution.
+4. **Stockbit Stream Capture** — default-branch GitHub Actions -> private R2.
+5. **Stockbit Intraday Capture** — post-close intraday capture/reconstruction; still Windows-hosted and a future cloud-migration target.
+
+Foreign flow, price/trend, reliability/uncertainty, model scoring, Decision, Sizing, Execution, and PaperState are derived/consumer layers, not additional canonical capture systems.
 
 ---
 
 ## Always-on / operational lanes
 
-| Lane | Status | Canonical branch | Boundary |
+| Lane | Status | Canonical anchor | Boundary |
 |---|---|---|---|
-| Stockbit Stream prospective archive | `ACTIVE` | `data/stockbit-stream-prospective-archive-v1`; remediation head `fix/stockbit-stream-zapi-envelope-v1`; audit `audit/stockbit-stream-v2-red-team-v1`; retention remediation `fix/stockbit-r2-retention-v1` | Prospective archive only. No historical backfill/model/outcome use without a separate contract. PR #35/#36 heads intentionally retained. Long-term R2 retention is active and GET-verified: raw, normalized, manifests, and universe_inputs are retained indefinitely; no Stockbit-prefix delete rule remains; unrelated multipart-abort rule is preserved. |
-| Stockbit intraday post-close capture | `AUTOMATED` | `fix/stockbit-intraday-postclose-fix-v1` | Scheduler moved to EOD-aligned post-close windows; do not invent retroactive captures for missed sessions. |
-| Market/index forward EOD | `AUTOMATED` | `data/market-index-forward-eod-v1-monitoring` | Keep operational monitoring separate from alpha promotion. |
-| Forward Open archive | `AUTOMATED` | `ops/idx-forward-open-archive-v1` | Legacy/generic archive retained as historical operational evidence; do not treat it as the E2E execution-grade Open source. The separate E2E official `OpenPrice` sidecar is now deployed and uses explicit direct-IDX → Zapi-raw transport redundancy. |
-| Frontend monitoring | `PARKED` | `frontend/v4x-v2-monitoring-refresh-v1` | Viewer/ops surface only; backend E2E completion takes priority. Preserve historical model/score/hover visibility. |
+| Official Open Capture | `AUTOMATED` | default-branch `.github/workflows/official-open-prospective-cloud-capture.yml`; accepted implementation SHA pinned by deployment contract | GitHub Actions -> private R2 `official-open-v1`. Legacy generic Forward Open is not execution authority. |
+| Stockbit Stream Capture | `ACTIVE` | `main` workflow/runtime; independent audit `audit/stockbit-stream-v2-red-team-v1` PR #36 remains open/draft | Production workflow is on `main`, not old base/remediation branches. Long-term R2 retention is active and verified. Do not delete PR #36 branch until audit closure/integration. |
+| Stockbit Intraday Capture | `AUTOMATED` | `fix/stockbit-intraday-postclose-fix-v1` | Current Windows post-close runtime retained. Future bounded migration target to GitHub Actions/R2; no retroactive captures. |
+| EOD Market Capture | `REVIEW` | accepted E2E POST_EOD path; `data/market-index-forward-eod-v1-monitoring` temporarily retained for unique index-context audit | Treat Stock EOD and Market/Index EOD as one canonical transaction. Do not duplicate providers/canonical artifacts. |
+| Corporate Action Capture | `ACTIVE` | accepted E2E/forward-CA lineage | Integrated CA acquisition/attestation; verify first genuine cloud cycle before retiring local fallback. |
+| Legacy Forward Open scaffold | `PARKED` | historical head `dc5e84b589eebe040119f48f9f69538d398a9d36` | PR #12 closed unmerged, source never frozen/execution-grade, superseded by Official Open. Archive exact head then delete live branch ref. |
+| Frontend monitoring | `PARKED` | `frontend/v4x-v2-monitoring-refresh-v1` | Viewer/ops surface only; preserve historical model/score/hover visibility. |
 
 ---
 
 ## Parallel retained research/data lanes
 
-These branches are retained because they contain current reusable work, but **none may silently become a prerequisite or modify frozen V4-X1/Decision V2**.
+These branches are retained because they contain reusable work, but **none may silently become a prerequisite or modify frozen V4-X1/Decision V2**.
 
 | Domain | Status | Retained anchors | Boundary |
 |---|---|---|---|
-| Financial PIT / representation | `PARKED` | `research/idx-financial-pit-alpha-v1`; `research/idx-financial-representation-v2` | Resume only as a separately scoped alpha/data challenger after baseline E2E or explicit user reprioritization. |
-| Foreign flow | `PARKED` | `research/idx-foreign-flow-alpha-v2-core`; `research/idx-foreign-flow-representation-v2`; `integration/foreign-flow-representation-v2-forward-v1`; capture/acquisition branches | Existing representation/capture work preserved. No silent admission into incumbent alpha. |
-| Price/trend state | `PARKED` | `research/idx-price-trend-confirmation-state-v1`; `integration/price-trend-state-forward-sidecar-v1`; `integration/price-trend-runtime-bridge-adapter-v1` | Sidecar/challenger only unless separately promoted. |
-| Reliability / uncertainty | `WAITING` | `research/idx-reliability-uncertainty-v1-forward-shadow` | Forward sidecar evidence only; not alpha or Decision input by default. |
-| Historical/open/price-basis remediation | `PARKED` | `data/idx-open-official-stock-summary-recovery-v1`; `data/tradingview-historical-price-path-v2-1-remediation`; `data/price-basis-remediation-v1`; `research/price-basis-clean-refit-v1` | Keep accepted source/lineage improvements; do not reopen rejected historical-source experiments without new preregistration. |
+| Financial PIT / representation | `PARKED` | `research/idx-financial-pit-alpha-v1`; `research/idx-financial-representation-v2` | Resume only as separately scoped challenger work. |
+| Foreign flow | `PARKED` | `research/idx-foreign-flow-alpha-v2-core`; `research/idx-foreign-flow-representation-v2`; `integration/foreign-flow-representation-v2-forward-v1`; capture/acquisition history | Treat forward representation as a derived sidecar over canonical Stock Summary raw unless a future acquisition contract explicitly changes that. No silent admission into incumbent alpha. |
+| Price/trend state | `PARKED` | `research/idx-price-trend-confirmation-state-v1`; `integration/price-trend-state-forward-sidecar-v1`; `integration/price-trend-runtime-bridge-adapter-v1` | Derived sidecar/challenger only. |
+| Reliability / uncertainty | `WAITING` | `research/idx-reliability-uncertainty-v1-forward-shadow` | Derived forward sidecar evidence only; not alpha or Decision input by default. |
+| Historical/open/price-basis remediation | `PARKED` | `data/idx-open-official-stock-summary-recovery-v1`; `data/tradingview-historical-price-path-v2-1-remediation`; `data/price-basis-remediation-v1`; `research/price-basis-clean-refit-v1` | Historical evidence only. Do not revive rejected approximate executable-Open/intraday sources as production collectors. |
 | Personal KSEI | `PARKED` | `integration/personal-ksei-bounded-auth-design-v1` | Private authenticated observation/reconciliation only; no credentials in repo/browser and no implied broker order routing. |
 
-Historical PIT sector, ownership/free-float, market-breadth, old CA, O2, Stage3/4/5, Decision V1/V3/V4 intermediates, and rejected intraday/source experiments were deliberately archived or tombstoned by Hygiene V2. Recover via `archive/hygiene-v2/*` tags only when forensic reconstruction is genuinely required.
+Historical PIT sector, ownership/free-float, market-breadth, old CA, O2, Stage3/4/5, Decision V1/V3/V4 intermediates, and rejected intraday/source experiments were deliberately archived or tombstoned by Hygiene V2. Recover via `archive/hygiene-v2/*` evidence only when forensic reconstruction is genuinely required.
 
 ---
 
 ## Current project decision
 
-The project is now in **system-completion mode**, not model-search mode.
+The project is in **system-completion mode**, not model-search mode.
 
-Canonical ordering:
+Canonical operational ordering:
 
 ```text
-repository/documentation consolidation
+canonical data capture
     ↓
-fresh V4-X1 scoring deployment
+EOD clean scoring
     ↓
-prospective Decision V2 shadow
+Decision V2
     ↓
 Sizing V1 (fixed ~10% per seat; residual cash allowed)
     ↓
 Execution V1
     ↓
-official IDX OpenPrice evidence / execution admission
+Official IDX OpenPrice admission
     ↓
 CA/accounting safety
     ↓
-restart/idempotency-tested paper orchestrator
+restart/idempotency-tested cloud paper orchestrator
     ↓
 prospective paper portfolio
     ↓
@@ -109,7 +128,7 @@ whole-stack evaluation
 
 Baseline sizing remains **10% per seat/name, maximum 10 seats**. If fewer names qualify, keep residual cash; do not renormalize remaining names upward merely to reach 100% exposure.
 
-Do not reopen Decision research, Path Risk rescue work, probability/payoff rescue work, or new alpha experiments merely because E2E integration exposes operational inconvenience.
+Do not reopen Decision research, Path Risk rescue work, probability/payoff rescue work, rejected historical source work, or new alpha experiments merely because E2E integration exposes operational inconvenience.
 
 ---
 
@@ -121,12 +140,15 @@ Do not reopen Decision research, Path Risk rescue work, probability/payoff rescu
 4. Close stale PRs when their verdict is final; do not use open PRs as an archive.
 5. When a lane is closed, preserve the durable conclusion in docs and archive-tag only genuinely valuable exact code heads.
 6. Before opening a new lane, check whether a retained branch already contains the required code.
-7. Target repository steady state: **well below 100 live remote branches**; if branch count starts trending materially upward, perform hygiene before adding more experiments.
+7. A branch deletion is not runtime retirement; verify workflow checkout refs and local scheduled tasks separately.
+8. Target repository steady state: well below 100 live remote branches; run hygiene before clutter becomes architectural documentation.
 
 ---
 
-## Next authorized coordination action
+## Next authorized coordination actions
 
-For the E2E cloud-first lane, PR #92 at `484adeaa34a8ba69aa4b82c9c0a1da2e548f6e6d` is code-review complete and exact-head CI green. Merge #92 into `integration/idx-e2e-baseline-paper-v1`, then use the accepted integration merge SHA as the single producer/consumer implementation identity: repin `IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF` and the #93 launcher to that SHA before any live activation. Provision the private cloud input manifest, run the isolated ConditionalS3/R2 smoke against a throwaway prefix, and only then activate #93 for one genuine future-session cloud proof. Keep the Windows paper path until that proof passes; do not retroactively fill missed evidence.
+For E2E cloud-first: finish private R2 input provisioning and isolated ConditionalS3 smoke, then independently audit readback/preflight before activating PR #93 for one genuine future-session cloud proof. Keep Windows fallbacks until that proof passes. Do not backfill missed sessions.
 
-In parallel, keep PR #89 as the single completion follow-on to merged PR #88: remediate the contamination-status propagation defect, add explicit fail-closed precedence tests, obtain exact-head CI, then run the hardened two-session real outcome-blind replay on a fresh isolated staging root and verify deterministic rerun hashes. Keep the real protected preflight blocked; do not materialize targets, mutate the forward counter/runtime/scheduler, call providers, access protected outcomes, call the protected loader, or modify frozen evaluator/gate science.
+For capture hygiene: merge `CAPTURE_RUNTIME_REGISTRY_V1`, audit the two unique Market/Index EOD commits, keep PR #36 untouched while open, convert the three temporary exact-head forensic refs to permanent archive tags using an API/local Git surface that supports tag creation/deletion, then atomically remove only branches certified `SAFE_TO_DELETE_BRANCH` or `ARCHIVE_EXACT_HEAD_THEN_DELETE`. Verify default-branch and pinned-SHA workflows afterward.
+
+In parallel, keep PR #89 as a separate forward-evaluation completion lane; do not materialize protected targets, mutate counters/runtime/schedulers, or mix evaluation-science changes into capture/runtime cleanup.
