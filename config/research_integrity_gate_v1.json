@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "profile_id": "IDX_RESEARCH_INTEGRITY_GATE_V1",
+  "fail_closed": true,
+  "unknown_blocks_promotion": true,
+  "stages": {
+    "DATA_ADMISSION": {
+      "required_check_ids": [
+        "source.semantics",
+        "schema.required_columns",
+        "schema.unique_key",
+        "units.contract",
+        "calendar.session_membership",
+        "missingness.policy",
+        "pit.knowledge_time",
+        "ca.price_basis",
+        "golden_cases.data",
+        "anomaly.reconciliation",
+        "provenance.hashes"
+      ]
+    },
+    "RESEARCH_ADMISSION": {
+      "required_check_ids": [
+        "data_admission.pass",
+        "feature.independent_recompute",
+        "feature.backward_window_integrity",
+        "universe.pit",
+        "research.outcome_blindness",
+        "research.visual_sanity",
+        "golden_cases.feature",
+        "research.reproducibility"
+      ]
+    },
+    "MODEL_PROMOTION": {
+      "required_check_ids": [
+        "research_admission.pass",
+        "experiment.frozen_contract",
+        "experiment.valid_oos",
+        "model.input_lineage",
+        "model.reproducibility",
+        "model.cost_turnover_capacity",
+        "red_team.falsification",
+        "incident.regression_suite"
+      ]
+    }
+  }
+}
