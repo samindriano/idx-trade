@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-26 Asia/Jakarta
+Last coordinated update: 2026-08-27 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -43,7 +43,7 @@ Capture/runtime terminology is now governed by `docs/repository_hygiene/CAPTURE_
 | Lane | Status | Canonical branch / anchor | Current boundary / next action |
 |---|---|---|---|
 | V4-X1 Clean alpha | `DONE` | `research/idx-v4-x1-clean-historical-oos-replay-v1`; `research/idx-v4-x1-clean-phase-b-final-refit-prep-v1` | Alpha science is frozen. Do not retune V4-X1 as part of downstream engineering. |
-| Research Integrity / Data QA Gate V1 | `ACTIVE` | `audit/research-integrity-data-qa-gate-v1` | Build a fail-closed reusable data/research/model admission framework plus repository-wide QA orchestration defaults. First concrete case is historical CA/price-basis integrity. No V4-X1 refit, outcome access, counter mutation, capture/runtime change, or science rescue is authorized in this lane. |
+| Research Integrity / Data QA Gate V1 | `REVIEW` | `audit/research-integrity-data-qa-gate-v1` | Phase-1 framework validation/hardening passed (21 focused, 260 full). INC-001 historical CA/price-basis HEAVY QA is materially blocked: DATA_ADMISSION=FAIL, RESEARCH_ADMISSION=FAIL, MODEL_PROMOTION=NOT_EVALUATED. Incident is CONFIRMED/NOT_CLOSED. No V4-X1 refit, outcome access, counter mutation, capture/runtime change, historical CA remediation, or science rescue is authorized. Await independent review. |
 | EOD Market Capture + prospective V4-X1 scoring | `REVIEW` | accepted E2E integration `integration/idx-e2e-baseline-paper-v1@043003ee`; clean scorer lineage retained in history | Canonical post-close Stock EOD/OHLCV, official IDX Index Summary context, and scoring are present in the accepted E2E POST_EOD lineage. The old `data/market-index-forward-eod-v1-monitoring` branch was independently compared and is now superseded by a stricter accepted implementation; preserve its exact head as forensic history, then remove its live branch ref. Windows remains fallback until first genuine cloud proof. |
 | 100-session prospective alpha evaluation | `REVIEW` | `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1`; `research/idx-v4-x1-prospective-evaluation-protocol-v1`; merged PR #83 (`bd251c1c`); merged pre-access readiness/adapter PR #88 (`68894b97`); completion PR #89 `ops/v4-x1-preaccess-artifact-completion-v1` @ `1c4c6d17` | Frozen evaluator/access-gate science remains unchanged. Outcome-blind readiness core plus production adapters are merged. Real production score evidence remains `2/100`; runtime counter remains `2/100`; official schedule and independently anchored code pins are `READY`; canonical admitted 100-session inventory and sealed target attestation remain `NOT_AVAILABLE`; real protected preflight remains blocked. PR #89 remains a separate evaluation-completion lane; do not mix it with capture cleanup. |
 | Decision policy | `DONE` | `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1` | **Decision V2 is frozen incumbent. Decision research on this 600-session development set is CLOSED.** No V4.1/V5/rescue search. |

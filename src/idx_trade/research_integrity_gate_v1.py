@@ -65,7 +65,7 @@ def evaluate_integrity_gate(
     stage: IntegrityStage | str,
     checks: Iterable[IntegrityCheck],
     *,
-    required_check_ids: Sequence[str] = (),
+    required_check_ids: Sequence[str] | None = None,
 ) -> IntegrityGateReport:
     """Evaluate an integrity gate fail-closed.
 
@@ -76,10 +76,24 @@ def evaluate_integrity_gate(
 
     stage = IntegrityStage(stage)
     materialized = list(checks)
+    for check in materialized:
+        if not isinstance(check, IntegrityCheck):
+            raise TypeError("Integrity checks must be IntegrityCheck instances")
+        if not isinstance(check.status, IntegrityStatus):
+            raise TypeError(f"Invalid integrity status for {check.check_id!r}")
+        if not isinstance(check.check_id, str) or not check.check_id:
+            raise ValueError("Integrity check IDs must be non-empty strings")
+        if not isinstance(check.category, str) or not check.category:
+            raise ValueError(f"Integrity check category must be non-empty: {check.check_id}")
+        if not isinstance(check.evidence, Mapping):
+            raise TypeError(f"Integrity check evidence must be an object: {check.check_id}")
     ids = [check.check_id for check in materialized]
     duplicated = sorted({value for value in ids if ids.count(value) > 1})
     if duplicated:
         raise ValueError(f"Duplicate integrity check IDs: {duplicated}")
+
+    if required_check_ids is None or not required_check_ids:
+        raise ValueError("At least one required integrity check ID must be supplied")
 
     required_ids = list(required_check_ids)
     duplicated_required = sorted({value for value in required_ids if required_ids.count(value) > 1})
@@ -116,6 +130,20 @@ def evaluate_integrity_gate(
             normalized.append(check)
         materialized = normalized
 
+    evidenced: list[IntegrityCheck] = []
+    for check in materialized:
+        if check.required and check.status is IntegrityStatus.PASS and not check.evidence:
+            check = IntegrityCheck(
+                check_id=check.check_id,
+                category=check.category,
+                status=IntegrityStatus.UNKNOWN,
+                summary="Required PASS has no supporting evidence.",
+                required=True,
+                evidence={"reason": "MISSING_PASS_EVIDENCE"},
+            )
+        evidenced.append(check)
+    materialized = evidenced
+
     blockers = tuple(check.check_id for check in materialized if check.blocking)
     nonblocking = tuple(
         check.check_id
@@ -137,20 +165,74 @@ def assert_integrity_gate(report: IntegrityGateReport | Mapping[str, Any]) -> No
         blockers = list(report.blocking_check_ids)
         stage = report.stage.value
     else:
-        passed = bool(report.get("passed", False))
-        blockers = list(report.get("blocking_check_ids", []))
-        stage = str(report.get("stage", "UNKNOWN_STAGE"))
+        if not isinstance(report, Mapping):
+            raise TypeError("Integrity gate assertion requires an IntegrityGateReport")
+        stage_raw = report.get("stage")
+        checks_raw = report.get("checks")
+        if not isinstance(stage_raw, str) or not isinstance(checks_raw, list) or not checks_raw:
+            raise RuntimeError("Serialized integrity gate report is malformed; refusing assertion")
+        try:
+            serialized_checks: list[IntegrityCheck] = []
+            for row in checks_raw:
+                if not isinstance(row, Mapping):
+                    raise ValueError("serialized check is not an object")
+                evidence = row.get("evidence", {})
+                if not isinstance(evidence, Mapping):
+                    raise ValueError("serialized evidence is not an object")
+                serialized_checks.append(
+                    IntegrityCheck(
+                        check_id=str(row["check_id"]),
+                        category=str(row["category"]),
+                        status=IntegrityStatus(str(row["status"])),
+                        summary=str(row.get("summary", "")),
+                        required=bool(row.get("required", True)),
+                        evidence=dict(evidence),
+                    )
+                )
+            required = tuple(check.check_id for check in serialized_checks if check.required)
+            if not required:
+                raise ValueError("serialized report contains no required checks")
+            reconstructed = evaluate_integrity_gate(
+                IntegrityStage(stage_raw),
+                serialized_checks,
+                required_check_ids=required,
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RuntimeError(f"Serialized integrity gate report is malformed: {exc}") from exc
+        expected_blockers = list(reconstructed.blocking_check_ids)
+        expected_passed = reconstructed.passed
+        actual_blockers = report.get("blocking_check_ids")
+        actual_passed = report.get("passed")
+        if not isinstance(actual_blockers, list) or not isinstance(actual_passed, bool):
+            raise RuntimeError("Serialized integrity gate report is malformed; refusing assertion")
+        if actual_blockers != expected_blockers or actual_passed != expected_passed:
+            raise RuntimeError("Serialized integrity gate report is internally inconsistent")
+        passed = expected_passed
+        blockers = expected_blockers
+        stage = reconstructed.stage.value
     if not passed:
         raise RuntimeError(f"{stage} integrity gate failed; blockers={blockers}")
 
 
 def load_gate_profile(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Gate profile must be a JSON object")
     if payload.get("schema_version") != 1:
         raise ValueError("Unsupported research-integrity gate profile schema")
+    if not isinstance(payload.get("profile_id"), str) or not payload["profile_id"]:
+        raise ValueError("Gate profile must contain a non-empty profile_id")
+    if payload.get("fail_closed") is not True or payload.get("unknown_blocks_promotion") is not True:
+        raise ValueError("Gate profile must explicitly enable fail-closed UNKNOWN blocking")
     stages = payload.get("stages")
     if not isinstance(stages, dict) or not stages:
         raise ValueError("Gate profile must contain non-empty stages")
+    for stage_name, stage_payload in stages.items():
+        if not isinstance(stage_name, str) or not isinstance(stage_payload, Mapping):
+            raise ValueError("Gate profile stages must be named objects")
+        values = stage_payload.get("required_check_ids")
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"Gate profile stage must declare required checks: {stage_name}")
     return payload
 
 
@@ -202,16 +284,32 @@ def check_unique_key(
             required=required,
             evidence={"missing_columns": missing},
         )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="KEY_UNIQUENESS",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Unique-key check cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET", "key_columns": list(key_columns)},
+        )
     duplicated = frame.duplicated(list(key_columns), keep=False)
-    examples = frame.loc[duplicated, list(key_columns)].head(10).to_dict(orient="records")
+    null_keys = frame.loc[:, list(key_columns)].isna().any(axis=1)
+    examples = frame.loc[duplicated | null_keys, list(key_columns)].head(10).to_dict(orient="records")
     count = int(duplicated.sum())
+    null_count = int(null_keys.sum())
     return IntegrityCheck(
         check_id=check_id,
         category="KEY_UNIQUENESS",
-        status=IntegrityStatus.FAIL if count else IntegrityStatus.PASS,
-        summary="Key is unique." if not count else "Duplicate key rows detected.",
+        status=IntegrityStatus.FAIL if count or null_count else IntegrityStatus.PASS,
+        summary="Key is unique and populated." if not count and not null_count else "Duplicate or null key rows detected.",
         required=required,
-        evidence={"duplicate_rows": count, "examples": examples, "key_columns": list(key_columns)},
+        evidence={
+            "duplicate_rows": count,
+            "null_key_rows": null_count,
+            "examples": examples,
+            "key_columns": list(key_columns),
+        },
     )
 
 
@@ -233,12 +331,22 @@ def check_nonnegative(
             required=required,
             evidence={"missing_columns": missing},
         )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="VALUE_DOMAIN",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Non-negative domain check cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET", "columns": list(columns)},
+        )
     bad_mask = pd.Series(False, index=frame.index)
     for column in columns:
         source = frame[column]
         numeric = pd.to_numeric(source, errors="coerce")
         bad_mask |= numeric.lt(0)
         bad_mask |= numeric.isna() & source.notna()
+        bad_mask |= numeric.notna() & ~np.isfinite(numeric)
         if not allow_na:
             bad_mask |= numeric.isna()
     count = int(bad_mask.sum())
@@ -270,6 +378,15 @@ def check_allowed_values(
             summary="Allowed-values check cannot run because the column is missing.",
             required=required,
             evidence={"missing_column": column},
+        )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category=category,
+            status=IntegrityStatus.UNKNOWN,
+            summary="Allowed-values check cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET", "column": column},
         )
     series = frame[column]
     allowed = list(allowed_values)
@@ -311,6 +428,15 @@ def check_session_membership(
             required=required,
             evidence={"missing_column": session_column},
         )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="SESSION_CALENDAR",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Session-membership check cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET", "session_column": session_column},
+        )
     observed = pd.to_datetime(frame[session_column], errors="coerce")
     observed_keys = observed.dt.strftime("%Y-%m-%d")
     official = pd.to_datetime(pd.Index(official_sessions), errors="coerce")
@@ -344,6 +470,15 @@ def check_missingness_policy(
             summary="Missingness policy cannot run because governed columns are missing.",
             required=required,
             evidence={"missing_columns": missing_columns},
+        )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="MISSINGNESS_POLICY",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Missingness policy cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET"},
         )
     violations: dict[str, dict[str, float]] = {}
     observed: dict[str, float] = {}
@@ -381,9 +516,21 @@ def check_ohlc_identity(
             required=required,
             evidence={"missing_columns": missing},
         )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="ECONOMIC_IDENTITY",
+            status=IntegrityStatus.UNKNOWN,
+            summary="OHLC identity cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET"},
+        )
     numeric = frame.loc[:, columns].apply(pd.to_numeric, errors="coerce")
+    finite = np.isfinite(numeric.to_numpy(dtype=float)).all(axis=1)
     bad = (
         numeric.isna().any(axis=1)
+        | ~finite
+        | numeric.le(0).any(axis=1)
         | numeric["high"].lt(numeric[["open", "close"]].max(axis=1))
         | numeric["low"].gt(numeric[["open", "close"]].min(axis=1))
         | numeric["high"].lt(numeric["low"])
@@ -420,6 +567,15 @@ def check_additive_identity(
             summary="Additive identity cannot run because columns are missing.",
             required=required,
             evidence={"missing_columns": missing},
+        )
+    if frame.empty:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="ECONOMIC_IDENTITY",
+            status=IntegrityStatus.UNKNOWN,
+            summary="Additive identity cannot certify an empty dataset.",
+            required=required,
+            evidence={"reason": "EMPTY_DATASET", "identity": f"{lhs} == {positive} - {negative}"},
         )
     lhs_values = pd.to_numeric(frame[lhs], errors="coerce").to_numpy(dtype=float)
     rhs_values = (
@@ -466,9 +622,27 @@ def check_knowledge_time(
             required=required,
             evidence={"missing_columns": missing},
         )
-    knowledge = pd.to_datetime(frame[knowledge_column], errors="coerce", utc=True)
-    decision = pd.to_datetime(frame[decision_column], errors="coerce", utc=True)
-    bad = knowledge.isna() | decision.isna()
+    knowledge_source = frame[knowledge_column]
+    decision_source = frame[decision_column]
+
+    def _naive_timestamp_mask(series: pd.Series) -> pd.Series:
+        values: list[bool] = []
+        for value in series.tolist():
+            try:
+                if bool(pd.isna(value)):
+                    values.append(False)
+                    continue
+                timestamp = pd.Timestamp(value)
+                values.append(timestamp.tzinfo is None or timestamp.tz is None)
+            except (TypeError, ValueError, OverflowError):
+                values.append(False)
+        return pd.Series(values, index=series.index, dtype=bool)
+
+    knowledge_naive = _naive_timestamp_mask(knowledge_source)
+    decision_naive = _naive_timestamp_mask(decision_source)
+    knowledge = pd.to_datetime(knowledge_source, errors="coerce", utc=True)
+    decision = pd.to_datetime(decision_source, errors="coerce", utc=True)
+    bad = knowledge.isna() | decision.isna() | knowledge_naive | decision_naive
     bad |= knowledge.gt(decision) if allow_equal else knowledge.ge(decision)
     count = int(bad.sum())
     return IntegrityCheck(
@@ -482,6 +656,7 @@ def check_knowledge_time(
             "knowledge_column": knowledge_column,
             "decision_column": decision_column,
             "allow_equal": allow_equal,
+            "naive_timestamp_rows": int((knowledge_naive | decision_naive).sum()),
         },
     )
 
@@ -500,6 +675,15 @@ def check_file_hashes(
     check_id: str = "provenance.hashes",
     required: bool = True,
 ) -> IntegrityCheck:
+    if not expected_sha256:
+        return IntegrityCheck(
+            check_id=check_id,
+            category="PROVENANCE_HASHES",
+            status=IntegrityStatus.UNKNOWN,
+            summary="No expected artifact hashes were supplied.",
+            required=required,
+            evidence={"reason": "EMPTY_EXPECTATION"},
+        )
     missing: list[str] = []
     mismatches: list[dict[str, str]] = []
     verified: list[dict[str, str]] = []

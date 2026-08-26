@@ -28,6 +28,7 @@ def test_missing_required_check_materializes_as_unknown_and_blocks():
                 category="SOURCE_SEMANTICS",
                 status=IntegrityStatus.PASS,
                 summary="Source contract frozen.",
+                evidence={"fixture": "source-contract"},
             )
         ],
         required_check_ids=("source.semantics", "pit.knowledge_time"),
@@ -68,9 +69,10 @@ def test_optional_unknown_is_visible_but_nonblocking():
         [
             IntegrityCheck(
                 check_id="data_admission.pass",
-                category="UPSTREAM_GATE",
-                status=IntegrityStatus.PASS,
-                summary="Upstream gate passed.",
+                    category="UPSTREAM_GATE",
+                    status=IntegrityStatus.PASS,
+                    summary="Upstream gate passed.",
+                    evidence={"fixture": "upstream-gate"},
             ),
             IntegrityCheck(
                 check_id="diagnostic.extra_visual",
@@ -143,6 +145,9 @@ def test_knowledge_time_is_fail_closed_for_future_or_unknown_timestamp():
 def test_default_profile_is_schema_v1_and_has_three_stages(tmp_path):
     payload = {
         "schema_version": 1,
+        "profile_id": "TEST_PROFILE",
+        "fail_closed": True,
+        "unknown_blocks_promotion": True,
         "stages": {
             "DATA_ADMISSION": {"required_check_ids": ["a"]},
             "RESEARCH_ADMISSION": {"required_check_ids": ["b"]},
@@ -156,3 +161,46 @@ def test_default_profile_is_schema_v1_and_has_three_stages(tmp_path):
     assert required_checks_for_stage(profile, "DATA_ADMISSION") == ("a",)
     assert required_checks_for_stage(profile, "RESEARCH_ADMISSION") == ("b",)
     assert required_checks_for_stage(profile, "MODEL_PROMOTION") == ("c",)
+
+
+def test_gate_without_required_profile_checks_fails_closed():
+    with pytest.raises(ValueError, match="At least one required"):
+        evaluate_integrity_gate(IntegrityStage.DATA_ADMISSION, [])
+
+
+def test_profile_with_empty_stage_requirements_is_rejected(tmp_path):
+    path = tmp_path / "profile.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "profile_id": "TEST_PROFILE",
+                "fail_closed": True,
+                "unknown_blocks_promotion": True,
+                "stages": {"DATA_ADMISSION": {"required_check_ids": []}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="required checks"):
+        load_gate_profile(path)
+
+
+def test_serialized_report_is_recomputed_not_trusted():
+    report = evaluate_integrity_gate(
+        IntegrityStage.DATA_ADMISSION,
+        [
+            IntegrityCheck(
+                check_id="source.semantics",
+                category="SOURCE",
+                status=IntegrityStatus.PASS,
+                summary="evidence",
+                evidence={"source": "fixture"},
+            )
+        ],
+        required_check_ids=("source.semantics",),
+    )
+    payload = report.to_dict()
+    payload["passed"] = False
+    with pytest.raises(RuntimeError, match="internally inconsistent"):
+        assert_integrity_gate(payload)

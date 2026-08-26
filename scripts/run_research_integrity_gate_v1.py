@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 from idx_trade.research_integrity_gate_v1 import (
     IntegrityCheck,
@@ -35,16 +41,25 @@ def _load_checks(path: Path) -> list[IntegrityCheck]:
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("Each check must be an object")
+        if not isinstance(row.get("check_id"), str) or not row["check_id"]:
+            raise ValueError("Each check must have a non-empty string check_id")
+        if not isinstance(row.get("category"), str) or not row["category"]:
+            raise ValueError(f"Each check must have a non-empty category: {row.get('check_id')}")
+        if not isinstance(row.get("status"), str):
+            raise ValueError(f"Each check must have a string status: {row.get('check_id')}")
         evidence = row.get("evidence", {})
         if not isinstance(evidence, dict):
             raise ValueError(f"Check evidence must be an object: {row.get('check_id')}")
+        required = row.get("required", True)
+        if not isinstance(required, bool):
+            raise ValueError(f"Check required flag must be boolean: {row.get('check_id')}")
         checks.append(
             IntegrityCheck(
-                check_id=str(row["check_id"]),
-                category=str(row["category"]),
+                check_id=row["check_id"],
+                category=row["category"],
                 status=IntegrityStatus(str(row["status"])),
                 summary=str(row.get("summary", "")),
-                required=bool(row.get("required", True)),
+                required=required,
                 evidence=evidence,
             )
         )
@@ -59,6 +74,8 @@ def main() -> int:
     required = required_checks_for_stage(profile, stage)
     report = evaluate_integrity_gate(stage, checks, required_check_ids=required)
 
+    if args.output.exists():
+        raise FileExistsError(f"Refusing to overwrite existing gate report: {args.output}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
