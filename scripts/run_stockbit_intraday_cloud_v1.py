@@ -108,6 +108,8 @@ def run_once(*, slot: str, session_date: str | None = None) -> dict[str, Any]:
     _validate_slot_clock(slot, now=now)
     code_ref = _verify_code_pin()
 
+    if os.getenv("STOCKBIT_INTRADAY_STORAGE_BACKEND", "s3").strip().lower() != "s3":
+        raise RuntimeError("STOCKBIT_INTRADAY_PRODUCTION_REQUIRES_S3_STORAGE")
     intraday_store = build_intraday_store_from_env()
     intraday_archive = StockbitIntradayCloudArchive(intraday_store)
 

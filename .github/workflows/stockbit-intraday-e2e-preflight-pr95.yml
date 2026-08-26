@@ -15,10 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      STOCKBIT_INTRADAY_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-      STOCKBIT_INTRADAY_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
-      STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       STOCKBIT_INTRADAY_E2E_PREFIX: e2e-paper-v1
       STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY: inputs/manifest.json
       STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT: ${{ github.workspace }}/accepted-e2e

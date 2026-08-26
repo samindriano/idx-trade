@@ -18,6 +18,7 @@ from .stockbit_stream_archive import StorageImmutabilityConflict
 
 SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_slot_v1"
 POLICY_SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_policy_v1"
+CLAIM_SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_claim_v1"
 PRODUCTION_STORAGE_PREFIX = "stockbit-intraday-v1"
 SLOTS = ("1830", "1930", "2030")
 
@@ -100,6 +101,10 @@ class StockbitIntradayCloudArchive:
         return f"sessions/{_session(session_date)}/slots/{_slot(slot)}/commit.json"
 
     @staticmethod
+    def claim_key(session_date: str | date, slot: str) -> str:
+        return f"sessions/{_session(session_date)}/slots/{_slot(slot)}/claim.json"
+
+    @staticmethod
     def snapshot_key(session_date: str | date, slot: str, snapshot_sha256: str) -> str:
         return f"sessions/{_session(session_date)}/slots/{_slot(slot)}/snapshots/{snapshot_sha256}.zip"
 
@@ -143,6 +148,10 @@ class StockbitIntradayCloudArchive:
         result_sha = str(result.get("sha256") or "").lower()
         if len(snapshot_sha) != 64 or len(result_sha) != 64 or not snapshot_key or not result_key:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_REF_INVALID")
+        if snapshot_key != self.snapshot_key(session, slot, snapshot_sha):
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_SNAPSHOT_KEY_MISMATCH")
+        if result_key != self.result_key(session, slot, result_sha):
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_RESULT_KEY_MISMATCH")
         snapshot_raw = self.store.read(snapshot_key)
         result_raw = self.store.read(result_key)
         if snapshot_raw is None or sha256_bytes(snapshot_raw) != snapshot_sha:
@@ -171,6 +180,50 @@ class StockbitIntradayCloudArchive:
             result_sha256=result_sha,
             payload=payload,
         )
+
+    def claim_slot(
+        self,
+        *,
+        session_date: str | date,
+        slot: str,
+        claimed_at_utc: str,
+        code_identity: Mapping[str, Any],
+        claim_id: str,
+    ) -> str:
+        """Reserve a slot before any provider-stage work begins.
+
+        The claim is immutable and create-only.  A concurrent/restarted caller
+        must observe the claim and fail closed until the slot has a committed
+        result; it may never run a second provider history for the same key.
+        """
+        session = _session(session_date)
+        normalized_slot = _slot(slot)
+        payload = {
+            "schema_version": CLAIM_SCHEMA_VERSION,
+            "claim_state": "CLAIMED",
+            "session_date": session,
+            "slot": normalized_slot,
+            "claim_id": str(claim_id),
+            "claimed_at_utc": str(claimed_at_utc),
+            "code_identity": dict(code_identity),
+            "guards": {
+                "synthetic_fill_used": False,
+                "retroactive_capture_used": False,
+                "outcome_accessed": False,
+            },
+        }
+        encoded = canonical_json_bytes(payload)
+        key = self.claim_key(session, normalized_slot)
+        try:
+            result = self.store.put_if_absent(key, encoded, "application/json")
+        except StorageImmutabilityConflict as exc:
+            raise StockbitIntradayCloudError(
+                "STOCKBIT_INTRADAY_SLOT_ALREADY_CLAIMED"
+            ) from exc
+        confirmed = self.store.read(key)
+        if confirmed is None or confirmed != encoded:
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_CLAIM_READBACK_MISMATCH")
+        return result.sha256
 
     def latest_committed_slot_before(self, session_date: str | date, slot: str) -> IntradaySlotCommit | None:
         target = _slot(slot)
@@ -214,6 +267,7 @@ class StockbitIntradayCloudArchive:
         self, *, session_date: str | date, slot: str, status: str, snapshot_bytes: bytes,
         result_payload: Mapping[str, Any], code_identity: Mapping[str, Any],
         eod_manifest_sha256: str | None, session_manifest_sha256: str | None,
+        claim_sha256: str | None = None,
     ) -> IntradaySlotCommit:
         session = _session(session_date)
         slot = _slot(slot)
@@ -224,6 +278,8 @@ class StockbitIntradayCloudArchive:
         snapshot_key = self.snapshot_key(session, slot, snapshot_sha)
         result_key = self.result_key(session, slot, result_sha)
         payload = self._expected_slot_payload(session=session, slot=slot, status=status, snapshot_sha=snapshot_sha, snapshot_key=snapshot_key, result_sha=result_sha, result_key=result_key, code_identity=code_identity, eod_manifest_sha256=eod_manifest_sha256, session_manifest_sha256=session_manifest_sha256)
+        if claim_sha256 is not None:
+            payload["claim_sha256"] = str(claim_sha256).lower()
         encoded = canonical_json_bytes(payload)
         expected_commit_sha = sha256_bytes(encoded)
         existing = self.existing_slot(session, slot)

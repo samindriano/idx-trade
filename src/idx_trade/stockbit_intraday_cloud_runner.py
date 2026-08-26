@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import json
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
+import uuid
 
 from .official_trading_schedule_v1 import VerifiedOfficialTradingSchedule
 from .stockbit_intraday_cloud_archive import (
@@ -121,6 +122,13 @@ def run_cloud_slot(
         restore_intraday_snapshot(archive, prior, root)
 
     policy = _policy_for_session(archive, schedule.session_dates, expected_date)
+    claim_sha256 = archive.claim_slot(
+        session_date=expected_date,
+        slot=slot,
+        claimed_at_utc=now.astimezone(timezone.utc).isoformat(),
+        code_identity=code_identity,
+        claim_id=uuid.uuid4().hex,
+    )
     journal: SessionJournal | None = None
     if context is not None or (root / "session_manifest.json").exists() or (root / "day_metadata.json").exists():
         journal = SessionJournal(root, expected_date=expected_date)
@@ -150,6 +158,7 @@ def run_cloud_slot(
         code_identity=code_identity,
         eod_manifest_sha256=context.eod_manifest_sha256 if context is not None else None,
         session_manifest_sha256=result.session_manifest_sha256,
+        claim_sha256=claim_sha256,
     )
     if result.status == "ADMISSIBLE_COMPLETE":
         if not result.session_manifest_sha256:
