@@ -70,14 +70,16 @@ def checkpoint_commit_key(session_date: str) -> str:
     return f"sessions/{session}/checkpoints/PREOPEN_CA/commit.json"
 
 
-def _checkpoint_snapshot_key(session_date: str) -> str:
+def _checkpoint_snapshot_key(session_date: str, snapshot_sha256: str) -> str:
     session = date.fromisoformat(session_date).isoformat()
-    return f"sessions/{session}/checkpoints/PREOPEN_CA/runtime_snapshot.zip"
+    digest = _require_sha(snapshot_sha256, "CLOUD_PREOPEN_CA_SNAPSHOT")
+    return f"sessions/{session}/checkpoints/PREOPEN_CA/snapshots/{digest}.zip"
 
 
-def _checkpoint_result_key(session_date: str) -> str:
+def _checkpoint_result_key(session_date: str, result_sha256: str) -> str:
     session = date.fromisoformat(session_date).isoformat()
-    return f"sessions/{session}/checkpoints/PREOPEN_CA/result.json"
+    digest = _require_sha(result_sha256, "CLOUD_PREOPEN_CA_RESULT")
+    return f"sessions/{session}/checkpoints/PREOPEN_CA/results/{digest}.json"
 
 
 def _json_object(raw: bytes, label: str) -> dict[str, Any]:
@@ -175,12 +177,15 @@ def load_preopen_ca_checkpoint(
     result = payload.get("result")
     if not isinstance(snapshot, Mapping) or not isinstance(result, Mapping):
         raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_CHECKPOINT_CHILD_REF_INVALID")
-    snapshot_key = str(snapshot.get("key") or "")
-    result_key = str(result.get("key") or "")
-    if snapshot_key != _checkpoint_snapshot_key(session) or result_key != _checkpoint_result_key(session):
-        raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_CHECKPOINT_CHILD_KEY_MISMATCH")
     snapshot_sha = _require_sha(snapshot.get("sha256"), "CLOUD_PREOPEN_CA_SNAPSHOT")
     result_sha = _require_sha(result.get("sha256"), "CLOUD_PREOPEN_CA_RESULT")
+    snapshot_key = str(snapshot.get("key") or "")
+    result_key = str(result.get("key") or "")
+    if (
+        snapshot_key != _checkpoint_snapshot_key(session, snapshot_sha)
+        or result_key != _checkpoint_result_key(session, result_sha)
+    ):
+        raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_CHECKPOINT_CHILD_KEY_MISMATCH")
     _validate_snapshot_metadata(snapshot.get("metadata"), snapshot_sha)
     snapshot_bytes = store.read(snapshot_key)
     result_bytes = store.read(result_key)
@@ -239,10 +244,14 @@ def commit_preopen_ca_checkpoint(
     metadata = _validate_snapshot_metadata(snapshot_metadata, snapshot_sha)
     result_bytes = canonical_json_bytes(result)
     result_sha = sha256_bytes(result_bytes)
-    snapshot_key = _checkpoint_snapshot_key(session)
-    result_key = _checkpoint_result_key(session)
-    store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
-    store.put_if_absent(result_key, result_bytes, "application/json")
+    snapshot_key = _checkpoint_snapshot_key(session, snapshot_sha)
+    result_key = _checkpoint_result_key(session, result_sha)
+    snapshot_ref = store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
+    result_ref = store.put_if_absent(result_key, result_bytes, "application/json")
+    if snapshot_ref.sha256 != snapshot_sha:
+        raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_SNAPSHOT_UPLOAD_SHA_MISMATCH")
+    if result_ref.sha256 != result_sha:
+        raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_RESULT_UPLOAD_SHA_MISMATCH")
     body = {
         "schema_version": CHECKPOINT_SCHEMA,
         "contract_version": CONTRACT_VERSION,
@@ -262,7 +271,11 @@ def commit_preopen_ca_checkpoint(
         "guards": {name: False for name in _GUARD_FIELDS},
     }
     commit_bytes = canonical_json_bytes(body)
-    store.put_if_absent(checkpoint_commit_key(session), commit_bytes, "application/json")
+    commit_ref = store.put_if_absent(
+        checkpoint_commit_key(session), commit_bytes, "application/json"
+    )
+    if commit_ref.sha256 != sha256_bytes(commit_bytes):
+        raise CloudPaperRuntimeError("CLOUD_PREOPEN_CA_COMMIT_SHA_MISMATCH")
     loaded = load_preopen_ca_checkpoint(
         store,
         session_date=session,
@@ -554,8 +567,6 @@ def validate_existing_t0_or_bootstrap(
         raise v1.E2EOperationalGuardError("E2E_T0_EXISTING_ROOT_INVALID") from exc
     if original_session > requested_session:
         raise v1.E2EOperationalGuardError("E2E_T0_EXISTING_ROOT_FROM_FUTURE")
-    # Re-enter the accepted bootstrap verifier with the original immutable
-    # session identity. It verifies T0 payload hash and its runtime snapshot.
     return original_bootstrap(root, session_date=original_session)
 
 
