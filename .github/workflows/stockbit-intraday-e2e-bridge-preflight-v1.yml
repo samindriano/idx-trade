@@ -1,0 +1,64 @@
+name: Stockbit Intraday E2E bridge preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STOCKBIT_INTRADAY_E2E_PREFIX: e2e-paper-v1
+      STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY: inputs/manifest.json
+      STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT: ${{ github.workspace }}/accepted-e2e
+      STOCKBIT_INTRADAY_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      STOCKBIT_INTRADAY_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+      STOCKBIT_INTRADAY_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      STOCKBIT_INTRADAY_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+      - name: Checkout accepted E2E runtime bridge
+        uses: actions/checkout@v4
+        with:
+          ref: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+          path: accepted-e2e
+          persist-credentials: false
+
+      - name: Verify accepted E2E bridge checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C accepted-e2e rev-parse HEAD)" = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
+          test -z "$(git -C accepted-e2e status --porcelain=v1 --untracked-files=all)"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install archive dependency
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[archive]"
+
+      - name: Run read-only E2E bridge preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_stockbit_intraday_cloud_preflight_v1.py
