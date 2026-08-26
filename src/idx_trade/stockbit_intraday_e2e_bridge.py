@@ -107,10 +107,15 @@ def _child_env(values: Mapping[str, str], accepted: Path) -> dict[str, str]:
 
 def _safe_manifest_key(value: object) -> str:
     raw = str(value or "").strip().replace("\\", "/")
+    raw_parts = raw.split("/") if raw else []
     path = PurePosixPath(raw)
-    if not raw or path.is_absolute() or ".." in path.parts or "." in path.parts:
+    if (
+        not raw
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in raw_parts)
+    ):
         raise StockbitIntradayE2EBridgeError("STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY_INVALID")
-    return str(path)
+    return raw
 
 
 def _require_within(path: Path, root: Path, *, label: str) -> Path:
