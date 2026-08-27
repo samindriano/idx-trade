@@ -11,8 +11,14 @@ from idx_trade.e2e_cloud_security_master_v1 import (
     CloudSecurityMasterError,
     refresh_cloud_runtime_security_master,
 )
+from idx_trade.coverage import active_price_view
 from idx_trade.forward_monitoring import _load_security_master, runtime_paths
-from idx_trade.security_master import SECURITY_COLUMNS
+from idx_trade.security_master import (
+    SECURITY_COLUMNS,
+    existence_state,
+    model_eligibility,
+)
+from idx_trade.states import ExistenceState
 
 
 JAKARTA = ZoneInfo("Asia/Jakarta")
@@ -93,20 +99,306 @@ def test_fresh_cloud_bootstrap_satisfies_exact_canonical_eod_discovery_boundary(
     assert calls == {"start_year": 2026, "end": datetime(2026, 8, 26).date()}
 
 
-def test_refresh_fails_closed_when_freeze_live_identity_disappears(tmp_path: Path) -> None:
+def test_refresh_preserves_baseline_live_identity_missing_from_current_active(
+    tmp_path: Path,
+) -> None:
     baseline = tmp_path / "baseline.csv"
     _write_baseline(
         baseline,
         [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
     )
-    with pytest.raises(CloudSecurityMasterError, match="BASELINE_LIVE_IDENTITY_MISSING"):
+    result = refresh_cloud_runtime_security_master(
+        tmp_path / "runtime",
+        baseline_master=baseline,
+        observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+        delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+    )
+    frame = pd.read_csv(Path(str(result["security_master_path"])))
+    preserved = frame.loc[frame["ticker"].eq("AAAA")].iloc[0]
+    assert set(frame["ticker"]) == {"AAAA", "NEWW"}
+    assert preserved["source"] == "IDX_FROZEN_BASELINE_IDENTITY_CONTINUITY"
+    assert result["baseline_identities_preserved_not_in_current_active"] == ["AAAA"]
+
+
+def test_preserved_baseline_identity_does_not_make_suspended_security_tradable(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    result = refresh_cloud_runtime_security_master(
+        tmp_path / "runtime",
+        baseline_master=baseline,
+        observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+        delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+    )
+    master = pd.read_csv(Path(str(result["security_master_path"])))
+    intervals = pd.DataFrame(
+        [
+            {
+                "ticker": "AAAA",
+                "market": "REGULAR",
+                "state": "SUSPENDED",
+                "effective_from": "2024-08-07",
+                "effective_to": pd.NaT,
+                "announced_at": pd.NaT,
+                "source": "IDX_SUSPENSION_EVIDENCE",
+                "source_ref": "Peng-SPT-00006/BEI.PP1/08-2024",
+            }
+        ]
+    )
+    windows = pd.DataFrame()
+    price = pd.DataFrame(
+        [{"ticker": "AAAA", "date": "2026-08-26", "raw_close": 10.0, "raw_volume": 100.0}]
+    )
+
+    assert existence_state(master, "AAAA", pd.Timestamp("2026-08-26")) is ExistenceState.LISTED
+    assert active_price_view(
+        price,
+        "AAAA",
+        master,
+        intervals,
+        windows,
+    ).empty
+    decision = model_eligibility(
+        master,
+        intervals,
+        windows,
+        "AAAA",
+        pd.Timestamp("2026-08-26"),
+        observed_sessions_since_listing=60,
+        minimum_warmup_sessions=60,
+    )
+    assert decision.eligible is False
+    assert decision.reason == "SUSPENDED"
+
+
+def test_baseline_identity_source_omission_without_tradability_evidence_fails_closed(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    result = refresh_cloud_runtime_security_master(
+        tmp_path / "runtime",
+        baseline_master=baseline,
+        observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+        delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+    )
+    master = pd.read_csv(Path(str(result["security_master_path"])))
+    empty_intervals = pd.DataFrame()
+    empty_windows = pd.DataFrame()
+    decision = model_eligibility(
+        master,
+        empty_intervals,
+        empty_windows,
+        "AAAA",
+        pd.Timestamp("2026-08-26"),
+        observed_sessions_since_listing=60,
+        minimum_warmup_sessions=60,
+    )
+    assert decision.eligible is False
+    assert decision.reason == "UNKNOWN"
+
+
+def test_authoritative_delisting_ends_baseline_identity_and_is_not_preserved(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    result = refresh_cloud_runtime_security_master(
+        tmp_path / "runtime",
+        baseline_master=baseline,
+        observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+        delisted_fetcher=lambda *args, **kwargs: _delisted(
+            [("AAAA", "2020-01-01", "2026-08-25")]
+        ),
+    )
+    master = pd.read_csv(Path(str(result["security_master_path"])))
+    row = master.loc[master["ticker"].eq("AAAA")].iloc[0]
+    assert str(row["listed_to"]) == "2026-08-25"
+    assert result["baseline_identities_preserved_not_in_current_active"] == []
+    assert existence_state(master, "AAAA", pd.Timestamp("2026-08-26")) is ExistenceState.DELISTED
+
+
+def test_refresh_rejects_malformed_unknown_source_identity(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="ACTIVE_INVALID_IDENTITY"):
         refresh_cloud_runtime_security_master(
             tmp_path / "runtime",
             baseline_master=baseline,
             observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
-            active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+            active_fetcher=lambda: _active(
+                [("AAAA", "2020-01-01"), ("BOGUS", "2026-08-21")]
+            ),
             delisted_fetcher=lambda *args, **kwargs: _delisted([]),
         )
+
+
+def test_refresh_rejects_null_source_identity(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="ACTIVE_INVALID_IDENTITY"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active([("AAAA", "2020-01-01"), (None, "2026-08-21")]),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_rejects_source_listing_after_observation(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="LISTING_AFTER_OBSERVED_DATE"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active(
+                [("AAAA", "2020-01-01"), ("NEWW", "2026-08-27")]
+            ),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_rejects_baseline_and_current_listing_identity_conflict(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="BASELINE_IDENTITY_CONFLICT:AAAA"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active([("AAAA", "2021-01-01")]),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_does_not_require_baseline_identity_ended_before_observation(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "OLDX", "listed_from": "2020-01-01", "listed_to": "2026-08-25"}],
+    )
+    result = refresh_cloud_runtime_security_master(
+        tmp_path / "runtime",
+        baseline_master=baseline,
+        observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        active_fetcher=lambda: _active([("NEWW", "2026-08-21")]),
+        delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+    )
+    frame = pd.read_csv(Path(str(result["security_master_path"])))
+    assert set(frame["ticker"]) == {"NEWW"}
+    assert result["baseline_identities_preserved_not_in_current_active"] == []
+
+
+def test_refresh_rejects_duplicate_current_identity_before_build_deduplicates(
+    tmp_path: Path,
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="ACTIVE_DUPLICATE_TICKER"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active(
+                [("AAAA", "2020-01-01"), ("AAAA", "2020-01-01")]
+            ),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_rejects_invalid_identity_interval(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="ACTIVE_INVALID_LISTING_INTERVAL"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active([("AAAA", "2021-01-01")]).assign(
+                listed_to=pd.to_datetime(["2020-01-01"])
+            ),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_rejects_malformed_listed_to(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    with pytest.raises(CloudSecurityMasterError, match="ACTIVE_INVALID_LISTED_TO"):
+        refresh_cloud_runtime_security_master(
+            tmp_path / "runtime",
+            baseline_master=baseline,
+            observed_at=datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+            active_fetcher=lambda: _active([("AAAA", "2020-01-01")]).assign(
+                listed_to=["not-a-date"]
+            ),
+            delisted_fetcher=lambda *args, **kwargs: _delisted([]),
+        )
+
+
+def test_refresh_is_deterministic_on_restart_with_same_source_inputs(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.csv"
+    _write_baseline(
+        baseline,
+        [{"ticker": "AAAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    kwargs = {
+        "baseline_master": baseline,
+        "observed_at": datetime(2026, 8, 26, 18, 35, tzinfo=JAKARTA),
+        "active_fetcher": lambda: _active(
+            [("AAAA", "2020-01-01"), ("NEWW", "2026-08-21")]
+        ),
+        "delisted_fetcher": lambda *args, **kwargs: _delisted([]),
+    }
+    first = refresh_cloud_runtime_security_master(tmp_path / "runtime", **kwargs)
+    first_bytes = Path(str(first["security_master_path"])).read_bytes()
+    second = refresh_cloud_runtime_security_master(tmp_path / "runtime", **kwargs)
+    second_bytes = Path(str(second["security_master_path"])).read_bytes()
+    assert first_bytes == second_bytes
+    assert first["security_master_sha256"] == second["security_master_sha256"]
+    assert first["baseline_identities_preserved_not_in_current_active"] == []
 
 
 def test_refresh_rejects_identity_absent_from_baseline_if_not_strictly_post_freeze(

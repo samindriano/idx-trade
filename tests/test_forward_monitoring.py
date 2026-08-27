@@ -17,6 +17,42 @@ from idx_trade.provenance import sha256_file, write_manifest_atomic
 SESSION = pd.Timestamp("2026-08-03")
 
 
+def test_positive_point_evidence_cannot_override_known_suspension() -> None:
+    assert monitor._point_state_compatible_with_evidence(
+        monitor.TradabilityState.ACTIVE,
+        monitor.TradabilityState.SUSPENDED,
+    ) is False
+    assert monitor._point_state_compatible_with_evidence(
+        monitor.TradabilityState.ACTIVE,
+        monitor.TradabilityState.UNKNOWN,
+    ) is True
+
+
+def test_capture_fails_closed_on_point_active_vs_explicit_suspension(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _prepare(monkeypatch, tmp_path)
+    tradability_root = tmp_path / "tradability"
+    tradability_root.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "ticker": "AAAA",
+                "market": "REGULAR",
+                "state": "SUSPENDED",
+                "effective_from": "2026-01-01",
+                "effective_to": None,
+                "announced_at": None,
+                "source": "IDX_TEST_SUSPENSION",
+                "source_ref": "idx://test-suspension",
+            }
+        ]
+    ).to_csv(tradability_root / "tradability_intervals.csv", index=False)
+
+    with pytest.raises(RuntimeError, match="session point evidence unresolved"):
+        monitor.capture_session(tmp_path, target_date=SESSION)
+
+
 def _security_master(root: Path) -> None:
     directory = root / "listings"
     directory.mkdir(parents=True)

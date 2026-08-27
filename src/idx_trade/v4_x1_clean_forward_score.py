@@ -242,7 +242,16 @@ def _merged_security_master_path(paths) -> Path:
                 "V4_X1_CLEAN_RUNTIME_MASTER_PRE_FREEZE_ADDITION:" +
                 json.dumps(bad.to_dict("records"), sort_keys=True)
             )
-    merged = pd.concat([baseline, additions], ignore_index=True, sort=False)
+    # Shared identities retain the frozen baseline start/name identity, but an
+    # explicit current listed_to must propagate so a verified delisting cannot
+    # be resurrected by the clean scorer's baseline overlay.
+    shared_current_end = current.loc[
+        current["ticker"].isin(baseline_tickers), ["ticker", "listed_to"]
+    ].rename(columns={"listed_to": "listed_to_current"})
+    merged = baseline.merge(shared_current_end, on="ticker", how="left")
+    merged["listed_to"] = merged["listed_to_current"].combine_first(merged["listed_to"])
+    merged = merged.drop(columns=["listed_to_current"])
+    merged = pd.concat([merged, additions], ignore_index=True, sort=False)
     if merged["ticker"].duplicated().any():
         raise RuntimeError("V4_X1_CLEAN_MERGED_MASTER_DUPLICATE")
     merged = merged.sort_values("ticker", kind="mergesort").reset_index(drop=True)

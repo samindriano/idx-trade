@@ -40,6 +40,7 @@ from .security_master import (
     existence_state,
     normalise_ticker,
     tradability_state,
+    _point_states_compatible,
 )
 from .session_backfill import run_exchange_session_backfill
 from .states import ExistenceState, TradabilityState
@@ -309,11 +310,29 @@ def _discover_table(root: Path, required: Iterable[str], *, label: str, optional
 def _load_security_master(paths: RuntimePaths) -> pd.DataFrame:
     frame = _discover_table(paths.listings_root, SECURITY_COLUMNS, label="security master")
     data = frame.copy()
-    data["ticker"] = data["ticker"].map(normalise_ticker)
+    raw_ticker = data["ticker"]
+    if raw_ticker.isna().any() or (~raw_ticker.map(lambda value: isinstance(value, str))).any():
+        raise RuntimeError("security master contains invalid identity")
+    data["ticker"] = raw_ticker.map(normalise_ticker)
     data["listed_from"] = pd.to_datetime(data["listed_from"], errors="coerce").dt.normalize()
-    data["listed_to"] = pd.to_datetime(data["listed_to"], errors="coerce").dt.normalize()
-    data = data.dropna(subset=["ticker", "listed_from"])
-    data = data[data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False)]
+    raw_listed_to = data["listed_to"]
+    data["listed_to"] = pd.to_datetime(raw_listed_to, errors="coerce").dt.normalize()
+    malformed_listed_to = (
+        raw_listed_to.notna()
+        & raw_listed_to.astype("string").fillna("").str.strip().ne("")
+        & data["listed_to"].isna()
+    )
+    if malformed_listed_to.any():
+        raise RuntimeError("security master contains malformed listed_to")
+    invalid_ticker = data["ticker"].eq("") | ~data["ticker"].str.fullmatch(
+        r"[A-Z0-9]{4}", na=False
+    )
+    if invalid_ticker.any() or data["listed_from"].isna().any():
+        raise RuntimeError("security master contains invalid identity")
+    if data["ticker"].duplicated().any():
+        raise RuntimeError("security master contains duplicate ticker identity")
+    if (data["listed_to"].notna() & data["listed_to"].lt(data["listed_from"])).any():
+        raise RuntimeError("security master contains invalid listing interval")
     return data[list(SECURITY_COLUMNS)].sort_values(["ticker", "listed_from"]).reset_index(drop=True)
 
 
@@ -358,6 +377,22 @@ def _point_state(row: pd.Series) -> TradabilityState:
     if float(volume) == 0 and float(frequency) == 0:
         return TradabilityState.NO_TRADE
     return TradabilityState.UNKNOWN
+
+
+def _point_state_compatible_with_evidence(
+    point_state: TradabilityState,
+    explicit_state: TradabilityState,
+) -> bool:
+    """Require positive point evidence not to contradict known state evidence.
+
+    UNKNOWN means no explicit interval/anchor evidence was available, so the
+    official same-session point can still be used. Any known non-active state
+    vetoes a positive point row and forces the capture to fail closed.
+    """
+
+    if explicit_state is TradabilityState.UNKNOWN:
+        return True
+    return _point_states_compatible(point_state, explicit_state)
 
 
 def _raw_row(path: Path, session: pd.Timestamp) -> pd.Series | None:
@@ -934,15 +969,33 @@ def capture_session(
                 point = _point_state(row)
                 regular_value = pd.to_numeric(pd.Series([row.get("regular_value")]), errors="coerce").iloc[0]
                 if point is TradabilityState.ACTIVE:
-                    if pd.isna(regular_value) or float(regular_value) < 0:
+                    try:
+                        explicit_state = tradability_state(
+                            intervals,
+                            windows,
+                            ticker,
+                            session,
+                            market="REGULAR",
+                            anchors=anchors,
+                        )
+                    except ValueError:
                         unresolved.append(ticker)
                         state = TradabilityState.UNKNOWN
-                        reason = "REGULAR_MARKET_VALUE_MISSING"
+                        reason = "TRADABILITY_EVIDENCE_AMBIGUOUS"
                     else:
-                        active.append(ticker)
-                        regular_values[ticker] = float(regular_value)
-                        state = point
-                        reason = "IDX_STOCK_SUMMARY_ACTIVE"
+                        if not _point_state_compatible_with_evidence(point, explicit_state):
+                            unresolved.append(ticker)
+                            state = TradabilityState.UNKNOWN
+                            reason = f"TRADABILITY_CONFLICT_POINT_ACTIVE_VS_{explicit_state.value}"
+                        elif pd.isna(regular_value) or float(regular_value) < 0:
+                            unresolved.append(ticker)
+                            state = TradabilityState.UNKNOWN
+                            reason = "REGULAR_MARKET_VALUE_MISSING"
+                        else:
+                            active.append(ticker)
+                            regular_values[ticker] = float(regular_value)
+                            state = point
+                            reason = "IDX_STOCK_SUMMARY_ACTIVE"
                 elif point is TradabilityState.NO_TRADE:
                     state = point
                     reason = "IDX_STOCK_SUMMARY_NO_TRADE"

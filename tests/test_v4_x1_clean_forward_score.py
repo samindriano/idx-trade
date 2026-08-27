@@ -69,6 +69,29 @@ def test_security_master_allows_only_strictly_post_freeze_additions(
     assert merged.loc[merged["ticker"].eq("AAA"), "listed_from"].iloc[0] == "2020-01-01"
 
 
+def test_security_master_propagates_explicit_current_delisting_to_shared_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = tmp_path / "baseline.csv"
+    current = tmp_path / "current.csv"
+    _write_master(
+        baseline,
+        [{"ticker": "AAA", "listed_from": "2020-01-01", "listed_to": ""}],
+    )
+    _write_master(
+        current,
+        [{"ticker": "AAA", "listed_from": "2020-01-01", "listed_to": "2026-08-25"}],
+    )
+    monkeypatch.setattr(clean, "_ACTIVE_CLEAN_PANEL", tmp_path / "unused.parquet")
+    monkeypatch.setattr(clean, "_ACTIVE_CLEAN_SECURITY_MASTER", baseline)
+    monkeypatch.setattr(clean, "_LEGACY_SECURITY_MASTER_PATH", lambda _paths: current)
+    paths = SimpleNamespace(monitor_root=tmp_path / "monitor")
+
+    result = clean._merged_security_master_path(paths)
+    merged = pd.read_csv(result)
+    assert merged.loc[merged["ticker"].eq("AAA"), "listed_to"].iloc[0] == "2026-08-25"
+
+
 def test_security_master_rejects_pre_freeze_extra_identity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
