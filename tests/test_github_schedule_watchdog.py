@@ -706,7 +706,8 @@ def test_every_watchdog_e2e_slot_id_is_in_actual_workflow_allow_list() -> None:
     )
 
     assert "trigger_slot:" in workflow
-    assert "inputs.trigger_slot ||" in run_name_contract
+    assert "inputs.trigger_slot ||" not in run_name_contract
+    assert "does not agree with phase" in workflow
     assert allow_list is not None
     allowed_by_input = set(allow_list.group(1).split("|"))
     assert allowed_by_input == E2E_SLOT_IDS
@@ -716,6 +717,15 @@ def test_every_watchdog_e2e_slot_id_is_in_actual_workflow_allow_list() -> None:
         for slot in SLOTS
         if slot.workflow_file == "e2e-paper-cloud-orchestration.yml"
     } == allowed_by_schedule
+    for slot_id in E2E_SLOT_IDS:
+        phase = (
+            "PREOPEN_CA"
+            if slot_id.startswith("E2E_PREOPEN_CA_")
+            else "PREOPEN"
+            if slot_id.startswith("E2E_PREOPEN_")
+            else "POST_EOD"
+        )
+        assert f"inputs.phase == '{phase}' && inputs.trigger_slot == '{slot_id}' && '{slot_id}'" in run_name_contract
 
 
 def test_every_e2e_slot_dispatches_phase_and_exact_trigger_slot() -> None:
