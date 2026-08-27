@@ -57,16 +57,21 @@ it is admitted to redundant triggering.
 
 ## Trigger model
 
-The production config uses one UTC Cron Trigger:
+The production config uses five UTC Cron Trigger expressions, within the
+Cloudflare Free-plan limit:
 
 ```text
-*/5 1-15 * * 1-5
+35,50 1 * * 1-5
+0,5,15,22 2 * * 1-5
+40 11 * * 1-5
+10,40 12 * * 1-5
+40 13 * * 1-5
 ```
 
-Cloudflare Cron runs in UTC. This polls every five minutes from 08:00 through
-22:55 WIB on weekdays, but the Worker calls GitHub only while a bounded slot
-window is actually due. The broad cron is intentionally separated from the
-market deadlines encoded in `src/core.mjs`.
+Cloudflare Cron runs in UTC. These wake-ups correspond to bounded checks at
+08:35/08:50, 09:00/09:05/09:15/09:22, 18:40, 19:10/19:40, and 20:40 WIB.
+`dueSlots()` still decides which logical slots need handling at each wake-up;
+the Worker never extends the 09:02 CA cutoff or the 09:22 PREOPEN deadline.
 
 Actual `Date.now()` controls admission. `controller.scheduledTime` is evidence
 only; a badly delayed Cloudflare invocation cannot use its nominal timestamp to
@@ -75,12 +80,34 @@ backfill an expired market window.
 ## Exact-slot evidence
 
 GitHub workflow-run metadata does not expose the originating cron expression or
-`workflow_dispatch` inputs. Therefore:
+`workflow_dispatch` inputs, and native schedule delivery can be delayed by many
+hours. The three production workflows therefore expose a deterministic
+`run-name` contract containing `IDX-SLOT:<exact_slot_id>`:
 
-- a native `event=schedule` run is accepted only inside the exact interval for
-  the current slot;
-- the next same-workflow slot is a hard ambiguity boundary;
-- an unknown `workflow_dispatch` run is **not** accepted as exact slot evidence;
+- E2E derives the identity from the exact native cron or its optional
+  provenance-only `trigger_slot`; a manual dispatch without it is
+  `IDX-SLOT:AMBIGUOUS_MANUAL`.
+- Official Open derives the identity from its native cron or exact `slot`
+  input, and both paths share the same canonical concurrency key.
+- Stockbit Intraday derives the identity from its native cron or exact `slot`
+  input.
+
+The Worker accepts coverage only when all of these hold:
+
+- the event is `schedule` or `workflow_dispatch`;
+- the run is on production `main` (validated from branch/ref metadata);
+- `display_title`/run-name contains the exact current `IDX-SLOT:<slot_id>`;
+- `created_at` is only within the bounded current-Jakarta-date API search range.
+
+The timestamp is never used to infer the logical slot. Consequently:
+
+- a delayed morning run cannot cover an evening slot;
+- a delayed previous same-workflow slot cannot cover the next slot;
+- an exact Windows-watchdog dispatch covers only after it emits the same exact
+  slot identity;
+- an ambiguous manual run never suppresses Cloudflare fallback.
+
+An unknown or ambiguous run is **not** accepted as exact slot evidence;
 - a Cloudflare-originated dispatch is identified by the coordinator's durable
   marker and the returned workflow run id when GitHub provides one.
 

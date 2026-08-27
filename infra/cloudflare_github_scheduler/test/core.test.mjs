@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import {
   SLOTS,
   SLOT_BY_ID,
+  canonicalSlotRunName,
   dueSlots,
-  exactNativeScheduleRuns,
+  exactSlotCoverageRuns,
+  isFinalMarkerState,
   localTimeEpochMs,
+  markerKey,
   slotWindow,
   dispatchBody,
   workflowDispatchUrl,
@@ -24,7 +27,21 @@ test('18:40 WIB makes both 18:30 intraday and 18:35 POST_EOD due', () => {
 });
 
 test('09:00 WIB never dispatches expired PREOPEN_CA 08:55 after 09:02 cutoff', () => {
-  assert.equal(dueSlots(ms('2026-08-27', '09:03')).some((slot) => slot.id === 'E2E_PREOPEN_CA_0855'), false);
+  assert.equal(dueSlots(ms('2026-08-27', '09:02')).some((slot) => slot.id === 'E2E_PREOPEN_CA_0855'), false);
+});
+
+test('09:22 final Open and PREOPEN checks are due only through 09:22:59', () => {
+  const finalIds = dueSlots(ms('2026-08-27', '09:22')).map((slot) => slot.id).sort();
+  assert.deepEqual(finalIds, ['E2E_PREOPEN_0922', 'OFFICIAL_OPEN_0922']);
+  assert.deepEqual(
+    dueSlots(ms('2026-08-27', '09:22') + 59_000).map((slot) => slot.id).sort(),
+    finalIds,
+  );
+  assert.equal(dueSlots(ms('2026-08-27', '09:23')).length, 0);
+});
+
+test('weekend is a deterministic NOOP', () => {
+  assert.deepEqual(dueSlots(ms('2026-08-29', '18:40')), []);
 });
 
 test('same-workflow next slot is a hard ambiguity boundary', () => {
@@ -33,27 +50,65 @@ test('same-workflow next slot is a hard ambiguity boundary', () => {
   assert.equal(new Date(window.cutoffMs).toISOString(), new Date(ms('2026-08-27', '19:30')).toISOString());
 });
 
-test('delayed 18:30 schedule created at 19:30 cannot cover 18:30', () => {
-  const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
-  const runs = [{ event: 'schedule', head_branch: 'main', created_at: new Date(ms('2026-08-27', '19:30')).toISOString() }];
-  assert.equal(exactNativeScheduleRuns(runs, slot, ms('2026-08-27', '19:35')).length, 0);
+test('10-hour-delayed morning schedule cannot cover an evening slot', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1935');
+  const runs = [{
+    event: 'schedule',
+    head_branch: 'main',
+    created_at: new Date(ms('2026-08-27', '19:35')).toISOString(),
+    display_title: canonicalSlotRunName('E2E_PREOPEN_0903'),
+  }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '19:40')).length, 0);
 });
 
-test('native schedule inside exact interval covers current slot', () => {
+test('delayed previous same-workflow slot cannot cover the next slot', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1935');
+  const runs = [{
+    event: 'schedule',
+    head_branch: 'main',
+    created_at: new Date(ms('2026-08-27', '19:35')).toISOString(),
+    display_title: 'IDX-SLOT:E2E_POST_EOD_1905',
+  }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '20:00')).length, 0);
+});
+
+test('exact native schedule identity covers the current slot', () => {
   const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1930');
-  const runs = [{ event: 'schedule', head_branch: 'main', created_at: new Date(ms('2026-08-27', '19:31')).toISOString() }];
-  assert.equal(exactNativeScheduleRuns(runs, slot, ms('2026-08-27', '19:40')).length, 1);
+  const runs = [{ event: 'schedule', head_branch: 'main', created_at: new Date(ms('2026-08-27', '19:31')).toISOString(), display_title: 'IDX-SLOT:STOCKBIT_INTRADAY_1930' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '19:40')).length, 1);
 });
 
-test('unknown workflow_dispatch metadata is never accepted as native slot evidence', () => {
+test('exact Windows-watchdog workflow_dispatch identity covers the current slot', () => {
   const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
-  const runs = [{ event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:36')).toISOString() }];
-  assert.equal(exactNativeScheduleRuns(runs, slot, ms('2026-08-27', '18:40')).length, 0);
+  const runs = [{ event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:36')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '18:40')).length, 1);
+});
+
+test('ambiguous manual workflow_dispatch metadata never suppresses a slot', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const runs = [{ event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:36')).toISOString(), display_title: 'E2E Paper cloud orchestration' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '18:40')).length, 0);
+});
+
+test('feature branch or non-main ref never covers production', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const base = { event: 'schedule', created_at: new Date(ms('2026-08-27', '18:36')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' };
+  assert.equal(exactSlotCoverageRuns([{ ...base, head_branch: 'feature/x' }], slot, ms('2026-08-27', '18:40')).length, 0);
+  assert.equal(exactSlotCoverageRuns([{ ...base, head_branch: 'main', ref: 'refs/heads/feature/x' }], slot, ms('2026-08-27', '18:40')).length, 0);
 });
 
 test('dispatch body preserves exact workflow input', () => {
   const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
-  assert.deepEqual(dispatchBody(slot), { ref: 'main', inputs: { phase: 'POST_EOD' } });
+  assert.deepEqual(dispatchBody(slot), { ref: 'main', inputs: { phase: 'POST_EOD', trigger_slot: 'E2E_POST_EOD_1835' } });
+  assert.deepEqual(dispatchBody(SLOT_BY_ID.get('OFFICIAL_OPEN_0902')), { ref: 'main', inputs: { slot: '0902' } });
+});
+
+test('durable final marker states suppress repeats while retryable errors remain retryable', () => {
+  assert.equal(isFinalMarkerState('covered_native'), true);
+  assert.equal(isFinalMarkerState('dispatched'), true);
+  assert.equal(isFinalMarkerState('blocked'), true);
+  assert.equal(isFinalMarkerState('retryable_error'), false);
+  assert.equal(markerKey('2026-08-27', 'E2E_POST_EOD_1835'), '2026-08-27::E2E_POST_EOD_1835');
 });
 
 test('GitHub URLs safely encode workflow filename and date filter', () => {

@@ -2,8 +2,8 @@
 
 Date: 2026-08-27 Asia/Jakarta
 Branch: `ops/cloudflare-github-scheduler-redundancy-v1`
-Base: `main@f6b032350ac5a10feac7c1e093b523a4f91261f9`
-Status: `IMPLEMENTATION_BUILT_NOT_PRODUCTION_ACTIVATED`
+Base: `main@5170314b574fc280f161cafff39ad03262daa06c`
+Status: `IMPLEMENTATION_HARDENED_NOT_PRODUCTION_ACTIVATED`
 
 ## Incident basis
 
@@ -31,14 +31,21 @@ commit would move default-branch HEAD immediately before the scheduled proof.
 ## Implementation
 
 - pure Jakarta slot/cutoff resolver;
-- exact same-workflow ambiguity boundaries;
-- GitHub native-schedule query with fail-closed errors;
+- exact five-expression bounded Cloudflare cron schedule;
+- deterministic `IDX-SLOT:<slot_id>` run-name contracts on E2E, Official Open,
+  and Stockbit Intraday workflows;
+- E2E provenance-only `trigger_slot` validation and dispatch propagation;
+- Official Open native/dispatch same-slot concurrency identity;
+- exact run-name/branch/ref/event coverage validation; `created_at` is only a
+  bounded current-date search filter;
+- GitHub run query with fail-closed errors;
 - exact `workflow_dispatch` input mapping;
 - one SQLite-backed Durable Object for strongly consistent per-slot markers;
 - short durable dispatch lease for duplicate Cloudflare invocations;
 - actual observed time controls cutoff admission;
 - production activation separated into `wrangler.production.jsonc`;
-- one five-minute UTC cron is sufficient; most invocations are local no-ops.
+- five exact UTC cron expressions stay within the Cloudflare Free-plan limit;
+  `dueSlots()` decides which logical slots are handled at each wake-up.
 
 ## Security
 
@@ -49,24 +56,33 @@ secret is accepted by the Worker configuration.
 
 ## Validation completed in implementation environment
 
-- Node: 22.16.0
-- `npm test`: 14/14 PASS
-- schedule tests include late-slot ambiguity, morning cutoff, native-only
-  coverage, unknown workflow_dispatch ambiguity, GitHub query fail-closed, exact
-  dispatch inputs, retryable/non-retryable GitHub responses, and explicit
-  Stockbit Stream exclusion.
-- dependency installation / Wrangler dry-run was attempted but the current
-  execution environment timed out before installing `node_modules`; therefore
-  **Wrangler runtime validation remains pending and is not claimed**.
+- Node: 26.0.0
+- `npm ci`: BLOCKED because this lane has no package-lock or npm-shrinkwrap;
+  `npm install --no-package-lock` completed successfully with 0 vulnerabilities.
+- `npm test`: 24/24 PASS
+- schedule tests include exact run-name coverage, delayed-slot rejection,
+  exact watchdog dispatch coverage, branch/ref filtering, morning and 09:22
+  deadlines, native/dispatch contracts, GitHub query fail-closed, exact
+  dispatch inputs, retryable/non-retryable GitHub responses, durable marker
+  suppression, and explicit Stockbit Stream exclusion.
+- `npx wrangler types --config wrangler.production.jsonc`: PASS.
+- `npx wrangler types --config wrangler.jsonc`: PASS.
+- `npx wrangler deploy --dry-run --config wrangler.production.jsonc`: PASS;
+  Wrangler 4.127.0, 15.73 KiB upload / 4.63 KiB gzip; no deployment occurred.
+- focused watchdog tests: 21/21 PASS with a fresh explicit Windows pytest
+  temp root; full repository pytest: PASS.
+- PyYAML syntax parse: 12 workflow/config files PASS; `actionlint` and
+  `yamllint` are unavailable in this environment. `git diff --check`: PASS.
 
 ## Next gate
 
-After the 2026-08-27 18:30–20:40 proof:
+Before any provider-free staging/diagnostic deployment:
 
-1. audit actual native + Windows-watchdog evidence;
-2. run clean npm/Wrangler validation in the user's local repo environment;
-3. perform a provider-free Cloudflare -> GitHub diagnostic;
-4. only then activate `wrangler.production.jsonc`;
-5. retain Windows fallback until one genuine future Cloudflare-covered slot is
+1. review this rebased/hardened lane and its exact-slot evidence;
+2. separately update the temporary local Windows watchdog to send E2E
+   `trigger_slot`; its current script still sends only `phase`;
+3. provide/configure the staging GitHub Actions token and explicitly authorize
+   the provider-free diagnostic;
+4. retain Windows fallback until one genuine future Cloudflare-covered slot is
    observed;
-6. separately harden Stockbit Stream early dedupe before admitting it.
+5. separately harden Stockbit Stream early dedupe before admitting it.

@@ -1,7 +1,6 @@
 import {
-  RUN_LOOKBACK_MS,
   dispatchBody,
-  exactNativeScheduleRuns,
+  exactSlotCoverageRuns,
   slotWindow,
   workflowDispatchUrl,
   workflowRunsUrl,
@@ -29,15 +28,15 @@ export class GithubApiError extends Error {
   }
 }
 
-export async function queryNativeScheduleCoverage({ fetchFn = fetch, owner, repo, token, slot, epochMs }) {
-  const { dueMs, cutoffMs } = slotWindow(slot, epochMs);
+export async function queryExactSlotCoverage({ fetchFn = fetch, owner, repo, token, slot, epochMs }) {
+  const { dateStartMs, cutoffMs } = slotWindow(slot, epochMs);
   const endMs = Math.min(epochMs, cutoffMs - 1);
-  if (endMs < dueMs - RUN_LOOKBACK_MS) return [];
+  if (endMs < dateStartMs) return [];
   const url = workflowRunsUrl({
     owner,
     repo,
     workflow: slot.workflow,
-    startMs: dueMs - RUN_LOOKBACK_MS,
+    startMs: dateStartMs,
     endMs,
   });
   const response = await fetchFn(url, { method: 'GET', headers: headers(token) });
@@ -51,7 +50,7 @@ export async function queryNativeScheduleCoverage({ fetchFn = fetch, owner, repo
   if (!Array.isArray(payload?.workflow_runs)) {
     throw new GithubApiError('GITHUB_RUN_QUERY_MISSING_LIST', response.status);
   }
-  return exactNativeScheduleRuns(payload.workflow_runs, slot, epochMs);
+  return exactSlotCoverageRuns(payload.workflow_runs, slot, epochMs);
 }
 
 export function isRetryableGithubStatus(status) {

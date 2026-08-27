@@ -1,6 +1,7 @@
 export const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
-export const RUN_LOOKBACK_MS = 2 * 60 * 1000;
 export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
+export const FINAL_MARKER_STATES = Object.freeze(['covered_native', 'dispatched', 'blocked']);
+export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
   { id: 'E2E_PREOPEN_CA_0830', due: '08:30', checkDelayMin: 5, latest: '08:39', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'PREOPEN_CA' },
@@ -10,8 +11,8 @@ export const SLOTS = Object.freeze([
   { id: 'E2E_PREOPEN_0903', due: '09:03', checkDelayMin: 2, latest: '09:09', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'PREOPEN' },
   { id: 'OFFICIAL_OPEN_0912', due: '09:12', checkDelayMin: 3, latest: '09:18', workflow: 'official-open-prospective-cloud-capture.yml', inputName: 'slot', inputValue: '0912' },
   { id: 'E2E_PREOPEN_0913', due: '09:13', checkDelayMin: 2, latest: '09:19', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'PREOPEN' },
-  { id: 'OFFICIAL_OPEN_0922', due: '09:22', checkDelayMin: 3, latest: '09:28', workflow: 'official-open-prospective-cloud-capture.yml', inputName: 'slot', inputValue: '0922' },
-  { id: 'E2E_PREOPEN_0922', due: '09:22', checkDelayMin: 3, latest: '09:28', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'PREOPEN' },
+  { id: 'OFFICIAL_OPEN_0922', due: '09:22', checkDelayMin: 0, latest: '09:23', workflow: 'official-open-prospective-cloud-capture.yml', inputName: 'slot', inputValue: '0922' },
+  { id: 'E2E_PREOPEN_0922', due: '09:22', checkDelayMin: 0, latest: '09:23', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'PREOPEN' },
   { id: 'STOCKBIT_INTRADAY_1830', due: '18:30', checkDelayMin: 10, latest: '19:30', workflow: 'stockbit-intraday-cloud-production.yml', inputName: 'slot', inputValue: '1830' },
   { id: 'E2E_POST_EOD_1835', due: '18:35', checkDelayMin: 5, latest: '19:05', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'POST_EOD' },
   { id: 'E2E_POST_EOD_1905', due: '19:05', checkDelayMin: 5, latest: '19:35', workflow: 'e2e-paper-cloud-orchestration.yml', inputName: 'phase', inputValue: 'POST_EOD' },
@@ -39,6 +40,7 @@ export function localTimeEpochMs(dateKey, hhmm) {
 
 export function slotWindow(slot, epochMs) {
   const dateKey = jakartaDateKey(epochMs);
+  const dateStartMs = localTimeEpochMs(dateKey, '00:00');
   const dueMs = localTimeEpochMs(dateKey, slot.due);
   const checkMs = dueMs + slot.checkDelayMin * 60_000;
   const configuredLatestMs = localTimeEpochMs(dateKey, slot.latest);
@@ -48,7 +50,7 @@ export function slotWindow(slot, epochMs) {
     .filter((entry) => entry.dueMs > dueMs)
     .sort((a, b) => a.dueMs - b.dueMs)[0];
   const cutoffMs = nextSameWorkflow ? Math.min(configuredLatestMs, nextSameWorkflow.dueMs) : configuredLatestMs;
-  return { dateKey, dueMs, checkMs, cutoffMs, nextSameWorkflowDueMs: nextSameWorkflow?.dueMs ?? null };
+  return { dateKey, dateStartMs, dueMs, checkMs, cutoffMs, nextSameWorkflowDueMs: nextSameWorkflow?.dueMs ?? null };
 }
 
 export function dueSlots(epochMs) {
@@ -60,14 +62,46 @@ export function dueSlots(epochMs) {
   });
 }
 
-export function exactNativeScheduleRuns(runs, slot, epochMs) {
-  const { dueMs, cutoffMs } = slotWindow(slot, epochMs);
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function canonicalSlotRunName(slotId) {
+  return `${SLOT_RUN_NAME_PREFIX}${slotId}`;
+}
+
+export function hasExactSlotRunName(run, slotId) {
+  const expected = canonicalSlotRunName(slotId);
+  const boundaryPattern = new RegExp(`(?:^|[^A-Za-z0-9_])${escapeRegExp(expected)}(?:$|[^A-Za-z0-9_])`);
+  return ['display_title', 'run_name', 'runName']
+    .map((field) => run?.[field])
+    .some((value) => typeof value === 'string' && boundaryPattern.test(value));
+}
+
+export function isProductionMainRun(run) {
+  const branch = typeof run?.head_branch === 'string' ? run.head_branch.trim() : null;
+  const ref = typeof run?.ref === 'string' ? run.ref.trim() : null;
+  const validRefs = new Set(['main', 'refs/heads/main']);
+  if (branch !== null && branch !== 'main') return false;
+  if (ref !== null && !validRefs.has(ref)) return false;
+  return branch === 'main' || (ref !== null && validRefs.has(ref));
+}
+
+export function exactSlotCoverageRuns(runs, slot, epochMs) {
+  const { dateStartMs } = slotWindow(slot, epochMs);
   return runs.filter((run) => {
-    if (run?.event !== 'schedule') return false;
-    if (run?.head_branch != null && run.head_branch !== 'main') return false;
+    if (run?.event !== 'schedule' && run?.event !== 'workflow_dispatch') return false;
+    if (!isProductionMainRun(run)) return false;
+    if (!hasExactSlotRunName(run, slot.id)) return false;
+    // created_at is only a bounded same-Jakarta-date search filter. It is never
+    // used to infer which logical slot produced the run; the exact run name is.
     const createdMs = Date.parse(run?.created_at ?? '');
-    return Number.isFinite(createdMs) && createdMs >= dueMs && createdMs < cutoffMs;
+    return Number.isFinite(createdMs) && createdMs >= dateStartMs && createdMs <= epochMs;
   });
+}
+
+export function isFinalMarkerState(state) {
+  return FINAL_MARKER_STATES.includes(state);
 }
 
 export function workflowRunsUrl({ owner, repo, workflow, startMs, endMs }) {
@@ -83,7 +117,9 @@ export function workflowDispatchUrl({ owner, repo, workflow }) {
 }
 
 export function dispatchBody(slot, ref = 'main') {
-  return { ref, inputs: { [slot.inputName]: slot.inputValue } };
+  const inputs = { [slot.inputName]: slot.inputValue };
+  if (slot.inputName === 'phase') inputs.trigger_slot = slot.id;
+  return { ref, inputs };
 }
 
 export function markerKey(dateKey, slotId) {

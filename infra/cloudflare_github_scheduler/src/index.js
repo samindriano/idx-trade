@@ -3,18 +3,17 @@ import {
   DISPATCH_LEASE_MS,
   SLOT_BY_ID,
   dueSlots,
+  isFinalMarkerState,
   markerKey,
   slotWindow,
 } from './core.mjs';
 import {
   GithubApiError,
   dispatchWorkflow,
-  queryNativeScheduleCoverage,
+  queryExactSlotCoverage,
 } from './github.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
-const FINAL_STATES = new Set(['covered_native', 'dispatched', 'blocked']);
-
 function safeError(error) {
   if (error instanceof GithubApiError) return error.code;
   if (error instanceof Error && /^[A-Z0-9_:.-]+$/.test(error.message)) return error.message;
@@ -88,14 +87,14 @@ export class SchedulerCoordinator extends DurableObject {
 
     const slotKey = markerKey(window.dateKey, slotId);
     const prior = this._read(slotKey);
-    if (prior && FINAL_STATES.has(prior.state)) {
+    if (prior && isFinalMarkerState(prior.state)) {
       return { slot: slotId, status: 'DURABLE_MARKER_ALREADY_FINAL', state: prior.state, runId: prior.run_id ?? null };
     }
     if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
       return { slot: slotId, status: 'DISPATCH_LEASE_IN_FLIGHT' };
     }
 
-    const nativeCoverage = await queryNativeScheduleCoverage({
+    const nativeCoverage = await queryExactSlotCoverage({
       owner,
       repo,
       token,

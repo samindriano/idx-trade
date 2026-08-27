@@ -1,31 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SLOT_BY_ID, localTimeEpochMs } from '../src/core.mjs';
-import { GithubApiError, dispatchWorkflow, queryNativeScheduleCoverage } from '../src/github.mjs';
+import { GithubApiError, dispatchWorkflow, queryExactSlotCoverage } from '../src/github.mjs';
 
 const epoch = (t) => localTimeEpochMs('2026-08-27', t);
 const jsonResponse = (payload, status = 200) => new Response(JSON.stringify(payload), { status, headers: { 'content-type': 'application/json' } });
 
-test('query accepts exact native schedule only', async () => {
+test('query accepts exact native and watchdog dispatch identities only', async () => {
   const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
   const fetchFn = async () => jsonResponse({ workflow_runs: [
-    { id: 10, event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(epoch('18:36')).toISOString() },
-    { id: 11, event: 'schedule', head_branch: 'main', created_at: new Date(epoch('18:37')).toISOString() },
+    { id: 10, event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(epoch('18:36')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' },
+    { id: 11, event: 'schedule', head_branch: 'main', created_at: new Date(epoch('18:37')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' },
+    { id: 12, event: 'schedule', head_branch: 'main', created_at: new Date(epoch('18:37')).toISOString(), display_title: 'IDX-SLOT:E2E_PREOPEN_0903' },
+    { id: 13, event: 'schedule', head_branch: 'main', created_at: new Date(epoch('18:37')).toISOString() },
   ] });
-  const runs = await queryNativeScheduleCoverage({ fetchFn, owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, epochMs: epoch('18:40') });
-  assert.deepEqual(runs.map((run) => run.id), [11]);
+  const runs = await queryExactSlotCoverage({ fetchFn, owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, epochMs: epoch('18:40') });
+  assert.deepEqual(runs.map((run) => run.id), [10, 11]);
 });
 
 test('query failure is fail-closed and never converted to missing coverage', async () => {
   const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
   await assert.rejects(
-    queryNativeScheduleCoverage({ fetchFn: async () => new Response('', { status: 503 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, epochMs: epoch('18:40') }),
+    queryExactSlotCoverage({ fetchFn: async () => new Response('', { status: 503 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, epochMs: epoch('18:40') }),
     (error) => error instanceof GithubApiError && error.code === 'GITHUB_RUN_QUERY_HTTP_503',
   );
 });
 
 test('dispatch sends exact ref and input and captures returned run id', async () => {
-  const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
   let seen;
   const fetchFn = async (url, init) => {
     seen = { url, init };
@@ -34,7 +36,7 @@ test('dispatch sends exact ref and input and captures returned run id', async ()
   const result = await dispatchWorkflow({ fetchFn, owner: 'samindriano', repo: 'idx-trade', token: 'secret', ref: 'main', slot });
   assert.equal(result.ok, true);
   assert.equal(result.runId, 12345);
-  assert.deepEqual(JSON.parse(seen.init.body), { ref: 'main', inputs: { slot: '1830' } });
+  assert.deepEqual(JSON.parse(seen.init.body), { ref: 'main', inputs: { phase: 'POST_EOD', trigger_slot: 'E2E_POST_EOD_1835' } });
   assert.equal(seen.init.headers.Authorization, 'Bearer secret');
 });
 
