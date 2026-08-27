@@ -11,7 +11,11 @@ from idx_trade.ca_feature_basis_family_coverage_v1 import (
     prepare_family_coverage,
 )
 from idx_trade.ca_feature_basis_gate_v1 import CA_COVERAGE_CERTIFIED, CA_COVERAGE_UNKNOWN
-from idx_trade.ca_feature_basis_v1 import RIGHTS_HMETD, STOCK_DIVIDEND
+from idx_trade.ca_feature_basis_v1 import (
+    RIGHTS_HMETD,
+    STOCK_DIVIDEND,
+    VOLUNTARY_CONVERSION,
+)
 
 
 SHA = "a" * 64
@@ -69,6 +73,23 @@ def test_one_source_family_does_not_certify_unrelated_families() -> None:
     row = result.iloc[0]
     assert row["coverage_state"] == CA_COVERAGE_UNKNOWN
     assert "STOCK_SPLIT" in row["missing_structural_families"].split("|")
+
+
+def test_voluntary_conversion_is_required_before_global_certification() -> None:
+    days = sessions()
+    ids = pd.DataFrame({"ticker": ["TEST"], "date": [days[1]]})
+    assert VOLUNTARY_CONVERSION in DEFAULT_REQUIRED_FAMILIES
+
+    rows = [
+        row
+        for row in complete_claims(days[1])
+        if row["event_family"] != VOLUNTARY_CONVERSION
+    ]
+    result = combine_family_coverage(ids, pd.DataFrame(rows), days)
+    row = result.iloc[0]
+
+    assert row["coverage_state"] == CA_COVERAGE_UNKNOWN
+    assert VOLUNTARY_CONVERSION in row["missing_structural_families"].split("|")
 
 
 def test_union_of_independent_source_contracts_can_certify_global_coverage() -> None:
