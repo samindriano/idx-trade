@@ -226,6 +226,123 @@ def test_queued_or_in_progress_run_counts_as_coverage(tmp_path: Path) -> None:
     assert stockbit["status"] == "ALREADY_COVERED"
 
 
+def test_delayed_1830_run_near_1930_cannot_cover_stockbit_1930(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "stockbit-intraday-cloud-production.yml": [
+                {
+                    "id": 111,
+                    "event": "schedule",
+                    "head_branch": "main",
+                    "status": "in_progress",
+                    "conclusion": None,
+                    # A severely delayed 18:30 run appears one minute before
+                    # the 19:30 slot.  The API exposes no slot input.
+                    "created_at": "2026-08-27T12:29:00Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    action = next(item for item in result["actions"] if item["slot"] == "STOCKBIT_1930")
+    assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
+    assert action["ambiguous_run_ids"] == [111]
+    assert any(
+        "stockbit-intraday-cloud-production.yml" in call
+        and "slot=1930" in " ".join(call)
+        for call in calls
+    )
+
+
+def test_exact_1930_native_run_covers_stockbit_1930(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "stockbit-intraday-cloud-production.yml": [
+                {
+                    "id": 222,
+                    "event": "schedule",
+                    "head_branch": "main",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "created_at": "2026-08-27T12:30:00Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    action = next(item for item in result["actions"] if item["slot"] == "STOCKBIT_1930")
+    assert action["status"] == "ALREADY_COVERED"
+    assert not any("slot=1930" in " ".join(call) for call in calls)
+
+
+def test_exact_watchdog_dispatch_run_covers_intended_current_slot(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "stockbit-intraday-cloud-production.yml": [
+                {
+                    "id": 333,
+                    "event": "workflow_dispatch",
+                    "head_branch": "main",
+                    "status": "in_progress",
+                    "conclusion": None,
+                    "created_at": "2026-08-27T12:30:30Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    action = next(item for item in result["actions"] if item["slot"] == "STOCKBIT_1930")
+    assert action["status"] == "ALREADY_COVERED"
+    assert not any("slot=1930" in " ".join(call) for call in calls)
+
+
+def test_out_of_order_delayed_schedule_cannot_suppress_later_valid_slot(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "stockbit-intraday-cloud-production.yml": [
+                {
+                    "id": 444,
+                    "event": "schedule",
+                    "head_branch": "main",
+                    "status": "queued",
+                    "conclusion": None,
+                    # This is before the exact 19:30 slot boundary and is
+                    # therefore not evidence for STOCKBIT_1930.
+                    "created_at": "2026-08-27T12:29:59Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    action = next(item for item in result["actions"] if item["slot"] == "STOCKBIT_1930")
+    assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
+    assert any("slot=1930" in " ".join(call) for call in calls)
+
+
 def test_prior_same_workflow_slot_does_not_suppress_current_slot(tmp_path: Path) -> None:
     runner, calls = _runner_with_runs(
         {

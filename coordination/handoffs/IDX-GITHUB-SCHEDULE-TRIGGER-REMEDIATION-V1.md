@@ -34,6 +34,9 @@ decisions_made:
   - Add provider-free regression coverage for native-only, external-only,
     duplicate, delayed/queued, marker-delayed, cutoff, and trigger-failure
     scenarios; leave capture success to the existing production workflows.
+  - Treat GitHub run metadata as slot evidence only within the strict interval
+    from the current due time up to the next same-workflow slot; ambiguous runs
+    deliberately dispatch the current slot.
 decisions_needed:
   - Observe one genuine post-close slot through the existing cloud workflow path.
   - After evidence, decide whether to keep the fallback or replace it with a Cloudflare Cron implementation.
@@ -43,7 +46,7 @@ blocking_risks:
   - The task requires `gh` authentication available to the same Windows user at scheduled runtime.
 validation_run:
   - `python -m py_compile scripts/github_schedule_watchdog.py`: PASS
-  - `python -m pytest -q tests/test_github_schedule_watchdog.py --basetemp <fresh>`: PASS (17)
+  - `python -m pytest -q tests/test_github_schedule_watchdog.py --basetemp <fresh>`: PASS (21)
   - full pytest with fresh Windows basetemp: PASS (838 passed, 3 existing warnings)
   - PowerShell installer parser: PASS
   - workflow_dispatch synthetic diagnostic 33042090215: SUCCESS

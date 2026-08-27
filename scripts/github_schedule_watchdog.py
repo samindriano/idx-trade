@@ -260,6 +260,48 @@ def _append_event(state_root: Path, payload: Mapping[str, Any]) -> None:
         handle.write("\n")
 
 
+def _next_same_workflow_due(day: date, slot: Slot) -> datetime | None:
+    """Return the next same-workflow slot boundary for this day.
+
+    GitHub's workflow-run metadata does not expose the cron expression or
+    workflow_dispatch inputs.  A run can therefore be treated as exact slot
+    evidence only while it remains between this slot's due time and the next
+    slot of the same workflow.  Once it crosses that boundary it is ambiguous
+    (for example, a delayed 18:30 run observed near 19:30) and the caller must
+    dispatch the current slot rather than silently suppress it.
+    """
+
+    due = _slot_due(day, slot)
+    candidates = [
+        _slot_due(day, candidate)
+        for candidate in SLOTS
+        if candidate.workflow_file == slot.workflow_file
+        and _slot_due(day, candidate) > due
+    ]
+    return min(candidates) if candidates else None
+
+
+def _exact_slot_runs(
+    *, runs: Sequence[Mapping[str, Any]], slot: Slot, due: datetime
+) -> list[dict[str, Any]]:
+    next_due = _next_same_workflow_due(due.date(), slot)
+    exact: list[dict[str, Any]] = []
+    for row in runs:
+        created_at = row.get("created_at")
+        if not isinstance(created_at, str):
+            continue
+        try:
+            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if created < due:
+            continue
+        if next_due is not None and created >= next_due:
+            continue
+        exact.append(dict(row))
+    return exact
+
+
 def _query_runs(
     *, runner: Runner, repository: str, slot: Slot, due: datetime, now: datetime, gh_exe: str | None
 ) -> list[dict[str, Any]]:
@@ -398,12 +440,13 @@ def run_once(
             )
             continue
 
-        if existing:
+        exact = _exact_slot_runs(runs=existing, slot=slot, due=due)
+        if exact:
             action = {
                 "slot": slot.slot_id,
                 "status": "ALREADY_COVERED",
-                "run_ids": [row.get("id") for row in existing],
-                "run_events": [row.get("event") for row in existing],
+                "run_ids": [row.get("id") for row in exact],
+                "run_events": [row.get("event") for row in exact],
             }
             actions.append(action)
             continue
@@ -464,11 +507,13 @@ def run_once(
         _write_json_atomic(marker, marker_payload)
         action = {
             "slot": slot.slot_id,
-            "status": "DISPATCH_REQUESTED",
+            "status": "DISPATCH_REQUESTED_AMBIGUOUS_RUN" if existing else "DISPATCH_REQUESTED",
             "workflow": slot.workflow_file,
             "input_name": slot.input_name,
             "input_value": slot.input_value,
         }
+        if existing:
+            action["ambiguous_run_ids"] = [row.get("id") for row in existing]
         actions.append(action)
         _append_event(
             state_root,

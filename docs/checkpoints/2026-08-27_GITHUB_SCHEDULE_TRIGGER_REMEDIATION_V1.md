@@ -103,6 +103,33 @@ prevents a prior phase of the same E2E workflow from suppressing a later slot,
 while still recognizing a native or externally dispatched run created after
 the current slot became due.
 
+### Slot-identity remediation
+
+The GitHub Actions `workflow_run` response was audited directly. Its safe
+metadata includes `event`, `path`, `created_at`, `run_started_at`, status,
+conclusion, branch, and SHA, but it does not include the originating cron
+expression or `workflow_dispatch` input values. `display_title` is the workflow
+title and is not a slot identity. Therefore a same-workflow run cannot be
+accepted solely because its `created_at` falls somewhere in the broad late
+grace window.
+
+The watchdog now uses a strict per-workflow slot interval:
+
+`[current_slot_due, next_same_workflow_slot_due)`
+
+Only a run in that interval can suppress the current dispatch. A run before
+the current due time or after the next same-workflow boundary is ambiguous and
+causes a dispatch of the current slot. A successful watchdog dispatch remains
+protected by its durable per-slot marker. For a watchdog-originated
+`workflow_dispatch`, that marker is the exact input/slot evidence; the GitHub
+run metadata alone is not.
+
+Consequently, a native Stockbit 18:30 run created near 19:29 cannot suppress
+the 19:30 check. An exact 19:30 run can suppress 19:30. If a delayed run is
+ambiguous, the additional cloud dispatch follows the existing workflow's
+single concurrency group and idempotent current-session contract; the
+watchdog never performs provider work or creates a second capture history.
+
 ## Provider-free redundancy matrix
 
 The watchdog contract was exercised with synthetic GitHub CLI responses for the
