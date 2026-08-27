@@ -1,8 +1,8 @@
 # Handoff
 
-from: MAIN / Codex  
-to: ChatGPT review  
-task_id: IDX-CA-AWARE-FEATURE-BASIS-REMEDIATION-V1-R3-1  
+from: MAIN / Codex
+to: ChatGPT review
+task_id: IDX-CA-AWARE-FEATURE-BASIS-REMEDIATION-V1-R3-1
 branch: `data/ca-aware-feature-basis-remediation-v1`
 
 ## Scope

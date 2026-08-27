@@ -1,7 +1,7 @@
 # INC-001 CA-Aware Feature-Basis Remediation V1 — R3.1 Red-Team Correction
 
-Date: 2026-08-28 Asia/Jakarta  
-Branch: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-28 Asia/Jakarta
+Branch: `data/ca-aware-feature-basis-remediation-v1`
 Scope: narrow R3.1 correction for event-scope fail-open, expanded-population gate dead-end, support-lineage attribution, and validation wording.
 
 ## Boundaries
