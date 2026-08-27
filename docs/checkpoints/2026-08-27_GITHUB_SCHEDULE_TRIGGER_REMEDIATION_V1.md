@@ -103,6 +103,29 @@ prevents a prior phase of the same E2E workflow from suppressing a later slot,
 while still recognizing a native or externally dispatched run created after
 the current slot became due.
 
+## Provider-free redundancy matrix
+
+The watchdog contract was exercised with synthetic GitHub CLI responses for the
+relevant trigger states:
+
+| Scenario | Expected safe result | Result |
+| --- | --- | --- |
+| Native run only | visible schedule run suppresses dispatch | PASS |
+| External watchdog only | missing run dispatches the existing workflow | PASS |
+| Native and external both fire | visible run suppresses a duplicate watchdog dispatch | PASS |
+| Native execution delayed/queued | run created at its scheduled due time still counts as coverage | PASS |
+| External dispatch visibility delayed | durable marker prevents repeated dispatch | PASS |
+| One trigger/query fails | fail-closed, no provider action | PASS |
+| GitHub execution remains queued | queued/in-progress run counts as trigger coverage | PASS |
+| PREOPEN_CA at/after 09:02 | no late dispatch | PASS |
+| PREOPEN after its retry deadline | no retroactive dispatch | PASS |
+| duplicate Official Open slot | per-slot run/marker suppresses repeat | PASS |
+| local watchdog overlap | Task Scheduler `IgnoreNew` prevents a second watchdog instance; downstream workflow concurrency remains authoritative | STATIC-CONTRACT PASS |
+
+These are trigger-layer tests only. They do not claim that a dispatch's
+provider capture succeeds; the existing cloud workflow result remains the
+production authority. No real production slot was manually dispatched.
+
 ## Local deployment evidence
 
 The reversible fallback task was registered after the implementation commit
@@ -137,7 +160,7 @@ Enable-ScheduledTask -TaskName 'IDX-Trade Stockbit Intraday Daily' -TaskPath '\\
 
 ## Validation status
 
-- watchdog focused tests: 12 passed;
+- watchdog focused tests: 17 passed;
 - full pytest: 838 passed, 3 existing warnings, exit code 0 using a fresh
   Windows basetemp;
 - Python compile: pass;

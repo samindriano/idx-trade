@@ -121,6 +121,111 @@ def test_existing_schedule_or_dispatch_run_suppresses_duplicate(tmp_path: Path) 
     assert len(dispatch_calls) == 1
 
 
+def test_native_only_coverage_does_not_dispatch_the_already_created_slot(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "e2e-paper-cloud-orchestration.yml": [
+                {
+                    "id": 321,
+                    "event": "schedule",
+                    "head_branch": "main",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "created_at": "2026-08-27T11:35:00Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 18, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    e2e = next(action for action in result["actions"] if action["slot"] == "E2E_1835")
+    assert e2e["status"] == "ALREADY_COVERED"
+    assert not any(
+        "e2e-paper-cloud-orchestration.yml" in call and "workflow" in call and "run" in call
+        for call in calls
+    )
+
+
+def test_delayed_native_execution_is_still_seen_without_covering_a_later_slot(
+    tmp_path: Path,
+) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "e2e-paper-cloud-orchestration.yml": [
+                {
+                    "id": 654,
+                    "event": "schedule",
+                    "head_branch": "main",
+                    "status": "in_progress",
+                    "conclusion": None,
+                    # The run was enqueued at the 18:35 schedule, although its
+                    # execution is still delayed at 19:05.
+                    "created_at": "2026-08-27T11:35:00Z",
+                }
+            ]
+        }
+    )
+
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 10, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    statuses = {action["slot"]: action["status"] for action in result["actions"]}
+    assert statuses["E2E_1835"] == "ALREADY_COVERED"
+    assert statuses["E2E_1905"] == "DISPATCH_REQUESTED"
+    assert any(
+        "e2e-paper-cloud-orchestration.yml" in call
+        and "POST_EOD" in " ".join(call)
+        and "workflow" in call
+        and "run" in call
+        for call in calls
+    )
+
+
+def test_external_only_trigger_path_dispatches_when_native_is_absent(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs({})
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    assert any(action["status"] == "DISPATCH_REQUESTED" for action in result["actions"])
+    assert any("workflow" in call and "run" in call for call in calls)
+
+
+def test_queued_or_in_progress_run_counts_as_coverage(tmp_path: Path) -> None:
+    runner, _ = _runner_with_runs(
+        {
+            "stockbit-intraday-cloud-production.yml": [
+                {
+                    "id": 987,
+                    "event": "workflow_dispatch",
+                    "head_branch": "main",
+                    "status": "queued",
+                    "conclusion": None,
+                    "created_at": "2026-08-27T11:40:00Z",
+                }
+            ]
+        }
+    )
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 18, 40, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    stockbit = next(action for action in result["actions"] if action["slot"] == "STOCKBIT_1830")
+    assert stockbit["status"] == "ALREADY_COVERED"
+
+
 def test_prior_same_workflow_slot_does_not_suppress_current_slot(tmp_path: Path) -> None:
     runner, calls = _runner_with_runs(
         {
@@ -211,3 +316,34 @@ def test_installer_contract_has_morning_and_post_close_checks() -> None:
     assert "AddHours(8).AddMinutes(59)" in text
     assert "AddHours(9).AddMinutes(6)" in text
     assert "AddHours(18).AddMinutes(40)" in text
+    assert "-MultipleInstances IgnoreNew" in text
+
+
+def test_production_workflows_keep_trigger_paths_and_phase_concurrency_isolated() -> None:
+    root = Path(__file__).parents[1]
+    e2e = (root / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml").read_text(
+        encoding="utf-8"
+    )
+    stockbit = (root / ".github" / "workflows" / "stockbit-intraday-cloud-production.yml").read_text(
+        encoding="utf-8"
+    )
+
+    for schedule in (
+        "30 1 * * 1-5",
+        "45 1 * * 1-5",
+        "55 1 * * 1-5",
+        "3 2 * * 1-5",
+        "13 2 * * 1-5",
+        "22 2 * * 1-5",
+        "35 11 * * 1-5",
+        "5 12 * * 1-5",
+        "35 12 * * 1-5",
+    ):
+        assert schedule in e2e
+    for phase in ("PREOPEN_CA", "PREOPEN", "POST_EOD"):
+        assert phase in e2e
+    assert "cancel-in-progress: false" in e2e
+    assert "'preopen-ca'" in e2e
+    assert "'preopen'" in e2e
+    assert "'post-eod'" in e2e
+    assert "cancel-in-progress: false" in stockbit
