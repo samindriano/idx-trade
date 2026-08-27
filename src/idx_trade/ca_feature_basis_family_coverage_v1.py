@@ -78,7 +78,7 @@ def prepare_family_coverage(
 ) -> pd.DataFrame:
     """Validate source-family-specific corporate-action coverage evidence.
 
-    Multiple independent sources may cover one family/date.  A source row is a
+    Multiple independent sources may cover one family/date. A source row is a
     coverage claim only for the explicit family named on that row; it cannot be
     generalized to other structural families.
     """
@@ -151,12 +151,16 @@ def combine_family_coverage(
     required_families: Sequence[str] = DEFAULT_REQUIRED_FAMILIES,
     composite_source_ref: str = "COMPOSITE_CA_FAMILY_COVERAGE_V1",
 ) -> pd.DataFrame:
-    """Collapse family-scoped evidence into the binary gate coverage ledger.
+    """Collapse complete family-scoped evidence into the binary global gate.
 
-    A ticker/session is globally certified only when *every* required structural
+    The binary `CA_COVERAGE_CERTIFIED` state is reserved for the *entire frozen
+    structural-family ontology*. Callers may not narrow `required_families` and
+    still obtain a global certification. Partial/source-specific proof must stay
+    in the family-scoped ledger until every frozen structural family is covered.
+
+    A ticker/session is globally certified only when every frozen structural
     family has at least one authoritative certified coverage claim and no claim
-    for that family is marked as a source conflict.  One provider therefore
-    cannot silently certify event families outside its explicit source contract.
+    for that family is marked as a source conflict.
     """
 
     if not {"ticker", "date"}.issubset(identities.columns):
@@ -170,12 +174,24 @@ def combine_family_coverage(
     if not set(ids["date"]).issubset(set(sessions)):
         raise ValueError("identity frame contains non-official session")
 
-    families = tuple(dict.fromkeys(str(value).upper().strip() for value in required_families))
-    if not families:
+    requested = tuple(dict.fromkeys(str(value).upper().strip() for value in required_families))
+    if not requested:
         raise ValueError("required_families must not be empty")
-    unsupported = sorted(set(families) - set(STRUCTURAL_EVENT_FAMILIES))
+    unsupported = sorted(set(requested) - set(STRUCTURAL_EVENT_FAMILIES))
     if unsupported:
         raise ValueError(f"unsupported required structural families: {unsupported}")
+    if set(requested) != set(DEFAULT_REQUIRED_FAMILIES):
+        missing = sorted(set(DEFAULT_REQUIRED_FAMILIES) - set(requested))
+        extra = sorted(set(requested) - set(DEFAULT_REQUIRED_FAMILIES))
+        raise ValueError(
+            "global CA coverage requires exact frozen structural family set: "
+            f"missing={missing}:extra={extra}"
+        )
+    families = DEFAULT_REQUIRED_FAMILIES
+
+    source_ref = str(composite_source_ref or "").strip()
+    if not source_ref:
+        raise ValueError("composite_source_ref must be non-empty")
 
     coverage = prepare_family_coverage(family_coverage, sessions)
     grouped = {
@@ -235,7 +251,7 @@ def combine_family_coverage(
                 "coverage_state": (
                     CA_COVERAGE_CERTIFIED if globally_safe else CA_COVERAGE_UNKNOWN
                 ),
-                "source_ref": str(composite_source_ref),
+                "source_ref": source_ref,
                 "evidence_sha256": composite_sha,
                 "missing_structural_families": "|".join(sorted(missing)),
                 "conflicting_structural_families": "|".join(sorted(conflicting)),
