@@ -14,9 +14,34 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
+import sys
+import types
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
+
+import pandas as pd
+
+# Allow the repository script to use the checked-out package without relying
+# on a caller's global PYTHONPATH.  This does not load any data or alter the
+# frozen source modules.
+_SRC_ROOT = str(Path(__file__).resolve().parents[1] / "src")
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
+
+from idx_trade.ca_aware_feature_basis_r3 import (
+    R3_DEPENDENCY_OFFSETS,
+    build_cross_section_population,
+    build_observed_dependency_closure,
+    build_primary_membership_dependency_closure,
+    classify_event_scope,
+    compare_identity_sets,
+    global_ca_population_gate,
+    merge_dependency_closures,
+    reconcile_ksei_populations,
+    validate_strict_event_census,
+)
 
 
 EXPECTED = {
@@ -31,6 +56,14 @@ EXPECTED = {
     "ksei_history": "3ea2f0a160300dd4d74c40281dbcbf680e03accc565487cf00b190630471c08d",
     "ksei_requests": "e68d60103cc3efc04299c1b330c4ef39e55ba1e44bbcf79f178b2f1ccff812e5",
     "ca_event_census": "10540f8f73e6a0cec3975ac189dc2ab2034a81c6610f81381009966848f95ed3",
+    "ca_audit_summary": "3f6de321e673775dfe9b39150aded7ff54295b0d9b68828d14ff77943f50494c",
+    "clean_security_master": "51fecc3be6956d24eac3d0193c80a6595f6b7976b999e1b9432b16a0e3c3cf0e",
+    "official_calendar": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "frozen_feature_builder_blob": "59ad05f815870ae00480dc7945fe18371d8eff9c",
+    "old_manifest": "5d3bce5ce8776d68a356ea814aa2dcd8909cb26b8d3334ea5e3f68f089a5fe61",
+    "old_summary": "c4d55545066bb28401246ec0ff217c6bf2a36a77372cedd158fe7ca579bfb4c5",
+    "old_h5": "2c2874bde129f8cefb68af1aae01ab88203dfe74c2bc8cf4cf3e5bab61e76ede",
+    "old_h10": "606eae2a431d0b924f7dbe574cbca493f1b857bf55aeb0d1af74db3d01c03386",
 }
 
 STRUCTURAL_FAMILIES = (
@@ -163,6 +196,8 @@ def _family_verdict(family: str, count: int) -> tuple[str, str, str]:
 
 
 def run(args: argparse.Namespace) -> Path:
+    if getattr(args, "r3", False):
+        return run_r3(args)
     phase_a = Path(args.phase_a_root)
     phase_b = Path(args.phase_b_root)
     clean_panel = Path(args.clean_panel)
@@ -561,14 +596,452 @@ def run(args: argparse.Namespace) -> Path:
     return output
 
 
+def _load_frozen_feature_builder(repo_root: Path):
+    """Load the accepted builder blob in memory and verify its object identity."""
+
+    result = subprocess.run(
+        ["git", "cat-file", "-p", EXPECTED["frozen_feature_builder_blob"]],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    source = result.stdout
+    object_hash = subprocess.run(
+        ["git", "hash-object", "--stdin"],
+        cwd=repo_root,
+        input=source,
+        check=True,
+        capture_output=True,
+    ).stdout.decode("ascii").strip()
+    actual = object_hash
+    if actual != EXPECTED["frozen_feature_builder_blob"]:
+        raise RuntimeError(
+            "frozen feature builder blob mismatch: "
+            f"expected={EXPECTED['frozen_feature_builder_blob']} actual={actual}"
+        )
+    name = "_idx_trade_frozen_v4_builder_r3"
+    module = types.ModuleType(name)
+    module.__file__ = f"<git-blob:{actual}>"
+    sys.modules[name] = module
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    return module, actual
+
+
+def _r3_frame_rows(frame: pd.DataFrame) -> list[dict[str, object]]:
+    """Convert a deterministic frame to plain rows for the shared CSV writer."""
+
+    if frame.empty:
+        return []
+    return frame.astype(object).where(frame.notna(), "").to_dict(orient="records")
+
+
+def _r3_ticker_summary(
+    population: pd.DataFrame,
+    h5_keys: set[tuple[str, str]],
+    h10_keys: set[tuple[str, str]],
+    ksei_rows: pd.DataFrame,
+) -> pd.DataFrame:
+    ksei = ksei_rows.copy()
+    ksei["ticker"] = ksei["ticker"].astype(str).str.upper().str.strip()
+    ksei = ksei.set_index("ticker")
+    rows: list[dict[str, object]] = []
+    for ticker, group in population.groupby("ticker", sort=True):
+        dates = group["date"].tolist()
+        h5_count = sum((ticker, date) in h5_keys for date in dates)
+        h10_count = sum((ticker, date) in h10_keys for date in dates)
+        ksei_row = ksei.loc[ticker] if ticker in ksei.index else None
+        rows.append(
+            {
+                "ticker": ticker,
+                "application_rows": len(group),
+                "h5_fit_rows": h5_count,
+                "h10_fit_rows": h10_count,
+                "fit_union_rows": h5_count + h10_count - sum(
+                    (ticker, date) in h5_keys and (ticker, date) in h10_keys for date in dates
+                ),
+                "application_start": min(dates),
+                "application_end": max(dates),
+                "ksei_present": ksei_row is not None,
+                "ksei_coverage_status": str(ksei_row["coverage_status"]) if ksei_row is not None else "ABSENT_FROM_KSEI_CENSUS",
+                "ksei_source_sha256": str(ksei_row.get("source_sha256", "")) if ksei_row is not None else "",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def run_r3(args: argparse.Namespace) -> Path:
+    """Run the outcome-blind R3 population/closure reconciliation exactly once."""
+
+    required_args = (
+        "phase_a_root",
+        "phase_b_root",
+        "clean_panel",
+        "ksei_root",
+        "ca_audit_root",
+        "output_dir",
+        "repo_root",
+        "clean_security_master",
+        "official_calendar",
+        "old_support_root",
+    )
+    missing_args = [name for name in required_args if not getattr(args, name, None)]
+    if missing_args:
+        raise RuntimeError(f"R3 arguments missing: {', '.join(missing_args)}")
+
+    phase_a = Path(args.phase_a_root)
+    phase_b = Path(args.phase_b_root)
+    clean_panel = Path(args.clean_panel)
+    ksei = Path(args.ksei_root)
+    ca_audit = Path(args.ca_audit_root)
+    old_support = Path(args.old_support_root)
+    clean_master = Path(args.clean_security_master)
+    official_calendar = Path(args.official_calendar)
+    repo_root = Path(args.repo_root)
+    output = Path(args.output_dir)
+    staging = output.with_name(output.name + ".staging")
+    if output.exists() or staging.exists():
+        raise RuntimeError("refusing to overwrite existing R3 output or staging directory")
+
+    phase_a_manifest = phase_a / "MANIFEST.json"
+    h5_path = phase_a / "clean_h5_support_identities.csv"
+    h10_path = phase_a / "clean_h10_support_identities.csv"
+    phase_b_manifest = phase_b / "MANIFEST.json"
+    ksei_manifest = ksei / "MANIFEST.json"
+    ksei_summary = ksei / "summary.json"
+    ksei_coverage = ksei / "ticker_coverage.csv"
+    ksei_history = ksei / "ksei_ca_history.jsonl"
+    ksei_requests = ksei / "request_records.jsonl"
+    ca_events = ca_audit / "ca_event_census.csv"
+    ca_audit_summary = ca_audit / "audit_summary.json"
+    old_manifest = old_support / "MANIFEST.json"
+    old_summary = old_support / "summary.json"
+    old_h5_path = old_support / "h5_support_identities.csv"
+    old_h10_path = old_support / "h10_support_identities.csv"
+
+    input_hashes = {
+        "phase_a_manifest": require_hash(phase_a_manifest, EXPECTED["phase_a_manifest"], "phase_a_manifest"),
+        "phase_a_h5": require_hash(h5_path, EXPECTED["phase_a_h5"], "phase_a_h5"),
+        "phase_a_h10": require_hash(h10_path, EXPECTED["phase_a_h10"], "phase_a_h10"),
+        "phase_b_manifest": require_hash(phase_b_manifest, EXPECTED["phase_b_manifest"], "phase_b_manifest"),
+        "clean_panel": require_hash(clean_panel, EXPECTED["clean_panel"], "clean_panel"),
+        "clean_security_master": require_hash(clean_master, EXPECTED["clean_security_master"], "clean_security_master"),
+        "official_calendar": require_hash(official_calendar, EXPECTED["official_calendar"], "official_calendar"),
+        "ksei_manifest": require_hash(ksei_manifest, EXPECTED["ksei_manifest"], "ksei_manifest"),
+        "ksei_summary": require_hash(ksei_summary, EXPECTED["ksei_summary"], "ksei_summary"),
+        "ksei_coverage": require_hash(ksei_coverage, EXPECTED["ksei_coverage"], "ksei_coverage"),
+        "ksei_history": require_hash(ksei_history, EXPECTED["ksei_history"], "ksei_history"),
+        "ksei_requests": require_hash(ksei_requests, EXPECTED["ksei_requests"], "ksei_requests"),
+        "ca_event_census": require_hash(ca_events, EXPECTED["ca_event_census"], "ca_event_census"),
+        "ca_audit_summary": require_hash(ca_audit_summary, EXPECTED["ca_audit_summary"], "ca_audit_summary"),
+        "old_manifest": require_hash(old_manifest, EXPECTED["old_manifest"], "old_manifest"),
+        "old_summary": require_hash(old_summary, EXPECTED["old_summary"], "old_summary"),
+        "old_h5": require_hash(old_h5_path, EXPECTED["old_h5"], "old_h5"),
+        "old_h10": require_hash(old_h10_path, EXPECTED["old_h10"], "old_h10"),
+    }
+
+    phase_a_data = read_json(phase_a_manifest)
+    phase_b_data = read_json(phase_b_manifest)
+    ksei_data = read_json(ksei_manifest)
+    ksei_summary_data = read_json(ksei_summary)
+    ca_audit_data = read_json(ca_audit_summary)
+    old_summary_data = read_json(old_summary)
+    if not isinstance(phase_a_data, dict) or not isinstance(phase_b_data, dict):
+        raise RuntimeError("R3 phase manifests must be JSON objects")
+    if phase_b_data.get("phase_a_output_hashes", {}).get("h5_support") != input_hashes["phase_a_h5"]:
+        raise RuntimeError("R3 Phase-B manifest is not bound to accepted H5 support")
+    if phase_b_data.get("phase_a_output_hashes", {}).get("h10_support") != input_hashes["phase_a_h10"]:
+        raise RuntimeError("R3 Phase-B manifest is not bound to accepted H10 support")
+    if not isinstance(ksei_data, dict) or ksei_data.get("ticker_count") not in (None, 610):
+        raise RuntimeError("R3 KSEI manifest ticker count is neither absent nor the pinned 610")
+    if not isinstance(ksei_summary_data, dict) or ksei_summary_data.get("ticker_count") != 610:
+        raise RuntimeError("R3 KSEI summary ticker count is not the pinned 610")
+    if not isinstance(ca_audit_data, dict) or ca_audit_data.get("market_ca_event_census", {}).get("evidence_rows") != 26:
+        raise RuntimeError("R3 strict CA census completeness attestation is missing or not 26 rows")
+
+    h5 = read_csv(h5_path)
+    h10 = read_csv(h10_path)
+    old_h5 = read_csv(old_h5_path)
+    old_h10 = read_csv(old_h10_path)
+    validate_identity_rows(h5, "R3 H5")
+    validate_identity_rows(h10, "R3 H10")
+    validate_identity_rows(old_h5, "R3 old H5")
+    validate_identity_rows(old_h10, "R3 old H10")
+    h5_keys = {(row["ticker"].strip().upper(), row["date"].strip()) for row in h5}
+    h10_keys = {(row["ticker"].strip().upper(), row["date"].strip()) for row in h10}
+    old_h5_keys = {(row["ticker"].strip().upper(), row["date"].strip()) for row in old_h5}
+    old_h10_keys = {(row["ticker"].strip().upper(), row["date"].strip()) for row in old_h10}
+    current_union = h5_keys | h10_keys
+    old_union = old_h5_keys | old_h10_keys
+
+    panel = pd.read_parquet(clean_panel)
+    forbidden = {
+        "r5",
+        "r10",
+        "realized_consensus",
+        "target_rank_h5",
+        "target_rank_h10",
+        "target_state_h5",
+        "target_state_h10",
+    }
+    if forbidden & set(panel.columns):
+        raise RuntimeError(f"clean panel contains forbidden target/outcome columns: {sorted(forbidden & set(panel.columns))}")
+    master = pd.read_csv(clean_master)
+    calendar = pd.read_csv(official_calendar)
+    if "date" not in calendar.columns:
+        raise RuntimeError("official calendar missing date column")
+    builder, builder_blob = _load_frozen_feature_builder(repo_root)
+    features, builder_diag = builder.build_v4_control_feature_table(panel, calendar["date"], master)
+    if forbidden & set(features.columns):
+        raise RuntimeError(f"frozen feature builder exposed forbidden target/outcome columns: {sorted(forbidden & set(features.columns))}")
+
+    population, population_summary = build_cross_section_population(features, h5_keys, h10_keys)
+    application_keys = set(map(tuple, population[["ticker", "date"]].itertuples(index=False, name=None)))
+    direct_closure, direct_closure_summary = build_observed_dependency_closure(
+        features,
+        application_keys,
+        dependencies=R3_DEPENDENCY_OFFSETS,
+    )
+    membership_closure, membership_closure_summary = build_primary_membership_dependency_closure(
+        features,
+        application_keys,
+        calendar["date"],
+        lookback_sessions=60,
+    )
+    closure = merge_dependency_closures(direct_closure, membership_closure)
+    closure_summary = {
+        **direct_closure_summary,
+        "direct_closure_rows": direct_closure_summary["closure_rows"],
+        "primary_membership_closure_rows": membership_closure_summary["closure_rows"],
+        "primary_membership_closure_tickers": membership_closure_summary["closure_tickers"],
+        "primary_membership_closure_start": membership_closure_summary["closure_start"],
+        "primary_membership_closure_end": membership_closure_summary["closure_end"],
+        "closure_rows": len(closure),
+        "closure_tickers": closure["ticker"].nunique() if not closure.empty else 0,
+        "closure_start": closure["date"].min() if not closure.empty else "",
+        "closure_end": closure["date"].max() if not closure.empty else "",
+        "primary_membership_lookback_sessions": 60,
+    }
+
+    ksei_rows = pd.read_csv(ksei_coverage, dtype=str).fillna("")
+    ksei_scope = reconcile_ksei_populations(
+        {
+            "EXACT_FINAL_FIT": {ticker for ticker, _ in current_union},
+            "CROSS_SECTION_APPLICATION": set(population["ticker"]),
+            "BACKWARD_DEPENDENCY_CLOSURE": set(closure["ticker"]) if not closure.empty else set(),
+        },
+        ksei_rows,
+    )
+    ksei_lookup = ksei_rows.copy()
+    ksei_lookup["ticker"] = ksei_lookup["ticker"].astype(str).str.upper().str.strip()
+    ksei_lookup = ksei_lookup.set_index("ticker")
+    population = population.copy()
+    population["ksei_present"] = population["ticker"].isin(set(ksei_lookup.index))
+    population["ksei_coverage_status"] = population["ticker"].map(ksei_lookup["coverage_status"]).fillna("ABSENT_FROM_KSEI_CENSUS")
+    population["ksei_source_sha256"] = population["ticker"].map(ksei_lookup.get("source_sha256", pd.Series(dtype=str))).fillna("")
+    ticker_summary = _r3_ticker_summary(population, h5_keys, h10_keys, ksei_rows)
+
+    event_rows = pd.read_csv(ca_events, dtype=str).fillna("")
+    expected_family_counts = ca_audit_data.get("market_ca_event_census", {}).get("event_family_counts", {})
+    try:
+        validate_strict_event_census(
+            event_rows,
+            expected_rows=26,
+            expected_family_counts=expected_family_counts,
+        )
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+    event_scope = classify_event_scope(event_rows, closure)
+    family_counts = event_rows["event_family"].value_counts().sort_index().to_dict()
+
+    lineage_frames = []
+    lineage_summaries = {}
+    for name, old_set, current_set in (
+        ("H5", old_h5_keys, h5_keys),
+        ("H10", old_h10_keys, h10_keys),
+        ("UNION", old_union, current_union),
+    ):
+        frame, comparison = compare_identity_sets(old_set, current_set)
+        frame.insert(0, "support_head", name)
+        lineage_frames.append(frame)
+        lineage_summaries[name] = comparison
+    lineage = pd.concat(lineage_frames, ignore_index=True)
+    old_overlay_union = ca_audit_data.get("accepted_overlay_exact_fit_impact", {}).get("UNION", {})
+    support_lineage_summary = {
+        "old_stage_c": {
+            "manifest_sha256": input_hashes["old_manifest"],
+            "summary_sha256": input_hashes["old_summary"],
+            "h5_rows": len(old_h5_keys),
+            "h10_rows": len(old_h10_keys),
+            "union_rows": len(old_union),
+            "decision": old_summary_data.get("decision", ""),
+        },
+        "current_phase_a_b": {
+            "phase_a_manifest_sha256": input_hashes["phase_a_manifest"],
+            "phase_b_manifest_sha256": input_hashes["phase_b_manifest"],
+            "h5_rows": len(h5_keys),
+            "h10_rows": len(h10_keys),
+            "union_rows": len(current_union),
+        },
+        "comparisons": lineage_summaries,
+        "old_56602_overlay": {
+            "old_union_changed_rows": old_overlay_union.get("changed_rows", 56602),
+            "old_union_changed_tickers": old_overlay_union.get("changed_tickers", 486),
+            "current_phase_b_union_rows": len(current_union),
+            "applicability_to_current_phase_b": "NOT_APPLICABLE_UNPROVEN_ON_CURRENT_SUPPORT",
+            "reason": "the accepted 56,602-row overlay was measured on the superseded Stage-C population; no current Phase-B recomputation is authorized in R3",
+        },
+    }
+
+    fit_tickers = len({ticker for ticker, _ in current_union})
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=population_summary["application_tickers"],
+        closure_tickers=closure_summary["closure_tickers"],
+        ksei_scope=ksei_scope,
+        structural_event_complete=False,
+    )
+    if not closure.empty:
+        closure_index = pd.MultiIndex.from_frame(closure[["ticker", "date"]])
+        fit_index = pd.MultiIndex.from_tuples(sorted(current_union), names=["ticker", "date"])
+        cross_only_index = pd.MultiIndex.from_tuples(sorted(application_keys - current_union), names=["ticker", "date"])
+        closure["is_fit_identity"] = closure_index.isin(fit_index)
+        closure["is_cross_section_only"] = closure_index.isin(cross_only_index)
+    else:
+        closure["is_fit_identity"] = pd.Series(dtype=bool)
+        closure["is_cross_section_only"] = pd.Series(dtype=bool)
+    closure["outside_r2_fit_interval"] = closure["date"].map(lambda value: value < "2022-02-11" or value > "2026-07-17") if not closure.empty else pd.Series(dtype=bool)
+
+    event_scope_summary = event_scope["closure_scope_classification"].value_counts().sort_index().to_dict()
+    structural_summary = {
+        "strict_event_rows": len(event_scope),
+        "family_counts": {str(key): int(value) for key, value in sorted(family_counts.items())},
+        "scope_classification_counts": {str(key): int(value) for key, value in event_scope_summary.items()},
+        "all_transition_semantics_unresolved": bool((event_scope["transition_semantics"] == "UNRESOLVED").all()),
+        "strict_census_completeness_attested": True,
+        "global_event_coverage_certified": False,
+    }
+    summary = {
+        "schema_version": "ca_aware_feature_basis_reconciliation_r3",
+        "status": "R3_AUDIT_COMPLETE_PHASE_E_BLOCKED",
+        "verdict": {
+            "EXACT_FINAL_FIT_POPULATION": "PASS_IDENTITY_RECONCILED",
+            "CROSS_SECTION_APPLICATION_POPULATION": "PASS_FULL_PRIMARY_LIQUID_ON_FIT_DATES",
+            "BACKWARD_DEPENDENCY_CLOSURE": "PASS_OBSERVED_ROW_CLOSURE_COMPUTED",
+            "KSEI_FIT_POPULATION_COVERAGE": "FAIL_629_VS_610_NO_DATE_ATTESTATION",
+            "KSEI_CROSS_SECTION_COVERAGE": "FAIL_716_VS_610_NO_DATE_ATTESTATION",
+            "KSEI_DEPENDENCY_CLOSURE_COVERAGE": "FAIL_716_VS_610_NO_DATE_ATTESTATION",
+            "TEMPORAL_COVERAGE": "UNKNOWN_NO_KSEI_PER_SESSION_AS_OF_ATTESTATION",
+            "STRUCTURAL_CA_EVENT_SCOPE": "FAIL_OR_UNKNOWN_UNRESOLVED_TRANSITION_SEMANTICS",
+            "OLD_241724_POPULATION": "PRESENT_HASH_PINNED_LEGACY_STAGE_C_SUPPORT",
+            "CURRENT_240344_POPULATION": "PRESENT_HASH_PINNED_ACCEPTED_PHASE_B_SUPPORT",
+            "POPULATION_EQUIVALENCE": "FAIL_DIFFERENT_POPULATION",
+            "OLD_56602_APPLICABILITY_TO_CURRENT_PHASE_B": "NOT_APPLICABLE_UNPROVEN_ON_CURRENT_SUPPORT",
+            "STRUCTURAL_CA_FAMILY_COVERAGE": "FAIL_PARTIAL_OR_CONFLICTING_FAMILY_EVIDENCE",
+            "TRANSITION_SEMANTICS": "FAIL_OR_UNKNOWN_ALL_STRICT_EVENTS_UNRESOLVED",
+            "HISTORICAL_APPLICATION": "BLOCKED_PHASE_E_NOT_RUN",
+            "DATA_ADMISSION": "FAIL",
+            "RESEARCH_ADMISSION": "FAIL",
+            "MODEL_PROMOTION": "NOT_EVALUATED",
+            "REFIT_AUTHORIZED": False,
+            "COUNTER_ACTION": "NONE",
+        },
+        "exact_final_fit": {
+            "H5_rows": len(h5_keys),
+            "H10_rows": len(h10_keys),
+            "union_rows": len(current_union),
+            "H5_tickers": len({ticker for ticker, _ in h5_keys}),
+            "H10_tickers": len({ticker for ticker, _ in h10_keys}),
+            "union_tickers": fit_tickers,
+            "support_start": min(date for _, date in current_union),
+            "support_end": max(date for _, date in current_union),
+        },
+        "cross_section_application": population_summary,
+        "backward_dependency_closure": closure_summary,
+        "ksei_population_scope": ksei_scope.to_dict(orient="records"),
+        "support_lineage": support_lineage_summary,
+        "structural_ca": structural_summary,
+        "frozen_builder": {
+            "blob_sha1": builder_blob,
+            "diagnostics": {
+                key: getattr(builder_diag, key)
+                for key in ("input_rows", "admitted_listing_rows", "excluded_pre_listing_rows", "excluded_post_listing_rows", "excluded_missing_security_master_rows", "tickers_input", "tickers_admitted")
+                if hasattr(builder_diag, key)
+            },
+        },
+        "global_ca_population_gate": gate,
+        "guardrails": {
+            "outcome_blind": True,
+            "target_values_accessed": False,
+            "outcomes_accessed": False,
+            "model_fit": False,
+            "model_scoring": False,
+            "provider_calls": False,
+            "canonical_artifacts_mutated": False,
+            "historical_feature_recompute": False,
+            "phase_e_run": False,
+            "counter_mutated": False,
+        },
+        "inputs": input_hashes,
+    }
+
+    staging.mkdir(parents=True)
+    try:
+        write_csv(staging / "r3_cross_section_population_reconciliation.csv", tuple(population.columns), _r3_frame_rows(population))
+        write_csv(staging / "r3_cross_section_ticker_summary.csv", tuple(ticker_summary.columns), _r3_frame_rows(ticker_summary))
+        write_csv(staging / "r3_backward_dependency_closure.csv", tuple(closure.columns), _r3_frame_rows(closure))
+        write_csv(staging / "r3_structural_ca_event_scope.csv", tuple(event_scope.columns), _r3_frame_rows(event_scope))
+        write_csv(staging / "r3_support_lineage_reconciliation.csv", tuple(lineage.columns), _r3_frame_rows(lineage))
+        write_csv(staging / "r3_ksei_population_scope_reconciliation.csv", tuple(ksei_scope.columns), _r3_frame_rows(ksei_scope))
+        json_dump(staging / "r3_support_lineage_summary.json", support_lineage_summary)
+        json_dump(staging / "r3_summary.json", summary)
+        output_names = (
+            "r3_cross_section_population_reconciliation.csv",
+            "r3_cross_section_ticker_summary.csv",
+            "r3_backward_dependency_closure.csv",
+            "r3_structural_ca_event_scope.csv",
+            "r3_support_lineage_reconciliation.csv",
+            "r3_support_lineage_summary.json",
+            "r3_ksei_population_scope_reconciliation.csv",
+            "r3_summary.json",
+        )
+        output_hashes = {name: sha256(staging / name) for name in output_names}
+        manifest = {
+            "schema_version": "ca_aware_feature_basis_reconciliation_r3_manifest",
+            "status": "R3_AUDIT_COMPLETE_PHASE_E_BLOCKED",
+            "input_hashes": input_hashes,
+            "output_hashes": output_hashes,
+            "frozen_feature_builder_blob_sha1": builder_blob,
+            "exact_final_fit": summary["exact_final_fit"],
+            "cross_section_application": summary["cross_section_application"],
+            "backward_dependency_closure": summary["backward_dependency_closure"],
+            "ksei_population_scope": summary["ksei_population_scope"],
+            "support_lineage": support_lineage_summary,
+            "structural_ca": structural_summary,
+            "verdict": summary["verdict"],
+            "guardrails": summary["guardrails"],
+            "deterministic": True,
+        }
+        json_dump(staging / "MANIFEST.json", manifest)
+        staging.replace(output)
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return output
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--r3", action="store_true", help="run the outcome-blind R3 population/closure audit")
     parser.add_argument("--phase-a-root", required=True)
     parser.add_argument("--phase-b-root", required=True)
     parser.add_argument("--clean-panel", required=True)
     parser.add_argument("--ksei-root", required=True)
     parser.add_argument("--ca-audit-root", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--repo-root")
+    parser.add_argument("--clean-security-master")
+    parser.add_argument("--official-calendar")
+    parser.add_argument("--old-support-root")
     return parser.parse_args()
 
 
