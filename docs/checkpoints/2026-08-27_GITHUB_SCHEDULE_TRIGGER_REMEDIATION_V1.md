@@ -2,7 +2,7 @@
 
 Date: 2026-08-27 Asia/Jakarta  
 Lane: `ops/github-schedule-watchdog-v1`  
-Status: `WATCHDOG_REGISTERED_POST_CLOSE_PROOF_PENDING`
+Status: `WATCHDOG_REGISTERED_MORNING_AND_POST_CLOSE_PROOF_PENDING`
 
 ## Incident evidence
 
@@ -84,6 +84,20 @@ The production workflows' own concurrency/idempotency and current-session
 guards remain authoritative. A watchdog query failure or dispatch failure is
 fail-closed and never turns into provider capture.
 
+The watchdog also has bounded morning fallback slots. They dispatch only the
+existing workflows and never dispatch an expired morning stage:
+
+| WIB check | Existing workflow input | Validity boundary |
+| --- | --- | --- |
+| 08:30, 08:45, 08:55 | E2E `phase=PREOPEN_CA` | strictly before 09:02 |
+| 09:02, 09:12, 09:22 | Official Open `slot=0902/0912/0922` | short slot-specific retry window |
+| 09:03, 09:13, 09:22 | E2E `phase=PREOPEN` | short slot-specific retry window |
+
+The Windows task checks at 08:34, 08:49, 08:59, 09:06, 09:16, and 09:26
+WIB, plus the existing post-close checks. A logon after a morning hard
+boundary is a no-op for that expired stage; it cannot create a retroactive
+PREOPEN_CA, Official Open, or PREOPEN capture.
+
 ## Local deployment evidence
 
 The reversible fallback task was registered after the implementation commit
@@ -94,6 +108,7 @@ The reversible fallback task was registered after the implementation commit
 - action: the exact Python 3.13 executable plus the watchdog script, repository
   name, external state root, and `gh.exe` path only; no credential argument;
 - daily checks: 18:40, 19:10, 19:40, and 20:40 WIB, plus `AtLogOn`;
+- morning checks: 08:34, 08:49, 08:59, 09:06, 09:16, and 09:26 WIB;
 - settings: `StartWhenAvailable`, `MultipleInstances=IgnoreNew`,
   `RunOnlyIfNetworkAvailable`, and battery start/stop allowed;
 - the pre-existing `IDX-Trade Stockbit Intraday Daily` task remains disabled.
@@ -117,7 +132,7 @@ Enable-ScheduledTask -TaskName 'IDX-Trade Stockbit Intraday Daily' -TaskPath '\\
 
 ## Validation status
 
-- watchdog focused tests: 7 passed;
+- watchdog focused tests: 11 passed;
 - full pytest: 838 passed, 3 existing warnings, exit code 0 using a fresh
   Windows basetemp;
 - Python compile: pass;
