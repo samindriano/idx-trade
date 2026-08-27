@@ -62,6 +62,47 @@ def test_missing_native_runs_dispatches_due_post_close_slots(tmp_path: Path) -> 
     assert all("ZAPI_API_KEY" not in " ".join(call) for call in calls)
 
 
+def test_missing_native_runs_dispatch_due_morning_stages(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs({})
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 9, 6, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    assert [action["slot"] for action in result["actions"]] == [
+        "OFFICIAL_OPEN_0902",
+        "E2E_PREOPEN_0903",
+    ]
+    assert all(action["status"] == "DISPATCH_REQUESTED" for action in result["actions"])
+    assert any("official-open-prospective-cloud-capture.yml" in call for call in calls)
+    assert any("e2e-paper-cloud-orchestration.yml" in call for call in calls)
+
+
+def test_preopen_ca_never_dispatches_at_or_after_hard_cutoff(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs({})
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 9, 2, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    assert all(action["slot"] != "E2E_PREOPEN_CA_0855" for action in result["actions"])
+    assert not any("PREOPEN_CA" in " ".join(call) for call in calls)
+
+
+def test_morning_dispatch_does_not_backfill_expired_slot(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs({})
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 9, 10, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    assert result["actions"] == []
+    assert calls == []
+
+
 def test_existing_schedule_or_dispatch_run_suppresses_duplicate(tmp_path: Path) -> None:
     created = "2026-08-27T11:31:00Z"
     runner, calls = _runner_with_runs(
@@ -102,7 +143,7 @@ def test_next_day_never_dispatches_previous_session(tmp_path: Path) -> None:
     runner, calls = _runner_with_runs({})
     result = run_once(
         state_root=tmp_path,
-        now=datetime(2026, 8, 28, 9, 0, tzinfo=JAKARTA),
+        now=datetime(2026, 8, 28, 9, 30, tzinfo=JAKARTA),
         runner=runner,
     )
     assert result["status"] == "NO_DUE_SLOTS"
@@ -133,3 +174,13 @@ def test_installer_contract_allows_lightweight_watchdog_on_battery() -> None:
     text = installer.read_text(encoding="utf-8")
     assert "-AllowStartIfOnBatteries" in text
     assert "-DontStopIfGoingOnBatteries" in text
+
+
+def test_installer_contract_has_morning_and_post_close_checks() -> None:
+    installer = Path(__file__).parents[1] / "scripts" / "install_github_schedule_watchdog.ps1"
+    text = installer.read_text(encoding="utf-8")
+    assert "AddHours(8).AddMinutes(34)" in text
+    assert "AddHours(8).AddMinutes(49)" in text
+    assert "AddHours(8).AddMinutes(59)" in text
+    assert "AddHours(9).AddMinutes(6)" in text
+    assert "AddHours(18).AddMinutes(40)" in text

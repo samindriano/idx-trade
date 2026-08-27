@@ -32,6 +32,12 @@ $argument = '"{0}" --repo "samindriano/idx-trade" --state-root "{1}" --gh-exe "{
 $action = New-ScheduledTaskAction -Execute $resolvedPython -Argument $argument
 $today = (Get-Date).Date
 $triggers = @(
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(8).AddMinutes(34)),
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(8).AddMinutes(49)),
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(8).AddMinutes(59)),
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(9).AddMinutes(6)),
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(9).AddMinutes(16)),
+    (New-ScheduledTaskTrigger -Daily -At $today.AddHours(9).AddMinutes(26)),
     (New-ScheduledTaskTrigger -Daily -At $today.AddHours(18).AddMinutes(40)),
     (New-ScheduledTaskTrigger -Daily -At $today.AddHours(19).AddMinutes(10)),
     (New-ScheduledTaskTrigger -Daily -At $today.AddHours(19).AddMinutes(40)),

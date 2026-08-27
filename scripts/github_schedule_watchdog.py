@@ -37,9 +37,99 @@ class Slot:
     workflow_id: str
     input_name: str
     input_value: str
+    latest_local: time | None = None
+
+    def window_end(self, day: date) -> datetime:
+        if self.latest_local is not None:
+            return datetime.combine(day, self.latest_local, tzinfo=JAKARTA)
+        return _slot_due(day, self) + LATE_GRACE
 
 
 SLOTS: tuple[Slot, ...] = (
+    # Morning fallback checks are deliberately short-lived.  In particular,
+    # PREOPEN_CA is never dispatched at or after the existing 09:02 WIB hard
+    # cutoff; a later logon cannot turn it into a retroactive capture.
+    Slot(
+        "E2E_PREOPEN_CA_0830",
+        time(8, 30),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN_CA",
+        latest_local=time(8, 39),
+    ),
+    Slot(
+        "E2E_PREOPEN_CA_0845",
+        time(8, 45),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN_CA",
+        latest_local=time(8, 54),
+    ),
+    Slot(
+        "E2E_PREOPEN_CA_0855",
+        time(8, 55),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN_CA",
+        latest_local=time(9, 2),
+    ),
+    Slot(
+        "OFFICIAL_OPEN_0902",
+        time(9, 2),
+        "official-open-prospective-cloud-capture.yml",
+        "official-open-prospective-cloud-capture.yml",
+        "slot",
+        "0902",
+        latest_local=time(9, 8),
+    ),
+    Slot(
+        "E2E_PREOPEN_0903",
+        time(9, 3),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN",
+        latest_local=time(9, 9),
+    ),
+    Slot(
+        "OFFICIAL_OPEN_0912",
+        time(9, 12),
+        "official-open-prospective-cloud-capture.yml",
+        "official-open-prospective-cloud-capture.yml",
+        "slot",
+        "0912",
+        latest_local=time(9, 18),
+    ),
+    Slot(
+        "E2E_PREOPEN_0913",
+        time(9, 13),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN",
+        latest_local=time(9, 19),
+    ),
+    Slot(
+        "OFFICIAL_OPEN_0922",
+        time(9, 22),
+        "official-open-prospective-cloud-capture.yml",
+        "official-open-prospective-cloud-capture.yml",
+        "slot",
+        "0922",
+        latest_local=time(9, 28),
+    ),
+    Slot(
+        "E2E_PREOPEN_0922",
+        time(9, 22),
+        "e2e-paper-cloud-orchestration.yml",
+        "e2e-paper-cloud-orchestration.yml",
+        "phase",
+        "PREOPEN",
+        latest_local=time(9, 28),
+    ),
     Slot(
         "STOCKBIT_1830",
         time(18, 30),
@@ -170,7 +260,7 @@ def _query_runs(
     *, runner: Runner, repository: str, slot: Slot, due: datetime, now: datetime, gh_exe: str | None
 ) -> list[dict[str, Any]]:
     start = due - RUN_LOOKBACK
-    end = min(now, due + LATE_GRACE)
+    end = min(now, slot.window_end(due.date()))
     if end < start:
         return []
     gh = gh_exe or shutil.which("gh") or "gh"
@@ -272,7 +362,7 @@ def run_once(
     actions: list[dict[str, Any]] = []
     for slot in SLOTS:
         due = _slot_due(current.date(), slot)
-        if not (due <= current <= due + LATE_GRACE):
+        if not (due <= current < slot.window_end(current.date())):
             continue
         marker = _marker_path(state_root, current.date(), slot)
         try:
