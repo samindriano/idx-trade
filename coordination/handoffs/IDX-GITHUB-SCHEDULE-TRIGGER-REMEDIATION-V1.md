@@ -8,7 +8,8 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: f6b032350ac5a10feac7c1e093b523a4f91261f9
 branch: ops/github-schedule-watchdog-v1
-head_commit: implementation pending final commit
+implementation_head_commit: 1fd471db8c44d11433b3bf16ef784cd9ed0cae1d
+documentation_head_commit: reported externally after this documentation commit
 scope: Diagnose missed GitHub native schedule delivery and add a reversible trigger-only watchdog fallback.
 files_changed:
   - scripts/github_schedule_watchdog.py
@@ -26,8 +27,10 @@ decisions_made:
   - Keep existing production workflows and capture implementations unchanged.
   - Query current-day GitHub run metadata before dispatch; suppress duplicates and fail closed on query errors.
   - Do not dispatch previous dates and do not perform provider capture from the watchdog.
+  - Register one reversible Windows watchdog task only after Cloudflare/Wrangler was shown unavailable locally.
+  - Keep battery execution enabled so the trigger-only task is not silently skipped on a laptop running unplugged.
 decisions_needed:
-  - Register the watchdog task under the current Windows user and observe one genuine post-close slot.
+  - Observe one genuine post-close slot through the existing cloud workflow path.
   - After evidence, decide whether to keep the fallback or replace it with a Cloudflare Cron implementation.
 blocking_risks:
   - The native GitHub schedule-event delivery problem remains unexplained at the GitHub service level.
@@ -35,7 +38,10 @@ blocking_risks:
   - The task requires `gh` authentication available to the same Windows user at scheduled runtime.
 validation_run:
   - `python -m py_compile scripts/github_schedule_watchdog.py`: PASS
-  - `python -m pytest -q tests/test_github_schedule_watchdog.py`: PASS (6)
+  - `python -m pytest -q tests/test_github_schedule_watchdog.py`: PASS (7)
+  - full pytest with fresh Windows basetemp: PASS (838 passed, 3 existing warnings)
+  - PowerShell installer parser: PASS
   - workflow_dispatch synthetic diagnostic 33042090215: SUCCESS
+  - registered task manual no-due smoke: PASS (`NO_DUE_SLOTS`, provider_calls=0)
   - no provider, outcome, model, PaperState, order/fill, or counter access in remediation
-recommended_next_action: Register the reversible watchdog, validate task properties, and observe the first genuine 18:30/18:35 WIB post-close pair without manually dispatching production workflows.
+recommended_next_action: Observe the first genuine 18:30/18:35 WIB post-close pair without manually dispatching production workflows; treat the existing cloud workflow result as authoritative.

@@ -2,7 +2,7 @@
 
 Date: 2026-08-27 Asia/Jakarta  
 Lane: `ops/github-schedule-watchdog-v1`  
-Status: `IMPLEMENTED_PENDING_RUNTIME_INSTALL_AND_POST_CLOSE_PROOF`
+Status: `WATCHDOG_REGISTERED_POST_CLOSE_PROOF_PENDING`
 
 ## Incident evidence
 
@@ -84,6 +84,25 @@ The production workflows' own concurrency/idempotency and current-session
 guards remain authoritative. A watchdog query failure or dispatch failure is
 fail-closed and never turns into provider capture.
 
+## Local deployment evidence
+
+The reversible fallback task was registered after the implementation commit
+`1fd471db8c44d11433b3bf16ef784cd9ed0cae1d`:
+
+- task: `IDXTrade-GitHub-Cloud-Dispatch-Watchdog`;
+- state: `Ready`, enabled, current user `Sam`, run level `Limited`;
+- action: the exact Python 3.13 executable plus the watchdog script, repository
+  name, external state root, and `gh.exe` path only; no credential argument;
+- daily checks: 18:40, 19:10, 19:40, and 20:40 WIB, plus `AtLogOn`;
+- settings: `StartWhenAvailable`, `MultipleInstances=IgnoreNew`,
+  `RunOnlyIfNetworkAvailable`, and battery start/stop allowed;
+- the pre-existing `IDX-Trade Stockbit Intraday Daily` task remains disabled.
+
+A manual task start at 13:04 WIB completed with `LastTaskResult=0` and wrote
+the safe operational event `NO_DUE_SLOTS` with `provider_calls=0`. This is a
+provider-free execution check, not post-close production proof. Genuine
+18:30/18:35, 19:05/19:35, and 20:30 slots remain the authoritative next proof.
+
 ## Existing local automation isolation
 
 The existing `IDX-Trade Stockbit Intraday Daily` Windows task remains disabled
@@ -98,10 +117,14 @@ Enable-ScheduledTask -TaskName 'IDX-Trade Stockbit Intraday Daily' -TaskPath '\\
 
 ## Validation status
 
-- watchdog focused tests: 6 passed;
+- watchdog focused tests: 7 passed;
+- full pytest: 838 passed, 3 existing warnings, exit code 0 using a fresh
+  Windows basetemp;
 - Python compile: pass;
-- PowerShell installer parse: pending final install validation;
+- PowerShell installer parse: pass;
 - workflow-dispatch diagnostic: success as recorded above;
+- registered-task manual no-due smoke: pass, `NO_DUE_SLOTS`, zero provider
+  calls;
 - production post-close trigger proof: pending the first genuine slot;
 - no provider capture was initiated by this remediation.
 
