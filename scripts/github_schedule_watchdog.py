@@ -25,7 +25,11 @@ JAKARTA = timezone(timedelta(hours=7), name="Asia/Jakarta")
 DEFAULT_REPOSITORY = "samindriano/idx-trade"
 DEFAULT_STATE_ROOT = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "IDXTrade" / "github_schedule_watchdog_v1"
 WATCHDOG_SCHEMA = "idx_trade_github_schedule_watchdog_v1"
-RUN_LOOKBACK = timedelta(minutes=15)
+# Keep the lower bound narrow enough that a prior phase of the same workflow
+# (for example E2E POST_EOD 18:35 versus 19:05) cannot masquerade as coverage
+# for the current slot. A delayed run is still observed because its created_at
+# is after the current slot's due time.
+RUN_LOOKBACK = timedelta(minutes=2)
 LATE_GRACE = timedelta(hours=2)
 
 

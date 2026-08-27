@@ -121,6 +121,33 @@ def test_existing_schedule_or_dispatch_run_suppresses_duplicate(tmp_path: Path) 
     assert len(dispatch_calls) == 1
 
 
+def test_prior_same_workflow_slot_does_not_suppress_current_slot(tmp_path: Path) -> None:
+    runner, calls = _runner_with_runs(
+        {
+            "e2e-paper-cloud-orchestration.yml": [
+                {
+                    "id": 456,
+                    "event": "workflow_dispatch",
+                    "head_branch": "main",
+                    "created_at": "2026-08-27T11:36:00Z",
+                }
+            ]
+        }
+    )
+    result = run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 8, 27, 19, 10, tzinfo=JAKARTA),
+        runner=runner,
+    )
+
+    e2e_retry = next(action for action in result["actions"] if action["slot"] == "E2E_1905")
+    assert e2e_retry["status"] == "DISPATCH_REQUESTED"
+    assert any(
+        "e2e-paper-cloud-orchestration.yml" in call and "POST_EOD" in " ".join(call)
+        for call in calls
+    )
+
+
 def test_marker_prevents_repeat_when_github_run_is_not_yet_visible(tmp_path: Path) -> None:
     runner, _ = _runner_with_runs({})
     first = run_once(
