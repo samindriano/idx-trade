@@ -22,6 +22,7 @@ files_changed:
   - `tests/test_ca_aware_feature_basis_reconciliation_v1.py`
   - `docs/checkpoints/2026-08-27_CA_AWARE_FEATURE_BASIS_REMEDIATION_V1_A_D_AUDIT.md`
   - `coordination/handoffs/IDX-CA-AWARE-FEATURE-BASIS-REMEDIATION-V1-A-D-AUDIT.md`
+  - `docs/checkpoints/2026-08-27_CA_AWARE_FEATURE_BASIS_REMEDIATION_V1_A_D_AUDIT_R2.md`
 
 findings:
   - `H5=239648` rows and `H10=237976` rows; deduplicated union `240344`; all have `629` unique tickers.
@@ -55,6 +56,8 @@ validation_run:
   - `git diff --check` — **PASS**.
   - Offline reconciliation run into `D:\Documents\Project\idx-ca-aware-feature-basis-remediation-20260827-v1` — **complete**.
   - Fresh-root deterministic rerun — **0 output-hash mismatches**.
+  - R2 runner correction verified the full clean-panel observation interval (`2021-04-29` — `2026-07-31`) from the hash-pinned date column only; fresh-root R2 rerun — **0 output-hash mismatches**. R2 output root: `D:\Documents\Project\idx-ca-aware-feature-basis-remediation-20260827-v2`; manifest SHA: `0a83472bf04cdd8d7d62cfd0e59d8323ba46065f7079d3298059e7f1e60e6fb7`.
+  - Focused post-R2 suite — **84 passed**; fresh-basetemp full repository suite — **323 passed**; `py_compile` — **PASS**; `git diff --check` — **PASS**.
 
 recommended_next_action: |
   Keep INC-001 open and all historical CA-aware model admission blocked. Review

@@ -12,7 +12,6 @@ import argparse
 import csv
 import hashlib
 import json
-import os
 import re
 import shutil
 from collections import Counter, defaultdict
@@ -25,6 +24,7 @@ EXPECTED = {
     "phase_a_h5": "c4768bf09956ec0599df2bcefe4aa26fba3608178110dc2a6d64f9f68e8b0049",
     "phase_a_h10": "b537d2ebea9610431522199e6221abe6b13cd96a6b1d487ad761ae4ba46a191b",
     "phase_b_manifest": "30e1b505a731da944021078a80d62d75afe7bd461507b2d207b28849140f79cf",
+    "clean_panel": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
     "ksei_manifest": "7cc3ac4d409c3e15c6aa566b63bedab4268562fd4914d1af198ab29657dba25a",
     "ksei_summary": "a046637fbcff69cbc42c09e4cac30d9181b2ce93a3cf7297a9a01cfc23a2f422",
     "ksei_coverage": "bb5414125862411e5d3ee760f8e7415b8418803c71d1cc1ef26fb0c55397bc70",
@@ -116,6 +116,26 @@ def _timestamp_bounds(request_rows: Sequence[Mapping[str, str]]) -> tuple[str, s
     return (values[0], values[-1]) if values else ("", "")
 
 
+def clean_panel_interval(path: Path) -> dict[str, object]:
+    """Read only the date column needed to pin the full observation interval."""
+    try:
+        import pyarrow.parquet as parquet
+    except ImportError as exc:  # pragma: no cover - environment contract
+        raise RuntimeError("clean panel date interval requires pyarrow") from exc
+    schema = parquet.read_schema(path)
+    if "date" not in schema.names:
+        raise RuntimeError("clean panel is missing the required date column")
+    table = parquet.read_table(path, columns=["date"])
+    dates = []
+    for value in table.column("date").to_pylist():
+        if hasattr(value, "date") and callable(value.date):
+            value = value.date()
+        dates.append(value.isoformat() if hasattr(value, "isoformat") else str(value))
+    if not dates or any(not DATE_RE.fullmatch(value) for value in dates):
+        raise RuntimeError("clean panel contains an empty or malformed date interval")
+    return {"row_count": len(dates), "start": min(dates), "end": max(dates)}
+
+
 def _family_verdict(family: str, count: int) -> tuple[str, str, str]:
     if family in {"MANDATORY_CONVERSION", "VOLUNTARY_CONVERSION"}:
         return (
@@ -145,6 +165,7 @@ def _family_verdict(family: str, count: int) -> tuple[str, str, str]:
 def run(args: argparse.Namespace) -> Path:
     phase_a = Path(args.phase_a_root)
     phase_b = Path(args.phase_b_root)
+    clean_panel = Path(args.clean_panel)
     ksei = Path(args.ksei_root)
     ca_audit = Path(args.ca_audit_root)
     output = Path(args.output_dir)
@@ -168,6 +189,7 @@ def run(args: argparse.Namespace) -> Path:
         "phase_a_h5": require_hash(h5_path, EXPECTED["phase_a_h5"], "phase_a_h5"),
         "phase_a_h10": require_hash(h10_path, EXPECTED["phase_a_h10"], "phase_a_h10"),
         "phase_b_manifest": require_hash(phase_b_manifest, EXPECTED["phase_b_manifest"], "phase_b_manifest"),
+        "clean_panel": require_hash(clean_panel, EXPECTED["clean_panel"], "clean_panel"),
         "ksei_manifest": require_hash(ksei_manifest, EXPECTED["ksei_manifest"], "ksei_manifest"),
         "ksei_summary": require_hash(ksei_summary, EXPECTED["ksei_summary"], "ksei_summary"),
         "ksei_coverage": require_hash(ksei_coverage, EXPECTED["ksei_coverage"], "ksei_coverage"),
@@ -210,6 +232,7 @@ def run(args: argparse.Namespace) -> Path:
             if isinstance(row, dict):
                 request_rows.append(row)
     observed_start, observed_end = _timestamp_bounds(request_rows)
+    feature_interval = clean_panel_interval(clean_panel)
 
     by_ticker_h5: Counter[str] = Counter(ticker for ticker, _ in h5_keys)
     by_ticker_h10: Counter[str] = Counter(ticker for ticker, _ in h10_keys)
@@ -338,6 +361,17 @@ def run(args: argparse.Namespace) -> Path:
             "reason": "support identity interval is exact; it is not CA source coverage",
         },
         {
+            "scope": "CLEAN_FEATURE_PANEL_OBSERVATION_INTERVAL",
+            "source": "hash-pinned clean model-safe panel date column only",
+            "start_session": feature_interval["start"],
+            "end_session": feature_interval["end"],
+            "observed_at_start_utc": "",
+            "observed_at_end_utc": "",
+            "certified": True,
+            "verdict": "PASS_OBSERVATION_INTERVAL_ONLY",
+            "reason": "full clean panel interval is wider than exact final-fit support and is the required historical comparison boundary",
+        },
+        {
             "scope": "KSEI_SOURCE_SNAPSHOT",
             "source": "pinned KSEI request_records.jsonl",
             "start_session": "",
@@ -433,6 +467,7 @@ def run(args: argparse.Namespace) -> Path:
             "support_end": event_max,
             "h5_h10_overlap_rows": len(h5_keys & h10_keys),
         },
+        "historical_feature_observation_interval": feature_interval,
         "ksei_population": {
             "ticker_count": len(ksei_tickers),
             "coverage_certified": sum(row.get("coverage_status") == "COVERAGE_CERTIFIED" for row in ksei_rows),
@@ -452,6 +487,7 @@ def run(args: argparse.Namespace) -> Path:
             "coverage_observed_at_field_present": False,
             "per_session_no_event_attestation": False,
             "dependencies": {"close_return_5": 5, "close_return_20": 20, "atr14_over_close": 14, "rolling20": 20, "rolling60": 59},
+            "historical_feature_observation_interval": feature_interval,
         },
         "structural_ca": {
             "strict_event_rows": len(event_rows),
@@ -512,6 +548,7 @@ def run(args: argparse.Namespace) -> Path:
             "exact_final_fit": summary["exact_final_fit"],
             "ksei_population": summary["ksei_population"],
             "temporal_coverage": summary["temporal_coverage"],
+            "historical_feature_observation_interval": feature_interval,
             "structural_ca": summary["structural_ca"],
             "guardrails": summary["guardrails"],
             "deterministic": True,
@@ -528,6 +565,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase-a-root", required=True)
     parser.add_argument("--phase-b-root", required=True)
+    parser.add_argument("--clean-panel", required=True)
     parser.add_argument("--ksei-root", required=True)
     parser.add_argument("--ca-audit-root", required=True)
     parser.add_argument("--output-dir", required=True)

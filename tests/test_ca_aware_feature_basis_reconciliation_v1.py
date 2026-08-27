@@ -37,6 +37,7 @@ def test_run_refuses_existing_output_or_staging(tmp_path) -> None:
     args = Namespace(
         phase_a_root=str(tmp_path / "phase-a"),
         phase_b_root=str(tmp_path / "phase-b"),
+        clean_panel=str(tmp_path / "clean-panel.parquet"),
         ksei_root=str(tmp_path / "ksei"),
         ca_audit_root=str(tmp_path / "ca"),
         output_dir=str(output),
@@ -51,6 +52,7 @@ def test_run_refuses_existing_staging(tmp_path) -> None:
     args = Namespace(
         phase_a_root=str(tmp_path / "phase-a"),
         phase_b_root=str(tmp_path / "phase-b"),
+        clean_panel=str(tmp_path / "clean-panel.parquet"),
         ksei_root=str(tmp_path / "ksei"),
         ca_audit_root=str(tmp_path / "ca"),
         output_dir=str(output),
