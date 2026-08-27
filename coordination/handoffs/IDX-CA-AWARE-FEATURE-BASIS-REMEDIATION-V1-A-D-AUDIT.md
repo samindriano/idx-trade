@@ -8,7 +8,7 @@ reasoning_level: xhigh
 source_repository: `samindriano/idx-trade`  
 source_commit: `8199e2477b764bd323f65265de9129e640c74f42`  
 branch: `data/ca-aware-feature-basis-remediation-v1`  
-head_commit: `pending final audit commit`  
+head_commit: `a619f37ca3fe7d41f02cca13246f83daf8d8f731`
 
 scope: |
   Outcome-blind Phase-A exact-fit population reconciliation, Phase-B temporal/
