@@ -88,8 +88,7 @@ secret is accepted by the Worker configuration.
   Wrangler 4.127.0, active binding and five Cron expressions visible, no
   deployment occurred.
 - focused watchdog tests: 29/29 PASS; related E2E activation/synthetic tests:
-  19/19 PASS; full repository pytest is required again after final branch
-  integration.
+  19/19 PASS; full repository pytest: 349/349 PASS.
 - PyYAML syntax parse: 10 workflow files plus 3 Wrangler configs PASS;
   `actionlint` and `yamllint` are unavailable in this environment.
 - Node syntax/import checks and `git diff --check`: PASS.
