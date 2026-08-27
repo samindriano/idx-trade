@@ -1,7 +1,7 @@
 # CA-Aware Feature-Basis Policy V1
 
-Status: `FROZEN_POLICY_PENDING_IMPLEMENTATION`
-Date: 2026-08-26
+Status: `FROZEN_POLICY_IMPLEMENTATION_HARDENED`
+Date: 2026-08-27
 Owner lane: Research Integrity / Data QA Gate V1
 Incident: `INC-001 — Historical CA / backward feature price-basis integrity`
 
@@ -33,6 +33,8 @@ This policy is data/research-integrity remediation. It does not authorize any ch
 
 Implementation under this policy must remain outcome-blind until a separate model decision is explicitly authorized.
 
+The 2026-08-27 hardening is a fail-closed source/taxonomy correction made before historical application. It adds no model hypothesis and was not informed by performance or protected outcomes.
+
 ## Definitions
 
 ### Compatible price-basis epoch
@@ -44,6 +46,8 @@ An epoch boundary is created only by source-backed evidence and explicit event s
 ### Structural CA candidate
 
 A corporate action is a structural CA candidate when it may mechanically change the economic/share basis of raw market prices or make a naive lag/rolling comparison across the event invalid.
+
+Structural-candidate classification is deliberately broader than “proved basis change.” A candidate remains `UNKNOWN` until event-specific evidence resolves the transition or explicitly justifies `NOT_BASIS_CHANGING`.
 
 ### Transition session
 
@@ -66,9 +70,14 @@ No generic corporate-action multiplier is permitted across event families.
 | `STOCK_DIVIDEND` | basis boundary candidate | no generic split assumption | event-specific semantics + transition session |
 | `BONUS_SHARES` | basis boundary candidate | no generic split assumption | event-specific semantics + transition session |
 | `RIGHTS_HMETD` | basis boundary candidate | **no** | transition session; terms/TERP required only if an adjustment is later proposed |
-| `MANDATORY_CONVERSION` | basis boundary candidate | **no** | event-specific semantics + transition session |
-| `CAPITAL_RESTRUCTURING` | basis boundary candidate | **no** | event-specific semantics + transition session |
+| `MANDATORY_CONVERSION` | basis boundary candidate | **no** | event-specific security/conversion semantics + transition session |
+| `VOLUNTARY_CONVERSION` | structural candidate until event-specific resolution | **no** | prove security-to-security basis transition, or explicitly justify `NOT_BASIS_CHANGING` for cash/security-to-currency settlement; never alias blindly to mandatory conversion |
+| `CAPITAL_RESTRUCTURING` | basis boundary candidate | **no** | event-specific semantics + transition session; source-native merger/restructuring aliases remain unresolved unless explicitly source-bound |
 | `CASH_DIVIDEND` | not a basis reset by default | not applicable | raw-price economic gap is retained unless source adjustment regime itself changes |
+
+`CAPITAL_RESTRUCTURING` is the V1 umbrella for source-native labels such as `MERGER_OR_RESTRUCTURING` only after event-specific source semantics are established. The existence of a merger announcement alone does not prove a price-basis boundary, and absence of an explicit transition does not prove harmlessness.
+
+Historical forensic evidence showed that source-native `Voluntary Conversion` was heterogeneous: some security-to-currency/cash-like rows are correctly non-blocking, while other rows remain schedule-required. Therefore `VOLUNTARY_CONVERSION` is a distinct structural candidate family and must not be normalized wholesale to `MANDATORY_CONVERSION`.
 
 Unknown/new event families default to `UNKNOWN` and cannot be silently treated as non-events.
 
@@ -119,6 +128,30 @@ NOT_BASIS_CHANGING
 `UNRESOLVED` means the available evidence cannot safely bound the transition.
 
 `NOT_BASIS_CHANGING` must be justified by event-family semantics, not absence of an observed price jump.
+
+## No-event coverage, population, and temporal provenance
+
+Absence of a structural event from an event ledger is not evidence that no event occurred. A `BASIS_SAFE` decision that depends on “no structural event in this history” requires explicit source-coverage evidence.
+
+Coverage claims are scoped simultaneously by:
+
+```text
+exact ticker identity
+structural event family
+start official session
+end official session
+source observation / as-of time
+source contract
+immutable evidence hash
+```
+
+A ticker-level statement such as “the issuer history page parsed successfully” may not be stretched to an arbitrary research interval. The requested analysis interval is not itself evidence of source coverage. If source-backed start/end/as-of scope is absent or the requested interval exceeds it, required coverage is `UNKNOWN`.
+
+Likewise, a coverage census built for one frozen population may not certify another population merely because its ticker count looks similar. Before historical application, the exact application ticker identities must be compared against the source-census identities. Every application ticker must be covered; extra source-census tickers are harmless, but missing application tickers keep the relevant coverage state `UNKNOWN`.
+
+For final V4-X1 historical application, population equivalence must be established from the exact accepted Phase-A/Phase-B identity artifacts, not inferred from model-frame row counts, aggregate ticker counts, or an older continuity-gate population.
+
+Global CA no-event coverage may become certified only when every structural family required by this frozen policy is covered for the exact ticker/session identity. Family-scoped evidence from one source cannot be generalized to unrelated event families.
 
 ## Basis-epoch construction
 
@@ -288,7 +321,11 @@ Before `INC-001` can close, regression protection must cover at least:
 5. **cash dividend** — does not create a price-basis reset solely because of an ex-dividend price gap;
 6. **multiple structural events** — produces distinct deterministic epochs and cannot bridge across either boundary;
 7. **source-bound BBCA case** — event truth comes from pinned evidence, not only hard-coded test constants;
-8. **no outcome dependency** — basis admission result is identical without loading targets/outcomes.
+8. **no outcome dependency** — basis admission result is identical without loading targets/outcomes;
+9. **voluntary conversion heterogeneity** — cash/security-to-currency cases are not blindly aliased to mandatory conversion, while unresolved security-basis cases remain blocking;
+10. **merger/restructuring alias** — source-native merger semantics cannot silently disappear from the structural ontology and cannot create an adjustment without event-specific evidence;
+11. **temporal coverage overreach** — a source coverage claim cannot be stretched beyond its source-backed start/end/as-of scope;
+12. **population mismatch** — a source census missing any exact application ticker cannot certify global historical coverage.
 
 ## Outcome-blind remediation sequence
 
@@ -298,6 +335,8 @@ The authorized implementation sequence is:
 immutable CA evidence
         ↓
 source/event semantics
+        ↓
+source coverage + exact application population/time-scope reconciliation
         ↓
 transition-state resolution
         ↓
@@ -327,6 +366,8 @@ feature_basis_admission.csv or equivalent auditable state
 basis_anomaly_census.csv
 exact_input_delta_direct.csv
 exact_input_delta_spillover.csv
+source_coverage_scope_ledger.csv or equivalent
+application_population_reconciliation.json or equivalent
 input_manifest.json
 result_summary.json
 MANIFEST.json
@@ -362,6 +403,7 @@ Any later decision to create a replacement model generation must define its own 
 root cause documented
 blast radius bounded under the frozen policy
 transition semantics source-bound
+source coverage bound to exact application population and time/as-of scope
 basis-safe implementation validated
 permanent golden/adversarial tests pass
 independent red-team passes
