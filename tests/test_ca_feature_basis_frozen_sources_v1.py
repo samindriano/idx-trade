@@ -1,16 +1,26 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
+from idx_trade.ca_feature_basis_family_coverage_v1 import (
+    FAMILY_COVERAGE_CERTIFIED,
+    FAMILY_COVERAGE_UNKNOWN,
+)
 from idx_trade.ca_feature_basis_frozen_sources_v1 import (
+    KSEI_PROVEN_COVERAGE_FAMILIES,
     frozen_event_semantics_to_basis_inputs,
     ksei_ticker_coverage_to_basis_coverage,
+    ksei_ticker_coverage_to_family_coverage,
 )
-from idx_trade.ca_feature_basis_gate_v1 import (
-    CA_COVERAGE_CERTIFIED,
-    CA_COVERAGE_UNKNOWN,
+from idx_trade.ca_feature_basis_v1 import (
+    BONUS_SHARES,
+    MANDATORY_CONVERSION,
+    RESOLVED,
+    RIGHTS_HMETD,
+    STOCK_DIVIDEND,
+    STOCK_SPLIT,
 )
-from idx_trade.ca_feature_basis_v1 import RESOLVED, RIGHTS_HMETD, STOCK_DIVIDEND
 
 
 SEMANTIC_SHA = "a" * 64
@@ -43,7 +53,7 @@ def semantic_row(
     }
 
 
-def test_exact_right_and_stock_dividend_are_promoted_only_from_pinned_semantics() -> None:
+def test_exact_entitlement_transitions_are_promoted_from_pinned_semantics() -> None:
     days = sessions()
     semantics = pd.DataFrame(
         [
@@ -63,6 +73,22 @@ def test_exact_right_and_stock_dividend_are_promoted_only_from_pinned_semantics(
                 transition_date=days[7],
                 transition_source="KSEI_STATIC_CUM_NEXT_OFFICIAL_SESSION",
             ),
+            semantic_row(
+                event_id="B1",
+                ticker="BONU",
+                family="SHARE_BONUS",
+                semantic_class="EXACT_TRANSITION",
+                transition_date=days[8],
+                transition_source="KSEI_STATIC_CUM_NEXT_OFFICIAL_SESSION",
+            ),
+            semantic_row(
+                event_id="MD1",
+                ticker="MIXD",
+                family="MIXED_STOCK_DIVIDEND",
+                semantic_class="EXACT_TRANSITION",
+                transition_date=days[9],
+                transition_source="KSEI_STATIC_CUM_NEXT_OFFICIAL_SESSION",
+            ),
         ]
     )
 
@@ -77,12 +103,50 @@ def test_exact_right_and_stock_dividend_are_promoted_only_from_pinned_semantics(
     rows = ledger.set_index("event_identity")
     assert rows.loc["R1", "event_family"] == RIGHTS_HMETD
     assert rows.loc["D1", "event_family"] == STOCK_DIVIDEND
+    assert rows.loc["B1", "event_family"] == BONUS_SHARES
+    assert rows.loc["MD1", "event_family"] == STOCK_DIVIDEND
     assert set(ledger["effective_transition_state"]) == {RESOLVED}
     assert ledger["event_semantics_certified"].all()
     assert set(ledger["semantic_evidence_sha256"]) == {SEMANTIC_SHA}
 
 
-def test_schedule_required_and_unknown_exact_family_force_ticker_unknown() -> None:
+def test_exact_schedule_resolved_split_or_mandatory_conversion_can_create_epoch_only() -> None:
+    days = sessions()
+    semantics = pd.DataFrame(
+        [
+            semantic_row(
+                event_id="S1",
+                ticker="SPLT",
+                family="STOCK_SPLIT",
+                semantic_class="EXACT_TRANSITION",
+                transition_date=days[5],
+                transition_source="OFFICIAL_KSEI_SCHEDULE",
+            ),
+            semantic_row(
+                event_id="C1",
+                ticker="CONV",
+                family="MANDATORY_CONVERSION",
+                semantic_class="EXACT_TRANSITION",
+                transition_date=days[6],
+                transition_source="OFFICIAL_KSEI_SCHEDULE",
+            ),
+        ]
+    )
+    ledger, blocked = frozen_event_semantics_to_basis_inputs(
+        semantics,
+        days,
+        semantic_artifact_sha256=SEMANTIC_SHA,
+        semantic_source_ref="frozen://event-semantics",
+    )
+    assert blocked == set()
+    rows = ledger.set_index("event_identity")
+    assert rows.loc["S1", "event_family"] == STOCK_SPLIT
+    assert rows.loc["C1", "event_family"] == MANDATORY_CONVERSION
+    # No adjustment factor is created by this adapter; only a boundary.
+    assert "adjustment_factor" not in ledger.columns
+
+
+def test_schedule_required_and_unsupported_exact_family_force_ticker_unknown() -> None:
     days = sessions()
     semantics = pd.DataFrame(
         [
@@ -93,12 +157,12 @@ def test_schedule_required_and_unknown_exact_family_force_ticker_unknown() -> No
                 semantic_class="SCHEDULE_REQUIRED",
             ),
             semantic_row(
-                event_id="X1",
-                ticker="MIXD",
-                family="MIXED_STOCK_DIVIDEND",
+                event_id="V1",
+                ticker="VOLC",
+                family="VOLUNTARY_CONVERSION",
                 semantic_class="EXACT_TRANSITION",
                 transition_date=days[5],
-                transition_source="fixture",
+                transition_source="OFFICIAL_KSEI_SCHEDULE",
             ),
         ]
     )
@@ -111,7 +175,7 @@ def test_schedule_required_and_unknown_exact_family_force_ticker_unknown() -> No
     )
 
     assert ledger.empty
-    assert blocked == {"CUAN", "MIXD"}
+    assert blocked == {"CUAN", "VOLC"}
 
 
 def test_exact_transition_off_calendar_is_not_silently_shifted() -> None:
@@ -156,7 +220,7 @@ def coverage_row(
     }
 
 
-def test_ksei_coverage_certifies_only_agreeing_unblocked_ticker() -> None:
+def test_ksei_coverage_is_family_scoped_and_forced_unknown_wins() -> None:
     days = sessions()
     census = pd.DataFrame(
         [
@@ -172,7 +236,7 @@ def test_ksei_coverage_certifies_only_agreeing_unblocked_ticker() -> None:
         ]
     )
 
-    coverage = ksei_ticker_coverage_to_basis_coverage(
+    coverage = ksei_ticker_coverage_to_family_coverage(
         census,
         days,
         start_session=days[2],
@@ -182,21 +246,33 @@ def test_ksei_coverage_certifies_only_agreeing_unblocked_ticker() -> None:
         forced_unknown_tickers={"SCHEDULED"},
     )
 
+    assert set(coverage["event_family"]) == set(KSEI_PROVEN_COVERAGE_FAMILIES)
     states = coverage.groupby("ticker")["coverage_state"].unique().to_dict()
-    assert states["SAFE"].tolist() == [CA_COVERAGE_CERTIFIED]
-    assert states["SCHEDULED"].tolist() == [CA_COVERAGE_UNKNOWN]
-    assert states["FAILED"].tolist() == [CA_COVERAGE_UNKNOWN]
-    assert coverage.groupby("ticker").size().to_dict() == {
-        "FAILED": 4,
-        "SAFE": 4,
-        "SCHEDULED": 4,
-    }
+    assert states["SAFE"].tolist() == [FAMILY_COVERAGE_CERTIFIED]
+    assert states["SCHEDULED"].tolist() == [FAMILY_COVERAGE_UNKNOWN]
+    assert states["FAILED"].tolist() == [FAMILY_COVERAGE_UNKNOWN]
+    assert coverage.groupby(["ticker", "event_family"]).size().eq(4).all()
 
 
-def test_coverage_field_disagreement_fails_closed_instead_of_certifying() -> None:
+def test_ksei_contract_refuses_to_certify_unproven_split_family() -> None:
+    days = sessions()
+    census = pd.DataFrame([coverage_row("TEST")])
+    with pytest.raises(ValueError, match="cannot certify unproven event families"):
+        ksei_ticker_coverage_to_family_coverage(
+            census,
+            days,
+            start_session=days[1],
+            end_session=days[2],
+            coverage_artifact_sha256=COVERAGE_SHA,
+            coverage_source_ref="frozen://ticker-coverage",
+            covered_event_families=[STOCK_SPLIT],
+        )
+
+
+def test_coverage_field_disagreement_fails_closed_per_family() -> None:
     days = sessions()
     census = pd.DataFrame([coverage_row("TEST", certified=False)])
-    coverage = ksei_ticker_coverage_to_basis_coverage(
+    coverage = ksei_ticker_coverage_to_family_coverage(
         census,
         days,
         start_session=days[1],
@@ -204,21 +280,10 @@ def test_coverage_field_disagreement_fails_closed_instead_of_certifying() -> Non
         coverage_artifact_sha256=COVERAGE_SHA,
         coverage_source_ref="frozen://ticker-coverage",
     )
-    assert set(coverage["coverage_state"]) == {CA_COVERAGE_UNKNOWN}
+    assert set(coverage["coverage_state"]) == {FAMILY_COVERAGE_UNKNOWN}
     assert set(coverage["coverage_reason"]) == {"KSEI_COVERAGE_FIELDS_DISAGREE"}
 
 
-def test_forced_unknown_wins_even_when_raw_ksei_coverage_is_certified() -> None:
-    days = sessions()
-    census = pd.DataFrame([coverage_row("ISAT")])
-    coverage = ksei_ticker_coverage_to_basis_coverage(
-        census,
-        days,
-        start_session=days[0],
-        end_session=days[1],
-        coverage_artifact_sha256=COVERAGE_SHA,
-        coverage_source_ref="frozen://ticker-coverage",
-        forced_unknown_tickers={"ISAT"},
-    )
-    assert set(coverage["coverage_state"]) == {CA_COVERAGE_UNKNOWN}
-    assert set(coverage["evidence_sha256"]) == {COVERAGE_SHA}
+def test_direct_ksei_to_global_coverage_path_is_forbidden() -> None:
+    with pytest.raises(RuntimeError, match="DIRECT_KSEI_TO_GLOBAL_CA_COVERAGE_FORBIDDEN"):
+        ksei_ticker_coverage_to_basis_coverage()
