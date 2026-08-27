@@ -50,6 +50,8 @@ The pre-existing R3 root was not overwritten.
 - `git diff --check`: PASS.
 - Exact-head baseline GitHub Actions run `33089485270`: **334 passed, 5
   warnings**. Warnings are not reported as zero.
+- R3.1 exact-head GitHub Actions run `33102152667`: **340 passed, 5
+  warnings**.
 
 ## Review boundary
 
