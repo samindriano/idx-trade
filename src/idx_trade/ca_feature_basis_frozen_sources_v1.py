@@ -1,15 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 import pandas as pd
 
-from .ca_feature_basis_gate_v1 import CA_COVERAGE_CERTIFIED, CA_COVERAGE_UNKNOWN
+from .ca_feature_basis_family_coverage_v1 import (
+    FAMILY_COVERAGE_CERTIFIED,
+    FAMILY_COVERAGE_UNKNOWN,
+)
 from .ca_feature_basis_inputs_v1 import expand_ca_coverage_intervals
 from .ca_feature_basis_v1 import (
+    BONUS_SHARES,
+    CAPITAL_RESTRUCTURING,
+    MANDATORY_CONVERSION,
     RESOLVED,
+    REVERSE_SPLIT,
     RIGHTS_HMETD,
     STOCK_DIVIDEND,
+    STOCK_SPLIT,
+    STRUCTURAL_EVENT_FAMILIES,
     prepare_basis_events,
 )
 
@@ -17,14 +26,36 @@ from .ca_feature_basis_v1 import (
 EXACT_TRANSITION = "EXACT_TRANSITION"
 SCHEDULE_REQUIRED = "SCHEDULE_REQUIRED"
 
-# Only source families whose transition semantics are already represented by the
-# frozen KSEI event-window policy are admitted here.  An exact transition with
-# any other family is not guessed into a V1 basis family; its ticker remains
-# coverage-blocked instead.
+# These mappings are used only to create an epoch boundary from an already
+# source-certified EXACT_TRANSITION.  They do not authorize any price factor or
+# economic adjustment.  Ambiguous/unsupported families remain UNKNOWN.
 _FROZEN_EXACT_FAMILY_MAP = {
     "RIGHT_DISTRIBUTION": RIGHTS_HMETD,
     "STOCK_DIVIDEND": STOCK_DIVIDEND,
+    "MIXED_STOCK_DIVIDEND": STOCK_DIVIDEND,
+    "SHARE_BONUS": BONUS_SHARES,
+    "BONUS_SHARES": BONUS_SHARES,
+    "BONUS_SHARE": BONUS_SHARES,
+    "BONUS_DISTRIBUTION": BONUS_SHARES,
+    "STOCK_SPLIT": STOCK_SPLIT,
+    "REVERSE_STOCK": REVERSE_SPLIT,
+    "REVERSE_STOCK_SPLIT": REVERSE_SPLIT,
+    "REVERSE_SPLIT": REVERSE_SPLIT,
+    "MANDATORY_CONVERSION": MANDATORY_CONVERSION,
+    "CAPITAL_RESTRUCTURING": CAPITAL_RESTRUCTURING,
+    "CAPITAL_REDUCTION": CAPITAL_RESTRUCTURING,
 }
+
+# Historical KSEI evidence in this project directly demonstrates issuer-history
+# representation for these source-native families.  Do not broaden this merely
+# because the parser has a normalization label for another family.  In
+# particular, voluntary conversion taxonomy was historically inconsistent and
+# split/bonus/restructuring coverage is primarily proven through separate IDX
+# evidence.
+KSEI_PROVEN_COVERAGE_FAMILIES: tuple[str, ...] = (
+    RIGHTS_HMETD,
+    STOCK_DIVIDEND,
+)
 
 _EVENT_SEMANTICS_REQUIRED = {
     "event_id",
@@ -104,6 +135,7 @@ def frozen_event_semantics_to_basis_inputs(
     if not source_ref:
         raise ValueError("semantic_source_ref must be non-empty")
     sessions = _official_sessions(official_sessions)
+    session_set = set(pd.Timestamp(day) for day in sessions)
 
     if semantics.duplicated(["event_id"]).any():
         raise ValueError("frozen CA semantics contains duplicate event_id")
@@ -130,7 +162,7 @@ def frozen_event_semantics_to_basis_inputs(
             continue
 
         transition = pd.Timestamp(transition).tz_localize(None).normalize()
-        if transition not in set(sessions):
+        if transition not in session_set:
             forced_unknown.add(ticker)
             continue
 
@@ -177,13 +209,11 @@ def frozen_event_semantics_to_basis_inputs(
     ]
     ledger = pd.DataFrame(resolved_rows, columns=columns)
     if not ledger.empty:
-        # Reuse the core structural checks; this also rejects a transition that
-        # is not on the supplied official-session calendar.
         ledger = prepare_basis_events(ledger, sessions)
     return ledger, forced_unknown
 
 
-def ksei_ticker_coverage_to_basis_coverage(
+def ksei_ticker_coverage_to_family_coverage(
     coverage_census: pd.DataFrame,
     official_sessions: Iterable[object],
     *,
@@ -191,14 +221,17 @@ def ksei_ticker_coverage_to_basis_coverage(
     end_session: object,
     coverage_artifact_sha256: str,
     coverage_source_ref: str,
+    covered_event_families: Sequence[str] = KSEI_PROVEN_COVERAGE_FAMILIES,
     forced_unknown_tickers: Iterable[str] = (),
-    coverage_policy_id: str = "KSEI_REGISTERED_SECURITY_HISTORY_V1",
+    source_contract_id: str = "KSEI_REGISTERED_SECURITY_HISTORY_V1",
 ) -> pd.DataFrame:
-    """Convert frozen per-ticker KSEI history census into explicit coverage.
+    """Convert KSEI history-page coverage into explicit family-scoped claims.
 
-    A ticker is certified only when both frozen coverage fields agree, its raw
-    source SHA is valid, and it is not explicitly forced UNKNOWN by unresolved
-    event semantics or cross-source conflict.  All other cases remain UNKNOWN.
+    This function deliberately does *not* return the binary global CA coverage
+    consumed by the feature gate.  KSEI may certify only the event families
+    explicitly named by ``covered_event_families``; a separate composite step
+    must prove all required structural families across all authoritative
+    sources before global coverage can become ``CA_COVERAGE_CERTIFIED``.
     """
 
     missing = _KSEI_COVERAGE_REQUIRED - set(coverage_census.columns)
@@ -206,9 +239,22 @@ def ksei_ticker_coverage_to_basis_coverage(
         raise ValueError(f"KSEI CA coverage census missing columns: {sorted(missing)}")
     artifact_sha = _sha256(coverage_artifact_sha256, label="coverage_artifact_sha256")
     source_ref = str(coverage_source_ref or "").strip()
-    policy_id = str(coverage_policy_id or "").strip()
-    if not source_ref or not policy_id:
-        raise ValueError("coverage source/policy identity must be non-empty")
+    contract_id = str(source_contract_id or "").strip()
+    if not source_ref or not contract_id:
+        raise ValueError("coverage source/contract identity must be non-empty")
+
+    families = tuple(dict.fromkeys(str(value).upper().strip() for value in covered_event_families))
+    if not families:
+        raise ValueError("covered_event_families must not be empty")
+    unsupported = sorted(set(families) - set(STRUCTURAL_EVENT_FAMILIES))
+    if unsupported:
+        raise ValueError(f"unsupported KSEI structural family coverage: {unsupported}")
+    not_proven = sorted(set(families) - set(KSEI_PROVEN_COVERAGE_FAMILIES))
+    if not_proven:
+        raise ValueError(
+            "KSEI source contract cannot certify unproven event families: "
+            f"{not_proven}"
+        )
 
     sessions = _official_sessions(official_sessions)
     start = pd.to_datetime(start_session, errors="coerce")
@@ -217,11 +263,13 @@ def ksei_ticker_coverage_to_basis_coverage(
         raise ValueError("coverage study boundary is invalid")
     start = pd.Timestamp(start).tz_localize(None).normalize()
     end = pd.Timestamp(end).tz_localize(None).normalize()
-    if start not in set(sessions) or end not in set(sessions) or start > end:
+    session_set = set(pd.Timestamp(day) for day in sessions)
+    if start not in session_set or end not in session_set or start > end:
         raise ValueError("coverage study boundaries must be ordered official sessions")
 
     blocked = {_ticker(value) for value in forced_unknown_tickers if _ticker(value)}
-    if coverage_census["ticker"].map(_ticker).duplicated().any():
+    normalized_tickers = coverage_census["ticker"].map(_ticker)
+    if normalized_tickers.duplicated().any():
         raise ValueError("KSEI CA coverage census contains duplicate ticker")
 
     intervals: list[dict[str, object]] = []
@@ -234,18 +282,18 @@ def ksei_ticker_coverage_to_basis_coverage(
         raw_source_ref = str(source.source_url or "").strip()
         raw_sha = str(source.source_sha256 or "").strip().lower()
         status_certified = status == "COVERAGE_CERTIFIED"
-
         certified = ticker not in blocked and certified_flag and status_certified
+
         if certified:
             raw_sha = _sha256(raw_sha, label=f"{ticker} source_sha256")
             if not raw_source_ref:
                 raise ValueError(f"{ticker} certified coverage requires source_url")
-            state = CA_COVERAGE_CERTIFIED
+            state = FAMILY_COVERAGE_CERTIFIED
             evidence_sha = raw_sha
             evidence_ref = raw_source_ref
-            reason = "KSEI_TICKER_HISTORY_COVERAGE_CERTIFIED"
+            reason = "KSEI_TICKER_HISTORY_COVERAGE_CERTIFIED_FOR_EXPLICIT_FAMILY"
         else:
-            state = CA_COVERAGE_UNKNOWN
+            state = FAMILY_COVERAGE_UNKNOWN
             evidence_sha = artifact_sha
             evidence_ref = source_ref
             if ticker in blocked:
@@ -253,29 +301,69 @@ def ksei_ticker_coverage_to_basis_coverage(
             elif certified_flag != status_certified:
                 reason = "KSEI_COVERAGE_FIELDS_DISAGREE"
             else:
-                reason = str(getattr(source, "failure_reason", "") or "").strip() or "KSEI_TICKER_HISTORY_COVERAGE_UNRESOLVED"
+                reason = (
+                    str(getattr(source, "failure_reason", "") or "").strip()
+                    or "KSEI_TICKER_HISTORY_COVERAGE_UNRESOLVED"
+                )
 
-        intervals.append(
-            {
-                "ticker": ticker,
-                "start_session": start,
-                "end_session": end,
-                "coverage_state": state,
-                "coverage_policy_id": policy_id,
-                "evidence_id": f"KSEI_CA_COVERAGE:{ticker}",
-                "source_ref": evidence_ref,
-                "evidence_sha256": evidence_sha,
-                "coverage_reason": reason,
-            }
-        )
+        for family in families:
+            intervals.append(
+                {
+                    "ticker": ticker,
+                    "event_family": family,
+                    "start_session": start,
+                    "end_session": end,
+                    "coverage_state": state,
+                    "source_contract_id": contract_id,
+                    "evidence_id": f"KSEI_CA_COVERAGE:{ticker}:{family}",
+                    "source_ref": evidence_ref,
+                    "evidence_sha256": evidence_sha,
+                    "coverage_reason": reason,
+                }
+            )
 
     interval_frame = pd.DataFrame(intervals)
-    expanded = expand_ca_coverage_intervals(interval_frame, sessions)
-    if expanded.empty:
-        return expanded
-    reason_lookup = {
-        str(row.ticker): str(row.coverage_reason)
-        for row in interval_frame.itertuples(index=False)
-    }
-    expanded["coverage_reason"] = expanded["ticker"].map(reason_lookup)
-    return expanded
+    if interval_frame.empty:
+        return pd.DataFrame(
+            columns=[
+                "ticker",
+                "date",
+                "event_family",
+                "coverage_state",
+                "source_contract_id",
+                "evidence_id",
+                "source_ref",
+                "evidence_sha256",
+                "coverage_reason",
+            ]
+        )
+
+    expanded_parts: list[pd.DataFrame] = []
+    for family, group in interval_frame.groupby("event_family", sort=False):
+        base = group.drop(columns=["event_family", "source_contract_id", "coverage_reason"])
+        expanded = expand_ca_coverage_intervals(base, sessions)
+        expanded["event_family"] = family
+        expanded["source_contract_id"] = contract_id
+        reason_lookup = {
+            str(row.ticker): str(row.coverage_reason)
+            for row in group.itertuples(index=False)
+        }
+        expanded["coverage_reason"] = expanded["ticker"].map(reason_lookup)
+        expanded_parts.append(expanded)
+
+    return pd.concat(expanded_parts, ignore_index=True).sort_values(
+        ["ticker", "date", "event_family"], kind="mergesort"
+    ).reset_index(drop=True)
+
+
+def ksei_ticker_coverage_to_basis_coverage(*args: object, **kwargs: object) -> pd.DataFrame:
+    """Removed unsafe compatibility path.
+
+    Historical KSEI page coverage is not sufficient to certify every structural
+    CA family market-wide.  Call ``ksei_ticker_coverage_to_family_coverage`` and
+    then ``combine_family_coverage`` instead.
+    """
+
+    raise RuntimeError(
+        "DIRECT_KSEI_TO_GLOBAL_CA_COVERAGE_FORBIDDEN_USE_FAMILY_SCOPED_COMPOSITE_GATE"
+    )
