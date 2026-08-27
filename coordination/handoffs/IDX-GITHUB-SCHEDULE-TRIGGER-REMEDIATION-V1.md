@@ -8,7 +8,7 @@ reasoning_level: high
 source_repository: samindriano/idx-trade
 source_commit: f6b032350ac5a10feac7c1e093b523a4f91261f9
 branch: ops/github-schedule-watchdog-v1
-implementation_head_commit: ecff6042d02d2a67c3798d9976ffa0c225bf4f65
+implementation_head_commit: 40da4f4e8a292dbda420ae0afcc1728cfda91684
 documentation_head_commit: reported externally after this documentation commit
 scope: Diagnose missed GitHub native schedule delivery and add a reversible trigger-only watchdog fallback.
 files_changed:
@@ -30,6 +30,7 @@ decisions_made:
   - Register one reversible Windows watchdog task only after Cloudflare/Wrangler was shown unavailable locally.
   - Keep battery execution enabled so the trigger-only task is not silently skipped on a laptop running unplugged.
   - Add bounded morning checks for PREOPEN_CA, Official Open, and PREOPEN; expired morning windows are never dispatched retroactively.
+  - Use a two-minute per-slot run lookback so prior phases of one workflow cannot falsely cover a later phase.
 decisions_needed:
   - Observe one genuine post-close slot through the existing cloud workflow path.
   - After evidence, decide whether to keep the fallback or replace it with a Cloudflare Cron implementation.
@@ -39,7 +40,7 @@ blocking_risks:
   - The task requires `gh` authentication available to the same Windows user at scheduled runtime.
 validation_run:
   - `python -m py_compile scripts/github_schedule_watchdog.py`: PASS
-  - `python -m pytest -q tests/test_github_schedule_watchdog.py`: PASS (11)
+  - `python -m pytest -q tests/test_github_schedule_watchdog.py`: PASS (12)
   - full pytest with fresh Windows basetemp: PASS (838 passed, 3 existing warnings)
   - PowerShell installer parser: PASS
   - workflow_dispatch synthetic diagnostic 33042090215: SUCCESS

@@ -98,10 +98,15 @@ WIB, plus the existing post-close checks. A logon after a morning hard
 boundary is a no-op for that expired stage; it cannot create a retroactive
 PREOPEN_CA, Official Open, or PREOPEN capture.
 
+Run detection uses a two-minute lower lookback from each slot due time. This
+prevents a prior phase of the same E2E workflow from suppressing a later slot,
+while still recognizing a native or externally dispatched run created after
+the current slot became due.
+
 ## Local deployment evidence
 
 The reversible fallback task was registered after the implementation commit
-`1fd471db8c44d11433b3bf16ef784cd9ed0cae1d`:
+`40da4f4e8a292dbda420ae0afcc1728cfda91684`:
 
 - task: `IDXTrade-GitHub-Cloud-Dispatch-Watchdog`;
 - state: `Ready`, enabled, current user `Sam`, run level `Limited`;
@@ -132,7 +137,7 @@ Enable-ScheduledTask -TaskName 'IDX-Trade Stockbit Intraday Daily' -TaskPath '\\
 
 ## Validation status
 
-- watchdog focused tests: 11 passed;
+- watchdog focused tests: 12 passed;
 - full pytest: 838 passed, 3 existing warnings, exit code 0 using a fresh
   Windows basetemp;
 - Python compile: pass;
