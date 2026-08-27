@@ -6,7 +6,11 @@ import pandas as pd
 
 from .ca_feature_basis_gate_v1 import evaluate_feature_basis_admission
 from .ca_feature_basis_v1 import (
+    BASIS_SAFE,
+    BASIS_UNKNOWN,
+    BASIS_UNSAFE,
     FeatureDependency,
+    NOT_APPLICABLE,
     REVERSE_SPLIT,
     STOCK_SPLIT,
     V4_PRICE_FEATURE_DEPENDENCIES,
@@ -30,7 +34,12 @@ V4_CA_BASIS_DIRECT_SOURCE_FEATURES: tuple[str, ...] = (
     "relative_volume_20",
 )
 
+V4_CA_ROW_ADMITTED = "V4_CA_ROW_ADMITTED"
+V4_CA_ROW_BLOCKED_UNSAFE = "V4_CA_ROW_BLOCKED_UNSAFE"
+V4_CA_ROW_BLOCKED_UNKNOWN = "V4_CA_ROW_BLOCKED_UNKNOWN"
+
 _SPLIT_VOLUME_FAMILIES = {STOCK_SPLIT, REVERSE_SPLIT}
+_BASIS_STATES = {BASIS_SAFE, BASIS_UNSAFE, BASIS_UNKNOWN, NOT_APPLICABLE}
 
 
 def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
@@ -145,3 +154,61 @@ def evaluate_v4_application_feature_basis_admission(
     if len(counts) != len(scope) or (counts != expected).any():
         raise ValueError("application feature-basis admission is incomplete")
     return scoped.sort_values(["date", "ticker", "feature"], kind="mergesort").reset_index(drop=True)
+
+
+def summarize_v4_model_row_ca_admission(admission: pd.DataFrame) -> pd.DataFrame:
+    """Separate CA-caused blocking from frozen model's natural feature missingness.
+
+    The accepted V4-X1 training pipeline retains rows with feature NaNs and lets
+    its frozen imputer handle them.  Therefore a naturally immature dependency
+    (``NOT_APPLICABLE``) is *not* by itself a CA reason to change training-row
+    identity.  Only ``BASIS_UNSAFE`` or ``BASIS_UNKNOWN`` blocks the row in this
+    remediation layer.  Counts remain explicit for auditability.
+    """
+
+    required = {"ticker", "date", "feature", "basis_integrity_state"}
+    missing = required - set(admission.columns)
+    if missing:
+        raise ValueError(f"V4 feature-basis admission missing columns: {sorted(missing)}")
+    if admission.duplicated(["ticker", "date", "feature"]).any():
+        raise ValueError("V4 feature-basis admission contains duplicate identity")
+
+    subset = admission[admission["feature"].isin(V4_CA_BASIS_DIRECT_SOURCE_FEATURES)].copy()
+    counts = subset.groupby(["ticker", "date"], sort=False)["feature"].nunique()
+    expected = len(V4_CA_BASIS_DIRECT_SOURCE_FEATURES)
+    if counts.empty or (counts != expected).any():
+        raise ValueError("V4 model-row CA admission is incomplete")
+
+    rows: list[dict[str, object]] = []
+    for (ticker, date), group in subset.groupby(["ticker", "date"], sort=False):
+        states = set(group["basis_integrity_state"].astype(str))
+        unsupported = states - _BASIS_STATES
+        if unsupported:
+            raise ValueError(f"unexpected V4 basis state: {sorted(unsupported)}")
+
+        unsafe_count = int(group["basis_integrity_state"].eq(BASIS_UNSAFE).sum())
+        unknown_count = int(group["basis_integrity_state"].eq(BASIS_UNKNOWN).sum())
+        not_applicable_count = int(group["basis_integrity_state"].eq(NOT_APPLICABLE).sum())
+        safe_count = int(group["basis_integrity_state"].eq(BASIS_SAFE).sum())
+
+        if unknown_count:
+            row_state = V4_CA_ROW_BLOCKED_UNKNOWN
+        elif unsafe_count:
+            row_state = V4_CA_ROW_BLOCKED_UNSAFE
+        else:
+            row_state = V4_CA_ROW_ADMITTED
+
+        rows.append(
+            {
+                "ticker": ticker,
+                "date": date,
+                "v4_ca_row_state": row_state,
+                "basis_safe_feature_count": safe_count,
+                "basis_unsafe_feature_count": unsafe_count,
+                "basis_unknown_feature_count": unknown_count,
+                "natural_not_applicable_feature_count": not_applicable_count,
+                "required_ca_basis_feature_count": expected,
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
