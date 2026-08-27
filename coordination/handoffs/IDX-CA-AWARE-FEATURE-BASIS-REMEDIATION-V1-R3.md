@@ -1,14 +1,14 @@
 # Handoff
 
-from: MAIN / Codex  
-to: ChatGPT independent review  
-task_id: IDX-CA-AWARE-FEATURE-BASIS-REMEDIATION-V1-R3  
-model_used: gpt-5.6-sol  
-reasoning_level: xhigh  
-source_repository: `samindriano/idx-trade`  
-source_commit: `5f95831949b475bee881be6969838196763375d3`  
-branch: `data/ca-aware-feature-basis-remediation-v1`  
-head_commit: `pending documentation commit`
+from: MAIN / Codex
+to: ChatGPT independent review
+task_id: IDX-CA-AWARE-FEATURE-BASIS-REMEDIATION-V1-R3
+model_used: gpt-5.6-sol
+reasoning_level: xhigh
+source_repository: `samindriano/idx-trade`
+source_commit: `5f95831949b475bee881be6969838196763375d3`
+branch: `data/ca-aware-feature-basis-remediation-v1`
+head_commit: `aa1bcd0ee32417aa4ec8ea48408c0e097d944beb` (substantive R3 implementation and audit commit; final branch may include the metadata-only formatting follow-up)
 
 scope: |
   Outcome-blind R3 A-D reconciliation. Build the exact all-primary-liquid

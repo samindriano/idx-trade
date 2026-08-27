@@ -1,7 +1,7 @@
 # INC-001 CA-Aware Feature-Basis Remediation V1 — R3 A-D Audit
 
-Date: 2026-08-27 Asia/Jakarta  
-Branch: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-27 Asia/Jakarta
+Branch: `data/ca-aware-feature-basis-remediation-v1`
 Source parent: `5f95831949b475bee881be6969838196763375d3`
 
 ## Scope
