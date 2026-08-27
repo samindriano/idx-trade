@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+import hashlib
+import json
 
 import pandas as pd
 
@@ -42,6 +44,32 @@ def _sessions(values: Iterable[object]) -> pd.DatetimeIndex:
     if sessions.isna().any() or not len(sessions):
         raise ValueError("official_sessions must be non-empty valid dates")
     return sessions.unique().sort_values()
+
+
+def _composite_evidence_sha256(
+    *,
+    ticker: str,
+    date: pd.Timestamp,
+    required_families: Sequence[str],
+    coverage_rows: list[dict[str, str]],
+) -> str:
+    payload = {
+        "schema_version": "composite_ca_family_coverage_evidence_v1",
+        "ticker": ticker,
+        "date": date.strftime("%Y-%m-%d"),
+        "required_families": sorted(required_families),
+        "coverage_rows": sorted(
+            coverage_rows,
+            key=lambda row: (
+                row["event_family"],
+                row["source_contract_id"],
+                row["evidence_sha256"],
+                row["source_ref"],
+            ),
+        ),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def prepare_family_coverage(
@@ -163,6 +191,7 @@ def combine_family_coverage(
         conflicting: list[str] = []
         supporting_hashes: set[str] = set()
         supporting_contracts: set[str] = set()
+        supporting_rows: list[dict[str, str]] = []
 
         for family in families:
             claims = grouped.get((ticker, date, family))
@@ -176,10 +205,29 @@ def combine_family_coverage(
             if certified.empty:
                 missing.append(family)
                 continue
-            supporting_hashes.update(certified["evidence_sha256"].astype(str))
-            supporting_contracts.update(certified["source_contract_id"].astype(str))
+            for claim in certified.itertuples(index=False):
+                supporting_hashes.add(str(claim.evidence_sha256))
+                supporting_contracts.add(str(claim.source_contract_id))
+                supporting_rows.append(
+                    {
+                        "event_family": family,
+                        "source_contract_id": str(claim.source_contract_id),
+                        "source_ref": str(claim.source_ref),
+                        "evidence_sha256": str(claim.evidence_sha256),
+                    }
+                )
 
         globally_safe = not missing and not conflicting
+        composite_sha = (
+            _composite_evidence_sha256(
+                ticker=ticker,
+                date=date,
+                required_families=families,
+                coverage_rows=supporting_rows,
+            )
+            if globally_safe
+            else ""
+        )
         rows.append(
             {
                 "ticker": ticker,
@@ -188,12 +236,7 @@ def combine_family_coverage(
                     CA_COVERAGE_CERTIFIED if globally_safe else CA_COVERAGE_UNKNOWN
                 ),
                 "source_ref": str(composite_source_ref),
-                # The binary gate only requires a hash for certified rows.  The
-                # deterministic composite lineage is carried explicitly below;
-                # an application runner should hash its own immutable output.
-                "evidence_sha256": (
-                    sorted(supporting_hashes)[0] if globally_safe and supporting_hashes else ""
-                ),
+                "evidence_sha256": composite_sha,
                 "missing_structural_families": "|".join(sorted(missing)),
                 "conflicting_structural_families": "|".join(sorted(conflicting)),
                 "supporting_source_contracts": "|".join(sorted(supporting_contracts)),
