@@ -8,7 +8,6 @@ from .ca_feature_basis_family_coverage_v1 import (
     FAMILY_COVERAGE_CERTIFIED,
     FAMILY_COVERAGE_UNKNOWN,
 )
-from .ca_feature_basis_inputs_v1 import expand_ca_coverage_intervals
 from .ca_feature_basis_v1 import (
     BONUS_SHARES,
     CAPITAL_RESTRUCTURING,
@@ -108,6 +107,103 @@ def _official_sessions(values: Iterable[object]) -> pd.DatetimeIndex:
     if sessions.isna().any() or not len(sessions):
         raise ValueError("official_sessions must be non-empty valid dates")
     return sessions.unique().sort_values()
+
+
+def _expand_family_coverage_intervals(
+    intervals: pd.DataFrame,
+    official_sessions: Iterable[object],
+) -> pd.DataFrame:
+    """Expand family-scoped source claims without promoting them to global coverage."""
+
+    required = {
+        "ticker",
+        "event_family",
+        "start_session",
+        "end_session",
+        "coverage_state",
+        "source_contract_id",
+        "evidence_id",
+        "source_ref",
+        "evidence_sha256",
+        "coverage_reason",
+    }
+    missing = required - set(intervals.columns)
+    if missing:
+        raise ValueError(f"family coverage interval ledger missing columns: {sorted(missing)}")
+
+    sessions = _official_sessions(official_sessions)
+    index_by_date = {pd.Timestamp(day): idx for idx, day in enumerate(sessions)}
+    rows: list[dict[str, object]] = []
+    seen: set[tuple[str, pd.Timestamp, str, str]] = set()
+
+    for source in intervals.itertuples(index=False):
+        ticker = _ticker(source.ticker)
+        family = str(source.event_family or "").upper().strip()
+        state = str(source.coverage_state or "").upper().strip()
+        contract_id = str(source.source_contract_id or "").strip()
+        evidence_id = str(source.evidence_id or "").strip()
+        source_ref = str(source.source_ref or "").strip()
+        evidence_sha = str(source.evidence_sha256 or "").strip().lower()
+        reason = str(source.coverage_reason or "").strip()
+        start = pd.to_datetime(source.start_session, errors="coerce")
+        end = pd.to_datetime(source.end_session, errors="coerce")
+
+        if not ticker or family not in STRUCTURAL_EVENT_FAMILIES:
+            raise ValueError("family coverage interval contains invalid ticker/family")
+        if state not in {FAMILY_COVERAGE_CERTIFIED, FAMILY_COVERAGE_UNKNOWN}:
+            raise ValueError(f"unsupported family coverage interval state: {state}")
+        if not contract_id or not evidence_id or not reason:
+            raise ValueError("family coverage interval requires contract/evidence/reason identity")
+        if pd.isna(start) or pd.isna(end):
+            raise ValueError("family coverage interval contains invalid boundary")
+        start = pd.Timestamp(start).tz_localize(None).normalize()
+        end = pd.Timestamp(end).tz_localize(None).normalize()
+        if start not in index_by_date or end not in index_by_date:
+            raise ValueError("family coverage interval boundary is not an official session")
+        if start > end:
+            raise ValueError("family coverage interval start is after end")
+        if state == FAMILY_COVERAGE_CERTIFIED:
+            if not source_ref:
+                raise ValueError("certified family coverage interval requires source_ref")
+            _sha256(evidence_sha, label=f"{ticker}:{family} evidence_sha256")
+
+        for index in range(index_by_date[start], index_by_date[end] + 1):
+            day = pd.Timestamp(sessions[index])
+            key = (ticker, day, family, contract_id)
+            if key in seen:
+                raise ValueError("family coverage intervals overlap for ticker/session/family/source")
+            seen.add(key)
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "date": day,
+                    "event_family": family,
+                    "coverage_state": state,
+                    "source_contract_id": contract_id,
+                    "evidence_id": evidence_id,
+                    "source_ref": source_ref,
+                    "evidence_sha256": evidence_sha,
+                    "coverage_reason": reason,
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "ticker",
+                "date",
+                "event_family",
+                "coverage_state",
+                "source_contract_id",
+                "evidence_id",
+                "source_ref",
+                "evidence_sha256",
+                "coverage_reason",
+            ]
+        )
+    return pd.DataFrame(rows).sort_values(
+        ["ticker", "date", "event_family", "source_contract_id"], kind="mergesort"
+    ).reset_index(drop=True)
 
 
 def frozen_event_semantics_to_basis_inputs(
@@ -322,38 +418,7 @@ def ksei_ticker_coverage_to_family_coverage(
                 }
             )
 
-    interval_frame = pd.DataFrame(intervals)
-    if interval_frame.empty:
-        return pd.DataFrame(
-            columns=[
-                "ticker",
-                "date",
-                "event_family",
-                "coverage_state",
-                "source_contract_id",
-                "evidence_id",
-                "source_ref",
-                "evidence_sha256",
-                "coverage_reason",
-            ]
-        )
-
-    expanded_parts: list[pd.DataFrame] = []
-    for family, group in interval_frame.groupby("event_family", sort=False):
-        base = group.drop(columns=["event_family", "source_contract_id", "coverage_reason"])
-        expanded = expand_ca_coverage_intervals(base, sessions)
-        expanded["event_family"] = family
-        expanded["source_contract_id"] = contract_id
-        reason_lookup = {
-            str(row.ticker): str(row.coverage_reason)
-            for row in group.itertuples(index=False)
-        }
-        expanded["coverage_reason"] = expanded["ticker"].map(reason_lookup)
-        expanded_parts.append(expanded)
-
-    return pd.concat(expanded_parts, ignore_index=True).sort_values(
-        ["ticker", "date", "event_family"], kind="mergesort"
-    ).reset_index(drop=True)
+    return _expand_family_coverage_intervals(pd.DataFrame(intervals), sessions)
 
 
 def ksei_ticker_coverage_to_basis_coverage(*args: object, **kwargs: object) -> pd.DataFrame:
