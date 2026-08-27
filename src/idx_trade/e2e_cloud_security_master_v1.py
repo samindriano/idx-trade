@@ -34,6 +34,8 @@ FREEZE_LOCAL_DATE = pd.Timestamp("2026-08-20")
 JAKARTA = ZoneInfo("Asia/Jakarta")
 DELISTING_PAGE_SIZE = 9999
 MAX_DELISTING_PAGES_PER_MONTH = 1000
+TICKER_PATTERN = r"[A-Z0-9]{4}"
+BASELINE_CONTINUITY_SOURCE = "IDX_FROZEN_BASELINE_IDENTITY_CONTINUITY"
 
 
 class CloudSecurityMasterError(RuntimeError):
@@ -238,6 +240,8 @@ def fetch_complete_delisted_listings(start_year: int, *, end: date) -> pd.DataFr
 
 
 def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame):
+        raise CloudSecurityMasterError(f"{label}_NOT_DATAFRAME")
     required = {"ticker", "listed_from", "listed_to"}
     missing = required - set(frame.columns)
     if missing:
@@ -246,8 +250,14 @@ def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
     data["ticker"] = data["ticker"].map(normalise_ticker)
     data["listed_from"] = pd.to_datetime(data["listed_from"], errors="coerce").dt.normalize()
     data["listed_to"] = pd.to_datetime(data["listed_to"], errors="coerce").dt.normalize()
-    if data["ticker"].eq("").any() or data["listed_from"].isna().any():
+    invalid_ticker = data["ticker"].eq("") | ~data["ticker"].str.fullmatch(
+        TICKER_PATTERN, na=False
+    )
+    if invalid_ticker.any() or data["listed_from"].isna().any():
         raise CloudSecurityMasterError(f"{label}_INVALID_IDENTITY")
+    invalid_intervals = data["listed_to"].notna() & data["listed_to"].lt(data["listed_from"])
+    if invalid_intervals.any():
+        raise CloudSecurityMasterError(f"{label}_INVALID_LISTING_INTERVAL")
     if data["ticker"].duplicated().any():
         duplicates = sorted(
             data.loc[data["ticker"].duplicated(keep=False), "ticker"].unique()
@@ -266,12 +276,15 @@ def refresh_cloud_runtime_security_master(
 ) -> dict[str, object]:
     """Refresh the mutable runtime listing reference from official IDX data.
 
-    The frozen clean baseline is never rewritten. It is used only as a
-    completeness anchor: every security that was live at the model freeze must
-    still be represented by either the current active listing response or the
-    post-freeze delisting history. Any identity absent from the baseline is
-    admissible only when its official ``listed_from`` is strictly after the
-    freeze date, matching the clean scorer's preregistered future-IPO rule.
+    The frozen clean baseline is never rewritten. It is used as an identity
+    continuity anchor: every security that was live at the model freeze and
+    remains legally live at observation must be represented by either the
+    current active listing response, the post-freeze delisting history, or its
+    unchanged baseline identity. Absence from a current-active snapshot alone
+    is not evidence of delisting because a legally listed security may be
+    suspended. Any identity absent from the baseline is admissible only when
+    its official ``listed_from`` is strictly after the freeze date, matching
+    the clean scorer's preregistered future-IPO rule.
     """
 
     if observed_at.tzinfo is None:
@@ -291,27 +304,71 @@ def refresh_cloud_runtime_security_master(
         label="RUNTIME_SECURITY_MASTER_BASELINE",
     )
 
-    active = active_fetcher()
-    delisted = delisted_fetcher(FREEZE_LOCAL_DATE.year, end=local_observed.date())
+    active = _normalize_identity(active_fetcher(), label="RUNTIME_SECURITY_MASTER_ACTIVE")
+    delisted = _normalize_identity(
+        delisted_fetcher(FREEZE_LOCAL_DATE.year, end=local_observed.date()),
+        label="RUNTIME_SECURITY_MASTER_DELISTED",
+    )
     current_full = build_security_master(active, delisted).loc[:, list(SECURITY_COLUMNS)]
     current = _normalize_identity(
         current_full,
         label="RUNTIME_SECURITY_MASTER_CURRENT",
     )
-
-    baseline_live_at_freeze = baseline[
-        baseline["listed_from"].le(FREEZE_LOCAL_DATE)
-        & (baseline["listed_to"].isna() | baseline["listed_to"].ge(FREEZE_LOCAL_DATE))
-    ]
-    current_tickers = set(current["ticker"])
-    missing_live = sorted(set(baseline_live_at_freeze["ticker"]) - current_tickers)
-    if missing_live:
+    if current["listed_from"].gt(observed_date).any():
         raise CloudSecurityMasterError(
-            "RUNTIME_SECURITY_MASTER_BASELINE_LIVE_IDENTITY_MISSING:"
-            + ",".join(missing_live[:20])
+            "RUNTIME_SECURITY_MASTER_CURRENT_LISTING_AFTER_OBSERVED_DATE"
+        )
+    if current["listed_to"].gt(observed_date).any():
+        raise CloudSecurityMasterError(
+            "RUNTIME_SECURITY_MASTER_CURRENT_DELISTING_AFTER_OBSERVED_DATE"
         )
 
+    baseline_live_at_observed = baseline[
+        baseline["listed_from"].le(FREEZE_LOCAL_DATE)
+        & (baseline["listed_to"].isna() | baseline["listed_to"].ge(observed_date))
+    ]
+    current_tickers = set(current["ticker"])
     baseline_tickers = set(baseline["ticker"])
+
+    common = baseline[baseline["ticker"].isin(current_tickers)].merge(
+        current.loc[:, ["ticker", "listed_from"]],
+        on="ticker",
+        how="inner",
+        suffixes=("_baseline", "_current"),
+    )
+    conflicting_identity = common[
+        common["listed_from_baseline"] != common["listed_from_current"]
+    ]
+    if not conflicting_identity.empty:
+        raise CloudSecurityMasterError(
+            "RUNTIME_SECURITY_MASTER_BASELINE_IDENTITY_CONFLICT:"
+            + ",".join(sorted(conflicting_identity["ticker"].tolist())[:20])
+        )
+
+    missing_live = sorted(set(baseline_live_at_observed["ticker"]) - current_tickers)
+    preserved_baseline = baseline[baseline["ticker"].isin(missing_live)].copy()
+    if not preserved_baseline.empty:
+        if "company_name" not in preserved_baseline.columns:
+            preserved_baseline["company_name"] = preserved_baseline["ticker"]
+        else:
+            preserved_baseline["company_name"] = preserved_baseline["company_name"].fillna(
+                preserved_baseline["ticker"]
+            )
+        preserved_baseline["security_id"] = (
+            "IDX:"
+            + preserved_baseline["ticker"]
+            + ":"
+            + preserved_baseline["listed_from"].dt.strftime("%Y%m%d")
+        )
+        preserved_baseline["source"] = BASELINE_CONTINUITY_SOURCE
+        preserved_baseline = preserved_baseline.loc[:, list(SECURITY_COLUMNS)]
+        current_full = pd.concat([current_full, preserved_baseline], ignore_index=True)
+        current = _normalize_identity(
+            current_full,
+            label="RUNTIME_SECURITY_MASTER_CURRENT_WITH_BASELINE_CONTINUITY",
+        )
+        current_full = current.loc[:, list(SECURITY_COLUMNS)]
+
     additions = current.loc[~current["ticker"].isin(baseline_tickers)].copy()
     invalid_additions = additions[additions["listed_from"].le(FREEZE_LOCAL_DATE)]
     if not invalid_additions.empty:
@@ -329,7 +386,7 @@ def refresh_cloud_runtime_security_master(
     manifest: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "authority": "IDX",
-        "semantics": "CURRENT_LISTING_IDENTITY_REFERENCE_WITH_POST_FREEZE_DELISTING_HISTORY",
+        "semantics": "CURRENT_ACTIVE_REFERENCE_PLUS_FROZEN_BASELINE_IDENTITY_CONTINUITY_AND_POST_FREEZE_DELISTING_HISTORY",
         "observed_at_jakarta": local_observed.isoformat(),
         "observed_date": observed_date.date().isoformat(),
         "freeze_local_date": FREEZE_LOCAL_DATE.date().isoformat(),
@@ -344,6 +401,8 @@ def refresh_cloud_runtime_security_master(
         "active_rows": int(len(active)),
         "delisted_rows": int(len(delisted)),
         "runtime_rows": int(len(current_full)),
+        "baseline_identities_preserved_not_in_current_active": missing_live,
+        "baseline_identities_preserved_count": int(len(missing_live)),
         "post_freeze_new_tickers": sorted(additions["ticker"].astype(str).tolist()),
         "security_master_path": str(output.resolve()),
         "security_master_sha256": artifact_sha,
