@@ -126,3 +126,10 @@ def test_query_failure_is_fail_closed_without_dispatch(tmp_path: Path) -> None:
     )
     assert all(action["status"] == "FAIL_CLOSED_QUERY" for action in result["actions"])
     assert not list((tmp_path / "dispatch_markers").glob("*.json"))
+
+
+def test_installer_contract_allows_lightweight_watchdog_on_battery() -> None:
+    installer = Path(__file__).parents[1] / "scripts" / "install_github_schedule_watchdog.ps1"
+    text = installer.read_text(encoding="utf-8")
+    assert "-AllowStartIfOnBatteries" in text
+    assert "-DontStopIfGoingOnBatteries" in text

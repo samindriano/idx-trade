@@ -39,6 +39,8 @@ $triggers = @(
     (New-ScheduledTaskTrigger -AtLogOn)
 )
 $settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
     -StartWhenAvailable `
     -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 10) `
