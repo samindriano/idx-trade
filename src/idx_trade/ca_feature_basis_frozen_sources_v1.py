@@ -43,6 +43,12 @@ _FROZEN_EXACT_FAMILY_MAP = {
     "MANDATORY_CONVERSION": MANDATORY_CONVERSION,
     "CAPITAL_RESTRUCTURING": CAPITAL_RESTRUCTURING,
     "CAPITAL_REDUCTION": CAPITAL_RESTRUCTURING,
+    # Historical KSEI schedule evidence used MERGER_OR_RESTRUCTURING as its
+    # source-native umbrella.  An already source-certified exact transition may
+    # create a conservative epoch boundary under CAPITAL_RESTRUCTURING; this
+    # still does not authorize an adjustment factor or imply every merger is a
+    # basis change without event-specific semantics.
+    "MERGER_OR_RESTRUCTURING": CAPITAL_RESTRUCTURING,
 }
 
 # Historical KSEI evidence in this project directly demonstrates issuer-history
@@ -67,12 +73,20 @@ _EVENT_SEMANTICS_REQUIRED = {
     "source_dates",
 }
 
+# The historical KSEI ticker census alone is not sufficient to claim an
+# arbitrary research interval.  Each row consumed by this adapter must be
+# accompanied by a source-bound temporal scope attestation.  The legacy census
+# can therefore be reused only after a separate immutable scope artifact adds
+# these fields; absence of that attestation fails closed.
 _KSEI_COVERAGE_REQUIRED = {
     "ticker",
     "coverage_status",
     "coverage_certified",
     "source_url",
     "source_sha256",
+    "coverage_start_session",
+    "coverage_end_session",
+    "coverage_observed_at",
 }
 
 
@@ -107,6 +121,23 @@ def _official_sessions(values: Iterable[object]) -> pd.DatetimeIndex:
     if sessions.isna().any() or not len(sessions):
         raise ValueError("official_sessions must be non-empty valid dates")
     return sessions.unique().sort_values()
+
+
+def _optional_timestamp(value: object, *, label: str, normalize: bool) -> pd.Timestamp | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        raise ValueError(f"{label} contains invalid timestamp")
+    timestamp = pd.Timestamp(parsed)
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.tz_convert(None)
+    if normalize:
+        timestamp = timestamp.normalize()
+    return timestamp
 
 
 def _expand_family_coverage_intervals(
@@ -309,6 +340,39 @@ def frozen_event_semantics_to_basis_inputs(
     return ledger, forced_unknown
 
 
+def compare_ksei_population_to_identities(
+    identities: pd.DataFrame,
+    coverage_census: pd.DataFrame,
+) -> dict[str, object]:
+    """Compare the exact application ticker population with a KSEI census.
+
+    Extra census tickers are harmless, but every application ticker must be
+    represented before the census can support a market-wide application claim.
+    The function intentionally compares exact normalized identities rather than
+    inferring population equivalence from row counts.
+    """
+
+    if "ticker" not in identities.columns:
+        raise ValueError("application identities require ticker")
+    if "ticker" not in coverage_census.columns:
+        raise ValueError("KSEI CA coverage census requires ticker")
+
+    application = {_ticker(value) for value in identities["ticker"]}
+    census = {_ticker(value) for value in coverage_census["ticker"]}
+    if "" in application or "" in census:
+        raise ValueError("population comparison contains empty ticker")
+
+    missing = sorted(application - census)
+    extra = sorted(census - application)
+    return {
+        "application_ticker_count": len(application),
+        "coverage_ticker_count": len(census),
+        "coverage_contains_application_population": not missing,
+        "missing_application_tickers": missing,
+        "extra_coverage_tickers": extra,
+    }
+
+
 def ksei_ticker_coverage_to_family_coverage(
     coverage_census: pd.DataFrame,
     official_sessions: Iterable[object],
@@ -328,6 +392,11 @@ def ksei_ticker_coverage_to_family_coverage(
     explicitly named by ``covered_event_families``; a separate composite step
     must prove all required structural families across all authoritative
     sources before global coverage can become ``CA_COVERAGE_CERTIFIED``.
+
+    The requested study interval is never treated as source truth.  Certified
+    rows must carry explicit source-bound ``coverage_start_session``,
+    ``coverage_end_session``, and ``coverage_observed_at`` fields, and the
+    requested interval must lie wholly inside that attested history scope.
     """
 
     missing = _KSEI_COVERAGE_REQUIRED - set(coverage_census.columns)
@@ -378,7 +447,37 @@ def ksei_ticker_coverage_to_family_coverage(
         raw_source_ref = str(source.source_url or "").strip()
         raw_sha = str(source.source_sha256 or "").strip().lower()
         status_certified = status == "COVERAGE_CERTIFIED"
-        certified = ticker not in blocked and certified_flag and status_certified
+
+        source_start = _optional_timestamp(
+            source.coverage_start_session,
+            label=f"{ticker} coverage_start_session",
+            normalize=True,
+        )
+        source_end = _optional_timestamp(
+            source.coverage_end_session,
+            label=f"{ticker} coverage_end_session",
+            normalize=True,
+        )
+        observed_at = _optional_timestamp(
+            source.coverage_observed_at,
+            label=f"{ticker} coverage_observed_at",
+            normalize=False,
+        )
+
+        source_scope_valid = False
+        if source_start is not None or source_end is not None or observed_at is not None:
+            if source_start is None or source_end is None or observed_at is None:
+                raise ValueError(f"{ticker} KSEI temporal coverage scope must be complete")
+            if source_start not in session_set or source_end not in session_set:
+                raise ValueError(f"{ticker} KSEI temporal coverage scope must use official sessions")
+            if source_start > source_end:
+                raise ValueError(f"{ticker} KSEI temporal coverage scope is reversed")
+            if observed_at.normalize() < source_end:
+                raise ValueError(f"{ticker} coverage_observed_at predates certified history end")
+            source_scope_valid = source_start <= start and source_end >= end
+
+        base_certified = ticker not in blocked and certified_flag and status_certified
+        certified = base_certified and source_scope_valid
 
         if certified:
             raw_sha = _sha256(raw_sha, label=f"{ticker} source_sha256")
@@ -387,7 +486,7 @@ def ksei_ticker_coverage_to_family_coverage(
             state = FAMILY_COVERAGE_CERTIFIED
             evidence_sha = raw_sha
             evidence_ref = raw_source_ref
-            reason = "KSEI_TICKER_HISTORY_COVERAGE_CERTIFIED_FOR_EXPLICIT_FAMILY"
+            reason = "KSEI_TICKER_HISTORY_SCOPE_CERTIFIED_FOR_EXPLICIT_FAMILY"
         else:
             state = FAMILY_COVERAGE_UNKNOWN
             evidence_sha = artifact_sha
@@ -396,6 +495,8 @@ def ksei_ticker_coverage_to_family_coverage(
                 reason = "FORCED_UNKNOWN_BY_EVENT_SEMANTICS_OR_CROSS_SOURCE_CONFLICT"
             elif certified_flag != status_certified:
                 reason = "KSEI_COVERAGE_FIELDS_DISAGREE"
+            elif base_certified and not source_scope_valid:
+                reason = "REQUESTED_INTERVAL_EXCEEDS_KSEI_CERTIFIED_HISTORY_SCOPE"
             else:
                 reason = (
                     str(getattr(source, "failure_reason", "") or "").strip()
