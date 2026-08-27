@@ -376,6 +376,8 @@ def _dispatch(
         "--field",
         f"{slot.input_name}={slot.input_value}",
     ]
+    if slot.workflow_file == "e2e-paper-cloud-orchestration.yml":
+        command.extend(["--field", f"trigger_slot={slot.slot_id}"])
     return_code, _ = runner(command)
     return return_code
 

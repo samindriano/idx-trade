@@ -4,10 +4,27 @@ from datetime import datetime, timezone, timedelta
 import json
 from pathlib import Path
 
-from scripts.github_schedule_watchdog import JAKARTA, run_once
+from scripts.github_schedule_watchdog import JAKARTA, SLOTS, _dispatch, run_once
 
 
 UTC = timezone.utc
+
+
+def _dispatch_command(slot) -> list[str]:
+    calls: list[list[str]] = []
+
+    def runner(command):
+        calls.append(list(command))
+        return 0, ""
+
+    assert _dispatch(
+        runner=runner,
+        repository="samindriano/idx-trade",
+        slot=slot,
+        gh_exe="gh",
+    ) == 0
+    assert len(calls) == 1
+    return calls[0]
 
 
 def _runner_with_runs(runs_by_workflow: dict[str, list[dict[str, object]]]):
@@ -416,6 +433,52 @@ def test_query_failure_is_fail_closed_without_dispatch(tmp_path: Path) -> None:
     )
     assert all(action["status"] == "FAIL_CLOSED_QUERY" for action in result["actions"])
     assert not list((tmp_path / "dispatch_markers").glob("*.json"))
+
+
+def test_every_e2e_slot_dispatches_phase_and_exact_trigger_slot() -> None:
+    e2e_slots = [
+        slot for slot in SLOTS if slot.workflow_file == "e2e-paper-cloud-orchestration.yml"
+    ]
+    assert e2e_slots
+
+    for slot in e2e_slots:
+        command = _dispatch_command(slot)
+        assert command == [
+            "gh",
+            "workflow",
+            "run",
+            slot.workflow_file,
+            "--repo",
+            "samindriano/idx-trade",
+            "--ref",
+            "main",
+            "--field",
+            f"phase={slot.input_value}",
+            "--field",
+            f"trigger_slot={slot.slot_id}",
+        ]
+
+
+def test_non_e2e_dispatch_keeps_existing_exact_slot_input() -> None:
+    non_e2e_slots = [
+        slot for slot in SLOTS if slot.workflow_file != "e2e-paper-cloud-orchestration.yml"
+    ]
+    assert non_e2e_slots
+
+    for slot in non_e2e_slots:
+        command = _dispatch_command(slot)
+        assert command == [
+            "gh",
+            "workflow",
+            "run",
+            slot.workflow_file,
+            "--repo",
+            "samindriano/idx-trade",
+            "--ref",
+            "main",
+            "--field",
+            f"{slot.input_name}={slot.input_value}",
+        ]
 
 
 def test_installer_contract_allows_lightweight_watchdog_on_battery() -> None:
