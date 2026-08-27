@@ -14,6 +14,7 @@ from datetime import date, datetime, time, timedelta, timezone
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -25,6 +26,7 @@ JAKARTA = timezone(timedelta(hours=7), name="Asia/Jakarta")
 DEFAULT_REPOSITORY = "samindriano/idx-trade"
 DEFAULT_STATE_ROOT = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "IDXTrade" / "github_schedule_watchdog_v1"
 WATCHDOG_SCHEMA = "idx_trade_github_schedule_watchdog_v1"
+SLOT_RUN_NAME_PREFIX = "IDX-SLOT:"
 # Keep the lower bound narrow enough that a prior phase of the same workflow
 # (for example E2E POST_EOD 18:35 versus 19:05) cannot masquerade as coverage
 # for the current slot. A delayed run is still observed because its created_at
@@ -123,7 +125,7 @@ SLOTS: tuple[Slot, ...] = (
         "official-open-prospective-cloud-capture.yml",
         "slot",
         "0922",
-        latest_local=time(9, 28),
+        latest_local=time(9, 23),
     ),
     Slot(
         "E2E_PREOPEN_0922",
@@ -132,10 +134,10 @@ SLOTS: tuple[Slot, ...] = (
         "e2e-paper-cloud-orchestration.yml",
         "phase",
         "PREOPEN",
-        latest_local=time(9, 28),
+        latest_local=time(9, 23),
     ),
     Slot(
-        "STOCKBIT_1830",
+        "STOCKBIT_INTRADAY_1830",
         time(18, 30),
         "stockbit-intraday-cloud-production.yml",
         "stockbit-intraday-cloud-production.yml",
@@ -143,7 +145,7 @@ SLOTS: tuple[Slot, ...] = (
         "1830",
     ),
     Slot(
-        "E2E_1835",
+        "E2E_POST_EOD_1835",
         time(18, 35),
         "e2e-paper-cloud-orchestration.yml",
         "e2e-paper-cloud-orchestration.yml",
@@ -151,7 +153,7 @@ SLOTS: tuple[Slot, ...] = (
         "POST_EOD",
     ),
     Slot(
-        "E2E_1905",
+        "E2E_POST_EOD_1905",
         time(19, 5),
         "e2e-paper-cloud-orchestration.yml",
         "e2e-paper-cloud-orchestration.yml",
@@ -159,7 +161,7 @@ SLOTS: tuple[Slot, ...] = (
         "POST_EOD",
     ),
     Slot(
-        "STOCKBIT_1930",
+        "STOCKBIT_INTRADAY_1930",
         time(19, 30),
         "stockbit-intraday-cloud-production.yml",
         "stockbit-intraday-cloud-production.yml",
@@ -167,7 +169,7 @@ SLOTS: tuple[Slot, ...] = (
         "1930",
     ),
     Slot(
-        "E2E_1935",
+        "E2E_POST_EOD_1935",
         time(19, 35),
         "e2e-paper-cloud-orchestration.yml",
         "e2e-paper-cloud-orchestration.yml",
@@ -175,7 +177,7 @@ SLOTS: tuple[Slot, ...] = (
         "POST_EOD",
     ),
     Slot(
-        "STOCKBIT_2030",
+        "STOCKBIT_INTRADAY_2030",
         time(20, 30),
         "stockbit-intraday-cloud-production.yml",
         "stockbit-intraday-cloud-production.yml",
@@ -260,43 +262,67 @@ def _append_event(state_root: Path, payload: Mapping[str, Any]) -> None:
         handle.write("\n")
 
 
-def _next_same_workflow_due(day: date, slot: Slot) -> datetime | None:
-    """Return the next same-workflow slot boundary for this day.
+def _has_exact_slot_run_name(row: Mapping[str, Any], slot_id: str) -> bool:
+    """Return whether GitHub's run-name metadata contains this exact slot token."""
 
-    GitHub's workflow-run metadata does not expose the cron expression or
-    workflow_dispatch inputs.  A run can therefore be treated as exact slot
-    evidence only while it remains between this slot's due time and the next
-    slot of the same workflow.  Once it crosses that boundary it is ambiguous
-    (for example, a delayed 18:30 run observed near 19:30) and the caller must
-    dispatch the current slot rather than silently suppress it.
-    """
+    expected = f"{SLOT_RUN_NAME_PREFIX}{slot_id}"
+    pattern = re.compile(
+        rf"(?:^|[^A-Za-z0-9_]){re.escape(expected)}(?:$|[^A-Za-z0-9_])"
+    )
+    return any(
+        isinstance(row.get(field), str) and pattern.search(row[field])
+        for field in ("display_title", "run_name", "runName")
+    )
 
-    due = _slot_due(day, slot)
-    candidates = [
-        _slot_due(day, candidate)
-        for candidate in SLOTS
-        if candidate.workflow_file == slot.workflow_file
-        and _slot_due(day, candidate) > due
-    ]
-    return min(candidates) if candidates else None
+
+def _is_production_main_run(row: Mapping[str, Any]) -> bool:
+    """Require an explicit production main branch or ref identity."""
+
+    branch = row.get("head_branch")
+    branch = branch.strip() if isinstance(branch, str) else None
+    ref = row.get("ref")
+    ref = ref.strip() if isinstance(ref, str) else None
+    valid_refs = {"main", "refs/heads/main"}
+    if branch is not None and branch != "main":
+        return False
+    if ref is not None and ref not in valid_refs:
+        return False
+    return branch == "main" or ref in valid_refs
+
+
+def _parse_created_at(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(JAKARTA)
 
 
 def _exact_slot_runs(
-    *, runs: Sequence[Mapping[str, Any]], slot: Slot, due: datetime
+    *,
+    runs: Sequence[Mapping[str, Any]],
+    slot: Slot,
+    due: datetime,
+    observation: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    next_due = _next_same_workflow_due(due.date(), slot)
+    cutoff = slot.window_end(due.date())
+    observed = observation.astimezone(JAKARTA) if observation is not None else None
     exact: list[dict[str, Any]] = []
     for row in runs:
-        created_at = row.get("created_at")
-        if not isinstance(created_at, str):
+        if row.get("event") not in {"schedule", "workflow_dispatch"}:
             continue
-        try:
-            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        except ValueError:
+        if not _is_production_main_run(row):
             continue
-        if created < due:
+        if not _has_exact_slot_run_name(row, slot.slot_id):
             continue
-        if next_due is not None and created >= next_due:
+        created = _parse_created_at(row.get("created_at"))
+        if created is None or created < due or created >= cutoff:
+            continue
+        if observed is not None and created > observed:
             continue
         exact.append(dict(row))
     return exact
@@ -306,7 +332,8 @@ def _query_runs(
     *, runner: Runner, repository: str, slot: Slot, due: datetime, now: datetime, gh_exe: str | None
 ) -> list[dict[str, Any]]:
     start = due - RUN_LOOKBACK
-    end = min(now, slot.window_end(due.date()))
+    cutoff = slot.window_end(due.date())
+    end = min(now, cutoff)
     if end < start:
         return []
     gh = gh_exe or shutil.which("gh") or "gh"
@@ -335,18 +362,10 @@ def _query_runs(
     for row in rows:
         if not isinstance(row, dict):
             continue
-        created_at = row.get("created_at")
-        if not isinstance(created_at, str):
-            continue
-        try:
-            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        except ValueError:
+        created = _parse_created_at(row.get("created_at"))
+        if created is None:
             continue
         if not (start <= created <= end):
-            continue
-        if row.get("event") not in {"schedule", "workflow_dispatch"}:
-            continue
-        if row.get("head_branch") not in {None, "main"}:
             continue
         result.append(
             {
@@ -354,7 +373,12 @@ def _query_runs(
                 "event": row.get("event"),
                 "status": row.get("status"),
                 "conclusion": row.get("conclusion"),
-                "created_at": created_at,
+                "created_at": row.get("created_at"),
+                "display_title": row.get("display_title"),
+                "run_name": row.get("run_name"),
+                "runName": row.get("runName"),
+                "head_branch": row.get("head_branch"),
+                "ref": row.get("ref"),
             }
         )
     return result
@@ -442,13 +466,39 @@ def run_once(
             )
             continue
 
-        exact = _exact_slot_runs(runs=existing, slot=slot, due=due)
+        exact = _exact_slot_runs(
+            runs=existing, slot=slot, due=due, observation=current
+        )
         if exact:
             action = {
                 "slot": slot.slot_id,
                 "status": "ALREADY_COVERED",
                 "run_ids": [row.get("id") for row in exact],
                 "run_events": [row.get("event") for row in exact],
+                "run_names": [
+                    next(
+                        (
+                            row.get(field)
+                            for field in ("display_title", "run_name", "runName")
+                            if isinstance(row.get(field), str)
+                        ),
+                        None,
+                    )
+                    for row in exact
+                ],
+                "run_metadata": [
+                    {
+                        "id": row.get("id"),
+                        "event": row.get("event"),
+                        "display_title": row.get("display_title"),
+                        "run_name": row.get("run_name"),
+                        "runName": row.get("runName"),
+                        "created_at": row.get("created_at"),
+                        "head_branch": row.get("head_branch"),
+                        "ref": row.get("ref"),
+                    }
+                    for row in exact
+                ],
             }
             actions.append(action)
             continue

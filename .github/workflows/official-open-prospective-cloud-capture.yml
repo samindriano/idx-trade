@@ -1,5 +1,13 @@
 name: Official Open prospective cloud archive
 
+run-name: >-
+  IDX-SLOT:${{
+    (github.event.schedule == '2 2 * * 1-5' || inputs.slot == '0902') && 'OFFICIAL_OPEN_0902' ||
+    (github.event.schedule == '12 2 * * 1-5' || inputs.slot == '0912') && 'OFFICIAL_OPEN_0912' ||
+    (github.event.schedule == '22 2 * * 1-5' || inputs.slot == '0922') && 'OFFICIAL_OPEN_0922' ||
+    'AMBIGUOUS_MANUAL'
+  }}
+
 on:
   schedule:
     # GitHub cron is UTC. These target 09:02 / 09:12 / 09:22 Asia/Jakarta.
