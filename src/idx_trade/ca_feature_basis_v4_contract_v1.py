@@ -33,6 +33,23 @@ V4_CA_BASIS_DIRECT_SOURCE_FEATURES: tuple[str, ...] = (
 _SPLIT_VOLUME_FAMILIES = {STOCK_SPLIT, REVERSE_SPLIT}
 
 
+def _normalize_identity(frame: pd.DataFrame, *, label: str) -> pd.DataFrame:
+    required = {"ticker", "date"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"{label} missing columns: {sorted(missing)}")
+    out = frame[["ticker", "date"]].copy()
+    out["ticker"] = (
+        out["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
+    )
+    out["date"] = pd.to_datetime(out["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
+    if out["ticker"].eq("").any() or out["date"].isna().any():
+        raise ValueError(f"{label} contains invalid ticker/date")
+    if out.duplicated(["ticker", "date"]).any():
+        raise ValueError(f"{label} contains duplicate ticker/date")
+    return out.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+
+
 def _split_volume_events(events: pd.DataFrame) -> pd.DataFrame:
     """Retain only source-certified event families that redefine share units."""
 
@@ -48,16 +65,17 @@ def evaluate_v4_feature_basis_admission(
     coverage: pd.DataFrame,
     official_sessions: Iterable[object],
 ) -> pd.DataFrame:
-    """Apply the frozen V4 field-specific CA dependency contract outcome-blind.
+    """Low-level V4 field-specific CA dependency evaluation.
 
-    H/L/C-derived dependencies use the generic price-basis contract and see all
-    admitted structural event families.  Raw-volume rolling semantics are added
-    separately and see only split/reverse-split transitions, because those
-    events mechanically redefine the share unit.
+    ``identities`` must be the same full PIT listing-admitted observation stream
+    on which the frozen pandas shift/rolling formulas operate.  Historical
+    application code should normally call
+    ``evaluate_v4_application_feature_basis_admission`` instead, so sparse
+    candidate/final-fit identities cannot redefine observed-row offsets.
 
-    Coverage remains the global fail-closed CA coverage ledger.  This function
-    does not infer event dates, adjust values, recompute cross-sectional
-    transforms, access outcomes, or authorize model fitting.
+    H/L/C-derived dependencies see all admitted structural event families.
+    Raw-volume rolling semantics see only split/reverse-split transitions,
+    because those events mechanically redefine the share unit.
     """
 
     price = evaluate_feature_basis_admission(
@@ -81,3 +99,49 @@ def evaluate_v4_feature_basis_admission(
     return combined.sort_values(
         ["date", "ticker", "feature"], kind="mergesort"
     ).reset_index(drop=True)
+
+
+def evaluate_v4_application_feature_basis_admission(
+    full_observation_identities: pd.DataFrame,
+    application_scope_identities: pd.DataFrame,
+    events: pd.DataFrame,
+    coverage: pd.DataFrame,
+    official_sessions: Iterable[object],
+) -> pd.DataFrame:
+    """Safe historical-application entry point preserving frozen row geometry.
+
+    Dependency positions are first computed on the complete PIT listing-admitted
+    ticker observation stream.  Only after that computation is the result
+    restricted to candidate/final-fit/application identities.  This prevents a
+    sparse application set from silently changing pandas ``shift``/``rolling``
+    semantics.
+    """
+
+    full = _normalize_identity(full_observation_identities, label="full observation stream")
+    scope = _normalize_identity(application_scope_identities, label="application scope")
+    full_keys = set(map(tuple, full[["ticker", "date"]].to_numpy()))
+    scope_keys = set(map(tuple, scope[["ticker", "date"]].to_numpy()))
+    missing = scope_keys - full_keys
+    if missing:
+        raise ValueError(
+            f"application scope contains identities outside full observation stream: {len(missing)}"
+        )
+
+    admission = evaluate_v4_feature_basis_admission(
+        full,
+        events,
+        coverage,
+        official_sessions,
+    )
+    scoped = admission.merge(
+        scope.assign(_application_scope=True),
+        on=["ticker", "date"],
+        how="inner",
+        validate="many_to_one",
+    ).drop(columns=["_application_scope"])
+
+    expected = len(V4_CA_BASIS_DIRECT_SOURCE_FEATURES)
+    counts = scoped.groupby(["ticker", "date"], sort=False)["feature"].nunique()
+    if len(counts) != len(scope) or (counts != expected).any():
+        raise ValueError("application feature-basis admission is incomplete")
+    return scoped.sort_values(["date", "ticker", "feature"], kind="mergesort").reset_index(drop=True)
