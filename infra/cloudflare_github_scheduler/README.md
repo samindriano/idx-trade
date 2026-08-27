@@ -16,10 +16,15 @@ The production capture implementations remain the existing GitHub workflows on
 
 `wrangler.jsonc` intentionally contains **no Cron Trigger**. Building or staging
 this Worker must not change the 2026-08-27 18:30–20:40 prospective proof.
+It names a separate Worker, `idx-trade-github-scheduler-v1-staging-observe`,
+with an isolated Durable Object namespace and explicit `DISPATCH_MODE=observe_only`.
+In that mode the Worker may query GitHub and report `WOULD_DISPATCH`, but the
+dispatch POST path is unreachable. A read-only GitHub token is sufficient.
 
 `wrangler.production.jsonc` is the explicit activation configuration and must
 not be deployed until the existing native-GitHub + Windows-watchdog proof has
-been audited.
+been audited. It names `idx-trade-github-scheduler-v1` and explicitly sets
+`DISPATCH_MODE=active`.
 
 ## Architecture
 
@@ -118,12 +123,16 @@ workflow, never toward silently suppressing a required slot.
 
 - GitHub run-query error -> fail closed; no dispatch.
 - Native exact schedule run -> durable `covered_native` marker; no dispatch.
-- Missing native run -> durable short `dispatching` lease, then dispatch.
+- Missing native run in `observe_only` -> non-final `would_dispatch` marker and
+  `WOULD_DISPATCH` result; no dispatch POST.
+- Missing native run in `active` -> durable short `dispatching` lease, then
+  dispatch.
 - Successful dispatch -> durable `dispatched` marker.
 - Retryable GitHub error (408/409/429/5xx) -> retryable marker; a later cron may
   re-query and retry while the slot is still valid.
 - Non-retryable GitHub error -> durable `blocked` marker; no repeated calls.
 - Expired market window -> no dispatch, no backfill.
+- Missing or invalid `DISPATCH_MODE` -> fail closed; never defaults to active.
 
 ## GitHub credential
 

@@ -7,7 +7,8 @@
   "vars": {
     "GITHUB_OWNER": "samindriano",
     "GITHUB_REPO": "idx-trade",
-    "GITHUB_REF": "main"
+    "GITHUB_REF": "main",
+    "DISPATCH_MODE": "active"
   },
   "secrets": {
     "required": ["GITHUB_ACTIONS_TOKEN"]

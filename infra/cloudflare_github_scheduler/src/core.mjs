@@ -104,6 +104,20 @@ export function isFinalMarkerState(state) {
   return FINAL_MARKER_STATES.includes(state);
 }
 
+export function durableMarkerDecision(prior, observedEpochMs) {
+  if (prior && isFinalMarkerState(prior.state)) {
+    return {
+      status: 'DURABLE_MARKER_ALREADY_FINAL',
+      state: prior.state,
+      runId: prior.run_id ?? null,
+    };
+  }
+  if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
+    return { status: 'DISPATCH_LEASE_IN_FLIGHT' };
+  }
+  return null;
+}
+
 export function workflowRunsUrl({ owner, repo, workflow, startMs, endMs }) {
   const params = new URLSearchParams({
     per_page: '100',

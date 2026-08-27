@@ -1,9 +1,9 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
-  DISPATCH_LEASE_MS,
   SLOT_BY_ID,
+  durableMarkerDecision,
+  dispatchBody,
   dueSlots,
-  isFinalMarkerState,
   markerKey,
   slotWindow,
 } from './core.mjs';
@@ -12,6 +12,7 @@ import {
   dispatchWorkflow,
   queryExactSlotCoverage,
 } from './github.mjs';
+import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
 function safeError(error) {
@@ -79,6 +80,7 @@ export class SchedulerCoordinator extends DurableObject {
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
     const token = requireEnv(this.env, 'GITHUB_ACTIONS_TOKEN');
+    const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
 
     const window = slotWindow(slot, observedEpochMs);
     if (observedEpochMs < window.checkMs || observedEpochMs >= window.cutoffMs) {
@@ -87,12 +89,8 @@ export class SchedulerCoordinator extends DurableObject {
 
     const slotKey = markerKey(window.dateKey, slotId);
     const prior = this._read(slotKey);
-    if (prior && isFinalMarkerState(prior.state)) {
-      return { slot: slotId, status: 'DURABLE_MARKER_ALREADY_FINAL', state: prior.state, runId: prior.run_id ?? null };
-    }
-    if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
-      return { slot: slotId, status: 'DISPATCH_LEASE_IN_FLIGHT' };
-    }
+    const markerDecision = durableMarkerDecision(prior, observedEpochMs);
+    if (markerDecision) return { slot: slotId, ...markerDecision };
 
     const nativeCoverage = await queryExactSlotCoverage({
       owner,
@@ -116,7 +114,22 @@ export class SchedulerCoordinator extends DurableObject {
       detail: { scheduledEpochMs },
     });
 
-    const dispatch = await dispatchWorkflow({ owner, repo, token, ref, slot });
+    const dispatchInputs = dispatchBody(slot, ref).inputs;
+    const dispatch = await dispatchWithMode({
+      mode: dispatchMode,
+      dispatchFn: () => dispatchWorkflow({ owner, repo, token, ref, slot }),
+    });
+    if (dispatch.status === 'WOULD_DISPATCH') {
+      this._write(slotKey, 'would_dispatch', observedEpochMs, {
+        detail: { dispatchMode, inputs: dispatchInputs },
+      });
+      return {
+        slot: slotId,
+        status: 'WOULD_DISPATCH',
+        dispatchMode,
+        inputs: dispatchInputs,
+      };
+    }
     if (dispatch.ok) {
       this._write(slotKey, 'dispatched', Date.now(), {
         attemptId,

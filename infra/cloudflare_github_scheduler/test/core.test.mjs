@@ -4,6 +4,7 @@ import {
   SLOTS,
   SLOT_BY_ID,
   canonicalSlotRunName,
+  durableMarkerDecision,
   dueSlots,
   exactSlotCoverageRuns,
   isFinalMarkerState,
@@ -108,7 +109,20 @@ test('durable final marker states suppress repeats while retryable errors remain
   assert.equal(isFinalMarkerState('dispatched'), true);
   assert.equal(isFinalMarkerState('blocked'), true);
   assert.equal(isFinalMarkerState('retryable_error'), false);
+  assert.equal(isFinalMarkerState('would_dispatch'), false);
   assert.equal(markerKey('2026-08-27', 'E2E_POST_EOD_1835'), '2026-08-27::E2E_POST_EOD_1835');
+});
+
+test('durable marker decision keeps active dispatch idempotent', () => {
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000),
+    { status: 'DURABLE_MARKER_ALREADY_FINAL', state: 'dispatched', runId: 123 },
+  );
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'dispatching', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_LEASE_IN_FLIGHT' },
+  );
+  assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
 });
 
 test('GitHub URLs safely encode workflow filename and date filter', () => {
