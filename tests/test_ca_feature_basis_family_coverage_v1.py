@@ -89,6 +89,25 @@ def test_union_of_independent_source_contracts_can_certify_global_coverage() -> 
     assert row["evidence_sha256"] != SHA
 
 
+def test_partial_required_family_override_cannot_emit_global_certification() -> None:
+    days = sessions()
+    ids = pd.DataFrame({"ticker": ["TEST"], "date": [days[1]]})
+    coverage = pd.DataFrame(
+        [
+            claim(ticker="TEST", date=days[1], family=RIGHTS_HMETD, source="KSEI"),
+            claim(ticker="TEST", date=days[1], family=STOCK_DIVIDEND, source="KSEI"),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="exact frozen structural family set"):
+        combine_family_coverage(
+            ids,
+            coverage,
+            days,
+            required_families=(RIGHTS_HMETD, STOCK_DIVIDEND),
+        )
+
+
 def test_composite_provenance_is_order_independent_and_changes_with_evidence() -> None:
     days = sessions()
     ids = pd.DataFrame({"ticker": ["TEST"], "date": [days[1]]})
