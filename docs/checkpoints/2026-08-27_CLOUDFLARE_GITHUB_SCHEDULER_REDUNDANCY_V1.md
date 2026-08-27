@@ -1,9 +1,10 @@
 # Cloudflare GitHub Scheduler Redundancy V1 — Build Checkpoint
 
-Date: 2026-08-27 Asia/Jakarta
+Date: 2026-08-28 Asia/Jakarta (remediation update)
 Branch: `ops/cloudflare-github-scheduler-redundancy-v1`
 Base: `main@acd448c9d554bbb9e37254e4d45b61f03cf59e5b`
 Status: `PREPARED_FOR_INDEPENDENT_REVIEW_NOT_PRODUCTION_ACTIVATED`
+Watchdog compatibility head: `ops/github-schedule-watchdog-v1@82f938e9`
 
 ## Incident basis
 
@@ -36,8 +37,9 @@ commit would move default-branch HEAD immediately before the scheduled proof.
   and Stockbit Intraday workflows;
 - E2E provenance-only `trigger_slot` validation and dispatch propagation;
 - Official Open native/dispatch same-slot concurrency identity;
-- exact run-name/branch/ref/event coverage validation; `created_at` is only a
-  bounded current-date search filter;
+- exact run-name/branch/ref/event coverage validation; `created_at` admits only
+  runs at or after the logical slot due time, before its cutoff, and no later
+  than observation time; it never supplies logical slot identity;
 - GitHub run query with fail-closed errors;
 - exact `workflow_dispatch` input mapping;
 - one SQLite-backed Durable Object for strongly consistent per-slot markers;
@@ -47,11 +49,15 @@ commit would move default-branch HEAD immediately before the scheduled proof.
   results;
 - distinct staging/production Worker names, therefore isolated Durable Object
   namespaces;
+- explicit baseline staging `"triggers": { "crons": [] }` plus a separate,
+  not-deployed five-cron `wrangler.staging-live.jsonc` observe-only config;
 - explicit production `active` mode; missing or invalid mode fails closed;
 - reproducible pinned `package-lock.json` and production activation separated
   into `wrangler.production.jsonc`;
 - five exact UTC cron expressions stay within the Cloudflare Free-plan limit;
   `dueSlots()` decides which logical slots are handled at each wake-up.
+- exact coverage persists generic `covered_exact` markers and preserves the
+  real GitHub event as `native_schedule` or `workflow_dispatch` provenance.
 
 ## Security
 
@@ -64,30 +70,38 @@ secret is accepted by the Worker configuration.
 
 - Node: 26.0.0
 - `npm ci`: PASS; 37 packages added, 0 vulnerabilities.
-- `npm test`: 31/31 PASS.
+- `npm test`: 35/35 PASS.
 - schedule tests include exact run-name coverage, delayed-slot rejection,
   exact watchdog dispatch coverage, branch/ref filtering, morning and 09:22
   deadlines, native/dispatch contracts, GitHub query fail-closed, exact
   dispatch inputs, retryable/non-retryable GitHub responses, durable marker
   suppression, and explicit Stockbit Stream exclusion.
-- `npx wrangler types --config wrangler.production.jsonc`: PASS.
 - `npx wrangler types --config wrangler.jsonc`: PASS.
+- `npx wrangler types --config wrangler.staging-live.jsonc`: PASS.
+- `npx wrangler types --config wrangler.production.jsonc`: PASS.
 - `npx wrangler deploy --dry-run --config wrangler.jsonc`: PASS; Wrangler
   4.127.0, observe-only binding visible, no deployment occurred.
+- `npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc`: PASS;
+  Wrangler 4.127.0, observe-only binding and five bounded Cron expressions
+  visible, no deployment occurred.
 - `npx wrangler deploy --dry-run --config wrangler.production.jsonc`: PASS;
   Wrangler 4.127.0, active binding and five Cron expressions visible, no
   deployment occurred.
-- focused watchdog tests: 23/23 PASS with a fresh explicit Windows pytest
-  temp root; full repository pytest: 320/320 PASS.
-- PyYAML syntax parse: 10 workflow files plus 2 Wrangler configs PASS;
+- focused watchdog tests: 29/29 PASS; related E2E activation/synthetic tests:
+  19/19 PASS; full repository pytest is required again after final branch
+  integration.
+- PyYAML syntax parse: 10 workflow files plus 3 Wrangler configs PASS;
   `actionlint` and `yamllint` are unavailable in this environment.
 - Node syntax/import checks and `git diff --check`: PASS.
+- watchdog cross-contract test parses the E2E workflow's actual schedule and
+  trigger-slot allow-lists and matches all nine watchdog E2E slot IDs; the
+  final 09:22 slots expire at 09:23 and the installer no longer contains 09:26.
 
 ## Next gate
 
 Before any provider-free staging/diagnostic deployment:
 
-1. independently review this rebased/hardened lane and the watchdog
+1. independently review this remediated lane and the watchdog
    compatibility branch;
 2. provide/configure the staging GitHub Actions token and explicitly authorize
    the provider-free diagnostic; no token has been configured here;

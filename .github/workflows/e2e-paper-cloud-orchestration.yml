@@ -2,7 +2,15 @@ name: E2E Paper cloud orchestration
 
 run-name: >-
   IDX-SLOT:${{
-    inputs.trigger_slot ||
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0830' && 'E2E_PREOPEN_CA_0830') ||
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0845' && 'E2E_PREOPEN_CA_0845') ||
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0855' && 'E2E_PREOPEN_CA_0855') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0903' && 'E2E_PREOPEN_0903') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0913' && 'E2E_PREOPEN_0913') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0922' && 'E2E_PREOPEN_0922') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1835' && 'E2E_POST_EOD_1835') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1905' && 'E2E_POST_EOD_1905') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1935' && 'E2E_POST_EOD_1935') ||
     (github.event.schedule == '30 1 * * 1-5' && 'E2E_PREOPEN_CA_0830') ||
     (github.event.schedule == '45 1 * * 1-5' && 'E2E_PREOPEN_CA_0845') ||
     (github.event.schedule == '55 1 * * 1-5' && 'E2E_PREOPEN_CA_0855') ||
@@ -110,7 +118,6 @@ jobs:
             *) echo "Invalid E2E trigger_slot: $E2E_TRIGGER_SLOT_INPUT" >&2; exit 2 ;;
           esac
           case "$E2E_PHASE_INPUT:$E2E_TRIGGER_SLOT_INPUT" in
-            auto:*) ;;
             PREOPEN_CA:E2E_PREOPEN_CA_*) ;;
             PREOPEN:E2E_PREOPEN_0903|PREOPEN:E2E_PREOPEN_0913|PREOPEN:E2E_PREOPEN_0922) ;;
             POST_EOD:E2E_POST_EOD_*) ;;

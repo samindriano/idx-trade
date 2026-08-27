@@ -92,20 +92,21 @@ export class SchedulerCoordinator extends DurableObject {
     const markerDecision = durableMarkerDecision(prior, observedEpochMs);
     if (markerDecision) return { slot: slotId, ...markerDecision };
 
-    const nativeCoverage = await queryExactSlotCoverage({
+    const exactCoverage = await queryExactSlotCoverage({
       owner,
       repo,
       token,
       slot,
       epochMs: observedEpochMs,
     });
-    if (nativeCoverage.length) {
-      const run = nativeCoverage[0];
-      this._write(slotKey, 'covered_native', observedEpochMs, {
+    if (exactCoverage.length) {
+      const run = exactCoverage[0];
+      const provenance = run.event === 'schedule' ? 'native_schedule' : 'workflow_dispatch';
+      this._write(slotKey, 'covered_exact', observedEpochMs, {
         runId: Number.isInteger(run.id) ? run.id : null,
-        detail: { event: 'schedule', createdAt: run.created_at ?? null },
+        detail: { event: run.event, provenance, createdAt: run.created_at ?? null },
       });
-      return { slot: slotId, status: 'NATIVE_SCHEDULE_COVERED', runId: run.id ?? null };
+      return { slot: slotId, status: 'EXACT_SLOT_COVERED', provenance, event: run.event, runId: run.id ?? null };
     }
 
     const attemptId = crypto.randomUUID();

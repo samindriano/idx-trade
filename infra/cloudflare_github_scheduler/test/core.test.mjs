@@ -79,6 +79,24 @@ test('exact native schedule identity covers the current slot', () => {
   assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '19:40')).length, 1);
 });
 
+test('exact current-slot schedule at due time is accepted', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const runs = [{ event: 'schedule', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:35')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '18:35')).length, 1);
+});
+
+test('valid exact slot manually dispatched before its due time is rejected', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const runs = [{ event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:34')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '18:40')).length, 0);
+});
+
+test('exact current-slot evidence expires at the slot cutoff', () => {
+  const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const runs = [{ event: 'schedule', head_branch: 'main', created_at: new Date(ms('2026-08-27', '19:05')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' }];
+  assert.equal(exactSlotCoverageRuns(runs, slot, ms('2026-08-27', '19:10')).length, 0);
+});
+
 test('exact Windows-watchdog workflow_dispatch identity covers the current slot', () => {
   const slot = SLOT_BY_ID.get('E2E_POST_EOD_1835');
   const runs = [{ event: 'workflow_dispatch', head_branch: 'main', created_at: new Date(ms('2026-08-27', '18:36')).toISOString(), display_title: 'IDX-SLOT:E2E_POST_EOD_1835' }];
@@ -105,7 +123,8 @@ test('dispatch body preserves exact workflow input', () => {
 });
 
 test('durable final marker states suppress repeats while retryable errors remain retryable', () => {
-  assert.equal(isFinalMarkerState('covered_native'), true);
+  assert.equal(isFinalMarkerState('covered_exact'), true);
+  assert.equal(isFinalMarkerState('covered_native'), false);
   assert.equal(isFinalMarkerState('dispatched'), true);
   assert.equal(isFinalMarkerState('blocked'), true);
   assert.equal(isFinalMarkerState('retryable_error'), false);

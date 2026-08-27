@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "idx-trade-github-scheduler-v1-staging-observe",
+  "name": "idx-trade-github-scheduler-v1-staging-live-observe",
   "main": "src/index.js",
   "compatibility_date": "2026-08-27",
   "workers_dev": false,
@@ -28,6 +28,12 @@
     }
   },
   "triggers": {
-    "crons": []
+    "crons": [
+      "35,50 1 * * 1-5",
+      "0,5,15,22 2 * * 1-5",
+      "40 11 * * 1-5",
+      "10,40 12 * * 1-5",
+      "40 13 * * 1-5"
+    ]
   }
 }

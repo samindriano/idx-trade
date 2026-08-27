@@ -18,8 +18,15 @@ The production capture implementations remain the existing GitHub workflows on
 this Worker must not change the 2026-08-27 18:30–20:40 prospective proof.
 It names a separate Worker, `idx-trade-github-scheduler-v1-staging-observe`,
 with an isolated Durable Object namespace and explicit `DISPATCH_MODE=observe_only`.
+The baseline staging config explicitly sets `"triggers": { "crons": [] }`.
 In that mode the Worker may query GitHub and report `WOULD_DISPATCH`, but the
 dispatch POST path is unreachable. A read-only GitHub token is sufficient.
+
+`wrangler.staging-live.jsonc` is a separate, not-deployed observe-only config
+with the same five bounded Cron Triggers as production. It exists only for a
+future live observe-only proof. Remove all five staging-live crons explicitly
+before production crons are deployed: Workers Free allows five Cron Triggers
+per account.
 
 `wrangler.production.jsonc` is the explicit activation configuration and must
 not be deployed until the existing native-GitHub + Windows-watchdog proof has
@@ -102,7 +109,8 @@ The Worker accepts coverage only when all of these hold:
 - the event is `schedule` or `workflow_dispatch`;
 - the run is on production `main` (validated from branch/ref metadata);
 - `display_title`/run-name contains the exact current `IDX-SLOT:<slot_id>`;
-- `created_at` is only within the bounded current-Jakarta-date API search range.
+- `created_at` is at or after the logical slot due time, strictly before its
+  cutoff, and no later than the observation time.
 
 The timestamp is never used to infer the logical slot. Consequently:
 
@@ -112,9 +120,11 @@ The timestamp is never used to infer the logical slot. Consequently:
   slot identity;
 - an ambiguous manual run never suppresses Cloudflare fallback.
 
-An unknown or ambiguous run is **not** accepted as exact slot evidence;
-- a Cloudflare-originated dispatch is identified by the coordinator's durable
-  marker and the returned workflow run id when GitHub provides one.
+An unknown or ambiguous run is **not** accepted as exact slot evidence. Exact
+coverage is persisted as the generic `covered_exact` marker, with provenance
+preserving the real GitHub event: `native_schedule` or `workflow_dispatch`.
+A Cloudflare-originated dispatch is additionally identified by the coordinator's
+durable marker and the returned workflow run id when GitHub provides one.
 
 Ambiguity fails toward another invocation of the existing idempotent cloud
 workflow, never toward silently suppressing a required slot.
@@ -122,7 +132,8 @@ workflow, never toward silently suppressing a required slot.
 ## Failure semantics
 
 - GitHub run-query error -> fail closed; no dispatch.
-- Native exact schedule run -> durable `covered_native` marker; no dispatch.
+- Native exact schedule or exact watchdog dispatch -> durable `covered_exact`
+  marker with `native_schedule` or `workflow_dispatch` provenance; no dispatch.
 - Missing native run in `observe_only` -> non-final `would_dispatch` marker and
   `WOULD_DISPATCH` result; no dispatch POST.
 - Missing native run in `active` -> durable short `dispatching` lease, then

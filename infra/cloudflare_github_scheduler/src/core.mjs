@@ -1,6 +1,6 @@
 export const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
 export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
-export const FINAL_MARKER_STATES = Object.freeze(['covered_native', 'dispatched', 'blocked']);
+export const FINAL_MARKER_STATES = Object.freeze(['covered_exact', 'dispatched', 'blocked']);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
@@ -88,15 +88,15 @@ export function isProductionMainRun(run) {
 }
 
 export function exactSlotCoverageRuns(runs, slot, epochMs) {
-  const { dateStartMs } = slotWindow(slot, epochMs);
+  const { dueMs, cutoffMs } = slotWindow(slot, epochMs);
   return runs.filter((run) => {
     if (run?.event !== 'schedule' && run?.event !== 'workflow_dispatch') return false;
     if (!isProductionMainRun(run)) return false;
     if (!hasExactSlotRunName(run, slot.id)) return false;
-    // created_at is only a bounded same-Jakarta-date search filter. It is never
-    // used to infer which logical slot produced the run; the exact run name is.
+    // created_at is only a temporal admission bound. It is never used to infer
+    // which logical slot produced the run; the exact run name is the identity.
     const createdMs = Date.parse(run?.created_at ?? '');
-    return Number.isFinite(createdMs) && createdMs >= dateStartMs && createdMs <= epochMs;
+    return Number.isFinite(createdMs) && createdMs >= dueMs && createdMs < cutoffMs && createdMs <= epochMs;
   });
 }
 
