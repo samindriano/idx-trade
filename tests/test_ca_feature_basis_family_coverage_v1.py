@@ -29,6 +29,7 @@ def claim(
     source: str,
     state: str = FAMILY_COVERAGE_CERTIFIED,
     conflict: bool = False,
+    evidence_sha: str = SHA,
 ) -> dict[str, object]:
     return {
         "ticker": ticker,
@@ -37,9 +38,24 @@ def claim(
         "coverage_state": state,
         "source_contract_id": source,
         "source_ref": f"fixture://{source}",
-        "evidence_sha256": SHA if state == FAMILY_COVERAGE_CERTIFIED else "",
+        "evidence_sha256": evidence_sha if state == FAMILY_COVERAGE_CERTIFIED else "",
         "coverage_conflict": conflict,
     }
+
+
+def complete_claims(date: object, *, changed_hash: str | None = None) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for index, family in enumerate(DEFAULT_REQUIRED_FAMILIES):
+        rows.append(
+            claim(
+                ticker="TEST",
+                date=date,
+                family=family,
+                source="KSEI" if index % 2 == 0 else "IDX_ISSUED_HISTORY",
+                evidence_sha=(changed_hash if changed_hash is not None and index == 0 else SHA),
+            )
+        )
+    return rows
 
 
 def test_one_source_family_does_not_certify_unrelated_families() -> None:
@@ -58,16 +74,7 @@ def test_one_source_family_does_not_certify_unrelated_families() -> None:
 def test_union_of_independent_source_contracts_can_certify_global_coverage() -> None:
     days = sessions()
     ids = pd.DataFrame({"ticker": ["TEST"], "date": [days[1]]})
-    rows = []
-    for index, family in enumerate(DEFAULT_REQUIRED_FAMILIES):
-        rows.append(
-            claim(
-                ticker="TEST",
-                date=days[1],
-                family=family,
-                source="KSEI" if index % 2 == 0 else "IDX_ISSUED_HISTORY",
-            )
-        )
+    rows = complete_claims(days[1])
 
     result = combine_family_coverage(ids, pd.DataFrame(rows), days)
     row = result.iloc[0]
@@ -78,6 +85,24 @@ def test_union_of_independent_source_contracts_can_certify_global_coverage() -> 
         "IDX_ISSUED_HISTORY",
         "KSEI",
     }
+    assert len(row["evidence_sha256"]) == 64
+    assert row["evidence_sha256"] != SHA
+
+
+def test_composite_provenance_is_order_independent_and_changes_with_evidence() -> None:
+    days = sessions()
+    ids = pd.DataFrame({"ticker": ["TEST"], "date": [days[1]]})
+    rows = complete_claims(days[1])
+    forward = combine_family_coverage(ids, pd.DataFrame(rows), days).iloc[0]
+    reverse = combine_family_coverage(ids, pd.DataFrame(list(reversed(rows))), days).iloc[0]
+    changed = combine_family_coverage(
+        ids,
+        pd.DataFrame(complete_claims(days[1], changed_hash="b" * 64)),
+        days,
+    ).iloc[0]
+
+    assert forward["evidence_sha256"] == reverse["evidence_sha256"]
+    assert forward["evidence_sha256"] != changed["evidence_sha256"]
 
 
 def test_source_conflict_overrides_an_otherwise_certified_family() -> None:
