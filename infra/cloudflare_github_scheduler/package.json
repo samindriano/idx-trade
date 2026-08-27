@@ -1,0 +1,14 @@
+{
+  "name": "idx-trade-cloudflare-github-scheduler",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.127.0"
+  }
+}
