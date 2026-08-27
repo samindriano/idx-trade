@@ -1,7 +1,7 @@
 # E2E cloud trigger and Security Master live-identity audit V1
 
-Date: 2026-08-27 Asia/Jakarta  
-Lane: `audit/e2e-security-master-live-identity-v1`  
+Date: 2026-08-27 Asia/Jakarta
+Lane: `audit/e2e-security-master-live-identity-v1`
 Source implementation anchor: `fix/e2e-cloud-runtime-security-master-bootstrap-v1@6ec8ade98b47ea8099dff0fc32e9b3a644d260a2`
 
 ## Scope and boundary
