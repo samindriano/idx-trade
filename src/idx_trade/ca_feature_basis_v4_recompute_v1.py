@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .ca_feature_basis_v1 import apply_direct_feature_basis_mask
+from .ca_feature_basis_v1 import NOT_APPLICABLE, apply_direct_feature_basis_mask
 from .ca_feature_basis_v4_contract_v1 import V4_CA_BASIS_DIRECT_SOURCE_FEATURES
 
 
@@ -82,6 +82,73 @@ def _finite(series: pd.Series) -> pd.Series:
     return numeric.where(np.isfinite(numeric))
 
 
+def assert_frozen_v4_feature_builder_blob(actual_blob_sha1: object) -> str:
+    """Fail closed unless application code proves the exact frozen builder blob.
+
+    The remediation branch intentionally does not carry the historical feature
+    builder.  An application runner must resolve the authoritative retained git
+    ref/blob and pass that SHA here before using this recomputation contract.
+    Merely copying formulas into this module is not accepted as provenance.
+    """
+
+    actual = str(actual_blob_sha1 or "").strip().lower()
+    if actual != FROZEN_V4_FEATURE_BUILDER_BLOB_SHA1:
+        raise ValueError(
+            "V4 frozen feature builder blob mismatch: "
+            f"{actual or '<empty>'}!={FROZEN_V4_FEATURE_BUILDER_BLOB_SHA1}"
+        )
+    return actual
+
+
+def _assert_not_applicable_is_natural_missing(
+    source: pd.DataFrame,
+    admission: pd.DataFrame,
+) -> None:
+    """Prevent CA remediation from manufacturing new warm-up missingness.
+
+    `NOT_APPLICABLE` means the frozen sequential formula did not yet have enough
+    dependency history.  Such a source feature must already be non-finite in the
+    frozen direct-feature table.  If it is finite, masking it would be a science
+    change rather than CA remediation, so application fails closed.
+    """
+
+    required = {"ticker", "date", "feature", "basis_integrity_state"}
+    missing = required - set(admission.columns)
+    if missing:
+        raise ValueError(f"feature admission missing columns: {sorted(missing)}")
+
+    states = admission[list(required)].copy()
+    states["ticker"] = _ticker(states["ticker"])
+    states["date"] = _date(states["date"])
+    states["feature"] = states["feature"].astype(str)
+    states["basis_integrity_state"] = (
+        states["basis_integrity_state"].astype(str).str.upper().str.strip()
+    )
+    if states.duplicated(["ticker", "date", "feature"]).any():
+        raise ValueError("feature admission contains duplicate identities")
+
+    for feature in V4_CA_BASIS_DIRECT_SOURCE_FEATURES:
+        not_applicable = states.loc[
+            states["feature"].eq(feature)
+            & states["basis_integrity_state"].eq(NOT_APPLICABLE),
+            ["ticker", "date"],
+        ]
+        if not_applicable.empty:
+            continue
+        values = source[["ticker", "date", feature]].merge(
+            not_applicable,
+            on=["ticker", "date"],
+            how="inner",
+            validate="one_to_one",
+        )
+        finite = np.isfinite(pd.to_numeric(values[feature], errors="coerce").astype(float))
+        if bool(finite.any()):
+            raise ValueError(
+                "NOT_APPLICABLE cannot erase finite frozen source feature: "
+                f"{feature}:{int(finite.sum())}"
+            )
+
+
 def recompute_v4_control_after_basis_admission(
     direct_features: pd.DataFrame,
     admission: pd.DataFrame,
@@ -118,6 +185,7 @@ def recompute_v4_control_after_basis_admission(
 
     # Never trust pre-existing derived columns from the contaminated build.
     source = source.drop(columns=list(V4_CONTROL_FEATURE_COLUMNS), errors="ignore")
+    _assert_not_applicable_is_natural_missing(source, admission)
     masked = apply_direct_feature_basis_mask(
         source,
         admission,
