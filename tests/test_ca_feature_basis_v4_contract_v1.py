@@ -5,10 +5,12 @@ import pytest
 
 from idx_trade.ca_feature_basis_gate_v1 import (
     BASIS_SAFE,
+    BASIS_UNKNOWN,
     BASIS_UNSAFE,
     CA_COVERAGE_CERTIFIED,
 )
 from idx_trade.ca_feature_basis_v1 import (
+    NOT_APPLICABLE,
     RESOLVED,
     REVERSE_SPLIT,
     RIGHTS_HMETD,
@@ -16,8 +18,12 @@ from idx_trade.ca_feature_basis_v1 import (
 )
 from idx_trade.ca_feature_basis_v4_contract_v1 import (
     V4_CA_BASIS_DIRECT_SOURCE_FEATURES,
+    V4_CA_ROW_ADMITTED,
+    V4_CA_ROW_BLOCKED_UNKNOWN,
+    V4_CA_ROW_BLOCKED_UNSAFE,
     evaluate_v4_application_feature_basis_admission,
     evaluate_v4_feature_basis_admission,
+    summarize_v4_model_row_ca_admission,
 )
 
 
@@ -152,6 +158,47 @@ def test_application_scope_must_be_subset_of_full_stream() -> None:
             coverage(days),
             days,
         )
+
+
+def test_natural_not_applicable_feature_does_not_change_training_row_identity() -> None:
+    day = pd.Timestamp("2021-01-04")
+    rows = []
+    for feature in V4_CA_BASIS_DIRECT_SOURCE_FEATURES:
+        rows.append(
+            {
+                "ticker": "TEST",
+                "date": day,
+                "feature": feature,
+                "basis_integrity_state": (
+                    NOT_APPLICABLE if feature == "distance_high_60_atr" else BASIS_SAFE
+                ),
+            }
+        )
+    summary = summarize_v4_model_row_ca_admission(pd.DataFrame(rows)).iloc[0]
+    assert summary["v4_ca_row_state"] == V4_CA_ROW_ADMITTED
+    assert summary["natural_not_applicable_feature_count"] == 1
+
+
+def test_unsafe_or_unknown_ca_state_blocks_model_row() -> None:
+    day = pd.Timestamp("2021-01-04")
+
+    def summary_for(blocked_state: str) -> str:
+        rows = []
+        for feature in V4_CA_BASIS_DIRECT_SOURCE_FEATURES:
+            rows.append(
+                {
+                    "ticker": "TEST",
+                    "date": day,
+                    "feature": feature,
+                    "basis_integrity_state": (
+                        blocked_state if feature == "close_return_5" else BASIS_SAFE
+                    ),
+                }
+            )
+        return str(summarize_v4_model_row_ca_admission(pd.DataFrame(rows)).iloc[0]["v4_ca_row_state"])
+
+    assert summary_for(BASIS_UNSAFE) == V4_CA_ROW_BLOCKED_UNSAFE
+    assert summary_for(BASIS_UNKNOWN) == V4_CA_ROW_BLOCKED_UNKNOWN
 
 
 def test_v4_direct_basis_contract_includes_relative_volume_once() -> None:
