@@ -64,6 +64,9 @@ EXPECTED = {
     "old_summary": "c4d55545066bb28401246ec0ff217c6bf2a36a77372cedd158fe7ca579bfb4c5",
     "old_h5": "2c2874bde129f8cefb68af1aae01ab88203dfe74c2bc8cf4cf3e5bab61e76ede",
     "old_h10": "606eae2a431d0b924f7dbe574cbca493f1b857bf55aeb0d1af74db3d01c03386",
+    "clean_ca80_support_per_date": "b36114623df7dc9475fd5227f877f9cae887a28f17b31448f28e26d443715f79",
+    "old_vs_clean_primary_identity_delta": "f07bfec5d89443e05512984364831034b1571c7337e1257e685e6bf71e58a240",
+    "old_vs_clean_support_delta": "ae13c763515ee86bf8934d6883dd089ae3aae5504ba317f8d951ffdcbf2f5862",
 }
 
 STRUCTURAL_FAMILIES = (
@@ -196,6 +199,8 @@ def _family_verdict(family: str, count: int) -> tuple[str, str, str]:
 
 
 def run(args: argparse.Namespace) -> Path:
+    if getattr(args, "r31", False):
+        return run_r31(args)
     if getattr(args, "r3", False):
         return run_r3(args)
     phase_a = Path(args.phase_a_root)
@@ -892,11 +897,18 @@ def run_r3(args: argparse.Namespace) -> Path:
         },
     }
 
-    fit_tickers = len({ticker for ticker, _ in current_union})
+    fit_ticker_set = {ticker for ticker, _ in current_union}
+    application_ticker_set = set(population["ticker"])
+    closure_identity_set = set(map(tuple, closure[["ticker", "date"]].itertuples(index=False, name=None))) if not closure.empty else set()
+    closure_ticker_set = set(closure["ticker"]) if not closure.empty else set()
+    fit_tickers = len(fit_ticker_set)
     gate = global_ca_population_gate(
-        fit_tickers=fit_tickers,
-        application_tickers=population_summary["application_tickers"],
-        closure_tickers=closure_summary["closure_tickers"],
+        fit_tickers=fit_ticker_set,
+        application_tickers=application_ticker_set,
+        closure_tickers=closure_ticker_set,
+        fit_identities=current_union,
+        application_identities=application_keys,
+        closure_identities=closure_identity_set,
         ksei_scope=ksei_scope,
         structural_event_complete=False,
     )
@@ -1029,8 +1041,248 @@ def run_r3(args: argparse.Namespace) -> Path:
     return output
 
 
+_R31_EVENT_IDENTITY_FIELDS = (
+    "source_kind",
+    "ticker",
+    "event_family",
+    "candidate_date",
+    "source_action_id",
+    "source_ref",
+    "source_sha256",
+    "published_at_utc",
+    "evidence_id",
+)
+
+
+def _r31_event_identity(row: Mapping[str, str]) -> str:
+    return "|".join(str(row.get(field, "") or "").strip() for field in _R31_EVENT_IDENTITY_FIELDS)
+
+
+def _r31_support_mechanisms(
+    lineage_rows: Sequence[Mapping[str, str]],
+    *,
+    phase_a_root: Path,
+    old_stage_c_decision: str,
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Keep row-level support-removal attribution fail-closed.
+
+    The pinned manifests expose a global Stage-C decision, but no per-identity
+    admission/remediation mapping.  That global note is retained as evidence,
+    never promoted into a row-level explanation.
+    """
+
+    primary_delta_path = phase_a_root / "old_vs_clean_primary_identity_delta.csv"
+    support_delta_path = phase_a_root / "old_vs_clean_support_delta.csv"
+    ca80_path = phase_a_root / "clean_ca80_support_per_date.csv"
+    primary_delta_hash = require_hash(
+        primary_delta_path,
+        EXPECTED["old_vs_clean_primary_identity_delta"],
+        "R3.1 old_vs_clean_primary_identity_delta",
+    )
+    support_delta_hash = require_hash(
+        support_delta_path,
+        EXPECTED["old_vs_clean_support_delta"],
+        "R3.1 old_vs_clean_support_delta",
+    )
+    ca80_hash = require_hash(ca80_path, EXPECTED["clean_ca80_support_per_date"], "R3.1 clean_ca80_support_per_date")
+    primary_rows = read_csv(primary_delta_path)
+    primary_add_dates = {
+        row["date"]
+        for row in primary_rows
+        if row.get("ticker", "").strip().upper() == "FREN" and row.get("change") == "PRIMARY_ADD"
+    }
+    support_rows = read_csv(support_delta_path)
+    drops_by_identity: defaultdict[tuple[str, str, str], set[str]] = defaultdict(set)
+    for row in support_rows:
+        if row.get("change") == "DROP":
+            drops_by_identity[(row.get("head", ""), row.get("ticker", "").strip().upper(), row.get("date", ""))].add(
+                row.get("head", "")
+            )
+    ca80_by_date = {row.get("date", ""): row for row in read_csv(ca80_path)}
+    rows: list[dict[str, object]] = []
+    for row in lineage_rows:
+        if row.get("support_head") != "UNION" or row.get("comparison") != "OLD_ONLY":
+            continue
+        ticker = row.get("ticker", "").strip().upper()
+        date = row.get("date", "")
+        heads = sorted(head for head in ("H5", "H10") if (head, ticker, date) in drops_by_identity)
+        ca80_row = ca80_by_date.get(date, {})
+        gate_flipped = bool(
+            heads
+            and all(str(ca80_row.get(f"{head.lower()}_eligible", "")).strip().lower() == "false" for head in heads)
+        )
+        primary_admission_on_date = date in primary_add_dates
+        proven = primary_admission_on_date and gate_flipped
+        rows.append(
+            {
+                "ticker": ticker,
+                "date": date,
+                "support_head": "UNION",
+                "mechanism_classification": (
+                    "CLEAN_SECURITY_MASTER_ADMISSION_PLUS_CA80_DATE_GATE_FLIP" if proven else "UNKNOWN"
+                ),
+                "mechanism_evidence": (
+                    "FREN PRIMARY_ADD is present on the date and clean CA80 eligibility is false for the dropped head(s)"
+                    if proven
+                    else "identity-only artifacts do not prove the complete admission/gate chain for this row"
+                ),
+                "affected_heads": ";".join(heads),
+                "primary_admission_identity": "FREN|" + date if primary_admission_on_date else "",
+                "clean_ca80_gate_flipped": gate_flipped,
+                "row_level_numerator_attribution": "UNKNOWN",
+                "global_stage_c_decision": old_stage_c_decision,
+                "global_decision_is_row_level_proof": False,
+            }
+        )
+    mechanism_counts = Counter(row["mechanism_classification"] for row in rows)
+    summary = {
+        "old_only_union_rows": len(rows),
+        "mechanism_classification_counts": dict(sorted(mechanism_counts.items())),
+        "global_stage_c_decision": old_stage_c_decision,
+        "row_level_attribution": "DATE_LEVEL_MECHANISM_PROVEN_NUMERATOR_UNKNOWN",
+        "reason": "the clean primary identity delta and clean per-date CA80 ledger prove the security-master admission plus date-gate mechanism; they do not expose individual numerator/support flags",
+        "source_artifact_hashes": {
+            "old_vs_clean_primary_identity_delta": primary_delta_hash,
+            "old_vs_clean_support_delta": support_delta_hash,
+            "clean_ca80_support_per_date": ca80_hash,
+        },
+    }
+    return rows, summary
+
+
+def run_r31(args: argparse.Namespace) -> Path:
+    """Run the immutable, outcome-blind R3.1 red-team correction ledger."""
+
+    prior_root_value = getattr(args, "prior_r3_root", None)
+    if not prior_root_value:
+        raise RuntimeError("R3.1 requires --prior-r3-root")
+    prior_root = Path(prior_root_value)
+    prior_manifest_path = prior_root / "MANIFEST.json"
+    prior_scope_path = prior_root / "r3_structural_ca_event_scope.csv"
+    if not prior_manifest_path.is_file() or not prior_scope_path.is_file():
+        raise RuntimeError("R3.1 prior R3 root is missing MANIFEST.json or structural event scope")
+    prior_manifest = read_json(prior_manifest_path)
+    if not isinstance(prior_manifest, dict) or not str(prior_manifest.get("schema_version", "")).endswith("_r3_manifest"):
+        raise RuntimeError("R3.1 prior root is not an R3 manifest")
+    prior_scope_hash = sha256(prior_scope_path)
+    if prior_manifest.get("output_hashes", {}).get("r3_structural_ca_event_scope.csv") != prior_scope_hash:
+        raise RuntimeError("R3.1 prior R3 structural event scope hash is not manifest-bound")
+
+    output = Path(args.output_dir)
+    base_output = output.with_name(output.name + ".r31-base")
+    if output.exists() or base_output.exists() or base_output.with_name(base_output.name + ".staging").exists():
+        raise RuntimeError("refusing to overwrite existing R3.1 output or staging directory")
+    base_args = argparse.Namespace(**vars(args))
+    base_args.output_dir = str(base_output)
+    run_r3(base_args)
+
+    try:
+        current_scope_path = base_output / "r3_structural_ca_event_scope.csv"
+        current_scope = read_csv(current_scope_path)
+        prior_scope = read_csv(prior_scope_path)
+        prior_by_id = {_r31_event_identity(row): row for row in prior_scope}
+        current_by_id = {_r31_event_identity(row): row for row in current_scope}
+        if len(prior_by_id) != len(prior_scope) or len(current_by_id) != len(current_scope):
+            raise RuntimeError("R3.1 event scope contains duplicate source identities")
+        if set(prior_by_id) != set(current_by_id):
+            raise RuntimeError("R3.1 event scope identities differ from pinned R3 census")
+
+        reclassification_rows = []
+        for identity in sorted(current_by_id):
+            before = prior_by_id[identity]
+            after = current_by_id[identity]
+            reclassification_rows.append(
+                {
+                    "event_identity": identity,
+                    "source_kind": after.get("source_kind", ""),
+                    "ticker": after.get("ticker", ""),
+                    "event_family": after.get("event_family", ""),
+                    "candidate_date": after.get("candidate_date", ""),
+                    "source_action_id": after.get("source_action_id", ""),
+                    "source_ref": after.get("source_ref", ""),
+                    "before_classification": before.get("closure_scope_classification", ""),
+                    "after_classification": after.get("closure_scope_classification", ""),
+                    "before_reason": before.get("resolution_reason", ""),
+                    "after_reason": after.get("resolution_reason", ""),
+                    "classification_changed": before.get("closure_scope_classification", "") != after.get("closure_scope_classification", ""),
+                }
+            )
+
+        lineage_path = base_output / "r3_support_lineage_reconciliation.csv"
+        lineage_rows = read_csv(lineage_path)
+        support_mechanism_rows, mechanism_summary = _r31_support_mechanisms(
+            lineage_rows,
+            phase_a_root=Path(args.phase_a_root),
+            old_stage_c_decision=str(
+                read_json(Path(args.old_support_root) / "summary.json").get("decision", "")
+            ),
+        )
+        support_summary_path = base_output / "r3_support_lineage_summary.json"
+        support_summary = read_json(support_summary_path)
+        if not isinstance(support_summary, dict):
+            raise RuntimeError("R3.1 support lineage summary is not a JSON object")
+        support_summary["old_only_mechanism_classification"] = mechanism_summary
+
+        summary_path = base_output / "r3_summary.json"
+        summary = read_json(summary_path)
+        if not isinstance(summary, dict):
+            raise RuntimeError("R3.1 R3 summary is not a JSON object")
+        before_counts = dict(sorted(Counter(row.get("closure_scope_classification", "") for row in prior_scope).items()))
+        after_counts = dict(sorted(Counter(row.get("closure_scope_classification", "") for row in current_scope).items()))
+        changed = [row for row in reclassification_rows if row["classification_changed"]]
+        summary["schema_version"] = "ca_aware_feature_basis_reconciliation_r3_1"
+        summary["status"] = "R3_1_AUDIT_COMPLETE_PHASE_E_BLOCKED"
+        summary["inputs"]["prior_r3_manifest"] = sha256(prior_manifest_path)
+        summary["inputs"]["prior_r3_structural_event_scope"] = prior_scope_hash
+        summary["support_lineage"] = support_summary
+        summary["structural_ca"]["scope_classification_counts_before_r3"] = before_counts
+        summary["structural_ca"]["scope_classification_counts_after_r3_1"] = after_counts
+        summary["structural_ca"]["reclassified_event_rows"] = len(changed)
+        summary["structural_ca"]["reclassified_event_identities"] = [row["event_identity"] for row in changed]
+        summary["verdict"]["EVENT_SCOPE_RULE"] = "PASS_ONLY_CERTIFIED_TRANSITION_LOWER_BOUND_MAY_PROVE_OUTSIDE"
+        summary["verdict"]["SUPPORT_LINEAGE_ROW_LEVEL_MECHANISM"] = "UNKNOWN_NOT_PROVEN_BY_IDENTITY_ONLY_ARTIFACTS"
+        summary["verdict"]["EXACT_HEAD_CI_33089485270"] = "334_PASSED_5_WARNINGS"
+
+        write_csv(
+            base_output / "r3_1_scope_reclassification.csv",
+            tuple(reclassification_rows[0].keys()) if reclassification_rows else ("event_identity",),
+            reclassification_rows,
+        )
+        write_csv(
+            base_output / "r3_1_support_lineage_mechanism.csv",
+            tuple(support_mechanism_rows[0].keys()) if support_mechanism_rows else ("ticker", "date"),
+            support_mechanism_rows,
+        )
+        json_dump(support_summary_path, support_summary)
+        json_dump(summary_path, summary)
+
+        output_names = tuple(sorted(path.name for path in base_output.iterdir() if path.is_file() and path.name != "MANIFEST.json"))
+        output_hashes = {name: sha256(base_output / name) for name in output_names}
+        manifest = dict(read_json(base_output / "MANIFEST.json"))
+        manifest.update(
+            {
+                "schema_version": "ca_aware_feature_basis_reconciliation_r3_1_manifest",
+                "status": "R3_1_AUDIT_COMPLETE_PHASE_E_BLOCKED",
+                "input_hashes": summary["inputs"],
+                "output_hashes": output_hashes,
+                "support_lineage": support_summary,
+                "structural_ca": summary["structural_ca"],
+                "verdict": summary["verdict"],
+                "guardrails": summary["guardrails"],
+                "deterministic": True,
+            }
+        )
+        json_dump(base_output / "MANIFEST.json", manifest)
+        base_output.replace(output)
+    except Exception:
+        shutil.rmtree(base_output, ignore_errors=True)
+        raise
+    return output
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--r31", action="store_true", help="run the immutable outcome-blind R3.1 red-team correction audit")
     parser.add_argument("--r3", action="store_true", help="run the outcome-blind R3 population/closure audit")
     parser.add_argument("--phase-a-root", required=True)
     parser.add_argument("--phase-b-root", required=True)
@@ -1042,6 +1294,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--clean-security-master")
     parser.add_argument("--official-calendar")
     parser.add_argument("--old-support-root")
+    parser.add_argument("--prior-r3-root")
     return parser.parse_args()
 
 

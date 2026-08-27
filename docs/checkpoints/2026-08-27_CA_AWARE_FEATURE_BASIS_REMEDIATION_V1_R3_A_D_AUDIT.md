@@ -163,7 +163,8 @@ Validation on the final branch worktree:
 
 ```text
 Focused CA/integrity regression: 95 passed, 0 failed, 0 skipped, 0 warnings
-Full pytest: 334 passed, 0 failed, 0 skipped, 0 warnings
+Local full pytest: 334 passed, 0 failed, 0 skipped, 0 warnings
+Exact-head GitHub Actions run `33089485270`: 334 passed, 5 warnings
 py_compile: PASS
 git diff --check: PASS
 Deterministic fresh rerun: 9/9 output hashes match

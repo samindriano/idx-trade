@@ -85,7 +85,8 @@ artifact_root: |
 
 validation_run:
   - `python -m pytest -q -rA --basetemp D:\Documents\Project\idx-ca-aware-feature-basis-pytest-ca-integrity-20260827-v2 tests/test_ca_aware_feature_basis_reconciliation_v1.py tests/test_ca_feature_basis_family_coverage_v1.py tests/test_ca_feature_basis_frozen_sources_v1.py tests/test_ca_feature_basis_gate_v1.py tests/test_ca_feature_basis_inputs_v1.py tests/test_ca_feature_basis_v1.py tests/test_ca_feature_basis_v4_contract_v1.py tests/test_ca_feature_basis_v4_recompute_v1.py tests/test_research_integrity_gate_v1.py tests/test_research_integrity_primitives_v1.py` — **95 passed**.
-  - `python -m pytest -q --basetemp D:\Documents\Project\idx-ca-aware-feature-basis-pytest-full-20260827-v2` — **334 passed**.
+  - `python -m pytest -q --basetemp D:\Documents\Project\idx-ca-aware-feature-basis-pytest-full-20260827-v2` — **334 passed locally**.
+  - Exact-head GitHub Actions run `33089485270` — **334 passed, 5 warnings**.
   - `python -m py_compile src/idx_trade/ca_aware_feature_basis_r3.py scripts/run_ca_aware_feature_basis_reconciliation_v1.py` — **PASS**.
   - `git diff --check` — **PASS**.
   - R3 final runtime plus fresh-root deterministic rerun — **9/9 output hashes match**.

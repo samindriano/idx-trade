@@ -9,9 +9,11 @@ never promoted to a transition date by this module.
 from __future__ import annotations
 
 import hashlib
+import re
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
+from numbers import Integral
 
 import pandas as pd
 import numpy as np
@@ -353,6 +355,48 @@ def _missing_ticker_sha(tickers: Iterable[str]) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _identity_set(values: Iterable[tuple[str, str]] | None, *, label: str) -> set[tuple[str, str]] | None:
+    if values is None:
+        return None
+    result: set[tuple[str, str]] = set()
+    for value in values:
+        if not isinstance(value, Sequence) or isinstance(value, (str, bytes)) or len(value) != 2:
+            raise ValueError(f"{label} must contain ticker/date pairs")
+        ticker = _normalise_ticker(value[0])
+        if not ticker:
+            raise ValueError(f"{label} contains an empty ticker")
+        result.add((ticker, _normalise_date(value[1], label=label)))
+    return result
+
+
+def _scope_values(values: int | Iterable[str], *, label: str) -> tuple[int, set[str] | None]:
+    if isinstance(values, Integral) and not isinstance(values, bool):
+        count = int(values)
+        if count < 0:
+            raise ValueError(f"{label} must not be negative")
+        return count, None
+    normalised = {_normalise_ticker(value) for value in values}
+    if "" in normalised:
+        raise ValueError(f"{label} contains an empty ticker")
+    return len(normalised), normalised
+
+
+def _strict_bool(value: object, *, label: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y"}:
+        return True
+    if text in {"false", "0", "no", "n", ""}:
+        return False
+    raise ValueError(f"{label}: expected a strict boolean, got {value!r}")
+
+
+def _identity_sha(keys: Iterable[tuple[str, str]]) -> str:
+    value = "\n".join(f"{ticker}|{date}" for ticker, date in sorted(set(keys)))
+    return hashlib.sha256((value + ("\n" if value else "")).encode("utf-8")).hexdigest()
+
+
 def reconcile_ksei_populations(
     populations: Mapping[str, Iterable[str]],
     ksei_rows: pd.DataFrame,
@@ -409,6 +453,9 @@ def classify_event_scope(
     for index, source in events.reset_index(drop=True).iterrows():
         ticker = _normalise_ticker(source["ticker"])
         candidate = str(source.get("candidate_date", "") or "").strip()
+        lower_bound_value = ""
+        lower_bound_status = ""
+        lower_bound_certified = False
         if ticker not in bounds.index:
             classification = "OUTSIDE_DEPENDENCY_TICKER"
             reason = "event ticker is absent from observed dependency closure"
@@ -428,9 +475,40 @@ def classify_event_scope(
                 lower = str(bounds.loc[ticker, "min"])
                 upper = str(bounds.loc[ticker, "max"])
                 candidate_in_closure = (ticker, candidate) in closure_dates
-                if candidate > upper:
+                lower_bound_value = str(source.get("certified_transition_lower_bound", "") or "").strip()
+                lower_bound_status = str(source.get("transition_lower_bound_status", "") or "").strip().upper()
+                if lower_bound_value:
+                    try:
+                        lower_bound_value = _normalise_date(
+                            lower_bound_value,
+                            label=f"event[{index}].certified_transition_lower_bound",
+                        )
+                        explicit_certified = _strict_bool(
+                            source.get("transition_lower_bound_certified", False),
+                            label=f"event[{index}].transition_lower_bound_certified",
+                        )
+                    except ValueError:
+                        lower_bound_value = ""
+                        explicit_certified = False
+                    lower_bound_source = str(
+                        source.get("transition_lower_bound_source_ref", source.get("source_ref", "")) or ""
+                    ).strip()
+                    lower_bound_sha = str(
+                        source.get("transition_lower_bound_source_sha256", source.get("source_sha256", "")) or ""
+                    ).strip()
+                    lower_bound_sha_valid = not lower_bound_sha or bool(re.fullmatch(r"[0-9a-fA-F]{64}", lower_bound_sha))
+                    lower_bound_certified = bool(
+                        explicit_certified
+                        and lower_bound_status in {"CERTIFIED", "SOURCE_CERTIFIED", "CERTIFIED_SOURCE_BOUND"}
+                        and lower_bound_source
+                        and lower_bound_sha_valid
+                    )
+                if lower_bound_certified and lower_bound_value > upper:
                     classification = "OUTSIDE_DEPENDENCY_AFTER_CLOSURE"
-                    reason = "candidate evidence is after the observed backward dependency closure"
+                    reason = "source-certified transition lower bound is after the observed backward dependency closure"
+                elif candidate > upper:
+                    classification = "UNKNOWN_UNRESOLVED_AFTER_CLOSURE"
+                    reason = "candidate evidence is after closure, but it is not a certified transition lower bound"
                 elif candidate < lower:
                     classification = "UNRESOLVED_CANDIDATE_BEFORE_CLOSURE"
                     reason = "pre-closure event may affect later basis; no transition date is inferred"
@@ -446,6 +524,9 @@ def classify_event_scope(
                 "resolution_reason": reason,
             }
         )
+        row["certified_transition_lower_bound"] = lower_bound_value
+        row["transition_lower_bound_certified"] = bool(lower_bound_certified)
+        row["transition_lower_bound_status"] = lower_bound_status
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -515,26 +596,125 @@ def validate_strict_event_census(
 
 def global_ca_population_gate(
     *,
-    fit_tickers: int,
-    application_tickers: int,
-    closure_tickers: int,
+    fit_tickers: int | Iterable[str],
+    application_tickers: int | Iterable[str],
+    closure_tickers: int | Iterable[str],
     ksei_scope: pd.DataFrame,
     structural_event_complete: bool,
+    fit_identities: Iterable[tuple[str, str]] | None = None,
+    application_identities: Iterable[tuple[str, str]] | None = None,
+    closure_identities: Iterable[tuple[str, str]] | None = None,
+    scope_evidence: pd.DataFrame | None = None,
 ) -> dict[str, object]:
-    """Conservative gate: ticker coverage is not date-level CA admission."""
+    """Fail-closed population gate using full identity-scope certification.
+
+    Fit, application, and dependency-closure scopes intentionally have
+    different cardinalities.  A count comparison would reject the valid
+    expanded cross-sectional architecture and would not prove containment or
+    date-level evidence.
+    """
+
+    fit_ticker_count, fit_ticker_set = _scope_values(fit_tickers, label="fit_tickers")
+    application_ticker_count, application_ticker_set = _scope_values(application_tickers, label="application_tickers")
+    closure_ticker_count, closure_ticker_set = _scope_values(closure_tickers, label="closure_tickers")
+    fit_set = _identity_set(fit_identities, label="fit_identities")
+    application_set = _identity_set(application_identities, label="application_identities")
+    closure_set = _identity_set(closure_identities, label="closure_identities")
+    diagnostics: dict[str, object] = {
+        "fit_identity_scope_available": fit_set is not None,
+        "application_identity_scope_available": application_set is not None,
+        "closure_identity_scope_available": closure_set is not None,
+        "fit_contained_in_application": False,
+        "application_contained_in_closure": False,
+        "missing_application_identity_count": 0,
+        "missing_closure_identity_count": 0,
+        "scope_evidence_rows": 0,
+        "scope_evidence_missing_identity_count": 0,
+        "scope_evidence_uncertified_source_count": 0,
+        "scope_evidence_unattested_date_count": 0,
+    }
 
     if not structural_event_complete:
         verdict = "FAIL_STRUCTURAL_CA_COVERAGE_NOT_CERTIFIED"
-    elif any(not bool(value) for value in ksei_scope["date_level_attestation"]):
+    elif "date_level_attestation" not in ksei_scope.columns or ksei_scope.empty:
         verdict = "FAIL_KSEI_DATE_LEVEL_ATTESTATION_MISSING"
-    elif application_tickers != fit_tickers or closure_tickers != fit_tickers:
-        verdict = "FAIL_POPULATION_SCOPE_EXCEEDS_FINAL_FIT"
+    elif any(not _strict_bool(value, label="KSEI date_level_attestation") for value in ksei_scope["date_level_attestation"]):
+        verdict = "FAIL_KSEI_DATE_LEVEL_ATTESTATION_MISSING"
+    elif fit_set is None or application_set is None or closure_set is None:
+        verdict = "FAIL_IDENTITY_SCOPE_ATTESTATION_MISSING"
     else:
-        verdict = "PASS"
+        missing_application = fit_set - application_set
+        missing_closure = application_set - closure_set
+        diagnostics["fit_contained_in_application"] = not missing_application
+        diagnostics["application_contained_in_closure"] = not missing_closure
+        diagnostics["missing_application_identity_count"] = len(missing_application)
+        diagnostics["missing_closure_identity_count"] = len(missing_closure)
+        diagnostics["missing_application_identity_sha256"] = _identity_sha(missing_application)
+        diagnostics["missing_closure_identity_sha256"] = _identity_sha(missing_closure)
+        if missing_application:
+            verdict = "FAIL_FIT_IDENTITIES_OUTSIDE_APPLICATION_SCOPE"
+        elif missing_closure:
+            verdict = "FAIL_APPLICATION_IDENTITIES_OUTSIDE_CLOSURE"
+        elif fit_ticker_set is not None and not fit_ticker_set <= (application_ticker_set or set()):
+            verdict = "FAIL_FIT_TICKERS_OUTSIDE_APPLICATION_SCOPE"
+        elif application_ticker_set is not None and not application_ticker_set <= (closure_ticker_set or set()):
+            verdict = "FAIL_APPLICATION_TICKERS_OUTSIDE_CLOSURE"
+        elif scope_evidence is None:
+            verdict = "FAIL_SCOPE_EVIDENCE_MISSING"
+        else:
+            required = {"scope", "ticker", "date", "source_family_certified", "date_level_attestation"}
+            missing_columns = required - set(scope_evidence.columns)
+            if missing_columns:
+                verdict = "FAIL_SCOPE_EVIDENCE_COLUMNS_MISSING"
+                diagnostics["scope_evidence_missing_columns"] = sorted(missing_columns)
+            else:
+                expected_by_scope = {"APPLICATION": application_set, "CLOSURE": closure_set}
+                observed_by_scope: dict[str, set[tuple[str, str]]] = {key: set() for key in expected_by_scope}
+                uncertified_source = 0
+                unattested_date = 0
+                duplicate = False
+                scope_failure: str | None = None
+                for index, row in scope_evidence.reset_index(drop=True).iterrows():
+                    scope = str(row["scope"] or "").strip().upper()
+                    if scope not in expected_by_scope:
+                        scope_failure = "FAIL_SCOPE_EVIDENCE_SCOPE_INVALID"
+                        break
+                    key = (_normalise_ticker(row["ticker"]), _normalise_date(row["date"], label=f"scope_evidence[{index}].date"))
+                    if key in observed_by_scope[scope]:
+                        duplicate = True
+                        break
+                    observed_by_scope[scope].add(key)
+                    if not _strict_bool(row["source_family_certified"], label=f"scope_evidence[{index}].source_family_certified"):
+                        uncertified_source += 1
+                    if not _strict_bool(row["date_level_attestation"], label=f"scope_evidence[{index}].date_level_attestation"):
+                        unattested_date += 1
+                if scope_failure is not None:
+                    verdict = scope_failure
+                else:
+                    if duplicate:
+                        verdict = "FAIL_SCOPE_EVIDENCE_DUPLICATE_IDENTITY"
+                    else:
+                        missing_evidence = set().union(
+                            *(expected_by_scope[scope] - observed_by_scope[scope] for scope in expected_by_scope)
+                        )
+                        diagnostics["scope_evidence_missing_identity_count"] = len(missing_evidence)
+                        diagnostics["scope_evidence_missing_identity_sha256"] = _identity_sha(missing_evidence)
+                        diagnostics["scope_evidence_uncertified_source_count"] = uncertified_source
+                        diagnostics["scope_evidence_unattested_date_count"] = unattested_date
+                        if missing_evidence:
+                            verdict = "FAIL_SCOPE_EVIDENCE_INCOMPLETE"
+                        elif uncertified_source:
+                            verdict = "FAIL_SOURCE_FAMILY_CERTIFICATION_INCOMPLETE"
+                        elif unattested_date:
+                            verdict = "FAIL_DATE_LEVEL_ATTESTATION_INCOMPLETE"
+                        else:
+                            verdict = "PASS"
+                diagnostics["scope_evidence_rows"] = len(scope_evidence)
     return {
         "verdict": verdict,
-        "fit_tickers": fit_tickers,
-        "application_tickers": application_tickers,
-        "closure_tickers": closure_tickers,
+        "fit_tickers": fit_ticker_count,
+        "application_tickers": application_ticker_count,
+        "closure_tickers": closure_ticker_count,
         "structural_event_complete": structural_event_complete,
+        **diagnostics,
     }

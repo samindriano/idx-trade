@@ -170,7 +170,7 @@ def test_r3_pre_fit_event_remains_unresolved_against_closure() -> None:
     assert result.loc[0, "transition_semantics"] == "UNRESOLVED"
 
 
-def test_r3_event_after_closure_is_not_silently_in_scope() -> None:
+def test_r31_candidate_after_closure_without_transition_bound_is_unknown() -> None:
     closure = pd.DataFrame({"ticker": ["AAA"], "date": ["2022-01-03"]})
     events = pd.DataFrame(
         {
@@ -180,7 +180,178 @@ def test_r3_event_after_closure_is_not_silently_in_scope() -> None:
         }
     )
     result = classify_event_scope(events, closure)
+    assert result.loc[0, "closure_scope_classification"] == "UNKNOWN_UNRESOLVED_AFTER_CLOSURE"
+    assert not bool(result.loc[0, "transition_lower_bound_certified"])
+
+
+def test_r31_only_certified_transition_lower_bound_can_be_outside() -> None:
+    closure = pd.DataFrame({"ticker": ["AAA"], "date": ["2022-01-03"]})
+    events = pd.DataFrame(
+        {
+            "ticker": ["AAA"],
+            "event_family": ["STOCK_SPLIT"],
+            "candidate_date": ["2022-02-01"],
+            "certified_transition_lower_bound": ["2022-01-04"],
+            "transition_lower_bound_certified": [True],
+            "transition_lower_bound_status": ["CERTIFIED"],
+            "transition_lower_bound_source_ref": ["SOURCE:AAA:2022-01-04"],
+            "transition_lower_bound_source_sha256": ["a" * 64],
+        }
+    )
+    result = classify_event_scope(events, closure)
     assert result.loc[0, "closure_scope_classification"] == "OUTSIDE_DEPENDENCY_AFTER_CLOSURE"
+    assert bool(result.loc[0, "transition_lower_bound_certified"])
+
+
+def test_r31_current_26_row_scope_reclassification_shape_is_fail_closed() -> None:
+    closure = pd.DataFrame(
+        {
+            "ticker": ["MLPT", "RAJA", "SCMA", "SINI"],
+            "date": ["2026-07-17", "2026-07-17", "2026-08-09", "2026-07-17"],
+        }
+    )
+    after_closure = [
+        ("IDX_GET_ISSUED_HISTORY", "MLPT", "STOCK_SPLIT", "2026-07-21", "82680"),
+        ("KSEI_REGISTERED_SECURITY", "RAJA", "MANDATORY_CONVERSION", "2026-07-20", ""),
+        ("KSEI_REGISTERED_SECURITY", "MLPT", "MANDATORY_CONVERSION", "2026-07-23", ""),
+        ("IDX_GET_ISSUED_HISTORY", "SCMA", "CAPITAL_RESTRUCTURING", "2026-08-10", "82840"),
+        ("IDX_GET_ISSUED_HISTORY", "SINI", "RIGHTS_HMETD", "2026-07-24", "82732"),
+    ]
+    rows = [
+        {"source_kind": kind, "ticker": ticker, "event_family": family, "candidate_date": date, "source_action_id": action}
+        for kind, ticker, family, date, action in after_closure
+    ]
+    rows.extend(
+        {"ticker": f"OUT{index:02d}", "event_family": "STOCK_SPLIT", "candidate_date": "2026-07-20"}
+        for index in range(10)
+    )
+    rows.extend(
+        {"ticker": "MLPT", "event_family": "STOCK_SPLIT", "candidate_date": "2026-07-16"}
+        for _ in range(3)
+    )
+    rows.extend(
+        {"ticker": "MLPT", "event_family": "STOCK_SPLIT", "candidate_date": "2026-07-17"}
+        for _ in range(8)
+    )
+    result = classify_event_scope(pd.DataFrame(rows), closure)
+    assert len(result) == 26
+    assert result["closure_scope_classification"].value_counts().to_dict() == {
+        "UNKNOWN_UNRESOLVED_AFTER_CLOSURE": 5,
+        "OUTSIDE_DEPENDENCY_TICKER": 10,
+        "UNRESOLVED_CANDIDATE_BEFORE_CLOSURE": 3,
+        "UNRESOLVED_CANDIDATE_IN_CLOSURE": 8,
+    }
+
+
+def _certified_scope_evidence(keys: set[tuple[str, str]], *, scope: str, false_date: bool = False) -> list[dict[str, object]]:
+    return [
+        {
+            "scope": scope,
+            "ticker": ticker,
+            "date": date,
+            "source_family_certified": True,
+            "date_level_attestation": not false_date or index != 0,
+        }
+        for index, (ticker, date) in enumerate(sorted(keys))
+    ]
+
+
+def _expanded_gate_inputs() -> tuple[set[str], set[str], set[tuple[str, str]], set[tuple[str, str]], set[tuple[str, str]]]:
+    fit_tickers = {f"F{index:03d}" for index in range(629)}
+    application_tickers = fit_tickers | {f"A{index:03d}" for index in range(87)}
+    fit_ids = {(ticker, "2022-01-03") for ticker in sorted(fit_tickers)}
+    application_ids = {(ticker, "2022-01-03") for ticker in sorted(application_tickers)}
+    return fit_tickers, application_tickers, fit_ids, application_ids, application_ids
+
+
+def test_r31_global_gate_accepts_expanded_629_716_716_scope_when_certified() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    evidence = pd.DataFrame(
+        _certified_scope_evidence(application_ids, scope="APPLICATION")
+        + _certified_scope_evidence(closure_ids, scope="CLOSURE")
+    )
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        scope_evidence=evidence,
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "PASS"
+    assert (gate["fit_tickers"], gate["application_tickers"], gate["closure_tickers"]) == (629, 716, 716)
+
+
+def test_r31_global_gate_rejects_629_only_evidence_for_716_application_scope() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    evidence = pd.DataFrame(
+        _certified_scope_evidence(fit_ids, scope="APPLICATION")
+        + _certified_scope_evidence(fit_ids, scope="CLOSURE")
+    )
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        scope_evidence=evidence,
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_SCOPE_EVIDENCE_INCOMPLETE"
+
+
+def test_r31_global_gate_rejects_missing_application_or_closure_identity() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    missing_fit_application = set(application_ids) - {next(iter(fit_ids))}
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=missing_fit_application,
+        closure_identities=closure_ids,
+        scope_evidence=pd.DataFrame(),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_FIT_IDENTITIES_OUTSIDE_APPLICATION_SCOPE"
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=set(closure_ids) - {next(iter(application_ids))},
+        scope_evidence=pd.DataFrame(),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_APPLICATION_IDENTITIES_OUTSIDE_CLOSURE"
+
+
+def test_r31_global_gate_rejects_incomplete_date_level_attestation() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    evidence = pd.DataFrame(
+        _certified_scope_evidence(application_ids, scope="APPLICATION", false_date=True)
+        + _certified_scope_evidence(closure_ids, scope="CLOSURE")
+    )
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        scope_evidence=evidence,
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_DATE_LEVEL_ATTESTATION_INCOMPLETE"
 
 
 def test_r3_lineage_comparison_is_exact_and_deterministic() -> None:
