@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from idx_trade.ca_feature_basis_gate_v1 import (
     BASIS_SAFE,
@@ -15,6 +16,7 @@ from idx_trade.ca_feature_basis_v1 import (
 )
 from idx_trade.ca_feature_basis_v4_contract_v1 import (
     V4_CA_BASIS_DIRECT_SOURCE_FEATURES,
+    evaluate_v4_application_feature_basis_admission,
     evaluate_v4_feature_basis_admission,
 )
 
@@ -106,6 +108,50 @@ def test_rights_event_does_not_overblock_raw_volume_without_unit_basis_contract(
         result["feature"].eq("close_return_20") & result["date"].ge(days[70])
     ]
     assert int(price["basis_integrity_state"].eq(BASIS_UNSAFE).sum()) == 20
+
+
+def test_application_scope_is_selected_only_after_full_stream_geometry() -> None:
+    days = sessions()
+    full = identities(days)
+    # Deliberately sparse application identities: using these rows as the shift
+    # stream would redefine "20 observations" into roughly 40 market sessions.
+    scope = full.iloc[::2].reset_index(drop=True)
+    result = evaluate_v4_application_feature_basis_admission(
+        full,
+        scope,
+        event(days, family=STOCK_SPLIT),
+        coverage(days),
+        days,
+    )
+    expected = evaluate_v4_feature_basis_admission(
+        full,
+        event(days, family=STOCK_SPLIT),
+        coverage(days),
+        days,
+    ).merge(scope, on=["ticker", "date"], how="inner")
+
+    left = result.sort_values(["date", "feature"], kind="mergesort").reset_index(drop=True)
+    right = expected.sort_values(["date", "feature"], kind="mergesort").reset_index(drop=True)
+    assert left[["ticker", "date", "feature", "basis_integrity_state"]].equals(
+        right[["ticker", "date", "feature", "basis_integrity_state"]]
+    )
+
+
+def test_application_scope_must_be_subset_of_full_stream() -> None:
+    days = sessions()
+    full = identities(days)
+    scope = pd.concat(
+        [full.iloc[[0]], pd.DataFrame({"ticker": ["TEST"], "date": [days[-1] + pd.Timedelta(days=7)]})],
+        ignore_index=True,
+    )
+    with pytest.raises(ValueError, match="outside full observation stream"):
+        evaluate_v4_application_feature_basis_admission(
+            full,
+            scope,
+            event(days, family=STOCK_SPLIT),
+            coverage(days),
+            days,
+        )
 
 
 def test_v4_direct_basis_contract_includes_relative_volume_once() -> None:
