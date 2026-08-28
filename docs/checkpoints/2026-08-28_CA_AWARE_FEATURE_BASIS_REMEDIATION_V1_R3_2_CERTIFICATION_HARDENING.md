@@ -115,10 +115,12 @@ Pre-push local validation for this checkpoint:
 Focused R3.2 reconciliation tests: 31 passed
 All CA/integrity tests: 110 passed
 Full pytest: 349 passed
-py_compile: pending final local check
-git diff --check: pending final local check
-Exact-head GitHub Actions: pending post-push run
+py_compile: PASS
+git diff --check: PASS
+Exact-head GitHub Actions run 33131395428 at bcfd2ea4: 349 passed, 5 warnings
 ```
 
-The final exact-head run and immutable branch head are recorded in the
-companion R3.2 handoff after push. PR #108 remains unmerged.
+The exact-head run is green. Its five warnings are the existing two NumPy
+timedelta deprecations and three Node/action deprecation annotations; no test
+failed. The final documentation update is recorded in the companion handoff.
+PR #108 remains unmerged.

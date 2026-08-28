@@ -54,9 +54,12 @@ the R3.1 deterministic rerun remains unchanged.
 - Focused R3.2 reconciliation tests: **31 passed**.
 - All CA/integrity tests: **110 passed**.
 - Full pytest: **349 passed**, exit 0.
-- `py_compile`: pending final local check.
-- `git diff --check`: pending final local check.
-- Exact-head GitHub Actions: pending post-push run.
+- `py_compile`: PASS.
+- `git diff --check`: PASS.
+- Exact-head GitHub Actions run `33131395428` at `bcfd2ea4`: **349 passed,
+  5 warnings**, exit 0. The warnings are the existing NumPy timedelta and
+  GitHub Actions Node/action deprecation warnings; they are not reported as
+  zero.
 
 ## Review boundary
 
