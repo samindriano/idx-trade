@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "idx-trade-github-scheduler-v1-staging-observe",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-27",
+  "workers_dev": false,
+  "vars": {
+    "GITHUB_OWNER": "samindriano",
+    "GITHUB_REPO": "idx-trade",
+    "GITHUB_REF": "main",
+    "DISPATCH_MODE": "observe_only"
+  },
+  "secrets": {
+    "required": ["GITHUB_ACTIONS_TOKEN"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COORDINATOR",
+        "class_name": "SchedulerCoordinator"
+      }
+    ]
+  },
+  "exports": {
+    "SchedulerCoordinator": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "triggers": {
+    "crons": []
+  }
+}

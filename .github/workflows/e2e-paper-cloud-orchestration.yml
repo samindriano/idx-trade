@@ -1,5 +1,28 @@
 name: E2E Paper cloud orchestration
 
+run-name: >-
+  IDX-SLOT:${{
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0830' && 'E2E_PREOPEN_CA_0830') ||
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0845' && 'E2E_PREOPEN_CA_0845') ||
+    (inputs.phase == 'PREOPEN_CA' && inputs.trigger_slot == 'E2E_PREOPEN_CA_0855' && 'E2E_PREOPEN_CA_0855') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0903' && 'E2E_PREOPEN_0903') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0913' && 'E2E_PREOPEN_0913') ||
+    (inputs.phase == 'PREOPEN' && inputs.trigger_slot == 'E2E_PREOPEN_0922' && 'E2E_PREOPEN_0922') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1835' && 'E2E_POST_EOD_1835') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1905' && 'E2E_POST_EOD_1905') ||
+    (inputs.phase == 'POST_EOD' && inputs.trigger_slot == 'E2E_POST_EOD_1935' && 'E2E_POST_EOD_1935') ||
+    (github.event.schedule == '30 1 * * 1-5' && 'E2E_PREOPEN_CA_0830') ||
+    (github.event.schedule == '45 1 * * 1-5' && 'E2E_PREOPEN_CA_0845') ||
+    (github.event.schedule == '55 1 * * 1-5' && 'E2E_PREOPEN_CA_0855') ||
+    (github.event.schedule == '3 2 * * 1-5' && 'E2E_PREOPEN_0903') ||
+    (github.event.schedule == '13 2 * * 1-5' && 'E2E_PREOPEN_0913') ||
+    (github.event.schedule == '22 2 * * 1-5' && 'E2E_PREOPEN_0922') ||
+    (github.event.schedule == '35 11 * * 1-5' && 'E2E_POST_EOD_1835') ||
+    (github.event.schedule == '5 12 * * 1-5' && 'E2E_POST_EOD_1905') ||
+    (github.event.schedule == '35 12 * * 1-5' && 'E2E_POST_EOD_1935') ||
+    'AMBIGUOUS_MANUAL'
+  }}
+
 on:
   schedule:
     # GitHub cron is UTC. PREOPEN_CA retries at 08:30/08:45/08:55 WIB,
@@ -25,6 +48,11 @@ on:
         description: Optional current Jakarta session date
         required: false
         default: ""
+      trigger_slot:
+        description: Optional provenance-only exact logical slot identity
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -66,9 +94,36 @@ jobs:
       E2E_CLOUD_EXPECTED_BRANCH: cloud-pinned-runtime
       E2E_CLOUD_DISPATCH_PHASE: ${{ inputs.phase || '' }}
       E2E_CLOUD_DISPATCH_SESSION_DATE: ${{ inputs.session_date || '' }}
+      E2E_CLOUD_DISPATCH_TRIGGER_SLOT: ${{ inputs.trigger_slot || '' }}
       E2E_CLOUD_EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
 
     steps:
+      - name: Validate provenance-only trigger slot
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          E2E_PHASE_INPUT: ${{ inputs.phase || '' }}
+          E2E_TRIGGER_SLOT_INPUT: ${{ inputs.trigger_slot || '' }}
+        run: |
+          set -euo pipefail
+          case "$E2E_PHASE_INPUT" in
+            auto|PREOPEN_CA|PREOPEN|POST_EOD) ;;
+            *) echo "Invalid E2E phase: $E2E_PHASE_INPUT" >&2; exit 2 ;;
+          esac
+          if [[ -z "$E2E_TRIGGER_SLOT_INPUT" ]]; then
+            exit 0
+          fi
+          case "$E2E_TRIGGER_SLOT_INPUT" in
+            E2E_PREOPEN_CA_0830|E2E_PREOPEN_CA_0845|E2E_PREOPEN_CA_0855|E2E_PREOPEN_0903|E2E_PREOPEN_0913|E2E_PREOPEN_0922|E2E_POST_EOD_1835|E2E_POST_EOD_1905|E2E_POST_EOD_1935) ;;
+            *) echo "Invalid E2E trigger_slot: $E2E_TRIGGER_SLOT_INPUT" >&2; exit 2 ;;
+          esac
+          case "$E2E_PHASE_INPUT:$E2E_TRIGGER_SLOT_INPUT" in
+            PREOPEN_CA:E2E_PREOPEN_CA_*) ;;
+            PREOPEN:E2E_PREOPEN_0903|PREOPEN:E2E_PREOPEN_0913|PREOPEN:E2E_PREOPEN_0922) ;;
+            POST_EOD:E2E_POST_EOD_*) ;;
+            *) echo "E2E trigger_slot does not agree with phase" >&2; exit 2 ;;
+          esac
+
       - name: Checkout pinned implementation
         uses: actions/checkout@v4
         with:

@@ -1,5 +1,13 @@
 name: Stockbit Intraday cloud production
 
+run-name: >-
+  IDX-SLOT:${{
+    (github.event.schedule == '30 11 * * 1-5' || inputs.slot == '1830') && 'STOCKBIT_INTRADAY_1830' ||
+    (github.event.schedule == '30 12 * * 1-5' || inputs.slot == '1930') && 'STOCKBIT_INTRADAY_1930' ||
+    (github.event.schedule == '30 13 * * 1-5' || inputs.slot == '2030') && 'STOCKBIT_INTRADAY_2030' ||
+    'AMBIGUOUS_MANUAL'
+  }}
+
 on:
   schedule:
     # GitHub cron is UTC: 18:30 / 19:30 / 20:30 Asia/Jakarta.
