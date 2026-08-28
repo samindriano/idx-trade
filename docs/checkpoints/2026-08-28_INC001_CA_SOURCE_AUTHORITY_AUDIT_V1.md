@@ -105,6 +105,18 @@ REFIT_AUTHORIZED=FALSE
 COUNTER_ACTION=NONE
 ```
 
+## Validation record
+
+The source-audit regression selection passed (`4` tests), the focused
+CA/integrity selection passed (`99` tests), and the final local full pytest
+completed successfully. `py_compile` and `git diff --check` also passed.
+The fresh-root deterministic rerun matched all `9/9` artifact file hashes.
+
+The exact-head GitHub Actions pytest run reported `353 passed, 5 warnings`.
+The five warnings are pytest warnings; GitHub also emitted a separate Node.js
+20 deprecation annotation for the pinned checkout/setup actions. These are
+reported as warnings, not failures.
+
 ## Immutable audit root
 
 Root: `D:\Documents\Project\idx-ca-source-authority-audit-20260829-v5-final`

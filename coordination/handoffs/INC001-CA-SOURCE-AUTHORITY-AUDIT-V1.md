@@ -65,4 +65,15 @@ REFIT_AUTHORIZED=FALSE
 COUNTER_ACTION=NONE
 ```
 
+## Validation
+
+The source-audit tests passed (`4`), the focused CA/integrity selection passed
+(`99`), and the final local full pytest completed successfully. `py_compile`
+and `git diff --check` passed. The fresh-root deterministic rerun matched all
+`9/9` artifact file hashes.
+
+The exact-head GitHub Actions pytest result was `353 passed, 5 warnings`.
+The warnings did not fail the job; GitHub additionally reported the expected
+Node.js 20 deprecation annotation for the pinned checkout/setup actions.
+
 No merge of PR #108/#103 is requested.
