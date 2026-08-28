@@ -119,12 +119,12 @@ reported as warnings, not failures.
 
 ## Immutable audit root
 
-Root: `D:\Documents\Project\idx-ca-source-authority-audit-20260829-v5-final`
-`MANIFEST.json` SHA-256: `71639eaef1a7327f3ab5e2b003fa493f6560c9744915312607c148f1a9f45efd`
-`summary.json` SHA-256: `decc4927424970e7b6474caf5e649fc2f948d5803262588616866f437d6850a3`
+Root: `D:\Documents\Project\idx-ca-source-authority-audit-20260829-v6-final`
+`MANIFEST.json` SHA-256: `b8fb556061eb53ca6ac00a71b6551d4e28282a779a07262a6481d76dc928c9eb`
+`summary.json` SHA-256: `9435d08118a62c3ccc51033efdd14b6ffdbb3b1520d608487d2f77a37235a820`
 
 The fresh-root deterministic rerun is
-`D:\Documents\Project\idx-ca-source-authority-audit-20260829-deterministic-rerun-v2`;
+`D:\Documents\Project\idx-ca-source-authority-audit-20260829-deterministic-rerun-v3`;
 all 9 file SHA-256 values match the final root exactly. The generator uses a
 stable placeholder for the physical output path in `summary.json`, so root
 location does not alter the evidence hashes.
