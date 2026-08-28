@@ -39,8 +39,9 @@ test('E2E workflow exposes all exact provenance-only trigger slots', () => {
 });
 
 test('E2E provider checkout cannot dirty the attested deployment worktree', () => {
-  assert.match(e2e, /E2E_CLOUD_PROVIDER_CHECKOUT: \$\{\{ runner\.temp \}\}\/idx-bei-provider/);
+  assert.match(e2e, /E2E_CLOUD_PROVIDER_CHECKOUT: \/tmp\/idx-bei-provider/);
   assert.doesNotMatch(e2e, /E2E_CLOUD_PROVIDER_CHECKOUT: \$\{\{ github\.workspace \}\}\/idx-bei-provider/);
+  assert.doesNotMatch(e2e, /runner\.temp/);
   assert.match(e2e, /Checkout pinned IDX provider outside deployment worktree/);
   assert.match(e2e, /git -C "\$E2E_CLOUD_PROVIDER_CHECKOUT" fetch --no-tags --depth=1 origin "\$E2E_CLOUD_PROVIDER_COMMIT"/);
   assert.match(e2e, /test -z "\$\(git status --porcelain=v1 --untracked-files=all\)"/);
