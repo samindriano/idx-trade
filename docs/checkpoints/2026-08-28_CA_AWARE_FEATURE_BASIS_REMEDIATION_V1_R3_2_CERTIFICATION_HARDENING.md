@@ -117,7 +117,7 @@ All CA/integrity tests: 110 passed
 Full pytest: 349 passed
 py_compile: PASS
 git diff --check: PASS
-Exact-head GitHub Actions run 33131395428 at bcfd2ea4: 349 passed, 5 warnings
+Exact-head GitHub Actions run 33131604191 at 312d1632: 349 passed, 5 warnings
 ```
 
 The exact-head run is green. Its five warnings are the existing two NumPy

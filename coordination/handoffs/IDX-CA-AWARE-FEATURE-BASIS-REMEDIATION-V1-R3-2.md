@@ -56,7 +56,7 @@ the R3.1 deterministic rerun remains unchanged.
 - Full pytest: **349 passed**, exit 0.
 - `py_compile`: PASS.
 - `git diff --check`: PASS.
-- Exact-head GitHub Actions run `33131395428` at `bcfd2ea4`: **349 passed,
+- Exact-head GitHub Actions run `33131604191` at `312d1632`: **349 passed,
   5 warnings**, exit 0. The warnings are the existing NumPy timedelta and
   GitHub Actions Node/action deprecation warnings; they are not reported as
   zero.
