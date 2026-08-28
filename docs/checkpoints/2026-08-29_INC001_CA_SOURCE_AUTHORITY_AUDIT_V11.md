@@ -147,8 +147,11 @@ COUNTER_ACTION          = NONE
 - `py_compile`: PASS.
 - `git diff --check`: PASS.
 - Deterministic artifact rerun: PASS, zero non-manifest hash mismatches.
-- Exact-head GitHub Actions: pending at checkpoint creation; must be recorded
-  in the final handoff after the pushed final documentation commit.
+- Exact-head GitHub Actions run `33199155485` on commit
+  `a9b1ef45057efc7902e71bef4d1b567026552d1b`: SUCCESS, `360 passed, 5
+  warnings` in `148.35s` ([run](https://github.com/samindriano/idx-trade/actions/runs/33199155485)).
+  The warnings are non-blocking Node.js action-runtime deprecations and two
+  NumPy timedelta deprecations reported by the suite.
 
 ## Immutable artifact hashes
 

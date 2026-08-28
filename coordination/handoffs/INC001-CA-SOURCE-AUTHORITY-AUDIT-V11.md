@@ -119,7 +119,11 @@ COUNTER_ACTION          = NONE
 - `py_compile`: PASS.
 - `git diff --check`: PASS.
 - Deterministic artifact rerun: PASS, zero output mismatches.
-- Exact-head GitHub Actions: to be pinned after final docs commit.
+- Exact-head GitHub Actions run `33199155485` on commit
+  `a9b1ef45057efc7902e71bef4d1b567026552d1b`: SUCCESS, `360 passed, 5
+  warnings` in `148.35s` ([run](https://github.com/samindriano/idx-trade/actions/runs/33199155485)).
+  Warnings are non-blocking Node.js action-runtime and NumPy timedelta
+  deprecations.
 
 Review this handoff and the immutable V1.1 roots. Do not merge PR #108/#103 or
 run further scientific/production work as part of this handoff.
