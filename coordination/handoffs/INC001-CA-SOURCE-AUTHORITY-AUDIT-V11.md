@@ -1,10 +1,10 @@
 # Handoff: INC-001 CA Source Authority Audit V1.1
 
-from: MAIN / Codex  
-to: ChatGPT review  
-task_id: INC001-CA-SOURCE-AUTHORITY-AUDIT-V11  
-branch: `data/ca-aware-feature-basis-remediation-v1`  
-implementation commit: `13ba27598f971591f6f8b144cd95d9b4fc6ee3c3`  
+from: MAIN / Codex
+to: ChatGPT review
+task_id: INC001-CA-SOURCE-AUTHORITY-AUDIT-V11
+branch: `data/ca-aware-feature-basis-remediation-v1`
+implementation commit: `13ba27598f971591f6f8b144cd95d9b4fc6ee3c3`
 reviewed base: `879a6f95bfe28379a7c918461f2ce955f2deea84`
 
 ## Decision

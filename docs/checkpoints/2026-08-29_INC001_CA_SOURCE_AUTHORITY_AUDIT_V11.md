@@ -1,8 +1,8 @@
 # INC-001 CA Source Authority Audit V1.1
 
-Date: 2026-08-29 Asia/Jakarta  
-Branch: `data/ca-aware-feature-basis-remediation-v1`  
-Implementation commit: `13ba27598f971591f6f8b144cd95d9b4fc6ee3c3`  
+Date: 2026-08-29 Asia/Jakarta
+Branch: `data/ca-aware-feature-basis-remediation-v1`
+Implementation commit: `13ba27598f971591f6f8b144cd95d9b4fc6ee3c3`
 Reviewed base pin: `879a6f95bfe28379a7c918461f2ce955f2deea84`
 
 ## Decision and boundaries
