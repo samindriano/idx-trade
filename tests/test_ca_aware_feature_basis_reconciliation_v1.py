@@ -5,6 +5,11 @@ from argparse import Namespace
 import pandas as pd
 import pytest
 
+from idx_trade.ca_feature_basis_family_coverage_v1 import (
+    DEFAULT_REQUIRED_FAMILIES,
+    FAMILY_COVERAGE_CERTIFIED,
+    FAMILY_COVERAGE_UNKNOWN,
+)
 from idx_trade.ca_aware_feature_basis_r3 import (
     build_cross_section_population,
     build_observed_dependency_closure,
@@ -203,6 +208,43 @@ def test_r31_only_certified_transition_lower_bound_can_be_outside() -> None:
     assert bool(result.loc[0, "transition_lower_bound_certified"])
 
 
+@pytest.mark.parametrize(
+    ("overrides", "case"),
+    [
+        ({"transition_lower_bound_source_sha256": ""}, "empty evidence SHA"),
+        ({"transition_lower_bound_source_sha256": "not-a-sha"}, "malformed evidence SHA"),
+        ({"transition_lower_bound_source_ref": ""}, "missing source reference"),
+        (
+            {
+                "transition_lower_bound_certified": True,
+                "transition_lower_bound_status": "CERTIFIED",
+                "transition_lower_bound_source_ref": "",
+                "transition_lower_bound_source_sha256": "",
+            },
+            "boolean/status without provenance",
+        ),
+    ],
+)
+def test_r32_transition_lower_bound_requires_source_bound_provenance(
+    overrides: dict[str, object], case: str
+) -> None:
+    closure = pd.DataFrame({"ticker": ["AAA"], "date": ["2022-01-03"]})
+    row: dict[str, object] = {
+        "ticker": "AAA",
+        "event_family": "STOCK_SPLIT",
+        "candidate_date": "2022-02-01",
+        "certified_transition_lower_bound": "2022-01-04",
+        "transition_lower_bound_certified": True,
+        "transition_lower_bound_status": "CERTIFIED",
+        "transition_lower_bound_source_ref": "SOURCE:AAA:2022-01-04",
+        "transition_lower_bound_source_sha256": "a" * 64,
+    }
+    row.update(overrides)
+    result = classify_event_scope(pd.DataFrame([row]), closure)
+    assert result.loc[0, "closure_scope_classification"] == "UNKNOWN_UNRESOLVED_AFTER_CLOSURE", case
+    assert not bool(result.loc[0, "transition_lower_bound_certified"]), case
+
+
 def test_r31_current_26_row_scope_reclassification_shape_is_fail_closed() -> None:
     closure = pd.DataFrame(
         {
@@ -256,6 +298,49 @@ def _certified_scope_evidence(keys: set[tuple[str, str]], *, scope: str, false_d
     ]
 
 
+def _certified_family_coverage(
+    keys: set[tuple[str, str]],
+    *,
+    missing_family: str | None = None,
+    conflict_family: str | None = None,
+    evidence_sha256: str = "a" * 64,
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for ticker, date in sorted(keys):
+        for family in DEFAULT_REQUIRED_FAMILIES:
+            missing = family == missing_family
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "date": date,
+                    "event_family": family,
+                    "coverage_state": FAMILY_COVERAGE_UNKNOWN if missing else FAMILY_COVERAGE_CERTIFIED,
+                    "source_contract_id": f"CONTRACT:{family}",
+                    "source_ref": "" if missing else f"fixture://{family}/{ticker}/{date}",
+                    "evidence_sha256": "" if missing else evidence_sha256,
+                    "coverage_conflict": family == conflict_family,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _certified_temporal_attestation(keys: set[tuple[str, str]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "ticker": ticker,
+                "date": date,
+                "coverage_state": "TEMPORAL_ASOF_CERTIFIED",
+                "source_contract_id": "CONTRACT:TEMPORAL_ASOF",
+                "source_ref": f"fixture://temporal/{ticker}/{date}",
+                "evidence_sha256": "b" * 64,
+                "as_of_semantics": "PER_SESSION_AS_OF_NO_EVENT_COVERAGE",
+            }
+            for ticker, date in sorted(keys)
+        ]
+    )
+
+
 def _expanded_gate_inputs() -> tuple[set[str], set[str], set[tuple[str, str]], set[tuple[str, str]], set[tuple[str, str]]]:
     fit_tickers = {f"F{index:03d}" for index in range(629)}
     application_tickers = fit_tickers | {f"A{index:03d}" for index in range(87)}
@@ -264,7 +349,28 @@ def _expanded_gate_inputs() -> tuple[set[str], set[str], set[tuple[str, str]], s
     return fit_tickers, application_tickers, fit_ids, application_ids, application_ids
 
 
-def test_r31_global_gate_accepts_expanded_629_716_716_scope_when_certified() -> None:
+def test_r32_global_gate_accepts_expanded_629_716_716_scope_with_provenance() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(application_ids),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(application_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "PASS"
+    assert (gate["fit_tickers"], gate["application_tickers"], gate["closure_tickers"]) == (629, 716, 716)
+    assert gate["fit_contained_in_application"]
+    assert gate["application_contained_in_closure"]
+
+
+def test_r32_global_gate_rejects_naked_scope_booleans_without_provenance() -> None:
     fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
     evidence = pd.DataFrame(
         _certified_scope_evidence(application_ids, scope="APPLICATION")
@@ -281,15 +387,55 @@ def test_r31_global_gate_accepts_expanded_629_716_716_scope_when_certified() -> 
         ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
         structural_event_complete=True,
     )
-    assert gate["verdict"] == "PASS"
-    assert (gate["fit_tickers"], gate["application_tickers"], gate["closure_tickers"]) == (629, 716, 716)
+    assert gate["verdict"] == "FAIL_FAMILY_COVERAGE_EVIDENCE_MISSING"
 
 
-def test_r31_global_gate_rejects_629_only_evidence_for_716_application_scope() -> None:
+def test_r32_global_gate_rejects_missing_frozen_structural_family() -> None:
     fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
-    evidence = pd.DataFrame(
-        _certified_scope_evidence(fit_ids, scope="APPLICATION")
-        + _certified_scope_evidence(fit_ids, scope="CLOSURE")
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(application_ids, missing_family=DEFAULT_REQUIRED_FAMILIES[0]),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(application_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_FAMILY_COVERAGE_NOT_FULLY_CERTIFIED"
+
+
+@pytest.mark.parametrize("evidence_sha256", ["", "malformed-sha"])
+def test_r32_global_gate_rejects_missing_or_malformed_family_evidence_sha(
+    evidence_sha256: str,
+) -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(application_ids, evidence_sha256=evidence_sha256),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(application_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_FAMILY_COVERAGE_EVIDENCE_INVALID"
+
+
+def test_r32_global_gate_rejects_missing_date_asof_provenance() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    naked_temporal = pd.DataFrame(
+        [
+            {"ticker": ticker, "date": date, "date_level_attestation": True}
+            for ticker, date in sorted(application_ids)
+        ]
     )
     gate = global_ca_population_gate(
         fit_tickers=fit_tickers,
@@ -298,11 +444,49 @@ def test_r31_global_gate_rejects_629_only_evidence_for_716_application_scope() -
         fit_identities=fit_ids,
         application_identities=application_ids,
         closure_identities=closure_ids,
-        scope_evidence=evidence,
+        family_coverage=_certified_family_coverage(application_ids),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=naked_temporal,
         ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
         structural_event_complete=True,
     )
-    assert gate["verdict"] == "FAIL_SCOPE_EVIDENCE_INCOMPLETE"
+    assert gate["verdict"] == "FAIL_TEMPORAL_ASOF_EVIDENCE_INVALID"
+
+
+def test_r32_global_gate_rejects_conflicting_family_evidence() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(application_ids, conflict_family=DEFAULT_REQUIRED_FAMILIES[0]),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(application_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_FAMILY_COVERAGE_NOT_FULLY_CERTIFIED"
+
+
+def test_r32_global_gate_rejects_partial_629_only_evidence_for_716_scope() -> None:
+    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
+        application_identities=application_ids,
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(fit_ids),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(application_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_FAMILY_COVERAGE_NOT_FULLY_CERTIFIED"
 
 
 def test_r31_global_gate_rejects_missing_application_or_closure_identity() -> None:
@@ -325,6 +509,20 @@ def test_r31_global_gate_rejects_missing_application_or_closure_identity() -> No
         application_tickers=application_tickers,
         closure_tickers=application_tickers,
         fit_identities=fit_ids,
+        application_identities=application_ids - {("A000", "2022-01-03")},
+        closure_identities=closure_ids,
+        family_coverage=_certified_family_coverage(closure_ids),
+        official_sessions=["2022-01-03"],
+        temporal_attestation=_certified_temporal_attestation(closure_ids),
+        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
+        structural_event_complete=True,
+    )
+    assert gate["verdict"] == "FAIL_APPLICATION_IDENTITY_TICKER_SCOPE_MISMATCH"
+    gate = global_ca_population_gate(
+        fit_tickers=fit_tickers,
+        application_tickers=application_tickers,
+        closure_tickers=application_tickers,
+        fit_identities=fit_ids,
         application_identities=application_ids,
         closure_identities=set(closure_ids) - {next(iter(application_ids))},
         scope_evidence=pd.DataFrame(),
@@ -332,26 +530,6 @@ def test_r31_global_gate_rejects_missing_application_or_closure_identity() -> No
         structural_event_complete=True,
     )
     assert gate["verdict"] == "FAIL_APPLICATION_IDENTITIES_OUTSIDE_CLOSURE"
-
-
-def test_r31_global_gate_rejects_incomplete_date_level_attestation() -> None:
-    fit_tickers, application_tickers, fit_ids, application_ids, closure_ids = _expanded_gate_inputs()
-    evidence = pd.DataFrame(
-        _certified_scope_evidence(application_ids, scope="APPLICATION", false_date=True)
-        + _certified_scope_evidence(closure_ids, scope="CLOSURE")
-    )
-    gate = global_ca_population_gate(
-        fit_tickers=fit_tickers,
-        application_tickers=application_tickers,
-        closure_tickers=application_tickers,
-        fit_identities=fit_ids,
-        application_identities=application_ids,
-        closure_identities=closure_ids,
-        scope_evidence=evidence,
-        ksei_scope=pd.DataFrame({"date_level_attestation": [True]}),
-        structural_event_complete=True,
-    )
-    assert gate["verdict"] == "FAIL_DATE_LEVEL_ATTESTATION_INCOMPLETE"
 
 
 def test_r3_lineage_comparison_is_exact_and_deterministic() -> None:

@@ -18,6 +18,11 @@ from numbers import Integral
 import pandas as pd
 import numpy as np
 
+from .ca_feature_basis_family_coverage_v1 import (
+    combine_family_coverage,
+)
+from .ca_feature_basis_gate_v1 import CA_COVERAGE_CERTIFIED
+
 
 R3_DEPENDENCY_OFFSETS: Mapping[str, tuple[int, ...]] = {
     "close_return_5": (-5, 0),
@@ -455,6 +460,7 @@ def classify_event_scope(
         candidate = str(source.get("candidate_date", "") or "").strip()
         lower_bound_value = ""
         lower_bound_status = ""
+        lower_bound_source_contract = ""
         lower_bound_certified = False
         if ticker not in bounds.index:
             classification = "OUTSIDE_DEPENDENCY_TICKER"
@@ -496,7 +502,18 @@ def classify_event_scope(
                     lower_bound_sha = str(
                         source.get("transition_lower_bound_source_sha256", source.get("source_sha256", "")) or ""
                     ).strip()
-                    lower_bound_sha_valid = not lower_bound_sha or bool(re.fullmatch(r"[0-9a-fA-F]{64}", lower_bound_sha))
+                    lower_bound_source_contract = str(
+                        source.get(
+                            "transition_lower_bound_source_contract_id",
+                            source.get("source_contract_id", ""),
+                        )
+                        or ""
+                    ).strip()
+                    # A source-bound lower bound is not certified unless the
+                    # evidence digest is present and exactly 64 hex chars.
+                    # Empty evidence must remain unresolved, even when the
+                    # source status and lower-bound date look authoritative.
+                    lower_bound_sha_valid = bool(re.fullmatch(r"[0-9a-fA-F]{64}", lower_bound_sha))
                     lower_bound_certified = bool(
                         explicit_certified
                         and lower_bound_status in {"CERTIFIED", "SOURCE_CERTIFIED", "CERTIFIED_SOURCE_BOUND"}
@@ -527,6 +544,7 @@ def classify_event_scope(
         row["certified_transition_lower_bound"] = lower_bound_value
         row["transition_lower_bound_certified"] = bool(lower_bound_certified)
         row["transition_lower_bound_status"] = lower_bound_status
+        row["transition_lower_bound_source_contract_id"] = lower_bound_source_contract
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -605,6 +623,9 @@ def global_ca_population_gate(
     application_identities: Iterable[tuple[str, str]] | None = None,
     closure_identities: Iterable[tuple[str, str]] | None = None,
     scope_evidence: pd.DataFrame | None = None,
+    family_coverage: pd.DataFrame | None = None,
+    official_sessions: Iterable[object] | None = None,
+    temporal_attestation: pd.DataFrame | None = None,
 ) -> dict[str, object]:
     """Fail-closed population gate using full identity-scope certification.
 
@@ -632,6 +653,11 @@ def global_ca_population_gate(
         "scope_evidence_missing_identity_count": 0,
         "scope_evidence_uncertified_source_count": 0,
         "scope_evidence_unattested_date_count": 0,
+        "family_coverage_rows": 0,
+        "family_certified_identity_count": 0,
+        "temporal_attestation_rows": 0,
+        "temporal_missing_identity_count": 0,
+        "temporal_invalid_provenance_count": 0,
     }
 
     if not structural_event_complete:
@@ -655,61 +681,119 @@ def global_ca_population_gate(
             verdict = "FAIL_FIT_IDENTITIES_OUTSIDE_APPLICATION_SCOPE"
         elif missing_closure:
             verdict = "FAIL_APPLICATION_IDENTITIES_OUTSIDE_CLOSURE"
+        elif fit_ticker_set is not None and {ticker for ticker, _ in fit_set} != fit_ticker_set:
+            verdict = "FAIL_FIT_IDENTITY_TICKER_SCOPE_MISMATCH"
+        elif application_ticker_set is not None and {ticker for ticker, _ in application_set} != application_ticker_set:
+            verdict = "FAIL_APPLICATION_IDENTITY_TICKER_SCOPE_MISMATCH"
+        elif closure_ticker_set is not None and {ticker for ticker, _ in closure_set} != closure_ticker_set:
+            verdict = "FAIL_CLOSURE_IDENTITY_TICKER_SCOPE_MISMATCH"
         elif fit_ticker_set is not None and not fit_ticker_set <= (application_ticker_set or set()):
             verdict = "FAIL_FIT_TICKERS_OUTSIDE_APPLICATION_SCOPE"
         elif application_ticker_set is not None and not application_ticker_set <= (closure_ticker_set or set()):
             verdict = "FAIL_APPLICATION_TICKERS_OUTSIDE_CLOSURE"
-        elif scope_evidence is None:
-            verdict = "FAIL_SCOPE_EVIDENCE_MISSING"
+        elif family_coverage is None or official_sessions is None:
+            verdict = "FAIL_FAMILY_COVERAGE_EVIDENCE_MISSING"
         else:
-            required = {"scope", "ticker", "date", "source_family_certified", "date_level_attestation"}
-            missing_columns = required - set(scope_evidence.columns)
-            if missing_columns:
-                verdict = "FAIL_SCOPE_EVIDENCE_COLUMNS_MISSING"
-                diagnostics["scope_evidence_missing_columns"] = sorted(missing_columns)
+            expected_identities = application_set | closure_set
+            try:
+                certified_family = combine_family_coverage(
+                    pd.DataFrame(sorted(expected_identities), columns=["ticker", "date"]),
+                    family_coverage,
+                    official_sessions,
+                )
+            except (TypeError, ValueError) as exc:
+                verdict = "FAIL_FAMILY_COVERAGE_EVIDENCE_INVALID"
+                diagnostics["family_coverage_error"] = str(exc)
             else:
-                expected_by_scope = {"APPLICATION": application_set, "CLOSURE": closure_set}
-                observed_by_scope: dict[str, set[tuple[str, str]]] = {key: set() for key in expected_by_scope}
-                uncertified_source = 0
-                unattested_date = 0
-                duplicate = False
-                scope_failure: str | None = None
-                for index, row in scope_evidence.reset_index(drop=True).iterrows():
-                    scope = str(row["scope"] or "").strip().upper()
-                    if scope not in expected_by_scope:
-                        scope_failure = "FAIL_SCOPE_EVIDENCE_SCOPE_INVALID"
-                        break
-                    key = (_normalise_ticker(row["ticker"]), _normalise_date(row["date"], label=f"scope_evidence[{index}].date"))
-                    if key in observed_by_scope[scope]:
-                        duplicate = True
-                        break
-                    observed_by_scope[scope].add(key)
-                    if not _strict_bool(row["source_family_certified"], label=f"scope_evidence[{index}].source_family_certified"):
-                        uncertified_source += 1
-                    if not _strict_bool(row["date_level_attestation"], label=f"scope_evidence[{index}].date_level_attestation"):
-                        unattested_date += 1
-                if scope_failure is not None:
-                    verdict = scope_failure
+                diagnostics["family_coverage_rows"] = len(certified_family)
+                certified_keys: set[tuple[str, str]] = set()
+                invalid_provenance = 0
+                invalid_family_state = 0
+                for index, row in certified_family.iterrows():
+                    key = (
+                        _normalise_ticker(row["ticker"]),
+                        _normalise_date(row["date"], label=f"combined_family_coverage[{index}].date"),
+                    )
+                    if row["coverage_state"] == CA_COVERAGE_CERTIFIED:
+                        certified_keys.add(key)
+                    if row["coverage_state"] != CA_COVERAGE_CERTIFIED or row["missing_structural_families"] or row["conflicting_structural_families"]:
+                        invalid_family_state += 1
+                        continue
+                    source_ref = str(row["source_ref"] or "").strip()
+                    composite_sha = str(row["evidence_sha256"] or "").strip().lower()
+                    contracts = str(row["supporting_source_contracts"] or "").strip()
+                    supporting_hashes = [value for value in str(row["supporting_evidence_sha256"] or "").split("|") if value]
+                    if (
+                        not source_ref
+                        or not contracts
+                        or not re.fullmatch(r"[0-9a-f]{64}", composite_sha)
+                        or not supporting_hashes
+                        or any(not re.fullmatch(r"[0-9a-f]{64}", value.lower()) for value in supporting_hashes)
+                    ):
+                        invalid_provenance += 1
+                diagnostics["family_certified_identity_count"] = len(certified_keys)
+                diagnostics["family_invalid_state_count"] = invalid_family_state
+                diagnostics["family_invalid_provenance_count"] = invalid_provenance
+                if invalid_family_state or invalid_provenance or certified_keys != expected_identities:
+                    missing_family = expected_identities - certified_keys
+                    diagnostics["family_missing_identity_count"] = len(missing_family)
+                    diagnostics["family_missing_identity_sha256"] = _identity_sha(missing_family)
+                    verdict = "FAIL_FAMILY_COVERAGE_NOT_FULLY_CERTIFIED"
+                elif temporal_attestation is None:
+                    verdict = "FAIL_TEMPORAL_ASOF_EVIDENCE_MISSING"
                 else:
-                    if duplicate:
-                        verdict = "FAIL_SCOPE_EVIDENCE_DUPLICATE_IDENTITY"
+                    temporal_required = {
+                        "ticker",
+                        "date",
+                        "coverage_state",
+                        "source_contract_id",
+                        "source_ref",
+                        "evidence_sha256",
+                        "as_of_semantics",
+                    }
+                    missing_temporal_columns = temporal_required - set(temporal_attestation.columns)
+                    if missing_temporal_columns:
+                        verdict = "FAIL_TEMPORAL_ASOF_EVIDENCE_INVALID"
+                        diagnostics["temporal_missing_columns"] = sorted(missing_temporal_columns)
                     else:
-                        missing_evidence = set().union(
-                            *(expected_by_scope[scope] - observed_by_scope[scope] for scope in expected_by_scope)
-                        )
-                        diagnostics["scope_evidence_missing_identity_count"] = len(missing_evidence)
-                        diagnostics["scope_evidence_missing_identity_sha256"] = _identity_sha(missing_evidence)
-                        diagnostics["scope_evidence_uncertified_source_count"] = uncertified_source
-                        diagnostics["scope_evidence_unattested_date_count"] = unattested_date
-                        if missing_evidence:
-                            verdict = "FAIL_SCOPE_EVIDENCE_INCOMPLETE"
-                        elif uncertified_source:
-                            verdict = "FAIL_SOURCE_FAMILY_CERTIFICATION_INCOMPLETE"
-                        elif unattested_date:
-                            verdict = "FAIL_DATE_LEVEL_ATTESTATION_INCOMPLETE"
+                        temporal_seen: set[tuple[str, str]] = set()
+                        temporal_invalid = 0
+                        temporal_duplicate = False
+                        accepted_semantics = {
+                            "PER_SESSION_AS_OF_NO_EVENT_COVERAGE",
+                            "HISTORICAL_DATE_LEVEL_AS_OF_NO_EVENT_COVERAGE",
+                        }
+                        for index, row in temporal_attestation.reset_index(drop=True).iterrows():
+                            key = (
+                                _normalise_ticker(row["ticker"]),
+                                _normalise_date(row["date"], label=f"temporal_attestation[{index}].date"),
+                            )
+                            if key in temporal_seen:
+                                temporal_duplicate = True
+                                continue
+                            temporal_seen.add(key)
+                            if (
+                                str(row["coverage_state"] or "").strip().upper() != "TEMPORAL_ASOF_CERTIFIED"
+                                or not str(row["source_contract_id"] or "").strip()
+                                or not str(row["source_ref"] or "").strip()
+                                or not re.fullmatch(r"[0-9a-fA-F]{64}", str(row["evidence_sha256"] or "").strip())
+                                or str(row["as_of_semantics"] or "").strip().upper() not in accepted_semantics
+                            ):
+                                temporal_invalid += 1
+                        missing_temporal = expected_identities - temporal_seen
+                        diagnostics["temporal_attestation_rows"] = len(temporal_attestation)
+                        diagnostics["temporal_missing_identity_count"] = len(missing_temporal)
+                        diagnostics["temporal_missing_identity_sha256"] = _identity_sha(missing_temporal)
+                        diagnostics["temporal_invalid_provenance_count"] = temporal_invalid
+                        if temporal_duplicate:
+                            verdict = "FAIL_TEMPORAL_ASOF_EVIDENCE_DUPLICATE_IDENTITY"
+                        elif missing_temporal:
+                            verdict = "FAIL_TEMPORAL_ASOF_EVIDENCE_INCOMPLETE"
+                        elif temporal_invalid:
+                            verdict = "FAIL_TEMPORAL_ASOF_EVIDENCE_INVALID"
                         else:
                             verdict = "PASS"
-                diagnostics["scope_evidence_rows"] = len(scope_evidence)
+                diagnostics["scope_evidence_rows"] = len(scope_evidence) if scope_evidence is not None else 0
     return {
         "verdict": verdict,
         "fit_tickers": fit_ticker_count,
