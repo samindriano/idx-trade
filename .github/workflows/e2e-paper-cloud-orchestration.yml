@@ -25,6 +25,9 @@ run-name: >-
 
 on:
   schedule:
+    # GitHub cron is UTC. PREOPEN_CA retries at 08:30/08:45/08:55 WIB,
+    # all before the hard 09:02 WIB checkpoint cutoff. The later PREOPEN
+    # retries and POST_EOD retries retain their existing schedule.
     - cron: "30 1 * * 1-5"
     - cron: "45 1 * * 1-5"
     - cron: "55 1 * * 1-5"
@@ -55,6 +58,10 @@ permissions:
   contents: read
 
 concurrency:
+  # PREOPEN_CA retries share one serialized group, but are isolated from the
+  # PREOPEN group. A hung/late CA attempt therefore cannot queue-block the
+  # valid PREOPEN consumer. The V3 runner independently enforces the 09:02
+  # Jakarta cutoff and fails closed after it.
   group: >-
     idx-trade-e2e-paper-cloud-v3-${{
       (inputs.phase == 'PREOPEN_CA' || github.event.schedule == '30 1 * * 1-5' || github.event.schedule == '45 1 * * 1-5' || github.event.schedule == '55 1 * * 1-5') && 'preopen-ca' ||
@@ -69,6 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
+      # Exact reviewed successor implementation accepted into the E2E integration baseline.
+      # Change only through a reviewed provenance update.
       E2E_CLOUD_IMPLEMENTATION_REF: cb7573422097aef2f34ad41d53ccd95f6231a67a
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
@@ -77,8 +86,10 @@ jobs:
       E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
       E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1
+      # Must equal the accepted Official Open producer implementation SHA.
       E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
       E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
+      # External provider source must not live under the attested deployment worktree.
       E2E_CLOUD_PROVIDER_CHECKOUT: /tmp/idx-bei-provider
       E2E_CLOUD_PROVIDER_COMMIT: 75d6c0f74fa360d225794c70c383348977de6798
       E2E_CLOUD_EXPECTED_BRANCH: cloud-pinned-runtime
@@ -139,6 +150,7 @@ jobs:
           git -C "$E2E_CLOUD_PROVIDER_CHECKOUT" checkout --detach FETCH_HEAD
           test "$(git -C "$E2E_CLOUD_PROVIDER_CHECKOUT" rev-parse HEAD)" = "$E2E_CLOUD_PROVIDER_COMMIT"
           test -z "$(git -C "$E2E_CLOUD_PROVIDER_CHECKOUT" status --porcelain=v1 --untracked-files=all)"
+          # The deployment guard must remain strict; prove provider setup did not dirty it.
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
       - name: Setup Python and uv
