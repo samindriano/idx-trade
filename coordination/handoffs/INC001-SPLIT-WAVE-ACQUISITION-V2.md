@@ -89,8 +89,9 @@ PR_103_MERGED=FALSE
 Local focused tests: 48 passed. CA/integrity suite: 131 passed. Full pytest:
 370 passed. `py_compile`: 84 files passed. `git diff --check`: PASS.
 V7/V8 deterministic comparison: 14/14 non-manifest files identical, PASS.
-Exact-head GitHub Actions run is recorded after push in the final update to
-this handoff/checkpoint.
+Exact-head GitHub Actions run `33258560263` on commit `0e983dc9`: PASS,
+`370 passed, 5 warnings`; the separate GitHub annotation is the Node.js 20
+deprecation warning for `actions/checkout@v4` and `actions/setup-python@v5`.
 
 Recommended next action: independent ChatGPT review of the immutable V7
 reconciliation and future plan. No merge or production execution.

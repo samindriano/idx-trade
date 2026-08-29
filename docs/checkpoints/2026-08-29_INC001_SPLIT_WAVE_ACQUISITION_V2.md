@@ -134,8 +134,9 @@ COUNTER_ACTION          = NONE
 - `py_compile` over `src`, `scripts`, and `tests`: 84 files passed;
 - `git diff --check`: PASS;
 - deterministic V7/V8 comparison: 14/14 non-manifest files, PASS;
-- exact-head GitHub Actions: pending the pushed commit; the final handoff
-  records the exact run and warning count.
+- exact-head GitHub Actions run `33258560263` on commit `0e983dc9`: PASS,
+  `370 passed, 5 warnings`; the separate GitHub annotation is the Node.js 20
+  deprecation warning for `actions/checkout@v4` and `actions/setup-python@v5`.
 
 This checkpoint stops at review/handoff. No merge or further production
 execution is authorized.
