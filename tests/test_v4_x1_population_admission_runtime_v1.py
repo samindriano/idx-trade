@@ -80,11 +80,17 @@ def _write_runtime_fixture(
 
     if include_tradability:
         intervals = paths.tradability_root / "tradability_intervals.csv"
+        coverage = paths.tradability_root / "tradability_coverage_window.csv"
         anchors = paths.tradability_root / "idx_stock_summary_anchors.csv"
         intervals.parent.mkdir(parents=True, exist_ok=True)
         intervals.write_text(
             "ticker,market,state,effective_from,effective_to,announced_at,source,source_ref\n"
             f"AAAA,REGULAR,{tradability_state},2020-01-01,,,IDX,idx://interval\n",
+            encoding="utf-8",
+        )
+        coverage.write_text(
+            "market,effective_from,effective_to,source,is_complete,discovery_basis,left_boundary_basis\n"
+            f"REGULAR,2026-08-01,{SESSION},IDX,true,EXHAUSTIVE_EVENT_DISCOVERY,VERIFIED_LEFT_BOUNDARY\n",
             encoding="utf-8",
         )
         anchors.write_text(
@@ -237,6 +243,9 @@ def test_build_runtime_population_admission_uses_real_data_ready_fixture(tmp_pat
     assert admission.metadata["tradability_intervals_sha256"] == sha256_file(
         paths.tradability_root / "tradability_intervals.csv"
     )
+    assert admission.metadata["tradability_coverage_sha256"] == sha256_file(
+        paths.tradability_root / "tradability_coverage_window.csv"
+    )
     assert admission.metadata["tradability_anchors_sha256"] == sha256_file(
         paths.tradability_root / "idx_stock_summary_anchors.csv"
     )
@@ -326,6 +335,9 @@ def test_runtime_safe_attestation_binds_refresh_and_tradability_artifacts(
     assert payload["metadata"]["tradability_intervals_sha256"] == admission.metadata[
         "tradability_intervals_sha256"
     ]
+    assert payload["metadata"]["tradability_coverage_sha256"] == admission.metadata[
+        "tradability_coverage_sha256"
+    ]
     assert payload["metadata"]["tradability_anchors_sha256"] == admission.metadata[
         "tradability_anchors_sha256"
     ]
@@ -337,3 +349,73 @@ def test_runtime_safe_attestation_binds_refresh_and_tradability_artifacts(
         )
         == PROVEN_V1_POPULATION_COMPATIBLE
     )
+
+
+def test_runtime_same_session_active_point_does_not_require_coverage_propagation(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    intervals = paths.tradability_root / "tradability_intervals.csv"
+    coverage = paths.tradability_root / "tradability_coverage_window.csv"
+    anchors = paths.tradability_root / "idx_stock_summary_anchors.csv"
+    intervals.write_text(
+        "ticker,market,state,effective_from,effective_to,announced_at,source,source_ref\n",
+        encoding="utf-8",
+    )
+    anchors.write_text(
+        "ticker,market,as_of_date,state,source,source_ref,evidence_type\n"
+        "AAAA,REGULAR,2026-08-27,ACTIVE,IDX,idx://anchor,OFFICIAL_STATUS_SNAPSHOT\n",
+        encoding="utf-8",
+    )
+    coverage.write_text(
+        "market,effective_from,effective_to,source,is_complete,discovery_basis,left_boundary_basis\n"
+        "REGULAR,2026-08-01,2026-08-27,IDX,true,EXHAUSTIVE_EVENT_DISCOVERY,VERIFIED_LEFT_BOUNDARY\n",
+        encoding="utf-8",
+    )
+
+    admission = build_runtime_population_admission(**fixture)
+
+    # Frozen forward_monitoring treats the same-session official ACTIVE point
+    # as authoritative.  A stale propagation window must not create a new
+    # Path-A rejection in the absence of an explicit contradictory state.
+    assert admission.status == "SAFE_V1_POPULATION"
+
+
+def test_runtime_complete_coverage_propagates_active_anchor(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    intervals = paths.tradability_root / "tradability_intervals.csv"
+    coverage = paths.tradability_root / "tradability_coverage_window.csv"
+    anchors = paths.tradability_root / "idx_stock_summary_anchors.csv"
+    intervals.write_text(
+        "ticker,market,state,effective_from,effective_to,announced_at,source,source_ref\n",
+        encoding="utf-8",
+    )
+    anchors.write_text(
+        "ticker,market,as_of_date,state,source,source_ref,evidence_type\n"
+        "AAAA,REGULAR,2026-08-27,ACTIVE,IDX,idx://anchor,OFFICIAL_STATUS_SNAPSHOT\n",
+        encoding="utf-8",
+    )
+    coverage.write_text(
+        "market,effective_from,effective_to,source,is_complete,discovery_basis,left_boundary_basis\n"
+        f"REGULAR,2026-08-01,{SESSION},IDX,true,EXHAUSTIVE_EVENT_DISCOVERY,VERIFIED_LEFT_BOUNDARY\n",
+        encoding="utf-8",
+    )
+
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == "SAFE_V1_POPULATION"
+
+
+def test_runtime_missing_coverage_artifact_fails_closed(tmp_path: Path) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    (paths.tradability_root / "tradability_coverage_window.csv").unlink()
+
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == V1_POPULATION_NOT_PROVABLE
+    assert "TRADABILITY_COVERAGE_ARTIFACT_MISSING" in admission.reason_codes

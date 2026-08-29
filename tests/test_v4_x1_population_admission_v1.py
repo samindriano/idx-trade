@@ -562,3 +562,21 @@ def test_cloud_v2_wrapper_preserves_eod_failure_boundary_before_paper_controller
     assert result["population_admission"]["status"] == gate.V1_POPULATION_NOT_PROVABLE
     assert score_calls == []
     assert (tmp_path / "runtime" / "DATA_READY.json").is_file()
+
+
+def test_same_session_active_point_preserves_frozen_precedence_without_explicit_state() -> None:
+    result = _evaluate(security_master_evidence={})
+    assert result.status == gate.SAFE_V1_POPULATION
+    assert result.observed_model_input_tickers == ("AAAA",)
+    assert not any(reason.startswith("TRADABILITY_CONFLICT:AAAA") for reason in result.reason_codes)
+
+
+def test_no_trade_without_model_input_preserves_frozen_valid_domain_without_explicit_propagation() -> None:
+    result = _evaluate(
+        point_evidence=_points(state="NO_TRADE"),
+        model_input=pd.DataFrame(columns=["ticker", "date"]),
+        security_master_evidence={},
+    )
+    assert result.status == gate.SAFE_V1_POPULATION
+    assert result.expected_identity_tickers == ("AAAA",)
+    assert result.observed_model_input_tickers == ()

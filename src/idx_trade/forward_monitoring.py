@@ -271,13 +271,7 @@ def _table_columns(path: Path) -> set[str]:
         return set()
 
 
-def _discover_table_path(
-    root: Path,
-    required: Iterable[str],
-    *,
-    label: str,
-    optional: bool = False,
-) -> Path | None:
+def _discover_table(root: Path, required: Iterable[str], *, label: str, optional: bool = False) -> pd.DataFrame:
     required_set = set(required)
     matches: list[Path] = []
     for path in _candidate_tables(root):
@@ -285,7 +279,7 @@ def _discover_table_path(
             matches.append(path)
     if not matches:
         if optional:
-            return None
+            return pd.DataFrame(columns=sorted(required_set))
         raise RuntimeError(f"{label} artifact not found below {root}")
     # Prefer canonical-looking names, then shallow paths.
     keywords = {
@@ -308,25 +302,7 @@ def _discover_table_path(
             f"ambiguous {label} artifacts below {root}: "
             f"{matches[0]} and {matches[1]}"
         )
-    return matches[0]
-
-
-def _discover_table(
-    root: Path,
-    required: Iterable[str],
-    *,
-    label: str,
-    optional: bool = False,
-) -> pd.DataFrame:
-    required_set = set(required)
-    selected = _discover_table_path(
-        root,
-        required_set,
-        label=label,
-        optional=optional,
-    )
-    if selected is None:
-        return pd.DataFrame(columns=sorted(required_set))
+    selected = matches[0]
     return pd.read_csv(selected) if selected.suffix.lower() == ".csv" else pd.read_parquet(selected)
 
 

@@ -28,18 +28,24 @@ from .e2e_cloud_security_master_v1 import (
     SCHEMA_VERSION as SECURITY_MASTER_REFRESH_SCHEMA_VERSION,
 )
 from .forward_monitoring import (
+    _candidate_tables,
     _existing_session,
-    _discover_table_path,
+    _table_columns,
     _verify_ready_artifacts,
     runtime_paths,
 )
 from .provenance import sha256_file
 from .security_master import (
+    COVERAGE_WINDOW_COLUMNS,
     TRADABILITY_ANCHOR_COLUMNS,
     TRADABILITY_COLUMNS,
+    _point_states_compatible,
+    canonicalize_coverage_windows,
     canonicalize_tradability_anchors,
     canonicalize_tradability_intervals,
+    tradability_state,
 )
+from .states import TradabilityState
 from .providers.idx import IDX_DELISTING_URL, IDX_STOCK_LIST_URL
 
 
@@ -66,6 +72,7 @@ SECURITY_MASTER_DELISTING_COMPLETENESS = (
 _ATTESTATION_RUNTIME_HASH_FIELDS = (
     "security_master_refresh_manifest_sha256",
     "tradability_intervals_sha256",
+    "tradability_coverage_sha256",
     "tradability_anchors_sha256",
 )
 
@@ -274,6 +281,25 @@ def _interval_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     return canonical
 
 
+def _coverage_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return _empty_frame(COVERAGE_WINDOW_COLUMNS)
+    required = {"market", "effective_from", "source", "is_complete"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError(f"TRADABILITY_COVERAGE_COLUMNS_MISSING:{sorted(missing)}")
+    try:
+        canonical = canonicalize_coverage_windows(frame.copy())
+    except ValueError as exc:
+        raise ValueError("TRADABILITY_COVERAGE_INVALID") from exc
+    # An existing but non-propagating coverage table is a valid canonical
+    # input. tradability_state() will return UNKNOWN where propagation cannot
+    # be proved. Same-session Stock Summary point evidence keeps its frozen
+    # precedence; absence of the coverage ARTIFACT itself is still rejected by
+    # _load_runtime_tradability_evidence().
+    return canonical
+
+
 def _anchor_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     if frame is None or frame.empty:
         return _empty_frame(("ticker", "market", "as_of_date", "state", "source", "source_ref", "evidence_type"))
@@ -306,50 +332,98 @@ def _read_runtime_table(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
-def _load_runtime_tradability_evidence(paths: Any) -> dict[str, Any]:
-    """Load the canonical forward-monitoring legal-state artifacts.
+def _discover_runtime_table_path(
+    root: Path,
+    required: Sequence[str],
+    *,
+    label: str,
+) -> Path:
+    """Resolve the exact table path without modifying the frozen monitor module.
 
-    The production path must not substitute a refresh-manifest dictionary or
-    synthetic in-memory state for the retained interval and anchor artifacts.
-    ``_discover_table_path`` is the same deterministic resolver used by
-    ``forward_monitoring._load_tradability``; retaining the selected paths lets
-    the admission attestation bind the exact files that were consumed.
+    Selection intentionally mirrors the frozen ``forward_monitoring._discover_table``
+    ranking while reusing its byte-frozen candidate/column helpers.  This outer
+    operational gate needs the selected path only so the consumed artifact can be
+    hash-bound in its attestation.
     """
 
-    interval_path = _discover_table_path(
+    required_set = set(required)
+    matches = [
+        path
+        for path in _candidate_tables(root)
+        if required_set.issubset(_table_columns(path))
+    ]
+    if not matches:
+        missing_codes = {
+            "tradability intervals": "TRADABILITY_INTERVAL_ARTIFACT_MISSING",
+            "tradability coverage": "TRADABILITY_COVERAGE_ARTIFACT_MISSING",
+            "tradability anchors": "TRADABILITY_ANCHOR_ARTIFACT_MISSING",
+        }
+        raise ValueError(
+            missing_codes.get(
+                label,
+                f"{label.upper().replace(' ', '_')}_ARTIFACT_MISSING",
+            )
+        )
+    keywords = {
+        "tradability intervals": ("tradability_intervals", "interval"),
+        "tradability coverage": ("coverage_window", "coverage"),
+        "tradability anchors": ("tradability_anchor", "anchor"),
+    }.get(label, ())
+
+    def ranking(path: Path) -> tuple[int, int, str, str]:
+        return (
+            0 if any(token in path.name.lower() for token in keywords) else 1,
+            len(path.parts),
+            path.name.lower(),
+            str(path).lower(),
+        )
+
+    matches.sort(key=ranking)
+    if len(matches) > 1 and ranking(matches[0])[:2] == ranking(matches[1])[:2]:
+        raise ValueError(
+            f"AMBIGUOUS_{label.upper().replace(' ', '_')}_ARTIFACT:"
+            f"{matches[0]}:{matches[1]}"
+        )
+    return matches[0]
+
+
+def _load_runtime_tradability_evidence(paths: Any) -> dict[str, Any]:
+    """Load and bind the three canonical forward tradability artifacts."""
+
+    interval_path = _discover_runtime_table_path(
         paths.tradability_root,
         TRADABILITY_COLUMNS,
         label="tradability intervals",
-        optional=True,
     )
-    anchor_path = _discover_table_path(
+    coverage_path = _discover_runtime_table_path(
+        paths.tradability_root,
+        COVERAGE_WINDOW_COLUMNS,
+        label="tradability coverage",
+    )
+    anchor_path = _discover_runtime_table_path(
         paths.tradability_root,
         TRADABILITY_ANCHOR_COLUMNS,
         label="tradability anchors",
-        optional=True,
     )
-    if interval_path is None:
-        raise ValueError("TRADABILITY_INTERVAL_ARTIFACT_MISSING")
-    if anchor_path is None:
-        raise ValueError("TRADABILITY_ANCHOR_ARTIFACT_MISSING")
 
     intervals = _interval_frame(_read_runtime_table(interval_path))
+    coverage = _coverage_frame(_read_runtime_table(coverage_path))
     anchors = _anchor_frame(_read_runtime_table(anchor_path))
-    if intervals.empty and anchors.empty:
-        raise ValueError("TRADABILITY_EVIDENCE_EMPTY")
 
     return {
         "tradability_intervals": intervals,
+        "tradability_coverage_windows": coverage,
         "tradability_anchors": anchors,
         "tradability_intervals_path": str(interval_path.resolve()),
         "tradability_intervals_sha256": sha256_file(interval_path),
+        "tradability_coverage_path": str(coverage_path.resolve()),
+        "tradability_coverage_sha256": sha256_file(coverage_path),
         "tradability_anchors_path": str(anchor_path.resolve()),
         "tradability_anchors_sha256": sha256_file(anchor_path),
         "tradability_evidence_source": (
             "IDX_TRADE_FORWARD_MONITORING_RUNTIME_TRADABILITY_ROOT"
         ),
     }
-
 
 def _validate_security_master_refresh_manifest(
     manifest_path: Path,
@@ -413,47 +487,6 @@ def _validate_security_master_refresh_manifest(
     if declared_manifest_sha is not None and str(declared_manifest_sha).lower() != sha256_file(manifest_path):
         raise ValueError("CURRENT_IDENTITY_REFRESH_MANIFEST_HASH_MISMATCH")
     return sha256_file(manifest_path)
-
-
-def _states_at(
-    intervals: pd.DataFrame,
-    anchors: pd.DataFrame,
-    ticker: str,
-    session: str,
-) -> set[str]:
-    target = pd.Timestamp(session)
-    states: set[str] = set()
-    if not intervals.empty:
-        rows = intervals[
-            intervals["ticker"].eq(ticker)
-            & intervals["market"].isin(["REGULAR", "ALL"])
-            & intervals["effective_from"].le(target)
-            & (intervals["effective_to"].isna() | intervals["effective_to"].ge(target))
-        ]
-        exact = rows[rows["market"].eq("REGULAR")]
-        rows = exact if not exact.empty else rows[rows["market"].eq("ALL")]
-        states.update(rows["state"].astype(str).tolist())
-    if not anchors.empty:
-        rows = anchors[
-            anchors["ticker"].eq(ticker)
-            & anchors["market"].isin(["REGULAR", "ALL"])
-            & anchors["as_of_date"].eq(target)
-        ]
-        exact = rows[rows["market"].eq("REGULAR")]
-        rows = exact if not exact.empty else rows[rows["market"].eq("ALL")]
-        states.update(rows["state"].astype(str).tolist())
-    return states
-
-
-def _compatible(point: str, explicit: set[str]) -> bool:
-    if not explicit:
-        return True
-    if len(explicit) != 1:
-        return False
-    state = next(iter(explicit))
-    return point == state or (
-        point == "NO_TRADE" and state in {"SUSPENDED", "FCA_WATCHLIST"}
-    )
 
 
 def _metadata_reasons(
@@ -592,6 +625,8 @@ def evaluate_population_admission(
         "security_master_refresh_manifest_sha256",
         "tradability_intervals_path",
         "tradability_intervals_sha256",
+        "tradability_coverage_path",
+        "tradability_coverage_sha256",
         "tradability_anchors_path",
         "tradability_anchors_sha256",
         "tradability_evidence_source",
@@ -603,6 +638,7 @@ def evaluate_population_admission(
         for field in (
             "security_master_refresh_manifest_sha256",
             "tradability_intervals_sha256",
+            "tradability_coverage_sha256",
             "tradability_anchors_sha256",
             "tradability_evidence_source",
         )
@@ -707,9 +743,19 @@ def evaluate_population_admission(
         }
 
         points = _point_frame(point_evidence, session)
-        intervals = _interval_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_intervals"))
-        anchors = _anchor_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_anchors"))
-        point_by_ticker = {str(row.ticker): str(row.point_state) for row in points.itertuples(index=False)}
+        intervals = _interval_frame(
+            None if security_master_evidence is None else security_master_evidence.get("tradability_intervals")
+        )
+        coverage = _coverage_frame(
+            None if security_master_evidence is None else security_master_evidence.get("tradability_coverage_windows")
+        )
+        anchors = _anchor_frame(
+            None if security_master_evidence is None else security_master_evidence.get("tradability_anchors")
+        )
+        point_by_ticker = {
+            str(row.ticker): str(row.point_state)
+            for row in points.itertuples(index=False)
+        }
         expected_identity_set = set(expected_identity)
         extra_points = sorted(set(point_by_ticker) - expected_identity_set)
         if extra_points:
@@ -735,9 +781,9 @@ def evaluate_population_admission(
             point = point_by_ticker.get(ticker)
             has_model_input = ticker in set(observed_input)
             if ticker in post_freeze_delisted_before_target:
-                # The frozen merged master retains the post-freeze identity,
-                # while the feature builder's inclusive listed_to boundary
-                # excludes it once target is strictly after listed_to.
+                # Preserve the safe-parent merged-master semantics: the
+                # post-freeze identity remains retained, but the pinned feature
+                # builder excludes it once target is strictly after listed_to.
                 if has_model_input:
                     reasons.append(
                         f"POST_FREEZE_DELISTED_MODEL_INPUT_PRESENT:{ticker}"
@@ -748,29 +794,92 @@ def evaluate_population_admission(
                     )
                 continue
 
-            explicit = _states_at(intervals, anchors, ticker, session)
-            if point is not None and not _compatible(point, explicit):
+            try:
+                explicit_state = tradability_state(
+                    intervals,
+                    coverage,
+                    ticker,
+                    pd.Timestamp(session),
+                    market="REGULAR",
+                    anchors=anchors,
+                )
+            except ValueError:
                 reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
                 continue
-            if len(explicit) > 1:
-                reasons.append(f"TRADABILITY_STATE_AMBIGUOUS:{ticker}")
+
+            point_state = TradabilityState(point) if point is not None else None
+
+            if has_model_input:
+                # Preserve the frozen forward-monitoring precedence: canonical
+                # same-session Stock Summary ACTIVE point evidence is sufficient
+                # for the ACTIVE-only model-input row.  Independent retained
+                # tradability evidence is a contradiction veto, not a second
+                # admission requirement.  UNKNOWN therefore does not invent a
+                # new V1 rejection rule when the same-session point is present.
+                if point_state is None:
+                    if explicit_state is TradabilityState.UNKNOWN:
+                        reasons.append(f"TRADABILITY_STATE_NOT_EXPLICIT:{ticker}")
+                    elif explicit_state is TradabilityState.ACTIVE:
+                        reasons.append(f"MODEL_INPUT_POINT_STATE_MISSING:{ticker}")
+                    else:
+                        reasons.append(
+                            f"MODEL_INPUT_NON_ACTIVE_STATE:{ticker}:{explicit_state.value}"
+                        )
+                    continue
+                if point_state is not TradabilityState.ACTIVE:
+                    if (
+                        explicit_state not in {TradabilityState.UNKNOWN, point_state}
+                        and not _point_states_compatible(point_state, explicit_state)
+                    ):
+                        reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
+                    else:
+                        reasons.append(
+                            f"MODEL_INPUT_NON_ACTIVE_STATE:{ticker}:{point_state.value}"
+                        )
+                    continue
+                if explicit_state not in {
+                    TradabilityState.UNKNOWN,
+                    TradabilityState.ACTIVE,
+                }:
+                    reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
                 continue
-            resolved = point or (next(iter(explicit)) if explicit else None)
-            if resolved is None:
+
+            # No model input is a valid frozen-domain state for legally retained
+            # identities when the same-session point is non-active.  Do not turn
+            # this into a scientific population deletion or require set equality.
+            if point_state is TradabilityState.ACTIVE:
+                reasons.append(f"MODEL_INPUT_ACTIVE_TICKER_MISSING:{ticker}")
+                continue
+            if point_state in {
+                TradabilityState.NO_TRADE,
+                TradabilityState.SUSPENDED,
+                TradabilityState.FCA_WATCHLIST,
+            }:
+                # The same-session point is sufficient to prove that no ACTIVE
+                # model row should exist.  If independent evidence resolves to a
+                # known non-active state, require the existing canonical
+                # compatibility relation; ACTIVE is not treated as proof of trade
+                # occurrence and therefore does not override a NO_TRADE point.
+                if (
+                    explicit_state not in {TradabilityState.UNKNOWN, TradabilityState.ACTIVE}
+                    and not _point_states_compatible(point_state, explicit_state)
+                ):
+                    reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
+                continue
+
+            # When Stock Summary has no same-session point, only canonical
+            # interval/coverage/anchor reconstruction may justify omission from
+            # model input.  UNKNOWN is intentionally fail-closed.
+            if explicit_state is TradabilityState.UNKNOWN:
                 reasons.append(f"TRADABILITY_STATE_NOT_EXPLICIT:{ticker}")
-                continue
-            if resolved == "ACTIVE":
-                if point is None and has_model_input:
-                    reasons.append(f"MODEL_INPUT_POINT_STATE_MISSING:{ticker}")
-                if not has_model_input:
-                    reasons.append(f"MODEL_INPUT_ACTIVE_TICKER_MISSING:{ticker}")
-            else:
-                # NO_TRADE/SUSPENDED/FCA_WATCHLIST are valid domain states
-                # for an expected identity, but cannot have model input.
-                if has_model_input:
-                    reasons.append(
-                        f"MODEL_INPUT_NON_ACTIVE_STATE:{ticker}:{resolved}"
-                    )
+            elif explicit_state is TradabilityState.ACTIVE:
+                reasons.append(f"MODEL_INPUT_ACTIVE_TICKER_MISSING:{ticker}")
+            elif explicit_state not in {
+                TradabilityState.NO_TRADE,
+                TradabilityState.SUSPENDED,
+                TradabilityState.FCA_WATCHLIST,
+            }:
+                reasons.append(f"TRADABILITY_STATE_NOT_PROVABLE:{ticker}")
     except Exception as exc:
         reasons.append(str(exc))
 
@@ -811,7 +920,7 @@ def _git_blobs(repo_root: Path) -> tuple[dict[str, str], dict[str, str]]:
     actual: dict[str, str] = {}
     for path in expected:
         actual[path] = subprocess.run(
-            ["git", "-C", str(repo_root), "rev-parse", f"HEAD:{path}"],
+            ["git", "-C", str(repo_root), "hash-object", "--", path],
             check=True,
             capture_output=True,
             text=True,
@@ -1091,6 +1200,7 @@ def _validate_attestation_payload(
         for field in (
             "security_master_refresh_manifest_path",
             "tradability_intervals_path",
+            "tradability_coverage_path",
             "tradability_anchors_path",
         ):
             if not str(metadata.get(field) or "").strip():
