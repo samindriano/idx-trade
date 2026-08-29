@@ -1,12 +1,23 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "acquire_inc001_stock_split_discovery_v3.py"
 SPEC = importlib.util.spec_from_file_location("inc001_stock_split_discovery_v3", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
+
+BUILDER_SCRIPT = Path(__file__).parents[1] / "scripts" / "build_inc001_split_wave_reconciliation_v2.py"
+import sys
+
+sys.path.insert(0, str(BUILDER_SCRIPT.parent))
+BUILDER_SPEC = importlib.util.spec_from_file_location("inc001_split_wave_reconciliation_v3", BUILDER_SCRIPT)
+BUILDER = importlib.util.module_from_spec(BUILDER_SPEC)
+assert BUILDER_SPEC.loader is not None
+BUILDER_SPEC.loader.exec_module(BUILDER)
 
 
 def test_source_ids_accepts_raw_v7_hex_identity():
@@ -51,3 +62,59 @@ Date of securities distribution
     assert parsed["explicit_regular_market_semantic"] == "true"
     assert parsed["parser_status"] == "PARSED_EXACT_STOCK_SPLIT_SCHEDULE"
     assert parsed["status_code"] == "200"
+
+
+def _source(source_event_id):
+    return {"source_event_id": source_event_id}
+
+
+def _link(left, right, source_ref="https://official.example/stock-split.pdf", sha="a" * 64):
+    return {
+        "left_source_event_id": left,
+        "right_source_event_id": right,
+        "relation": "PROVEN_SAME_ECONOMIC_EVENT",
+        "authority_source_ref": source_ref,
+        "authority_evidence_sha256": sha,
+        "ticker": "AKRA",
+        "source_families": "MANDATORY_CONVERSION|STOCK_SPLIT",
+        "linkage_reason": "same official schedule binds source date roles",
+    }
+
+
+def _discovery_document(source_ref="https://official.example/stock-split.pdf", sha="a" * 64):
+    return {
+        "source_ref": source_ref,
+        "evidence_sha256": sha,
+        "parser_status": "PARSED_EXACT_STOCK_SPLIT_SCHEDULE",
+        "explicit_regular_market_semantic": "true",
+    }
+
+
+def test_successor_accepts_new_source_bound_linkage_from_retained_document():
+    prior, accepted, delta = BUILDER.audit_linkage_delta(
+        [_source("mconv"), _source("idx")],
+        [],
+        [_link("mconv", "idx")],
+        [_discovery_document()],
+    )
+    assert prior == []
+    assert [(row["left_source_event_id"], row["right_source_event_id"]) for row in accepted] == [("mconv", "idx")]
+    assert [row["delta_status"] for row in delta] == ["NEW_PROVEN_SAME_ECONOMIC_EVENT"]
+
+
+@pytest.mark.parametrize(
+    "source_ref,sha",
+    [
+        ("", "a" * 64),
+        ("https://official.example/stock-split.pdf", ""),
+        ("https://official.example/stock-split.pdf", "not-a-sha"),
+    ],
+)
+def test_new_linkage_missing_or_invalid_authority_fails_closed(source_ref, sha):
+    with pytest.raises(RuntimeError):
+        BUILDER.audit_linkage_delta(
+            [_source("mconv"), _source("idx")],
+            [],
+            [_link("mconv", "idx", source_ref=source_ref, sha=sha)],
+            [_discovery_document(source_ref=source_ref, sha=sha)],
+        )
