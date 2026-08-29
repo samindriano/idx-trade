@@ -91,7 +91,7 @@ COMPILEALL          = PASS
 DIFF_CHECK          = PASS
 ARTIFACT_HASHES     = PASS; 0 retained-document hash failures
 DETERMINISTIC_RERUN = PASS; 20/20 non-manifest files byte-identical
-EXACT_HEAD_CI       = PENDING FINAL PUSH
+EXACT_HEAD_CI       = PASS; run 33263200103 on `cb52d809`; 376 passed, 5 non-blocking Node.js 20 warnings
 ```
 
 Return for ChatGPT review after exact-head CI. Do not merge and do not run
