@@ -1,0 +1,11 @@
+QUESTION_ID,QUESTION,WHY_IT_MATTERS,REQUIRED_EVIDENCE,SAFE_NEXT_OWNER
+Q1,"Which 13 active GitHub workflow registrations are historical, renamed, disabled-in-practice, or still runnable?","Registry mismatch may expose stale canonical writers","Per-registration current ref/triggers and explicit authority decision","Operations/control-plane owner"
+Q2,"Does watchdog coverage require durable terminal stage commit rather than any exact-slot run?","Prevents false-green and missed recovery","Contract test plus metadata-to-R2 commit correlation without provider payload","Scheduler owner"
+Q3,"Can E2E, Stream, and Intraday resume after every provider/archive crash window?","Exactly-once and quota integrity","External synthetic crash harness with no provider secrets and durable archive mock","Runtime owners"
+Q4,"What immutable allowlist binds Official Open variable to approved producer?","Prevents unreviewed producer substitution","Signed or repository-bound SHA attestation","Official Open owner"
+Q5,"Is A9 string coercion reachable from any canonical input serializer?","Determines bug versus defensive API gap","Typed schema audit of all canonical callers and fixtures","Data-gate owner"
+Q6,"Is A10 generic Security Master used by current Path-A production?","Separates legacy helper risk from live risk","Import/call graph from pinned launcher and exact runtime","Security Master owner"
+Q7,"Are current Phase-B CA support identities and 56,602 legacy overlay semantically comparable?","Determines historical input impact","Exact support-set join and independent recomputation with lineage manifests","Research Integrity owner"
+Q8,"Are 412 source rows, 389 physical events, 155 resolved, 188 unresolved economic events/transitions, and 46 excluded reconciled one-to-one?","Prevents ontology collapse","Typed event ledger and independent count reconciliation","CA source authority owner"
+Q9,"Does evaluation gate cryptographically bind score producer, feature order, PIT/as-of input, target rows, and PaperState to NAV?","Prevents invalid prospective credit","Protected-access contract tests using synthetic mutated artifacts","Evaluation owner"
+Q10,"Are current PR heads reflected in the next authoritative TEAM_STATUS snapshot?","Prevents stale operational decisions","New coordinated status snapshot with exact refs","Coordination owner"

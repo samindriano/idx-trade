@@ -1,0 +1,9 @@
+CLUSTER_ID,NAME,FINDINGS,ROOT_CAUSE_STATEMENT,PRIMARY_RISK,STATUS
+C1,scheduler_false_green,"A1;A23","Coverage is inferred from workflow metadata or a mutable installed script rather than durable terminal evidence and attested control-plane bytes","False-positive operational success or missed recovery",OPEN
+C2,recovery_commit_semantics,"A2;A3;A4;A5","Commit-last and create-only writes do not cover every crash window and nonterminal state is sealable","Duplicate provider history or permanently incomplete slot",OPEN
+C3,mutable_control_plane,"A6;A7;A8;A22","Canonical workflows accept mutable refs/inputs or manual paths without a single immutable approved producer boundary","Noncanonical evidence in canonical namespace",OPEN
+C4,data_gate_and_identity_semantics,"A9;A10;A11;A12;A13;A19;A20","Generic helpers lack strict type, calendar, instrument-scope, interval, conflict, and pagination enforcement","Historical/PIT population identity corruption",OPEN
+C5,evaluation_provenance_and_metrics,"A15;A16;A17","Evaluation admission and pure metrics do not fully enforce producer/data/state linkage or declared eligible denominators","Invalid prospective evidence or incomparable statistics",OPEN
+C6,workflow_registry_and_documentation,"A21;A24","GitHub registration and coordination snapshots are not reconciled with current main/PR heads","Operator selects stale or unknown control surface",UNRESOLVED
+C7,ca_basis_lineage_and_authority,"A18;A25;A26;A30","CA source ontology, basis semantics, population lineage, and date-level authority remain partially unresolved","Historical training-input identity cannot be admitted",OPEN
+C8,provenance_self_description,"A27;A28;A29","Stored evidence does not always self-describe the exact bytes and controlling workflow/ref needed for replay","Post-hoc verification and retention weakness",OPEN

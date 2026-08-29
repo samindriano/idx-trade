@@ -1,0 +1,13 @@
+SURFACE,EXACT_TARGET,COVERAGE,EVIDENCE,REMAINING_GAP
+repo_and_refs,origin/main@adc071d6fd7e8009557bed27b1224217421514ae,PASS,"git rev-parse and ls-remote agree; local dirty branch preserved","Remote may move after epoch; do not replace target"
+governing_docs,origin/main TEAM_STATUS plus AGENTS and project docs,PASS_WITH_STALENESS,"TEAM_STATUS newer than CURRENT_STATUS and PROJECT_CONTEXT_MASTER","Some claims/checkpoints are snapshot notes"
+e2e_launcher,6b6a41114a910287b413a099a36d59c5e057a8f2,STATIC_REACHABLE,"workflow exact checkout and HEAD verification","No target-SHA genuine scheduled proof"
+official_open,043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2,CONFIG_ONLY,"repository variable current value format-valid","No immutable allowlist or provider/R2 proof"
+stockbit_intraday,main workflow at origin/main plus bridge 043003ee,CONFIG_ONLY,"main guard and exact github.sha","First genuine cloud proof pending"
+stockbit_stream,origin/main workflow,STATIC_REACHABLE,"scheduled workflow and archive paths","Manual non-main path and red-team PR unresolved"
+watchdog,82f938e9 plus origin/main script,STATIC_REACHABLE,"trigger-only metadata query and dispatch paths","Durable commit/success predicate and installed ref attestation"
+data_pit,origin/main src/idx_trade,PARTIAL,"static helper and gate review","Canonical reachability of every generic helper"
+ca_remediation,d018ba4dc4d55daa48d9832b65df6d68e469d396,PASS_IDENTITY_FAIL_AUTHORITY,"current support reconciliation and frozen verdict","Date-level KSEI/as-of and transition semantics"
+prospective_eval,origin/main src/config,PASS_SHAPE_BLOCKED_PROVENANCE,"schema/inventory/guard checks","Cryptographic producer/input/target/state linkage"
+github_registry,current GitHub workflow metadata,PARTIAL,"23 active registrations versus 10 main tree files","Classification and cleanup authority for 13 absent registrations"
+protected_state,not accessed by policy,NOT_ACCESSED,"outcome-blind boundary preserved","Cannot certify live outcome/PaperState behavior"
