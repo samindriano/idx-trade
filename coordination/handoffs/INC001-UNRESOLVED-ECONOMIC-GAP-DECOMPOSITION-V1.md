@@ -100,3 +100,17 @@ PR_103_MERGED           = FALSE
 Please review the immutable decomposition and its deterministic rerun. No
 merge, provider execution, Phase-E, outcome access, model work, counter
 mutation, or canonical historical rewrite is authorized by this handoff.
+
+## Validation
+
+- focused economic suite: 7 passed;
+- CA/integrity suite: 131 passed, 5 warnings;
+- full pytest: 370 passed, 5 warnings;
+- py_compile: 47 Python files passed;
+- staged `git diff --check`: PASS;
+- exact-head GitHub Actions run `33254837877` on `3ade9ef9`: PASS, 370
+  passed, 5 pytest warnings. The separate GitHub annotation is the known
+  Node.js 20 deprecation warning for `actions/checkout@v4` and
+  `actions/setup-python@v5`.
+
+No further production execution is authorized tonight.

@@ -179,6 +179,16 @@ Validation performed before this handoff:
 - deterministic comparison: 7/7 non-manifest files, PASS;
 - py_compile of the new builder: PASS.
 
-The CA/integrity suite, full pytest, final py_compile, diff-check, and
-exact-head CI are reported in the final handoff. Stop for ChatGPT review; do
-not merge or execute provider or scientific work.
+Final validation:
+
+- focused economic suite: 7 passed;
+- CA/integrity suite: 131 passed, 5 warnings;
+- full pytest: PASS, 370 passed, 5 warnings;
+- py_compile: PASS, 47 Python files;
+- staged `git diff --check`: PASS;
+- exact-head GitHub Actions run `33254837877` on commit `3ade9ef9`: PASS,
+  370 passed, 5 pytest warnings; the separate workflow annotation is the
+  known Node.js 20 deprecation warning for `actions/checkout@v4` and
+  `actions/setup-python@v5`.
+
+Stop for ChatGPT review; do not merge or execute provider or scientific work.
