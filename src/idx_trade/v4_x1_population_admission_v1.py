@@ -24,16 +24,23 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from .e2e_cloud_security_master_v1 import (
+    SCHEMA_VERSION as SECURITY_MASTER_REFRESH_SCHEMA_VERSION,
+)
 from .forward_monitoring import (
     _existing_session,
+    _discover_table_path,
     _verify_ready_artifacts,
     runtime_paths,
 )
 from .provenance import sha256_file
 from .security_master import (
+    TRADABILITY_ANCHOR_COLUMNS,
+    TRADABILITY_COLUMNS,
     canonicalize_tradability_anchors,
     canonicalize_tradability_intervals,
 )
+from .providers.idx import IDX_DELISTING_URL, IDX_STOCK_LIST_URL
 
 
 SCHEMA_VERSION = "idx_trade_v4_x1_population_admission_v1"
@@ -49,6 +56,18 @@ JAKARTA = ZoneInfo("Asia/Jakarta")
 TICKER_RE = re.compile(r"^[A-Z0-9]{4}$")
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 GIT_RE = re.compile(r"^[0-9a-f]{40}$")
+SECURITY_MASTER_REFRESH_SEMANTICS = (
+    "CURRENT_LISTING_IDENTITY_REFERENCE_WITH_POST_FREEZE_DELISTING_HISTORY"
+)
+SECURITY_MASTER_ACTIVE_COMPLETENESS = "RECORDS_TOTAL_EXACT_SINGLE_RESPONSE"
+SECURITY_MASTER_DELISTING_COMPLETENESS = (
+    "MONTHLY_META_TOTAL_ITEMS_EXHAUSTIVE_PAGINATION"
+)
+_ATTESTATION_RUNTIME_HASH_FIELDS = (
+    "security_master_refresh_manifest_sha256",
+    "tradability_intervals_sha256",
+    "tradability_anchors_sha256",
+)
 
 
 class PopulationAdmissionConflict(RuntimeError):
@@ -281,6 +300,121 @@ def _anchor_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     return canonical
 
 
+def _read_runtime_table(path: Path) -> pd.DataFrame:
+    if path.suffix.lower() == ".csv":
+        return pd.read_csv(path)
+    return pd.read_parquet(path)
+
+
+def _load_runtime_tradability_evidence(paths: Any) -> dict[str, Any]:
+    """Load the canonical forward-monitoring legal-state artifacts.
+
+    The production path must not substitute a refresh-manifest dictionary or
+    synthetic in-memory state for the retained interval and anchor artifacts.
+    ``_discover_table_path`` is the same deterministic resolver used by
+    ``forward_monitoring._load_tradability``; retaining the selected paths lets
+    the admission attestation bind the exact files that were consumed.
+    """
+
+    interval_path = _discover_table_path(
+        paths.tradability_root,
+        TRADABILITY_COLUMNS,
+        label="tradability intervals",
+        optional=True,
+    )
+    anchor_path = _discover_table_path(
+        paths.tradability_root,
+        TRADABILITY_ANCHOR_COLUMNS,
+        label="tradability anchors",
+        optional=True,
+    )
+    if interval_path is None:
+        raise ValueError("TRADABILITY_INTERVAL_ARTIFACT_MISSING")
+    if anchor_path is None:
+        raise ValueError("TRADABILITY_ANCHOR_ARTIFACT_MISSING")
+
+    intervals = _interval_frame(_read_runtime_table(interval_path))
+    anchors = _anchor_frame(_read_runtime_table(anchor_path))
+    if intervals.empty and anchors.empty:
+        raise ValueError("TRADABILITY_EVIDENCE_EMPTY")
+
+    return {
+        "tradability_intervals": intervals,
+        "tradability_anchors": anchors,
+        "tradability_intervals_path": str(interval_path.resolve()),
+        "tradability_intervals_sha256": sha256_file(interval_path),
+        "tradability_anchors_path": str(anchor_path.resolve()),
+        "tradability_anchors_sha256": sha256_file(anchor_path),
+        "tradability_evidence_source": (
+            "IDX_TRADE_FORWARD_MONITORING_RUNTIME_TRADABILITY_ROOT"
+        ),
+    }
+
+
+def _validate_security_master_refresh_manifest(
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    *,
+    baseline_path: Path,
+    current_path: Path,
+    session: str,
+) -> str:
+    """Validate the exact contract emitted by the accepted cloud refresh."""
+
+    if manifest.get("schema_version") != SECURITY_MASTER_REFRESH_SCHEMA_VERSION:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_SCHEMA_INVALID")
+    if manifest.get("authority") != "IDX":
+        raise ValueError("CURRENT_IDENTITY_REFRESH_AUTHORITY_INVALID")
+    if manifest.get("semantics") != SECURITY_MASTER_REFRESH_SEMANTICS:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_SEMANTICS_INVALID")
+    if str(manifest.get("observed_date") or "") != session:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_OBSERVED_DATE_MISMATCH")
+    try:
+        if _safe_observed_at(manifest.get("observed_at_jakarta"))[:10] != session:
+            raise ValueError("CURRENT_IDENTITY_REFRESH_OBSERVED_AT_MISMATCH")
+    except ValueError as exc:
+        if str(exc) == "CURRENT_IDENTITY_REFRESH_OBSERVED_AT_MISMATCH":
+            raise
+        raise ValueError("CURRENT_IDENTITY_REFRESH_OBSERVED_AT_INVALID") from exc
+    if str(manifest.get("freeze_local_date") or "") != FREEZE_LOCAL_DATE.isoformat():
+        raise ValueError("CURRENT_IDENTITY_REFRESH_FREEZE_DATE_INVALID")
+    if Path(str(manifest.get("baseline_path") or "")).expanduser().resolve() != baseline_path:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_BASELINE_PATH_INVALID")
+    if str(manifest.get("baseline_sha256") or "").lower() != sha256_file(baseline_path):
+        raise ValueError("CURRENT_IDENTITY_REFRESH_BASELINE_HASH_MISMATCH")
+    if str(manifest.get("active_source") or "") != IDX_STOCK_LIST_URL:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_ACTIVE_SOURCE_INVALID")
+    if str(manifest.get("active_completeness") or "") != SECURITY_MASTER_ACTIVE_COMPLETENESS:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_ACTIVE_COMPLETENESS_INVALID")
+    if str(manifest.get("delisting_source") or "") != IDX_DELISTING_URL:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_DELISTING_SOURCE_INVALID")
+    if str(manifest.get("delisting_completeness") or "") != SECURITY_MASTER_DELISTING_COMPLETENESS:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_DELISTING_COMPLETENESS_INVALID")
+    if Path(str(manifest.get("security_master_path") or "")).expanduser().resolve() != current_path:
+        raise ValueError("CURRENT_IDENTITY_REFRESH_MASTER_PATH_INVALID")
+    if str(manifest.get("security_master_sha256") or "").lower() != sha256_file(current_path):
+        raise ValueError("CURRENT_IDENTITY_REFRESH_MASTER_HASH_MISMATCH")
+    guards = manifest.get("guards")
+    required_guards = (
+        "outcome_accessed",
+        "protected_forward_accessed",
+        "model_refit",
+        "paper_state_mutated",
+        "retroactive_capture_authorized",
+    )
+    if not isinstance(guards, Mapping) or any(guards.get(key) is not False for key in required_guards):
+        raise ValueError("CURRENT_IDENTITY_REFRESH_GUARDS_INVALID")
+
+    declared_manifest_path = manifest.get("manifest_path")
+    if declared_manifest_path is not None:
+        if Path(str(declared_manifest_path)).expanduser().resolve() != manifest_path.resolve():
+            raise ValueError("CURRENT_IDENTITY_REFRESH_MANIFEST_PATH_INVALID")
+    declared_manifest_sha = manifest.get("manifest_sha256")
+    if declared_manifest_sha is not None and str(declared_manifest_sha).lower() != sha256_file(manifest_path):
+        raise ValueError("CURRENT_IDENTITY_REFRESH_MANIFEST_HASH_MISMATCH")
+    return sha256_file(manifest_path)
+
+
 def _states_at(
     intervals: pd.DataFrame,
     anchors: pd.DataFrame,
@@ -452,6 +586,27 @@ def evaluate_population_admission(
         "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
     )
     metadata["final_scoring_population_attested"] = False
+    evidence_metadata = security_master_evidence or {}
+    for field in (
+        "security_master_refresh_manifest_path",
+        "security_master_refresh_manifest_sha256",
+        "tradability_intervals_path",
+        "tradability_intervals_sha256",
+        "tradability_anchors_path",
+        "tradability_anchors_sha256",
+        "tradability_evidence_source",
+    ):
+        if field in evidence_metadata:
+            metadata[field] = evidence_metadata[field]
+    metadata["runtime_tradability_evidence_bound"] = all(
+        evidence_metadata.get(field) not in (None, "")
+        for field in (
+            "security_master_refresh_manifest_sha256",
+            "tradability_intervals_sha256",
+            "tradability_anchors_sha256",
+            "tradability_evidence_source",
+        )
+    )
 
     expected_identity: tuple[str, ...] = ()
     observed_input: tuple[str, ...] = ()
@@ -509,9 +664,15 @@ def evaluate_population_admission(
 
         additions = sorted(current_set - baseline_set)
         allowed_additions: list[str] = []
+        post_freeze_delisted_before_target: list[str] = []
         for ticker in additions:
             row = current_by_ticker[ticker]
             listed_from = pd.Timestamp(row.listed_from)
+            listed_to = (
+                pd.Timestamp(row.listed_to)
+                if pd.notna(row.listed_to)
+                else None
+            )
             if listed_from > target:
                 reasons.append(f"FUTURE_IDENTITY:{ticker}")
             elif listed_from <= freeze:
@@ -523,6 +684,8 @@ def evaluate_population_admission(
                 # shrink the shared frozen identity; the pinned feature
                 # builder remains the authority for final scoring inclusion.
                 allowed_additions.append(ticker)
+                if listed_to is not None and listed_to < target:
+                    post_freeze_delisted_before_target.append(ticker)
 
         # Shared expected identity always follows the frozen baseline interval.
         # Only genuinely post-freeze additions may use the current interval.
@@ -537,6 +700,9 @@ def evaluate_population_admission(
             "baseline_shared_confirmed": confirmed_shared,
             "shared_identity_conflicts": shared_conflicts,
             "post_freeze_additions": additions,
+            "post_freeze_additions_excluded_by_listed_to": sorted(
+                post_freeze_delisted_before_target
+            ),
             "missing_baseline": missing,
         }
 
@@ -544,23 +710,6 @@ def evaluate_population_admission(
         intervals = _interval_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_intervals"))
         anchors = _anchor_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_anchors"))
         point_by_ticker = {str(row.ticker): str(row.point_state) for row in points.itertuples(index=False)}
-        for ticker in expected_identity:
-            explicit = _states_at(intervals, anchors, ticker, session)
-            point = point_by_ticker.get(ticker)
-            if point is None and not explicit:
-                reasons.append(f"TRADABILITY_STATE_NOT_EXPLICIT:{ticker}")
-                continue
-            if point is not None and not _compatible(point, explicit):
-                reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
-                continue
-            states = set(explicit)
-            if point is not None:
-                states.add(point)
-            if not states:
-                reasons.append(f"TRADABILITY_STATE_AMBIGUOUS:{ticker}")
-            elif states != {"ACTIVE"}:
-                state_label = "+".join(sorted(states))
-                reasons.append(f"TRADABILITY_NON_ACTIVE:{ticker}:{state_label}")
         expected_identity_set = set(expected_identity)
         extra_points = sorted(set(point_by_ticker) - expected_identity_set)
         if extra_points:
@@ -582,23 +731,60 @@ def evaluate_population_admission(
                 "MODEL_INPUT_IDENTITY_TICKER_NOT_EXPECTED:"
                 + ",".join(added_identity)
             )
-        if removed_identity:
-            reasons.append(
-                "MODEL_INPUT_IDENTITY_TICKER_MISSING:"
-                + ",".join(removed_identity)
-            )
+        for ticker in expected_identity:
+            point = point_by_ticker.get(ticker)
+            has_model_input = ticker in set(observed_input)
+            if ticker in post_freeze_delisted_before_target:
+                # The frozen merged master retains the post-freeze identity,
+                # while the feature builder's inclusive listed_to boundary
+                # excludes it once target is strictly after listed_to.
+                if has_model_input:
+                    reasons.append(
+                        f"POST_FREEZE_DELISTED_MODEL_INPUT_PRESENT:{ticker}"
+                    )
+                if point is not None:
+                    reasons.append(
+                        f"POST_FREEZE_DELISTED_POINT_EVIDENCE_PRESENT:{ticker}"
+                    )
+                continue
+
+            explicit = _states_at(intervals, anchors, ticker, session)
+            if point is not None and not _compatible(point, explicit):
+                reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
+                continue
+            if len(explicit) > 1:
+                reasons.append(f"TRADABILITY_STATE_AMBIGUOUS:{ticker}")
+                continue
+            resolved = point or (next(iter(explicit)) if explicit else None)
+            if resolved is None:
+                reasons.append(f"TRADABILITY_STATE_NOT_EXPLICIT:{ticker}")
+                continue
+            if resolved == "ACTIVE":
+                if point is None and has_model_input:
+                    reasons.append(f"MODEL_INPUT_POINT_STATE_MISSING:{ticker}")
+                if not has_model_input:
+                    reasons.append(f"MODEL_INPUT_ACTIVE_TICKER_MISSING:{ticker}")
+            else:
+                # NO_TRADE/SUSPENDED/FCA_WATCHLIST are valid domain states
+                # for an expected identity, but cannot have model input.
+                if has_model_input:
+                    reasons.append(
+                        f"MODEL_INPUT_NON_ACTIVE_STATE:{ticker}:{resolved}"
+                    )
     except Exception as exc:
         reasons.append(str(exc))
 
     deduped_reasons = tuple(dict.fromkeys(reasons))
-    metadata["model_input_identity_equality"] = not added_identity and not removed_identity and not any(
+    metadata["model_input_identity_subset"] = not added_identity and not any(
         reason.startswith(
             (
                 "MODEL_INPUT_IDENTITY_TICKER_NOT_EXPECTED",
-                "MODEL_INPUT_IDENTITY_TICKER_MISSING",
             )
         )
         for reason in deduped_reasons
+    )
+    metadata["model_input_identity_equality"] = (
+        metadata["model_input_identity_subset"] and not removed_identity
     )
     metadata["expected_identity_set_sha256"] = _set_hash(expected_identity)
     metadata["observed_model_input_set_sha256"] = _set_hash(observed_input)
@@ -716,21 +902,34 @@ def build_runtime_population_admission(
             return _runtime_failure(session_date=session, reasons=("MODEL_MANIFEST_PIN_MISMATCH",))
         runner = Path(runner_path).expanduser().resolve()
         current_manifest_path = current_path.with_name("security_master_refresh_manifest.json")
-        security_evidence: dict[str, Any] = {}
         if not current_manifest_path.is_file():
             return _runtime_failure(session_date=session, reasons=("CURRENT_IDENTITY_EVIDENCE_MANIFEST_MISSING",))
         loaded = json.loads(current_manifest_path.read_text(encoding="utf-8"))
         if not isinstance(loaded, dict):
             return _runtime_failure(session_date=session, reasons=("CURRENT_IDENTITY_EVIDENCE_MANIFEST_INVALID",))
-        security_evidence = loaded
-        if (
-            Path(str(security_evidence.get("security_master_path") or "")).expanduser().resolve() != current_path
-            or str(security_evidence.get("security_master_sha256") or "") != sha256_file(current_path)
-            or str(security_evidence.get("baseline_sha256") or "") != sha256_file(Path(clean_security_master).expanduser().resolve())
-            or (security_evidence.get("guards") or {}).get("outcome_accessed") is not False
-            or (security_evidence.get("guards") or {}).get("protected_forward_accessed") is not False
-        ):
-            return _runtime_failure(session_date=session, reasons=("CURRENT_IDENTITY_EVIDENCE_BINDING_INVALID",))
+        try:
+            refresh_manifest_sha256 = _validate_security_master_refresh_manifest(
+                current_manifest_path,
+                loaded,
+                baseline_path=baseline_path,
+                current_path=current_path,
+                session=session,
+            )
+        except ValueError as exc:
+            return _runtime_failure(session_date=session, reasons=(str(exc),))
+        try:
+            tradability_evidence = _load_runtime_tradability_evidence(paths)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return _runtime_failure(
+                session_date=session,
+                reasons=(str(exc) or "TRADABILITY_EVIDENCE_NOT_PROVABLE",),
+            )
+        security_evidence = {
+            **loaded,
+            **tradability_evidence,
+            "security_master_refresh_manifest_path": str(current_manifest_path.resolve()),
+            "security_master_refresh_manifest_sha256": refresh_manifest_sha256,
+        }
         current = pd.read_csv(current_path)
         baseline = pd.read_csv(baseline_path)
         point = pd.read_parquet(Path(str(eod["evidence_path"])))
@@ -789,6 +988,7 @@ _ATTESTATION_BOUND_HASH_FIELDS = (
     "model_manifest_sha256",
     "model_fingerprint",
     "gate_sha256",
+    *_ATTESTATION_RUNTIME_HASH_FIELDS,
 )
 
 
@@ -847,6 +1047,14 @@ def _validate_attestation_payload(
         declared = str(payload.get(field) or "").lower()
         if declared != _set_hash(values):
             raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_MISMATCH")
+    expected_set = set(expected)
+    observed_set = set(observed)
+    added = set(payload["identity_added_tickers"])
+    removed = set(payload["identity_removed_tickers"])
+    if not observed_set.issubset(expected_set):
+        raise ValueError("POPULATION_ATTESTATION_INPUT_IDENTITY_NOT_SUBSET")
+    if added != observed_set - expected_set or removed != expected_set - observed_set:
+        raise ValueError("POPULATION_ATTESTATION_IDENTITY_DELTA_MISMATCH")
     metadata = payload.get("metadata")
     if not isinstance(metadata, Mapping):
         raise ValueError("POPULATION_ATTESTATION_METADATA_INVALID")
@@ -866,16 +1074,38 @@ def _validate_attestation_payload(
             "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
         ):
             raise ValueError("POPULATION_ATTESTATION_FINAL_DENOMINATOR_AUTHORITY_INVALID")
-        if metadata.get("model_input_identity_equality") is not True:
-            raise ValueError("POPULATION_ATTESTATION_INPUT_IDENTITY_NOT_EQUAL")
-        if payload.get("identity_added_tickers") or payload.get("identity_removed_tickers"):
-            raise ValueError("POPULATION_ATTESTATION_IDENTITY_DELTA")
+        if metadata.get("runtime_tradability_evidence_bound") is not True:
+            raise ValueError("POPULATION_ATTESTATION_RUNTIME_EVIDENCE_NOT_BOUND")
+        if metadata.get("model_input_identity_subset") is not True:
+            raise ValueError("POPULATION_ATTESTATION_INPUT_IDENTITY_NOT_SUBSET")
+        if payload.get("identity_added_tickers"):
+            raise ValueError("POPULATION_ATTESTATION_IDENTITY_ADDITION")
         if payload.get("reason_codes"):
             raise ValueError("POPULATION_ATTESTATION_REASONS_PRESENT")
 
+    if metadata.get("runtime_tradability_evidence_bound") is True:
+        if metadata.get("tradability_evidence_source") != (
+            "IDX_TRADE_FORWARD_MONITORING_RUNTIME_TRADABILITY_ROOT"
+        ):
+            raise ValueError("POPULATION_ATTESTATION_TRADABILITY_SOURCE_INVALID")
+        for field in (
+            "security_master_refresh_manifest_path",
+            "tradability_intervals_path",
+            "tradability_anchors_path",
+        ):
+            if not str(metadata.get(field) or "").strip():
+                raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_MISSING")
+
     for field in _ATTESTATION_BOUND_HASH_FIELDS:
         value = metadata.get(field)
-        if require_safe or value is not None:
+        if (
+            require_safe
+            or value is not None
+            or (
+                metadata.get("runtime_tradability_evidence_bound") is True
+                and field in _ATTESTATION_RUNTIME_HASH_FIELDS
+            )
+        ):
             _sha(value, field.upper())
     code_identity = metadata.get("code_identity")
     if require_safe or code_identity is not None:

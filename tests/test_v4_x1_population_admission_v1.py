@@ -161,6 +161,20 @@ def test_post_freeze_ipo_follows_only_the_frozen_identity_rule() -> None:
     assert "POST_FREEZE_RULE_VIOLATION:NEWW" in blocked.reason_codes
 
 
+def test_post_freeze_ipo_delisted_before_target_follows_frozen_builder_semantics() -> None:
+    current = pd.concat(
+        [_identity(), _identity(ticker="NEWW", listed_from="2026-08-21", listed_to="2026-08-25")],
+        ignore_index=True,
+    )
+    result = _evaluate(current_identity=current)
+
+    assert result.status == gate.SAFE_V1_POPULATION
+    assert result.expected_identity_tickers == ("AAAA", "NEWW")
+    assert result.observed_model_input_tickers == ("AAAA",)
+    assert result.identity_removed_tickers == ("NEWW",)
+    assert result.identity_cases["post_freeze_additions_excluded_by_listed_to"] == ["NEWW"]
+
+
 def test_tradability_active_vs_non_active_conflict_fails_whole_session() -> None:
     intervals = pd.DataFrame(
         [{
@@ -242,9 +256,62 @@ def test_non_active_state_does_not_shrink_expected_population(state: str) -> Non
         point_evidence=_points(state=state),
         model_input=pd.DataFrame(columns=["ticker", "date"]),
     )
-    assert result.status == gate.V1_POPULATION_NOT_PROVABLE
+    assert result.status == gate.SAFE_V1_POPULATION
     assert result.expected_identity_tickers == ("AAAA",)
-    assert f"TRADABILITY_NON_ACTIVE:AAAA:{state}" in result.reason_codes
+    assert result.observed_model_input_tickers == ()
+    assert result.identity_removed_tickers == ("AAAA",)
+
+
+def test_model_input_is_a_subset_and_non_active_expected_identity_is_omitted() -> None:
+    baseline = pd.concat(
+        [_identity(), _identity(ticker="BBBB")],
+        ignore_index=True,
+    )
+    result = _evaluate(
+        baseline_identity=baseline,
+        current_identity=baseline,
+        point_evidence=pd.concat(
+            [_points(), _points(ticker="BBBB", state="NO_TRADE")],
+            ignore_index=True,
+        ),
+        model_input=pd.DataFrame({"ticker": ["AAAA"], "date": [SESSION]}),
+    )
+
+    assert result.status == gate.SAFE_V1_POPULATION
+    assert result.expected_identity_tickers == ("AAAA", "BBBB")
+    assert result.observed_model_input_tickers == ("AAAA",)
+    assert result.identity_removed_tickers == ("BBBB",)
+    assert result.metadata["model_input_identity_subset"] is True
+    assert result.metadata["model_input_identity_equality"] is False
+
+
+def test_non_active_expected_identity_cannot_have_model_input() -> None:
+    result = _evaluate(
+        point_evidence=_points(state="SUSPENDED"),
+    )
+    assert result.status == gate.V1_POPULATION_NOT_PROVABLE
+    assert "MODEL_INPUT_NON_ACTIVE_STATE:AAAA:SUSPENDED" in result.reason_codes
+
+
+def test_explicit_non_active_state_without_point_or_model_is_valid_domain() -> None:
+    intervals = pd.DataFrame(
+        [{
+            "ticker": "AAAA",
+            "market": "REGULAR",
+            "state": "SUSPENDED",
+            "effective_from": SESSION,
+            "effective_to": None,
+            "source": "IDX",
+        }]
+    )
+    result = _evaluate(
+        point_evidence=pd.DataFrame(columns=["ticker", "session_date", "point_state"]),
+        model_input=pd.DataFrame(columns=["ticker", "date"]),
+        security_master_evidence={"tradability_intervals": intervals},
+    )
+
+    assert result.status == gate.SAFE_V1_POPULATION
+    assert result.identity_removed_tickers == ("AAAA",)
 
 
 def test_missing_explicit_tradability_state_is_not_provable() -> None:
@@ -258,7 +325,7 @@ def test_missing_explicit_tradability_state_is_not_provable() -> None:
 def test_model_input_identity_mismatch_is_not_a_final_scoring_denominator_claim() -> None:
     result = _evaluate(model_input=pd.DataFrame(columns=["ticker", "date"]))
     assert result.status == gate.V1_POPULATION_NOT_PROVABLE
-    assert "MODEL_INPUT_IDENTITY_TICKER_MISSING:AAAA" in result.reason_codes
+    assert "MODEL_INPUT_ACTIVE_TICKER_MISSING:AAAA" in result.reason_codes
     assert result.metadata["population_proof_scope"] == "IDENTITY_TRADABILITY_COMPATIBILITY_ONLY"
     assert result.metadata["final_scoring_population_authority"] == (
         "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
