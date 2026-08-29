@@ -26,7 +26,7 @@ AUDIT_SCHEMA = "ca_source_authority_audit_v11"
 AUDIT_DATE = "2026-08-29"
 AUDIT_ROOT_NAME = "idx-ca-source-authority-audit-20260829-v11-final"
 R31_ROOT_NAME = "idx-ca-aware-feature-basis-remediation-20260828-r3_1-final"
-REVIEWED_IMPLEMENTATION_HEAD = "879a6f95bfe28379a7c918461f2ce955f2deea84"
+REVIEWED_IMPLEMENTATION_HEAD = "0626b653e273067612631fd3414b579ca93c3763"
 SOURCE_CONTRACT_ID = "V4_CA_EVENT_WINDOWS_SOURCE_CONTRACT_75AD356880323FB8D4856EE70A6490B5C1F499AB568571EBEC570DD0B18F6B87"
 IDX_SOURCE_CONTRACT_ID = "IDX_GET_ISSUED_HISTORY_CONTRACT_75D6C0F74FA360D225794C70C383348977DE6798"
 
@@ -324,6 +324,27 @@ def _in_geometry(candidate_dates: Iterable[str], start: date, end: date) -> bool
     return any((parsed := _as_date(value)) is not None and extended_start <= parsed <= extended_end for value in candidate_dates)
 
 
+def _dependency_bounds(population: Mapping[str, Any], ticker: str) -> tuple[date, date] | None:
+    indexed = population.get("dependency_bounds")
+    if isinstance(indexed, Mapping) and ticker in indexed:
+        value = indexed[ticker]
+        if isinstance(value, tuple) and len(value) == 2:
+            return value
+    days = [
+        parsed
+        for current_ticker, raw_day in population.get("closure_ids", set())
+        if current_ticker == ticker and (parsed := _as_date(raw_day)) is not None
+    ]
+    return (min(days), max(days)) if days else None
+
+
+def _dependency_geometry(population: Mapping[str, Any], ticker: str) -> tuple[date, date] | None:
+    bounds = _dependency_bounds(population, ticker)
+    if not bounds:
+        return None
+    return bounds[0] - timedelta(days=60), bounds[1] + timedelta(days=60)
+
+
 def _resolve_path(value: Any, root: Path) -> Path | None:
     text = _text(value)
     if not text:
@@ -419,6 +440,13 @@ def _load_population(project_root: Path) -> dict[str, Any]:
     fit_ids.discard(("", ""))
     app_ids.discard(("", ""))
     closure_ids.discard(("", ""))
+    dependency_bounds: dict[str, tuple[date, date]] = {}
+    for ticker, raw_day in closure_ids:
+        parsed = _as_date(raw_day)
+        if parsed is None:
+            continue
+        old = dependency_bounds.get(ticker)
+        dependency_bounds[ticker] = (min(old[0], parsed), max(old[1], parsed)) if old else (parsed, parsed)
     return {
         "summary": summary,
         "population_rows": population_rows,
@@ -429,6 +457,7 @@ def _load_population(project_root: Path) -> dict[str, Any]:
         "fit_tickers": {ticker for ticker, _ in fit_ids},
         "app_tickers": {ticker for ticker, _ in app_ids},
         "closure_tickers": {ticker for ticker, _ in closure_ids},
+        "dependency_bounds": dependency_bounds,
         "closure_start": summary["backward_dependency_closure"]["closure_start"],
         "closure_end": summary["backward_dependency_closure"]["closure_end"],
     }
@@ -851,6 +880,8 @@ def _transition_reconstruction(primary: Sequence[Mapping[str, Any]], context: Ma
         "raw_resolved_count": len(resolved_ids),
         "newly_resolved_count": len(resolved_ids - prior_exact),
         "raw_unresolved_count": len(raw_ids - resolved_ids),
+        "raw_unresolved_ticker_count": len({_ticker(row.get("ticker")) for row in rows if row.get("record_kind") == "RAW_SOURCE_EVENT" and _text(row.get("event_id")) in (raw_ids - resolved_ids) and _ticker(row.get("ticker"))}),
+        "raw_unresolved_ticker_set_sha256": canonical_set_hash(_ticker(row.get("ticker")) for row in rows if row.get("record_kind") == "RAW_SOURCE_EVENT" and _text(row.get("event_id")) in (raw_ids - resolved_ids)),
         "strict_26_scope_counts": dict(Counter(_text(row.get("scope_classification")) for row in rows if row.get("record_kind") == "STRICT_26_SCOPE_REAUDIT")),
         "strict_26_outside_after_closure_count": sum(row.get("scope_classification") == "OUTSIDE_DEPENDENCY_AFTER_CLOSURE" for row in rows if row.get("record_kind") == "STRICT_26_SCOPE_REAUDIT"),
         "strict_26_prior_scope_counts": dict(Counter(_text(row.get("before_classification")) for row in context.get("scope_reclassification", []))),
@@ -871,6 +902,11 @@ def _census(primary: Sequence[Mapping[str, Any]], transition: Sequence[Mapping[s
         for row in context["strict"]
     }
     transition_by_id = {_text(row.get("event_id")): row for row in transition if row.get("record_kind") == "RAW_SOURCE_EVENT"}
+    taxonomy_links: dict[str, list[str]] = defaultdict(list)
+    for finding in forensics:
+        underlying = _text(finding.get("underlying_event_id"))
+        if underlying:
+            taxonomy_links[underlying].append(_text(finding.get("finding_id")))
     rows: list[dict[str, Any]] = []
     current_ids: set[str] = set()
     for source in sorted(primary, key=lambda row: (_text(row.get("source_kind")), _text(row.get("ticker")), _text(row.get("candidate_date")), _text(row.get("raw_row_identity")))):
@@ -896,10 +932,13 @@ def _census(primary: Sequence[Mapping[str, Any]], transition: Sequence[Mapping[s
                 "difference_class": "COMMON_WITH_PRIOR_136" if event_id in prior_ids else "RAW_ADDITIONAL",
                 "transition_class": tr.get("v11_raw_recomputed_class", "UNRESOLVED"),
                 "transition_date": tr.get("transition_date", ""),
-                "source_ref": source.get("source_ref", ""),
-                "evidence_sha256": source.get("evidence_sha256", ""),
-                "taxonomy_status": "FROZEN_FAMILY" if source.get("event_family") in FROZEN_FAMILIES else "UNKNOWN",
-                "notes": "raw source-bound row; prior semantic CSV is comparison only",
+                 "source_ref": source.get("source_ref", ""),
+                 "evidence_sha256": source.get("evidence_sha256", ""),
+                 "taxonomy_status": "FROZEN_FAMILY" if source.get("event_family") in FROZEN_FAMILIES else "UNKNOWN",
+                 "physical_event_counted": "true",
+                 "underlying_event_id": event_id,
+                 "linked_taxonomy_finding_ids": "|".join(sorted(value for value in taxonomy_links.get(event_id, []) if value)),
+                 "notes": "raw source-bound row; prior semantic CSV is comparison only",
             }
         )
     for old in context["prior"]:
@@ -923,39 +962,15 @@ def _census(primary: Sequence[Mapping[str, Any]], transition: Sequence[Mapping[s
                     "difference_class": "OLD_ONLY",
                     "transition_class": "UNRESOLVED",
                     "transition_date": "",
-                    "source_ref": old.get("transition_source", ""),
-                    "evidence_sha256": old.get("source_sha256", ""),
-                    "taxonomy_status": "UNKNOWN",
-                    "notes": "historical semantic row not present in retained raw candidate set",
-                }
-            )
-    for finding in forensics:
-        if finding.get("census_event_candidate") != "true":
-            continue
-        rows.append(
-            {
-                "census_status": "TAXONOMY_UNKNOWN_CANDIDATE",
-                "event_id": finding.get("finding_id", ""),
-                "source_kind": finding.get("source_kind", ""),
-                "ticker": finding.get("ticker", ""),
-                "event_family": "UNKNOWN_TAXONOMY",
-                "source_native_label": finding.get("source_native_label", ""),
-                "candidate_date": finding.get("candidate_date", ""),
-                "closure_geometry_start": "",
-                "closure_geometry_end": "",
-                "prior_136_present": "false",
-                "strict_26_signature_match": "false",
-                "prior_family_ticker_date_diff": "NOT_COMPARABLE",
-                "strict_26_family_ticker_date_diff": "NOT_COMPARABLE",
-                "difference_class": "TAXONOMY_UNKNOWN",
-                "transition_class": "UNRESOLVED",
-                "transition_date": "",
-                "source_ref": finding.get("source_ref", ""),
-                "evidence_sha256": finding.get("evidence_sha256", ""),
-                "taxonomy_status": "REQUIRES_POLICY_DECISION",
-                "notes": finding.get("finding", ""),
-            }
-        )
+                     "source_ref": old.get("transition_source", ""),
+                     "evidence_sha256": old.get("source_sha256", ""),
+                     "taxonomy_status": "UNKNOWN",
+                     "physical_event_counted": "false",
+                     "underlying_event_id": event_id,
+                     "linked_taxonomy_finding_ids": "",
+                     "notes": "historical semantic row not present in retained raw candidate set",
+                 }
+             )
     return rows
 
 
@@ -966,7 +981,7 @@ def _find_raw_ksei(context: Mapping[str, Any], ticker: str, source_label: str, *
     return {}
 
 
-def _forensic_row(finding_id: str, *, source_kind: str, ticker: str, label: str, candidate: str, source_ref: str, sha: str, membership: Mapping[str, Any], finding: str, decision: str, census: bool = False, source_fields: str = "") -> dict[str, Any]:
+def _forensic_row(finding_id: str, *, source_kind: str, ticker: str, label: str, candidate: str, source_ref: str, sha: str, membership: Mapping[str, Any], finding: str, decision: str, census: bool = False, source_fields: str = "", underlying_event_id: str = "", source_document_group_id: str = "") -> dict[str, Any]:
     return {
         "finding_id": finding_id,
         "source_kind": source_kind,
@@ -980,6 +995,10 @@ def _forensic_row(finding_id: str, *, source_kind: str, ticker: str, label: str,
         "application_ticker": str(membership.get("application", False)).lower(),
         "closure_ticker": str(membership.get("closure", False)).lower(),
         "boundary_intersects_dependency_window": str(membership.get("intersects", False)).lower(),
+        "dependency_window_start": membership.get("dependency_start", ""),
+        "dependency_window_end": membership.get("dependency_end", ""),
+        "underlying_event_id": underlying_event_id,
+        "source_document_group_id": source_document_group_id,
         "shareholder_entitlement": "UNKNOWN",
         "authoritative_cum_record_transition_dates": "",
         "separate_cash_event": "UNKNOWN",
@@ -993,88 +1012,117 @@ def _forensic_row(finding_id: str, *, source_kind: str, ticker: str, label: str,
 
 def _forensics(context: Mapping[str, Any]) -> list[dict[str, Any]]:
     population = context["population"]
-    memberships = {
-        ticker: {
+
+    def membership(ticker: str, candidates: Iterable[str]) -> dict[str, Any]:
+        bounds = _dependency_bounds(population, ticker)
+        return {
             "fit": ticker in population["fit_tickers"],
             "application": ticker in population["app_tickers"],
             "closure": ticker in population["closure_tickers"],
-            "intersects": any(row[0] == ticker and row[1] in population["closure_ids"] for row in []),
+            "intersects": bool(bounds and _in_geometry(candidates, bounds[0], bounds[1])),
+            "dependency_start": bounds[0].isoformat() if bounds else "",
+            "dependency_end": bounds[1].isoformat() if bounds else "",
         }
-        for ticker in {"ADRO", "AADI", "TPIA"}
-    }
-    closure_dates = {ticker: {day for t, day in population["closure_ids"] if t == ticker} for ticker in memberships}
-    for ticker in memberships:
-        memberships[ticker]["intersects"] = bool(closure_dates[ticker])
+
     rows: list[dict[str, Any]] = []
     adro_right = _find_raw_ksei(context, "ADRO", "Right Distribution", record_date="2024-11-29", distribution_date="2024-12-02")
     adro_cash = _find_raw_ksei(context, "ADRO", "Cash Dividend", record_date="2024-11-29", distribution_date="2024-12-06")
     if adro_right:
-        rows.append(_forensic_row("ADRO-AADI-2024-KSEI-RIGHT-DISTRIBUTION", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="ADRO", label="Right Distribution", candidate=_candidate_date(adro_right), source_ref=_text(adro_right.get("source_url")), sha=_text(adro_right.get("source_sha256")), membership=memberships["ADRO"], finding="KSEI source-native rights row: ratio grants ADRO holders 1000 ADRO-H per 4389 ADRO; it does not state distribution-in-specie of AADI shares and has no cum date.", decision="REQUIRES_POLICY_DECISION", census=True, source_fields=json.dumps({key: adro_right.get(key) for key in ("cum_date", "record_date", "distribution_date", "ratio_raw", "ratio_right_security", "ratio_right_value", "status")}, sort_keys=True)))
+        event_id = _ksei_event_identity(adro_right)
+        candidate = _candidate_date(adro_right)
+        rows.append(_forensic_row("ADRO-AADI-2024-KSEI-RIGHT-DISTRIBUTION", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="ADRO", label="Right Distribution", candidate=candidate, source_ref=_text(adro_right.get("source_url")), sha=_text(adro_right.get("source_sha256")), membership=membership("ADRO", [candidate]), finding="KSEI source-native rights row: ratio grants ADRO holders 1000 ADRO-H per 4389 ADRO; it does not state distribution-in-specie of AADI shares and has no cum date. The separation question is linked to this one physical source event.", decision="REQUIRES_POLICY_DECISION", census=False, source_fields=json.dumps({key: adro_right.get(key) for key in ("cum_date", "record_date", "distribution_date", "ratio_raw", "ratio_right_security", "ratio_right_value", "status")}, sort_keys=True), underlying_event_id=event_id, source_document_group_id="ADRO-AADI-2024"))
         rows[-1]["shareholder_entitlement"] = "SOURCE_NATIVE_RIGHT_TO_ACQUIRE_ADRO_H"
         rows[-1]["authoritative_cum_record_transition_dates"] = "record=2024-11-29|distribution=2024-12-02|cum=EMPTY|transition=UNRESOLVED"
         rows[-1]["basis_change_evidence"] = "NO_SOURCE_BOUND_BASIS_TRANSITION"
         rows[-1]["existing_capital_restructuring_coverage"] = "RIGHTS_HMETD_SOURCE_CONTRACT_ONLY; separation aspect not mapped"
     if adro_cash:
-        rows.append(_forensic_row("ADRO-2024-KSEI-CASH-DIVIDEND", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="ADRO", label="Cash Dividend", candidate=_candidate_date(adro_cash), source_ref=_text(adro_cash.get("source_url")), sha=_text(adro_cash.get("source_sha256")), membership=memberships["ADRO"], finding="Separate KSEI cash-dividend row: (1 ADRO : 1 IDR), with its own cum/record/distribution dates; it is not the structural entitlement row.", decision="NOT_A_SEPARATION_EVENT", census=False, source_fields=json.dumps({key: adro_cash.get(key) for key in ("cum_date", "record_date", "distribution_date", "ratio_raw", "ratio_right_security", "ratio_right_value", "status")}, sort_keys=True)))
+        cash_id = _ksei_event_identity(adro_cash)
+        cash_candidate = _candidate_date(adro_cash)
+        rows.append(_forensic_row("ADRO-2024-KSEI-CASH-DIVIDEND", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="ADRO", label="Cash Dividend", candidate=cash_candidate, source_ref=_text(adro_cash.get("source_url")), sha=_text(adro_cash.get("source_sha256")), membership=membership("ADRO", [cash_candidate]), finding="Separate KSEI cash-dividend row: (1 ADRO : 1 IDR), with its own cum/record/distribution dates; it is not the structural entitlement row.", decision="NOT_A_SEPARATION_EVENT", census=False, source_fields=json.dumps({key: adro_cash.get(key) for key in ("cum_date", "record_date", "distribution_date", "ratio_raw", "ratio_right_security", "ratio_right_value", "status")}, sort_keys=True), underlying_event_id=cash_id, source_document_group_id="ADRO-2024-CASH-DIVIDEND"))
         rows[-1]["shareholder_entitlement"] = "CASH_DIVIDEND"
         rows[-1]["authoritative_cum_record_transition_dates"] = "cum=2024-11-26|record=2024-11-29|distribution=2024-12-06"
         rows[-1]["separate_cash_event"] = "YES"
     aadi_ksei = [row for row in context["ksei_rows"] if _ticker(row.get("ticker")) == "AADI" and _ksei_family(row)]
-    rows.append(_forensic_row("AADI-2024-KSEI-NO-STRUCTURAL-ROW", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="AADI", label="NO_STRUCTURAL_KSEI_ROW_IN_RETAINED_HISTORY", candidate="", source_ref="https://web.ksei.co.id/services/registered-securities/shares/lc/AADI?setLocale=en-US", sha=_text(next((row.get("source_sha256") for row in context["ksei_rows"] if _ticker(row.get("ticker")) == "AADI"), "")), membership=memberships["AADI"], finding=f"Retained AADI KSEI history has {len(aadi_ksei)} structural-family row(s) under the controlling mapping; no row ties AADI to an ADRO separation entitlement.", decision="UNKNOWN", census=False))
+    rows.append(_forensic_row("AADI-2024-KSEI-NO-STRUCTURAL-ROW", source_kind="KSEI_REGISTERED_SECURITY_HISTORY", ticker="AADI", label="NO_STRUCTURAL_KSEI_ROW_IN_RETAINED_HISTORY", candidate="", source_ref="https://web.ksei.co.id/services/registered-securities/shares/lc/AADI?setLocale=en-US", sha=_text(next((row.get("source_sha256") for row in context["ksei_rows"] if _ticker(row.get("ticker")) == "AADI"), "")), membership=membership("AADI", []), finding=f"Retained AADI KSEI history has {len(aadi_ksei)} structural-family row(s) under the controlling mapping; no row ties AADI to an ADRO separation entitlement.", decision="UNKNOWN", census=False))
     idx_adro = [raw for raw, _ in context["idx_records"] if _ticker(raw.get("KodeEmiten")) == "ADRO" and _text(raw.get("JenisTindakan")) == "kurangModal"]
     for raw in idx_adro:
         capture = next((capture for candidate, capture in context["idx_records"] if candidate is raw), {})
-        rows.append(_forensic_row("ADRO-IDX-KURANG-MODAL-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker="ADRO", label="kurangModal", candidate=_candidate_date(raw), source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership=memberships["ADRO"], finding="IDX source-native kurangModal row is dated 2026-07-13, not the 2024 ADRO/AADI separation case; it cannot be used as proof that the 2024 event is CAPITAL_RESTRUCTURING.", decision="KNOWN_SOURCE_LABEL_NOT_2024_CASE", census=False))
+        candidate = _candidate_date(raw)
+        rows.append(_forensic_row("ADRO-IDX-KURANG-MODAL-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker="ADRO", label="kurangModal", candidate=candidate, source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership=membership("ADRO", [candidate]), finding="IDX source-native kurangModal row is dated 2026-07-13, not the 2024 ADRO/AADI separation case; it cannot be used as proof that the 2024 event is CAPITAL_RESTRUCTURING.", decision="KNOWN_SOURCE_LABEL_NOT_2024_CASE", census=False, underlying_event_id=_idx_event_identity(raw), source_document_group_id="ADRO-2026-KURANG-MODAL"))
     idx_aadi = [raw for raw, _ in context["idx_records"] if _ticker(raw.get("KodeEmiten")) == "AADI" and _text(raw.get("JenisTindakan")) == "ipo"]
     for raw in idx_aadi:
         capture = next((capture for candidate, capture in context["idx_records"] if candidate is raw), {})
-        rows.append(_forensic_row("AADI-IDX-IPO-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker="AADI", label="ipo", candidate=_candidate_date(raw), source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership=memberships["AADI"], finding="IDX source-native ipo row records AADI on 2024-12-05; it is listing evidence, not evidence of an ADRO shareholder entitlement or a market-basis transition for ADRO.", decision="REQUIRES_POLICY_DECISION", census=True))
+        candidate = _candidate_date(raw)
+        rows.append(_forensic_row("AADI-IDX-IPO-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker="AADI", label="ipo", candidate=candidate, source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership=membership("AADI", [candidate]), finding="IDX source-native ipo row records AADI on 2024-12-05; it is listing evidence, not evidence of an ADRO shareholder entitlement or a market-basis transition for ADRO.", decision="REQUIRES_POLICY_DECISION", census=False))
     for ticker in ("ADRO", "AADI"):
         linked = [row for row in context["announcements"] if _ticker(row.get("ticker")) == ticker]
-        rows.append(_forensic_row(f"{ticker}-ANNOUNCEMENT-LINKAGE-{len(linked)}", source_kind="IDX_OFFICIAL_ANNOUNCEMENT_ATTACHMENT", ticker=ticker, label="NO_RETAINED_EVENT_LINKAGE_ROW", candidate="", source_ref="idx_announcement_linkages.jsonl", sha="", membership=memberships[ticker], finding=f"No retained IDX announcement-linkage row names {ticker} for the 2024 case (matched linkage rows={len(linked)}); absence is not no-event authority.", decision="UNKNOWN", census=False))
+        rows.append(_forensic_row(f"{ticker}-ANNOUNCEMENT-LINKAGE-{len(linked)}", source_kind="IDX_OFFICIAL_ANNOUNCEMENT_ATTACHMENT", ticker=ticker, label="NO_RETAINED_EVENT_LINKAGE_ROW", candidate="", source_ref="idx_announcement_linkages.jsonl", sha="", membership=membership(ticker, []), finding=f"No retained IDX announcement-linkage row names {ticker} for the 2024 case (matched linkage rows={len(linked)}); absence is not no-event authority.", decision="UNKNOWN", census=False))
     for index, raw in enumerate(context["schedule_parse"], start=1):
-        text = " | ".join(_text(value) for value in raw.values())
-        if not SEPARATION_RE.search(text) or not re.search(r"pemisah|spin[- ]?off|demerg|subsidiar|pups|in specie|unit usaha", text, re.IGNORECASE):
+        raw_text = " | ".join(_text(value) for value in raw.values())
+        if not SEPARATION_RE.search(raw_text) or not re.search(r"pemisah|spin[- ]?off|demerg|subsidiar|pups|in specie|unit usaha", raw_text, re.IGNORECASE):
             continue
         values = list(raw.values())
         label = _text(raw.get("document_title") or raw.get("title") or raw.get("subject") or (values[1] if len(values) > 1 else ""))
         ref = _text(raw.get("source_url") or (values[-2] if len(values) >= 2 else ""))
         sha = _text(raw.get("source_sha256") or (values[-1] if values else ""))
-        ticker = "TPIA" if "TPIA" in text.upper() else ""
-        rows.append(_forensic_row(f"SCHEDULE-TAXONOMY-{index:03d}", source_kind="KSEI_TARGETED_SCHEDULE_DOCUMENT", ticker=ticker, label=label, candidate=_iso_date(raw.get("document_date") or raw.get("date")), source_ref=ref, sha=sha, membership=memberships.get(ticker, {"fit": False, "application": False, "closure": False, "intersects": False}), finding="Retained source-native schedule title contains Pemisahan Unit Usaha; no controlling contract maps it to an existing frozen family. Preserve raw label and leave taxonomy unresolved.", decision="REQUIRES_POLICY_DECISION", census=False))
+        ticker = "TPIA" if "TPIA" in raw_text.upper() else _ticker(raw.get("ticker"))
+        candidate = _iso_date(raw.get("document_date") or raw.get("date"))
+        tpia_underlying = _find_raw_ksei(context, "TPIA", "Voluntary Conversion", distribution_date="2024-05-20")
+        underlying = _ksei_event_identity(tpia_underlying) if ticker == "TPIA" and tpia_underlying else ""
+        rows.append(_forensic_row(f"SCHEDULE-TAXONOMY-{index:03d}", source_kind="KSEI_TARGETED_SCHEDULE_DOCUMENT", ticker=ticker, label=label, candidate=candidate, source_ref=ref, sha=sha, membership=membership(ticker, [candidate, _iso_date(raw.get("distribution_date")), _iso_date(raw.get("transition_date"))]), finding="Retained source-native schedule title contains Pemisahan Unit Usaha; it is linked to the existing TPIA event where available, but no controlling contract maps it to an existing frozen family. Preserve raw label and leave taxonomy unresolved.", decision="REQUIRES_POLICY_DECISION", census=False, source_fields=json.dumps(dict(raw), sort_keys=True), underlying_event_id=underlying, source_document_group_id="TPIA-2024-05-20-SEPARATION-BUYBACK" if ticker == "TPIA" else ""))
     for raw, capture in context["idx_records"]:
         if _text(raw.get("JenisTindakan")) == "gabungUsaha":
             ticker = _ticker(raw.get("KodeEmiten"))
-            if ticker in population["app_tickers"]:
-                rows.append(_forensic_row("IDX-TAXONOMY-GABUNG-USAHA-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker=ticker, label="gabungUsaha", candidate=_candidate_date(raw), source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership={"fit": ticker in population["fit_tickers"], "application": True, "closure": ticker in population["closure_tickers"], "intersects": True}, finding="Source-native gabungUsaha is retained as MERGER-like evidence but is outside the eight frozen families; it is not force-mapped to CAPITAL_RESTRUCTURING.", decision="REQUIRES_POLICY_DECISION", census=False))
+            if ticker not in population["app_tickers"]:
+                continue
+            candidate = _candidate_date(raw)
+            event_id = _idx_event_identity(raw)
+            member = membership(ticker, [candidate])
+            primary_geometry = bool(member["application"] and member["intersects"])
+            finding = "Source-native gabungUsaha is already represented by the one primary MERGER-like raw event in the V1.1 census; it is outside the eight frozen families and is not force-mapped to CAPITAL_RESTRUCTURING." if primary_geometry else "Source-native gabungUsaha is retained as a forensic-only row outside the ticker's accepted dependency geometry; it is not a primary V1.1 census event and is not force-mapped to CAPITAL_RESTRUCTURING."
+            rows.append(_forensic_row("IDX-TAXONOMY-GABUNG-USAHA-" + _text(raw.get("id")), source_kind="IDX_GET_ISSUED_HISTORY", ticker=ticker, label="gabungUsaha", candidate=candidate, source_ref=_text(capture.get("url") or capture.get("requested_url")), sha=_text(capture.get("sha256")), membership=member, finding=finding, decision="REQUIRES_POLICY_DECISION", census=False, underlying_event_id=event_id, source_document_group_id="IDX-GABUNG-USAHA-" + _text(raw.get("id"))))
     return rows
 
 
 def _interval_authority(context: Mapping[str, Any]) -> list[dict[str, Any]]:
     population = context["population"]
     coverage = {_ticker(row.get("ticker")): row for row in context["ksei_coverage"] if _ticker(row.get("ticker"))}
+    parsed_row_counts = Counter(_ticker(row.get("ticker")) for row in context["ksei_rows"] if _ticker(row.get("ticker")))
     rows: list[dict[str, Any]] = []
     for family in FROZEN_FAMILIES:
         for ticker in sorted(population["app_tickers"]):
             source = coverage.get(ticker, {})
-            certified = family in {"RIGHTS_HMETD", "STOCK_DIVIDEND"} and _upper(source.get("coverage_status")) == "COVERAGE_CERTIFIED" and valid_sha256(source.get("source_sha256", "")) and _text(source.get("source_url"))
+            dependency = _dependency_bounds(population, ticker)
             capture = _best_capture(context["ksei_by_sha"], source.get("source_sha256"))
-            certified = certified and bool(capture.get("hash_matches_bytes"))
+            source_bound = bool(valid_sha256(source.get("source_sha256", "")) and _text(source.get("source_url")) and capture and capture.get("hash_matches_bytes"))
+            expected_rows = _text(source.get("ca_rows"))
+            parsed_rows = parsed_row_counts[ticker]
+            table_row_count_matches = bool(expected_rows.isdigit() and int(expected_rows) == parsed_rows)
+            page_only = family in {"RIGHTS_HMETD", "STOCK_DIVIDEND"} and _upper(source.get("coverage_status")) == "COVERAGE_CERTIFIED" and source_bound and table_row_count_matches
             rows.append(
                 {
                     "ticker": ticker,
                     "event_family": family,
-                    "coverage_scope": "APPLICATION_AND_CLOSURE_TICKER_SCOPE",
-                    "coverage_start_session": population["closure_start"],
-                    "coverage_end_session": population["closure_end"],
+                    "coverage_scope": "APPLICATION_AND_CLOSURE_TICKER_SCOPE_PER_TICKER_DEPENDENCY_BOUND",
+                    "coverage_start_session": dependency[0].isoformat() if dependency else "",
+                    "coverage_end_session": dependency[1].isoformat() if dependency else "",
+                    "coverage_geometry_start": (dependency[0] - timedelta(days=60)).isoformat() if dependency else "",
+                    "coverage_geometry_end": (dependency[1] + timedelta(days=60)).isoformat() if dependency else "",
                     "coverage_observed_at": _text(capture.get("accessed_at_utc")),
                     "source_contract_id": SOURCE_CONTRACT_ID,
-                    "source_ref": _text(source.get("source_url")) if certified else "",
-                    "evidence_sha256": _text(source.get("source_sha256")).lower() if certified else "",
-                    "coverage_state": "CERTIFIED_INTERVAL" if certified else "UNKNOWN_INTERVAL",
-                    "completeness_semantics": "single unpaginated Corporate Action table for registered security; complete through observed capture for RIGHTS_HMETD/STOCK_DIVIDEND only" if certified else "family-specific complete interval not proven",
-                    "as_of_semantics": "later retained capture certifies earlier bounded interval through observed capture" if certified else "retrieval timestamp/history-present flag is insufficient",
-                    "verdict": "CERTIFIED_INTERVAL" if certified else "UNKNOWN_INTERVAL",
+                    "source_ref": _text(source.get("source_url")) if source_bound else "",
+                    "evidence_sha256": _text(source.get("source_sha256")).lower() if source_bound else "",
+                    "retained_coverage_status": _text(source.get("coverage_status")),
+                    "table_row_count": expected_rows,
+                    "parsed_row_count": str(parsed_rows),
+                    "table_row_count_matches": str(table_row_count_matches).lower(),
+                    "coverage_state": "PARSED_PAGE_ONLY" if page_only else "UNKNOWN_INTERVAL",
+                    "completeness_semantics": "retained HTML has one inline Corporate Action table and ca_rows matches parsed rows; provider-level completeness is not proven" if page_only else "family-specific complete interval not proven",
+                    "pagination_semantics": "no visible recordsTotal/serverSide/ajax/pagination markers; absence does not prove no server-side truncation" if page_only else "pagination behavior not proven",
+                    "observed_through_semantics": "capture retrieval timestamp only; provider-defined historical as-of/no-event authority is not proven" if page_only else "retrieval timestamp/history-present flag is insufficient",
+                    "family_coverage_semantics": "positive source-native label presence only; full-family and no-event coverage are not proven" if page_only else "family coverage not proven",
+                    "as_of_semantics": "not source-contract certified" if page_only else "not source-contract certified",
+                    "verdict": "UNKNOWN_INTERVAL" if page_only else "UNKNOWN_INTERVAL",
                 }
             )
     return rows
@@ -1136,6 +1184,7 @@ def _family_authority(context: Mapping[str, Any], primary: Sequence[Mapping[str,
     resolved_by = Counter(row.get("event_family") for row in transitions if row.get("record_kind") == "RAW_SOURCE_EVENT" and row.get("v11_raw_recomputed_class") == "RESOLVED")
     for family in FROZEN_FAMILIES:
         certified_tickers = {row["ticker"] for row in intervals if row.get("event_family") == family and row.get("coverage_state") == "CERTIFIED_INTERVAL"}
+        parsed_page_tickers = {row["ticker"] for row in intervals if row.get("event_family") == family and row.get("coverage_state") == "PARSED_PAGE_ONLY"}
         family_primary = [row for row in primary if row.get("event_family") == family]
         rows.append(
             {
@@ -1143,15 +1192,17 @@ def _family_authority(context: Mapping[str, Any], primary: Sequence[Mapping[str,
                 "frozen_family": "true",
                 "raw_primary_event_count": len(family_primary),
                 "raw_resolved_transition_count": resolved_by[family],
-                "raw_unresolved_transition_count": transition_by[family] - resolved_by[family],
-                "interval_certified_ticker_count": len(certified_tickers),
-                "interval_missing_or_unknown_ticker_count": len(context["population"]["app_tickers"]) - len(certified_tickers),
-                "interval_certified_ticker_set_sha256": canonical_set_hash(certified_tickers),
+                 "raw_unresolved_transition_count": transition_by[family] - resolved_by[family],
+                 "interval_certified_ticker_count": len(certified_tickers),
+                 "interval_parsed_page_only_ticker_count": len(parsed_page_tickers),
+                 "interval_missing_or_unknown_ticker_count": len(context["population"]["app_tickers"]) - len(certified_tickers),
+                 "interval_certified_ticker_set_sha256": canonical_set_hash(certified_tickers),
+                 "interval_parsed_page_only_ticker_set_sha256": canonical_set_hash(parsed_page_tickers),
                 "source_family_certified": "false",
                 "date_level_attestation": "false",
                 "conflict_status": "UNKNOWN_CONFLICT_REQUIRES_SOURCE_ADJUDICATION" if family == "CAPITAL_RESTRUCTURING" else "NO_CONFLICT_PROOF",
-                "verdict": "FAIL_PARTIAL_SCOPE" if certified_tickers and len(certified_tickers) < len(context["population"]["app_tickers"]) else "UNKNOWN",
-                "notes": "full expanded 716 scope is not certified; 567 KSEI interval rows are family-limited to RIGHTS_HMETD/STOCK_DIVIDEND",
+                 "verdict": "FAIL_PAGE_ONLY_PARTIAL_SCOPE" if parsed_page_tickers else "UNKNOWN",
+                 "notes": "retained KSEI pages support parsed-row facts only; provider completeness, pagination absence, observed-through as-of, and no-event semantics are not certified",
             }
         )
     taxonomy = [row for row in forensics if row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION"]
@@ -1159,12 +1210,16 @@ def _family_authority(context: Mapping[str, Any], primary: Sequence[Mapping[str,
         {
             "event_family": "UNKNOWN_TAXONOMY_CANDIDATES",
             "frozen_family": "false",
-            "raw_primary_event_count": len(taxonomy),
+            "raw_primary_event_count": 0,
             "raw_resolved_transition_count": 0,
-            "raw_unresolved_transition_count": len(taxonomy),
+            "raw_unresolved_transition_count": 0,
+            "taxonomy_finding_count": len(taxonomy),
+            "taxonomy_finding_linked_to_underlying_event_count": sum(bool(row.get("underlying_event_id")) for row in taxonomy),
             "interval_certified_ticker_count": 0,
+            "interval_parsed_page_only_ticker_count": 0,
             "interval_missing_or_unknown_ticker_count": len(context["population"]["app_tickers"]),
             "interval_certified_ticker_set_sha256": canonical_set_hash(()),
+            "interval_parsed_page_only_ticker_set_sha256": canonical_set_hash(()),
             "source_family_certified": "false",
             "date_level_attestation": "false",
             "conflict_status": "REQUIRES_POLICY_DECISION",
@@ -1201,13 +1256,14 @@ def _population_authority(context: Mapping[str, Any], intervals: Sequence[Mappin
 def _gap_matrix(context: Mapping[str, Any], family: Sequence[Mapping[str, Any]], intervals: Sequence[Mapping[str, Any]], negative: Sequence[Mapping[str, Any]], transition_summary: Mapping[str, Any], forensics: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     population = context["population"]
     unknown_taxonomy = [row for row in forensics if row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION"]
-    missing_ksei = sorted(population["app_tickers"] - {row["ticker"] for row in intervals if row.get("event_family") == "RIGHTS_HMETD" and row.get("coverage_state") == "CERTIFIED_INTERVAL"})
+    page_only_ksei = {row["ticker"] for row in intervals if row.get("event_family") == "RIGHTS_HMETD" and row.get("coverage_state") == "PARSED_PAGE_ONLY"}
+    missing_ksei = sorted(population["app_tickers"] - page_only_ksei)
     missing_hash = canonical_set_hash(missing_ksei)
     return [
         {"gap_id": "V11-G001", "area": "FULL_716_SOURCE_FAMILY_COVERAGE", "verdict": "FAIL", "exact_gap": "full expanded application and closure scope lacks family-certified positive and no-event evidence", "ticker_count": len(population["app_tickers"]), "ticker_set_sha256": canonical_set_hash(population["app_tickers"]), "acquisition_requirement": "ACQ-V11-001"},
-        {"gap_id": "V11-G002", "area": "KSEI_INTERVAL_COVERAGE", "verdict": "FAIL_PARTIAL", "exact_gap": f"RIGHTS_HMETD/STOCK_DIVIDEND interval authority is 567/716; unresolved or absent ticker count={len(missing_ksei)}", "ticker_count": len(missing_ksei), "ticker_set_sha256": missing_hash, "acquisition_requirement": "ACQ-V11-002"},
+        {"gap_id": "V11-G002", "area": "KSEI_INTERVAL_COVERAGE", "verdict": "FAIL_PAGE_ONLY_PARTIAL", "exact_gap": f"retained KSEI pages are parsed-page-only for {len(page_only_ksei)}/716 tickers; provider completeness/as-of/no-event authority is not proven and unresolved or absent ticker count={len(missing_ksei)}", "ticker_count": len(missing_ksei), "ticker_set_sha256": missing_hash, "acquisition_requirement": "ACQ-V11-002"},
         {"gap_id": "V11-G003", "area": "IDX_NEGATIVE_SEMANTICS", "verdict": "UNKNOWN", "exact_gap": "successful empty GetIssuedHistory responses have no source-defined exhaustive no-event meaning", "ticker_count": len(population["app_tickers"]), "ticker_set_sha256": canonical_set_hash(population["app_tickers"]), "acquisition_requirement": "ACQ-V11-003"},
-        {"gap_id": "V11-G004", "area": "TRANSITION_SEMANTICS", "verdict": "FAIL_OR_UNKNOWN", "exact_gap": f"raw events resolved={transition_summary.get('raw_resolved_count', 0)}; raw events unresolved={transition_summary.get('raw_unresolved_count', 0)}", "ticker_count": 0, "ticker_set_sha256": canonical_set_hash(()), "acquisition_requirement": "ACQ-V11-004"},
+        {"gap_id": "V11-G004", "area": "TRANSITION_SEMANTICS", "verdict": "FAIL_OR_UNKNOWN", "exact_gap": f"raw events resolved={transition_summary.get('raw_resolved_count', 0)}; raw events unresolved={transition_summary.get('raw_unresolved_count', 0)}; every unresolved event identity requires explicit transition evidence", "ticker_count": transition_summary.get("raw_unresolved_ticker_count", 0), "ticker_set_sha256": transition_summary.get("raw_unresolved_ticker_set_sha256", canonical_set_hash(())), "acquisition_requirement": "ACQ-V11-004"},
         {"gap_id": "V11-G005", "area": "CROSS_SOURCE_CONFLICTS", "verdict": "UNKNOWN", "exact_gap": "retained family/date conflicts remain source-contract unresolved", "ticker_count": 3, "ticker_set_sha256": canonical_set_hash(["ISAT", "MEGA", "SCMA"]), "acquisition_requirement": "ACQ-V11-005"},
         {"gap_id": "V11-G006", "area": "SEPARATION_TAXONOMY", "verdict": "UNKNOWN", "exact_gap": f"{len(unknown_taxonomy)} retained separation-like/source-native candidates require policy decision; no force-map to CAPITAL_RESTRUCTURING", "ticker_count": len({row.get('ticker') for row in unknown_taxonomy if row.get('ticker')}), "ticker_set_sha256": canonical_set_hash(row.get("ticker", "") for row in unknown_taxonomy), "acquisition_requirement": "ACQ-V11-006"},
         {"gap_id": "V11-G007", "area": "IDENTITY_CONTAINMENT", "verdict": "PASS_IDENTITY_ONLY", "exact_gap": "none; fit identities are contained in application and application identities in closure", "ticker_count": len(population["closure_tickers"]), "ticker_set_sha256": canonical_set_hash(population["closure_tickers"]), "acquisition_requirement": "none"},
@@ -1215,29 +1271,172 @@ def _gap_matrix(context: Mapping[str, Any], family: Sequence[Mapping[str, Any]],
     ]
 
 
-def _acquisition(context: Mapping[str, Any], forensics: Sequence[Mapping[str, Any]], transition_summary: Mapping[str, Any]) -> dict[str, Any]:
+def _acquisition(context: Mapping[str, Any], forensics: Sequence[Mapping[str, Any]], transitions: Sequence[Mapping[str, Any]], transition_summary: Mapping[str, Any], intervals: Sequence[Mapping[str, Any]] | None = None) -> dict[str, Any]:
     population = context["population"]
-    missing_ksei = sorted(population["app_tickers"] - {row["ticker"] for row in _interval_authority(context) if row.get("event_family") == "RIGHTS_HMETD" and row.get("coverage_state") == "CERTIFIED_INTERVAL"})
+    intervals = list(intervals) if intervals is not None else _interval_authority(context)
+    page_only_ksei = {row["ticker"] for row in intervals if row.get("event_family") == "RIGHTS_HMETD" and row.get("coverage_state") == "PARSED_PAGE_ONLY"}
+    missing_ksei = sorted(population["app_tickers"] - page_only_ksei)
+    raw_unresolved = [
+        row for row in transitions
+        if row.get("record_kind") == "RAW_SOURCE_EVENT" and _text(row.get("v11_raw_recomputed_class")) != "RESOLVED"
+    ]
+    unresolved_ids = [_text(row.get("event_id")) for row in raw_unresolved if _text(row.get("event_id"))]
+    unresolved_tickers = sorted({_ticker(row.get("ticker")) for row in raw_unresolved if _ticker(row.get("ticker"))})
+    prior_schedule_required = sum(_upper(row.get("prior_derived_class")) == "SCHEDULE_REQUIRED" for row in raw_unresolved)
+    additional_unresolved = len(raw_unresolved) - prior_schedule_required
+    ticker_intervals = {}
+    for ticker in sorted(population["closure_tickers"]):
+        bounds = _dependency_bounds(population, ticker)
+        if bounds:
+            ticker_intervals[ticker] = {
+                "dependency_start": bounds[0].isoformat(),
+                "dependency_end": bounds[1].isoformat(),
+                "geometry_start": (bounds[0] - timedelta(days=60)).isoformat(),
+                "geometry_end": (bounds[1] + timedelta(days=60)).isoformat(),
+            }
+    def event_identity(row: Mapping[str, Any]) -> dict[str, Any]:
+        family = _text(row.get("event_family"))
+        missing_semantics = (
+            "official exchange session mapping for source-native KSEI cum date"
+            if row.get("source_kind") == "KSEI_REGISTERED_SECURITY_HISTORY" and _text(row.get("cum_date")) and not _next_session(_iso_date(row.get("cum_date")), context["sessions"])
+            else "REGULAR_MARKET_EX_DATE or REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE linked to this event, with source ref and valid evidence SHA"
+        )
+        return {
+            "event_id": _text(row.get("event_id")),
+            "ticker": _ticker(row.get("ticker")),
+            "structural_family": family,
+            "source_native_label": _text(row.get("source_native_label")),
+            "candidate_date": _iso_date(row.get("candidate_date")),
+            "source_ref": _text(row.get("source_ref")),
+            "evidence_sha256": _text(row.get("evidence_sha256")).lower(),
+            "missing_transition_semantic_source": missing_semantics,
+            "transition_lower_bound_certified": False,
+        }
+    unresolved_events = [event_identity(row) for row in sorted(raw_unresolved, key=lambda value: (_ticker(value.get("ticker")), _iso_date(value.get("candidate_date")), _text(value.get("event_id"))))]
+    application_tickers = sorted(population["app_tickers"])
+    closure_tickers = sorted(population["closure_tickers"])
+    idx_categories = {
+        "STOCK_SPLIT": "stockSplit",
+        "REVERSE_SPLIT": "reverseStock",
+        "RIGHTS_HMETD": "hmetd",
+        "STOCK_DIVIDEND": "dividenSaham",
+        "BONUS_SHARES": "sahamBonus",
+        "MANDATORY_CONVERSION": "obligasiWajibKonversi",
+        "VOLUNTARY_CONVERSION": "konversiSaham",
+        "CAPITAL_RESTRUCTURING": "kurangModal",
+        "MERGER": "gabungUsaha",
+    }
+    common_fields = {
+        "historical_interval": ticker_intervals,
+        "source_native_candidate_dates": "retained candidates are enumerated in exact_event_identities where event-specific; bulk units must preserve source-native dates",
+        "fields_required": ["ticker/issuer identity", "source-native event/action label", "candidate/effective dates", "source ref", "evidence SHA-256", "publication/as-of metadata"],
+        "positive_event_requirement": True,
+        "no_event_completeness_requirement": True,
+        "exact_transition_semantic_requirement": ["REGULAR_MARKET_EX_DATE", "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"],
+        "publication_as_of_requirement": "source-defined publication/as-of or observed-through semantics bound to source ref and evidence SHA",
+        "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_required": True, "evidence_sha256_required": True, "hash_binding_required": True},
+        "empty_success_has_authority": False,
+    }
+    requirements: list[dict[str, Any]] = []
+    requirements.append({
+        "requirement_id": "ACQ-V11-001", "unit_id": "ACQ-V11-001-CAPABILITY-KSEI", "source_provider": "KSEI",
+        "endpoint_page_document_family": "registered-security shares/lc/{ticker}", "request_type": "CAPABILITY_VERIFICATION_REQUIRED",
+        "exact_action_category_parameter": {"path_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}", "query": "setLocale=en-US"},
+        "ticker_set": ["AADI", "ADRO", "AALI"], "ticker_set_sha256": canonical_set_hash(["AADI", "ADRO", "AALI"]), "ticker_count": 3,
+        "exact_event_ids": [], "structural_family": "ALL_FROZEN_FAMILIES", "historical_interval": {ticker: ticker_intervals[ticker] for ticker in ("AADI", "ADRO", "AALI") if ticker in ticker_intervals},
+        "source_native_candidate_dates": [], "fields_required": ["raw HTML bytes", "table/pagination behavior", "coverage/as-of semantics", "source-native event rows"],
+        "positive_event_requirement": True, "no_event_completeness_requirement": True,
+        "exact_transition_semantic_requirement": ["source-contract family semantics", "not candidate-date inference"],
+        "publication_as_of_requirement": "prove whether retrieval is provider-defined observed-through/as-of or only capture time",
+        "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_pattern": "registered-security shares/lc/{ticker}?setLocale=en-US", "evidence_sha256": "SHA-256 of retained response bytes"},
+        "empty_success_has_authority": False, "capability_status": "CAPABILITY_VERIFICATION_REQUIRED",
+        "request_count_derivation": {"formula": "one bounded capability request per representative ticker", "request_count": 3, "status": "EXACT_BOUNDED_CAPABILITY_CHECK"},
+        "why_local_insufficient": "retained pages show parsed rows but do not prove provider completeness, pagination absence, or historical as-of/no-event semantics",
+    })
+    requirements.append({
+        "requirement_id": "ACQ-V11-001", "unit_id": "ACQ-V11-001-BULK-KSEI-FULL-716", "source_provider": "KSEI",
+        "endpoint_page_document_family": "registered-security shares/lc/{ticker}", "request_type": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION",
+        "exact_action_category_parameter": {"path_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}", "query": "setLocale=en-US"},
+        "ticker_set": application_tickers, "ticker_set_sha256": canonical_set_hash(application_tickers), "ticker_count": len(application_tickers),
+        "exact_event_ids": [], "structural_family": "ALL_FROZEN_FAMILIES", "historical_interval": ticker_intervals,
+        "source_native_candidate_dates": [], "fields_required": common_fields["fields_required"], "positive_event_requirement": True, "no_event_completeness_requirement": True,
+        "exact_transition_semantic_requirement": common_fields["exact_transition_semantic_requirement"], "publication_as_of_requirement": common_fields["publication_as_of_requirement"],
+        "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_pattern": "registered-security shares/lc/{ticker}?setLocale=en-US", "evidence_sha256": "SHA-256 of raw response bytes"},
+        "empty_success_has_authority": False, "capability_status": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION",
+        "request_count_derivation": {"formula": "1 page request × exact 716 ticker set", "minimum_request_count": len(application_tickers), "request_count": len(application_tickers), "status": "DERIVED_IF_KSEI_PAGE_CAPABILITY_IS_CONFIRMED"},
+        "why_local_insufficient": "149 application/closure tickers lack retained parsed-page evidence and all 716 lack source-contract completeness/as-of/no-event proof",
+    })
+    requirements.append({
+        "requirement_id": "ACQ-V11-002", "unit_id": "ACQ-V11-002-BULK-KSEI-RESIDUAL-149", "source_provider": "KSEI",
+        "endpoint_page_document_family": "registered-security shares/lc/{ticker}; RIGHTS_HMETD and STOCK_DIVIDEND interval residual",
+        "request_type": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION", "exact_action_category_parameter": {"path_template": "https://web.ksei.co.id/services/registered-securities/shares/lc/{ticker}", "query": "setLocale=en-US"},
+        "ticker_set": missing_ksei, "ticker_set_sha256": canonical_set_hash(missing_ksei), "ticker_count": len(missing_ksei), "exact_event_ids": [],
+        "structural_family": ["RIGHTS_HMETD", "STOCK_DIVIDEND"], "historical_interval": {ticker: ticker_intervals[ticker] for ticker in missing_ksei if ticker in ticker_intervals},
+        "source_native_candidate_dates": [], "fields_required": ["complete raw page", "source-native rows", "publication/as-of metadata", "source ref", "valid evidence SHA-256"],
+        "positive_event_requirement": True, "no_event_completeness_requirement": True, "exact_transition_semantic_requirement": ["family-specific source contract", "no candidate-date inference"],
+        "publication_as_of_requirement": common_fields["publication_as_of_requirement"], "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_pattern": "registered-security shares/lc/{ticker}?setLocale=en-US", "evidence_sha256": "SHA-256 of raw response bytes"},
+        "empty_success_has_authority": False, "capability_status": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION",
+        "request_count_derivation": {"formula": "1 page request × exact residual ticker set", "request_count": len(missing_ksei), "status": "DERIVED_IF_KSEI_PAGE_CAPABILITY_IS_CONFIRMED"},
+        "why_local_insufficient": "residual set is absent or unresolved in retained KSEI page coverage; page-only positives do not certify intervals",
+    })
+    for family, category in idx_categories.items():
+        requirements.append({
+            "requirement_id": "ACQ-V11-003", "unit_id": f"ACQ-V11-003-CAPABILITY-IDX-{category}", "source_provider": "IDX GetIssuedHistory",
+            "endpoint_page_document_family": "https://www.idx.id/primary/ListingActivity/GetIssuedHistory", "request_type": "CAPABILITY_VERIFICATION_REQUIRED",
+            "exact_action_category_parameter": {"caType": category, "dateFrom": "20180101", "dateTo": "20260814", "start": 0, "length": 250},
+            "ticker_set": [], "ticker_set_sha256": canonical_set_hash(()), "ticker_count": 0, "ticker_dimension": "NONE_PROVEN; endpoint is cross-issuer and ticker set is not a request filter",
+            "required_certification_ticker_set": application_tickers, "required_certification_ticker_set_sha256": canonical_set_hash(application_tickers), "exact_event_ids": [], "structural_family": family,
+            "historical_interval": {"start": "2018-01-01", "end": "2026-08-14"}, "source_native_candidate_dates": [], "fields_required": ["raw JSON bytes", "recordsTotal or equivalent completeness signal", "category/action label", "issuer identity", "TanggalPencatatan", "source ref/hash"],
+            "positive_event_requirement": True, "no_event_completeness_requirement": True, "exact_transition_semantic_requirement": ["category row is not a transition date", "independent accepted transition evidence required"],
+            "publication_as_of_requirement": "source response capture and any source-defined historical interval/as-of semantics", "expected_source_ref_hash_contract": {"source_contract_id": IDX_SOURCE_CONTRACT_ID, "source_ref_pattern": "GetIssuedHistory?caType={category}&dateFrom=20180101&dateTo=20260814&start={start}&length=250", "evidence_sha256": "SHA-256 of raw JSON bytes"},
+            "empty_success_has_authority": False, "capability_status": "CAPABILITY_VERIFICATION_REQUIRED", "request_count_derivation": {"formula": "one first-page capability request for this exact caType parameter", "request_count": 1, "status": "EXACT_BOUNDED_CAPABILITY_CHECK"},
+            "why_local_insufficient": "retained endpoint has page-shaped responses but category-exhaustive and successful-empty no-event semantics are unproven",
+        })
+        requirements.append({
+            "requirement_id": "ACQ-V11-003", "unit_id": f"ACQ-V11-003-BULK-IDX-{category}", "source_provider": "IDX GetIssuedHistory",
+            "endpoint_page_document_family": "https://www.idx.id/primary/ListingActivity/GetIssuedHistory", "request_type": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION",
+            "exact_action_category_parameter": {"caType": category, "dateFrom": "20180101", "dateTo": "20260814", "start": "0,250,...", "length": 250}, "ticker_set": application_tickers, "ticker_set_sha256": canonical_set_hash(application_tickers), "ticker_count": len(application_tickers), "ticker_dimension": "endpoint-wide response; ticker set is certification target, not a proven request filter",
+            "exact_event_ids": [], "structural_family": family, "historical_interval": {"start": "2018-01-01", "end": "2026-08-14"}, "source_native_candidate_dates": [], "fields_required": ["all category rows", "issuer identity", "source-native action", "TanggalPencatatan", "raw response ref/hash", "pagination/completeness evidence"],
+            "positive_event_requirement": True, "no_event_completeness_requirement": True, "exact_transition_semantic_requirement": ["separate accepted transition evidence for each event"], "publication_as_of_requirement": common_fields["publication_as_of_requirement"], "expected_source_ref_hash_contract": {"source_contract_id": IDX_SOURCE_CONTRACT_ID, "source_ref_pattern": "GetIssuedHistory?caType={category}&dateFrom=20180101&dateTo=20260814&start={start}&length=250", "evidence_sha256": "SHA-256 of each raw JSON page"},
+            "empty_success_has_authority": False, "capability_status": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION", "request_count_derivation": {"formula": "ceil(provider-defined complete record count / 250)", "request_count": None, "status": "NOT_DERIVABLE_BEFORE_CAPABILITY_VERIFICATION", "retained_page_shape": "start=0,250,500 observed but not an exhaustive contract"},
+            "why_local_insufficient": "current retained pages do not prove complete category coverage or page count",
+        })
+    requirements.append({
+        "requirement_id": "ACQ-V11-004", "unit_id": "ACQ-V11-004-CAPABILITY-SCHEDULE", "source_provider": "KSEI schedule / issuer official source",
+        "endpoint_page_document_family": "event-specific official schedule documents", "request_type": "CAPABILITY_VERIFICATION_REQUIRED",
+        "exact_action_category_parameter": {"document_reference": ["KSEI-9582/JKU/0524", "KSEI-27597/JKU/1124"], "semantic_fields": ["REGULAR_MARKET_EX_DATE", "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"]},
+        "ticker_set": ["TPIA", "ADRO"], "ticker_set_sha256": canonical_set_hash(["TPIA", "ADRO"]), "ticker_count": 2, "exact_event_ids": [], "structural_family": "SCHEDULE_REQUIRED_FAMILIES",
+        "historical_interval": {ticker: ticker_intervals[ticker] for ticker in ("TPIA", "ADRO") if ticker in ticker_intervals}, "source_native_candidate_dates": ["2024-05-07", "2024-11-29"], "fields_required": ["official document bytes", "KSEI reference", "issuer/source ref", "valid SHA-256", "explicit accepted transition semantic", "publication date"],
+        "positive_event_requirement": True, "no_event_completeness_requirement": False, "exact_transition_semantic_requirement": ["REGULAR_MARKET_EX_DATE", "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"], "publication_as_of_requirement": "document publication date plus source-bound document bytes", "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_required": True, "evidence_sha256_required": True, "ksei_reference_required": True}, "empty_success_has_authority": False, "capability_status": "CAPABILITY_VERIFICATION_REQUIRED", "request_count_derivation": {"formula": "two retained reference/document capability checks", "request_count": 2, "status": "EXACT_BOUNDED_CAPABILITY_CHECK"}, "why_local_insufficient": "retained targeted schedules are mostly unresolved and do not establish an exhaustive lookup capability",
+    })
+    requirements.append({
+        "requirement_id": "ACQ-V11-004", "unit_id": "ACQ-V11-004-BULK-TRANSITION-291", "source_provider": "KSEI schedule / issuer official source", "endpoint_page_document_family": "event-specific official schedule documents with accepted regular-market transition semantic", "request_type": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION",
+        "exact_action_category_parameter": {"lookup": "one exact event identity per unit unless a source-backed document-deduplication map is proven", "accepted_semantics": ["REGULAR_MARKET_EX_DATE", "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"]},
+        "ticker_set": unresolved_tickers, "ticker_set_sha256": canonical_set_hash(unresolved_tickers), "ticker_count": len(unresolved_tickers), "exact_event_ids": unresolved_events, "event_id_set_sha256": canonical_set_hash(unresolved_ids), "structural_family": "PER_EVENT_UNRESOLVED_RAW_TRANSITIONS", "historical_interval": ticker_intervals,
+        "source_native_candidate_dates": [{"event_id": item["event_id"], "ticker": item["ticker"], "candidate_date": item["candidate_date"]} for item in unresolved_events], "fields_required": ["exact event linkage", "source-native candidate dates", "accepted transition semantic", "KSEI reference/document ref", "publication date", "source ref", "valid evidence SHA-256"], "positive_event_requirement": True, "no_event_completeness_requirement": False, "exact_transition_semantic_requirement": ["REGULAR_MARKET_EX_DATE", "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE", "or separately validated source-specific lower-bound contract"], "publication_as_of_requirement": "event-specific publication/source-as-of evidence bound to the exact event identity", "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_required": True, "evidence_sha256_required": True, "hash_binding_required": True, "deduplication_map_required_if_request_count_less_than_event_count": True}, "empty_success_has_authority": False, "capability_status": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION", "request_count_derivation": {"formula": "one request/evidence unit per exact unresolved event identity; 94 prior schedule-required + 197 additional raw unresolved", "prior_schedule_required_count": prior_schedule_required, "additional_unresolved_count": additional_unresolved, "minimum_request_count": len(unresolved_events), "request_count": len(unresolved_events), "status": "MINIMUM_EXACT_EVENT_UNIT_COUNT; no source-backed deduplication proven"}, "why_local_insufficient": "all unresolved raw event rows lack certified transition lower-bound provenance; candidate dates are not transitions",
+    })
+    requirements.append({
+        "requirement_id": "ACQ-V11-005", "unit_id": "ACQ-V11-005-BULK-CONFLICT-3", "source_provider": "authoritative source-contract adjudication", "endpoint_page_document_family": "conflict-specific official source records", "request_type": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION", "exact_action_category_parameter": {"conflict_scope": ["ISAT", "MEGA", "SCMA"]}, "ticker_set": ["ISAT", "MEGA", "SCMA"], "ticker_set_sha256": canonical_set_hash(["ISAT", "MEGA", "SCMA"]), "ticker_count": 3, "exact_event_ids": [], "structural_family": "CONFLICTING_FAMILY_OR_DATE_SEMANTICS", "historical_interval": {ticker: ticker_intervals[ticker] for ticker in ("ISAT", "MEGA", "SCMA") if ticker in ticker_intervals}, "source_native_candidate_dates": [], "fields_required": ["conflicting raw rows", "source-native family/date fields", "adjudicating source ref/hash", "accepted transition semantic"], "positive_event_requirement": True, "no_event_completeness_requirement": False, "exact_transition_semantic_requirement": ["source-contract adjudicated transition"], "publication_as_of_requirement": common_fields["publication_as_of_requirement"], "expected_source_ref_hash_contract": {"source_contract_id": SOURCE_CONTRACT_ID, "source_ref_required": True, "evidence_sha256_required": True}, "empty_success_has_authority": False, "capability_status": "BULK_ACQUISITION_REQUIRED_AFTER_CAPABILITY_VERIFICATION", "request_count_derivation": {"formula": "one conflict-resolution evidence unit per exact ticker", "request_count": 3, "status": "EXACT_BOUNDED_TICKER_UNIT_COUNT"}, "why_local_insufficient": "retained family/date conflict is unresolved by the current source contract",
+    })
+    taxonomy = [row for row in forensics if row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION"]
+    taxonomy_tickers = sorted({_ticker(row.get("ticker")) for row in taxonomy if _ticker(row.get("ticker"))})
+    requirements.append({
+        "requirement_id": "ACQ-V11-006", "unit_id": "ACQ-V11-006-POLICY-TAXONOMY", "source_provider": "policy plus official source semantics", "endpoint_page_document_family": "separation/demerger/subsidiary-distribution/PUPS/distribution-in-specie candidate evidence", "request_type": "POLICY_DECISION_REQUIRED_BEFORE_ACQUISITION", "exact_action_category_parameter": {"terms": ["Pemisahan Unit Usaha", "gabungUsaha", "Right Distribution", "ipo"]}, "ticker_set": taxonomy_tickers, "ticker_set_sha256": canonical_set_hash(taxonomy_tickers), "ticker_count": len(taxonomy_tickers), "exact_event_ids": [{"finding_id": _text(row.get("finding_id")), "underlying_event_id": _text(row.get("underlying_event_id")), "ticker": _ticker(row.get("ticker")), "source_native_label": _text(row.get("source_native_label")), "candidate_date": _iso_date(row.get("candidate_date")), "source_ref": _text(row.get("source_ref")), "evidence_sha256": _text(row.get("evidence_sha256")).lower()} for row in taxonomy], "structural_family": "UNKNOWN_TAXONOMY", "historical_interval": ticker_intervals, "source_native_candidate_dates": [{"finding_id": _text(row.get("finding_id")), "candidate_date": _iso_date(row.get("candidate_date"))} for row in taxonomy], "fields_required": ["exact raw label", "underlying event identity", "shareholder entitlement semantics", "source ref", "valid evidence SHA-256", "policy decision"], "positive_event_requirement": False, "no_event_completeness_requirement": False, "exact_transition_semantic_requirement": ["not applicable until taxonomy policy is decided"], "publication_as_of_requirement": "source-bound publication evidence if policy authorizes follow-up", "expected_source_ref_hash_contract": {"source_ref_required": True, "evidence_sha256_required": True}, "empty_success_has_authority": False, "capability_status": "CAPABILITY_VERIFICATION_REQUIRED_ONLY_AFTER_POLICY_DECISION", "request_count_derivation": {"formula": "zero acquisition requests while taxonomy policy is unresolved", "request_count": 0, "status": "NO_ACQUISITION_AUTHORIZED"}, "why_local_insufficient": "retained raw labels are candidates, not a frozen family contract; no force-map is allowed",
+    })
     return {
         "schema_version": "ca_source_authority_acquisition_requirements_v11",
         "status": "STOP_NO_PROVIDER_ACQUISITION_AUTHORIZED",
         "scope": {
-            "fit": 629,
-            "application": 716,
-            "closure": 716,
+            "fit": 629, "fit_ticker_set_sha256": canonical_set_hash(population["fit_tickers"]),
+            "application": 716, "application_ticker_set_sha256": canonical_set_hash(application_tickers),
+            "closure": 716, "closure_ticker_set_sha256": canonical_set_hash(closure_tickers),
             "closure_start": population["closure_start"],
             "closure_end": population["closure_end"],
-            "application_ticker_set_sha256": canonical_set_hash(population["app_tickers"]),
-            "closure_ticker_set_sha256": canonical_set_hash(population["closure_tickers"]),
+            "application_tickers": application_tickers,
+            "closure_tickers": closure_tickers,
         },
-        "requirements": [
-            {"id": "ACQ-V11-001", "provider_or_source": "source-family authority for full 716 scope", "endpoint_or_document_family": "family-specific evidence for all frozen families; exact 716 ticker scope", "ticker_count": len(population["app_tickers"]), "ticker_list": sorted(population["app_tickers"]), "ticker_set_sha256": canonical_set_hash(population["app_tickers"]), "interval": f"{population['closure_start']}..{population['closure_end']} with 60-calendar-day event halo", "must_prove": ["positive and source-defined no-event semantics per family", "identity/ticker containment", "date-level/as-of provenance", "source_contract_id, source_ref, valid evidence_sha256"], "estimated_request_count": 9, "capability_status": "SOURCE_CAPABILITY_REQUIRES_PROVIDER_VERIFICATION", "why_local_insufficient": "retained local positives and ticker history do not certify full expanded family scope"},
-            {"id": "ACQ-V11-002", "provider_or_source": "KSEI registered-security Corporate Action History", "endpoint_or_document_family": "registered-security shares/lc/{ticker}; RIGHTS_HMETD and STOCK_DIVIDEND interval evidence", "ticker_count": len(missing_ksei), "ticker_list": missing_ksei, "ticker_set_sha256": canonical_set_hash(missing_ksei), "interval": f"{population['closure_start']}..{population['closure_end']}", "must_prove": ["complete table semantics", "observed-through timestamp", "source ref and valid SHA", "family-limited coverage"], "estimated_request_count": len(missing_ksei), "capability_status": "SOURCE_CAPABILITY_REQUIRES_PROVIDER_VERIFICATION", "why_local_insufficient": "149 application/closure tickers are not certified by retained KSEI capture"},
-            {"id": "ACQ-V11-003", "provider_or_source": "IDX GetIssuedHistory", "endpoint_or_document_family": "https://www.idx.id/primary/ListingActivity/GetIssuedHistory; caType category requests", "ticker_count": len(population["app_tickers"]), "ticker_list": sorted(population["app_tickers"]), "ticker_set_sha256": canonical_set_hash(population["app_tickers"]), "interval": "2018-01-01..2026-08-14", "must_prove": ["category-exhaustive positive rows", "source-defined meaning of successful empty response", "source/ref/hash bound response capture"], "estimated_request_count": 9, "capability_status": "SOURCE_CAPABILITY_REQUIRES_PROVIDER_VERIFICATION", "why_local_insufficient": "retained contract defines response parsing but not exhaustive no-event semantics"},
-            {"id": "ACQ-V11-004", "provider_or_source": "official KSEI schedule / issuer official source", "endpoint_or_document_family": "event-specific schedule documents with REGULAR_MARKET_EX_DATE or REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE", "ticker_count": 0, "ticker_list": [], "ticker_set_sha256": canonical_set_hash(()), "interval": f"{population['closure_start']}..{population['closure_end']}", "must_prove": ["all {0} unresolved raw transition candidates".format(transition_summary.get('raw_unresolved_count', 0)), "exact linkage, ksei reference, source ref, valid SHA", "no candidate-date inference"], "estimated_request_count": 94, "capability_status": "SOURCE_CAPABILITY_REQUIRES_PROVIDER_VERIFICATION", "why_local_insufficient": "targeted retained schedule linkage leaves unresolved candidates"},
-            {"id": "ACQ-V11-005", "provider_or_source": "authoritative source-contract adjudication", "endpoint_or_document_family": "ISAT, MEGA, SCMA conflict records and conversion/restructuring semantics", "ticker_count": 3, "ticker_list": ["ISAT", "MEGA", "SCMA"], "ticker_set_sha256": canonical_set_hash(["ISAT", "MEGA", "SCMA"]), "interval": f"{population['closure_start']}..{population['closure_end']}", "must_prove": ["conflict resolution with source refs/hashes", "accepted family and transition semantics"], "estimated_request_count": 3, "capability_status": "SOURCE_CAPABILITY_REQUIRES_PROVIDER_VERIFICATION", "why_local_insufficient": "retained source families disagree or are not exact-transition authoritative"},
-            {"id": "ACQ-V11-006", "provider_or_source": "policy plus official source semantics", "endpoint_or_document_family": "separation, demerger, subsidiary-distribution, PUPS, distribution-in-specie terminology", "ticker_count": len({row.get('ticker') for row in forensics if row.get('taxonomy_status') == 'REQUIRES_POLICY_DECISION' and row.get('ticker')}), "ticker_list": sorted({row.get('ticker') for row in forensics if row.get('taxonomy_status') == 'REQUIRES_POLICY_DECISION' and row.get('ticker')}), "ticker_set_sha256": canonical_set_hash(row.get('ticker', '') for row in forensics if row.get('taxonomy_status') == 'REQUIRES_POLICY_DECISION'), "interval": f"{population['closure_start']}..{population['closure_end']}", "must_prove": ["source-native semantics before choosing any family name", "shareholder entitlement and transition semantics", "whether existing CAPITAL_RESTRUCTURING contract applies"], "estimated_request_count": 0, "capability_status": "POLICY_DECISION_REQUIRED_BEFORE_NEW_FAMILY", "why_local_insufficient": "retained labels show candidates but no frozen taxonomy contract"},
-        ],
+        "requirements": requirements,
+        "reconciliation": {"raw_unresolved_transition_count": len(raw_unresolved), "prior_schedule_required_count": prior_schedule_required, "additional_unresolved_count": additional_unresolved, "raw_unresolved_event_id_set_sha256": canonical_set_hash(unresolved_ids), "raw_unresolved_ticker_set_sha256": canonical_set_hash(unresolved_tickers), "minimum_event_specific_evidence_units": len(unresolved_events), "previous_estimated_event_specific_request_count": 94, "previous_estimate_sufficient": False, "explanation": "94 was the prior SCHEDULE_REQUIRED subset; 197 additional raw unresolved events also lack accepted transition evidence, so 291 exact event identities are the minimum absent a proven source-document deduplication map"},
         "guardrails": {"provider_calls": False, "phase_e_run": False, "outcomes_accessed": False, "targets_accessed": False, "model_fit": False, "model_refit": False, "model_scoring": False, "counter_mutated": False, "canonical_historical_data_rewritten": False},
         "next_step": "Return for ChatGPT review; no provider acquisition or scientific execution is authorized by this artifact.",
     }
@@ -1394,7 +1593,7 @@ def run_audit(project_root: Path, output_root: Path, repo_root: Path | None = No
     family = _family_authority(context, primary, transitions, intervals, forensics)
     population_rows = _population_authority(context, intervals, negative)
     gaps = _gap_matrix(context, family, intervals, negative, transition_summary, forensics)
-    acquisition = _acquisition(context, forensics, transition_summary)
+    acquisition = _acquisition(context, forensics, transitions, transition_summary, intervals)
     staging = output_root.parent / f".{output_root.name}.staging"
     if staging.exists():
         raise FileExistsError(f"staging root already exists: {staging}")
@@ -1402,8 +1601,8 @@ def run_audit(project_root: Path, output_root: Path, repo_root: Path | None = No
     try:
         ledger_fields = ["source_kind", "ticker", "event_family", "source_native_label", "raw_row_identity", "candidate_date", "cum_date", "record_date", "distribution_date", "ratio_left_security", "ratio_left_value", "ratio_right_security", "ratio_right_value", "ratio_raw", "status", "source_ref", "source_url", "evidence_sha256", "source_contract_id", "capture_observed_at_utc", "raw_capture_path", "source_hash_matches_bytes", "publication_fields", "raw_evidence_role", "raw_date_set", "raw_source_row_index", "idx_action_id", "idx_date_native", "idx_shares", "idx_shares_after"]
         transition_fields = ["record_kind", "event_id", "source_kind", "ticker", "event_family", "source_native_label", "candidate_date", "cum_date", "record_date", "distribution_date", "prior_derived_class", "prior_transition_source", "v11_raw_recomputed_class", "transition_date", "resolution_reason", "source_ref", "evidence_sha256", "source_contract_id", "source_hash_matches_bytes", "transition_lower_bound_certified", "transition_lower_bound_source_ref", "transition_lower_bound_source_sha256", "scope_classification"]
-        census_fields = ["census_status", "event_id", "source_kind", "ticker", "event_family", "source_native_label", "candidate_date", "closure_geometry_start", "closure_geometry_end", "prior_136_present", "strict_26_signature_match", "prior_family_ticker_date_diff", "strict_26_family_ticker_date_diff", "difference_class", "transition_class", "transition_date", "source_ref", "evidence_sha256", "taxonomy_status", "notes"]
-        forensic_fields = ["finding_id", "source_kind", "ticker", "source_native_label", "candidate_date", "source_ref", "evidence_sha256", "source_fields", "fit_ticker", "application_ticker", "closure_ticker", "boundary_intersects_dependency_window", "shareholder_entitlement", "authoritative_cum_record_transition_dates", "separate_cash_event", "basis_change_evidence", "existing_capital_restructuring_coverage", "taxonomy_status", "finding", "census_event_candidate"]
+        census_fields = ["census_status", "event_id", "source_kind", "ticker", "event_family", "source_native_label", "candidate_date", "closure_geometry_start", "closure_geometry_end", "prior_136_present", "strict_26_signature_match", "prior_family_ticker_date_diff", "strict_26_family_ticker_date_diff", "difference_class", "transition_class", "transition_date", "source_ref", "evidence_sha256", "taxonomy_status", "physical_event_counted", "underlying_event_id", "linked_taxonomy_finding_ids", "notes"]
+        forensic_fields = ["finding_id", "source_kind", "ticker", "source_native_label", "candidate_date", "source_ref", "evidence_sha256", "source_fields", "fit_ticker", "application_ticker", "closure_ticker", "boundary_intersects_dependency_window", "dependency_window_start", "dependency_window_end", "underlying_event_id", "source_document_group_id", "shareholder_entitlement", "authoritative_cum_record_transition_dates", "separate_cash_event", "basis_change_evidence", "existing_capital_restructuring_coverage", "taxonomy_status", "finding", "census_event_candidate"]
         _write_csv(staging / "v11_raw_source_event_ledger.csv", sorted(ledger, key=lambda row: (_text(row.get("source_kind")), _text(row.get("ticker")), _text(row.get("candidate_date")), _text(row.get("raw_row_identity")))), ledger_fields)
         _write_csv(staging / "v11_transition_reconstruction.csv", transitions, transition_fields)
         _write_csv(staging / "v11_dependency_closure_event_census.csv", census, census_fields)
@@ -1418,6 +1617,7 @@ def run_audit(project_root: Path, output_root: Path, repo_root: Path | None = No
         data_hashes = {path.name: sha256_file(path) for path in sorted(staging.iterdir()) if path.is_file()}
         strict_counts = transition_summary["strict_26_scope_counts"]
         interval_certified = {family: sum(row.get("coverage_state") == "CERTIFIED_INTERVAL" for row in intervals if row.get("event_family") == family) for family in FROZEN_FAMILIES}
+        interval_page_only = {family: sum(row.get("coverage_state") == "PARSED_PAGE_ONLY" for row in intervals if row.get("event_family") == family) for family in FROZEN_FAMILIES}
         summary = {
             "schema_version": AUDIT_SCHEMA,
             "audit_date": AUDIT_DATE,
@@ -1432,13 +1632,15 @@ def run_audit(project_root: Path, output_root: Path, repo_root: Path | None = No
                 "raw_source_event_ledger_rows": len(ledger),
                 "primary_structural_event_count": len(primary),
                 "full_census_rows": len(census),
-                "taxonomy_unknown_candidate_count": sum(row.get("census_status") == "TAXONOMY_UNKNOWN_CANDIDATE" for row in census),
+                 "taxonomy_unknown_candidate_count": sum(row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION" for row in forensics),
+                 "taxonomy_findings_linked_to_physical_events": sum(bool(row.get("underlying_event_id")) for row in forensics if row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION"),
                 "census_difference_counts": dict(Counter(row.get("difference_class", "") for row in census)),
                 "transition_reconstruction": transition_summary,
                 "strict_26_after_scope_counts": strict_counts,
                 "strict_26_outside_after_closure": transition_summary["strict_26_outside_after_closure_count"],
                 "ksei_interval_certified_by_family": interval_certified,
-                "ksei_interval_scope": "567/716 for RIGHTS_HMETD and STOCK_DIVIDEND; all other frozen families UNKNOWN_INTERVAL",
+                 "ksei_interval_parsed_page_only_by_family": interval_page_only,
+                 "ksei_interval_scope": "567/716 parsed-page-only for RIGHTS_HMETD and STOCK_DIVIDEND; zero source-certified intervals; all other frozen families UNKNOWN_INTERVAL",
                 "idx_negative_verdicts": dict(Counter(row["verdict"] for row in negative)),
                 "separation_forensic_findings": len(forensics),
                 "separation_taxonomy_unknown_findings": sum(row.get("taxonomy_status") == "REQUIRES_POLICY_DECISION" for row in forensics),
