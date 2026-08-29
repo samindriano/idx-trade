@@ -35,6 +35,38 @@ If an agent cannot safely read/update the canonical ledger, it must say so and m
 
 This coordination ledger does not grant scientific authorization. Branch-local frozen specs/checkpoints still control what research/data/model actions are allowed.
 
+## ANTI-OVERENGINEERING / MINIMUM-SUFFICIENT DESIGN
+
+- Prefer the smallest correct root-cause fix. Planning may be deep; implementation should remain lean.
+- Before adding a new abstraction, adapter, framework, compatibility layer, wrapper, gate, versioned implementation, or parallel code path, prove that correcting or simplifying the existing canonical path is insufficient.
+- Do not create V2/V3/etc. merely to avoid cleaning up or correcting current code. Prefer one canonical implementation and one source of truth.
+- Do not design for hypothetical future requirements, stack layers to satisfy constraints created by earlier layers, or retain duplicate implementations solely for convenience.
+- Read the actual relevant code before proposing abstractions, and fix causes rather than repeatedly patching symptoms.
+- Tests should prove requested/current behavior and critical failure paths; do not expand test architecture merely for completeness.
+- If a small change starts touching many unrelated files or introducing layers, stop and reconsider a simpler design.
+
+### IDX-Trade exception / non-negotiable integrity
+
+Minimalism must not weaken required IDX-Trade scientific or operational invariants. Preserve safeguards required for:
+
+- fail-closed UNKNOWN/malformed/ambiguous evidence;
+- PIT/as-of correctness;
+- immutable provenance;
+- outcome isolation;
+- frozen science/model boundaries;
+- exactly-once/state integrity;
+- canonical source authority.
+
+The objective is the simplest architecture that still satisfies the proven contract.
+
+Before future IDX-Trade implementation, ask:
+
+1. Can this be fixed cleanly in the existing canonical path?
+2. Am I adding a layer because it is necessary, or because it is easier than understanding current code?
+3. Can an obsolete/superseded path eventually be removed rather than wrapped?
+4. Is every new abstraction required by a current proven requirement?
+5. Is there a simpler root-cause solution with fewer moving parts?
+
 ## Parallel-first objective
 
 For every non-trivial task, MAIN must perform a short **parallelism preflight** before implementation:
