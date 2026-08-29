@@ -390,7 +390,9 @@ def _ensure_preopen_ca_phase(
             prior=prior,
         )
         return "REUSED"
-    if journal.exists() or batch.exists():
+    if journal.exists() and not batch.exists():
+        raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
+    if batch.exists() and not batch.is_dir():
         raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
 
     missing = v1._config_missing(config)
@@ -407,8 +409,22 @@ def _ensure_preopen_ca_phase(
     attestation_root = Path(config.ca_attestation_root).expanduser().resolve()
     attestation_path = attestation_root / "attestations" / f"{phase_session}_PREOPEN.json"
     capture_root = attestation_root / "captures" / f"{phase_session}_PREOPEN"
+    capture_complete = False
     if attestation_path.exists() or capture_root.exists():
-        raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_ATTESTATION_PARTIAL")
+        if attestation_path.is_file() and capture_root.is_dir():
+            _load_and_verify_post_eod_attestation_v1_2(
+                path=attestation_path,
+                expected_from_session_date=decision,
+                expected_through_session_date=execution,
+                required_tickers=tickers,
+            )
+            capture_complete = True
+        elif capture_root.is_dir() and (capture_root / "PUBLISH.json").is_file():
+            # The capture publisher's durable marker proves that the provider
+            # capture can be reused while acquisition repairs its own child.
+            pass
+        else:
+            raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_ATTESTATION_PARTIAL")
 
     capture_command = [
         str(Path(config.uv_exe).expanduser().resolve()),
@@ -432,13 +448,14 @@ def _ensure_preopen_ca_phase(
         "--attestation-output",
         str(attestation_path),
     ]
-    v1._run_child(config, "ca_capture_preopen_cloud", capture_command)
-    _load_and_verify_post_eod_attestation_v1_2(
-        path=attestation_path,
-        expected_from_session_date=decision,
-        expected_through_session_date=execution,
-        required_tickers=tickers,
-    )
+    if not capture_complete:
+        v1._run_child(config, "ca_capture_preopen_cloud", capture_command)
+        _load_and_verify_post_eod_attestation_v1_2(
+            path=attestation_path,
+            expected_from_session_date=decision,
+            expected_through_session_date=execution,
+            required_tickers=tickers,
+        )
 
     acquisition_command = [
         str(Path(config.python_exe).expanduser().resolve()),

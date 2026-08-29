@@ -588,3 +588,82 @@ def test_preopen_parent_binding_rejects_wrong_batch_parent_metadata(
             journal=current,
             prior=prior,
         )
+
+
+def test_preopen_ca_reuses_complete_capture_after_acquisition_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A crash after provider capture must not cause a second provider call."""
+
+    config = _base_config(tmp_path)
+    decision = "2026-08-27"
+    execution = "2026-08-28"
+    prior = controller_v1._journal_paths(config, decision, "POST_EOD")[1]
+    prior.parent.mkdir(parents=True)
+    prior.write_text("prior\n", encoding="utf-8")
+    batch, journal = controller_v1._journal_paths(config, execution, "PREOPEN")
+    capture_root = config.ca_attestation_root / "captures" / f"{execution}_PREOPEN"
+    attestation = config.ca_attestation_root / "attestations" / f"{execution}_PREOPEN.json"
+    capture_root.mkdir(parents=True)
+    attestation.parent.mkdir(parents=True)
+    attestation.write_text("complete\n", encoding="utf-8")
+
+    def fake_journal(path):
+        resolved = Path(path).resolve()
+        if resolved == prior.resolve():
+            return SimpleNamespace(
+                path=resolved,
+                file_sha256="1" * 64,
+                journal_sha256="2" * 64,
+                previous_path=None,
+                previous_file_sha256=None,
+                journal=SimpleNamespace(as_of_date=decision, capture_phase="POST_EOD"),
+            )
+        return SimpleNamespace(
+            path=resolved,
+            file_sha256="3" * 64,
+            journal_sha256="4" * 64,
+            previous_path=prior.resolve(),
+            previous_file_sha256="1" * 64,
+            journal=SimpleNamespace(as_of_date=execution, capture_phase="PREOPEN"),
+        )
+
+    monkeypatch.setattr(preopen_ca, "load_journal_document", fake_journal)
+    monkeypatch.setattr(preopen_ca.v1, "_config_missing", lambda cfg: None)
+    monkeypatch.setattr(
+        preopen_ca,
+        "_load_and_verify_post_eod_attestation_v1_2",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(preopen_ca, "_verify_preopen_parent_binding", lambda **kwargs: None)
+    labels: list[str] = []
+
+    def fake_run_child(cfg, label, command, **kwargs):
+        del command, kwargs
+        labels.append(label)
+        assert label == "ca_preopen_cloud"
+        batch.mkdir(parents=True)
+        journal.parent.mkdir(parents=True, exist_ok=True)
+        journal.write_text("journal\n", encoding="utf-8")
+
+    monkeypatch.setattr(preopen_ca.v1, "_run_child", fake_run_child)
+    monkeypatch.setattr(
+        preopen_ca.v1,
+        "_verify_phase_sidecar",
+        lambda cfg, session, phase, through_session: json.loads(
+            controller_v1._phase_sidecar_path(cfg, session, phase).read_text(encoding="utf-8")
+        ),
+    )
+
+    result = preopen_ca._ensure_preopen_ca_phase(
+        config,
+        phase_session=execution,
+        from_session=decision,
+        through_session=execution,
+        required_tickers=("BBCA",),
+        now=datetime(2026, 8, 28, 8, 40, tzinfo=JAKARTA),
+        clock=lambda: datetime(2026, 8, 28, 8, 50, tzinfo=JAKARTA),
+    )
+    assert result == "CAPTURED"
+    assert labels == ["ca_preopen_cloud"]

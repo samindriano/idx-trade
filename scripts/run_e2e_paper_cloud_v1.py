@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 from datetime import date, datetime, timedelta, timezone
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -376,13 +377,22 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
     started = effective_now
     if chosen == "POST_EOD":
         model_root = roles["model_manifest"].parent
+        pipeline_kwargs = {
+            "clean_panel": roles["clean_panel"],
+            "clean_security_master": roles["clean_security_master"],
+            "repo_root": REPO_ROOT,
+            "observed_by": effective_now.astimezone(UTC).isoformat(),
+        }
+        # The V2 adapter consumes the cloud input hash at the outer runtime
+        # boundary.  Direct V1 remains byte/signature compatible with the
+        # frozen clean pipeline and therefore receives no adapter-only field.
+        parameters = inspect.signature(run_clean_eod_pipeline).parameters
+        if any(parameter.kind is inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()):
+            pipeline_kwargs["population_input_manifest_sha256"] = input_sha
         run_clean_eod_pipeline(
             roots["forward"],
             model_root,
-            clean_panel=roles["clean_panel"],
-            clean_security_master=roles["clean_security_master"],
-            repo_root=REPO_ROOT,
-            observed_by=effective_now.astimezone(UTC).isoformat(),
+            **pipeline_kwargs,
         )
     status = run_operational_cycle_v2(config, now=effective_now)
     finished = _now()

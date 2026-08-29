@@ -27,10 +27,16 @@ if str(SRC_ROOT) not in sys.path:
 from idx_trade.e2e_cloud_security_master_v1 import (  # noqa: E402
     refresh_cloud_runtime_security_master,
 )
+from idx_trade import v4_x1_clean_forward_score as clean_x1  # noqa: E402
+from idx_trade.v4_x1_population_admission_v1 import (  # noqa: E402
+    PopulationScoreGate,
+    V1PopulationNotProvable,
+)
 from scripts import run_e2e_paper_cloud_v1 as v1  # noqa: E402
 
 
 _LAST_SECURITY_MASTER_REFRESH: dict[str, object] | None = None
+_LAST_POPULATION_ADMISSION: dict[str, object] | None = None
 
 
 def _with_runtime_security_master(
@@ -39,7 +45,7 @@ def _with_runtime_security_master(
     model_root: str | Path,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    global _LAST_SECURITY_MASTER_REFRESH
+    global _LAST_SECURITY_MASTER_REFRESH, _LAST_POPULATION_ADMISSION
 
     observed_by = str(kwargs.get("observed_by") or "")
     if not observed_by:
@@ -56,7 +62,43 @@ def _with_runtime_security_master(
         baseline_master=baseline_master,
         observed_at=observed_at,
     )
-    result = original_pipeline(runtime_root, model_root, **kwargs)
+    pipeline_kwargs = dict(kwargs)
+    input_manifest_sha256 = str(
+        pipeline_kwargs.pop("population_input_manifest_sha256", "")
+    )
+    gate = PopulationScoreGate(
+        clean_x1,
+        runtime_root=runtime_root,
+        clean_panel=kwargs.get("clean_panel"),
+        clean_security_master=baseline_master,
+        model_root=model_root,
+        repo_root=kwargs.get("repo_root", REPO_ROOT),
+        observed_by=observed_by,
+        input_manifest_sha256=input_manifest_sha256,
+        runner_path=Path(__file__).resolve(),
+        expected_baseline_sha256=clean_x1.EXPECTED_CLEAN_SECURITY_MASTER_SHA256,
+        expected_model_manifest_sha256=clean_x1.EXPECTED_MODEL_MANIFEST_SHA256,
+    )
+    try:
+        with gate:
+            result = original_pipeline(runtime_root, model_root, **pipeline_kwargs)
+    except V1PopulationNotProvable as error:
+        # The frozen pipeline has already persisted PIPELINE_FAILED, including
+        # its successful EOD capture result.  Keep the controller on its
+        # existing fail-closed waiting path and never enter PaperState.
+        result = {
+            "status": "PIPELINE_FAILED",
+            "x1_score_attempted": False,
+            "provider_calls_from_x1": False,
+            "protected_outcome_accessed": False,
+            "model_refit": False,
+            "population_admission": error.admission.to_dict(),
+            "error_code": "V1_POPULATION_NOT_PROVABLE",
+            "error_message": V1PopulationNotProvable.__name__,
+        }
+    _LAST_POPULATION_ADMISSION = (
+        gate.last_admission.to_dict() if gate.last_admission is not None else None
+    )
     return dict(result)
 
 
@@ -71,6 +113,8 @@ def _result_payload_with_refresh(
         result["cloud_runtime_security_master_refresh"] = dict(
             _LAST_SECURITY_MASTER_REFRESH
         )
+        if _LAST_POPULATION_ADMISSION is not None:
+            result["v1_population_admission"] = dict(_LAST_POPULATION_ADMISSION)
     return result
 
 
@@ -104,8 +148,9 @@ def _patched_v1_runtime() -> Iterator[None]:
 
 
 def run_once(*, phase: str | None = None, session_date: str | None = None) -> dict[str, object]:
-    global _LAST_SECURITY_MASTER_REFRESH
+    global _LAST_SECURITY_MASTER_REFRESH, _LAST_POPULATION_ADMISSION
     _LAST_SECURITY_MASTER_REFRESH = None
+    _LAST_POPULATION_ADMISSION = None
     with _patched_v1_runtime():
         return v1.run_once(phase=phase, session_date=session_date)
 
