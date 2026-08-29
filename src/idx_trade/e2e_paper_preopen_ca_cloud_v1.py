@@ -392,6 +392,8 @@ def _ensure_preopen_ca_phase(
         return "REUSED"
     if journal.exists() and not batch.exists():
         raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
+    if batch.is_dir() and not journal.is_file():
+        raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
     if batch.exists() and not batch.is_dir():
         raise v1.E2EOperationalGuardError("E2E_OPERATIONAL_CA_PHASE_PARTIAL")
 
@@ -410,6 +412,7 @@ def _ensure_preopen_ca_phase(
     attestation_path = attestation_root / "attestations" / f"{phase_session}_PREOPEN.json"
     capture_root = attestation_root / "captures" / f"{phase_session}_PREOPEN"
     capture_complete = False
+    capture_recovery = False
     if attestation_path.exists() or capture_root.exists():
         if attestation_path.is_file() and capture_root.is_dir():
             _load_and_verify_post_eod_attestation_v1_2(
@@ -420,9 +423,10 @@ def _ensure_preopen_ca_phase(
             )
             capture_complete = True
         elif capture_root.is_dir() and (capture_root / "PUBLISH.json").is_file():
-            # The capture publisher's durable marker proves that the provider
-            # capture can be reused while acquisition repairs its own child.
-            pass
+            # The capture publisher's durable marker is an interrupted
+            # provider-free publication. Complete that publication instead of
+            # importing or calling the provider a second time.
+            capture_recovery = True
         else:
             raise v1.E2EOperationalGuardError("E2E_PREOPEN_CA_ATTESTATION_PARTIAL")
 
@@ -448,6 +452,8 @@ def _ensure_preopen_ca_phase(
         "--attestation-output",
         str(attestation_path),
     ]
+    if capture_recovery:
+        capture_command.append("--recover-publication")
     if not capture_complete:
         v1._run_child(config, "ca_capture_preopen_cloud", capture_command)
         _load_and_verify_post_eod_attestation_v1_2(

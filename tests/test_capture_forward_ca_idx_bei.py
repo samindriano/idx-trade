@@ -360,3 +360,44 @@ def test_interrupted_publication_is_completed_without_provider_access(
     assert not pending.exists()
     assert not (output / "PUBLISH.json").exists()
     assert FakeClient.calls == []
+
+
+def test_recovery_cli_mode_is_provider_free_and_does_not_require_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calendar = {"Results": [{"Code": "BBCA", "Date": "2026-08-22", "Title": "RUPS"}]}
+    output, attestation = _run(tmp_path, monkeypatch, responses=_responses(calendar))
+    pending = attestation.with_name(".pending-attestation")
+    pending.write_bytes(attestation.read_bytes())
+    attestation.unlink()
+    marker = {
+        "schema_version": "idx_trade_forward_ca_publication_v1",
+        "output_dir": str(output.resolve()),
+        "attestation": str(attestation.resolve()),
+        "pending_attestation": str(pending.resolve()),
+        "manifest_sha256": capture._sha256_bytes((output / "MANIFEST.json").read_bytes()),
+        "pending_attestation_sha256": capture._sha256_bytes(pending.read_bytes()),
+    }
+    (output / "PUBLISH.json").write_text(json.dumps(marker), encoding="utf-8")
+    FakeClient.calls = []
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "capture_forward_ca_idx_bei.py",
+            "--recover-publication",
+            "--phase", "POST_EOD",
+            "--from-session", "2026-08-22",
+            "--through-session", "2026-08-23",
+            "--tickers", "BBCA,TLKM",
+            "--output-dir", str(output),
+            "--attestation-output", str(attestation),
+        ],
+    )
+
+    assert capture.main() == 0
+    assert attestation.is_file()
+    assert not pending.exists()
+    assert not (output / "PUBLISH.json").exists()
+    assert FakeClient.calls == []

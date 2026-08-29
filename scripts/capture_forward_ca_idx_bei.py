@@ -348,7 +348,12 @@ def _normalize_zapi_raw_payload(raw: bytes, endpoint: str) -> dict[str, Any] | l
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--provider-checkout", required=True)
+    parser.add_argument("--provider-checkout")
+    parser.add_argument(
+        "--recover-publication",
+        action="store_true",
+        help="finish a validated PUBLISH.json without importing or calling the provider",
+    )
     parser.add_argument("--phase", required=True, choices=("POST_EOD", "PREOPEN"))
     parser.add_argument("--from-session", required=True)
     parser.add_argument("--through-session", required=True)
@@ -366,6 +371,20 @@ def main() -> int:
         raise SystemExit("FORWARD_CA_REQUIRED_TICKERS_EMPTY")
     out = Path(args.output_dir).expanduser().resolve()
     attestation = Path(args.attestation_output).expanduser().resolve()
+    if args.recover_publication:
+        if _recover_interrupted_publication(
+            out,
+            attestation,
+            expected_phase=args.phase,
+            expected_from_session=from_session,
+            expected_through_session=through_session,
+            required_tickers=tickers,
+        ):
+            print(json.dumps({"status": "RECOVERED", "outcome_access": False}, sort_keys=True))
+            return 0
+        raise SystemExit("FORWARD_CA_RECOVERY_NOT_AVAILABLE")
+    if not args.provider_checkout:
+        raise SystemExit("FORWARD_CA_PROVIDER_CHECKOUT_REQUIRED")
     if out.exists():
         if _recover_interrupted_publication(
             out,

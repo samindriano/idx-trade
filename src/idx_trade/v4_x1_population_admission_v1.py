@@ -19,6 +19,7 @@ import re
 import subprocess
 from types import ModuleType
 from typing import Any, Callable, Mapping, Sequence
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -44,8 +45,6 @@ FREEZE_LOCAL_DATE = date(2026, 8, 20)
 FROZEN_POLICY = (
     "ACCEPTED_CLEAN_BASELINE_PLUS_RUNTIME_IDENTITIES_WITH_LISTED_FROM_STRICTLY_AFTER_2026_08_20_ONLY"
 )
-DELISTING_COMPLETENESS = "MONTHLY_META_TOTAL_ITEMS_EXHAUSTIVE_PAGINATION"
-LEGAL_DELISTING_SOURCE = "IDX_DIGITAL_STATISTIC_DELISTING"
 JAKARTA = ZoneInfo("Asia/Jakarta")
 TICKER_RE = re.compile(r"^[A-Z0-9]{4}$")
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -60,14 +59,14 @@ class PopulationAdmissionConflict(RuntimeError):
 class PopulationAdmission:
     status: str
     session_date: str
-    expected_tickers: tuple[str, ...]
-    observed_tickers: tuple[str, ...]
-    added_tickers: tuple[str, ...]
-    removed_tickers: tuple[str, ...]
+    expected_identity_tickers: tuple[str, ...]
+    observed_model_input_tickers: tuple[str, ...]
+    identity_added_tickers: tuple[str, ...]
+    identity_removed_tickers: tuple[str, ...]
     reason_codes: tuple[str, ...]
     identity_cases: Mapping[str, Any]
-    expected_ticker_set_sha256: str
-    observed_ticker_set_sha256: str
+    expected_identity_set_sha256: str
+    observed_model_input_set_sha256: str
     metadata: Mapping[str, Any]
     attestation_path: str | None = None
     attestation_sha256: str | None = None
@@ -81,14 +80,14 @@ class PopulationAdmission:
             "schema_version": SCHEMA_VERSION,
             "status": self.status,
             "session_date": self.session_date,
-            "expected_tickers": list(self.expected_tickers),
-            "observed_tickers": list(self.observed_tickers),
-            "added_tickers": list(self.added_tickers),
-            "removed_tickers": list(self.removed_tickers),
+            "expected_identity_tickers": list(self.expected_identity_tickers),
+            "observed_model_input_tickers": list(self.observed_model_input_tickers),
+            "identity_added_tickers": list(self.identity_added_tickers),
+            "identity_removed_tickers": list(self.identity_removed_tickers),
             "reason_codes": list(self.reason_codes),
             "identity_cases": dict(self.identity_cases),
-            "expected_ticker_set_sha256": self.expected_ticker_set_sha256,
-            "observed_ticker_set_sha256": self.observed_ticker_set_sha256,
+            "expected_identity_set_sha256": self.expected_identity_set_sha256,
+            "observed_model_input_set_sha256": self.observed_model_input_set_sha256,
             "metadata": dict(self.metadata),
             **({"attestation_path": self.attestation_path} if self.attestation_path else {}),
             **({"attestation_sha256": self.attestation_sha256} if self.attestation_sha256 else {}),
@@ -415,7 +414,6 @@ def evaluate_population_admission(
     observed_at: str,
     gate_sha256: str,
     security_master_evidence: Mapping[str, Any] | None = None,
-    post_freeze_history: Mapping[str, int] | None = None,
     expected_frozen_science_blobs: Mapping[str, str] | None = None,
     actual_frozen_science_blobs: Mapping[str, str] | None = None,
     freeze_date: date = FREEZE_LOCAL_DATE,
@@ -446,12 +444,19 @@ def evaluate_population_admission(
     metadata["same_session_eod"] = dict(eod_manifest or {})
     metadata["frozen_science_blobs"] = dict(actual_frozen_science_blobs or {})
     metadata["listed_to_overlay_applied"] = False
-    metadata["population_source"] = "FROZEN_BASELINE_PLUS_LEGAL_IDENTITY_AND_INDEPENDENT_TRADABILITY"
+    metadata["population_source"] = "FROZEN_BASELINE_PLUS_POST_FREEZE_IDENTITY_ADMISSIONS"
+    metadata["population_proof_scope"] = "IDENTITY_TRADABILITY_COMPATIBILITY_ONLY"
+    metadata["shared_identity_source"] = "FROZEN_BASELINE_ONLY"
+    metadata["current_identity_role"] = "CONFIRM_OR_VETO_SHARED_POST_FREEZE_ADDITIONS_ONLY"
+    metadata["final_scoring_population_authority"] = (
+        "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
+    )
+    metadata["final_scoring_population_attested"] = False
 
-    expected: tuple[str, ...] = ()
-    observed: tuple[str, ...] = ()
-    added: tuple[str, ...] = ()
-    removed: tuple[str, ...] = ()
+    expected_identity: tuple[str, ...] = ()
+    observed_input: tuple[str, ...] = ()
+    added_identity: tuple[str, ...] = ()
+    removed_identity: tuple[str, ...] = ()
     identity_cases: dict[str, Any] = {}
     try:
         baseline = _identity_frame(baseline_identity, "FROZEN_BASELINE")
@@ -466,46 +471,71 @@ def evaluate_population_admission(
             baseline["listed_from"].le(freeze)
             & (baseline["listed_to"].isna() | baseline["listed_to"].ge(freeze))
         ]
-        baseline_set = set(baseline_live["ticker"])
+        baseline_live_set = set(baseline_live["ticker"])
+        baseline_set = set(baseline["ticker"])
         current_set = set(current["ticker"])
-        missing = sorted(baseline_set - current_set)
+        missing = sorted(baseline_live_set - current_set)
         if missing:
             reasons.append("BASELINE_IDENTITY_NOT_PROVABLE:" + ",".join(missing))
 
-        history = {str(key).upper().strip(): int(value) for key, value in (post_freeze_history or {}).items()}
-        legal_set = {
-            str(value).upper().strip()
-            for value in ((security_master_evidence or {}).get("delisted_tickers") or ())
+        current_by_ticker = {
+            str(row.ticker): row for row in current.itertuples(index=False)
         }
-        legal_set.update(str(value).upper().strip() for value in ((security_master_evidence or {}).get("legal_delisting_tickers") or ()))
-        legal_complete = (security_master_evidence or {}).get("delisting_completeness") == DELISTING_COMPLETENESS
+        baseline_by_ticker = {
+            str(row.ticker): row for row in baseline.itertuples(index=False)
+        }
+        shared_conflicts: list[str] = []
+        confirmed_shared: list[str] = []
+        for ticker in sorted(baseline_set & current_set):
+            frozen_row = baseline_by_ticker[ticker]
+            current_row = current_by_ticker[ticker]
+            frozen_from = pd.Timestamp(frozen_row.listed_from)
+            current_from = pd.Timestamp(current_row.listed_from)
+            frozen_to = (
+                pd.Timestamp(frozen_row.listed_to)
+                if pd.notna(frozen_row.listed_to)
+                else None
+            )
+            current_to = (
+                pd.Timestamp(current_row.listed_to)
+                if pd.notna(current_row.listed_to)
+                else None
+            )
+            if frozen_from != current_from or frozen_to != current_to:
+                shared_conflicts.append(ticker)
+                reasons.append(f"SHARED_IDENTITY_CURRENT_CONFLICT:{ticker}")
+            else:
+                confirmed_shared.append(ticker)
+
         additions = sorted(current_set - baseline_set)
-        legal_absent: list[str] = []
-        unchanged: list[str] = []
-        for row in current.itertuples(index=False):
-            ticker = str(row.ticker)
+        allowed_additions: list[str] = []
+        for ticker in additions:
+            row = current_by_ticker[ticker]
             listed_from = pd.Timestamp(row.listed_from)
-            listed_to = pd.Timestamp(row.listed_to) if pd.notna(row.listed_to) else None
             if listed_from > target:
                 reasons.append(f"FUTURE_IDENTITY:{ticker}")
-            if ticker in additions:
-                if listed_from <= freeze:
-                    reasons.append(f"POST_FREEZE_RULE_VIOLATION:{ticker}")
-                if history.get(ticker, 0) <= 0:
-                    reasons.append(f"POST_FREEZE_IDENTITY_HISTORY_NOT_PROVABLE:{ticker}")
-            elif ticker in baseline_set:
-                if listed_to is not None and listed_to < freeze:
-                    reasons.append(f"DELISTING_BEFORE_FREEZE_INCOMPATIBLE:{ticker}")
-                if listed_to is not None and listed_to < target:
-                    if ticker not in legal_set and not (legal_complete and str(getattr(row, "source", "")) == LEGAL_DELISTING_SOURCE):
-                        reasons.append(f"DELISTING_EVIDENCE_NOT_VERIFIED:{ticker}")
-                    else:
-                        legal_absent.append(ticker)
-                else:
-                    unchanged.append(ticker)
+            elif listed_from <= freeze:
+                reasons.append(f"POST_FREEZE_RULE_VIOLATION:{ticker}")
+            else:
+                # Match the frozen _merged_security_master_path rule: a
+                # post-freeze addition is admitted by listed_from alone.  Its
+                # listed_to remains evidence, never a reason to rewrite or
+                # shrink the shared frozen identity; the pinned feature
+                # builder remains the authority for final scoring inclusion.
+                allowed_additions.append(ticker)
+
+        # Shared expected identity always follows the frozen baseline interval.
+        # Only genuinely post-freeze additions may use the current interval.
+        frozen_live_at_target = baseline[
+            baseline["listed_from"].le(target)
+            & (baseline["listed_to"].isna() | baseline["listed_to"].ge(target))
+        ]
+        expected_identity = tuple(
+            sorted(set(frozen_live_at_target["ticker"]) | set(allowed_additions))
+        )
         identity_cases = {
-            "baseline_unchanged": sorted(unchanged),
-            "baseline_legally_absent": sorted(legal_absent),
+            "baseline_shared_confirmed": confirmed_shared,
+            "shared_identity_conflicts": shared_conflicts,
             "post_freeze_additions": additions,
             "missing_baseline": missing,
         }
@@ -513,13 +543,8 @@ def evaluate_population_admission(
         points = _point_frame(point_evidence, session)
         intervals = _interval_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_intervals"))
         anchors = _anchor_frame(None if security_master_evidence is None else security_master_evidence.get("tradability_anchors"))
-        live = current[
-            current["listed_from"].le(target)
-            & (current["listed_to"].isna() | current["listed_to"].ge(target))
-        ]
         point_by_ticker = {str(row.ticker): str(row.point_state) for row in points.itertuples(index=False)}
-        active_expected: list[str] = []
-        for ticker in sorted(set(live["ticker"])):
+        for ticker in expected_identity:
             explicit = _states_at(intervals, anchors, ticker, session)
             point = point_by_ticker.get(ticker)
             if point is None and not explicit:
@@ -528,15 +553,18 @@ def evaluate_population_admission(
             if point is not None and not _compatible(point, explicit):
                 reasons.append(f"TRADABILITY_CONFLICT:{ticker}")
                 continue
-            resolved = point or (next(iter(explicit)) if len(explicit) == 1 else "")
-            if not resolved:
+            states = set(explicit)
+            if point is not None:
+                states.add(point)
+            if not states:
                 reasons.append(f"TRADABILITY_STATE_AMBIGUOUS:{ticker}")
-            elif resolved == "ACTIVE":
-                active_expected.append(ticker)
-        live_set = set(live["ticker"])
-        extra_points = sorted(set(point_by_ticker) - live_set)
+            elif states != {"ACTIVE"}:
+                state_label = "+".join(sorted(states))
+                reasons.append(f"TRADABILITY_NON_ACTIVE:{ticker}:{state_label}")
+        expected_identity_set = set(expected_identity)
+        extra_points = sorted(set(point_by_ticker) - expected_identity_set)
         if extra_points:
-            reasons.append("POINT_EVIDENCE_OUTSIDE_LIVE_IDENTITY:" + ",".join(extra_points))
+            reasons.append("POINT_EVIDENCE_OUTSIDE_EXPECTED_IDENTITY:" + ",".join(extra_points))
         model = model_input.copy()
         if not {"ticker", "date"}.issubset(model.columns):
             raise ValueError("MODEL_INPUT_COLUMNS_MISSING")
@@ -546,38 +574,46 @@ def evaluate_population_admission(
             raise ValueError("MODEL_INPUT_SESSION_MISMATCH")
         if model.duplicated(["ticker", "date"]).any():
             raise ValueError("MODEL_INPUT_DUPLICATE")
-        observed = tuple(sorted(set(model["ticker"])))
-        expected = tuple(sorted(set(active_expected)))
-        added = tuple(sorted(set(observed) - set(expected)))
-        removed = tuple(sorted(set(expected) - set(observed)))
-        if added:
-            reasons.append("MODEL_INPUT_TICKER_NOT_EXPECTED:" + ",".join(added))
-        if removed:
-            reasons.append("MODEL_INPUT_EXPECTED_TICKER_MISSING:" + ",".join(removed))
-        if set(observed) - live_set:
-            reasons.append("MODEL_INPUT_TICKER_NOT_LIVE:" + ",".join(sorted(set(observed) - live_set)))
+        observed_input = tuple(sorted(set(model["ticker"])))
+        added_identity = tuple(sorted(set(observed_input) - expected_identity_set))
+        removed_identity = tuple(sorted(expected_identity_set - set(observed_input)))
+        if added_identity:
+            reasons.append(
+                "MODEL_INPUT_IDENTITY_TICKER_NOT_EXPECTED:"
+                + ",".join(added_identity)
+            )
+        if removed_identity:
+            reasons.append(
+                "MODEL_INPUT_IDENTITY_TICKER_MISSING:"
+                + ",".join(removed_identity)
+            )
     except Exception as exc:
         reasons.append(str(exc))
 
     deduped_reasons = tuple(dict.fromkeys(reasons))
-    metadata["population_equality"] = not added and not removed and not any(
-        reason.startswith(("MODEL_INPUT_TICKER_NOT_EXPECTED", "MODEL_INPUT_EXPECTED_TICKER_MISSING"))
+    metadata["model_input_identity_equality"] = not added_identity and not removed_identity and not any(
+        reason.startswith(
+            (
+                "MODEL_INPUT_IDENTITY_TICKER_NOT_EXPECTED",
+                "MODEL_INPUT_IDENTITY_TICKER_MISSING",
+            )
+        )
         for reason in deduped_reasons
     )
-    metadata["expected_ticker_set_sha256"] = _set_hash(expected)
-    metadata["observed_ticker_set_sha256"] = _set_hash(observed)
+    metadata["expected_identity_set_sha256"] = _set_hash(expected_identity)
+    metadata["observed_model_input_set_sha256"] = _set_hash(observed_input)
     status = SAFE_V1_POPULATION if not deduped_reasons else V1_POPULATION_NOT_PROVABLE
     return PopulationAdmission(
         status=status,
         session_date=session,
-        expected_tickers=expected,
-        observed_tickers=observed,
-        added_tickers=added,
-        removed_tickers=removed,
+        expected_identity_tickers=expected_identity,
+        observed_model_input_tickers=observed_input,
+        identity_added_tickers=added_identity,
+        identity_removed_tickers=removed_identity,
         reason_codes=deduped_reasons,
         identity_cases=identity_cases,
-        expected_ticker_set_sha256=_set_hash(expected),
-        observed_ticker_set_sha256=_set_hash(observed),
+        expected_identity_set_sha256=_set_hash(expected_identity),
+        observed_model_input_set_sha256=_set_hash(observed_input),
         metadata=metadata,
     )
 
@@ -606,18 +642,22 @@ def _runtime_failure(**kwargs: Any) -> PopulationAdmission:
     reasons = tuple(dict.fromkeys(str(value) for value in kwargs.get("reasons", ())))
     metadata = dict(kwargs.get("metadata") or {})
     metadata.setdefault("listed_to_overlay_applied", False)
-    metadata.setdefault("population_source", "FROZEN_BASELINE_PLUS_LEGAL_IDENTITY_AND_INDEPENDENT_TRADABILITY")
+    metadata.setdefault("population_source", "FROZEN_BASELINE_PLUS_POST_FREEZE_IDENTITY_ADMISSIONS")
+    metadata.setdefault("population_proof_scope", "IDENTITY_TRADABILITY_COMPATIBILITY_ONLY")
+    metadata.setdefault("shared_identity_source", "FROZEN_BASELINE_ONLY")
+    metadata.setdefault("final_scoring_population_authority", "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID")
+    metadata.setdefault("final_scoring_population_attested", False)
     return PopulationAdmission(
         status=V1_POPULATION_NOT_PROVABLE,
         session_date=session,
-        expected_tickers=(),
-        observed_tickers=(),
-        added_tickers=(),
-        removed_tickers=(),
+        expected_identity_tickers=(),
+        observed_model_input_tickers=(),
+        identity_added_tickers=(),
+        identity_removed_tickers=(),
         reason_codes=reasons or ("RUNTIME_EVIDENCE_NOT_PROVABLE",),
         identity_cases={},
-        expected_ticker_set_sha256=_set_hash(()),
-        observed_ticker_set_sha256=_set_hash(()),
+        expected_identity_set_sha256=_set_hash(()),
+        observed_model_input_set_sha256=_set_hash(()),
         metadata=metadata,
     )
 
@@ -695,24 +735,9 @@ def build_runtime_population_admission(
         baseline = pd.read_csv(baseline_path)
         point = pd.read_parquet(Path(str(eod["evidence_path"])))
         model_input = pd.read_parquet(Path(str(eod["snapshot_path"])))
-        panel = pd.read_parquet(Path(clean_panel).expanduser().resolve())
-        current_work = current.copy()
-        history: dict[str, int] = {}
-        if {"ticker", "date"}.issubset(panel.columns):
-            panel["ticker"] = panel["ticker"].astype(str).str.upper().str.replace(".JK", "", regex=False).str.strip()
-            panel["date"] = pd.to_datetime(panel["date"], errors="coerce").dt.tz_localize(None).dt.normalize()
-            for row in current_work.itertuples(index=False):
-                ticker = str(getattr(row, "ticker")).upper().strip()
-                listed_from = pd.to_datetime(getattr(row, "listed_from"), errors="coerce")
-                if pd.notna(listed_from):
-                    history[ticker] = int(
-                        panel.loc[
-                            panel["ticker"].eq(ticker)
-                            & panel["date"].ge(pd.Timestamp(listed_from).normalize())
-                            & panel["date"].le(pd.Timestamp(session)),
-                            "date",
-                        ].nunique()
-                    )
+        clean_panel_path = Path(clean_panel).expanduser().resolve()
+        if not clean_panel_path.is_file():
+            return _runtime_failure(session_date=session, reasons=("CLEAN_PANEL_MISSING",))
         expected_blobs, actual_blobs = _git_blobs(Path(repo_root).expanduser().resolve())
         code_identity = {
             "repo": "samindriano/idx-trade",
@@ -742,7 +767,6 @@ def build_runtime_population_admission(
             observed_at=observed_by,
             gate_sha256=sha256_file(Path(__file__).resolve()),
             security_master_evidence=security_evidence,
-            post_freeze_history=history,
             expected_frozen_science_blobs=expected_blobs,
             actual_frozen_science_blobs=actual_blobs,
         )
@@ -756,44 +780,245 @@ def build_runtime_population_admission(
         return _runtime_failure(session_date=str(observed_by)[:10], reasons=(type(exc).__name__.upper() + ":" + str(exc),))
 
 
-def persist_population_attestation(runtime_root: str | Path, admission: PopulationAdmission) -> PopulationAdmission:
-    """Persist a create-only marker; same evidence is idempotent, changes conflict."""
+_ATTESTATION_BOUND_HASH_FIELDS = (
+    "frozen_baseline_sha256",
+    "current_identity_sha256",
+    "eod_manifest_sha256",
+    "input_manifest_sha256",
+    "calendar_sha256",
+    "model_manifest_sha256",
+    "model_fingerprint",
+    "gate_sha256",
+)
 
-    path = (Path(runtime_root).expanduser().resolve() / "forward_monitoring" / "population_admission" / f"{admission.session_date}.json")
-    payload = admission.to_dict()
-    payload.pop("attestation_path", None)
-    payload.pop("attestation_sha256", None)
+
+def _attestation_identity(payload: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, Mapping):
+        raise ValueError("POPULATION_ATTESTATION_NOT_OBJECT")
     identity = dict(payload)
-    identity.pop("metadata", None)
+    for field in ("attestation_path", "attestation_sha256", "immutable_identity_sha256"):
+        identity.pop(field, None)
+    metadata = identity.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise ValueError("POPULATION_ATTESTATION_METADATA_INVALID")
     identity["metadata"] = {
-        key: value
-        for key, value in (payload.get("metadata") or {}).items()
-        if key != "observed_at_jakarta"
+        key: value for key, value in metadata.items() if key != "observed_at_jakarta"
     }
+    return identity
+
+
+def _attestation_ticker_list(payload: Mapping[str, Any], field: str) -> tuple[str, ...]:
+    values = payload.get(field)
+    if not isinstance(values, list):
+        raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_INVALID")
+    normalized = tuple(_safe_ticker(value) for value in values)
+    if normalized != tuple(sorted(normalized)) or len(set(normalized)) != len(normalized):
+        raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_NOT_CANONICAL")
+    return normalized
+
+
+def _validate_attestation_payload(
+    payload: Mapping[str, Any],
+    *,
+    require_safe: bool,
+    require_identity_hash: bool,
+) -> dict[str, Any]:
+    if payload.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError("POPULATION_ATTESTATION_SCHEMA_INVALID")
+    status = payload.get("status")
+    if status not in {SAFE_V1_POPULATION, V1_POPULATION_NOT_PROVABLE}:
+        raise ValueError("POPULATION_ATTESTATION_STATUS_INVALID")
+    if require_safe and status != SAFE_V1_POPULATION:
+        raise ValueError("POPULATION_ATTESTATION_NOT_SAFE")
+    session = _safe_session(payload.get("session_date"))
+    for field in (
+        "expected_identity_tickers",
+        "observed_model_input_tickers",
+        "identity_added_tickers",
+        "identity_removed_tickers",
+    ):
+        _attestation_ticker_list(payload, field)
+    expected = payload["expected_identity_tickers"]
+    observed = payload["observed_model_input_tickers"]
+    for field, values in (
+        ("expected_identity_set_sha256", expected),
+        ("observed_model_input_set_sha256", observed),
+    ):
+        declared = str(payload.get(field) or "").lower()
+        if declared != _set_hash(values):
+            raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_MISMATCH")
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, Mapping):
+        raise ValueError("POPULATION_ATTESTATION_METADATA_INVALID")
+    if metadata.get("listed_to_overlay_applied") is not False:
+        raise ValueError("POPULATION_ATTESTATION_LISTED_TO_OVERLAY")
+    if metadata.get("final_scoring_population_attested") is not False:
+        raise ValueError("POPULATION_ATTESTATION_FINAL_DENOMINATOR_CLAIM")
+    if require_safe:
+        _safe_observed_at(metadata.get("observed_at_jakarta"))
+        if metadata.get("frozen_policy") != FROZEN_POLICY:
+            raise ValueError("POPULATION_ATTESTATION_POLICY_INVALID")
+        if metadata.get("population_proof_scope") != "IDENTITY_TRADABILITY_COMPATIBILITY_ONLY":
+            raise ValueError("POPULATION_ATTESTATION_SCOPE_INVALID")
+        if metadata.get("shared_identity_source") != "FROZEN_BASELINE_ONLY":
+            raise ValueError("POPULATION_ATTESTATION_SHARED_IDENTITY_SOURCE_INVALID")
+        if metadata.get("final_scoring_population_authority") != (
+            "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
+        ):
+            raise ValueError("POPULATION_ATTESTATION_FINAL_DENOMINATOR_AUTHORITY_INVALID")
+        if metadata.get("model_input_identity_equality") is not True:
+            raise ValueError("POPULATION_ATTESTATION_INPUT_IDENTITY_NOT_EQUAL")
+        if payload.get("identity_added_tickers") or payload.get("identity_removed_tickers"):
+            raise ValueError("POPULATION_ATTESTATION_IDENTITY_DELTA")
+        if payload.get("reason_codes"):
+            raise ValueError("POPULATION_ATTESTATION_REASONS_PRESENT")
+
+    for field in _ATTESTATION_BOUND_HASH_FIELDS:
+        value = metadata.get(field)
+        if require_safe or value is not None:
+            _sha(value, field.upper())
+    code_identity = metadata.get("code_identity")
+    if require_safe or code_identity is not None:
+        if not isinstance(code_identity, Mapping):
+            raise ValueError("POPULATION_ATTESTATION_CODE_IDENTITY_INVALID")
+        if not GIT_RE.fullmatch(str(code_identity.get("commit") or "").lower()):
+            raise ValueError("POPULATION_ATTESTATION_CODE_COMMIT_INVALID")
+        if not HEX64_RE.fullmatch(str(code_identity.get("runner_sha256") or "").lower()):
+            raise ValueError("POPULATION_ATTESTATION_CODE_RUNNER_INVALID")
+    same_session_eod = metadata.get("same_session_eod")
+    if require_safe:
+        if not isinstance(same_session_eod, Mapping):
+            raise ValueError("POPULATION_ATTESTATION_EOD_INVALID")
+        if (
+            same_session_eod.get("status") != "DATA_READY"
+            or str(same_session_eod.get("session_date") or "") != session
+            or same_session_eod.get("outcome_blind") is not True
+            or same_session_eod.get("forward_outcomes_accessed") is not False
+        ):
+            raise ValueError("POPULATION_ATTESTATION_EOD_INVALID")
+        science_blobs = metadata.get("frozen_science_blobs")
+        if not isinstance(science_blobs, Mapping) or not science_blobs:
+            raise ValueError("POPULATION_ATTESTATION_FROZEN_BLOBS_INVALID")
+        for value in science_blobs.values():
+            if not re.fullmatch(r"[0-9a-f]{40,64}", str(value or "").lower()):
+                raise ValueError("POPULATION_ATTESTATION_FROZEN_BLOB_HASH_INVALID")
+    identity = _attestation_identity(payload)
+    identity_sha = hashlib.sha256(_canonical_json(identity)).hexdigest()
+    declared_identity_sha = str(payload.get("immutable_identity_sha256") or "").lower()
+    if require_identity_hash or declared_identity_sha:
+        if declared_identity_sha != identity_sha:
+            raise ValueError("POPULATION_ATTESTATION_IDENTITY_HASH_MISMATCH")
+    return identity
+
+
+def _attestation_stage_hook(stage: str, temporary: Path, target: Path) -> None:
+    """Test seam for crash-injection; production behavior is a no-op."""
+
+
+def _existing_attestation(
+    path: Path,
+    *,
+    expected_payload: Mapping[str, Any],
+    expected_identity: Mapping[str, Any],
+) -> bytes:
+    try:
+        raw = path.read_bytes()
+        existing = json.loads(raw.decode("utf-8"))
+        if not isinstance(existing, Mapping):
+            raise ValueError("POPULATION_ATTESTATION_EXISTING_INVALID")
+        actual_identity = _validate_attestation_payload(
+            existing, require_safe=False, require_identity_hash=True
+        )
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        if isinstance(exc, PopulationAdmissionConflict):
+            raise
+        raise PopulationAdmissionConflict("POPULATION_ATTESTATION_EXISTING_INVALID") from exc
+    if actual_identity != dict(expected_identity) or actual_identity != _attestation_identity(expected_payload):
+        raise PopulationAdmissionConflict("POPULATION_ATTESTATION_IDENTITY_CONFLICT")
+    return raw
+
+
+def persist_population_attestation(runtime_root: str | Path, admission: PopulationAdmission) -> PopulationAdmission:
+    """Persist a fully durable create-only marker with verified idempotency."""
+
+    path = (
+        Path(runtime_root).expanduser().resolve()
+        / "forward_monitoring"
+        / "population_admission"
+        / f"{admission.session_date}.json"
+    )
+    payload = admission.to_dict()
+    identity = _attestation_identity(payload)
     identity_sha = hashlib.sha256(_canonical_json(identity)).hexdigest()
     payload["immutable_identity_sha256"] = identity_sha
+    _validate_attestation_payload(
+        payload, require_safe=False, require_identity_hash=True
+    )
     raw = _canonical_json(payload)
     path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0))
-    except FileExistsError:
-        existing_raw = path.read_bytes()
-        try:
-            existing = json.loads(existing_raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise PopulationAdmissionConflict("POPULATION_ATTESTATION_EXISTING_INVALID") from exc
-        if existing.get("immutable_identity_sha256") != identity_sha:
-            raise PopulationAdmissionConflict("POPULATION_ATTESTATION_IDENTITY_CONFLICT")
-        return PopulationAdmission(
-            **{**admission.__dict__, "attestation_path": str(path), "attestation_sha256": hashlib.sha256(existing_raw).hexdigest()}
+    if path.exists():
+        existing_raw = _existing_attestation(
+            path, expected_payload=payload, expected_identity=identity
         )
-    with os.fdopen(fd, "wb") as handle:
-        handle.write(raw)
-        handle.flush()
-        os.fsync(handle.fileno())
-    return PopulationAdmission(
-        **{**admission.__dict__, "attestation_path": str(path), "attestation_sha256": hashlib.sha256(raw).hexdigest()}
-    )
+        return PopulationAdmission(
+            **{
+                **admission.__dict__,
+                "attestation_path": str(path),
+                "attestation_sha256": hashlib.sha256(existing_raw).hexdigest(),
+            }
+        )
+
+    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0)
+    try:
+        fd = os.open(temporary, flags)
+        with os.fdopen(fd, "wb") as handle:
+            _attestation_stage_hook("temp_created", temporary, path)
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+            _attestation_stage_hook("temp_fsynced", temporary, path)
+        _attestation_stage_hook("promotion", temporary, path)
+        try:
+            # Hard-link promotion is atomic and create-only: it cannot replace
+            # a concurrent writer's final marker.
+            os.link(temporary, path)
+        except FileExistsError:
+            existing_raw = _existing_attestation(
+                path, expected_payload=payload, expected_identity=identity
+            )
+            return PopulationAdmission(
+                **{
+                    **admission.__dict__,
+                    "attestation_path": str(path),
+                    "attestation_sha256": hashlib.sha256(existing_raw).hexdigest(),
+                }
+            )
+        except OSError as exc:
+            raise PopulationAdmissionConflict(
+                "POPULATION_ATTESTATION_CREATE_ONLY_PROMOTION_UNAVAILABLE"
+            ) from exc
+        _attestation_stage_hook("promoted", temporary, path)
+        return PopulationAdmission(
+            **{
+                **admission.__dict__,
+                "attestation_path": str(path),
+                "attestation_sha256": hashlib.sha256(raw).hexdigest(),
+            }
+        )
+    except FileExistsError:
+        existing_raw = _existing_attestation(
+            path, expected_payload=payload, expected_identity=identity
+        )
+        return PopulationAdmission(
+            **{
+                **admission.__dict__,
+                "attestation_path": str(path),
+                "attestation_sha256": hashlib.sha256(existing_raw).hexdigest(),
+            }
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def classify_retained_population_attestation(
@@ -805,38 +1030,16 @@ def classify_retained_population_attestation(
     """Classify retained 2/100 evidence without outcomes, rescoring, or counters."""
 
     try:
-        if attestation.get("schema_version") != SCHEMA_VERSION:
-            raise ValueError
-        if attestation.get("status") != SAFE_V1_POPULATION:
-            raise ValueError
+        _validate_attestation_payload(
+            attestation, require_safe=True, require_identity_hash=True
+        )
         if _safe_session(attestation.get("session_date")) != _safe_session(expected_session_date):
-            raise ValueError
-        metadata = attestation.get("metadata")
-        if not isinstance(metadata, Mapping):
-            raise ValueError
+            raise ValueError("POPULATION_ATTESTATION_SESSION_MISMATCH")
+        metadata = attestation["metadata"]
         if metadata.get("frozen_baseline_sha256") != str(expected_baseline_sha256).lower():
-            raise ValueError
-        if metadata.get("listed_to_overlay_applied") is not False:
-            raise ValueError
-        if metadata.get("population_equality") is not True:
-            raise ValueError
-        if attestation.get("expected_ticker_set_sha256") != attestation.get("observed_ticker_set_sha256"):
-            raise ValueError
-        if not HEX64_RE.fullmatch(str(attestation.get("immutable_identity_sha256") or "")):
-            raise ValueError
-        if not isinstance(attestation.get("expected_tickers"), list) or not isinstance(attestation.get("observed_tickers"), list):
-            raise ValueError
-        if attestation.get("added_tickers") or attestation.get("removed_tickers"):
-            raise ValueError
-        same_session_eod = metadata.get("same_session_eod")
-        if not isinstance(same_session_eod, Mapping) or same_session_eod.get("status") != "DATA_READY":
-            raise ValueError
-        if not metadata.get("frozen_science_blobs"):
-            raise ValueError
-        if attestation.get("reason_codes"):
-            raise ValueError
+            raise ValueError("POPULATION_ATTESTATION_BASELINE_MISMATCH")
         return PROVEN_V1_POPULATION_COMPATIBLE
-    except (TypeError, ValueError):
+    except (AttributeError, TypeError, ValueError):
         return NOT_PROVABLE_FROM_RETAINED_EVIDENCE
 
 
