@@ -115,6 +115,8 @@ PR_103_MERGED           = FALSE
 Final validation was run in an isolated local environment: focused `7`
 passed, CA/integrity `131` passed, full pytest exit `0`, py_compile `46`
 files PASS, artifact hash audit PASS, and deterministic comparison PASS.
-`git diff --check` and exact-head CI must be recorded after the handoff files
-are committed/pushed. Stop for ChatGPT review; do not merge or execute
+Exact-head GitHub Actions run `33252527408` completed SUCCESS with `370
+passed` and `5 pytest warnings` in `127.42s`; the separate workflow
+annotation is a Node.js 20 deprecation warning for checkout/setup actions.
+`git diff --check` is PASS. Stop for ChatGPT review; do not merge or execute
 production work.

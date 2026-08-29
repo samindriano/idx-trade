@@ -167,7 +167,9 @@ COUNTER_ACTION          = NONE
 - manifest output hash audit: `14/14` PASS;
 - deterministic v3/rerun comparison: `13` non-manifest files, PASS;
 - `git diff --check`: PASS before final handoff commit;
-- exact-head GitHub Actions: pending the post-handoff push; no merge is
+- exact-head GitHub Actions run `33252527408`: SUCCESS, `370 passed` and `5
+  pytest warnings` in `127.42s`; the separate workflow annotation reports
+  the Node.js 20 deprecation for checkout/setup actions. No merge is
   authorized.
 
 Next gate: ChatGPT review of this immutable local reconciliation and handoff.
