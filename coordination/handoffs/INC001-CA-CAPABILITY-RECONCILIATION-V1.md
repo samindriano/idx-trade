@@ -1,9 +1,9 @@
 # Handoff: INC-001 CA capability reconciliation V1.1
 
-from: MAIN / Codex  
-to: ChatGPT review  
-task_id: `INC001-CA-CAPABILITY-RECONCILIATION-V11`  
-branch: `data/ca-aware-feature-basis-remediation-v1`  
+from: MAIN / Codex
+to: ChatGPT review
+task_id: `INC001-CA-CAPABILITY-RECONCILIATION-V11`
+branch: `data/ca-aware-feature-basis-remediation-v1`
 evidence input HEAD: `0e8d0ed8ae83da9753bbca44f43a49030d3d5d5e`
 
 ## Decision

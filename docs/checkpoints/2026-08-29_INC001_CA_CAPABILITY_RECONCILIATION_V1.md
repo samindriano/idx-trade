@@ -1,6 +1,6 @@
 # INC-001 CA capability reconciliation — V1.1 continuation
 
-Date: 2026-08-29  
+Date: 2026-08-29
 Lane: `data/ca-aware-feature-basis-remediation-v1`
 
 This is a bounded local reconciliation of the already retained 2026-08-29
