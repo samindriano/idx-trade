@@ -1,8 +1,8 @@
 # V4-X1 Path-A Population Gate Activation / Provenance V1
 
-Date: 2026-08-29 Asia/Jakarta  
-Activation branch base: `origin/main@bee0a4f95eff5d319467abfc339f9845a8996c8f`  
-Approved implementation commit: `6b6a41114a910287b413a099a36d59c5e057a8f2`  
+Date: 2026-08-29 Asia/Jakarta
+Activation branch base: `origin/main@bee0a4f95eff5d319467abfc339f9845a8996c8f`
+Approved implementation commit: `6b6a41114a910287b413a099a36d59c5e057a8f2`
 
 ## Change boundary
 
