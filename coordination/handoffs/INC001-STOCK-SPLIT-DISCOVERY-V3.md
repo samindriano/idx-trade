@@ -109,7 +109,8 @@ git diff --check  = PASS
 determinism       = 15/15 non-manifest files identical
 ```
 
-Exact-head GitHub Actions will be recorded after pushing the final lane
-commit. Report any CI warnings precisely as warnings. This handoff stops at
-ChatGPT review; no merge or production execution should follow without a
-separate decision.
+Exact-head GitHub Actions run `33260926312` on `af20528c` passed with
+`372 passed, 5 warnings`. The GitHub annotation is the Node.js 20 deprecation
+for `actions/checkout@v4` and `actions/setup-python@v5`; report it as a warning
+and not as zero-warning success. This handoff stops at ChatGPT review; no
+merge or production execution should follow without a separate decision.

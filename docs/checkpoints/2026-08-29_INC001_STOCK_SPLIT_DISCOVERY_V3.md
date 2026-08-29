@@ -130,9 +130,11 @@ and no scientific admission follows this reconciliation.
 - `python -m compileall -q src scripts tests`: **PASS** (86 Python files);
 - `git diff --check`: **PASS**;
 - deterministic V8 comparison: **15/15 non-manifest files identical**;
-- exact-head GitHub Actions validation is to be recorded after this lane
-  commit is pushed. GitHub warnings must be reported as warnings; they are
-  not to be described as zero-warning success.
+- exact-head GitHub Actions run `33260926312` on `af20528c`: **PASS**,
+  `372 passed, 5 warnings` in the pytest job. The workflow annotation is a
+  Node.js 20 deprecation affecting `actions/checkout@v4` and
+  `actions/setup-python@v5`; warnings are reported as warnings, not as
+  zero-warning success.
 
 This checkpoint stops for ChatGPT review. PR #108 and PR #103 remain
 unmerged, and no production execution is authorized.
