@@ -3,8 +3,10 @@
 V1 remains the accepted orchestration engine. This adapter changes one
 operational boundary only: before V1 invokes the canonical POST_EOD pipeline on
 an ephemeral runner, it refreshes ``forward/listings/security_master.csv`` from
-official IDX identity/reference data, anchored against the frozen clean
-security master. PREOPEN behavior is unchanged.
+official IDX identity/reference data, anchors it against the frozen clean
+security master, and creates the canonical runtime tradability evidence set
+from existing runtime artifacts or pinned repository seeds. PREOPEN behavior is
+unchanged.
 """
 
 from __future__ import annotations
@@ -27,6 +29,9 @@ if str(SRC_ROOT) not in sys.path:
 from idx_trade.e2e_cloud_security_master_v1 import (  # noqa: E402
     refresh_cloud_runtime_security_master,
 )
+from idx_trade.e2e_cloud_tradability_bootstrap_v1 import (  # noqa: E402
+    ensure_runtime_tradability_artifacts,
+)
 from idx_trade import v4_x1_clean_forward_score as clean_x1  # noqa: E402
 from idx_trade.v4_x1_population_admission_v1 import (  # noqa: E402
     PopulationScoreGate,
@@ -36,6 +41,7 @@ from scripts import run_e2e_paper_cloud_v1 as v1  # noqa: E402
 
 
 _LAST_SECURITY_MASTER_REFRESH: dict[str, object] | None = None
+_LAST_TRADABILITY_BOOTSTRAP: dict[str, object] | None = None
 _LAST_POPULATION_ADMISSION: dict[str, object] | None = None
 
 
@@ -45,7 +51,7 @@ def _with_runtime_security_master(
     model_root: str | Path,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    global _LAST_SECURITY_MASTER_REFRESH, _LAST_POPULATION_ADMISSION
+    global _LAST_SECURITY_MASTER_REFRESH, _LAST_TRADABILITY_BOOTSTRAP, _LAST_POPULATION_ADMISSION
 
     observed_by = str(kwargs.get("observed_by") or "")
     if not observed_by:
@@ -61,6 +67,11 @@ def _with_runtime_security_master(
         runtime_root,
         baseline_master=baseline_master,
         observed_at=observed_at,
+    )
+    _LAST_TRADABILITY_BOOTSTRAP = ensure_runtime_tradability_artifacts(
+        runtime_root,
+        repo_root=kwargs.get("repo_root", REPO_ROOT),
+        code_commit=v1._git_head(REPO_ROOT),
     )
     pipeline_kwargs = dict(kwargs)
     input_manifest_sha256 = str(
@@ -113,6 +124,11 @@ def _result_payload_with_refresh(
         result["cloud_runtime_security_master_refresh"] = dict(
             _LAST_SECURITY_MASTER_REFRESH
         )
+        if _LAST_TRADABILITY_BOOTSTRAP is None:
+            raise RuntimeError("CLOUD_RUNTIME_TRADABILITY_BOOTSTRAP_EVIDENCE_MISSING")
+        result["cloud_runtime_tradability_bootstrap"] = dict(
+            _LAST_TRADABILITY_BOOTSTRAP
+        )
         if _LAST_POPULATION_ADMISSION is not None:
             result["v1_population_admission"] = dict(_LAST_POPULATION_ADMISSION)
     return result
@@ -148,8 +164,9 @@ def _patched_v1_runtime() -> Iterator[None]:
 
 
 def run_once(*, phase: str | None = None, session_date: str | None = None) -> dict[str, object]:
-    global _LAST_SECURITY_MASTER_REFRESH, _LAST_POPULATION_ADMISSION
+    global _LAST_SECURITY_MASTER_REFRESH, _LAST_TRADABILITY_BOOTSTRAP, _LAST_POPULATION_ADMISSION
     _LAST_SECURITY_MASTER_REFRESH = None
+    _LAST_TRADABILITY_BOOTSTRAP = None
     _LAST_POPULATION_ADMISSION = None
     with _patched_v1_runtime():
         return v1.run_once(phase=phase, session_date=session_date)

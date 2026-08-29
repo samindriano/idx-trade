@@ -67,6 +67,24 @@ def test_checkpoint_wins_over_prior_session_standard_snapshot(
     assert result[2]["stage"] == "PREOPEN_CA"
 
 
+def test_post_eod_routes_through_v2_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str | None, str | None]] = []
+    expected = {
+        "status": "WAITING",
+        "cloud_runtime_tradability_bootstrap": {"status": "TRADABILITY_RUNTIME_READY"},
+    }
+
+    def fake_v2_run_once(*, phase=None, session_date=None):
+        calls.append((phase, session_date))
+        return expected
+
+    monkeypatch.setattr(v3.v2, "run_once", fake_v2_run_once)
+    result = v3.run_once(phase="POST_EOD", session_date="2026-08-28")
+
+    assert calls == [("POST_EOD", "2026-08-28")]
+    assert result == expected
+
+
 def test_same_session_scientific_terminal_snapshot_beats_checkpoint(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

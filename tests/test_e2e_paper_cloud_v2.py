@@ -41,6 +41,14 @@ def test_v2_refreshes_runtime_master_before_canonical_eod_pipeline(
         return {"status": "PIPELINE_OK_NO_FRESH_SESSION"}
 
     monkeypatch.setattr(v2, "refresh_cloud_runtime_security_master", fake_refresh)
+    def fake_bootstrap(runtime_root_arg, *, repo_root, code_commit):
+        assert Path(runtime_root_arg) == runtime_root
+        assert Path(repo_root) == tmp_path
+        assert code_commit
+        events.append("bootstrap")
+        return {"status": "TRADABILITY_RUNTIME_READY"}
+
+    monkeypatch.setattr(v2, "ensure_runtime_tradability_artifacts", fake_bootstrap)
     result = v2._with_runtime_security_master(
         fake_pipeline,
         runtime_root,
@@ -51,7 +59,7 @@ def test_v2_refreshes_runtime_master_before_canonical_eod_pipeline(
         observed_by="2026-08-26T11:35:00+00:00",
     )
 
-    assert events == ["refresh", "eod"]
+    assert events == ["refresh", "bootstrap", "eod"]
     assert result["status"] == "PIPELINE_OK_NO_FRESH_SESSION"
 
 
@@ -62,6 +70,11 @@ def test_v2_post_eod_result_payload_binds_refresh_evidence(monkeypatch) -> None:
         "guards": {"outcome_accessed": False},
     }
     monkeypatch.setattr(v2, "_LAST_SECURITY_MASTER_REFRESH", evidence)
+    bootstrap = {
+        "status": "TRADABILITY_RUNTIME_READY",
+        "families": [],
+    }
+    monkeypatch.setattr(v2, "_LAST_TRADABILITY_BOOTSTRAP", bootstrap)
 
     def original_builder(**kwargs):
         return {
@@ -79,6 +92,7 @@ def test_v2_post_eod_result_payload_binds_refresh_evidence(monkeypatch) -> None:
         status={"controller_status": "POST_EOD_PREPARED"},
     )
     assert result["cloud_runtime_security_master_refresh"] == evidence
+    assert result["cloud_runtime_tradability_bootstrap"] == bootstrap
 
 
 def test_v2_preopen_result_payload_is_unchanged_by_security_master_adapter(monkeypatch) -> None:

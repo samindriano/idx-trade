@@ -531,6 +531,11 @@ def test_cloud_v2_wrapper_preserves_eod_failure_boundary_before_paper_controller
         "refresh_cloud_runtime_security_master",
         lambda *args, **kwargs: {"guards": {"outcome_accessed": False}},
     )
+    monkeypatch.setattr(
+        cloud_v2,
+        "ensure_runtime_tradability_artifacts",
+        lambda *args, **kwargs: {"status": "TRADABILITY_RUNTIME_READY"},
+    )
     monkeypatch.setattr(gate, "build_runtime_population_admission", lambda **kwargs: blocked)
     score_calls: list[str] = []
 
