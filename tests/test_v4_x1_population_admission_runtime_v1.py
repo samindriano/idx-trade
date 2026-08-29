@@ -55,7 +55,7 @@ def _write_runtime_fixture(
     refresh_payload: dict[str, object] = {
         "schema_version": "idx_e2e_cloud_runtime_security_master_v1",
         "authority": "IDX",
-        "semantics": "CURRENT_LISTING_IDENTITY_REFERENCE_WITH_POST_FREEZE_DELISTING_HISTORY",
+        "semantics": "CURRENT_ACTIVE_REFERENCE_PLUS_FROZEN_BASELINE_IDENTITY_CONTINUITY_AND_POST_FREEZE_DELISTING_HISTORY",
         "observed_at_jakarta": "2026-08-28T18:35:00+07:00",
         "observed_date": SESSION,
         "freeze_local_date": "2026-08-20",
