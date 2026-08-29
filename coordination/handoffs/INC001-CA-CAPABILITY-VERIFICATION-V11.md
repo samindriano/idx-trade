@@ -1,9 +1,9 @@
 # Handoff: INC-001 CA capability verification continuation V1.1
 
-from: MAIN / Codex  
-to: ChatGPT review  
-task_id: `INC001-CA-CAPABILITY-VERIFICATION-V11`  
-branch: `data/ca-aware-feature-basis-remediation-v1`  
+from: MAIN / Codex
+to: ChatGPT review
+task_id: `INC001-CA-CAPABILITY-VERIFICATION-V11`
+branch: `data/ca-aware-feature-basis-remediation-v1`
 implementation head: `077cc0299c4fcab0418da0614aac193600eb3ab2`
 
 ## Decision

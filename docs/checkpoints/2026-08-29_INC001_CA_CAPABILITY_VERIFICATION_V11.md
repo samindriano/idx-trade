@@ -1,7 +1,7 @@
 # INC-001 CA capability verification continuation — V1.1
 
-Date: 2026-08-29  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-29
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 Controlling implementation head: `077cc0299c4fcab0418da0614aac193600eb3ab2`
 
 This is a continuation of V1.1 capability verification, not a new taxonomy or
