@@ -40,6 +40,7 @@ This coordination ledger does not grant scientific authorization. Branch-local f
 - Prefer the smallest correct root-cause fix. Planning may be deep; implementation should remain lean.
 - Before adding a new abstraction, adapter, framework, compatibility layer, wrapper, gate, versioned implementation, or parallel code path, prove that correcting or simplifying the existing canonical path is insufficient.
 - Do not create V2/V3/etc. merely to avoid cleaning up or correcting current code. Prefer one canonical implementation and one source of truth.
+- Git history is the default version history for implementation code. Do not encode every implementation iteration as a new V2/V3 module. Version live code only when multiple semantics must intentionally coexist.
 - Do not design for hypothetical future requirements, stack layers to satisfy constraints created by earlier layers, or retain duplicate implementations solely for convenience.
 - Read the actual relevant code before proposing abstractions, and fix causes rather than repeatedly patching symptoms.
 - Tests should prove requested/current behavior and critical failure paths; do not expand test architecture merely for completeness.
