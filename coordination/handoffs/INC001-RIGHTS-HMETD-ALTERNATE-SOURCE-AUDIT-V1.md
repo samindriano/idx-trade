@@ -93,8 +93,12 @@ compileall = PASS
 git diff --check = PASS
 artifact hash validation = PASS
 deterministic assessment replay = PASS (V4 from V2, no provider calls)
-exact-head CI = pending final pushed HEAD verification
+exact-head CI = PASS, run 33309634065, head 4b4470f3d940ed021980691e824438f4fac63e7f, pytest job 2m59s
 ```
+
+The exact-head run emitted one GitHub deprecation annotation covering
+`actions/checkout@v4` and `actions/setup-python@v5` (Node.js 20 on Node.js 24),
+reported separately from the successful test result.
 
 PR #108 remains OPEN/DRAFT/unmerged. PR #103 remains OPEN/DRAFT/unmerged.
 No full residual RIGHTS acquisition, KSEI retry, other CA acquisition,

@@ -180,12 +180,13 @@ compileall = PASS
 git diff --check = PASS
 artifact hash validation = PASS (zero mismatches)
 deterministic assessment replay = PASS (V4 derived from V2 without provider calls)
-exact-head CI = pending final pushed HEAD verification
+exact-head CI = PASS, run 33309634065, head 4b4470f3d940ed021980691e824438f4fac63e7f, pytest job 2m59s
 ```
 
-The existing CI warning class is the GitHub Actions Node.js 20 deprecation
-annotation for `actions/checkout@v4` and `actions/setup-python@v5`; warnings
-must be reported separately from test results.
+The exact-head run emitted one GitHub deprecation annotation covering
+`actions/checkout@v4` and `actions/setup-python@v5` (Node.js 20 on Node.js 24),
+plus the normal Node deprecation output in the job log. These are warnings,
+reported separately from the successful test result.
 
 This checkpoint stops after the bounded pilot and is returned for ChatGPT
 review. Full residual RIGHTS acquisition remains on hold pending a separately
