@@ -215,6 +215,7 @@ compileall                  = PASS
 git diff --check            = PASS
 manifest/hash audit         = PASS (all listed outputs, zero mismatches)
 deterministic replay        = PASS (65/65 non-manifest files identical)
+exact-head GitHub Actions   = PASS, run 33295545859, 382 passed, 5 warnings
 ```
 
 No Phase-E, provider work beyond the same-12 corrected lookup, outcomes or

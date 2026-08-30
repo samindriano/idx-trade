@@ -104,8 +104,9 @@ compileall                  = PASS
 git diff --check            = PASS
 artifact hash audit         = PASS
 deterministic comparison    = PASS (65/65)
+exact-head CI               = PASS, run 33295545859, 382 passed, 5 warnings
 ```
 
-The branch is ready to be pushed for ChatGPT review. Exact-head CI is the only
-remaining post-push validation. Stop after CI; no further production execution
-or scientific work is authorized.
+The branch is pushed at the reviewed implementation head and is ready for
+ChatGPT review. Stop here; no further production execution or scientific work
+is authorized.
