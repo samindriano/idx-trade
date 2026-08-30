@@ -9,6 +9,8 @@ acquisition, KSEI retry/widening, other CA-family acquisition, Phase-E,
 outcome/target access, model fit/refit/scoring, counter mutation, canonical
 historical rewrite, production execution, or merge of PR #103/#108.
 
+Final lane HEAD: `5fc67a6f5dc33fd46c353c25b925d587e97f0d0d`.
+
 ## Controlling input and immutable artifacts
 
 The controlling economic reconciliation was V14:
@@ -180,7 +182,7 @@ compileall = PASS
 git diff --check = PASS
 artifact hash validation = PASS (zero mismatches)
 deterministic assessment replay = PASS (V4 derived from V2 without provider calls)
-exact-head CI = PASS, run 33309634065, head 4b4470f3d940ed021980691e824438f4fac63e7f, pytest job 2m59s
+exact-head CI = PASS, run 33309789585, head 5fc67a6f5dc33fd46c353c25b925d587e97f0d0d, pytest job 2m32s
 ```
 
 The exact-head run emitted one GitHub deprecation annotation covering

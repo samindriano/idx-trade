@@ -8,7 +8,7 @@ scope: bounded eight-event alternate official-source capability verification
 ## Review pins
 
 ```text
-current remote HEAD: 384516364aedb1b46afcb9ef90018402cb663520
+current remote HEAD: 5fc67a6f5dc33fd46c353c25b925d587e97f0d0d
 controlling V14 root: D:\Documents\Project\idx-ca-economic-event-reconciliation-20260830-v14-same-exact
 controlling V14 manifest: c095c00c31691c07cbf4d50c447abafde9b00db0e93f8184ea6e9a83b4a1990b
 selection root: D:\Documents\Project\idx-ca-rights-hmetd-alternate-source-audit-20260830-v1-selection
@@ -93,7 +93,7 @@ compileall = PASS
 git diff --check = PASS
 artifact hash validation = PASS
 deterministic assessment replay = PASS (V4 from V2, no provider calls)
-exact-head CI = PASS, run 33309634065, head 4b4470f3d940ed021980691e824438f4fac63e7f, pytest job 2m59s
+exact-head CI = PASS, run 33309789585, head 5fc67a6f5dc33fd46c353c25b925d587e97f0d0d, pytest job 2m32s
 ```
 
 The exact-head run emitted one GitHub deprecation annotation covering
