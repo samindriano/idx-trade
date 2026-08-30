@@ -133,6 +133,50 @@ def test_tender_cash_adjudication_is_non_basis_and_not_a_transition_blocker():
     assert event["transition_status"] == "NOT_APPLICABLE_NON_BASIS"
 
 
+def test_composite_cash_share_distribution_is_basis_changing_until_transition_is_proven():
+    row = _row(
+        "MIXED-DIVIDEND",
+        "KSEI_REGISTERED_SECURITY_HISTORY",
+        "UNKNOWN_TAXONOMY",
+        "Mixed Dividend",
+    )
+    result = reconcile_economic_events(
+        [row],
+        adjudications=[
+            _adjudication(
+                "MIXED-DIVIDEND",
+                "COMPOSITE_CASH_SHARE_DISTRIBUTION",
+                "BASIS_CHANGING",
+            )
+        ],
+    )
+    event = result["economic_events"][0]
+    assert event["economic_family"] == "COMPOSITE_CASH_SHARE_DISTRIBUTION"
+    assert event["basis_effect"] == "BASIS_CHANGING"
+    assert event["transition_status"] == "UNRESOLVED"
+    assert result["unresolved_transitions"] == 1
+
+
+def test_composite_cash_share_distribution_cannot_be_adjudicated_non_basis():
+    row = _row(
+        "MIXED-DIVIDEND",
+        "KSEI_REGISTERED_SECURITY_HISTORY",
+        "UNKNOWN_TAXONOMY",
+        "Mixed Dividend",
+    )
+    with pytest.raises(EconomicReconciliationError, match="basis-changing family"):
+        reconcile_economic_events(
+            [row],
+            adjudications=[
+                _adjudication(
+                    "MIXED-DIVIDEND",
+                    "COMPOSITE_CASH_SHARE_DISTRIBUTION",
+                    "NON_BASIS",
+                )
+            ],
+        )
+
+
 def test_resolved_transition_requires_explicit_accepted_semantic_and_provenance():
     row = _row("SPLIT", "IDX_GET_ISSUED_HISTORY", "STOCK_SPLIT")
     result = reconcile_economic_events(
