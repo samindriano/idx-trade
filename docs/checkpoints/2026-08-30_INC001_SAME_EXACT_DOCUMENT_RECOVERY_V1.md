@@ -112,11 +112,12 @@ COMPILEALL = PASS
 GIT_DIFF_CHECK = PASS
 ARTIFACT_HASH_VALIDATION = PASS (3 roots, zero mismatches)
 DETERMINISTIC_RECONCILIATION = PASS (13/13 non-manifest files identical)
+EXACT_HEAD_CI = PASS, run 33305713431 @ 89c3a36c; 392 passed, 5 pytest warnings
 ```
 
 The exact-head CI warning about GitHub Actions Node.js 20 is a warning
-annotation, not a test failure. Exact-head CI will be recorded after this
-checkpoint commit.
+annotation, not a test failure. The separate annotation concerns
+`actions/checkout@v4` and `actions/setup-python@v5` being forced onto Node.js 24.
 
 ```text
 DATA_ADMISSION = FAIL

@@ -76,11 +76,13 @@ COMPILEALL = PASS
 GIT_DIFF_CHECK = PASS
 ARTIFACT_HASH_VALIDATION = PASS (3 roots, zero mismatches)
 DETERMINISTIC_RECONCILIATION = PASS (13/13 non-manifest files identical)
+EXACT_HEAD_CI = PASS, run 33305713431 @ 89c3a36c; 392 passed, 5 pytest warnings
 ```
 
 The known non-blocking GitHub Actions Node.js 20 deprecation annotation must be
-reported separately from test results. Exact-head CI will be recorded after
-this final handoff commit.
+reported separately from test results. GitHub's separate annotation was the
+Node.js 20 deprecation notice for `actions/checkout@v4` and
+`actions/setup-python@v5`; it was not a test failure.
 
 ```text
 RIGHTS_ARCHIVE_ROUTING_CONTRACT_VERDICT = RIGHTS_ARCHIVE_ROUTING_CONTRACT_PARTIAL
