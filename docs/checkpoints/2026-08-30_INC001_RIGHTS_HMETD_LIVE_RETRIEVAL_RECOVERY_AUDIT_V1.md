@@ -183,14 +183,16 @@ compileall                   = PASS
 git diff --check             = PASS
 artifact hash validation     = PASS (zero mismatches)
 deterministic reconciliation = PASS (68/68)
-exact-head CI                = PASS, run 33297740347, 386 passed, 5 warnings
+exact-head CI on implementation commit = PASS, run 33297740347, 386 passed, 5 warnings
+exact-head CI on handoff commit        = PASS, run 33297919231, 386 passed, 5 warnings
 ```
 
-Branch commit:
+Implementation and handoff commits:
 
 ```text
 data/ca-aware-feature-basis-remediation-v1
 bf87482d3746c5f92bcd05741ed17683d8a12c62
+7a55753dace95a85d6abe182347877eda4bdb46d
 ```
 
 The branch is pushed and clean. PR #108 remains OPEN/DRAFT/unmerged. No

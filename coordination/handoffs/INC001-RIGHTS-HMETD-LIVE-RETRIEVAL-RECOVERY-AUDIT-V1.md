@@ -13,7 +13,7 @@ acquisition from this handoff.
 ## Return values
 
 ```text
-REMOTE_HEAD = bf87482d3746c5f92bcd05741ed17683d8a12c62
+REMOTE_HEAD_AT_HANDOFF = 7a55753dace95a85d6abe182347877eda4bdb46d
 MPPA_CANARY_LIVE_RESULT = HTTP_200_EXPECTED_CONTENT
 ROOT_CAUSE_OF_PRIOR_HTTP500 = unresolved provider/application/request-context condition; exact transport cause not proven
 SAME_SIX_KSEI_TARGETS = SAME, SGER, MMIX, GMFI, PACK, MPPA
@@ -48,7 +48,7 @@ COMPILEALL = PASS
 DIFF_CHECK = PASS
 ARTIFACT_HASH_AUDIT = PASS (zero mismatches)
 DETERMINISTIC_RECONCILIATION = PASS (68/68)
-EXACT_HEAD_CI = PASS, run 33297740347, 386 passed, 5 warnings
+EXACT_HEAD_CI = PASS, run 33297919231, 386 passed, 5 warnings
 
 DATA_ADMISSION = FAIL
 RESEARCH_ADMISSION = FAIL
