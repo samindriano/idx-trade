@@ -9,7 +9,7 @@ acquisition, KSEI retry/widening, other CA-family acquisition, Phase-E,
 outcome/target access, model fit/refit/scoring, counter mutation, canonical
 historical rewrite, production execution, or merge of PR #103/#108.
 
-Final lane HEAD: `5fc67a6f5dc33fd46c353c25b925d587e97f0d0d`.
+Final lane HEAD before this documentation pin: `117274b8cfac6bf23577cfe30d9bdd11936f6077`.
 
 ## Controlling input and immutable artifacts
 
@@ -182,7 +182,7 @@ compileall = PASS
 git diff --check = PASS
 artifact hash validation = PASS (zero mismatches)
 deterministic assessment replay = PASS (V4 derived from V2 without provider calls)
-exact-head CI = PASS, run 33309789585, head 5fc67a6f5dc33fd46c353c25b925d587e97f0d0d, pytest job 2m32s
+exact-head CI = PASS, run 33309931493, head 117274b8cfac6bf23577cfe30d9bdd11936f6077, pytest job 2m41s
 ```
 
 The exact-head run emitted one GitHub deprecation annotation covering
