@@ -5,6 +5,7 @@ from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -71,6 +72,70 @@ def test_score_pointer_verifies_artifact_when_declared(tmp_path: Path) -> None:
     with pytest.raises(E2EOperationalGuardError, match="ARTIFACT_HASH_MISMATCH"):
         controller._verify_score_pointer(
             {"x1_score": {**good, "artifact_sha256": "0" * 64}}, "2026-08-21"
+        )
+
+
+def test_previous_score_requires_verified_immediate_predecessor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    meta_dir = config.runtime_root / "state" / "decisions"
+    meta_dir.mkdir(parents=True)
+    manifests: dict[Path, SimpleNamespace] = {}
+
+    def add_metadata(filename: str, session: str, label: str) -> Path:
+        manifest = tmp_path / f"score-{label}.json"
+        manifest.write_text("{}\n", encoding="utf-8")
+        manifest_sha = _sha(manifest)
+        manifests[manifest.resolve()] = SimpleNamespace(
+            manifest_sha256=manifest_sha,
+            session_date=session,
+        )
+        body = {
+            "last_score_session_date": session,
+            "last_score_manifest_path": str(manifest.resolve()),
+            "last_score_manifest_sha256": manifest_sha,
+        }
+        (meta_dir / filename).write_text(
+            json.dumps({**body, "payload_sha256": _canonical_hash(body)}) + "\n",
+            encoding="utf-8",
+        )
+        return manifest
+
+    monkeypatch.setattr(
+        controller,
+        "load_score_manifest",
+        lambda path: manifests[Path(path).resolve()],
+    )
+
+    old = add_metadata("z-old.json", "2026-08-25", "old")
+    with pytest.raises(E2EOperationalGuardError, match="PREVIOUS_SCORE_MISSING"):
+        controller._previous_score_manifest(
+            config,
+            "2026-08-27",
+            expected_previous_session="2026-08-26",
+        )
+
+    exact = add_metadata("a-exact.json", "2026-08-26", "exact")
+    assert controller._previous_score_manifest(
+        config,
+        "2026-08-27",
+        expected_previous_session="2026-08-26",
+    ) == exact.resolve()
+    assert controller._previous_score_manifest(
+        config,
+        "2026-08-26",
+        expected_previous_session="2026-08-25",
+    ) == old.resolve()
+
+    conflicting = add_metadata("m-conflict.json", "2026-08-26", "conflict")
+    assert conflicting != exact
+    with pytest.raises(E2EOperationalGuardError, match="PREVIOUS_SCORE_AMBIGUOUS"):
+        controller._previous_score_manifest(
+            config,
+            "2026-08-27",
+            expected_previous_session="2026-08-26",
         )
 
 

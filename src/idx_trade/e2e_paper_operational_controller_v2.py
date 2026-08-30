@@ -366,7 +366,15 @@ def run_operational_cycle_v2(
 
             eod_paths = v1._session_manifest(config, today)
             current_score = load_score_manifest(score_ref["manifest_path"])
-            previous_path = v1._previous_score_manifest(config, today)
+            expected_previous_session = max(
+                (session for session in schedule.session_dates if session < today),
+                default=None,
+            )
+            previous_path = v1._previous_score_manifest(
+                config,
+                today,
+                expected_previous_session=expected_previous_session,
+            )
             previous_score = None if previous_path is None else load_score_manifest(previous_path)
             required = tuple(
                 sorted({str(value).strip().upper() for value in current_score.scores["ticker"].tolist()})

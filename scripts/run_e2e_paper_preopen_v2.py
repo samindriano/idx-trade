@@ -113,6 +113,7 @@ def _run(args: argparse.Namespace) -> int:
         current_score=current,
         previous_score=previous,
         eod_inputs=eod,
+        current_bootstrap_prepared_path=args.prepared,
     )
     if args.ca_journal:
         if evidence:

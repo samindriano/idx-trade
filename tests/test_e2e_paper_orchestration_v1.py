@@ -12,8 +12,10 @@ import pytest
 from idx_trade import forward_dividend_v1 as dividend
 from idx_trade import forward_dividend_runtime_v1_1 as dividend_runtime
 from idx_trade.e2e_paper_orchestration_v1 import (
+    E2EPaperPaths,
     E2EPaperOrchestrationError,
     INITIAL_NAV_IDR,
+    _resolve_scores,
     _reconciliation_payload,
     _verify_prepared_ca_parent,
     execute_preopen,
@@ -35,6 +37,7 @@ from idx_trade.v4_x1_decision_v1_contract import (
     VerifiedScoreSession,
     _VERIFIED_TOKEN,
 )
+from idx_trade.v4_x1_execution_v1_contract import PaperPosition
 from idx_trade.v4_x1_execution_v1_verify import (
     VerifiedCorporateActionAttestation,
     VerifiedEODExecutionInputs,
@@ -296,6 +299,117 @@ def test_t0_conflict_does_not_mutate_canonical_root(tmp_path: Path) -> None:
     with pytest.raises(E2EPaperOrchestrationError, match="T0_ROOT_CONFLICT"):
         bootstrap_t0(root, session_date="2026-08-25")
     assert snapshot.read_bytes() == before
+
+
+def test_bootstrap_requires_pristine_verified_t0_lineage(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    snapshot = dividend_runtime.load_latest_runtime_snapshot(root)
+    current = _score(tmp_path, "2026-08-24", 0)
+    paths = E2EPaperPaths.from_root(root)
+
+    plan, bootstrap = _resolve_scores(
+        current,
+        None,
+        paths=paths,
+        state=snapshot.state,
+        meta=None,
+        current_date="2026-08-24",
+    )
+    assert bootstrap is True
+    assert plan.bootstrap is True
+
+    progressed_state = replace(
+        snapshot.state,
+        base_state=replace(
+            snapshot.state.base_state,
+            cash_idr=INITIAL_NAV_IDR - 1.0,
+            positions=(PaperPosition("T00", 100),),
+        ),
+    )
+    with pytest.raises(E2EPaperOrchestrationError, match="BOOTSTRAP_T0_RUNTIME_ROOT_CONFLICT"):
+        _resolve_scores(
+            current,
+            None,
+            paths=paths,
+            state=progressed_state,
+            meta=None,
+            current_date="2026-08-24",
+        )
+
+
+def test_bootstrap_rejects_progressed_runtime_even_after_empty_holdings(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    first = dividend_runtime.load_latest_runtime_snapshot(root)
+    later_state = replace(
+        first.state,
+        base_state=replace(
+            first.state.base_state,
+            as_of_session_date="2026-08-25",
+        ),
+    )
+    dividend_runtime.write_runtime_snapshot(
+        root,
+        later_state,
+        previous_snapshot=first,
+    )
+    current = _score(tmp_path, "2026-08-25", 1)
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="BOOTSTRAP_T0_ROOT_CONFLICT|BOOTSTRAP_T0_RUNTIME_ROOT_CONFLICT",
+    ):
+        _resolve_scores(
+            current,
+            None,
+            paths=E2EPaperPaths.from_root(root),
+            state=dividend_runtime.load_latest_runtime_snapshot(root).state,
+            meta=None,
+            current_date="2026-08-25",
+        )
+
+
+@pytest.mark.parametrize("evidence_dir", ["prepared", "executions", "state/decisions"])
+def test_bootstrap_rejects_prior_durable_runtime_evidence(
+    tmp_path: Path,
+    evidence_dir: str,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    evidence = root / evidence_dir
+    evidence.mkdir(parents=True, exist_ok=True)
+    (evidence / "prior.json").write_text("prior\n", encoding="utf-8")
+    current = _score(tmp_path, "2026-08-24", 0)
+    with pytest.raises(E2EPaperOrchestrationError, match="BOOTSTRAP_RUNTIME_PROGRESSED"):
+        _resolve_scores(
+            current,
+            None,
+            paths=E2EPaperPaths.from_root(root),
+            state=dividend_runtime.load_latest_runtime_snapshot(root).state,
+            meta=None,
+            current_date="2026-08-24",
+        )
+
+
+def test_bootstrap_rejects_tampered_t0_root(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    t0 = root / "t0" / "T0.json"
+    payload = json.loads(t0.read_text(encoding="utf-8"))
+    payload["zero_holdings"] = False
+    t0.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    current = _score(tmp_path, "2026-08-24", 0)
+    with pytest.raises(E2EPaperOrchestrationError, match="BOOTSTRAP_T0_PAYLOAD_HASH_MISMATCH"):
+        _resolve_scores(
+            current,
+            None,
+            paths=E2EPaperPaths.from_root(root),
+            state=dividend_runtime.load_latest_runtime_snapshot(root).state,
+            meta=None,
+            current_date="2026-08-24",
+        )
 
 
 def test_next_session_uses_persisted_score_parent_and_shadow(tmp_path: Path) -> None:

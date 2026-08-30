@@ -441,11 +441,24 @@ def _session_manifest(config: OperationalControllerConfig, session: str) -> dict
     }
 
 
-def _previous_score_manifest(config: OperationalControllerConfig, current_session: str) -> Path | None:
+def _previous_score_manifest(
+    config: OperationalControllerConfig,
+    current_session: str,
+    *,
+    expected_previous_session: str | None,
+) -> Path | None:
+    """Resolve only the score for the verified immediate predecessor session.
+
+    The caller owns the calendar authority.  This helper deliberately does not
+    infer a predecessor from available score metadata: an older score is not a
+    safe substitute when the expected session's score is absent or ambiguous.
+    """
     meta_dir = config.runtime_root / "state" / "decisions"
     rows: list[tuple[str, Path, str]] = []
     if not meta_dir.is_dir():
-        return None
+        if expected_previous_session is None:
+            return None
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_MISSING")
     for path in sorted(meta_dir.glob("*.json")):
         payload = _read_json(path)
         body = dict(payload)
@@ -459,18 +472,28 @@ def _previous_score_manifest(config: OperationalControllerConfig, current_sessio
                 Path(str(payload.get("last_score_manifest_path") or "")).expanduser().resolve(),
                 str(payload.get("last_score_manifest_sha256") or "").lower(),
             ))
-    if not rows:
+    if expected_previous_session is None:
+        if rows:
+            raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_UNEXPECTED")
         return None
-    latest_session = max(session for session, _, _ in rows)
-    latest = [(path, sha) for session, path, sha in rows if session == latest_session]
-    if len({(str(path), sha) for path, sha in latest}) != 1:
+
+    exact = [
+        (path, sha)
+        for session, path, sha in rows
+        if session == expected_previous_session
+    ]
+    if not exact:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_MISSING")
+    if len({(str(path), sha) for path, sha in exact}) != 1:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_AMBIGUOUS")
-    path, expected_sha = latest[0]
+    path, expected_sha = exact[0]
     if not path.is_file():
         raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_MISSING")
     verified = load_score_manifest(path)
     if not expected_sha or verified.manifest_sha256 != expected_sha:
         raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_SHA_MISMATCH")
+    if verified.session_date != expected_previous_session:
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_PREVIOUS_SCORE_SESSION_MISMATCH")
     return path
 
 
@@ -1120,7 +1143,15 @@ def run_operational_cycle(
                     )
             eod_paths = _session_manifest(config, today)
             current_score = load_score_manifest(score_ref["manifest_path"])
-            previous_path = _previous_score_manifest(config, today)
+            expected_previous_session = max(
+                (session for session in sessions if session < today),
+                default=None,
+            )
+            previous_path = _previous_score_manifest(
+                config,
+                today,
+                expected_previous_session=expected_previous_session,
+            )
             previous_score = None if previous_path is None else load_score_manifest(previous_path)
             required = tuple(sorted({str(value).strip().upper() for value in current_score.scores["ticker"].tolist()}))
             try:

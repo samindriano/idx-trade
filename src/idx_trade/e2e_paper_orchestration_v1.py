@@ -659,6 +659,99 @@ def _load_meta(paths: E2EPaperPaths) -> dict[str, Any] | None:
     return payload
 
 
+def _verify_pristine_bootstrap_lineage(
+    paths: E2EPaperPaths,
+    state: dividend.DividendAwarePaperState,
+    *,
+    current_date: str,
+    current_bootstrap_prepared_path: Path | None = None,
+) -> None:
+    """Prove that a missing decision meta file is a genuine initial T0.
+
+    Bootstrap is a property of the complete immutable runtime root, not of the
+    decision metadata directory alone.  This read-only check reuses the T0 and
+    recursively verified runtime snapshot contracts already owned by the paper
+    runtime.
+    """
+    if not paths.t0_path.is_file():
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_MISSING")
+    try:
+        t0 = _read_verified_json(paths.t0_path, T0_SCHEMA)
+    except E2EPaperOrchestrationError as exc:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_INVALID") from exc
+
+    t0_body = dict(t0)
+    declared_t0_sha = str(t0_body.pop("payload_sha256") or "")
+    if not declared_t0_sha or _canonical_hash(t0_body) != declared_t0_sha:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_PAYLOAD_HASH_MISMATCH")
+    if (
+        t0.get("session_date") != current_date
+        or float(t0.get("initial_nav_idr") or 0.0) != INITIAL_NAV_IDR
+        or t0.get("historical_dividend_credit") is not False
+        or t0.get("zero_holdings") is not True
+        or t0.get("zero_pending_buys") is not True
+        or t0.get("zero_pending_sells") is not True
+        or t0.get("zero_receivables") is not True
+    ):
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_ROOT_CONFLICT")
+
+    snapshot_dir = (
+        paths.root / dividend_runtime.RUNTIME_DIRNAME / dividend_runtime.SNAPSHOT_DIRNAME
+    ).resolve()
+    expected_snapshot_path = (snapshot_dir / f"{current_date}.json").resolve()
+    snapshot_path = Path(str(t0.get("runtime_snapshot_path") or "")).expanduser().resolve()
+    if snapshot_path != expected_snapshot_path:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_SNAPSHOT_PATH_MISMATCH")
+    try:
+        snapshot = dividend_runtime.load_runtime_snapshot(snapshot_path)
+    except Exception as exc:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_RUNTIME_INVALID") from exc
+
+    if (
+        snapshot.file_sha256 != str(t0.get("runtime_snapshot_sha256") or "")
+        or dividend.dividend_aware_state_hash(snapshot.state)
+        != str(t0.get("state_sha256") or "")
+        or snapshot.state.base_state.as_of_session_date != current_date
+        or snapshot.state.base_state.cash_idr != INITIAL_NAV_IDR
+        or snapshot.state.base_state.positions
+        or snapshot.state.base_state.pending_buys
+        or snapshot.state.base_state.pending_sells
+        or snapshot.state.dividend_ledger != dividend.DividendLedger()
+        or snapshot.certified_dividend_registry
+        or snapshot.previous_snapshot_path is not None
+        or dividend.dividend_aware_state_hash(state)
+        != dividend.dividend_aware_state_hash(snapshot.state)
+    ):
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_T0_RUNTIME_ROOT_CONFLICT")
+
+    def _entries(path: Path) -> tuple[Path, ...]:
+        if not path.exists():
+            return ()
+        if not path.is_dir():
+            raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+        return tuple(sorted((child.resolve() for child in path.iterdir()), key=str))
+
+    if set(_entries(snapshot_dir)) != {expected_snapshot_path}:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+    if set(_entries(paths.t0_path.parent)) != {paths.t0_path.resolve()}:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+
+    runtime_dir = (paths.root / dividend_runtime.RUNTIME_DIRNAME).resolve()
+    if set(_entries(runtime_dir)) != {snapshot_dir}:
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+    state_dir = paths.meta_path.parent.resolve()
+    if set(_entries(state_dir)) not in (set(), {paths.meta_path.resolve()}):
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+    if set(_entries(paths.meta_path)):
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+    prepared_entries = set(_entries(paths.prepared_dir))
+    allowed_prepared = set()
+    if current_bootstrap_prepared_path is not None:
+        allowed_prepared.add(current_bootstrap_prepared_path.expanduser().resolve())
+    if prepared_entries != allowed_prepared or set(_entries(paths.execution_dir)):
+        raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_RUNTIME_PROGRESSED")
+
+
 def _verify_previous_execution_parent(
     paths: E2EPaperPaths,
     meta: Mapping[str, Any],
@@ -813,15 +906,23 @@ def _resolve_scores(
     current: VerifiedScoreSession,
     previous: VerifiedScoreSession | None,
     *,
+    paths: E2EPaperPaths,
     state: dividend.DividendAwarePaperState,
     meta: dict[str, Any] | None,
     current_date: str,
+    current_bootstrap_prepared_path: Path | None = None,
 ) -> tuple[DecisionV2Plan, bool]:
     if current.session_date != current_date:
         raise E2EPaperOrchestrationError("E2E_SCORE_SESSION_MISMATCH")
     if meta is None:
         if previous is not None:
             raise E2EPaperOrchestrationError("E2E_BOOTSTRAP_PREVIOUS_SCORE_FORBIDDEN")
+        _verify_pristine_bootstrap_lineage(
+            paths,
+            state,
+            current_date=current_date,
+            current_bootstrap_prepared_path=current_bootstrap_prepared_path,
+        )
         shadow = DecisionV2ShadowState.empty()
         bootstrap = True
     else:
@@ -850,6 +951,7 @@ def derive_required_execution_tickers(
     current_score: VerifiedScoreSession,
     previous_score: VerifiedScoreSession | None,
     eod_inputs: VerifiedEODExecutionInputs,
+    current_bootstrap_prepared_path: str | Path | None = None,
 ) -> tuple[str, ...]:
     """Resolve Decision V2 before CA acquisition and return the exact CA scope."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -863,9 +965,15 @@ def derive_required_execution_tickers(
     plan, _ = _resolve_scores(
         current_score,
         previous_score,
+        paths=paths,
         state=state,
         meta=meta,
         current_date=session,
+        current_bootstrap_prepared_path=(
+            None
+            if current_bootstrap_prepared_path is None
+            else Path(current_bootstrap_prepared_path).expanduser().resolve()
+        ),
     )
     required = tuple(sorted(
         {
@@ -903,7 +1011,12 @@ def prepare_post_eod(
         else _verify_previous_execution_parent(paths, meta, current_session=session)
     )
     plan, bootstrap = _resolve_scores(
-        current_score, previous_score, state=state, meta=meta, current_date=session
+        current_score,
+        previous_score,
+        paths=paths,
+        state=state,
+        meta=meta,
+        current_date=session,
     )
     required = tuple(sorted(
         {
@@ -1254,7 +1367,17 @@ def execute_preopen(
     snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
     if not isinstance(state_ref, dict) or str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve()) or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256 or str(state_ref.get("state_sha256")) != dividend.dividend_aware_state_hash(state):
         raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
-    plan, _ = _resolve_scores(current_score, previous_score, state=state, meta=_load_meta(paths), current_date=decision_date)
+    plan, _ = _resolve_scores(
+        current_score,
+        previous_score,
+        paths=paths,
+        state=state,
+        meta=_load_meta(paths),
+        current_date=decision_date,
+        current_bootstrap_prepared_path=(
+            prepared if payload.get("bootstrap") is True else None
+        ),
+    )
     declared_previous_execution = payload.get("previous_execution")
     current_meta = _load_meta(paths)
     actual_previous_execution = (
