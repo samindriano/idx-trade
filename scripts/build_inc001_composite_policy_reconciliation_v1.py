@@ -159,7 +159,6 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         if len(source_by_id) != len(source) or len(source) != 412:
             raise RuntimeError("V15 source ledger is not the expected unique 412-row population")
 
-        previous_by_source = {row["source_event_id"]: row for row in baseline_events for _ in [0]}
         target_by_source = {target["source_event_id"]: target for target in TARGETS}
         if set(target_by_source) - set(source_by_id):
             raise RuntimeError("composite target is absent from controlling source ledger")
