@@ -1,8 +1,8 @@
 # Handoff: INC-001 retained-evidence 50-event triage V1
 
-from: local Codex continuation  
-to: ChatGPT review / next authorized INC-001 action  
-task_id: `INC001-RETAINED-EVIDENCE-50-EVENT-TRIAGE-V1`  
+from: local Codex continuation
+to: ChatGPT review / next authorized INC-001 action
+task_id: `INC001-RETAINED-EVIDENCE-50-EVENT-TRIAGE-V1`
 lane: `data/ca-aware-feature-basis-remediation-v1`
 
 ## Review boundary
@@ -78,4 +78,3 @@ access, scoring/refit, counter/PaperState mutation, canonical rewrite,
 production execution, merge, or backfill occurred. The smallest justified next
 step is review of this single artifact; no next acquisition should be
 executed until separately authorized.
-

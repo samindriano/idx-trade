@@ -1,7 +1,7 @@
 # INC-001 retained-evidence 50-event triage — V1
 
-Date: 2026-08-30 Asia/Jakarta  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-30 Asia/Jakarta
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 Scope: exactly the 50 remaining events selected from controlling V14
 
 ## Authority and evidence boundary
@@ -129,4 +129,3 @@ The lane changed documentation/provenance only. No IDX-Trade application,
 runtime, science, source ledger, or canonical reconciliation file changed.
 The existing MAIN-owned coordination row was already `ACTIVE`; its final
 triage pointer remains a separate MAIN-owned coordination update after review.
-
