@@ -158,6 +158,24 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     staging.mkdir(parents=True)
 
     try:
+        predecessor_manifest = read_json(manifest_path)
+        listed_outputs = predecessor_manifest.get("output_hashes_excluding_manifest", {})
+        consumed_names = (
+            "economic_adjudication_ledger.csv",
+            "economic_event_ledger.csv",
+            "non_basis_exclusion_ledger.csv",
+            "proven_same_event_linkage_ledger.csv",
+            "remaining_gap_geometry.csv",
+            "source_evidence_ledger.csv",
+            "source_to_economic_mapping.csv",
+            "transition_attestation_ledger.csv",
+            "unresolved_economic_event_ledger.csv",
+        )
+        for name in consumed_names:
+            metadata = listed_outputs.get(name)
+            path = input_root / name
+            if not metadata or not path.is_file() or path.stat().st_size != metadata.get("bytes") or sha256_file(path) != metadata.get("sha256"):
+                raise RuntimeError(f"controlling V15 ledger is not manifest-bound: {name}")
         source = read_csv(input_root / "source_evidence_ledger.csv")
         baseline_events = read_csv(input_root / "economic_event_ledger.csv")
         adjudications = read_csv(input_root / "economic_adjudication_ledger.csv")
@@ -189,7 +207,13 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             if not raw_path.is_file() or sha256_file(raw_path) != target["evidence_sha256"]:
                 raise RuntimeError(f"retained composite evidence hash mismatch: {raw_path}")
             source_row = source_by_id[target["source_event_id"]]
-            if source_row["ticker"] != target["ticker"] or source_row["source_ref"] != target["source_ref"]:
+            if (
+                source_row["source_kind"] != "KSEI_REGISTERED_SECURITY_HISTORY"
+                or source_row["event_family"] != "UNKNOWN_TAXONOMY"
+                or source_row["evidence_sha256"].lower() != target["evidence_sha256"]
+                or source_row["ticker"] != target["ticker"]
+                or source_row["source_ref"] != target["source_ref"]
+            ):
                 raise RuntimeError(f"composite source identity mismatch: {target['source_event_id']}")
             if source_row["source_native_label"] != "Mixed Dividend":
                 raise RuntimeError(f"composite source label mismatch: {target['source_event_id']}")
@@ -201,6 +225,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             if (
                 paired["ticker"] != target["ticker"]
                 or paired["source_ref"] != target["source_ref"]
+                or paired["source_kind"] != "KSEI_REGISTERED_SECURITY_HISTORY"
+                or paired["event_family"] != "STOCK_DIVIDEND"
                 or paired["source_native_label"] != "Mixed Dividend"
                 or paired["ratio_raw"] != target["share_ratio"]
                 or paired["candidate_date"] != source_row["candidate_date"]
@@ -389,6 +415,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 "positive_share_leg_proven": "True",
                 "cash_leg_neutralizes_share_basis": "False",
                 "label_alone_sufficient": "False",
+                "association_status": "POLICY_COMPONENT_ASSOCIATION_NOT_PROVEN_SAME_EVENT",
             }
             for target in TARGETS
         ]
@@ -439,6 +466,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "source_to_economic_mapping_recomputed": True,
             "proven_linkages_recomputed_from_scratch": True,
             "proven_linkage_count": len(successor_pairs),
+            "component_association_is_not_proven_same_event_linkage": True,
             "scientific_verdict": {
                 "DATA_ADMISSION": "FAIL",
                 "RESEARCH_ADMISSION": "FAIL",
@@ -466,6 +494,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "composite_basis_changing": all(row["basis_effect"] == "BASIS_CHANGING" for row in component_rows),
             "transition_remains_unresolved": all(row["transition_status"] == "UNRESOLVED" for row in component_rows),
             "cash_and_share_components_retained": all(row["cash_component"] and row["share_component"] for row in component_rows),
+            "component_association_not_promoted_to_linkage": all(row["association_status"] == "POLICY_COMPONENT_ASSOCIATION_NOT_PROVEN_SAME_EVENT" for row in component_rows),
             "no_new_linkages": baseline_pairs == successor_pairs,
             "classification_conservation": sum(new_family_counts.values()) == len(events),
             "collapse_arithmetic": result["source_evidence_rows"] - result["cross_source_collapses"] - result["same_source_collapses"] == result["economic_event_count"],
