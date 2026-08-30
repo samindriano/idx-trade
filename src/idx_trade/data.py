@@ -46,9 +46,26 @@ def canonicalize_ohlcv(frame: pd.DataFrame, ticker: str | None = None) -> pd.Dat
     for column in numeric:
         data[column] = pd.to_numeric(data[column], errors="coerce")
 
+    duplicate_identity_columns = [
+        *RAW_COLUMNS,
+        *[column for column in OPTIONAL_VENDOR_COLUMNS if column in data.columns],
+    ]
+    duplicate_dates = data["date"].notna() & data["date"].duplicated(keep=False)
+    if duplicate_dates.any():
+        conflicting = (
+            data.loc[duplicate_dates]
+            .groupby("date", sort=False)[duplicate_identity_columns]
+            .nunique(dropna=False)
+            .gt(1)
+            .any(axis=1)
+        )
+        if conflicting.any():
+            dates = [pd.Timestamp(value).date().isoformat() for value in conflicting[conflicting].index]
+            raise ValueError(f"Conflicting OHLCV observations for date(s): {dates}")
+
     # Sort before dedupe and before any pct_change/rolling operation. V1 did this too late.
-    data = data.dropna(subset=["date", *RAW_COLUMNS]).sort_values("date")
-    data = data.drop_duplicates(subset=["date"], keep="last").reset_index(drop=True)
+    data = data.dropna(subset=["date", *RAW_COLUMNS]).sort_values("date", kind="mergesort")
+    data = data.drop_duplicates(subset=["date"], keep="first").reset_index(drop=True)
 
     valid_ohlc = (
         (data[["open", "high", "low", "close"]] > 0).all(axis=1)

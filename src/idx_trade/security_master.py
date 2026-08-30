@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from .states import ExistenceState, TradabilityState
@@ -17,6 +18,14 @@ COVERAGE_WINDOW_COLUMNS = (
     "market", "effective_from", "effective_to", "source", "is_complete"
 )
 SUPPORTED_MARKETS = {"REGULAR", "CASH", "NEGOTIATED", "ALL"}
+
+
+def _strict_boolean(value: object) -> bool:
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, str) and value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    raise ValueError("Coverage-window is_complete must be a strict boolean")
 
 
 def normalise_ticker(value: object) -> str:
@@ -141,7 +150,7 @@ def canonicalize_coverage_windows(frame: pd.DataFrame) -> pd.DataFrame:
     if "effective_to" not in data.columns:
         data["effective_to"] = pd.NaT
     data["effective_to"] = pd.to_datetime(data["effective_to"], errors="coerce").dt.normalize()
-    data["is_complete"] = data["is_complete"].astype(bool)
+    data["is_complete"] = data["is_complete"].map(_strict_boolean)
     return data.dropna(subset=["market", "effective_from", "source"])[list(COVERAGE_WINDOW_COLUMNS)].sort_values(["market", "effective_from"]).reset_index(drop=True)
 
 
