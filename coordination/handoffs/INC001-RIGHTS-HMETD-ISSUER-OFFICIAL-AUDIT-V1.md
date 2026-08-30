@@ -8,7 +8,7 @@ scope: exactly four frozen issuer-official discovery targets
 ## Pins
 
 ```text
-lane HEAD: 4071945d7acd0fee91425f6fe5c44615897053fe
+audit HEAD before this documentation-only handoff: 4071945d7acd0fee91425f6fe5c44615897053fe
 TEAM_STATUS main coordination commit: 7c21155bdc344c86fb34aa06d14235d59385b642
 V14 manifest: c095c00c31691c07cbf4d50c447abafde9b00db0e93f8184ea6e9a83b4a1990b
 issuer audit manifest: 81e02d13fe07a6ae70e03eb78cf71311366195911034ea6695f7307a198f342c
