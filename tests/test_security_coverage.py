@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from idx_trade.coverage import security_coverage
 from idx_trade.security_master import (
@@ -97,6 +98,38 @@ def test_coverage_does_not_pass_merely_because_many_rows_exist():
     assert report.missing_expected_sessions == 40
     assert report.coverage_ratio == 0.60
     assert report.complete is False
+
+
+@pytest.mark.parametrize("value, expected", [(True, True), (False, False), ("true", True), ("false", False), ("True", True), ("False", False)])
+def test_coverage_is_complete_accepts_only_explicit_boolean_tokens(value, expected):
+    result = canonicalize_coverage_windows(
+        pd.DataFrame(
+            {
+                "market": ["REGULAR"],
+                "effective_from": ["2025-01-01"],
+                "effective_to": ["2025-12-31"],
+                "source": ["TEST"],
+                "is_complete": [value],
+            }
+        )
+    )
+    assert bool(result.loc[0, "is_complete"]) is expected
+
+
+@pytest.mark.parametrize("value", ["no", "garbage", " ", " true", "false ", None, float("nan"), 1, 0])
+def test_coverage_is_complete_rejects_non_boolean_tokens(value):
+    with pytest.raises(ValueError, match="strict boolean"):
+        canonicalize_coverage_windows(
+            pd.DataFrame(
+                {
+                    "market": ["REGULAR"],
+                    "effective_from": ["2025-01-01"],
+                    "effective_to": ["2025-12-31"],
+                    "source": ["TEST"],
+                    "is_complete": [value],
+                }
+            )
+        )
 
 
 def test_suspended_sessions_are_not_expected_as_price_rows():
