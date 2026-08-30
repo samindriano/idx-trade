@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from idx_trade.data import canonicalize_ohlcv, raw_execution_prices
 
@@ -42,3 +43,24 @@ def test_corporate_action_sequence_is_calculated_after_date_sort():
     assert data["date"].is_monotonic_increasing
     assert data.loc[data["date"].eq(pd.Timestamp("2025-01-03")), "explicit_split_event"].item()
     assert not data.loc[data["date"].eq(pd.Timestamp("2025-01-01")), "explicit_split_event"].item()
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_conflicting_same_date_ohlcv_fails_closed_independent_of_row_order(reverse: bool):
+    frame = pd.DataFrame(
+        [
+            {"date": "2025-01-01", "open": 100.0, "high": 105.0, "low": 95.0, "close": 102.0, "volume": 1000.0},
+            {"date": "2025-01-01", "open": 200.0, "high": 205.0, "low": 195.0, "close": 202.0, "volume": 2000.0},
+        ]
+    )
+    if reverse:
+        frame = frame.iloc[::-1]
+    with pytest.raises(ValueError, match="Conflicting OHLCV observations"):
+        canonicalize_ohlcv(frame, "TEST")
+
+
+def test_identical_same_date_ohlcv_is_deterministic_after_deduplication():
+    row = {"date": "2025-01-01", "open": 100.0, "high": 105.0, "low": 95.0, "close": 102.0, "volume": 1000.0}
+    first = canonicalize_ohlcv(pd.DataFrame([row, row]), "TEST")
+    second = canonicalize_ohlcv(pd.DataFrame([row, row]).iloc[::-1], "TEST")
+    pd.testing.assert_frame_equal(first, second)

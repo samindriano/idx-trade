@@ -17,6 +17,7 @@ from typing import Any, Mapping
 import numpy as np
 import pandas as pd
 
+from .data import canonicalize_ohlcv
 from .price_backfill import _download_in_batches
 from .provenance import sha256_file, write_manifest_atomic
 from .providers.yahoo import download_daily
@@ -49,6 +50,17 @@ SESSION_OHLCV_COLUMNS = (
 
 def _utc_now() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
+
+
+def validate_model_input_regular_market_value(model_input: pd.DataFrame) -> None:
+    """Reject non-finite or negative market values before V4 feature admission."""
+
+    if "regular_market_value" not in model_input.columns:
+        return
+    values = pd.to_numeric(model_input["regular_market_value"], errors="coerce").astype(float)
+    valid = np.isfinite(values) & values.ge(0.0)
+    if not valid.all():
+        raise ValueError("model input regular_market_value must be finite and non-negative")
 
 
 def provider_row_evidence_sha256(
@@ -113,6 +125,34 @@ def _normalized_row(
     if result["high"] < max(result["open"], result["close"]):
         raise ValueError(f"high is below open/close for {ticker}")
     return result
+
+
+def _canonical_provider_row(
+    frame: pd.DataFrame,
+    ticker: str,
+    session_date: pd.Timestamp,
+) -> dict[str, object] | None:
+    if frame.empty or "date" not in frame.columns:
+        return None
+    dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
+    selected = frame.loc[dates.eq(pd.Timestamp(session_date).normalize())].copy()
+    if selected.empty:
+        return None
+    for raw, regular in (
+        ("raw_open", "open"),
+        ("raw_high", "high"),
+        ("raw_low", "low"),
+        ("raw_close", "close"),
+        ("raw_volume", "volume"),
+    ):
+        if raw in selected.columns:
+            selected[regular] = selected[raw]
+    canonical = canonicalize_ohlcv(selected, ticker)
+    if canonical.empty:
+        return None
+    if len(canonical) != 1:
+        raise ValueError(f"provider OHLCV has ambiguous session identity for {ticker}")
+    return canonical.iloc[0].to_dict()
 
 
 def validate_ohlcv_against_model_input(
@@ -219,13 +259,9 @@ def _local_provider_row(
     if not raw_path.exists():
         return None
     frame = pd.read_parquet(raw_path)
-    if "date" not in frame.columns:
+    row = _canonical_provider_row(frame, ticker, session_date)
+    if row is None:
         return None
-    dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
-    selected = frame.loc[dates.eq(session_date)]
-    if selected.empty:
-        return None
-    row = selected.iloc[-1].to_dict()
     return _normalized_row(
         ticker,
         session_date,
@@ -290,15 +326,14 @@ def enrich_session_ohlcv(
                 diagnostics.append({"ticker": ticker, "status": "DOWNLOAD_ERROR", "detail": errors[ticker]})
                 continue
             frame = downloaded.get(ticker, pd.DataFrame())
-            if frame.empty or "date" not in frame.columns:
+            try:
+                row = _canonical_provider_row(frame, ticker, session)
+            except ValueError as error:
+                diagnostics.append({"ticker": ticker, "status": "INVALID_PROVIDER_ROW", "detail": str(error)})
+                continue
+            if row is None:
                 diagnostics.append({"ticker": ticker, "status": "NO_PROVIDER_ROWS"})
                 continue
-            dates = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
-            selected = frame.loc[dates.eq(session)]
-            if selected.empty:
-                diagnostics.append({"ticker": ticker, "status": "NO_PROVIDER_ROWS"})
-                continue
-            row = selected.iloc[-1].to_dict()
             try:
                 accepted[ticker] = _normalized_row(
                     ticker,

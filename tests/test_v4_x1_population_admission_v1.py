@@ -208,7 +208,7 @@ def test_tradability_ambiguity_and_interval_anchor_conflict_fail() -> None:
         [{"ticker": "AAAA", "market": "REGULAR", "state": "SUSPENDED", "effective_from": SESSION, "source": "A"}]
     )
     anchors = pd.DataFrame(
-        [{"ticker": "AAAA", "market": "REGULAR", "as_of_date": SESSION, "state": "ACTIVE", "source": "B", "evidence_type": "POINT"}]
+        [{"ticker": "AAAA", "market": "REGULAR", "as_of_date": SESSION, "state": "ACTIVE", "source": "B", "source_ref": "test://anchor", "evidence_type": "POINT"}]
     )
     result = _evaluate(
         security_master_evidence={
@@ -218,6 +218,16 @@ def test_tradability_ambiguity_and_interval_anchor_conflict_fail() -> None:
     )
     assert result.status == gate.V1_POPULATION_NOT_PROVABLE
     assert "TRADABILITY_CONFLICT:AAAA" in result.reason_codes
+
+
+def test_model_input_negative_market_value_is_not_admitted() -> None:
+    result = _evaluate(
+        model_input=pd.DataFrame(
+            {"ticker": ["AAAA"], "date": [SESSION], "regular_market_value": [-1.0]}
+        )
+    )
+    assert result.status == gate.V1_POPULATION_NOT_PROVABLE
+    assert "model input regular_market_value must be finite and non-negative" in result.reason_codes
 
 
 def test_malformed_interval_or_anchor_evidence_fails_closed() -> None:
@@ -242,6 +252,7 @@ def test_malformed_interval_or_anchor_evidence_fails_closed() -> None:
             "as_of_date": SESSION,
             "state": "ACTIVE",
             "source": "",
+            "source_ref": "idx://anchor",
             "evidence_type": "POINT",
         }]
     )

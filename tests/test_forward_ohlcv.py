@@ -5,8 +5,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import idx_trade.forward_ohlcv as forward_ohlcv_module
 from idx_trade.forward_ohlcv import (
     SESSION_OHLCV_COLUMNS,
+    _local_provider_row,
     enrich_session_ohlcv,
     validate_ohlcv_against_model_input,
 )
@@ -108,6 +110,55 @@ def test_ohlcv_validation_fails_closed_on_hlc_disagreement() -> None:
 
     with pytest.raises(ValueError, match="high disagrees"):
         validate_ohlcv_against_model_input(ohlcv, model, SESSION)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_local_provider_selection_rejects_conflicting_same_session_rows(tmp_path: Path, reverse: bool) -> None:
+    raw_dir = tmp_path / "prices" / "raw"
+    raw_dir.mkdir(parents=True)
+    rows = pd.DataFrame(
+        [
+            {"ticker": "AAAA", "date": SESSION, "raw_open": 100.0, "raw_high": 105.0, "raw_low": 95.0, "raw_close": 102.0, "raw_volume": 1000.0},
+            {"ticker": "AAAA", "date": SESSION, "raw_open": 200.0, "raw_high": 205.0, "raw_low": 195.0, "raw_close": 202.0, "raw_volume": 2000.0},
+        ]
+    )
+    if reverse:
+        rows = rows.iloc[::-1]
+    path = raw_dir / "AAAA.parquet"
+    write_parquet_atomic(rows, path)
+    with pytest.raises(ValueError, match="Conflicting OHLCV observations"):
+        _local_provider_row(path, "AAAA", SESSION)
+
+
+def test_downloaded_provider_selection_rejects_conflicting_same_session_rows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session_dir = tmp_path / "forward_monitoring" / "sessions" / SESSION.date().isoformat()
+    session_dir.mkdir(parents=True)
+    write_parquet_atomic(_model_input(), session_dir / "model_input.parquet")
+    (session_dir / "manifest.json").write_text(
+        '{"status":"DATA_READY","session_date":"2026-08-10"}',
+        encoding="utf-8",
+    )
+    downloaded = pd.DataFrame(
+        [
+            {"date": SESSION, "open": 100.0, "high": 105.0, "low": 95.0, "close": 102.0, "volume": 1000.0},
+            {"date": SESSION, "open": 200.0, "high": 205.0, "low": 195.0, "close": 202.0, "volume": 2000.0},
+        ]
+    )
+    monkeypatch.setattr(
+        forward_ohlcv_module,
+        "_download_in_batches",
+        lambda *args, **kwargs: ({"AAAA": downloaded}, {}),
+    )
+
+    result = enrich_session_ohlcv(tmp_path, SESSION, fetch_missing=True)
+
+    assert result["status"] == "OPEN_INCOMPLETE"
+    assert result["missing_tickers"] == ["AAAA"]
+    invalid = [row for row in result["diagnostics"] if row["status"] == "INVALID_PROVIDER_ROW"]
+    assert len(invalid) == 1
+    assert "Conflicting OHLCV observations" in invalid[0]["detail"]
 
 
 def test_legacy_open_repair_allows_volume_revision_but_not_hlc_revision() -> None:

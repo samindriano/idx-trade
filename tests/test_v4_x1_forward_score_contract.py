@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from idx_trade.ranking_v4_3_preregistration import (
     build_session_geometry_features,
@@ -17,6 +18,7 @@ from idx_trade.v4_x1_forward_score import (
     MODEL_ID,
     _score_one,
 )
+from idx_trade.forward_ohlcv import validate_model_input_regular_market_value
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +80,21 @@ def test_model_output_rank_is_frozen_zero_to_one_percentile() -> None:
     assert raw.tolist() == [30.0, 10.0, 20.0]
     assert alpha.tolist() == [1.0, 0.0, 0.5]
     assert normalized_percentile_rank(pd.Series([30.0, 10.0, 20.0])).tolist() == alpha.tolist()
+
+
+@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf, -1.0])
+def test_model_input_market_value_rejects_invalid_raw_values(value: float) -> None:
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        validate_model_input_regular_market_value(
+            pd.DataFrame({"regular_market_value": [value]})
+        )
+
+
+@pytest.mark.parametrize("value", [0.0, 2_000_000_000.0])
+def test_model_input_market_value_allows_zero_and_valid_positive_values(value: float) -> None:
+    validate_model_input_regular_market_value(
+        pd.DataFrame({"regular_market_value": [value]})
+    )
 
 
 def test_scorer_is_outcome_blind_and_provider_call_free_by_contract() -> None:

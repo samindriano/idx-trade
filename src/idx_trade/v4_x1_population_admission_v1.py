@@ -34,6 +34,7 @@ from .forward_monitoring import (
     _verify_ready_artifacts,
     runtime_paths,
 )
+from .forward_ohlcv import validate_model_input_regular_market_value
 from .provenance import sha256_file
 from .security_master import (
     COVERAGE_WINDOW_COLUMNS,
@@ -303,7 +304,15 @@ def _coverage_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
 def _anchor_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     if frame is None or frame.empty:
         return _empty_frame(("ticker", "market", "as_of_date", "state", "source", "source_ref", "evidence_type"))
-    required = {"ticker", "market", "as_of_date", "state", "source", "evidence_type"}
+    required = {
+        "ticker",
+        "market",
+        "as_of_date",
+        "state",
+        "source",
+        "source_ref",
+        "evidence_type",
+    }
     missing = required - set(frame.columns)
     if missing:
         raise ValueError(f"TRADABILITY_ANCHOR_COLUMNS_MISSING:{sorted(missing)}")
@@ -313,7 +322,7 @@ def _anchor_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     data["state"] = data["state"].astype(str).str.upper().str.strip()
     if (~data["state"].isin({"ACTIVE", "NO_TRADE", "SUSPENDED", "FCA_WATCHLIST"})).any():
         raise ValueError("TRADABILITY_ANCHOR_STATE_UNRESOLVED")
-    for column in ("source", "evidence_type"):
+    for column in ("source", "source_ref", "evidence_type"):
         if data[column].isna().any() or data[column].astype(str).str.strip().eq("").any():
             raise ValueError(f"TRADABILITY_ANCHOR_{column.upper()}_MISSING")
     duplicate = data.duplicated(["ticker", "market", "as_of_date"], keep=False)
@@ -765,6 +774,7 @@ def evaluate_population_admission(
             raise ValueError("MODEL_INPUT_COLUMNS_MISSING")
         model["ticker"] = model["ticker"].map(_safe_ticker)
         model["date"] = _frame_date_series(model["date"], "MODEL_INPUT")
+        validate_model_input_regular_market_value(model)
         if not model["date"].eq(target).all():
             raise ValueError("MODEL_INPUT_SESSION_MISMATCH")
         if model.duplicated(["ticker", "date"]).any():

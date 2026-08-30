@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+import idx_trade.security_master as security_master_module
 from idx_trade.coverage import security_coverage
 from idx_trade.security_master import (
     build_security_master,
@@ -57,6 +58,31 @@ def _active_anchor(date: str = "2025-01-01"):
             }
         )
     )
+
+
+def _cache_safe_window():
+    return canonicalize_coverage_windows(
+        pd.DataFrame(
+            {
+                "market": ["REGULAR"],
+                "effective_from": ["2026-01-01"],
+                "effective_to": ["2026-01-20"],
+                "source": ["IDX_RECONSTRUCTION"],
+                "is_complete": [True],
+                "discovery_basis": ["IDX_PUBLIC_DISCOVERY_AUDIT"],
+                "left_boundary_basis": ["IDX_ARCHIVE_START_AUDIT"],
+            }
+        )
+    )
+
+
+def _clear_security_master_caches() -> None:
+    for store in (
+        security_master_module._INTERVAL_SCOPE_CACHE,
+        security_master_module._ANCHOR_SCOPE_CACHE,
+        security_master_module._ANCHOR_STATE_CACHE,
+    ):
+        store.clear()
 
 
 def test_absence_of_tradability_history_fails_closed_to_unknown():
@@ -286,3 +312,129 @@ def test_ipo_warmup_is_explicit_eligibility_state():
     )
     assert not early.eligible and early.reason == "IPO_WARMUP"
     assert mature.eligible and mature.reason == "ELIGIBLE"
+
+
+def test_market_interval_precedence_is_date_applicable_and_cache_order_independent():
+    intervals = canonicalize_tradability_intervals(
+        pd.DataFrame(
+            [
+                {
+                    "ticker": "TEST",
+                    "market": "ALL",
+                    "state": "ACTIVE",
+                    "effective_from": "2026-01-05",
+                    "effective_to": "2026-01-20",
+                    "source": "IDX",
+                    "source_ref": "all",
+                },
+                {
+                    "ticker": "TEST",
+                    "market": "REGULAR",
+                    "state": "NO_TRADE",
+                    "effective_from": "2026-01-10",
+                    "effective_to": "2026-01-15",
+                    "source": "IDX",
+                    "source_ref": "regular",
+                },
+            ]
+        )
+    )
+    windows = _cache_safe_window()
+
+    _clear_security_master_caches()
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-10")) is TradabilityState.NO_TRADE
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-06")) is TradabilityState.ACTIVE
+
+    _clear_security_master_caches()
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-06")) is TradabilityState.ACTIVE
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-10")) is TradabilityState.NO_TRADE
+
+
+def test_market_anchor_precedence_is_date_applicable_and_cache_order_independent():
+    anchors = canonicalize_tradability_anchors(
+        pd.DataFrame(
+            [
+                {
+                    "ticker": "TEST",
+                    "market": "ALL",
+                    "as_of_date": "2026-01-05",
+                    "state": "ACTIVE",
+                    "source": "IDX",
+                    "source_ref": "all",
+                    "evidence_type": "POINT",
+                },
+                {
+                    "ticker": "TEST",
+                    "market": "REGULAR",
+                    "as_of_date": "2026-01-10",
+                    "state": "SUSPENDED",
+                    "source": "IDX",
+                    "source_ref": "regular",
+                    "evidence_type": "POINT",
+                },
+            ]
+        )
+    )
+    intervals = canonicalize_tradability_intervals(pd.DataFrame())
+    windows = _cache_safe_window()
+
+    _clear_security_master_caches()
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-10"), anchors=anchors) is TradabilityState.SUSPENDED
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-06"), anchors=anchors) is TradabilityState.ACTIVE
+
+    _clear_security_master_caches()
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-06"), anchors=anchors) is TradabilityState.ACTIVE
+    assert tradability_state(intervals, windows, "TEST", pd.Timestamp("2026-01-10"), anchors=anchors) is TradabilityState.SUSPENDED
+
+
+@pytest.mark.parametrize("value", ["no", "garbage", " ", None, float("nan"), 1, 0])
+def test_coverage_is_complete_rejects_non_boolean_tokens(value):
+    with pytest.raises(ValueError, match="strict boolean"):
+        canonicalize_coverage_windows(
+            pd.DataFrame(
+                {
+                    "market": ["REGULAR"],
+                    "effective_from": ["2026-01-01"],
+                    "effective_to": ["2026-01-20"],
+                    "source": ["TEST"],
+                    "is_complete": [value],
+                    "discovery_basis": ["D"],
+                    "left_boundary_basis": ["L"],
+                }
+            )
+        )
+
+
+@pytest.mark.parametrize("value, expected", [("False", False), ("false", False), ("True", True), ("true", True)])
+def test_coverage_is_complete_accepts_only_explicit_boolean_tokens(value, expected):
+    result = canonicalize_coverage_windows(
+        pd.DataFrame(
+            {
+                "market": ["REGULAR"],
+                "effective_from": ["2026-01-01"],
+                "effective_to": ["2026-01-20"],
+                "source": ["TEST"],
+                "is_complete": [value],
+                "discovery_basis": ["D"],
+                "left_boundary_basis": ["L"],
+            }
+        )
+    )
+    assert bool(result.loc[0, "is_complete"]) is expected
+
+
+@pytest.mark.parametrize("source_ref", [None, "", "   "])
+def test_authoritative_anchor_requires_non_empty_source_ref(source_ref):
+    row = {
+        "ticker": "TEST",
+        "market": "REGULAR",
+        "as_of_date": "2026-01-01",
+        "state": "ACTIVE",
+        "source": "IDX",
+        "evidence_type": "POINT",
+    }
+    if source_ref is not None:
+        row["source_ref"] = source_ref
+    expected = "columns missing" if source_ref is None else "source_ref must be non-empty"
+    with pytest.raises(ValueError, match=expected):
+        canonicalize_tradability_anchors(pd.DataFrame([row]))

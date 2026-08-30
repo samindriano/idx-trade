@@ -38,6 +38,7 @@ from .forward_monitoring import (
 from .forward_ohlcv import (
     MODEL_INPUT_COLUMNS,
     SESSION_OHLCV_COLUMNS,
+    validate_model_input_regular_market_value,
     validate_ohlcv_against_model_input,
 )
 from .provenance import sha256_file
@@ -669,6 +670,7 @@ def score_v4_x1_session(
 
         security_path = _security_master_path(paths)
         security_master = pd.read_csv(security_path)
+        validate_model_input_regular_market_value(signal_panel)
         features, diagnostics = build_v4_control_feature_table(
             signal_panel,
             official_sessions,

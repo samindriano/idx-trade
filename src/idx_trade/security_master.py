@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from .states import ExistenceState, TradabilityState
@@ -68,6 +69,14 @@ def _scoped_cache(
         store[key] = (frame, cache)
         return cache
     return cached[1]
+
+
+def _strict_boolean(value: object) -> bool:
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, str) and value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    raise ValueError("Coverage-window is_complete must be a strict boolean")
 
 
 def normalise_ticker(value: object) -> str:
@@ -186,7 +195,7 @@ def canonicalize_coverage_windows(frame: pd.DataFrame) -> pd.DataFrame:
     if "effective_to" not in data.columns:
         data["effective_to"] = pd.NaT
     data["effective_to"] = pd.to_datetime(data["effective_to"], errors="coerce").dt.normalize()
-    data["is_complete"] = data["is_complete"].astype(bool)
+    data["is_complete"] = data["is_complete"].map(_strict_boolean)
     for column in ("discovery_basis", "left_boundary_basis"):
         if column not in data.columns:
             data[column] = ""
@@ -211,7 +220,15 @@ def canonicalize_tradability_anchors(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
         return pd.DataFrame(columns=TRADABILITY_ANCHOR_COLUMNS)
     data = frame.copy()
-    required = {"ticker", "market", "as_of_date", "state", "source", "evidence_type"}
+    required = {
+        "ticker",
+        "market",
+        "as_of_date",
+        "state",
+        "source",
+        "source_ref",
+        "evidence_type",
+    }
     missing = required - set(data.columns)
     if missing:
         raise ValueError(f"Tradability-anchor columns missing: {sorted(missing)}")
@@ -219,10 +236,10 @@ def canonicalize_tradability_anchors(frame: pd.DataFrame) -> pd.DataFrame:
     data["market"] = data["market"].map(normalise_market)
     data["as_of_date"] = pd.to_datetime(data["as_of_date"], errors="coerce").dt.normalize()
     data["state"] = data["state"].map(lambda value: TradabilityState(str(value)).value)
-    if "source_ref" not in data.columns:
-        data["source_ref"] = ""
     for column in ("source", "source_ref", "evidence_type"):
         data[column] = data[column].fillna("").astype(str).str.strip()
+    if data["source_ref"].eq("").any():
+        raise ValueError("Tradability-anchor source_ref must be non-empty")
     data = data.dropna(subset=["ticker", "market", "as_of_date"])
     data = data[
         data["ticker"].str.fullmatch(r"[A-Z0-9]{4}", na=False)
@@ -259,18 +276,17 @@ def _matching_interval_for_ticker(intervals: pd.DataFrame, ticker: str, session:
     key = (ticker, market)
     if key in cache:
         scoped = cache[key]
-        return _matching_interval(scoped, session)
+        exact = _matching_interval(scoped[scoped["market"].eq(market)], session)
+        fallback = _matching_interval(scoped[scoped["market"].eq("ALL")], session)
+        return exact if not exact.empty else fallback
 
     ticker_rows = intervals[intervals["ticker"].eq(ticker)]
     if ticker_rows.empty:
         cache[key] = ticker_rows
         return ticker_rows
-    exact_rows = ticker_rows[ticker_rows["market"].eq(market)]
-    fallback_rows = ticker_rows[ticker_rows["market"].eq("ALL")]
-    scoped = exact_rows if not exact_rows.empty else fallback_rows
-    cache[key] = scoped
-    exact = _matching_interval(exact_rows, session)
-    fallback = _matching_interval(fallback_rows, session)
+    cache[key] = ticker_rows
+    exact = _matching_interval(ticker_rows[ticker_rows["market"].eq(market)], session)
+    fallback = _matching_interval(ticker_rows[ticker_rows["market"].eq("ALL")], session)
     return exact if not exact.empty else fallback
 
 
@@ -286,10 +302,8 @@ def _anchor_scope(anchors: pd.DataFrame, ticker: str, market: str) -> pd.DataFra
     if rows.empty:
         cache[key] = rows
         return rows
-    exact = rows[rows["market"].eq(market)]
-    scoped = exact if not exact.empty else rows[rows["market"].eq("ALL")]
-    cache[key] = scoped
-    return scoped
+    cache[key] = rows
+    return rows
 
 
 def _exact_anchor_for_session(anchors: pd.DataFrame, ticker: str, market: str, session: pd.Timestamp) -> TradabilityState | None:
@@ -297,21 +311,24 @@ def _exact_anchor_for_session(anchors: pd.DataFrame, ticker: str, market: str, s
     if rows.empty:
         return None
     state_cache = _scoped_cache(anchors, _ANCHOR_STATE_CACHE)
-    key = (ticker, market)
-    if key not in state_cache:
-        dates = pd.to_datetime(rows["as_of_date"], errors="coerce").dt.normalize()
-        grouped: dict[pd.Timestamp, set[str]] = {}
-        for date, state in zip(dates, rows["state"], strict=False):
-            if pd.isna(date):
-                continue
-            grouped.setdefault(pd.Timestamp(date), set()).add(str(state))
-        state_cache[key] = grouped
-    states = state_cache[key].get(session, set())
-    if not states:
-        return None
-    if len(states) != 1:
-        raise ValueError(f"Ambiguous exact tradability anchor for {ticker}/{market} on {session.date()}")
-    return TradabilityState(next(iter(states)))
+    for scope in (market, "ALL"):
+        key = (ticker, scope)
+        if key not in state_cache:
+            scoped = rows[rows["market"].eq(scope)]
+            dates = pd.to_datetime(scoped["as_of_date"], errors="coerce").dt.normalize()
+            grouped: dict[pd.Timestamp, set[str]] = {}
+            for date, state in zip(dates, scoped["state"], strict=False):
+                if pd.isna(date):
+                    continue
+                grouped.setdefault(pd.Timestamp(date), set()).add(str(state))
+            state_cache[key] = grouped
+        states = state_cache[key].get(session, set())
+        if not states:
+            continue
+        if len(states) != 1:
+            raise ValueError(f"Ambiguous exact tradability anchor for {ticker}/{market} on {session.date()}")
+        return TradabilityState(next(iter(states)))
+    return None
 
 
 def _point_states_compatible(point_state: TradabilityState, explicit_state: TradabilityState) -> bool:
@@ -356,8 +373,15 @@ def _anchors_for_window(anchors: pd.DataFrame, ticker: str, market: str, window:
     start = pd.Timestamp(window["effective_from"]).normalize()
     end = pd.Timestamp(window["effective_to"]).normalize()
     target = pd.Timestamp(session).normalize()
-    dates = pd.to_datetime(rows["as_of_date"])
-    return rows[dates.ge(start) & dates.le(end) & dates.le(target)]
+    def applicable(scope: str) -> pd.DataFrame:
+        scoped = rows[rows["market"].eq(scope)]
+        dates = pd.to_datetime(scoped["as_of_date"])
+        return scoped[dates.ge(start) & dates.le(end) & dates.le(target)]
+
+    exact = applicable(market)
+    if not exact.empty:
+        return exact
+    return applicable("ALL")
 
 
 def _validate_anchor_consistency(intervals: pd.DataFrame, anchors: pd.DataFrame, ticker: str, market: str) -> None:
