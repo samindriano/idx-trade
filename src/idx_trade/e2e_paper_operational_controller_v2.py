@@ -366,9 +366,8 @@ def run_operational_cycle_v2(
 
             eod_paths = v1._session_manifest(config, today)
             current_score = load_score_manifest(score_ref["manifest_path"])
-            expected_previous_session = max(
-                (session for session in schedule.session_dates if session < today),
-                default=None,
+            expected_previous_session = v1._expected_previous_score_session(
+                config, schedule.session_dates, today
             )
             previous_path = v1._previous_score_manifest(
                 config,

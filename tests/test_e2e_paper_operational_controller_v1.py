@@ -139,6 +139,23 @@ def test_previous_score_requires_verified_immediate_predecessor(
         )
 
 
+def test_first_decision_mid_schedule_does_not_require_market_predecessor(
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path)
+    controller.bootstrap_t0(config.runtime_root, session_date="2026-08-24")
+    sessions = ("2026-08-21", "2026-08-24")
+
+    assert controller._expected_previous_score_session(
+        config, sessions, "2026-08-24"
+    ) is None
+    assert controller._previous_score_manifest(
+        config,
+        "2026-08-24",
+        expected_previous_session=None,
+    ) is None
+
+
 def test_missing_operational_config_fails_closed_without_provider_call(tmp_path: Path) -> None:
     config = _config(tmp_path)
     assert controller._config_missing(config) == (

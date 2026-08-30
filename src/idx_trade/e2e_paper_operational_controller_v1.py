@@ -497,6 +497,27 @@ def _previous_score_manifest(
     return path
 
 
+def _expected_previous_score_session(
+    config: OperationalControllerConfig,
+    sessions: Sequence[str],
+    current_session: str,
+) -> str | None:
+    """Require adjacency only after a Decision metadata lineage exists.
+
+    A first-ever Decision may start in the middle of the official schedule;
+    earlier market sessions are not Decision parents.  If metadata is absent,
+    the orchestration bootstrap verifier remains the authority, including for
+    the case where metadata was deleted after runtime progression.
+    """
+    meta_dir = config.runtime_root / "state" / "decisions"
+    if not any(meta_dir.glob("*.json")):
+        return None
+    return max(
+        (session for session in sessions if session < current_session),
+        default=None,
+    )
+
+
 def _process_log(config: OperationalControllerConfig, label: str, command: Sequence[str], proc: subprocess.CompletedProcess[str], started: datetime, finished: datetime) -> str:
     safe = {
         "schema_version": "idx_trade_e2e_operational_process_v1",
@@ -1143,9 +1164,8 @@ def run_operational_cycle(
                     )
             eod_paths = _session_manifest(config, today)
             current_score = load_score_manifest(score_ref["manifest_path"])
-            expected_previous_session = max(
-                (session for session in sessions if session < today),
-                default=None,
+            expected_previous_session = _expected_previous_score_session(
+                config, sessions, today
             )
             previous_path = _previous_score_manifest(
                 config,
