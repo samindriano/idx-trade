@@ -1,7 +1,7 @@
 # Handoff: INC-001 retained operational-label decomposition V1
 
-from: MAIN / `data/ca-aware-feature-basis-remediation-v1`  
-to: ChatGPT review  
+from: MAIN / `data/ca-aware-feature-basis-remediation-v1`
+to: ChatGPT review
 date: 2026-08-30
 
 ## Result

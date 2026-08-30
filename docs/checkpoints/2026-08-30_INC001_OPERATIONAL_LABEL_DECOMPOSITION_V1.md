@@ -1,7 +1,7 @@
 # INC-001 retained operational-label decomposition — V1
 
-Date: 2026-08-30 Asia/Jakarta  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-30 Asia/Jakarta
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 Scope: exactly the 47 unresolved operational-label economic events in V14
 
 ## Authority and evidence boundary
