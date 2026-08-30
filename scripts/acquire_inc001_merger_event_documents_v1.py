@@ -75,6 +75,16 @@ def source_sha_matches(row: Mapping[str, Any]) -> bool:
     return bool(path.is_file() and sha256_file(path) == text(row.get("evidence_sha256")).lower())
 
 
+def artifact_raw_path(raw_path: Any, staging: Path) -> str:
+    """Store raw captures as stable paths relative to the immutable artifact."""
+
+    path = Path(text(raw_path))
+    try:
+        return path.relative_to(staging).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def load_targets(input_root: Path) -> tuple[list[dict[str, str]], dict[str, dict[str, str]]]:
     source = read_csv(input_root / "source_evidence_ledger.csv")
     events = read_csv(input_root / "economic_event_ledger.csv")
@@ -176,6 +186,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 request_key=event_id,
             )
             requests.append(request_row)
+            request_row["raw_path"] = artifact_raw_path(request_row.get("raw_path"), staging)
             if payload is None:
                 failed_events.add(event_id)
                 continue
@@ -241,6 +252,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                     )
                     document_request["economic_event_id"] = event_id
                     requests.append(document_request)
+                    document_request["raw_path"] = artifact_raw_path(document_request.get("raw_path"), staging)
                     if document_payload is None:
                         continue
                     extracted = extract_document_text(document_payload)
