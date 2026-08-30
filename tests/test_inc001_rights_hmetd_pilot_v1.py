@@ -96,3 +96,43 @@ def test_rights_document_requires_explicit_regular_market_ex_semantic(tmp_path: 
     assert parsed["record_date"] == "2025-01-14"
     assert parsed["distribution_date"] == "2025-01-20"
     assert parsed["explicit_regular_market_ex_semantic"] == "true"
+
+
+def test_corrected_ksei_rights_index_discovers_mppa_style_row(tmp_path: Path) -> None:
+    index = tmp_path / "rights-distribution_202606.body"
+    index.write_text(
+        "<html><title>Distribusi HMETD</title><tbody>"
+        '<tr><td class="text-nowrap"><a href="/Announcement/Files/KSEI-15669_RIGHT_20260629_ID.pdf">'
+        "KSEI-15669/JKU/0626</a></td>"
+        "<td>Jadwal Kegiatan Penawaran Umum Terbatas dalam rangka Penerbitan "
+        "Hak Memesan Efek Terlebih Dahulu (HMETD) PT Matahari Putra Prima Tbk (MPPA)</td>"
+        '<td class="text-nowrap">29 Juni 2026</td></tr></tbody></html>',
+        encoding="utf-8",
+    )
+    rows = pilot.parse_ksei_index(
+        index,
+        {"request_number": 1, "sha256": pilot.sha256_file(index)},
+        "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT",
+    )
+    assert pilot.KSEI_RIGHTS_DISTRIBUTION.endswith("/rights-distribution")
+    assert len(rows) == 1
+    assert rows[0]["document_reference"] == "KSEI-15669/JKU/0626"
+    assert rows[0]["source_ref"].endswith("KSEI-15669_RIGHT_20260629_ID.pdf")
+    assert pilot.ticker_in_title(rows[0]["title"], "MPPA")
+    assert rows[0]["source_contract_id"] == "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT"
+
+
+def test_selected_targets_restores_source_identity_from_scope(tmp_path: Path) -> None:
+    fields = ["economic_event_id", "ticker", "source_event_ids", "source_kinds", "candidate_dates", "candidate_date"]
+    with (tmp_path / "rights_event_scope.csv").open("w", encoding="utf-8", newline="") as handle:
+        handle.write(",".join(fields) + "\n")
+        for index in range(12):
+            handle.write(f"E-{index},T{index},S-{index},KSEI_REGISTERED_SECURITY_HISTORY,2025-01-01,2025-01-01\n")
+    with (tmp_path / "pilot_selection.csv").open("w", encoding="utf-8", newline="") as handle:
+        handle.write("economic_event_id,ticker,source_kind,candidate_date,temporal_stratum,selection_rank,selection_reason\n")
+        for index in range(12):
+            handle.write(f"E-{index},T{index},KSEI_REGISTERED_SECURITY_HISTORY,2025-01-01,EARLY,{index + 1},test\n")
+    selected = pilot.selected_targets(tmp_path)
+    assert len(selected) == 12
+    assert selected[0]["source_event_ids"] == "S-0"
+    assert selected[-1]["source_kinds"] == "KSEI_REGISTERED_SECURITY_HISTORY"

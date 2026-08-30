@@ -203,7 +203,7 @@ def source_mapping(
     return sorted(rows, key=lambda row: (row["economic_event_id"], row["source_event_id"]))
 
 
-def post_pilot_plan(result: Mapping[str, Any], source_by_id: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+def post_pilot_plan(result: Mapping[str, Any], source_by_id: Mapping[str, Mapping[str, Any]], pilot_root: Path) -> dict[str, Any]:
     economic_rows = base.economic_csv_rows(result)
     unresolved = [row for row in economic_rows if text(row.get("transition_status")) == "UNRESOLVED"]
     grouped: dict[str, list[dict[str, Any]]] = {}
@@ -213,7 +213,7 @@ def post_pilot_plan(result: Mapping[str, Any], source_by_id: Mapping[str, Mappin
     for family, rows in sorted(grouped.items()):
         members = [member for row in rows for member in text(row.get("source_event_ids")).split("|") if member]
         units.append({"unit_id": f"EVENT-{family}-RESIDUAL", "family": family, "status": "OPEN_RESIDUAL", "event_ids": sorted(text(row.get("economic_event_id")) for row in rows), "tickers": sorted({text(source_by_id[member].get("ticker")) for member in members}), "event_count": len(rows), "remaining_semantic": base.gap_rows(result, source_by_id)[next(index for index, gap in enumerate(base.gap_rows(result, source_by_id)) if gap["economic_family"] == family)]["missing_semantic"]})
-    return {"schema_version": f"{SCHEMA}_future_plan", "status": "PLAN_ONLY_NO_BULK_ACQUISITION_AUTHORIZED", "unresolved_event_count": len(unresolved), "pilot_resolved_event_ids": sorted(text(row.get("economic_event_id")) for row in read_csv(PILOT_ROOT / "target_event_results.csv") if text(row.get("result_classification")) == "RESOLVED_EXACT"), "units": units, "rights_pilot_is_not_bulk_71": True, "capability_verification_requests": "separate bounded pilot only", "later_bulk_acquisition": "not executed", "guardrails": {"full_71_acquisition": False, "phase_e": False, "outcomes_or_targets": False, "fit_refit_score": False, "counter_mutation": False, "canonical_historical_rewrite": False, "production_execution": False, "merge": False}}
+    return {"schema_version": f"{SCHEMA}_future_plan", "status": "PLAN_ONLY_NO_BULK_ACQUISITION_AUTHORIZED", "unresolved_event_count": len(unresolved), "pilot_resolved_event_ids": sorted(text(row.get("economic_event_id")) for row in read_csv(pilot_root / "target_event_results.csv") if text(row.get("result_classification")) == "RESOLVED_EXACT"), "units": units, "rights_pilot_is_not_bulk_71": True, "capability_verification_requests": "separate bounded pilot only", "later_bulk_acquisition": "not executed", "guardrails": {"full_71_acquisition": False, "phase_e": False, "outcomes_or_targets": False, "fit_refit_score": False, "counter_mutation": False, "canonical_historical_rewrite": False, "production_execution": False, "merge": False}}
 
 
 def manifest_for(root: Path) -> dict[str, Any]:
@@ -292,7 +292,7 @@ def build(output_root: Path, repo_root: Path = REPO_ROOT, v9_root: Path = V9_ROO
         write_csv(staging / "target_event_results.csv", pilot_results, list(pilot_results[0].keys()))
         write_json(staging / "reconciliation_summary.json", summary)
         write_json(staging / "validation_report.json", validation)
-        write_json(staging / "post_pilot_future_acquisition_plan.json", post_pilot_plan(result, source_by_id))
+        write_json(staging / "post_pilot_future_acquisition_plan.json", post_pilot_plan(result, source_by_id, pilot_root))
         copy_file(v9_root / "future_acquisition_plan_v11_291.json", staging / "future_acquisition_plan_v11_291.json")
         copy_file(v9_root / "future_acquisition_plan_v2.json", staging / "future_acquisition_plan_v2.json")
         write_json(staging / "deterministic_input_pins.json", {"controlling_v9_root": str(v9_root), "controlling_v9_manifest_sha256": V9_MANIFEST_SHA256, "pilot_root": str(pilot_root), "pilot_manifest_sha256": sha256_file(pilot_root / "MANIFEST.json"), "repo_head": git_head(repo_root), "provider_calls_in_reconciliation": False})
@@ -319,11 +319,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--rerun-root", type=Path)
+    parser.add_argument("--pilot-root", type=Path, default=PILOT_ROOT)
     args = parser.parse_args()
-    first = build(args.output_root)
+    first = build(args.output_root, pilot_root=args.pilot_root)
     payload: dict[str, Any] = {"summary": first}
     if args.rerun_root:
-        build(args.rerun_root)
+        build(args.rerun_root, pilot_root=args.pilot_root)
         comparison = compare_non_manifest(args.output_root, args.rerun_root)
         write_json(args.output_root / "deterministic_non_manifest_comparison.json", comparison)
         write_json(args.rerun_root / "deterministic_non_manifest_comparison.json", comparison)

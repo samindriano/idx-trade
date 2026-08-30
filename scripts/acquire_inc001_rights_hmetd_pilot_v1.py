@@ -43,6 +43,7 @@ PROJECT_ROOT = Path(r"D:\Documents\Project")
 V9_ROOT_NAME = "idx-ca-economic-event-reconciliation-20260829-v9-stock-split-linkage-correction-final"
 V9_MANIFEST_SHA256 = "dcc5e05ca3bc5fe7da148629a26fb913a6e85b92a88cbc88180cfde05eec30cc"
 KSEI_MASR = "https://web.ksei.co.id/publications/corporate-action-schedules/masr"
+KSEI_RIGHTS_DISTRIBUTION = "https://web.ksei.co.id/publications/corporate-action-schedules/rights-distribution"
 IDX_ISSUED_HISTORY = "https://www.idx.id/primary/ListingActivity/GetIssuedHistory"
 MONTHS = {
     "januari": 1,
@@ -354,7 +355,7 @@ def strip_html(fragment: str) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
 
 
-def parse_ksei_index(path: Path, request: Mapping[str, Any]) -> list[dict[str, Any]]:
+def parse_ksei_index(path: Path, request: Mapping[str, Any], source_contract_id: str = "KSEI_MASR_OFFICIAL_INDEX_CONTRACT") -> list[dict[str, Any]]:
     body = path.read_text(encoding="utf-8", errors="replace")
     rows: list[dict[str, Any]] = []
     for fragment in TR_RE.findall(body):
@@ -365,7 +366,7 @@ def parse_ksei_index(path: Path, request: Mapping[str, Any]) -> list[dict[str, A
         title = " ".join(cells[1:])
         if not RIGHTS_TITLE_RE.search(title):
             continue
-        rows.append({"request_number": request.get("request_number"), "index_raw_path": str(path), "index_sha256": text(request.get("sha256")), "source_ref": hrefs[0], "document_reference": cells[0], "title": title, "published_date_native": cells[2] if len(cells) > 2 else "", "source_contract_id": "KSEI_MASR_OFFICIAL_INDEX_CONTRACT"})
+        rows.append({"request_number": request.get("request_number"), "index_raw_path": str(path), "index_sha256": text(request.get("sha256")), "source_ref": hrefs[0], "document_reference": cells[0], "title": title, "published_date_native": cells[2] if len(cells) > 2 else "", "source_contract_id": source_contract_id})
     return rows
 
 
@@ -451,13 +452,51 @@ def selection_root(output_root: Path, v9_root: Path) -> dict[str, Any]:
     return selection
 
 
-def execute_pilot(output_root: Path) -> dict[str, Any]:
+def prepare_corrected_root(prior_root: Path, output_root: Path) -> dict[str, Any]:
+    """Copy only the immutable 12-target selection into a new execution root."""
+    if output_root.exists():
+        raise FileExistsError(f"immutable corrected pilot root already exists: {output_root}")
+    prior_manifest_path = prior_root / "MANIFEST.json"
+    required = [prior_root / name for name in ("selection_manifest.json", "rights_event_scope.csv", "candidate_linkage_audit.csv", "pilot_selection.csv", "target_event_results.csv")]
+    if not prior_manifest_path.is_file() or any(not path.is_file() for path in required):
+        raise RuntimeError("corrected pilot requires the complete prior bounded pilot root")
+    prior_manifest_sha = sha256_file(prior_manifest_path)
+    prior_selection = read_json(prior_root / "selection_manifest.json")
+    if prior_selection.get("provider_calls") or prior_selection.get("pilot_tested") != 12:
+        raise RuntimeError("corrected pilot source is not the immutable 12-target selection root")
+    output_root.mkdir(parents=True)
+    for path in required[:-1]:
+        shutil.copyfile(path, output_root / path.name)
+    prior_results = read_csv(prior_root / "target_event_results.csv")
+    prior_counts = {key: sum(text(row.get("result_classification")) == key for row in prior_results) for key in sorted(RESULT_CLASSES)}
+    write_json(output_root / "prior_pilot_reference.json", {"root": str(prior_root), "manifest_sha256": prior_manifest_sha, "target_event_results_sha256": sha256_file(prior_root / "target_event_results.csv"), "pilot_tested": len(prior_results), "classification_counts": prior_counts, "immutable": True})
+    return {"prior_root": str(prior_root), "prior_manifest_sha256": prior_manifest_sha, "prior_classification_counts": prior_counts}
+
+
+def selected_targets(output_root: Path) -> list[dict[str, Any]]:
+    """Restore full target identity fields from the immutable 12-row scope."""
+    selections = read_csv(output_root / "pilot_selection.csv")
+    scope = {text(row.get("economic_event_id")): row for row in read_csv(output_root / "rights_event_scope.csv")}
+    selected: list[dict[str, Any]] = []
+    for selection in selections:
+        event_id = text(selection.get("economic_event_id"))
+        if event_id not in scope:
+            raise RuntimeError(f"pilot selection references missing rights scope event: {event_id}")
+        item = dict(scope[event_id])
+        item.update(selection)
+        selected.append(item)
+    if len(selected) != 12 or len({text(row.get("economic_event_id")) for row in selected}) != 12:
+        raise RuntimeError("corrected pilot selection is not exactly 12 unique persisted targets")
+    return selected
+
+
+def execute_pilot(output_root: Path, prior_pilot_root: Path | None = None) -> dict[str, Any]:
     if not output_root.is_dir() or not (output_root / "selection_manifest.json").is_file():
         raise RuntimeError("execute requires an existing selection-only root")
     selection = read_json(output_root / "selection_manifest.json")
     if selection.get("provider_lookup_started") is True or (output_root / "execution_started.json").exists():
         raise RuntimeError("provider execution may not be retried or rerun")
-    selected = read_csv(output_root / "pilot_selection.csv")
+    selected = selected_targets(output_root)
     if len(selected) > 12 or len({text(row.get("economic_event_id")) for row in selected}) != len(selected):
         raise RuntimeError("selection is not bounded and unique")
     (output_root / "execution_started.json").write_text(json.dumps({"started_utc": now_utc(), "provider_lookup_started": True, "no_retry": True}, indent=2) + "\n", encoding="utf-8")
@@ -471,12 +510,12 @@ def execute_pilot(output_root: Path) -> dict[str, Any]:
     request_number = 1
     months = sorted({(text(row.get("candidate_date")).split("-")[0], text(row.get("candidate_date")).split("-")[1]) for row in selected})
     for year, month in months:
-        url = f"{KSEI_MASR}?Month={month}&Year={year}&setLocale=en-US"
+        url = f"{KSEI_RIGHTS_DISTRIBUTION}?Month={month}&Year={year}&setLocale=id-ID"
         raw = provider / "index" / f"index_{request_number:03d}_{year}{month}.body"
         req = request_url(url, raw, request_number, "KSEI_INDEX", "|".join(sorted({text(row.get("ticker")) for row in selected})))
         search_ledger.append(req)
         if text(req.get("status_code")) == "200" and valid_sha(req.get("sha256")):
-            index_rows.extend(parse_ksei_index(raw, req))
+            index_rows.extend(parse_ksei_index(raw, req, "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT"))
         request_number += 1
     selected_by_id = {text(row.get("economic_event_id")): row for row in selected}
     match_refs: dict[str, list[dict[str, Any]]] = {key: [] for key in selected_by_id}
@@ -517,7 +556,7 @@ def execute_pilot(output_root: Path) -> dict[str, Any]:
         docs = [doc for doc in parsed_docs if ticker_in_title(text(doc.get("document_title")), text(target.get("ticker")))]
         exact_docs = [doc for doc in docs if document_matches_target(doc, target)]
         result = dict(target)
-        result.update({"official_document_count": len(docs), "discovered_document_refs": "|".join(sorted({text(doc.get("source_ref")) for doc in docs})), "discovered_document_sha256s": "|".join(sorted({text(doc.get("evidence_sha256")) for doc in docs})), "transition_semantic": "", "transition_date": "", "authority_source_ref": "", "authority_evidence_sha256": "", "transition_status": "UNRESOLVED"})
+        result.update({"prior_result_classification": "", "prior_result_reason": "", "official_document_count": len(docs), "discovered_document_refs": "|".join(sorted({text(doc.get("source_ref")) for doc in docs})), "discovered_document_sha256s": "|".join(sorted({text(doc.get("evidence_sha256")) for doc in docs})), "transition_semantic": "", "transition_date": "", "authority_source_ref": "", "authority_evidence_sha256": "", "transition_status": "UNRESOLVED"})
         if len(exact_docs) > 1:
             result.update({"result_classification": "OFFICIAL_DOCUMENT_FOUND_LINKAGE_AMBIGUOUS", "reason": "more than one official schedule matches the target candidate dates; no document identity is proven"})
         elif len(exact_docs) == 1:
@@ -540,6 +579,13 @@ def execute_pilot(output_root: Path) -> dict[str, Any]:
     if len(results) != len(selected) or any(text(row.get("result_classification")) not in RESULT_CLASSES for row in results):
         raise RuntimeError("pilot result conservation/classification validation failed")
     counts = {key: sum(text(row.get("result_classification")) == key for row in results) for key in sorted(RESULT_CLASSES)}
+    prior_reference = read_json(output_root / "prior_pilot_reference.json") if (output_root / "prior_pilot_reference.json").is_file() else None
+    if prior_reference:
+        prior_by_id = {text(row.get("economic_event_id")): row for row in read_csv(Path(prior_reference["root"]) / "target_event_results.csv")}
+        for row in results:
+            prior = prior_by_id.get(text(row.get("economic_event_id")), {})
+            row["prior_result_classification"] = text(prior.get("result_classification"))
+            row["prior_result_reason"] = text(prior.get("reason"))
     resolved = [row for row in results if text(row.get("result_classification")) == "RESOLVED_EXACT"]
     if len(resolved) == len(results):
         capability = "HISTORICAL_SOURCE_PATH_PROVEN"
@@ -555,8 +601,78 @@ def execute_pilot(output_root: Path) -> dict[str, Any]:
     write_csv(output_root / "ksei_index_candidate_rows.csv", index_rows, ["request_number", "index_raw_path", "index_sha256", "source_ref", "document_reference", "title", "published_date_native", "source_contract_id"])
     write_csv(output_root / "official_document_evidence.csv", parsed_docs, sorted({field for row in parsed_docs for field in row}))
     write_csv(output_root / "target_event_results.csv", results, list(results[0].keys()))
-    summary = {"schema_version": SCHEMA, "audit_date": AUDIT_DATE, "status": "COMPLETE_BOUNDED_OFFICIAL_RIGHTS_HMETD_PILOT_OUTCOME_BLIND", "controlling_v9_root": selection.get("controlling_v9_root"), "controlling_v9_manifest_sha256": V9_MANIFEST_SHA256, "rights_total_current": 71, "pilot_tested": len(results), "pilot_resolved": len(resolved), "classification_counts": counts, "new_linkages": 0, "remaining_unresolved_pilot_events": len(results) - len(resolved), "rights_source_capability_after_pilot": capability, "source_path_findings": ["A candidate/cum/record/distribution/listing date is not accepted as regular-market Ex authority.", "A positive official document result is event-specific and does not establish historical completeness.", "No retry or bulk acquisition is authorized by this root."], "provider_calls": True, "guardrails": {"full_71_acquisition": False, "other_ca_acquisition": False, "phase_e": False, "outcomes_or_targets": False, "fit_refit_score": False, "counter_mutation": False, "canonical_historical_rewrite": False, "production_execution": False, "merge": False}}
+    summary = {"schema_version": SCHEMA, "audit_date": AUDIT_DATE, "status": "COMPLETE_BOUNDED_OFFICIAL_RIGHTS_HMETD_PILOT_OUTCOME_BLIND", "controlling_v9_root": selection.get("controlling_v9_root"), "controlling_v9_manifest_sha256": V9_MANIFEST_SHA256, "rights_total_current": 71, "pilot_tested": len(results), "pilot_resolved": len(resolved), "classification_counts": counts, "new_linkages": 0, "remaining_unresolved_pilot_events": len(results) - len(resolved), "rights_source_capability_after_pilot": capability, "discovery_path": {"prior_endpoint": KSEI_MASR, "corrected_endpoint": KSEI_RIGHTS_DISTRIBUTION, "locale": "id-ID", "source_contract_id": "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT"}, "prior_pilot": prior_reference, "prior_classification_counts": prior_reference.get("classification_counts", {}) if prior_reference else {}, "corrected_classification_counts": counts, "source_path_findings": ["The prior pilot queried the general MASR index; this corrected run queries the official rights-distribution index with the same persisted 12 targets.", "A candidate/cum/record/distribution/listing date is not accepted as regular-market Ex authority.", "A positive official document result is event-specific and does not establish historical completeness.", "No retry or bulk acquisition is authorized by this root."], "provider_calls": True, "guardrails": {"full_71_acquisition": False, "other_ca_acquisition": False, "phase_e": False, "outcomes_or_targets": False, "fit_refit_score": False, "counter_mutation": False, "canonical_historical_rewrite": False, "production_execution": False, "merge": False}}
     write_json(output_root / "source_path_capability_assessment.json", {"verdict": capability, "classification_counts": counts, "historical_completeness_claim": "NOT_ESTABLISHED"})
+    write_json(output_root / "pilot_summary.json", summary)
+    write_json(output_root / "MANIFEST.json", manifest_for(output_root, True))
+    return summary
+
+
+def materialize_retained_mppa_evidence(base_root: Path, output_root: Path, retained_root: Path) -> dict[str, Any]:
+    """Derive a new root from the corrected run plus one retained official MPPA source.
+
+    This is an offline evidence replay.  It does not call a provider, retry a
+    failed request, or change the persisted 12-target selection.
+    """
+    if output_root.exists():
+        raise FileExistsError(f"immutable retained-evidence root already exists: {output_root}")
+    required = [
+        base_root / "MANIFEST.json",
+        base_root / "target_event_results.csv",
+        retained_root / "MANIFEST.json",
+        retained_root / "raw" / "index" / "rights-distribution_202606_attempt_01.html",
+        retained_root / "raw" / "documents" / "KSEI-15669_JKU_0626_attempt_01.pdf",
+    ]
+    if any(not path.is_file() for path in required):
+        raise RuntimeError("retained MPPA materialization requires complete corrected and source roots")
+    output_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(base_root, output_root)
+    retained = output_root / "retained_official_evidence"
+    retained_index = retained / "index" / "rights-distribution_202606_attempt_01.html"
+    retained_pdf = retained / "documents" / "KSEI-15669_JKU_0626_attempt_01.pdf"
+    retained_text = retained / "text" / "KSEI-15669_JKU_0626_attempt_01.txt"
+    retained_index.parent.mkdir(parents=True, exist_ok=True)
+    retained_pdf.parent.mkdir(parents=True, exist_ok=True)
+    retained_text.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(required[3], retained_index)
+    shutil.copyfile(required[4], retained_pdf)
+    retained_index_request = {"request_number": "RETAINED-001", "sha256": sha256_file(retained_index)}
+    index_rows = [
+        row
+        for row in parse_ksei_index(retained_index, retained_index_request, "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT")
+        if ticker_in_title(text(row.get("title")), "MPPA")
+        and text(row.get("document_reference")) == "KSEI-15669/JKU/0626"
+    ]
+    if len(index_rows) != 1:
+        raise RuntimeError(f"retained MPPA index linkage is not unique: {len(index_rows)}")
+    row = index_rows[0]
+    if not text(row.get("source_ref")).endswith("MPPA_RIGHT_20260629_ID.pdf"):
+        raise RuntimeError("retained MPPA index href mismatch")
+    document_request = {"document_id": "RIGHTS-PILOT-RETAINED-MPPA-001", "ticker": "MPPA", "document_reference": text(row.get("document_reference")), "title": text(row.get("title")), "source_ref": text(row.get("source_ref")), "sha256": sha256_file(retained_pdf), "bytes": retained_pdf.stat().st_size, "status_code": 200, "raw_path": str(retained_pdf)}
+    extraction_status, text_sha = extract_pdf_text(retained_pdf, retained_text)
+    document_request.update({"text_status": extraction_status, "text_sha256": text_sha})
+    document = parse_rights_document(document_request, retained_text)
+    if text(document.get("explicit_regular_market_ex_semantic")) != "true" or text(document.get("ex_date")) != "2026-06-26":
+        raise RuntimeError("retained MPPA document does not prove the accepted regular-market Ex semantic")
+    documents_path = output_root / "official_document_evidence.csv"
+    documents = read_csv(documents_path) if documents_path.is_file() else []
+    documents.append(document)
+    write_csv(output_root / "official_document_evidence.csv", documents, sorted({field for item in documents for field in item}))
+    results = read_csv(output_root / "target_event_results.csv")
+    target_rows = [item for item in results if text(item.get("ticker")) == "MPPA"]
+    if len(target_rows) != 1:
+        raise RuntimeError("corrected pilot does not contain exactly one MPPA target")
+    target = target_rows[0]
+    target.update({"official_document_count": "1", "discovered_document_refs": text(document.get("source_ref")), "discovered_document_sha256s": text(document.get("evidence_sha256")), "result_classification": "RESOLVED_EXACT", "reason": "retained official KSEI rights-distribution index row and PDF explicitly state the regular-market Ex date", "transition_status": "RESOLVED", "transition_semantic": "REGULAR_MARKET_EX_DATE", "transition_date": "2026-06-26", "authority_source_ref": text(document.get("source_ref")), "authority_evidence_sha256": text(document.get("evidence_sha256"))})
+    write_csv(output_root / "target_event_results.csv", results, list(results[0].keys()))
+    base_summary = read_json(output_root / "pilot_summary.json")
+    live_counts = dict(base_summary.get("classification_counts", {}))
+    counts = {key: sum(text(item.get("result_classification")) == key for item in results) for key in sorted(RESULT_CLASSES)}
+    prior_reference = read_json(output_root / "prior_pilot_reference.json") if (output_root / "prior_pilot_reference.json").is_file() else None
+    provenance = {"mode": "OFFLINE_REPLAY_OF_RETAINED_OFFICIAL_EVIDENCE", "base_corrected_root": str(base_root), "base_corrected_manifest_sha256": sha256_file(base_root / "MANIFEST.json"), "retained_source_root": str(retained_root), "retained_source_manifest_sha256": sha256_file(retained_root / "MANIFEST.json"), "retained_index_source_ref": "https://web.ksei.co.id/publications/corporate-action-schedules/rights-distribution?Month=06&Year=2026&setLocale=id-ID", "retained_index_raw_sha256": sha256_file(retained_index), "retained_document_source_ref": text(document.get("source_ref")), "retained_document_sha256": text(document.get("evidence_sha256")), "retained_document_reference": text(document.get("document_reference")), "accepted_transition_date": "2026-06-26", "provider_calls_in_this_materialization": False, "selection_unchanged": True}
+    write_json(output_root / "retained_evidence_provenance.json", provenance)
+    summary = {"schema_version": SCHEMA, "audit_date": AUDIT_DATE, "status": "COMPLETE_BOUNDED_OFFICIAL_RIGHTS_HMETD_PILOT_WITH_RETAINED_MPPA_EVIDENCE", "controlling_v9_root": base_summary.get("controlling_v9_root"), "controlling_v9_manifest_sha256": V9_MANIFEST_SHA256, "rights_total_current": 71, "pilot_tested": len(results), "pilot_resolved": sum(text(item.get("result_classification")) == "RESOLVED_EXACT" for item in results), "classification_counts": counts, "live_corrected_classification_counts": live_counts, "new_linkages": 0, "remaining_unresolved_pilot_events": len(results) - sum(text(item.get("result_classification")) == "RESOLVED_EXACT" for item in results), "rights_source_capability_after_pilot": "PARTIAL_HISTORICAL_CAPABILITY", "discovery_path": base_summary.get("discovery_path", {}), "prior_pilot": prior_reference, "prior_classification_counts": prior_reference.get("classification_counts", {}) if prior_reference else {}, "corrected_classification_counts": counts, "retained_evidence_correction": {"ticker": "MPPA", "result": "RESOLVED_EXACT", "document_reference": text(document.get("document_reference")), "source_ref": text(document.get("source_ref")), "evidence_sha256": text(document.get("evidence_sha256")), "transition_date": "2026-06-26", "source_contract": "KSEI_RIGHTS_DISTRIBUTION_OFFICIAL_INDEX_CONTRACT"}, "source_path_findings": base_summary.get("source_path_findings", []) + ["The live corrected provider result remains separately recorded; MPPA is resolved only by replaying retained official index/PDF bytes with matching source reference, document identity, ticker, and explicit Ex date.", "Historical completeness is not established by this one retained positive document."], "provider_calls": True, "retained_evidence_provider_calls": False, "guardrails": base_summary.get("guardrails", {})}
+    write_json(output_root / "source_path_capability_assessment.json", {"verdict": "PARTIAL_HISTORICAL_CAPABILITY", "live_provider_verdict": base_summary.get("rights_source_capability_after_pilot"), "classification_counts": counts, "live_corrected_classification_counts": live_counts, "retained_exact_paths": 1, "historical_completeness_claim": "NOT_ESTABLISHED"})
     write_json(output_root / "pilot_summary.json", summary)
     write_json(output_root / "MANIFEST.json", manifest_for(output_root, True))
     return summary
@@ -566,11 +682,24 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--v9-root", type=Path, default=PROJECT_ROOT / V9_ROOT_NAME)
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument("--prior-pilot-root", type=Path)
+    parser.add_argument("--materialize-retained-mppa-from", type=Path)
+    parser.add_argument("--retained-mppa-root", type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--selection-only", action="store_true")
     mode.add_argument("--execute", action="store_true")
     args = parser.parse_args()
-    result = selection_root(args.output_root, args.v9_root) if args.selection_only else execute_pilot(args.output_root)
+    if args.selection_only:
+        result = selection_root(args.output_root, args.v9_root)
+    elif args.materialize_retained_mppa_from:
+        if not args.retained_mppa_root:
+            parser.error("--materialize-retained-mppa-from requires --retained-mppa-root")
+        result = materialize_retained_mppa_evidence(args.materialize_retained_mppa_from, args.output_root, args.retained_mppa_root)
+    elif args.prior_pilot_root:
+        prepare_corrected_root(args.prior_pilot_root, args.output_root)
+        result = execute_pilot(args.output_root, args.prior_pilot_root)
+    else:
+        result = execute_pilot(args.output_root)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0
 
