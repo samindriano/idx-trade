@@ -37,6 +37,8 @@ TARGETS: tuple[dict[str, str], ...] = (
         "evidence_sha256": "e7656e6126b5be6091a805621de843b7f8bd2e72f500ecea5dac98ca86efc5d9",
         "cash_ratio": "(50 CNMA : 7 IDR)",
         "share_ratio": "(50 CNMA : 1 CNMA )",
+        "cash_units": "7",
+        "share_units": "1",
         "paired_stock_source_event_id": "3ac75071cfbca806f0e133579111cfefcfe30c4d76a86fb8c334d74a550ec196",
     },
     {
@@ -48,6 +50,8 @@ TARGETS: tuple[dict[str, str], ...] = (
         "evidence_sha256": "c674ef6469147656a057c09a617e5d95c9ea8e6761e4c75c4638f4d26ab55e78",
         "cash_ratio": "(10000 KKGI : 15 IDR)",
         "share_ratio": "(10000 KKGI : 53 KKGI )",
+        "cash_units": "15",
+        "share_units": "53",
         "paired_stock_source_event_id": "474512eee014cece469973a6ce29fa2e90a53557be3d0ae807e7bd36722d1960",
     },
     {
@@ -59,6 +63,8 @@ TARGETS: tuple[dict[str, str], ...] = (
         "evidence_sha256": "d2269bfed3d9f14ba06160641904a75d4753db706a8946793359fbcc5302280f",
         "cash_ratio": "(46 WINS : 2 IDR)",
         "share_ratio": "(46 WINS : 1 WINS )",
+        "cash_units": "2",
+        "share_units": "1",
         "paired_stock_source_event_id": "278e2ec1e086b7153b700b0d88e8c3d0fc83a1bb8f9c63a2e7fa3fd32d347ebd",
     },
     {
@@ -70,6 +76,8 @@ TARGETS: tuple[dict[str, str], ...] = (
         "evidence_sha256": "d2269bfed3d9f14ba06160641904a75d4753db706a8946793359fbcc5302280f",
         "cash_ratio": "(71 WINS : 2 IDR)",
         "share_ratio": "(71 WINS : 1 WINS )",
+        "cash_units": "2",
+        "share_units": "1",
         "paired_stock_source_event_id": "273d8d75c833a6bed57313b1d8eafd4bc2e3c73f33c738c798436419f6067870",
     },
 )
@@ -158,6 +166,17 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         source_by_id = {row["source_event_id"]: row for row in source}
         if len(source_by_id) != len(source) or len(source) != 412:
             raise RuntimeError("V15 source ledger is not the expected unique 412-row population")
+        source_hash_failures = []
+        for row in source:
+            raw_path = Path(row.get("raw_capture_path", ""))
+            if (
+                not raw_path.is_file()
+                or sha256_file(raw_path) != row.get("evidence_sha256", "").lower()
+                or row.get("source_hash_matches_bytes", "").lower() != "true"
+            ):
+                source_hash_failures.append(row.get("source_event_id", ""))
+        if source_hash_failures:
+            raise RuntimeError(f"V15 source evidence hash failures: {len(source_hash_failures)}")
 
         target_by_source = {target["source_event_id"]: target for target in TARGETS}
         if set(target_by_source) - set(source_by_id):
@@ -174,6 +193,32 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 raise RuntimeError(f"composite source identity mismatch: {target['source_event_id']}")
             if source_row["source_native_label"] != "Mixed Dividend":
                 raise RuntimeError(f"composite source label mismatch: {target['source_event_id']}")
+            if source_row["ratio_raw"] != target["cash_ratio"]:
+                raise RuntimeError(f"composite cash ratio mismatch: {target['source_event_id']}")
+            paired = source_by_id.get(target["paired_stock_source_event_id"])
+            if paired is None:
+                raise RuntimeError(f"paired share source is absent: {target['source_event_id']}")
+            if (
+                paired["ticker"] != target["ticker"]
+                or paired["source_ref"] != target["source_ref"]
+                or paired["source_native_label"] != "Mixed Dividend"
+                or paired["ratio_raw"] != target["share_ratio"]
+                or paired["candidate_date"] != source_row["candidate_date"]
+                or paired["cum_date"] != source_row["cum_date"]
+                or paired["record_date"] != source_row["record_date"]
+                or paired["distribution_date"] != source_row["distribution_date"]
+                or paired["status"] != source_row["status"]
+            ):
+                raise RuntimeError(f"paired share evidence is not same-date and active: {target['source_event_id']}")
+            if (
+                source_row["ratio_right_security"] != "IDR"
+                or int(source_row["ratio_right_value"]) <= 0
+                or source_row["ratio_right_value"] != target["cash_units"]
+                or paired["ratio_right_security"] != target["ticker"]
+                or int(paired["ratio_right_value"]) <= 0
+                or paired["ratio_right_value"] != target["share_units"]
+            ):
+                raise RuntimeError(f"composite positive cash/share legs are not proven: {target['source_event_id']}")
 
         added_adjudications = [
             {
