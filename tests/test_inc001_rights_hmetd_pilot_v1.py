@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -9,6 +10,12 @@ SPEC = importlib.util.spec_from_file_location("rights_hmetd_pilot", SCRIPT)
 assert SPEC and SPEC.loader
 pilot = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(pilot)
+
+CANARY_SCRIPT = Path(__file__).parents[1] / "scripts" / "audit_inc001_rights_hmetd_live_canary_v1.py"
+CANARY_SPEC = importlib.util.spec_from_file_location("rights_hmetd_live_canary", CANARY_SCRIPT)
+assert CANARY_SPEC and CANARY_SPEC.loader
+canary = importlib.util.module_from_spec(CANARY_SPEC)
+CANARY_SPEC.loader.exec_module(canary)
 
 
 def target(event_id: str, ticker: str, kind: str, candidate: str) -> dict[str, str]:
@@ -136,3 +143,81 @@ def test_selected_targets_restores_source_identity_from_scope(tmp_path: Path) ->
     assert len(selected) == 12
     assert selected[0]["source_event_ids"] == "S-0"
     assert selected[-1]["source_kinds"] == "KSEI_REGISTERED_SECURITY_HISTORY"
+
+
+def test_canary_url_contract_uses_padded_month_and_id_locale() -> None:
+    assert canary.index_url("06", "2026") == (
+        "https://web.ksei.co.id/publications/corporate-action-schedules/rights-distribution"
+        "?Month=06&Year=2026&setLocale=id-ID"
+    )
+
+
+def test_canary_failure_is_fail_closed_and_does_not_continue() -> None:
+    result = canary.classify_canary({"status_code": 500}, Path("missing-canary-body"))
+    assert result["classification"] == "HTTP_500"
+    assert result["provider_execution_stopped"] is True
+    assert result["remaining_five_requests"] == 0
+
+
+def test_request_contract_marks_unrecorded_transport_metadata_unknown(tmp_path: Path) -> None:
+    targets = [
+        {"ticker": "MPPA", "candidate_date": "2026-06-29", "prior_request_url": "old", "corrected_request_url": "new"}
+    ]
+    retained = tmp_path / "retained"
+    retained.mkdir()
+    (retained / "request_records.jsonl").write_text(
+        json.dumps([
+            {
+                "request_kind": "SCHEDULE_INDEX",
+                "requested_url": canary.index_url("06", "2026"),
+                "final_url": canary.index_url("06", "2026"),
+                "status_code": 200,
+                "sha256": "a" * 64,
+            }
+        ]),
+        encoding="utf-8",
+    )
+    (retained / "event_candidate_documents.csv").write_text(
+        "ticker,document_reference,source_ref\nMPPA,KSEI-15669/JKU/0626,https://example.invalid/doc.pdf\n",
+        encoding="utf-8",
+    )
+    diff = canary.contract_diff(targets, retained)
+    assert diff["fields"]["setLocale"]["retained_success"] == "id-ID"
+    assert diff["fields"]["user_agent"]["retained_success"] == "UNKNOWN_NOT_RECORDED"
+    assert diff["fields"]["cookies_session"]["retained_success"] == "UNKNOWN_NOT_RECORDED"
+
+
+def test_mppa_canary_performs_one_exact_get_and_retains_body(tmp_path: Path, monkeypatch) -> None:
+    calls = []
+
+    class Response:
+        status = 200
+        reason = "OK"
+        headers = {"Content-Type": "text/html; charset=UTF-8"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"retained canary body"
+
+        def geturl(self):
+            return canary.index_url("06", "2026")
+
+    def fake_urlopen(request, timeout):
+        calls.append((request, timeout))
+        return Response()
+
+    monkeypatch.setattr(canary.urllib.request, "urlopen", fake_urlopen)
+    raw = tmp_path / "mppa.body"
+    url = canary.index_url("06", "2026")
+    result = canary.perform_mppa_canary(url, raw)
+    assert len(calls) == 1
+    assert calls[0][0].full_url == url
+    assert calls[0][0].get_method() == "GET"
+    assert calls[0][1] == 30
+    assert raw.read_bytes() == b"retained canary body"
+    assert result["status_code"] == 200
