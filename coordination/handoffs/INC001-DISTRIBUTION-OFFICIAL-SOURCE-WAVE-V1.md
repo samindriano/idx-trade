@@ -1,8 +1,8 @@
 # Handoff: INC-001 bounded official distribution-source wave V1
 
-from: local Codex continuation  
-to: ChatGPT review / next authorized INC-001 action  
-task_id: `INC001-DISTRIBUTION-OFFICIAL-SOURCE-WAVE-V1`  
+from: local Codex continuation
+to: ChatGPT review / next authorized INC-001 action
+task_id: `INC001-DISTRIBUTION-OFFICIAL-SOURCE-WAVE-V1`
 lane: `data/ca-aware-feature-basis-remediation-v1`
 
 ## Review boundary

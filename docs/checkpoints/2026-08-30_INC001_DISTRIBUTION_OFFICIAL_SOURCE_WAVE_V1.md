@@ -1,7 +1,7 @@
 # INC-001 bounded official distribution-source wave — V1
 
-Date: 2026-08-30 Asia/Jakarta  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-30 Asia/Jakarta
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 Scope: exactly 18 unresolved V14 economic events: `BONUS_SHARES` 11 and `STOCK_DIVIDEND` 7
 
 ## Controlling inputs and acquisition boundary
