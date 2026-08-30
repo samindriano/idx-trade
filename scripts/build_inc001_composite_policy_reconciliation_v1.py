@@ -287,7 +287,11 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("UNKNOWN_TAXONOMY composite delta is not exactly 4 -> 0")
         if old_family_counts[COMPOSITE_FAMILY] != 0 or new_family_counts[COMPOSITE_FAMILY] != 4:
             raise RuntimeError("composite family delta is not exactly 0 -> 4")
-        for family in sorted(set(old_family_counts) | set(new_family_counts) - {"UNKNOWN_TAXONOMY", COMPOSITE_FAMILY}):
+        changed_families = (set(old_family_counts) | set(new_family_counts)) - {
+            "UNKNOWN_TAXONOMY",
+            COMPOSITE_FAMILY,
+        }
+        for family in sorted(changed_families):
             if old_family_counts[family] != new_family_counts[family]:
                 raise RuntimeError(f"unrelated family changed: {family}")
 
