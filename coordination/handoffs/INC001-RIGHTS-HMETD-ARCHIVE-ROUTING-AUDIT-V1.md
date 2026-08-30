@@ -77,8 +77,13 @@ PY_COMPILE = PASS
 GIT_DIFF_CHECK = PASS
 ARTIFACT_HASH_VALIDATION = PASS (12/12)
 DETERMINISTIC_ROUTING_PLAN_COMPARISON = PASS
-EXACT_HEAD_CI = pending final push
+EXACT_HEAD_CI_PRE_DOCUMENTATION = run 33300480396 @ 837ffe73: PASS; 392 passed, 5 pytest warnings
 ```
+
+The same run emitted the GitHub Actions Node.js 20 deprecation annotation:
+`actions/checkout@v4` and `actions/setup-python@v5` are being forced onto
+Node.js 24. This is a warning annotation, not a test failure. A final exact-head
+run will be checked after this handoff-only documentation commit.
 
 The lane remains outcome-blind. Scientific verdict remains
 `DATA_ADMISSION=FAIL`, `RESEARCH_ADMISSION=FAIL`,

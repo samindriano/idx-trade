@@ -127,6 +127,12 @@ COMPILEALL / PY_COMPILE = PASS
 GIT_DIFF_CHECK = PASS
 ```
 
+Exact-head GitHub Actions run `33300480396` at head `837ffe73` passed with
+`392 passed, 5 pytest warnings`. GitHub also emitted an Actions annotation that
+Node.js 20 is deprecated and `actions/checkout@v4` plus
+`actions/setup-python@v5` are being forced onto Node.js 24. These are warnings,
+not test failures.
+
 The first focused run encountered a known Windows pytest teardown
 `WinError 5` on the stale `pytest-current` temp link; the final runs used an
 isolated `basetemp` and passed. This is an environment note, not a test
