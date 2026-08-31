@@ -2,10 +2,10 @@ name: INC001 Tier A ZAPI CA capability probe V1
 
 on:
   push:
-    branches:
-      - data/ca-aware-feature-basis-remediation-v1
-    paths:
-      - .github/workflows/inc001-tier-a-zapi-capability-probe-v1.yml
+    branches: [data/ca-aware-feature-basis-remediation-v1]
+    paths: [.github/workflows/inc001-tier-a-zapi-capability-probe-v1.yml]
+  pull_request:
+    paths: [.github/workflows/inc001-tier-a-zapi-capability-probe-v1.yml]
 
 permissions:
   contents: read
@@ -18,232 +18,82 @@ jobs:
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
     steps:
       - name: Require ZAPI secret
-        shell: bash
-        run: |
-          test -n "$ZAPI_API_KEY"
+        run: test -n "$ZAPI_API_KEY"
 
-      - name: Run bounded read-only Tier A probe
+      - name: Run read-only control and unresolved probes
         shell: bash
         run: |
           python - <<'PY'
-          import hashlib
-          import json
-          import os
-          import pathlib
-          import urllib.error
-          import urllib.parse
-          import urllib.request
+          import hashlib, json, os, pathlib, urllib.error, urllib.parse, urllib.request
 
-          api_key = os.environ["ZAPI_API_KEY"]
+          key = os.environ["ZAPI_API_KEY"]
           root = pathlib.Path("tier-a-zapi-probe")
-          raw_dir = root / "raw"
-          raw_dir.mkdir(parents=True, exist_ok=True)
+          raw = root / "raw"
+          raw.mkdir(parents=True, exist_ok=True)
 
           targets = [
-              {
-                  "family": "RIGHTS_HMETD",
-                  "role": "RESOLVED_CONTROL",
-                  "ticker": "MPPA",
-                  "year": 2026,
-                  "month": 6,
-                  "endpoint": "rights-offerings",
-                  "accepted_transition": "2026-06-26",
-                  "accepted_semantic": "REGULAR_MARKET_EX_DATE",
-              },
-              {
-                  "family": "RIGHTS_HMETD",
-                  "role": "RESOLVED_CONTROL",
-                  "ticker": "GMFI",
-                  "year": 2025,
-                  "month": 12,
-                  "endpoint": "rights-offerings",
-                  "accepted_transition": "2025-12-22",
-                  "accepted_semantic": "REGULAR_MARKET_EX_DATE",
-              },
-              {
-                  "family": "RIGHTS_HMETD",
-                  "role": "UNRESOLVED_PROBE",
-                  "ticker": "SGER",
-                  "year": 2024,
-                  "month": 5,
-                  "endpoint": "rights-offerings",
-                  "accepted_transition": "",
-                  "accepted_semantic": "REGULAR_MARKET_EX_DATE",
-              },
-              {
-                  "family": "RIGHTS_HMETD",
-                  "role": "UNRESOLVED_PROBE",
-                  "ticker": "PACK",
-                  "year": 2026,
-                  "month": 1,
-                  "endpoint": "rights-offerings",
-                  "accepted_transition": "",
-                  "accepted_semantic": "REGULAR_MARKET_EX_DATE",
-              },
-              {
-                  "family": "STOCK_SPLIT",
-                  "role": "RESOLVED_CONTROL",
-                  "ticker": "AKRA",
-                  "year": 2022,
-                  "month": 1,
-                  "endpoint": "stock-splits",
-                  "accepted_transition": "2022-01-12",
-                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
-              },
-              {
-                  "family": "STOCK_SPLIT",
-                  "role": "RESOLVED_CONTROL",
-                  "ticker": "AMOR",
-                  "year": 2021,
-                  "month": 12,
-                  "endpoint": "stock-splits",
-                  "accepted_transition": "2021-12-08",
-                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
-              },
-              {
-                  "family": "STOCK_SPLIT",
-                  "role": "UNRESOLVED_PROBE",
-                  "ticker": "BMRI",
-                  "year": 2023,
-                  "month": 4,
-                  "endpoint": "stock-splits",
-                  "accepted_transition": "",
-                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
-              },
-              {
-                  "family": "STOCK_SPLIT",
-                  "role": "UNRESOLVED_PROBE",
-                  "ticker": "SMDR",
-                  "year": 2023,
-                  "month": 1,
-                  "endpoint": "stock-splits",
-                  "accepted_transition": "",
-                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
-              },
+            ("RIGHTS_HMETD","RESOLVED_CONTROL","MPPA",2026,6,"rights-offerings","2026-06-26","REGULAR_MARKET_EX_DATE"),
+            ("RIGHTS_HMETD","RESOLVED_CONTROL","GMFI",2025,12,"rights-offerings","2025-12-22","REGULAR_MARKET_EX_DATE"),
+            ("RIGHTS_HMETD","UNRESOLVED_PROBE","SGER",2024,5,"rights-offerings","","REGULAR_MARKET_EX_DATE"),
+            ("RIGHTS_HMETD","UNRESOLVED_PROBE","PACK",2026,1,"rights-offerings","","REGULAR_MARKET_EX_DATE"),
+            ("STOCK_SPLIT","RESOLVED_CONTROL","AKRA",2022,1,"stock-splits","2022-01-12","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
+            ("STOCK_SPLIT","RESOLVED_CONTROL","AMOR",2021,12,"stock-splits","2021-12-08","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
+            ("STOCK_SPLIT","UNRESOLVED_PROBE","BMRI",2023,4,"stock-splits","","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
+            ("STOCK_SPLIT","UNRESOLVED_PROBE","SMDR",2023,1,"stock-splits","","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
           ]
 
-          def compact(value, limit=1200):
-              text = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-              return text if len(text) <= limit else text[:limit] + "...<truncated>"
-
-          results = []
-          for idx, target in enumerate(targets, start=1):
-              params = {
-                  "year": target["year"],
-                  "month": target["month"],
-                  "page": 1,
-                  "length": 200,
-                  "search": target["ticker"],
-              }
-              query = urllib.parse.urlencode(params)
-              url = f"https://api.zpi.web.id/v1/finance:idx/{target['endpoint']}?{query}"
-              request = urllib.request.Request(
-                  url,
-                  headers={
-                      "x-api-key": api_key,
-                      "Accept": "application/json",
-                      "User-Agent": "IDX-Trade-INC001-TierA-Probe/1.0",
-                  },
-              )
-              status = 0
-              payload_bytes = b""
-              error = ""
-              content_type = ""
+          out = []
+          for i, (family, role, ticker, year, month, endpoint, accepted, semantic) in enumerate(targets, 1):
+              params = urllib.parse.urlencode({"year":year,"month":month,"page":1,"length":200,"search":ticker})
+              url = f"https://api.zpi.web.id/v1/finance:idx/{endpoint}?{params}"
+              req = urllib.request.Request(url, headers={"x-api-key":key,"Accept":"application/json","User-Agent":"IDX-Trade-INC001-TierA-Probe/1.1"})
+              status, body, err, ctype = 0, b"", "", ""
               try:
-                  with urllib.request.urlopen(request, timeout=40) as response:
-                      status = int(getattr(response, "status", 0) or 0)
-                      payload_bytes = response.read()
-                      content_type = str(response.headers.get("Content-Type", ""))
-              except urllib.error.HTTPError as exc:
-                  status = int(exc.code)
-                  payload_bytes = exc.read()
-                  error = f"HTTPError:{exc.code}"
-                  content_type = str(exc.headers.get("Content-Type", "")) if exc.headers else ""
-              except Exception as exc:
-                  error = f"{type(exc).__name__}:{exc}"
+                  with urllib.request.urlopen(req, timeout=40) as r:
+                      status, body, ctype = int(r.status), r.read(), str(r.headers.get("Content-Type", ""))
+              except urllib.error.HTTPError as e:
+                  status, body, err = int(e.code), e.read(), f"HTTPError:{e.code}"
+                  ctype = str(e.headers.get("Content-Type", "")) if e.headers else ""
+              except Exception as e:
+                  err = f"{type(e).__name__}:{e}"
 
-              raw_name = f"{idx:02d}_{target['endpoint']}_{target['ticker']}_{target['year']}_{target['month']:02d}.json"
-              (raw_dir / raw_name).write_bytes(payload_bytes)
-              sha = hashlib.sha256(payload_bytes).hexdigest() if payload_bytes else ""
-
-              parsed = None
-              parse_error = ""
-              if payload_bytes:
-                  try:
-                      parsed = json.loads(payload_bytes.decode("utf-8"))
-                  except Exception as exc:
-                      parse_error = f"{type(exc).__name__}:{exc}"
-
+              fn = f"{i:02d}_{endpoint}_{ticker}_{year}_{month:02d}.json"
+              (raw / fn).write_bytes(body)
+              sha = hashlib.sha256(body).hexdigest() if body else ""
+              parsed, parse_error = None, ""
+              if body:
+                  try: parsed = json.loads(body.decode("utf-8"))
+                  except Exception as e: parse_error = f"{type(e).__name__}:{e}"
               items = []
               if isinstance(parsed, dict):
-                  candidate = parsed.get("items")
-                  if isinstance(candidate, list):
-                      items = candidate
-                  elif isinstance(parsed.get("data"), list):
-                      items = parsed["data"]
+                  if isinstance(parsed.get("items"), list): items = parsed["items"]
+                  elif isinstance(parsed.get("data"), list): items = parsed["data"]
 
               row = {
-                  **target,
-                  "request_url_without_key": url,
-                  "http_status": status,
-                  "content_type": content_type,
-                  "response_bytes": len(payload_bytes),
-                  "response_sha256": sha,
-                  "error": error,
-                  "parse_error": parse_error,
-                  "item_count": len(items),
-                  "top_level_keys": sorted(parsed.keys()) if isinstance(parsed, dict) else [],
-                  "items": items,
-                  "raw_file": f"raw/{raw_name}",
+                "family":family,"role":role,"ticker":ticker,"year":year,"month":month,
+                "endpoint":endpoint,"accepted_transition":accepted,"accepted_semantic":semantic,
+                "request_url_without_key":url,"http_status":status,"content_type":ctype,
+                "response_bytes":len(body),"response_sha256":sha,"error":err,
+                "parse_error":parse_error,"top_level_keys":sorted(parsed) if isinstance(parsed,dict) else [],
+                "item_count":len(items),"items":items,"raw_file":f"raw/{fn}"
               }
-              results.append(row)
-
-              print(
-                  "PROBE",
-                  target["family"],
-                  target["role"],
-                  target["ticker"],
-                  f"{target['year']}-{target['month']:02d}",
-                  f"status={status}",
-                  f"items={len(items)}",
-                  f"sha256={sha}",
-                  f"error={error or '-'}",
-              )
-              if items:
-                  print("ITEM_SAMPLE", target["ticker"], compact(items[0]))
-              elif isinstance(parsed, dict):
-                  print("EMPTY_RESPONSE_SHAPE", target["ticker"], compact(parsed))
+              out.append(row)
+              print("PROBE", family, role, ticker, f"{year}-{month:02d}", f"status={status}", f"items={len(items)}", f"sha256={sha}", f"error={err or '-'}")
+              if isinstance(parsed, dict):
+                  sample = items[0] if items else parsed
+                  text = json.dumps(sample, ensure_ascii=True, sort_keys=True, separators=(",",":"))
+                  print("SAMPLE", ticker, text[:2000])
               else:
-                  print("NON_JSON_RESPONSE", target["ticker"], payload_bytes[:500].decode("utf-8", "replace"))
+                  print("NON_JSON", ticker, body[:500].decode("utf-8","replace"))
 
-          summary = {
-              "schema_version": "inc001_tier_a_zapi_capability_probe_v1",
-              "transport": "ZAPI",
-              "upstream_provider_claim": "IDX",
-              "read_only": True,
-              "production_mutation": False,
-              "call_count": len(results),
-              "targets": results,
-          }
-          (root / "probe.json").write_text(
-              json.dumps(summary, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-          manifest = {
-              "probe_sha256": hashlib.sha256((root / "probe.json").read_bytes()).hexdigest(),
-              "raw_sha256": {
-                  path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-                  for path in sorted(raw_dir.glob("*.json"))
-              },
-          }
-          (root / "MANIFEST.json").write_text(
-              json.dumps(manifest, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
+          probe = {"schema_version":"inc001_tier_a_zapi_capability_probe_v1","transport":"ZAPI","upstream_provider_claim":"IDX","read_only":True,"production_mutation":False,"call_count":len(out),"targets":out}
+          (root / "probe.json").write_text(json.dumps(probe, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          manifest = {"probe_sha256":hashlib.sha256((root/"probe.json").read_bytes()).hexdigest(),"raw_sha256":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(raw.glob("*.json"))}}
+          (root / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           print("PROBE_MANIFEST", json.dumps(manifest, sort_keys=True))
           PY
 
-      - name: Upload immutable probe evidence
+      - name: Upload probe evidence
         uses: actions/upload-artifact@v4
         with:
           name: inc001-tier-a-zapi-capability-probe-v1
