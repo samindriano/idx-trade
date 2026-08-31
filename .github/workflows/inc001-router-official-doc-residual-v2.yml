@@ -1,0 +1,186 @@
+name: INC001 Router Official Doc Residual V2
+
+on:
+  push:
+    branches:
+      - data/ca-aware-feature-basis-remediation-v1
+    paths:
+      - .github/workflows/inc001-router-official-doc-residual-v2.yml
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install deterministic PDF extractor
+        run: python -m pip install --quiet pypdf==6.16.2
+
+      - name: Run bounded residual first-party evidence pass
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv, hashlib, json, pathlib, re, ssl, urllib.error, urllib.request
+          from datetime import datetime, timezone
+          from urllib.parse import urlparse
+          from pypdf import PdfReader
+
+          ROOT = pathlib.Path('inc001-router-official-doc-residual-v2')
+          RAW, TEXT = ROOT/'raw', ROOT/'text'
+          RAW.mkdir(parents=True, exist_ok=True); TEXT.mkdir(parents=True, exist_ok=True)
+
+          PRIOR_V1 = {
+              'workflow_run': 33363989537,
+              'artifact_id': 9747649590,
+              'artifact_zip_sha256': '3de07832676e0bf7f001845f280b2bcd206ff164e586258ef11d968bb33c64fc',
+              'artifact_manifest_sha256': '2cb9eba292c8c8a3cda7e61a9b03f604bb28b0d0f01520f33f64e796a3bc69bc',
+              'already_exact': ['DIVA','TMAS','TUGU'],
+          }
+
+          # Only residuals where V1 had no exact admissible document and where a materially
+          # new first-party route exists. BYAN is deliberately not retried: V1 already
+          # fetched its issuer annual report successfully but the exact date-to-regular-
+          # market semantic linkage remained insufficient under the frozen contract.
+          TARGETS = [
+              {
+                  'ticker':'BMRI','family':'STOCK_SPLIT','candidate':'2023-04-04',
+                  'allowed_hosts':['www.bankmandiri.co.id'],
+                  'urls':['https://www.bankmandiri.co.id/documents/38268824/38269136/Keterbukaan%2BInformasi%2B2903.pdf/e444d7ab-97d5-38c4-5e07-fdf3547b73bc?t=1680071142662'],
+                  'owner':'PT Bank Mandiri (Persero) Tbk','source_kind':'ISSUER_FINAL_STOCK_SPLIT_DISCLOSURE',
+                  'date':r'4\s+April\s+2023',
+                  'semantic':r'Awal\s+perdagangan\s+saham\s+dengan\s+nilai\s+nominal\s+baru\s+di\s+Pasar\s+Reguler\s+dan\s+Pasar\s+Negosiasi',
+                  'mechanics':[r'rasio\s+1\s*:\s*2|rasio\s+1:2',r'Rp\s*250',r'Rp\s*125'],
+              },
+              {
+                  'ticker':'BBRM','family':'REVERSE_SPLIT','candidate':'2022-02-18',
+                  'allowed_hosts':['new.bbr.co.id'],
+                  'urls':[
+                      'https://new.bbr.co.id/wp-content/uploads/2024/12/Pengumuman%20Jadwal%20Reverse%20BBRM_16%20FEB%202022.pdf',
+                      'https://new.bbr.co.id/wp-content/uploads/2024/11/AR-BBR-2022-20-APRIL-2023-FINAL.pdf',
+                  ],
+                  'owner':'PT Pelayaran Nasional Bina Buana Raya Tbk','source_kind':'ISSUER_REVERSE_SPLIT_EVIDENCE',
+                  'date':r'18\s+Feb(?:ruari|ruary)\s+2022',
+                  'semantic':r'(?:Mulai|Awal|Start|Commencement).*?perdagangan.*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)',
+                  'mechanics':[r'reverse\s*stock|penggabungan\s+(?:nilai\s+nominal|saham)',r'100',r'150'],
+              },
+              {
+                  'ticker':'SKRN','family':'STOCK_SPLIT','candidate':'2023-01-06',
+                  'allowed_hosts':['superkrane.com','www.superkrane.com'],
+                  'urls':[
+                      'https://www.superkrane.com/wp-content/uploads/2025/10/Report-SKRN-per-30-Sept-2025.pdf',
+                      'https://superkrane.com/wp-content/uploads/2025/10/Report-SKRN-per-30-Sept-2025.pdf',
+                  ],
+                  'owner':'PT Superkrane Mitra Utama Tbk','source_kind':'ISSUER_FINANCIAL_REPORT',
+                  'date':r'6\s+Januari\s+2023|January\s+6,?\s+2023',
+                  'semantic':r'(?:awal\s+perdagangan|initial\s+trading).*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:pasar\s+reguler|regular\s+market).*?(?:pasar\s+negosiasi|negotiat(?:ed|ing)\s+market)',
+                  'mechanics':[r'stock\s*split|pemecahan',r'100',r'20'],
+              },
+              {
+                  'ticker':'SMDR','family':'STOCK_SPLIT','candidate':'2023-01-31',
+                  'allowed_hosts':['web.ksei.co.id','samudera.id'],
+                  'urls':[
+                      'https://web.ksei.co.id/Announcement/Files/SMDR_MCONV_20230201_ID.pdf',
+                      'https://samudera.id/public_assets/1/uploads/20240328051448PT_Samudera_indonesia_tbk__31_Des_2023_released.pdf',
+                  ],
+                  'owner':'KSEI or PT Samudera Indonesia Tbk','source_kind':'FIRST_PARTY_STOCK_SPLIT_EVIDENCE',
+                  'date':r'31\s+Januari\s+2023|31\s+January\s+2023|January\s+31,?\s+2023',
+                  'semantic':r'(?:Mulai|Awal|Start|initial).*?perdagangan.*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)',
+                  'mechanics':[r'stock\s*split|pemecahan',r'1\s*:\s*5|1\s+berbanding\s+5',r'25',r'5'],
+              },
+          ]
+
+          def sha(b): return hashlib.sha256(b).hexdigest()
+          def norm(s): return ' '.join(s.replace('\x00',' ').split())
+          def extract(path):
+              try:
+                  reader=PdfReader(str(path)); chunks=[]
+                  for page in reader.pages:
+                      try: chunks.append(page.extract_text() or '')
+                      except Exception as exc: chunks.append(f' [PAGE_EXTRACT_ERROR:{type(exc).__name__}] ')
+                  return '\n'.join(chunks), ''
+              except Exception as exc: return '', f'{type(exc).__name__}:{exc}'
+          def fetch(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 IDX-Trade/INC001-router-official-doc-residual-v2','Accept':'application/pdf,*/*;q=0.8'})
+              try:
+                  with urllib.request.urlopen(req,timeout=60,context=ssl.create_default_context()) as r:
+                      return int(r.status),r.geturl(),r.read(),'',str(r.headers.get('Content-Type',''))
+              except urllib.error.HTTPError as exc:
+                  return int(exc.code),str(exc.geturl()),exc.read(),f'HTTPError:{exc.code}',str(exc.headers.get('Content-Type','')) if exc.headers else ''
+              except Exception as exc: return 0,url,b'',f'{type(exc).__name__}:{exc}',''
+          def snip(text,m,w=1000):
+              if not m:return ''
+              return text[max(0,m.start()-w//2):min(len(text),m.end()+w//2)]
+
+          requests=[]; target_results=[]
+          for t_index,target in enumerate(TARGETS,1):
+              candidates=[]
+              for u_index,url in enumerate(target['urls'],1):
+                  host=(urlparse(url).hostname or '').lower()
+                  if host not in target['allowed_hosts']:
+                      raise RuntimeError(f"non-first-party host for {target['ticker']}: {host}")
+                  started=datetime.now(timezone.utc).isoformat()
+                  status,final_url,body,error,ctype=fetch(url)
+                  raw_path=RAW/f"{t_index:02d}_{target['ticker']}_{u_index:02d}.pdf"; raw_path.write_bytes(body)
+                  raw_sha=sha(body) if body else ''
+                  text,extract_error=extract(raw_path) if status==200 and body else ('','')
+                  text_path=TEXT/f"{t_index:02d}_{target['ticker']}_{u_index:02d}.txt"; text_path.write_text(text,encoding='utf-8')
+                  normalized=norm(text)
+                  date_m=re.search(target['date'],normalized,re.I|re.S)
+                  semantic_m=re.search(target['semantic'],normalized,re.I|re.S)
+                  mechanics=[bool(re.search(p,normalized,re.I|re.S)) for p in target['mechanics']]
+                  # Require the explicit date to be locally bound to the accepted market semantic.
+                  near=bool(date_m and semantic_m and abs(date_m.start()-semantic_m.start())<=2200)
+                  resolved=bool(status==200 and body and not extract_error and date_m and semantic_m and all(mechanics) and near)
+                  row={
+                      'ticker':target['ticker'],'family':target['family'],'candidate_transition':target['candidate'],
+                      'url':url,'final_url':final_url,'http_status':status,'content_type':ctype,'error':error,
+                      'bytes':len(body),'evidence_sha256':raw_sha,'text_sha256':sha(text_path.read_bytes()),
+                      'extract_error':extract_error,'date_match':bool(date_m),'semantic_match':bool(semantic_m),
+                      'mechanics_checks':mechanics,'date_near_semantic':near,'resolved_exact':resolved,
+                      'source_owner':target['owner'],'source_kind':target['source_kind'],'retrieved_utc':started,
+                      'raw_file':str(raw_path.relative_to(ROOT)),'text_file':str(text_path.relative_to(ROOT)),
+                      'date_snippet':snip(normalized,date_m),'semantic_snippet':snip(normalized,semantic_m),
+                  }
+                  candidates.append(row); requests.append(row)
+                  print('CANDIDATE',target['ticker'],u_index,f'status={status}',f'bytes={len(body)}',f'date={bool(date_m)}',f'semantic={bool(semantic_m)}',f'mechanics={mechanics}',f'near={near}',f'resolved={resolved}',f'error={error or extract_error or "-"}')
+              exact=[r for r in candidates if r['resolved_exact']]
+              target_results.append({
+                  'ticker':target['ticker'],'family':target['family'],'candidate_transition':target['candidate'],
+                  'verdict':'RESOLVED_EXACT_OFFICIAL' if exact else ('OFFICIAL_DOC_FOUND_SEMANTIC_INSUFFICIENT' if any(r['http_status']==200 and r['bytes'] for r in candidates) else 'OFFICIAL_DOC_UNAVAILABLE'),
+                  'accepted_evidence_sha256':exact[0]['evidence_sha256'] if exact else '',
+                  'accepted_url':exact[0]['final_url'] if exact else '',
+                  'candidate_count':len(candidates),'candidates':candidates,
+              })
+
+          counts={}
+          for row in target_results: counts[row['verdict']]=counts.get(row['verdict'],0)+1
+          summary={
+              'schema_version':'inc001_router_official_doc_residual_v2','read_only':True,'outcome_blind':True,
+              'production_mutation':False,'prior_v1':PRIOR_V1,'target_count':len(TARGETS),'verdict_counts':counts,
+              'negative_authority':'NOT_CLAIMED','population_completeness_authority':'NOT_EVALUATED_BY_THIS_WAVE',
+              'historical_asof_authority':'NOT_EVALUATED_BY_THIS_WAVE','byan_retrial':'DELIBERATELY_NOT_REPEATED_SEMANTICALLY_INSUFFICIENT_SOURCE_ALREADY_FETCHED',
+              'transition_admission_rule':'HASHED_FIRST_PARTY_BYTES_PLUS_EXPLICIT_REGULAR_MARKET_FIRST_NEW_BASIS_DATE_AND_MECHANICS_WITH_LOCAL_DATE_SEMANTIC_BINDING',
+              'targets':target_results,
+          }
+          with (ROOT/'request_ledger.csv').open('w',encoding='utf-8',newline='') as f:
+              fields=['ticker','family','candidate_transition','url','final_url','http_status','content_type','error','bytes','evidence_sha256','text_sha256','extract_error','date_match','semantic_match','mechanics_checks','date_near_semantic','resolved_exact','source_owner','source_kind','retrieved_utc','raw_file','text_file']
+              w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore',lineterminator='\n');w.writeheader();w.writerows(requests)
+          (ROOT/'summary.json').write_text(json.dumps(summary,ensure_ascii=True,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          files={}
+          for p in sorted(ROOT.rglob('*')):
+              if p.is_file() and p.name!='MANIFEST.json': files[str(p.relative_to(ROOT)).replace('\\','/')]={'bytes':p.stat().st_size,'sha256':sha(p.read_bytes())}
+          (ROOT/'MANIFEST.json').write_text(json.dumps({'manifest_version':'inc001_router_official_doc_residual_v2_manifest','files':files,'self_hash_policy':'MANIFEST.json excluded from its own hash'},indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print('SUMMARY',json.dumps({k:v for k,v in summary.items() if k!='targets'},sort_keys=True))
+          print('TARGET_RESULTS',json.dumps([{k:v for k,v in x.items() if k!='candidates'} for x in target_results],sort_keys=True))
+          print('MANIFEST_SHA256',sha((ROOT/'MANIFEST.json').read_bytes()))
+          PY
+
+      - name: Upload immutable residual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: inc001-router-official-doc-residual-v2
+          path: inc001-router-official-doc-residual-v2/
+          if-no-files-found: error
+          retention-days: 14

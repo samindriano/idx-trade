@@ -1,124 +1,17 @@
-name: INC001 Tier A ZAPI CA capability probe V1
+name: INC001 Tier A ZAPI CA capability probe V1 (frozen)
 
 on:
-  push:
-    branches: [data/ca-aware-feature-basis-remediation-v1]
-    paths: [.github/workflows/inc001-tier-a-zapi-capability-probe-v1.yml]
-  pull_request:
-    paths: [.github/workflows/inc001-tier-a-zapi-capability-probe-v1.yml]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  frozen:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
     steps:
-      - name: Require ZAPI secret
-        run: test -n "$ZAPI_API_KEY"
-
-      - name: Run targeted residual split router probe
-        shell: bash
+      - name: Historical router is frozen
         run: |
-          python - <<'PY'
-          import csv, hashlib, json, os, pathlib, urllib.error, urllib.parse, urllib.request
-
-          key = os.environ["ZAPI_API_KEY"]
-          root = pathlib.Path("tier-a-zapi-residual-router")
-          raw = root / "raw"
-          raw.mkdir(parents=True, exist_ok=True)
-
-          # These are only the already-known residual ticker/month windows from the
-          # accepted bounded split/reverse work. ZAPI is discovery/router evidence,
-          # never transition authority.
-          targets = [
-              ("DIVA", 2021, 9, "STOCK_SPLIT"),
-              ("BBRM", 2022, 2, "REVERSE_SPLIT"),
-              ("BYAN", 2022, 12, "STOCK_SPLIT"),
-              ("SKRN", 2023, 1, "STOCK_SPLIT"),
-              ("SMDR", 2023, 1, "STOCK_SPLIT"),
-              ("BMRI", 2023, 4, "STOCK_SPLIT"),
-              ("TMAS", 2023, 5, "STOCK_SPLIT"),
-              ("TUGU", 2023, 5, "STOCK_SPLIT"),
-          ]
-
-          ledger = []
-          rows = []
-          for i, (ticker, year, month, expected_family) in enumerate(targets, 1):
-              params = urllib.parse.urlencode({"year": year, "month": month, "page": 1, "length": 200, "search": ticker})
-              url = f"https://api.zpi.web.id/v1/finance:idx/stock-splits?{params}"
-              req = urllib.request.Request(url, headers={"x-api-key": key, "Accept": "application/json", "User-Agent": "IDX-Trade-INC001-TierA-Residual-Router/1.0"})
-              status, body, error = 0, b"", ""
-              try:
-                  with urllib.request.urlopen(req, timeout=40) as r:
-                      status, body = int(r.status), r.read()
-              except urllib.error.HTTPError as e:
-                  status, body, error = int(e.code), e.read(), f"HTTPError:{e.code}"
-              except Exception as e:
-                  error = f"{type(e).__name__}:{e}"
-
-              fn = f"{i:02d}_{ticker}_{year}_{month:02d}.json"
-              (raw / fn).write_bytes(body)
-              sha = hashlib.sha256(body).hexdigest() if body else ""
-              parsed, parse_error = None, ""
-              if body:
-                  try: parsed = json.loads(body.decode("utf-8"))
-                  except Exception as e: parse_error = f"{type(e).__name__}:{e}"
-              data = parsed.get("data") if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else {}
-              items = data.get("items") if isinstance(data.get("items"), list) else []
-              exact = [item for item in items if isinstance(item, dict) and str(item.get("code", "")).upper() == ticker]
-
-              ledger.append({
-                  "ticker": ticker, "expected_family": expected_family, "year": year, "month": month,
-                  "url_without_key": url, "http_status": status, "error": error,
-                  "parse_error": parse_error, "response_sha256": sha, "response_bytes": len(body),
-                  "api_total": data.get("total", ""), "api_count": data.get("count", ""),
-                  "exact_row_count": len(exact), "raw_file": f"raw/{fn}",
-              })
-              for item in exact:
-                  rows.append({
-                      "ticker": ticker, "expected_family": expected_family,
-                      "actionCode": item.get("actionCode", ""), "listingDate": item.get("listingDate", ""),
-                      "ratio": item.get("ratio", ""), "nominalValue": item.get("nominalValue", ""),
-                      "nominalValueNew": item.get("nominalValueNew", ""),
-                      "priceAdjustmentFactor": item.get("priceAdjustmentFactor", ""),
-                      "item_json": json.dumps(item, ensure_ascii=True, sort_keys=True, separators=(",", ":")),
-                  })
-              print("ROUTER", ticker, expected_family, f"status={status}", f"rows={len(exact)}", f"error={error or '-'}")
-              for item in exact:
-                  print("ROW", ticker, json.dumps(item, ensure_ascii=True, sort_keys=True, separators=(",", ":")))
-
-          fields = list(ledger[0])
-          with (root / "request_ledger.csv").open("w", encoding="utf-8", newline="") as f:
-              w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n"); w.writeheader(); w.writerows(ledger)
-          fields = ["ticker","expected_family","actionCode","listingDate","ratio","nominalValue","nominalValueNew","priceAdjustmentFactor","item_json"]
-          with (root / "rows.csv").open("w", encoding="utf-8", newline="") as f:
-              w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n"); w.writeheader(); w.writerows(rows)
-
-          summary = {
-              "schema_version": "inc001_tier_a_zapi_residual_router_v1",
-              "read_only": True,
-              "zapi_is_transition_authority": False,
-              "negative_authority": "NOT_CLAIMED",
-              "targets": len(targets),
-              "successful_requests": sum(1 for x in ledger if x["http_status"] == 200),
-              "targets_with_exact_rows": sum(1 for x in ledger if x["exact_row_count"] > 0),
-              "returned_rows": len(rows),
-          }
-          (root / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          manifest = {str(p.relative_to(root)).replace("\\", "/"): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob("*")) if p.is_file() and p.name != "MANIFEST.json"}
-          (root / "MANIFEST.json").write_text(json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          print("SUMMARY", json.dumps(summary, sort_keys=True))
-          print("MANIFEST_SHA256", hashlib.sha256((root / "MANIFEST.json").read_bytes()).hexdigest())
-          PY
-
-      - name: Upload targeted router evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: inc001-tier-a-zapi-residual-router-v1
-          path: tier-a-zapi-residual-router/
-          if-no-files-found: error
-          retention-days: 14
+          echo "Automatic Tier-A ZAPI routing is frozen after accepted run 33357587316."
+          echo "Use commit 6875cef4587c88b8fc0cba45a19b87f4a9456ab0 for the exact historical router implementation."
+          echo "ZAPI remains discovery/router evidence only, not transition, negative, population, or historical-as-of authority."
