@@ -3,7 +3,7 @@
 Date: 2026-08-31 Asia/Jakarta
 Repository: `samindriano/idx-trade`
 Lane: `data/ca-aware-feature-basis-remediation-v1`
-Lane HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02`
+Evidence source HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02` (before this documentation checkpoint)
 Mode: read-only, outcome-blind, no credentials
 
 ## Purpose
@@ -99,7 +99,7 @@ The deterministic external evidence tree is:
 `D:\Documents\Project\idx-ca-authority-source-contract-recon-20260831-v1`
 
 Manifest SHA-256 at checkpoint:
-`cbdb7fbaaf21dc4ee16dfcc69907deecba4b0a7fa954d14a0624621a421e464e`
+`80b494a284c00bf1fc1ead48b3f650acec6e99de317b6df40ebc2756d8980c49`
 
 It contains 33 raw-evidence index records, 32 captured payload hashes, a
 machine-readable source matrix, a 144-cell requirement matrix, a human-

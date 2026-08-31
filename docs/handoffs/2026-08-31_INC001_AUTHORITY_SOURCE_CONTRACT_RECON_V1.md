@@ -2,7 +2,7 @@
 
 Date: 2026-08-31 Asia/Jakarta
 Lane: `data/ca-aware-feature-basis-remediation-v1`
-HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02`
+Evidence source HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02` (before this documentation checkpoint)
 
 ## Result
 
@@ -21,7 +21,7 @@ External evidence root:
 `D:\Documents\Project\idx-ca-authority-source-contract-recon-20260831-v1`
 
 External manifest SHA-256:
-`cbdb7fbaaf21dc4ee16dfcc69907deecba4b0a7fa954d14a0624621a421e464e`
+`80b494a284c00bf1fc1ead48b3f650acec6e99de317b6df40ebc2756d8980c49`
 
 The root includes raw public bytes plus URL/retrieval/status/content-type/
 size/SHA metadata, `source_contract_matrix.csv/json/md`,
