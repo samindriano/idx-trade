@@ -75,6 +75,58 @@ _ATTESTATION_RUNTIME_HASH_FIELDS = (
     "tradability_intervals_sha256",
     "tradability_coverage_sha256",
     "tradability_anchors_sha256",
+    "feature_basis_evidence_sha256",
+)
+
+FEATURE_BASIS_SCHEMA_VERSION = "idx_trade_forward_feature_basis_v1"
+FEATURE_BASIS_POLICY_ID = "FORWARD_FEATURE_BASIS_ACCEPTANCE_GATE_V1"
+FEATURE_BASIS_EVIDENCE_FILENAME = "feature_basis_evidence.json"
+BASIS_SAFE = "BASIS_SAFE"
+BASIS_TRANSITION_OVERLAP = "BASIS_TRANSITION_OVERLAP"
+BASIS_UNRESOLVED = "BASIS_UNRESOLVED"
+SOURCE_CAPTURE_UNRESOLVED = "SOURCE_CAPTURE_UNRESOLVED"
+FEATURE_BASIS_STATES = (
+    "CERTIFIED_TRANSITION",
+    "CERTIFIED_SAME_BASIS",
+    "NO_KNOWN_TRANSITION",
+    "BASIS_UNKNOWN",
+    "SOURCE_CAPTURE_UNRESOLVED",
+)
+FEATURE_BASIS_FIELD_STATES = {"CERTIFIED_SAME_BASIS", "CERTIFIED_TRANSITION"}
+FEATURE_BASIS_FIELDS = ("high", "low", "close", "volume", "regular_market_value")
+
+# This is contract metadata only.  The frozen feature formulas remain in the
+# pinned scorer modules.  The spans are the exact potential mixed-basis spans
+# of the 28 final features recorded by the frozen feature-window audit.
+FEATURE_BASIS_WINDOW_CONTRACT = (
+    ("xs_rank_close_return_5", 4),
+    ("xs_rank_close_return_20", 19),
+    ("xs_rank_atr14_over_close", 13),
+    ("xs_rank_close_position_20", 19),
+    ("xs_rank_distance_high_20_atr", 19),
+    ("xs_rank_distance_low_20_atr", 19),
+    ("xs_rank_distance_high_60_atr", 59),
+    ("xs_rank_distance_low_60_atr", 59),
+    ("xs_rank_relative_volume_20", 19),
+    ("xs_rank_log_regular_value_relative_20", 19),
+    ("market_primary_liquid_count", 59),
+    ("market_breadth_return_5_positive", 4),
+    ("market_breadth_return_20_positive", 19),
+    ("market_median_close_return_5", 4),
+    ("market_median_close_return_20", 19),
+    ("market_median_atr14_over_close", 13),
+    ("market_median_close_position_20", 19),
+    ("market_median_relative_volume_20", 19),
+    ("market_median_log_regular_value_relative_20", 19),
+    ("market_relative_close_return_5", 4),
+    ("market_relative_close_return_20", 19),
+    ("market_relative_atr14_over_close", 13),
+    ("market_relative_close_position_20", 19),
+    ("market_relative_relative_volume_20", 19),
+    ("market_relative_log_regular_value_relative_20", 19),
+    ("session_open_position_range", 0),
+    ("session_body_signed_range", 0),
+    ("session_log_high_low_range", 0),
 )
 
 
@@ -137,6 +189,19 @@ def _set_hash(values: Sequence[str]) -> str:
     return hashlib.sha256(_canonical_json(sorted(set(values)))).hexdigest()
 
 
+def _feature_basis_window_contract_payload() -> list[dict[str, Any]]:
+    return [
+        {"feature": feature, "potential_mixed_basis_span": span}
+        for feature, span in FEATURE_BASIS_WINDOW_CONTRACT
+    ]
+
+
+def _feature_basis_window_contract_sha256() -> str:
+    return hashlib.sha256(
+        _canonical_json(_feature_basis_window_contract_payload())
+    ).hexdigest()
+
+
 def _safe_session(value: object) -> str:
     try:
         parsed = pd.Timestamp(value).tz_localize(None).normalize()
@@ -169,6 +234,423 @@ def _sha(value: object, label: str) -> str:
     if not HEX64_RE.fullmatch(result):
         raise ValueError(f"{label}_SHA_INVALID")
     return result
+
+
+def _feature_basis_failure(
+    status: str,
+    *reasons: str,
+    metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    reason_codes = list(dict.fromkeys(reasons))
+    if not reason_codes and status != BASIS_SAFE:
+        reason_codes = ["FEATURE_BASIS_NOT_PROVABLE"]
+    return {
+        "status": status,
+        "reason_codes": reason_codes,
+        "metadata": dict(metadata or {}),
+    }
+
+
+def evaluate_feature_basis_admission(
+    *,
+    session_date: str,
+    model_input_tickers: Sequence[str],
+    model_input_path: str | Path,
+    model_input_sha256: str,
+    clean_panel_path: str | Path,
+    clean_panel_sha256: str,
+    official_session_dates: Sequence[object],
+    evidence: Mapping[str, Any] | None,
+    observed_at: str,
+    evidence_path: str | Path | None = None,
+    evidence_sha256: str | None = None,
+) -> dict[str, Any]:
+    """Admit a model-input basis without changing the frozen scorer."""
+
+    metadata: dict[str, Any] = {
+        "feature_basis_gate_applied": True,
+        "feature_basis_policy_id": FEATURE_BASIS_POLICY_ID,
+        "feature_basis_evidence_path": (
+            str(Path(evidence_path).expanduser().resolve())
+            if evidence_path is not None
+            else ""
+        ),
+        "feature_basis_evidence_sha256": str(evidence_sha256 or "").lower(),
+        "feature_basis_window_contract_sha256": (
+            _feature_basis_window_contract_sha256()
+        ),
+    }
+    try:
+        session = _safe_session(session_date)
+        observed = pd.Timestamp(_safe_observed_at(observed_at))
+        model_path = Path(model_input_path).expanduser().resolve()
+        panel_path = Path(clean_panel_path).expanduser().resolve()
+        if not model_path.is_file() or not panel_path.is_file():
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_INPUT_ARTIFACT_MISSING",
+                metadata=metadata,
+            )
+        if str(model_input_sha256).lower() != sha256_file(model_path):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MODEL_INPUT_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        if str(clean_panel_sha256).lower() != sha256_file(panel_path):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CLEAN_PANEL_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        if not isinstance(evidence, Mapping):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_EVIDENCE_MISSING",
+                metadata=metadata,
+            )
+        if evidence.get("schema_version") != FEATURE_BASIS_SCHEMA_VERSION:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SCHEMA_INVALID",
+                metadata=metadata,
+            )
+        if evidence.get("policy_id") != FEATURE_BASIS_POLICY_ID:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_POLICY_INVALID",
+                metadata=metadata,
+            )
+        if _safe_session(evidence.get("session_date")) != session:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_MISMATCH",
+                metadata=metadata,
+            )
+        try:
+            knowledge_at = pd.Timestamp(
+                _safe_observed_at(evidence.get("knowledge_at"))
+            )
+        except ValueError as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc).replace("OBSERVED_AT", "FEATURE_BASIS_KNOWLEDGE_AT"),
+                metadata=metadata,
+            )
+        if knowledge_at > observed:
+            return _feature_basis_failure(
+                BASIS_UNRESOLVED,
+                "FEATURE_BASIS_KNOWLEDGE_AT_AFTER_OBSERVATION",
+                metadata=metadata,
+            )
+        model_path_declared = Path(
+            str(evidence.get("model_input_path") or "")
+        ).expanduser().resolve()
+        if model_path_declared != model_path:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MODEL_INPUT_PATH_MISMATCH",
+                metadata=metadata,
+            )
+        if str(evidence.get("model_input_sha256") or "").lower() != sha256_file(
+            model_path
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MODEL_INPUT_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        panel_path_declared = Path(
+            str(evidence.get("clean_panel_path") or "")
+        ).expanduser().resolve()
+        if panel_path_declared != panel_path:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CLEAN_PANEL_PATH_MISMATCH",
+                metadata=metadata,
+            )
+        if str(evidence.get("clean_panel_sha256") or "").lower() != sha256_file(
+            panel_path
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CLEAN_PANEL_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        if evidence.get("window_contract") != _feature_basis_window_contract_payload():
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_WINDOW_CONTRACT_MISMATCH",
+                metadata=metadata,
+            )
+        if str(evidence.get("window_contract_sha256") or "").lower() != (
+            _feature_basis_window_contract_sha256()
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_WINDOW_CONTRACT_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        observed_tickers = tuple(
+            sorted({_safe_ticker(ticker) for ticker in model_input_tickers})
+        )
+        if evidence.get("model_input_set_sha256") != _set_hash(observed_tickers):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MODEL_INPUT_SET_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        dates = _frame_date_series(
+            pd.Series(list(official_session_dates)), "FEATURE_BASIS_OFFICIAL_SESSION"
+        )
+        official = tuple(sorted(set(dates.dt.date.astype(str))))
+        if session not in official:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_NOT_OFFICIAL",
+                metadata=metadata,
+            )
+        boundary = evidence.get("scorer_boundary")
+        if not isinstance(boundary, Mapping):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SCORER_BOUNDARY_INVALID",
+                metadata=metadata,
+            )
+        if boundary.get("source") != "MAX_DATE_FROM_CLEAN_PANEL":
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SCORER_BOUNDARY_SOURCE_INVALID",
+                metadata=metadata,
+            )
+        if str(boundary.get("historical_end") or "") != official[-1]:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SCORER_BOUNDARY_MISMATCH",
+                metadata=metadata,
+            )
+        if str(boundary.get("clean_panel_sha256") or "").lower() != sha256_file(
+            panel_path
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SCORER_BOUNDARY_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        for name in (
+            "identity_attestation",
+            "calendar_attestation",
+            "revision_attestation",
+            "pit_attestation",
+        ):
+            attestation = evidence.get(name)
+            if not isinstance(attestation, Mapping):
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_{name.upper()}_INVALID",
+                    metadata=metadata,
+                )
+            if attestation.get("status") != "VERIFIED":
+                return _feature_basis_failure(
+                    BASIS_UNRESOLVED,
+                    f"FEATURE_BASIS_{name.upper()}_UNVERIFIED",
+                    metadata=metadata,
+                )
+            if not HEX64_RE.fullmatch(
+                str(attestation.get("sha256") or "").lower()
+            ) or not str(attestation.get("ref") or "").strip():
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_{name.upper()}_BINDING_INVALID",
+                    metadata=metadata,
+                )
+        if str(evidence["pit_attestation"].get("knowledge_at") or ""):
+            try:
+                pit_at = pd.Timestamp(
+                    _safe_observed_at(evidence["pit_attestation"]["knowledge_at"])
+                )
+            except ValueError:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    "FEATURE_BASIS_PIT_ATTESTATION_TIME_INVALID",
+                    metadata=metadata,
+                )
+            if pit_at > observed:
+                return _feature_basis_failure(
+                    BASIS_UNRESOLVED,
+                    "FEATURE_BASIS_PIT_ATTESTATION_AFTER_OBSERVATION",
+                    metadata=metadata,
+                )
+        else:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_PIT_ATTESTATION_TIME_MISSING",
+                metadata=metadata,
+            )
+        target_index = official.index(session)
+        records = evidence.get("records")
+        if not isinstance(records, list):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_RECORDS_INVALID",
+                metadata=metadata,
+            )
+        records_by_ticker: dict[str, Mapping[str, Any]] = {}
+        for record in records:
+            if not isinstance(record, Mapping):
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    "FEATURE_BASIS_RECORD_INVALID",
+                    metadata=metadata,
+                )
+            ticker = _safe_ticker(record.get("ticker"))
+            if ticker in records_by_ticker:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_DUPLICATE_TICKER:{ticker}",
+                    metadata=metadata,
+                )
+            records_by_ticker[ticker] = record
+        if tuple(sorted(records_by_ticker)) != observed_tickers:
+            missing = sorted(set(observed_tickers) - set(records_by_ticker))
+            extra = sorted(set(records_by_ticker) - set(observed_tickers))
+            reasons = [
+                *(
+                    ["FEATURE_BASIS_RECORD_MISSING:" + ",".join(missing)]
+                    if missing
+                    else []
+                ),
+                *(
+                    ["FEATURE_BASIS_RECORD_EXTRA:" + ",".join(extra)]
+                    if extra
+                    else []
+                ),
+            ]
+            return _feature_basis_failure(
+                BASIS_UNRESOLVED, *reasons, metadata=metadata
+            )
+
+        overlaps: list[str] = []
+        unresolved: list[str] = []
+        for ticker in observed_tickers:
+            record = records_by_ticker[ticker]
+            state = str(record.get("state") or "").strip().upper()
+            if state not in FEATURE_BASIS_STATES:
+                unresolved.append(f"FEATURE_BASIS_STATE_INVALID:{ticker}")
+                continue
+            field_states = record.get("field_states")
+            if not isinstance(field_states, Mapping) or set(field_states) != set(
+                FEATURE_BASIS_FIELDS
+            ):
+                unresolved.append(f"FEATURE_BASIS_FIELD_STATES_MISSING:{ticker}")
+                continue
+            if any(
+                str(field_states[field] or "").strip().upper()
+                not in FEATURE_BASIS_FIELD_STATES
+                for field in FEATURE_BASIS_FIELDS
+            ):
+                unresolved.append(f"FEATURE_BASIS_FIELD_STATE_UNRESOLVED:{ticker}")
+                continue
+            if any(
+                str(field_states[field]).strip().upper()
+                != "CERTIFIED_SAME_BASIS"
+                for field in FEATURE_BASIS_FIELDS
+            ):
+                unresolved.append(f"FEATURE_BASIS_FIELD_BASIS_NOT_SAFE:{ticker}")
+                continue
+            source_hashes = record.get("source_hashes")
+            if not isinstance(source_hashes, Mapping) or set(source_hashes) != set(
+                FEATURE_BASIS_FIELDS
+            ) or any(
+                not HEX64_RE.fullmatch(str(source_hashes.get(field) or "").lower())
+                for field in FEATURE_BASIS_FIELDS
+            ):
+                unresolved.append(f"FEATURE_BASIS_SOURCE_HASH_UNRESOLVED:{ticker}")
+                continue
+            source_refs = record.get("source_refs")
+            if not isinstance(source_refs, list) or not source_refs or any(
+                not str(value or "").strip() for value in source_refs
+            ):
+                unresolved.append(f"FEATURE_BASIS_SOURCE_REF_UNRESOLVED:{ticker}")
+                continue
+            authority = record.get("authority")
+            if not isinstance(authority, Mapping):
+                unresolved.append(f"FEATURE_BASIS_AUTHORITY_MISSING:{ticker}")
+                continue
+            if not str(authority.get("name") or "").strip() or not str(
+                authority.get("ref") or ""
+            ).strip() or not HEX64_RE.fullmatch(
+                str(authority.get("sha256") or "").lower()
+            ):
+                unresolved.append(f"FEATURE_BASIS_AUTHORITY_UNRESOLVED:{ticker}")
+                continue
+            transition_dates = record.get("transition_dates")
+            if not isinstance(transition_dates, list):
+                unresolved.append(f"FEATURE_BASIS_TRANSITION_DATES_INVALID:{ticker}")
+                continue
+            try:
+                transition_sessions = tuple(
+                    sorted({_safe_session(value) for value in transition_dates})
+                )
+            except ValueError:
+                unresolved.append(f"FEATURE_BASIS_TRANSITION_DATE_INVALID:{ticker}")
+                continue
+            if state == "CERTIFIED_SAME_BASIS" and transition_sessions:
+                unresolved.append(f"FEATURE_BASIS_STATE_TRANSITION_MISMATCH:{ticker}")
+                continue
+            if state == "CERTIFIED_TRANSITION" and not transition_sessions:
+                unresolved.append(f"FEATURE_BASIS_TRANSITION_DATE_MISSING:{ticker}")
+                continue
+            if state in {
+                "NO_KNOWN_TRANSITION",
+                "BASIS_UNKNOWN",
+                "SOURCE_CAPTURE_UNRESOLVED",
+            }:
+                unresolved.append(f"FEATURE_BASIS_NOT_CERTIFIED:{ticker}:{state}")
+                continue
+            for transition_session in transition_sessions:
+                if transition_session not in official:
+                    unresolved.append(
+                        "FEATURE_BASIS_TRANSITION_SESSION_NOT_OFFICIAL:"
+                        f"{ticker}:{transition_session}"
+                    )
+                    continue
+                transition_index = official.index(transition_session)
+                if transition_index > target_index:
+                    unresolved.append(
+                        f"FEATURE_BASIS_TRANSITION_AFTER_SESSION:{ticker}:{transition_session}"
+                    )
+                    continue
+                for feature, span in FEATURE_BASIS_WINDOW_CONTRACT:
+                    if target_index - span <= transition_index <= target_index:
+                        overlaps.append(
+                            f"BASIS_TRANSITION_OVERLAP:{ticker}:{transition_session}:{feature}"
+                        )
+        metadata.update(
+            {
+                "feature_basis_model_input_set_sha256": _set_hash(observed_tickers),
+                "feature_basis_record_count": len(records),
+                "feature_basis_official_session_start": official[0],
+                "feature_basis_official_session_end": official[-1],
+                "feature_basis_scorer_historical_end": official[-1],
+                "feature_basis_transition_overlaps": list(overlaps),
+            }
+        )
+        if unresolved:
+            return _feature_basis_failure(
+                BASIS_UNRESOLVED, *unresolved, metadata=metadata
+            )
+        if overlaps:
+            return _feature_basis_failure(
+                BASIS_TRANSITION_OVERLAP, *overlaps, metadata=metadata
+            )
+        return _feature_basis_failure(BASIS_SAFE, metadata=metadata)
+    except (OSError, TypeError, ValueError, KeyError) as exc:
+        return _feature_basis_failure(
+            SOURCE_CAPTURE_UNRESOLVED,
+            f"FEATURE_BASIS_VALIDATION_ERROR:{type(exc).__name__}:{exc}",
+            metadata=metadata,
+        )
 
 
 def _frame_date_series(series: pd.Series, label: str) -> pd.Series:
@@ -592,6 +1074,7 @@ def evaluate_population_admission(
     security_master_evidence: Mapping[str, Any] | None = None,
     expected_frozen_science_blobs: Mapping[str, str] | None = None,
     actual_frozen_science_blobs: Mapping[str, str] | None = None,
+    feature_basis_result: Mapping[str, Any] | None = None,
     freeze_date: date = FREEZE_LOCAL_DATE,
 ) -> PopulationAdmission:
     """Evaluate one complete, independent same-session population proof."""
@@ -628,6 +1111,24 @@ def evaluate_population_admission(
         "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
     )
     metadata["final_scoring_population_attested"] = False
+    metadata["feature_basis_gate_applied"] = feature_basis_result is not None
+    metadata["feature_basis_status"] = (
+        str(feature_basis_result.get("status"))
+        if feature_basis_result is not None
+        else "NOT_EVALUATED"
+    )
+    if feature_basis_result is not None:
+        basis_metadata = feature_basis_result.get("metadata")
+        if isinstance(basis_metadata, Mapping):
+            metadata.update(dict(basis_metadata))
+        basis_reasons = feature_basis_result.get("reason_codes")
+        if feature_basis_result.get("status") != BASIS_SAFE:
+            if not isinstance(basis_reasons, Sequence) or isinstance(
+                basis_reasons, (str, bytes)
+            ):
+                reasons.append("FEATURE_BASIS_NOT_PROVABLE")
+            else:
+                reasons.extend(str(reason) for reason in basis_reasons)
     evidence_metadata = security_master_evidence or {}
     for field in (
         "security_master_refresh_manifest_path",
@@ -639,6 +1140,8 @@ def evaluate_population_admission(
         "tradability_anchors_path",
         "tradability_anchors_sha256",
         "tradability_evidence_source",
+        "feature_basis_evidence_path",
+        "feature_basis_evidence_sha256",
     ):
         if field in evidence_metadata:
             metadata[field] = evidence_metadata[field]
@@ -650,6 +1153,7 @@ def evaluate_population_admission(
             "tradability_coverage_sha256",
             "tradability_anchors_sha256",
             "tradability_evidence_source",
+            "feature_basis_evidence_sha256",
         )
     )
 
@@ -1056,6 +1560,46 @@ def build_runtime_population_admission(
         clean_panel_path = Path(clean_panel).expanduser().resolve()
         if not clean_panel_path.is_file():
             return _runtime_failure(session_date=session, reasons=("CLEAN_PANEL_MISSING",))
+        feature_basis_path = eod_path.parent / FEATURE_BASIS_EVIDENCE_FILENAME
+        if not feature_basis_path.is_file():
+            return _runtime_failure(
+                session_date=session,
+                reasons=("FEATURE_BASIS_EVIDENCE_ARTIFACT_MISSING",),
+            )
+        try:
+            feature_basis_evidence = json.loads(
+                feature_basis_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(feature_basis_evidence, Mapping):
+                raise ValueError("FEATURE_BASIS_EVIDENCE_NOT_OBJECT")
+            official_session_dates = pd.read_parquet(
+                clean_panel_path, columns=["date"]
+            )["date"].tolist()
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError, KeyError) as exc:
+            return _runtime_failure(
+                session_date=session,
+                reasons=(str(exc) or "FEATURE_BASIS_EVIDENCE_INVALID",),
+            )
+        feature_basis_sha256 = sha256_file(feature_basis_path)
+        feature_basis_result = evaluate_feature_basis_admission(
+            session_date=session,
+            model_input_tickers=model_input["ticker"].tolist()
+            if "ticker" in model_input.columns
+            else (),
+            model_input_path=Path(str(eod["snapshot_path"])),
+            model_input_sha256=str(session_row["snapshot_sha256"] or ""),
+            clean_panel_path=clean_panel_path,
+            clean_panel_sha256=sha256_file(clean_panel_path),
+            official_session_dates=official_session_dates,
+            evidence=feature_basis_evidence,
+            observed_at=observed_by,
+            evidence_path=feature_basis_path,
+            evidence_sha256=feature_basis_sha256,
+        )
+        security_evidence["feature_basis_evidence_path"] = str(
+            feature_basis_path.resolve()
+        )
+        security_evidence["feature_basis_evidence_sha256"] = feature_basis_sha256
         expected_blobs, actual_blobs = _git_blobs(Path(repo_root).expanduser().resolve())
         code_identity = {
             "repo": "samindriano/idx-trade",
@@ -1087,6 +1631,7 @@ def build_runtime_population_admission(
             security_master_evidence=security_evidence,
             expected_frozen_science_blobs=expected_blobs,
             actual_frozen_science_blobs=actual_blobs,
+            feature_basis_result=feature_basis_result,
         )
         if admission.metadata.get("frozen_baseline_sha256") != str(expected_baseline_sha256).lower():
             return PopulationAdmission(
@@ -1193,6 +1738,10 @@ def _validate_attestation_payload(
             "PINNED_V4_X1_FEATURE_BUILDER_UNIVERSE_PRIMARY_LIQUID"
         ):
             raise ValueError("POPULATION_ATTESTATION_FINAL_DENOMINATOR_AUTHORITY_INVALID")
+        if metadata.get("feature_basis_gate_applied") is not True:
+            raise ValueError("POPULATION_ATTESTATION_FEATURE_BASIS_NOT_APPLIED")
+        if metadata.get("feature_basis_status") != BASIS_SAFE:
+            raise ValueError("POPULATION_ATTESTATION_FEATURE_BASIS_NOT_SAFE")
         if metadata.get("runtime_tradability_evidence_bound") is not True:
             raise ValueError("POPULATION_ATTESTATION_RUNTIME_EVIDENCE_NOT_BOUND")
         if metadata.get("model_input_identity_subset") is not True:
@@ -1212,6 +1761,7 @@ def _validate_attestation_payload(
             "tradability_intervals_path",
             "tradability_coverage_path",
             "tradability_anchors_path",
+            "feature_basis_evidence_path",
         ):
             if not str(metadata.get(field) or "").strip():
                 raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_MISSING")
@@ -1423,7 +1973,14 @@ class PopulationScoreGate:
 
 
 __all__ = [
+    "BASIS_SAFE",
+    "BASIS_TRANSITION_OVERLAP",
+    "BASIS_UNRESOLVED",
     "FREEZE_LOCAL_DATE",
+    "FEATURE_BASIS_EVIDENCE_FILENAME",
+    "FEATURE_BASIS_POLICY_ID",
+    "FEATURE_BASIS_SCHEMA_VERSION",
+    "FEATURE_BASIS_WINDOW_CONTRACT",
     "FROZEN_POLICY",
     "NOT_PROVABLE_FROM_RETAINED_EVIDENCE",
     "PopulationAdmission",
@@ -1431,10 +1988,12 @@ __all__ = [
     "PopulationScoreGate",
     "PROVEN_V1_POPULATION_COMPATIBLE",
     "SAFE_V1_POPULATION",
+    "SOURCE_CAPTURE_UNRESOLVED",
     "V1_POPULATION_NOT_PROVABLE",
     "V1PopulationNotProvable",
     "build_runtime_population_admission",
     "classify_retained_population_attestation",
     "evaluate_population_admission",
+    "evaluate_feature_basis_admission",
     "persist_population_attestation",
 ]

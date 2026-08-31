@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from idx_trade import v4_x1_population_admission_v1 as gate
 from idx_trade import forward_monitoring
 from idx_trade.forward_ohlcv import SESSION_OHLCV_COLUMNS
 from idx_trade.providers.idx import IDX_DELISTING_URL, IDX_STOCK_LIST_URL
@@ -207,8 +208,96 @@ def _write_runtime_fixture(
     model_manifest.write_text('{"model": "frozen-test"}\n', encoding="utf-8")
     clean_panel = tmp_path / "clean_panel.parquet"
     write_parquet_atomic(
-        pd.DataFrame({"ticker": ["AAAA"], "date": ["2026-08-19"], "close": [10.0]}),
+        pd.DataFrame(
+            {
+                "ticker": ["AAAA", "AAAA", "AAAA"],
+                "date": ["2026-08-19", "2026-08-27", SESSION],
+                "close": [10.0, 10.0, 10.0],
+            }
+        ),
         clean_panel,
+    )
+    feature_basis_path = session_root / gate.FEATURE_BASIS_EVIDENCE_FILENAME
+    feature_records = []
+    if include_model:
+        feature_records = [
+            {
+                "ticker": "AAAA",
+                "state": "CERTIFIED_SAME_BASIS",
+                "field_states": {
+                    "high": "CERTIFIED_SAME_BASIS",
+                    "low": "CERTIFIED_SAME_BASIS",
+                    "close": "CERTIFIED_SAME_BASIS",
+                    "volume": "CERTIFIED_SAME_BASIS",
+                    "regular_market_value": "CERTIFIED_SAME_BASIS",
+                },
+                "transition_dates": [],
+                "authority": {
+                    "name": "TEST_AUTHORITY",
+                    "ref": "test://authority",
+                    "sha256": "d" * 64,
+                },
+                "source_refs": ["test://basis"],
+                "source_hashes": {
+                    "high": "a" * 64,
+                    "low": "b" * 64,
+                    "close": "c" * 64,
+                    "volume": "d" * 64,
+                    "regular_market_value": "e" * 64,
+                },
+            }
+        ]
+    feature_basis_payload = {
+        "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
+        "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+        "session_date": SESSION,
+        "knowledge_at": "2026-08-28T18:35:00+07:00",
+        "model_input_path": str(snapshot_path.resolve()),
+        "model_input_sha256": sha256_file(snapshot_path),
+        "model_input_set_sha256": gate._set_hash(
+            ["AAAA"] if include_model else []
+        ),
+        "clean_panel_path": str(clean_panel.resolve()),
+        "clean_panel_sha256": sha256_file(clean_panel),
+        "scorer_boundary": {
+            "source": "MAX_DATE_FROM_CLEAN_PANEL",
+            "historical_end": SESSION,
+            "clean_panel_sha256": sha256_file(clean_panel),
+        },
+        "identity_attestation": {
+            "status": "VERIFIED",
+            "ref": "test://identity",
+            "sha256": "e" * 64,
+        },
+        "calendar_attestation": {
+            "status": "VERIFIED",
+            "ref": "test://calendar",
+            "sha256": "f" * 64,
+        },
+        "revision_attestation": {
+            "status": "VERIFIED",
+            "ref": "test://revision",
+            "sha256": "1" * 64,
+        },
+        "pit_attestation": {
+            "status": "VERIFIED",
+            "ref": "test://pit",
+            "sha256": "2" * 64,
+            "knowledge_at": "2026-08-28T18:35:00+07:00",
+        },
+        "window_contract": [
+            {
+                "feature": feature,
+                "potential_mixed_basis_span": span,
+            }
+            for feature, span in gate.FEATURE_BASIS_WINDOW_CONTRACT
+        ],
+        "window_contract_sha256": gate._feature_basis_window_contract_sha256(),
+        "records": feature_records,
+    }
+    feature_basis_path.write_text(
+        json.dumps(feature_basis_payload, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     runner = Path(__file__).resolve().parents[1] / "scripts" / "run_e2e_paper_cloud_v2.py"
     return {
@@ -419,3 +508,16 @@ def test_runtime_missing_coverage_artifact_fails_closed(tmp_path: Path) -> None:
 
     assert admission.status == V1_POPULATION_NOT_PROVABLE
     assert "TRADABILITY_COVERAGE_ARTIFACT_MISSING" in admission.reason_codes
+
+
+def test_runtime_missing_feature_basis_certificate_fails_before_scientific_admission(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    (paths.session_root / SESSION / gate.FEATURE_BASIS_EVIDENCE_FILENAME).unlink()
+
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == V1_POPULATION_NOT_PROVABLE
+    assert "FEATURE_BASIS_EVIDENCE_ARTIFACT_MISSING" in admission.reason_codes
