@@ -1,7 +1,7 @@
 # INC-001 Residual Transition Certification V17 Handoff
 
-Date: 2026-08-31 Asia/Jakarta  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-31 Asia/Jakarta
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 HEAD: `13aac8150bda29adac360af8affb3706f0911391`
 
 ## Decision
