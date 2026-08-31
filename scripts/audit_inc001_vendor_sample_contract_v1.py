@@ -420,7 +420,7 @@ def validate_sample(root: Path) -> dict[str, Any]:
         if has_event != declared:
             _fail(f"EVENT_COVERAGE_POLARITY_MISMATCH:{unit[0]}:{unit[1]}")
     return {
-        "status": "PASS",
+        "status": "OFFLINE_SAMPLE_REPLAY=PASS",
         "schema_version": str(manifest["schema_version"]),
         "source_id": str(manifest["source_id"]),
         "source_version": str(manifest["source_version"]),
@@ -440,7 +440,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         print(json.dumps(validate_sample(args.sample_root), indent=2, sort_keys=True))
     except VendorSampleContractError as exc:
-        print(json.dumps({"status": "FAIL", "reason": str(exc)}, sort_keys=True), file=sys.stderr)
+        print(json.dumps({"status": "OFFLINE_SAMPLE_REPLAY=FAIL", "reason": str(exc)}, sort_keys=True), file=sys.stderr)
         return 2
     return 0
 

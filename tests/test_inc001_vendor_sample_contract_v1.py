@@ -70,7 +70,7 @@ def _sample(tmp_path: Path) -> Path:
 
 def test_valid_sample_checks_scope_no_event_and_replay(tmp_path: Path) -> None:
     result = validate_sample(_sample(tmp_path))
-    assert result["status"] == "PASS"
+    assert result["status"] == "OFFLINE_SAMPLE_REPLAY=PASS"
     assert result["explicit_no_event_units"] == 1
     assert result["delta_rows"] == 3
     assert result["final_snapshot_events"] == 1
@@ -89,7 +89,7 @@ def test_empty_delta_stream_is_valid_when_snapshot_is_unchanged(tmp_path: Path) 
     manifest["deltas_row_count"] = 0
     (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     result = validate_sample(root)
-    assert result["status"] == "PASS"
+    assert result["status"] == "OFFLINE_SAMPLE_REPLAY=PASS"
     assert result["delta_rows"] == 0
 
 
