@@ -1,7 +1,7 @@
 # Handoff: INC-001 Authority Source-Contract Reconnaissance V1
 
-Date: 2026-08-31 Asia/Jakarta  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
+Date: 2026-08-31 Asia/Jakarta
+Lane: `data/ca-aware-feature-basis-remediation-v1`
 HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02`
 
 ## Result

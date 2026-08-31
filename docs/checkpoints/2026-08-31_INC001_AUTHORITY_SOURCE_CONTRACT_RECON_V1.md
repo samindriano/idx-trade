@@ -1,9 +1,9 @@
 # INC-001 Authority Source-Contract Reconnaissance V1
 
-Date: 2026-08-31 Asia/Jakarta  
-Repository: `samindriano/idx-trade`  
-Lane: `data/ca-aware-feature-basis-remediation-v1`  
-Lane HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02`  
+Date: 2026-08-31 Asia/Jakarta
+Repository: `samindriano/idx-trade`
+Lane: `data/ca-aware-feature-basis-remediation-v1`
+Lane HEAD: `7e72cedd7c53e95ab98b920e20e15aa0b4039f02`
 Mode: read-only, outcome-blind, no credentials
 
 ## Purpose
