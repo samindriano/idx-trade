@@ -13,90 +13,299 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     env:
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
     steps:
       - name: Require ZAPI secret
         run: test -n "$ZAPI_API_KEY"
 
-      - name: Run read-only control and unresolved probes
+      - name: Run read-only Tier A historical scan
         shell: bash
         run: |
           python - <<'PY'
-          import hashlib, json, os, pathlib, urllib.error, urllib.parse, urllib.request
+          import csv
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import urllib.error
+          import urllib.parse
+          import urllib.request
 
-          key = os.environ["ZAPI_API_KEY"]
-          root = pathlib.Path("tier-a-zapi-probe")
-          raw = root / "raw"
-          raw.mkdir(parents=True, exist_ok=True)
+          KEY = os.environ["ZAPI_API_KEY"]
+          ROOT = pathlib.Path("tier-a-zapi-probe")
+          RAW = ROOT / "raw"
+          RAW.mkdir(parents=True, exist_ok=True)
+          START_YM = (2021, 4)
+          END_YM = (2026, 7)
+          ENDPOINTS = ("rights-offerings", "stock-splits")
+          MAX_PAGES_PER_MONTH = 20
 
-          targets = [
-            ("RIGHTS_HMETD","RESOLVED_CONTROL","MPPA",2026,6,"rights-offerings","2026-06-26","REGULAR_MARKET_EX_DATE"),
-            ("RIGHTS_HMETD","RESOLVED_CONTROL","GMFI",2025,12,"rights-offerings","2025-12-22","REGULAR_MARKET_EX_DATE"),
-            ("RIGHTS_HMETD","UNRESOLVED_PROBE","SGER",2024,5,"rights-offerings","","REGULAR_MARKET_EX_DATE"),
-            ("RIGHTS_HMETD","UNRESOLVED_PROBE","PACK",2026,1,"rights-offerings","","REGULAR_MARKET_EX_DATE"),
-            ("STOCK_SPLIT","RESOLVED_CONTROL","AKRA",2022,1,"stock-splits","2022-01-12","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
-            ("STOCK_SPLIT","RESOLVED_CONTROL","AMOR",2021,12,"stock-splits","2021-12-08","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
-            ("STOCK_SPLIT","UNRESOLVED_PROBE","BMRI",2023,4,"stock-splits","","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
-            ("STOCK_SPLIT","UNRESOLVED_PROBE","SMDR",2023,1,"stock-splits","","REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE"),
-          ]
+          SPLIT_CONTROLS = {
+              "AKRA": "2022-01-12",
+              "AMOR": "2021-12-08",
+              "HRUM": "2022-06-02",
+              "MTDL": "2022-01-03",
+          }
+          RIGHTS_CONTROLS = {
+              "GMFI": "2025-12-22",
+              "MPPA": "2026-06-26",
+          }
 
-          out = []
-          for i, (family, role, ticker, year, month, endpoint, accepted, semantic) in enumerate(targets, 1):
-              params = urllib.parse.urlencode({"year":year,"month":month,"page":1,"length":200,"search":ticker})
+          def months(start, end):
+              y, m = start
+              while (y, m) <= end:
+                  yield y, m
+                  m += 1
+                  if m == 13:
+                      y += 1
+                      m = 1
+
+          def fetch(endpoint, year, month, page):
+              params = urllib.parse.urlencode({"year": year, "month": month, "page": page, "length": 200})
               url = f"https://api.zpi.web.id/v1/finance:idx/{endpoint}?{params}"
-              req = urllib.request.Request(url, headers={"x-api-key":key,"Accept":"application/json","User-Agent":"IDX-Trade-INC001-TierA-Probe/1.1"})
-              status, body, err, ctype = 0, b"", "", ""
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "x-api-key": KEY,
+                      "Accept": "application/json",
+                      "User-Agent": "IDX-Trade-INC001-TierA-Scan/1.0",
+                  },
+              )
+              status, body, error, ctype = 0, b"", "", ""
               try:
-                  with urllib.request.urlopen(req, timeout=40) as r:
-                      status, body, ctype = int(r.status), r.read(), str(r.headers.get("Content-Type", ""))
-              except urllib.error.HTTPError as e:
-                  status, body, err = int(e.code), e.read(), f"HTTPError:{e.code}"
-                  ctype = str(e.headers.get("Content-Type", "")) if e.headers else ""
-              except Exception as e:
-                  err = f"{type(e).__name__}:{e}"
+                  with urllib.request.urlopen(req, timeout=45) as response:
+                      status = int(response.status)
+                      body = response.read()
+                      ctype = str(response.headers.get("Content-Type", ""))
+              except urllib.error.HTTPError as exc:
+                  status = int(exc.code)
+                  body = exc.read()
+                  error = f"HTTPError:{exc.code}"
+                  ctype = str(exc.headers.get("Content-Type", "")) if exc.headers else ""
+              except Exception as exc:
+                  error = f"{type(exc).__name__}:{exc}"
+              return url, status, body, error, ctype
 
-              fn = f"{i:02d}_{endpoint}_{ticker}_{year}_{month:02d}.json"
-              (raw / fn).write_bytes(body)
-              sha = hashlib.sha256(body).hexdigest() if body else ""
-              parsed, parse_error = None, ""
-              if body:
-                  try: parsed = json.loads(body.decode("utf-8"))
-                  except Exception as e: parse_error = f"{type(e).__name__}:{e}"
-              items = []
-              if isinstance(parsed, dict):
-                  if isinstance(parsed.get("items"), list): items = parsed["items"]
-                  elif isinstance(parsed.get("data"), list): items = parsed["data"]
+          request_ledger = []
+          normalized = []
+          request_no = 0
 
-              row = {
-                "family":family,"role":role,"ticker":ticker,"year":year,"month":month,
-                "endpoint":endpoint,"accepted_transition":accepted,"accepted_semantic":semantic,
-                "request_url_without_key":url,"http_status":status,"content_type":ctype,
-                "response_bytes":len(body),"response_sha256":sha,"error":err,
-                "parse_error":parse_error,"top_level_keys":sorted(parsed) if isinstance(parsed,dict) else [],
-                "item_count":len(items),"items":items,"raw_file":f"raw/{fn}"
-              }
-              out.append(row)
-              print("PROBE", family, role, ticker, f"{year}-{month:02d}", f"status={status}", f"items={len(items)}", f"sha256={sha}", f"error={err or '-'}")
-              if isinstance(parsed, dict):
-                  sample = items[0] if items else parsed
-                  text = json.dumps(sample, ensure_ascii=True, sort_keys=True, separators=(",",":"))
-                  print("SAMPLE", ticker, text[:2000])
-              else:
-                  print("NON_JSON", ticker, body[:500].decode("utf-8","replace"))
+          for endpoint in ENDPOINTS:
+              for year, month in months(START_YM, END_YM):
+                  page = 1
+                  while True:
+                      request_no += 1
+                      url, status, body, error, ctype = fetch(endpoint, year, month, page)
+                      raw_name = f"{request_no:04d}_{endpoint}_{year}_{month:02d}_p{page:02d}.json"
+                      raw_path = RAW / raw_name
+                      raw_path.write_bytes(body)
+                      sha = hashlib.sha256(body).hexdigest() if body else ""
 
-          probe = {"schema_version":"inc001_tier_a_zapi_capability_probe_v1","transport":"ZAPI","upstream_provider_claim":"IDX","read_only":True,"production_mutation":False,"call_count":len(out),"targets":out}
-          (root / "probe.json").write_text(json.dumps(probe, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          manifest = {"probe_sha256":hashlib.sha256((root/"probe.json").read_bytes()).hexdigest(),"raw_sha256":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(raw.glob("*.json"))}}
-          (root / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          print("PROBE_MANIFEST", json.dumps(manifest, sort_keys=True))
+                      parsed, parse_error = None, ""
+                      if body:
+                          try:
+                              parsed = json.loads(body.decode("utf-8"))
+                          except Exception as exc:
+                              parse_error = f"{type(exc).__name__}:{exc}"
+
+                      data = parsed.get("data") if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else {}
+                      items = data.get("items") if isinstance(data.get("items"), list) else []
+                      count = data.get("count")
+                      total = data.get("total")
+                      has_more = bool(data.get("hasMore"))
+                      next_page = data.get("nextPage")
+
+                      request_ledger.append({
+                          "request_number": request_no,
+                          "endpoint": endpoint,
+                          "year": year,
+                          "month": month,
+                          "page": page,
+                          "url_without_key": url,
+                          "http_status": status,
+                          "content_type": ctype,
+                          "response_bytes": len(body),
+                          "response_sha256": sha,
+                          "error": error,
+                          "parse_error": parse_error,
+                          "count": count,
+                          "total": total,
+                          "item_count": len(items),
+                          "has_more": has_more,
+                          "next_page": next_page,
+                          "raw_file": f"raw/{raw_name}",
+                      })
+
+                      print(
+                          "REQUEST",
+                          request_no,
+                          endpoint,
+                          f"{year}-{month:02d}",
+                          f"page={page}",
+                          f"status={status}",
+                          f"items={len(items)}",
+                          f"total={total}",
+                          f"hasMore={has_more}",
+                          f"error={error or '-'}",
+                      )
+
+                      for item_index, item in enumerate(items, 1):
+                          if not isinstance(item, dict):
+                              continue
+                          normalized.append({
+                              "endpoint": endpoint,
+                              "request_number": request_no,
+                              "request_year": year,
+                              "request_month": month,
+                              "request_page": page,
+                              "item_index": item_index,
+                              "code": str(item.get("code", "")).upper(),
+                              "actionCode": item.get("actionCode", ""),
+                              "listingDate": item.get("listingDate", ""),
+                              "exDate": item.get("exDate", ""),
+                              "recordDate": item.get("recordDate", ""),
+                              "ratio": item.get("ratio", ""),
+                              "nominalValue": item.get("nominalValue", ""),
+                              "nominalValueNew": item.get("nominalValueNew", ""),
+                              "priceAdjustmentFactor": item.get("priceAdjustmentFactor", ""),
+                              "item_json": json.dumps(item, ensure_ascii=True, sort_keys=True, separators=(",", ":")),
+                          })
+
+                      if status != 200 or parse_error:
+                          break
+                      if not has_more and not next_page:
+                          break
+                      if page >= MAX_PAGES_PER_MONTH:
+                          raise RuntimeError(f"pagination exceeded bounded cap for {endpoint} {year}-{month:02d}")
+                      next_int = int(next_page) if next_page not in (None, "") else page + 1
+                      if next_int <= page:
+                          raise RuntimeError(f"non-monotonic pagination for {endpoint} {year}-{month:02d}: {next_int}")
+                      page = next_int
+
+          def rows_for(endpoint, code):
+              return [row for row in normalized if row["endpoint"] == endpoint and row["code"] == code]
+
+          control_audit = []
+          for code, accepted in SPLIT_CONTROLS.items():
+              rows = rows_for("stock-splits", code)
+              dates = sorted({str(row.get("listingDate") or "") for row in rows if row.get("listingDate")})
+              matches = [row for row in rows if str(row.get("listingDate") or "") == accepted]
+              control_audit.append({
+                  "family": "STOCK_SPLIT",
+                  "code": code,
+                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
+                  "accepted_transition": accepted,
+                  "provider_field": "listingDate",
+                  "provider_dates": dates,
+                  "matching_rows": len(matches),
+                  "status": "MATCH" if matches else ("ABSENT" if not rows else "CONFLICT"),
+                  "rows": rows,
+              })
+
+          for code, accepted in RIGHTS_CONTROLS.items():
+              rows = rows_for("rights-offerings", code)
+              dates = sorted({str(row.get("exDate") or "") for row in rows if row.get("exDate")})
+              matches = [row for row in rows if str(row.get("exDate") or "") == accepted]
+              control_audit.append({
+                  "family": "RIGHTS_HMETD",
+                  "code": code,
+                  "accepted_semantic": "REGULAR_MARKET_EX_DATE",
+                  "accepted_transition": accepted,
+                  "provider_field": "exDate",
+                  "provider_dates": dates,
+                  "matching_rows": len(matches),
+                  "status": "MATCH" if matches else ("ABSENT" if not rows else "CONFLICT"),
+                  "rows": rows,
+              })
+
+          split_controls = [x for x in control_audit if x["family"] == "STOCK_SPLIT"]
+          rights_controls = [x for x in control_audit if x["family"] == "RIGHTS_HMETD"]
+
+          action_counts = {}
+          reverse_shape_rows = []
+          suspicious_rs_rows = []
+          for row in normalized:
+              if row["endpoint"] != "stock-splits":
+                  continue
+              action = str(row.get("actionCode") or "")
+              action_counts[action] = action_counts.get(action, 0) + 1
+              try:
+                  old_nom = float(row.get("nominalValue"))
+                  new_nom = float(row.get("nominalValueNew"))
+              except (TypeError, ValueError):
+                  old_nom = new_nom = None
+              if old_nom is not None and new_nom is not None and new_nom > old_nom:
+                  reverse_shape_rows.append(row)
+              if action == "RS" and old_nom is not None and new_nom is not None and new_nom < old_nom:
+                  suspicious_rs_rows.append(row)
+
+          status_counts = {}
+          for row in request_ledger:
+              key = str(row["http_status"])
+              status_counts[key] = status_counts.get(key, 0) + 1
+
+          summary = {
+              "schema_version": "inc001_tier_a_zapi_historical_scan_v1",
+              "transport": "ZAPI",
+              "upstream_provider_claim": "IDX",
+              "scope": {
+                  "families": ["RIGHTS_HMETD", "STOCK_SPLIT", "REVERSE_SPLIT"],
+                  "start_month": "2021-04",
+                  "end_month": "2026-07",
+                  "endpoints": list(ENDPOINTS),
+              },
+              "read_only": True,
+              "production_mutation": False,
+              "request_count": len(request_ledger),
+              "normalized_row_count": len(normalized),
+              "http_status_counts": status_counts,
+              "endpoint_row_counts": {
+                  endpoint: sum(1 for row in normalized if row["endpoint"] == endpoint)
+                  for endpoint in ENDPOINTS
+              },
+              "stock_split_action_code_counts": action_counts,
+              "reverse_shape_row_count": len(reverse_shape_rows),
+              "suspicious_rs_row_count": len(suspicious_rs_rows),
+              "split_control_verdict": "ALL_MATCH" if all(x["status"] == "MATCH" for x in split_controls) else "NOT_ALL_MATCH",
+              "rights_control_verdict": "ALL_MATCH" if all(x["status"] == "MATCH" for x in rights_controls) else "NOT_ALL_MATCH",
+              "rights_admission_policy": "DISCOVERY_ONLY_PENDING_SEMANTIC_RECONCILIATION",
+              "split_admission_policy": "CANDIDATE_ONLY_PENDING_SOURCE_CONTRACT_CERTIFICATION",
+              "negative_authority": "NOT_CLAIMED",
+          }
+
+          with (ROOT / "request_ledger.csv").open("w", encoding="utf-8", newline="") as f:
+              fields = list(request_ledger[0]) if request_ledger else []
+              w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")
+              w.writeheader(); w.writerows(request_ledger)
+
+          with (ROOT / "normalized_rows.csv").open("w", encoding="utf-8", newline="") as f:
+              fields = list(normalized[0]) if normalized else []
+              w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")
+              w.writeheader(); w.writerows(normalized)
+
+          (ROOT / "control_audit.json").write_text(json.dumps(control_audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (ROOT / "reverse_shape_rows.json").write_text(json.dumps(reverse_shape_rows, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (ROOT / "suspicious_rs_rows.json").write_text(json.dumps(suspicious_rs_rows, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (ROOT / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+          manifest = {}
+          for path in sorted(ROOT.rglob("*")):
+              if path.is_file() and path.name != "MANIFEST.json":
+                  manifest[str(path.relative_to(ROOT)).replace("\\", "/")] = hashlib.sha256(path.read_bytes()).hexdigest()
+          (ROOT / "MANIFEST.json").write_text(json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("SUMMARY", json.dumps(summary, sort_keys=True))
+          print("CONTROL_AUDIT", json.dumps(control_audit, sort_keys=True))
+          print("REVERSE_SHAPE_ROWS", json.dumps(reverse_shape_rows, sort_keys=True))
+          print("SUSPICIOUS_RS_ROWS", json.dumps(suspicious_rs_rows, sort_keys=True))
+          print("MANIFEST_SHA256", hashlib.sha256((ROOT / "MANIFEST.json").read_bytes()).hexdigest())
           PY
 
-      - name: Upload probe evidence
+      - name: Upload Tier A scan evidence
         uses: actions/upload-artifact@v4
         with:
-          name: inc001-tier-a-zapi-capability-probe-v1
+          name: inc001-tier-a-zapi-historical-scan-v1
           path: tier-a-zapi-probe/
           if-no-files-found: error
           retention-days: 14
