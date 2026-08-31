@@ -1,9 +1,6 @@
 name: Stockbit Stream isolated cloud smoke
 
 on:
-  push:
-    branches:
-      - ops/stockbit-stream-cloud-smoke-v1
   workflow_dispatch:
     inputs:
       top_n:
