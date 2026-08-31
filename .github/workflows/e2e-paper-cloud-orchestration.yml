@@ -78,7 +78,7 @@ jobs:
     env:
       # Exact reviewed successor implementation accepted into the E2E integration baseline.
       # Change only through a reviewed provenance update.
-      E2E_CLOUD_IMPLEMENTATION_REF: 30d5a808b40727cf40c5075655ce0d1ecb857989
+      E2E_CLOUD_IMPLEMENTATION_REF: 82007457522d6e268de8bd6e1b75762fb76accfe
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
