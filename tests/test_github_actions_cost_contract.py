@@ -68,8 +68,10 @@ def test_e2e_retains_required_uv_bootstrap() -> None:
 def test_docs_only_ci_filter_and_stale_head_cancellation_are_explicit() -> None:
     text = _workflow_text("tests.yml")
     assert text.count("paths-ignore:") == 2
-    for pattern in ("'**/*.md'", "'coordination/**'", "'docs/**'"):
-        assert text.count(pattern) == 2
+    assert text.count("'coordination/TEAM_STATUS.md'") == 2
+    assert "'**/*.md'" not in text
+    assert "'docs/**'" not in text
+    assert "'coordination/**'" not in text
     assert (
         "group: tests-${{ github.workflow }}-"
         "${{ github.event.pull_request.number || github.ref }}"
@@ -77,16 +79,21 @@ def test_docs_only_ci_filter_and_stale_head_cancellation_are_explicit() -> None:
     assert "cancel-in-progress: true" in text
 
 
-def test_docs_only_filter_keeps_executable_and_workflow_changes_in_ci() -> None:
-    ignored = (".md", "coordination/", "docs/")
+def test_narrow_coordination_filter_keeps_authority_docs_in_ci() -> None:
+    ignored = "coordination/TEAM_STATUS.md"
 
     def workflow_runs(paths: list[str]) -> bool:
-        return any(
-            not (path.endswith(ignored[0]) or path.startswith(ignored[1:]))
-            for path in paths
-        )
+        return any(path != ignored for path in paths)
 
-    assert not workflow_runs(["docs/README.md", "coordination/TEAM_STATUS.md"])
-    assert not workflow_runs(["README.md"])
+    assert not workflow_runs(["coordination/TEAM_STATUS.md"])
+    assert workflow_runs(["coordination/PROJECT_ROADMAP.md"])
+    assert workflow_runs(["docs/README.md"])
+    assert workflow_runs(["docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md"])
     assert workflow_runs(["src/idx_trade/data.py"])
     assert workflow_runs([".github/workflows/tests.yml"])
+
+
+def test_frozen_protocol_change_is_not_ignored_by_ci() -> None:
+    text = _workflow_text("tests.yml")
+    assert "docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md" not in text
+    assert "paths-ignore:" in text

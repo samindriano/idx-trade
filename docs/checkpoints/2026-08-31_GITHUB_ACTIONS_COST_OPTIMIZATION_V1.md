@@ -59,9 +59,11 @@ before runner execution; they are not treated as savings or capture proof.
 - Changed Stockbit Stream production from `.[dev,archive]` to `.[archive]`.
   The production entrypoint does not import pytest; its capture and archive
   dependencies remain unchanged.
-- Added `paths-ignore` for Markdown, `docs/**`, and `coordination/**` to both
-  `push`-to-main and `pull_request` triggers of normal `tests.yml`. Any
-  executable or workflow change still runs CI.
+- Added a single exact `paths-ignore` entry for
+  `coordination/TEAM_STATUS.md` to both `push`-to-main and `pull_request`
+  triggers of normal `tests.yml`. Frozen protocol/checkpoint docs, other
+  coordination files, root instructions, source, tests, config, and workflows
+  still run CI.
 - Added latest-head concurrency cancellation only to normal `tests.yml`.
   Production capture workflows retain `cancel-in-progress: false` and all
   existing slot isolation.
@@ -78,8 +80,8 @@ The exact cron sets remain:
 - Stockbit Stream: `47 1`, `7 5`, `47 9` UTC every calendar day.
 - Stockbit Intraday: `30 11`, `30 12`, `30 13` UTC on weekdays.
 
-The CI filter changes only whether a test job is created for documentation-only
-changes; it does not apply to production capture workflows.
+The CI filter changes only whether a test job is created for the exact
+coordination ledger edit; it does not apply to production capture workflows.
 
 ## Existing integrity and recovery contracts
 
@@ -121,7 +123,8 @@ cancelled/omitted stale or documentation-only CI. Production logical job count
 and capture frequency are unchanged. A later post-reset comparison must measure
 install/bootstrap seconds, useful runtime, fast exits, provider calls,
 recovery/residual work, and final durable status before claiming a numeric
-monthly saving.
+monthly saving. The exact `TEAM_STATUS.md` filter can avoid one normal test job;
+other Markdown and all `docs/**` changes remain tested.
 
 Rollback is a normal revert of this branch's workflow/test/checkpoint changes.
 Reverting `tests.yml` restores full CI for documentation changes and allows
