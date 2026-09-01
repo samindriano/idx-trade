@@ -7,7 +7,21 @@ forward V4-X1 session can cross the existing population-admission gate. The
 producer is not the scorer and must not rewrite, patch, or reinterpret frozen
 science. A producer identity is accepted only when its implementation commit,
 implementation SHA-256, and implementation evidence are separately pinned and
-the detached root manifest verifies every retained child byte-for-byte.
+the detached root manifest verifies every retained child byte-for-byte. The
+manifest's producer block is only a claim: admission also requires an external
+`trusted_producer_contract` supplied outside the evidence bundle. The bundle
+cannot select or self-sign the producer that is trusted.
+
+The external trust contract contains `producer_id`,
+`implementation_repository`, `implementation_ref`, exact
+`implementation_commit`, exact implementation artifact/blob
+`implementation_sha256`, `policy_id`, `schema_version`, and
+`trust_contract_sha256`. Every claimed value must match that separately pinned
+contract. If the anchor is absent or invalid, admission returns
+`PRODUCER_TRUST_ANCHOR_MISSING` or another explicit trust-anchor failure and
+does not reach scientific admission. No production producer anchor is implied
+by this contract; a future production anchor must be independently reviewed
+and configured.
 
 ## Required inputs
 
@@ -24,11 +38,21 @@ The producer must bind, at minimum:
 - per-field source identity and source/evidence hashes for high, low, close,
   volume, and regular-market-value;
 - OPEN source identity, evidence hash, session date, ticker set, and knowledge
-  and observation/retrieval timestamps.
+  and observation/retrieval timestamps. The source, source reference, source
+  SHA-256, and retrieval timestamp declared by geometry must agree with the
+  actual candidate `session_ohlcv` rows, and the retained manifest child must
+  bind the same source identity. Per-ticker bindings are allowed when source
+  identity differs by ticker.
 
 The candidate OPEN is a fresh Geometry3 input. It is not added to historical
 rolling-window requirements. The historical/control H/L/C/volume/value basis
 remains governed by the frozen feature-window contract.
+
+The clean panel's maximum date is the historical boundary only. It is not the
+official scoring calendar. The scorer's own historical calendar plus forward
+official calendar is the sole session index for dependency windows. The gate
+requires the calendar sources to be complete, non-conflicting, and explicit;
+future rows after the target do not change the target's current index.
 
 ## Required output
 

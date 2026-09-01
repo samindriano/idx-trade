@@ -35,7 +35,7 @@ from .forward_monitoring import (
     _verify_ready_artifacts,
     runtime_paths,
 )
-from .forward_ohlcv import validate_model_input_regular_market_value
+from .forward_ohlcv import SESSION_OHLCV_COLUMNS, validate_model_input_regular_market_value
 from .provenance import sha256_file
 from .security_master import (
     COVERAGE_WINDOW_COLUMNS,
@@ -78,6 +78,7 @@ _ATTESTATION_RUNTIME_HASH_FIELDS = (
     "tradability_anchors_sha256",
     "feature_basis_evidence_sha256",
     "feature_basis_manifest_sha256",
+    "feature_basis_trust_contract_sha256",
 )
 
 FEATURE_BASIS_SCHEMA_VERSION = "idx_trade_forward_feature_basis_v1"
@@ -268,7 +269,7 @@ def _verify_feature_basis_manifest(
     manifest_path: Path,
     evidence_path: Path,
     evidence: Mapping[str, Any],
-) -> tuple[str, dict[str, Mapping[str, Any]], str]:
+) -> tuple[str, dict[str, Mapping[str, Any]], str, Mapping[str, Any]]:
     """Verify the detached root manifest and every declared retained child."""
 
     if not manifest_path.is_file():
@@ -302,6 +303,8 @@ def _verify_feature_basis_manifest(
         raise ValueError("FEATURE_BASIS_PRODUCER_ID_INVALID")
     if not str(producer.get("implementation_ref") or "").strip():
         raise ValueError("FEATURE_BASIS_PRODUCER_REF_MISSING")
+    if not str(producer.get("implementation_repository") or "").strip():
+        raise ValueError("FEATURE_BASIS_PRODUCER_REPOSITORY_MISSING")
     if not GIT_RE.fullmatch(str(producer.get("implementation_commit") or "").lower()):
         raise ValueError("FEATURE_BASIS_PRODUCER_COMMIT_INVALID")
     producer_sha = str(producer.get("implementation_sha256") or "").lower()
@@ -340,7 +343,111 @@ def _verify_feature_basis_manifest(
         raise ValueError("FEATURE_BASIS_PRODUCER_EVIDENCE_INVALID")
     if str(producer_child.get("sha256") or "").lower() != producer_sha:
         raise ValueError("FEATURE_BASIS_PRODUCER_SHA_UNBOUND")
-    return sha256_file(manifest_path), by_id, manifest_id
+    return sha256_file(manifest_path), by_id, manifest_id, producer
+
+
+def _verify_trusted_producer_contract(
+    trusted: Mapping[str, Any] | None,
+    producer: Mapping[str, Any],
+) -> str:
+    """Match bundle claims against an external, separately pinned anchor."""
+
+    if not isinstance(trusted, Mapping):
+        raise ValueError("PRODUCER_TRUST_ANCHOR_MISSING")
+    required = (
+        "producer_id",
+        "implementation_repository",
+        "implementation_ref",
+        "implementation_commit",
+        "implementation_sha256",
+        "policy_id",
+        "schema_version",
+        "trust_contract_sha256",
+    )
+    if any(not str(trusted.get(field) or "").strip() for field in required):
+        raise ValueError("PRODUCER_TRUST_ANCHOR_INVALID")
+    trust_sha = str(trusted["trust_contract_sha256"]).lower()
+    if not HEX64_RE.fullmatch(trust_sha):
+        raise ValueError("PRODUCER_TRUST_CONTRACT_SHA_INVALID")
+    if not GIT_RE.fullmatch(str(trusted["implementation_commit"]).lower()):
+        raise ValueError("PRODUCER_TRUST_COMMIT_INVALID")
+    if not HEX64_RE.fullmatch(str(trusted["implementation_sha256"]).lower()):
+        raise ValueError("PRODUCER_TRUST_ARTIFACT_SHA_INVALID")
+    if trusted["policy_id"] != FEATURE_BASIS_POLICY_ID:
+        raise ValueError("PRODUCER_TRUST_POLICY_MISMATCH")
+    if trusted["schema_version"] != FEATURE_BASIS_SCHEMA_VERSION:
+        raise ValueError("PRODUCER_TRUST_SCHEMA_MISMATCH")
+    comparisons = (
+        ("producer_id", "PRODUCER_ID_MISMATCH"),
+        ("implementation_repository", "PRODUCER_REPOSITORY_MISMATCH"),
+        ("implementation_ref", "PRODUCER_REF_MISMATCH"),
+        ("implementation_commit", "PRODUCER_COMMIT_MISMATCH"),
+        ("implementation_sha256", "PRODUCER_ARTIFACT_SHA_MISMATCH"),
+    )
+    for field, reason in comparisons:
+        if str(producer.get(field) or "") != str(trusted[field]):
+            raise ValueError(reason)
+    return trust_sha
+
+
+def _calendar_values(path: Path, label: str) -> tuple[str, ...]:
+    """Read a calendar with the frozen scorer's date semantics plus uniqueness."""
+
+    from . import v4_x1_forward_score as frozen_score
+
+    try:
+        raw = pd.read_csv(path)
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"FEATURE_BASIS_{label}_CALENDAR_INVALID") from exc
+    if "date" not in raw.columns:
+        raise ValueError(f"FEATURE_BASIS_{label}_CALENDAR_DATE_COLUMN_MISSING")
+    parsed = pd.to_datetime(raw["date"], errors="coerce")
+    if parsed.isna().any():
+        raise ValueError(f"FEATURE_BASIS_{label}_CALENDAR_INVALID_DATE")
+    normalized = pd.DatetimeIndex(parsed).tz_localize(None).normalize()
+    if normalized.duplicated().any():
+        raise ValueError(f"FEATURE_BASIS_{label}_CALENDAR_DUPLICATE")
+    # This is intentionally the scorer's parser, not a second calendar policy.
+    canonical = frozen_score._read_session_csv(path)
+    return tuple(value.date().isoformat() for value in canonical)
+
+
+def _canonical_scoring_calendar(paths: Any, target: str) -> tuple[tuple[str, ...], Mapping[str, tuple[str, ...]]]:
+    """Reuse V4-X1's historical+forward calendar construction and expose sources."""
+
+    from . import v4_x1_forward_score as frozen_score
+
+    historical_candidates = (
+        paths.runtime_root / "research_feasibility_1260_20260809" / "official_exchange_sessions_1260.csv",
+        paths.runtime_root / "sessions" / "exchange_sessions.csv",
+    )
+    if not any(path.is_file() for path in historical_candidates):
+        raise ValueError("FEATURE_BASIS_HISTORICAL_CALENDAR_MISSING")
+    forward_path = paths.calendar_root / "exchange_sessions.csv"
+    if not forward_path.is_file():
+        raise ValueError("FEATURE_BASIS_FORWARD_CALENDAR_MISSING")
+    try:
+        sessions, sources = frozen_score._local_official_sessions(paths, pd.Timestamp(target))
+    except (FileNotFoundError, OSError, RuntimeError, ValueError) as exc:
+        message = str(exc)
+        if "TARGET_NOT_IN_LOCAL_OFFICIAL_CALENDAR" in message:
+            raise ValueError("FEATURE_BASIS_SESSION_NOT_OFFICIAL") from exc
+        if "FORWARD" in message or "forward" in message:
+            raise ValueError("FEATURE_BASIS_FORWARD_CALENDAR_MISSING") from exc
+        raise ValueError("FEATURE_BASIS_HISTORICAL_CALENDAR_MISSING") from exc
+    if not sources:
+        raise ValueError("FEATURE_BASIS_HISTORICAL_CALENDAR_MISSING")
+    source_values: dict[str, tuple[str, ...]] = {}
+    for index, source in enumerate(sources):
+        label = "HISTORICAL" if index == 0 else "FORWARD"
+        path = Path(str(source.get("path") or "")).expanduser().resolve()
+        if not path.is_file():
+            raise ValueError(f"FEATURE_BASIS_{label}_CALENDAR_MISSING")
+        source_values[label.lower()] = _calendar_values(path, label)
+    if "forward" not in source_values:
+        raise ValueError("FEATURE_BASIS_FORWARD_CALENDAR_MISSING")
+    combined = tuple(value.date().isoformat() for value in sessions)
+    return combined, source_values
 
 
 def _manifest_child(
@@ -359,13 +466,13 @@ def _verify_candidate_session_ohlcv(
     session: str,
     observed: pd.Timestamp,
     expected_tickers: Sequence[str],
-) -> None:
+) -> dict[str, dict[str, str]]:
     if not path.is_file():
         raise ValueError("FEATURE_BASIS_SESSION_OHLCV_MISSING")
     if str(expected_sha256 or "").lower() != sha256_file(path):
         raise ValueError("FEATURE_BASIS_SESSION_OHLCV_HASH_MISMATCH")
     frame = pd.read_parquet(path)
-    required = {"ticker", "session_date", "open"}
+    required = set(SESSION_OHLCV_COLUMNS)
     missing = required - set(frame.columns)
     if missing:
         raise ValueError("FEATURE_BASIS_SESSION_OHLCV_COLUMNS_MISSING")
@@ -380,10 +487,29 @@ def _verify_candidate_session_ohlcv(
         raise ValueError("FEATURE_BASIS_OPEN_VALUE_UNRESOLVED")
     if pd.Timestamp(session) > observed.tz_localize(None).normalize():
         raise ValueError("FEATURE_BASIS_SESSION_AFTER_OBSERVATION")
-    if "observed_retrieved_at_utc" in frame.columns:
-        retrieved = pd.to_datetime(frame["observed_retrieved_at_utc"], errors="coerce", utc=True)
-        if retrieved.notna().any() and (retrieved.dropna() > observed.tz_convert("UTC")).any():
-            raise ValueError("FEATURE_BASIS_SESSION_OHLCV_FUTURE_DATED")
+    retrieved = pd.to_datetime(
+        frame["observed_retrieved_at_utc"], errors="coerce", utc=True
+    )
+    if retrieved.isna().any():
+        raise ValueError("FEATURE_BASIS_CANDIDATE_RETRIEVAL_TIME_MISSING")
+    if (retrieved > observed.tz_convert("UTC")).any():
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_FUTURE_DATED")
+    source_metadata: dict[str, dict[str, str]] = {}
+    for index, row in enumerate(frame.itertuples(index=False)):
+        source = str(getattr(row, "source", "") or "").strip()
+        source_ref = str(getattr(row, "source_ref", "") or "").strip()
+        source_sha256 = str(getattr(row, "source_sha256", "") or "").strip().lower()
+        if not source or not source_ref:
+            raise ValueError("FEATURE_BASIS_CANDIDATE_SOURCE_METADATA_MISSING")
+        if not HEX64_RE.fullmatch(source_sha256):
+            raise ValueError("FEATURE_BASIS_CANDIDATE_SOURCE_SHA_INVALID")
+        source_metadata[_safe_ticker(row.ticker)] = {
+            "source": source,
+            "source_ref": source_ref,
+            "source_sha256": source_sha256,
+            "observed_retrieved_at_utc": retrieved.iloc[index].isoformat(),
+        }
+    return source_metadata
 
 
 def _feature_basis_failure(
@@ -409,7 +535,9 @@ def evaluate_feature_basis_admission(
     model_input_sha256: str,
     clean_panel_path: str | Path,
     clean_panel_sha256: str,
+    historical_panel_end: str | object,
     official_session_dates: Sequence[object],
+    calendar_sources: Mapping[str, Sequence[object]] | None,
     evidence: Mapping[str, Any] | None,
     observed_at: str,
     evidence_path: str | Path | None = None,
@@ -418,6 +546,7 @@ def evaluate_feature_basis_admission(
     manifest_sha256: str | None = None,
     candidate_ohlcv_path: str | Path | None = None,
     candidate_ohlcv_sha256: str | None = None,
+    trusted_producer_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Admit a model-input basis without changing the frozen scorer."""
 
@@ -519,7 +648,7 @@ def evaluate_feature_basis_admission(
                     metadata=metadata,
                 )
         try:
-            actual_manifest_sha256, manifest_children, manifest_id = _verify_feature_basis_manifest(
+            actual_manifest_sha256, manifest_children, manifest_id, producer = _verify_feature_basis_manifest(
                 root_manifest_file, evidence_file, evidence
             )
         except (OSError, TypeError, ValueError, KeyError) as exc:
@@ -534,12 +663,31 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_MANIFEST_HASH_MISMATCH",
                 metadata=metadata,
             )
+        try:
+            trusted_producer_sha256 = _verify_trusted_producer_contract(
+                trusted_producer_contract, producer
+            )
+        except ValueError as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc),
+                metadata=metadata,
+            )
         metadata.update(
             {
                 "feature_basis_manifest_path": str(root_manifest_file),
                 "feature_basis_manifest_sha256": actual_manifest_sha256,
                 "feature_basis_manifest_id": manifest_id,
                 "feature_basis_manifest_child_count": len(manifest_children),
+                "feature_basis_trust_contract_sha256": trusted_producer_sha256,
+                "feature_basis_trusted_producer_id": str(producer.get("producer_id")),
+                "feature_basis_trusted_producer_repository": str(
+                    producer.get("implementation_repository")
+                ),
+                "feature_basis_trusted_producer_ref": str(
+                    producer.get("implementation_ref")
+                ),
+                "feature_basis_trusted_producer_commit": str(producer.get("implementation_commit")),
             }
         )
         if _safe_session(evidence.get("session_date")) != session:
@@ -621,14 +769,95 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_MODEL_INPUT_SET_HASH_MISMATCH",
                 metadata=metadata,
             )
+        panel_dates = _frame_date_series(
+            pd.read_parquet(panel_path, columns=["date"])["date"],
+            "FEATURE_BASIS_CLEAN_PANEL",
+        )
+        panel_end = panel_dates.max().date().isoformat()
+        if _safe_session(historical_panel_end) != panel_end:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_HISTORICAL_PANEL_END_MISMATCH",
+                metadata=metadata,
+            )
         dates = _frame_date_series(
             pd.Series(list(official_session_dates)), "FEATURE_BASIS_OFFICIAL_SESSION"
         )
-        official = tuple(sorted(set(dates.dt.date.astype(str))))
+        if dates.duplicated().any():
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OFFICIAL_CALENDAR_DUPLICATE",
+                metadata=metadata,
+            )
+        official = tuple(sorted(dates.dt.date.astype(str)))
+        if not isinstance(calendar_sources, Mapping) or set(calendar_sources) != {
+            "historical", "forward"
+        }:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CALENDAR_SOURCES_INVALID",
+                metadata=metadata,
+            )
+        source_sets: dict[str, set[str]] = {}
+        try:
+            for source_name in ("historical", "forward"):
+                source_dates = _frame_date_series(
+                    pd.Series(list(calendar_sources[source_name])),
+                    f"FEATURE_BASIS_{source_name.upper()}_CALENDAR",
+                )
+                if source_dates.duplicated().any():
+                    return _feature_basis_failure(
+                        SOURCE_CAPTURE_UNRESOLVED,
+                        f"FEATURE_BASIS_{source_name.upper()}_CALENDAR_DUPLICATE",
+                        metadata=metadata,
+                    )
+                source_sets[source_name] = set(source_dates.dt.date.astype(str))
+        except (TypeError, ValueError) as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc),
+                metadata=metadata,
+            )
+        if (
+            source_sets["historical"] & source_sets["forward"]
+            or any(value > panel_end for value in source_sets["historical"])
+            or any(value <= panel_end for value in source_sets["forward"])
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CALENDAR_SOURCE_CONFLICT",
+                metadata=metadata,
+            )
+        source_union = source_sets["historical"] | source_sets["forward"]
+        official_through_target = {value for value in official if value <= session}
+        if {value for value in source_union if value <= session} != official_through_target:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_CALENDAR_SOURCE_CONFLICT",
+                metadata=metadata,
+            )
+        if panel_end not in source_sets["historical"]:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_HISTORICAL_CALENDAR_PANEL_END_MISSING",
+                metadata=metadata,
+            )
+        if _safe_session(historical_panel_end) not in official:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_HISTORICAL_PANEL_END_NOT_OFFICIAL",
+                metadata=metadata,
+            )
         if session not in official:
             return _feature_basis_failure(
                 SOURCE_CAPTURE_UNRESOLVED,
                 "FEATURE_BASIS_SESSION_NOT_OFFICIAL",
+                metadata=metadata,
+            )
+        if session <= panel_end or session not in source_sets["forward"]:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_NOT_FORWARD_OFFICIAL",
                 metadata=metadata,
             )
         boundary = evidence.get("scorer_boundary")
@@ -644,7 +873,7 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_SCORER_BOUNDARY_SOURCE_INVALID",
                 metadata=metadata,
             )
-        if str(boundary.get("historical_end") or "") != official[-1]:
+        if str(boundary.get("historical_end") or "") != panel_end:
             return _feature_basis_failure(
                 SOURCE_CAPTURE_UNRESOLVED,
                 "FEATURE_BASIS_SCORER_BOUNDARY_MISMATCH",
@@ -666,7 +895,7 @@ def evaluate_feature_basis_admission(
             )
         candidate_path = Path(candidate_ohlcv_path).expanduser().resolve()
         try:
-            _verify_candidate_session_ohlcv(
+            candidate_source_metadata = _verify_candidate_session_ohlcv(
                 candidate_path,
                 str(candidate_ohlcv_sha256),
                 session,
@@ -744,23 +973,71 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_OPEN_SOURCE_INVALID",
                 metadata=metadata,
             )
-        open_child = _manifest_child(
-            manifest_children, open_source.get("evidence_id"), "FEATURE_BASIS_OPEN_SOURCE"
-        )
-        open_sha = str(geometry_open.get("open_evidence_sha256") or "").lower()
-        if (
-            not str(open_source.get("source") or "").strip()
-            or not str(open_source.get("source_ref") or "").strip()
-            or not HEX64_RE.fullmatch(open_sha)
-            or str(open_child.get("sha256") or "").lower() != open_sha
-            or str(open_child.get("kind") or "") != "open_source"
-            or str(open_child.get("source_ref") or "") != str(open_source.get("source_ref") or "")
-        ):
+        open_bindings = geometry_open.get("open_source_bindings")
+        if open_bindings is None:
+            open_bindings = {ticker: open_source for ticker in observed_tickers}
+        if not isinstance(open_bindings, Mapping) or set(open_bindings) != set(observed_tickers):
             return _feature_basis_failure(
                 SOURCE_CAPTURE_UNRESOLVED,
-                "FEATURE_BASIS_OPEN_SOURCE_UNBOUND",
+                "FEATURE_BASIS_OPEN_SOURCE_BINDINGS_MISMATCH",
                 metadata=metadata,
             )
+        open_shas: set[str] = set()
+        for ticker in observed_tickers:
+            binding = open_bindings.get(ticker)
+            actual_source = candidate_source_metadata.get(ticker)
+            if not isinstance(binding, Mapping) or actual_source is None:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_OPEN_SOURCE_BINDING_MISSING:{ticker}",
+                    metadata=metadata,
+                )
+            if any(
+                str(binding.get(field) or "").strip() != actual_source[field]
+                for field in (
+                    "source",
+                    "source_ref",
+                    "source_sha256",
+                    "observed_retrieved_at_utc",
+                )
+            ):
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_OPEN_SOURCE_ROW_MISMATCH:{ticker}",
+                    metadata=metadata,
+                )
+            try:
+                open_child = _manifest_child(
+                    manifest_children,
+                    binding.get("evidence_id"),
+                    f"FEATURE_BASIS_OPEN_SOURCE:{ticker}",
+                )
+            except ValueError as exc:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    str(exc),
+                    metadata=metadata,
+                )
+            open_sha = str(
+                binding.get("open_evidence_sha256")
+                or geometry_open.get("open_evidence_sha256")
+                or ""
+            ).lower()
+            if (
+                not HEX64_RE.fullmatch(open_sha)
+                or str(open_child.get("sha256") or "").lower() != open_sha
+                or str(open_child.get("kind") or "") != "open_source"
+                or str(open_child.get("source") or "") != actual_source["source"]
+                or str(open_child.get("source_ref") or "") != actual_source["source_ref"]
+                or str(open_child.get("source_sha256") or "").lower()
+                != actual_source["source_sha256"]
+            ):
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_OPEN_SOURCE_UNBOUND:{ticker}",
+                    metadata=metadata,
+                )
+            open_shas.add(open_sha)
         ohlcv_child = _manifest_child(
             manifest_children,
             geometry_open.get("session_ohlcv_evidence_id"),
@@ -781,7 +1058,7 @@ def evaluate_feature_basis_admission(
             {
                 "feature_basis_session_ohlcv_path": str(candidate_path),
                 "feature_basis_session_ohlcv_sha256": sha256_file(candidate_path),
-                "feature_basis_open_evidence_sha256": open_sha,
+                "feature_basis_open_evidence_sha256": sorted(open_shas),
             }
         )
         for name in (
@@ -1051,7 +1328,7 @@ def evaluate_feature_basis_admission(
                 "feature_basis_record_count": len(records),
                 "feature_basis_official_session_start": official[0],
                 "feature_basis_official_session_end": official[-1],
-                "feature_basis_scorer_historical_end": official[-1],
+                "feature_basis_scorer_historical_end": panel_end,
                 "feature_basis_transition_overlaps": list(overlaps),
             }
         )
@@ -1905,6 +2182,7 @@ def build_runtime_population_admission(
     runner_path: str | Path,
     expected_baseline_sha256: str,
     expected_model_manifest_sha256: str,
+    trusted_producer_contract: Mapping[str, Any] | None = None,
 ) -> PopulationAdmission:
     """Load only retained, same-session evidence and produce an admission."""
 
@@ -1913,6 +2191,11 @@ def build_runtime_population_admission(
         if observed.tzinfo is None or observed.utcoffset() is None:
             raise ValueError("OBSERVED_AT_NOT_TIMEZONE_AWARE")
         session = observed.astimezone(JAKARTA).date().isoformat()
+        if not isinstance(trusted_producer_contract, Mapping):
+            return _runtime_failure(
+                session_date=session,
+                reasons=("PRODUCER_TRUST_ANCHOR_MISSING",),
+            )
         paths = runtime_paths(runtime_root)
         baseline_path = Path(clean_security_master).expanduser().resolve()
         current_path = (paths.listings_root / "security_master.csv").resolve()
@@ -1994,9 +2277,16 @@ def build_runtime_population_admission(
             )
             if not isinstance(feature_basis_evidence, Mapping):
                 raise ValueError("FEATURE_BASIS_EVIDENCE_NOT_OBJECT")
-            official_session_dates = pd.read_parquet(
-                clean_panel_path, columns=["date"]
-            )["date"].tolist()
+            clean_panel_dates = _frame_date_series(
+                pd.read_parquet(clean_panel_path, columns=["date"])["date"],
+                "FEATURE_BASIS_CLEAN_PANEL",
+            )
+            if clean_panel_dates.empty:
+                raise ValueError("FEATURE_BASIS_CLEAN_PANEL_EMPTY")
+            historical_panel_end = clean_panel_dates.max().date().isoformat()
+            official_session_dates, calendar_sources = _canonical_scoring_calendar(
+                paths, session
+            )
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError, KeyError) as exc:
             return _runtime_failure(
                 session_date=session,
@@ -2026,7 +2316,9 @@ def build_runtime_population_admission(
             model_input_sha256=str(session_row["snapshot_sha256"] or ""),
             clean_panel_path=clean_panel_path,
             clean_panel_sha256=sha256_file(clean_panel_path),
+            historical_panel_end=historical_panel_end,
             official_session_dates=official_session_dates,
+            calendar_sources=calendar_sources,
             evidence=feature_basis_evidence,
             observed_at=observed_by,
             evidence_path=feature_basis_path,
@@ -2035,6 +2327,7 @@ def build_runtime_population_admission(
             manifest_sha256=feature_basis_manifest_sha256,
             candidate_ohlcv_path=session_ohlcv_path,
             candidate_ohlcv_sha256=session_ohlcv_sha256,
+            trusted_producer_contract=trusted_producer_contract,
         )
         security_evidence["feature_basis_evidence_path"] = str(
             feature_basis_path.resolve()

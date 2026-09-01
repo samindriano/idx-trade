@@ -123,10 +123,10 @@ def _write_runtime_fixture(
             "low": [9.0] if include_model else [],
             "close": [10.0] if include_model else [],
             "volume": [100.0] if include_model else [],
-            "source": ["TEST"] if include_model else [],
-            "source_ref": ["test://ohlcv"] if include_model else [],
+            "source": ["TEST_OPEN"] if include_model else [],
+            "source_ref": ["test://open"] if include_model else [],
             "source_sha256": ["a" * 64] if include_model else [],
-            "observed_retrieved_at_utc": [None] if include_model else [],
+            "observed_retrieved_at_utc": ["2026-08-28T11:00:00+00:00"] if include_model else [],
         }
     )
     snapshot_path = session_root / "model_input.parquet"
@@ -146,7 +146,20 @@ def _write_runtime_fixture(
     index_raw.write_text(json.dumps({"data": []}), encoding="utf-8")
     index.write_text(f"index_code,session_date\nCOMPOSITE,{SESSION}\n", encoding="utf-8")
     calendar.parent.mkdir(parents=True, exist_ok=True)
-    calendar.write_text(f"date\n{SESSION}\n", encoding="utf-8")
+    all_dates = pd.bdate_range("2026-04-01", "2026-08-31")
+    all_dates = [value for value in all_dates if value != pd.Timestamp("2026-05-01")]
+    forward_dates = [value for value in all_dates if value > pd.Timestamp("2026-07-31")]
+    historical_dates = [value for value in all_dates if value <= pd.Timestamp("2026-07-31")]
+    calendar.write_text(
+        "date\n" + "\n".join(value.date().isoformat() for value in forward_dates) + "\n",
+        encoding="utf-8",
+    )
+    historical_calendar = paths.runtime_root / "sessions" / "exchange_sessions.csv"
+    historical_calendar.parent.mkdir(parents=True, exist_ok=True)
+    historical_calendar.write_text(
+        "date\n" + "\n".join(value.date().isoformat() for value in historical_dates) + "\n",
+        encoding="utf-8",
+    )
 
     manifest = {
         "schema_version": forward_monitoring.MONITOR_SCHEMA_VERSION,
@@ -207,12 +220,13 @@ def _write_runtime_fixture(
     model_manifest = model_root / "MANIFEST.json"
     model_manifest.write_text('{"model": "frozen-test"}\n', encoding="utf-8")
     clean_panel = tmp_path / "clean_panel.parquet"
+    clean_dates = [value for value in historical_dates]
     write_parquet_atomic(
         pd.DataFrame(
             {
-                "ticker": ["AAAA", "AAAA", "AAAA"],
-                "date": ["2026-08-19", "2026-08-27", SESSION],
-                "close": [10.0, 10.0, 10.0],
+                "ticker": ["AAAA"] * len(clean_dates),
+                "date": clean_dates,
+                "close": [10.0] * len(clean_dates),
             }
         ),
         clean_panel,
@@ -257,6 +271,7 @@ def _write_runtime_fixture(
         )
     }
     open_child = feature_child("open-source", "open_source", "test://open", "open-v1\n")
+    open_child.update({"source": "TEST_OPEN", "source_sha256": "a" * 64})
     feature_children = [
         producer_child,
         *field_children.values(),
@@ -327,7 +342,7 @@ def _write_runtime_fixture(
         "clean_panel_sha256": sha256_file(clean_panel),
         "scorer_boundary": {
             "source": "MAX_DATE_FROM_CLEAN_PANEL",
-            "historical_end": SESSION,
+            "historical_end": "2026-07-31",
             "clean_panel_sha256": sha256_file(clean_panel),
         },
         **feature_attestations,
@@ -342,6 +357,8 @@ def _write_runtime_fixture(
             "open_source_identity": {
                 "source": "TEST_OPEN",
                 "source_ref": open_child["source_ref"],
+                "source_sha256": "a" * 64,
+                "observed_retrieved_at_utc": "2026-08-28T11:00:00+00:00",
                 "evidence_id": "open-source",
             },
             "open_evidence_sha256": open_child["sha256"],
@@ -363,6 +380,7 @@ def _write_runtime_fixture(
         "evidence_sha256": "0" * 64,
         "producer": {
             "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+            "implementation_repository": "samindriano/idx-trade",
             "implementation_ref": "git://test-producer",
             "implementation_commit": "1" * 40,
             "implementation_sha256": producer_child["sha256"],
@@ -392,6 +410,16 @@ def _write_runtime_fixture(
         "runner_path": runner,
         "expected_baseline_sha256": sha256_file(baseline),
         "expected_model_manifest_sha256": sha256_file(model_manifest),
+        "trusted_producer_contract": {
+            "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+            "implementation_repository": "samindriano/idx-trade",
+            "implementation_ref": "git://test-producer",
+            "implementation_commit": "1" * 40,
+            "implementation_sha256": producer_child["sha256"],
+            "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+            "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
+            "trust_contract_sha256": "3" * 64,
+        },
     }
 
 
@@ -423,6 +451,15 @@ def test_build_runtime_population_admission_uses_real_data_ready_fixture(tmp_pat
     assert admission.metadata["feature_basis_manifest_sha256"] == sha256_file(
         feature_manifest
     )
+
+
+def test_runtime_requires_external_producer_trust_anchor(tmp_path: Path) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    fixture.pop("trusted_producer_contract")
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == V1_POPULATION_NOT_PROVABLE
+    assert admission.reason_codes == ("PRODUCER_TRUST_ANCHOR_MISSING",)
 
 
 def test_build_runtime_population_admission_vetoes_shared_listed_to_change(
@@ -458,6 +495,20 @@ def test_runtime_missing_canonical_tradability_artifact_fails_closed(
 
     assert admission.status == V1_POPULATION_NOT_PROVABLE
     assert "TRADABILITY_INTERVAL_ARTIFACT_MISSING" in admission.reason_codes
+
+
+def test_runtime_missing_forward_calendar_fails_closed(tmp_path: Path) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    (paths.calendar_root / "exchange_sessions.csv").unlink()
+
+    with pytest.raises(ValueError, match="FEATURE_BASIS_FORWARD_CALENDAR_MISSING"):
+        gate._canonical_scoring_calendar(paths, SESSION)
+
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == V1_POPULATION_NOT_PROVABLE
+    assert "SAME_SESSION_EOD_ARTIFACT_INVALID" in admission.reason_codes
 
 
 @pytest.mark.parametrize(

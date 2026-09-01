@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from idx_trade import v4_x1_population_admission_v1 as gate
 from idx_trade.provenance import sha256_file
@@ -38,10 +39,17 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         ),
         model_path,
     )
-    dates = pd.date_range("2026-06-29", periods=62, freq="D")
+    all_dates = pd.bdate_range("2026-04-01", "2026-08-31")
+    dates = [date for date in all_dates if date != pd.Timestamp("2026-05-01")]
+    historical_dates = [date for date in dates if date <= pd.Timestamp("2026-07-31")]
+    forward_dates = [date for date in dates if date > pd.Timestamp("2026-07-31")]
     write_parquet_atomic(
         pd.DataFrame(
-            {"ticker": ["AAAA"] * len(dates), "date": dates, "close": [10.0] * len(dates)}
+            {
+                "ticker": ["AAAA"] * len(historical_dates),
+                "date": historical_dates,
+                "close": [10.0] * len(historical_dates),
+            }
         ),
         panel_path,
     )
@@ -56,8 +64,8 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
                 "low": [9.0],
                 "close": [10.0],
                 "volume": [100.0],
-                "source": ["TEST"],
-                "source_ref": ["test://ohlcv"],
+                "source": ["TEST_OPEN"],
+                "source_ref": ["test://open"],
                 "source_sha256": ["a" * 64],
                 "observed_retrieved_at_utc": ["2026-08-28T11:00:00+00:00"],
             }
@@ -96,6 +104,7 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         for name in ("identity_attestation", "calendar_attestation", "revision_attestation", "pit_attestation")
     }
     open_child = child("open-source", "open_source", "test://open", "open-v1\n")
+    open_child.update({"source": "TEST_OPEN", "source_sha256": "a" * 64})
     children = [
         producer_child,
         *field_children.values(),
@@ -158,7 +167,7 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         "clean_panel_sha256": sha256_file(panel_path),
         "scorer_boundary": {
             "source": "MAX_DATE_FROM_CLEAN_PANEL",
-            "historical_end": "2026-08-29",
+            "historical_end": "2026-07-31",
             "clean_panel_sha256": sha256_file(panel_path),
         },
         **attestations,
@@ -173,6 +182,8 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
             "open_source_identity": {
                 "source": "TEST_OPEN",
                 "source_ref": open_child["source_ref"],
+                "source_sha256": "a" * 64,
+                "observed_retrieved_at_utc": "2026-08-28T11:00:00+00:00",
                 "evidence_id": "open-source",
             },
             "open_evidence_sha256": open_child["sha256"],
@@ -191,6 +202,7 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         "evidence_sha256": "0" * 64,
         "producer": {
             "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+            "implementation_repository": "samindriano/idx-trade",
             "implementation_ref": "git://test-producer",
             "implementation_commit": "1" * 40,
             "implementation_sha256": producer_child["sha256"],
@@ -210,7 +222,12 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         "model_input_sha256": sha256_file(model_path),
         "clean_panel_path": panel_path,
         "clean_panel_sha256": sha256_file(panel_path),
-        "official_session_dates": dates,
+        "historical_panel_end": "2026-07-31",
+        "official_session_dates": historical_dates + forward_dates,
+        "calendar_sources": {
+            "historical": historical_dates,
+            "forward": forward_dates,
+        },
         "evidence": evidence,
         "observed_at": OBSERVED_AT,
         "evidence_path": evidence_path,
@@ -219,8 +236,34 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         "manifest_sha256": sha256_file(manifest_path),
         "candidate_ohlcv_path": candidate_path,
         "candidate_ohlcv_sha256": sha256_file(candidate_path),
+        "trusted_producer_contract": {
+            "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+            "implementation_repository": "samindriano/idx-trade",
+            "implementation_ref": "git://test-producer",
+            "implementation_commit": "1" * 40,
+            "implementation_sha256": producer_child["sha256"],
+            "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+            "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
+            "trust_contract_sha256": "3" * 64,
+        },
     }
     return context, record
+
+
+def _resign_bundle(context: dict[str, object], mutate: callable) -> None:
+    manifest_path = Path(context["manifest_path"])
+    evidence_path = Path(context["evidence_path"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    mutate(manifest)
+    manifest["manifest_id"] = gate._feature_basis_manifest_identity(manifest)
+    evidence = dict(context["evidence"])
+    evidence["root_manifest_id"] = manifest["manifest_id"]
+    evidence_path.write_text(json.dumps(evidence, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["evidence_sha256"] = sha256_file(evidence_path)
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
+    context["evidence"] = evidence
+    context["evidence_sha256"] = sha256_file(evidence_path)
+    context["manifest_sha256"] = sha256_file(manifest_path)
 
 
 def test_explicit_same_basis_whole_population_is_safe(tmp_path: Path) -> None:
@@ -236,6 +279,61 @@ def test_missing_certificate_is_source_capture_unresolved(tmp_path: Path) -> Non
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
     assert result["reason_codes"] == ["FEATURE_BASIS_EVIDENCE_MISSING"]
+
+
+def test_missing_external_producer_anchor_fails_closed(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    context.pop("trusted_producer_contract")
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "PRODUCER_TRUST_ANCHOR_MISSING" in result["reason_codes"]
+
+
+def test_complete_self_signed_bundle_is_rejected_by_external_anchor(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    manifest_path = Path(context["manifest_path"])
+
+    def mutate(manifest: dict[str, object]) -> None:
+        producer = manifest["producer"]
+        child = next(item for item in manifest["children"] if item["evidence_id"] == "producer")
+        child_path = manifest_path.parent / child["path"]
+        child_path.write_text("self-signed-producer\n", encoding="utf-8")
+        child["sha256"] = sha256_file(child_path)
+        producer["implementation_commit"] = "2" * 40
+        producer["implementation_sha256"] = child["sha256"]
+
+    _resign_bundle(context, mutate)
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "PRODUCER_COMMIT_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "reason"),
+    [
+        ("producer_id", "other-producer", "PRODUCER_ID_MISMATCH"),
+        ("implementation_repository", "other/repo", "PRODUCER_REPOSITORY_MISMATCH"),
+        ("implementation_ref", "git://other", "PRODUCER_REF_MISMATCH"),
+        ("implementation_commit", "2" * 40, "PRODUCER_COMMIT_MISMATCH"),
+        ("implementation_sha256", "b" * 64, "PRODUCER_ARTIFACT_SHA_MISMATCH"),
+    ],
+)
+def test_external_producer_anchor_mismatch_is_not_admitted(
+    tmp_path: Path, field: str, value: str, reason: str
+) -> None:
+    context, _ = _fixture(tmp_path / field)
+    context["trusted_producer_contract"][field] = value
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert reason in result["reason_codes"]
+
+
+def test_external_trust_contract_sha_must_be_valid(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    context["trusted_producer_contract"]["trust_contract_sha256"] = "invalid"
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "PRODUCER_TRUST_CONTRACT_SHA_INVALID" in result["reason_codes"]
 
 
 def test_no_known_transition_is_not_a_certified_no_event(tmp_path: Path) -> None:
@@ -265,7 +363,87 @@ def test_transition_inside_longest_feature_window_blocks_whole_session(
 def test_transition_outside_exact_window_can_be_admitted(tmp_path: Path) -> None:
     context, record = _fixture(tmp_path)
     record["state"] = "CERTIFIED_TRANSITION"
-    record["transition_dates"] = ["2026-06-29"]
+    official = sorted(pd.Timestamp(value) for value in context["official_session_dates"])
+    target_index = official.index(pd.Timestamp(SESSION))
+    record["transition_dates"] = [
+        official[target_index - 60].date().isoformat()
+    ]
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.BASIS_SAFE
+
+
+def test_transition_at_exact_longest_official_session_boundary_blocks(
+    tmp_path: Path,
+) -> None:
+    context, record = _fixture(tmp_path)
+    record["state"] = "CERTIFIED_TRANSITION"
+    official = sorted(pd.Timestamp(value) for value in context["official_session_dates"])
+    target_index = official.index(pd.Timestamp(SESSION))
+    record["transition_dates"] = [
+        official[target_index - 59].date().isoformat()
+    ]
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.BASIS_TRANSITION_OVERLAP
+    assert any(
+        reason.startswith("BASIS_TRANSITION_OVERLAP:AAAA:")
+        for reason in result["reason_codes"]
+    )
+
+
+def test_forward_calendar_is_separate_from_clean_panel_and_preserves_session_gaps(
+    tmp_path: Path,
+) -> None:
+    context, _ = _fixture(tmp_path)
+    official = {pd.Timestamp(value).date().isoformat() for value in context["official_session_dates"]}
+    assert max(pd.Timestamp(value) for value in pd.read_parquet(context["clean_panel_path"])["date"]) == pd.Timestamp("2026-07-31")
+    assert pd.Timestamp(SESSION) in context["calendar_sources"]["forward"]
+    assert "2026-08-29" not in official
+    assert "2026-05-01" not in official
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.BASIS_SAFE
+
+
+def test_non_official_or_missing_forward_calendar_fails_closed(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    context["official_session_dates"] = [
+        value for value in context["official_session_dates"] if pd.Timestamp(value).date().isoformat() != SESSION
+    ]
+    context["calendar_sources"] = {
+        "historical": context["calendar_sources"]["historical"],
+        "forward": [
+            value for value in context["calendar_sources"]["forward"] if pd.Timestamp(value).date().isoformat() != SESSION
+        ],
+    }
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_SESSION_NOT_OFFICIAL" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "missing-forward")
+    context["calendar_sources"] = {
+        "historical": context["calendar_sources"]["historical"],
+        "forward": [],
+    }
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_CALENDAR_SOURCE_CONFLICT" in result["reason_codes"]
+
+
+def test_calendar_conflict_duplicate_and_future_rows_are_explicit(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    context["calendar_sources"]["historical"].append(pd.Timestamp("2026-08-27"))
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_CALENDAR_SOURCE_CONFLICT" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "duplicate")
+    context["official_session_dates"].append(SESSION)
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_OFFICIAL_CALENDAR_DUPLICATE" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "future")
+    context["official_session_dates"].append(pd.Timestamp("2026-09-01"))
+    context["calendar_sources"]["forward"].append(pd.Timestamp("2026-09-01"))
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.BASIS_SAFE
 
@@ -311,10 +489,10 @@ def test_extra_certificate_record_cannot_be_used_to_filter_the_population(
 def test_future_transition_is_not_admitted_or_inferred(tmp_path: Path) -> None:
     context, record = _fixture(tmp_path)
     record["state"] = "CERTIFIED_TRANSITION"
-    record["transition_dates"] = ["2026-08-29"]
+    record["transition_dates"] = ["2026-08-31"]
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.BASIS_UNRESOLVED
-    assert "FEATURE_BASIS_TRANSITION_AFTER_SESSION:AAAA:2026-08-29" in result[
+    assert "FEATURE_BASIS_TRANSITION_AFTER_SESSION:AAAA:2026-08-31" in result[
         "reason_codes"
     ]
 
@@ -351,6 +529,46 @@ def test_open_candidate_must_match_session_and_model_population(tmp_path: Path) 
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
     assert "FEATURE_BASIS_OPEN_TICKER_SET_MISMATCH" in result["reason_codes"]
+
+
+def test_open_binding_must_match_candidate_source_reference_and_hash(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    context["evidence"]["geometry_open"]["open_source_identity"]["source_ref"] = "test://unrelated"
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_OPEN_SOURCE_ROW_MISMATCH:AAAA" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "source-hash")
+    context["evidence"]["geometry_open"]["open_source_identity"]["source_sha256"] = "b" * 64
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_OPEN_SOURCE_ROW_MISMATCH:AAAA" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "unrelated-child")
+    context["evidence"]["geometry_open"]["open_source_identity"]["evidence_id"] = "field-high"
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_OPEN_SOURCE_UNBOUND:AAAA" in result["reason_codes"]
+
+
+def test_candidate_open_source_metadata_is_required(tmp_path: Path) -> None:
+    context, _ = _fixture(tmp_path)
+    candidate_path = Path(context["candidate_ohlcv_path"])
+    candidate = pd.read_parquet(candidate_path)
+    candidate.loc[0, "source_ref"] = ""
+    write_parquet_atomic(candidate, candidate_path)
+    context["candidate_ohlcv_sha256"] = sha256_file(candidate_path)
+    _resign_bundle(
+        context,
+        lambda manifest: next(
+            item
+            for item in manifest["children"]
+            if item["evidence_id"] == "session-ohlcv"
+        ).__setitem__("sha256", sha256_file(candidate_path)),
+    )
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_CANDIDATE_SOURCE_METADATA_MISSING" in result["reason_codes"]
 
 
 def test_future_open_knowledge_is_not_admitted(tmp_path: Path) -> None:
