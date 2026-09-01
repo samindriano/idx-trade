@@ -1,0 +1,171 @@
+// Completion validation is deliberately separate from GitHub run metadata.
+// These validators describe the existing archive commit/manifest contracts;
+// the caller must obtain child bytes from that existing archive authority and
+// pass their computed hashes. They do not create a second archive authority or
+// infer completion from a claim, dispatch response, or workflow conclusion.
+
+export const COMPLETION_GRAIN = Object.freeze({
+  E2E: 'session_stage',
+  OFFICIAL_OPEN: 'session_observation_slot',
+  INTRADAY: 'session_recovery_objective',
+  STREAM: 'observation_slot_universe_source_identity',
+});
+
+export const CAPTURE_COMPLETION_STATE = 'capture_complete';
+
+const SHA256 = /^[0-9a-f]{64}$/;
+const GIT_SHA = /^[0-9a-f]{40}$/;
+const E2E_STATUSES = Object.freeze({
+  NOOP: new Set(['WEEKEND_OR_HOLIDAY_NOOP']),
+  POST_EOD: new Set(['POST_EOD_PREPARED', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
+  PREOPEN: new Set(['EXECUTION_COMPLETE', 'ALREADY_COMPLETE', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
+});
+
+export class CompletionContractError extends Error {
+  constructor(code) {
+    super(code);
+    this.name = 'CompletionContractError';
+    this.code = code;
+  }
+}
+
+function fail(code) {
+  throw new CompletionContractError(code);
+}
+
+function object(value, code) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(code);
+  return value;
+}
+
+function sha(value, code) {
+  if (typeof value !== 'string' || !SHA256.test(value)) fail(code);
+  return value;
+}
+
+function gitSha(value, code) {
+  if (typeof value !== 'string' || !GIT_SHA.test(value)) fail(code);
+  return value;
+}
+
+function childHash(childHashes, ref, code) {
+  const key = safeArchiveKey(ref?.key, code);
+  const expected = typeof ref?.sha256 === 'string' ? ref.sha256 : '';
+  if (!key || !SHA256.test(expected) || childHashes?.[key] !== expected) fail(code);
+  return { key, sha256: expected };
+}
+
+function safeArchiveKey(value, code) {
+  if (typeof value !== 'string' || !value || value.startsWith('/') || value.split('/').some((part) => part === '' || part === '.' || part === '..')) fail(code);
+  return value;
+}
+
+function falseGuardSet(guards, fields, code) {
+  const value = object(guards, code);
+  for (const field of fields) if (value[field] !== false) fail(code);
+}
+
+function parseJson(value, code) {
+  if (value instanceof Uint8Array) {
+    try {
+      const parsed = JSON.parse(new TextDecoder().decode(value));
+      return object(parsed, code);
+    } catch {
+      fail(code);
+    }
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  fail(code);
+}
+
+function result({ family, grain, key = null, sha256 = null }) {
+  return {
+    capture_complete: true,
+    state: CAPTURE_COMPLETION_STATE,
+    family,
+    grain,
+    completion_key: key,
+    completion_sha256: sha256,
+  };
+}
+
+export function validateE2ECompletion({ commit, resultBytes, snapshotSha256, expectedSession, expectedStage, childHashes = {}, completionKey, completionSha256 }) {
+  const value = object(commit, 'E2E_COMPLETION_NOT_OBJECT');
+  if (value.schema_version !== 'idx_trade_e2e_paper_cloud_stage_commit_v1' || value.commit_state !== 'COMMITTED') fail('E2E_COMPLETION_COMMIT_INVALID');
+  if (value.contract_version !== 'CLOUD_FIRST_E2E_PAPER_V1') fail('E2E_COMPLETION_CONTRACT_INVALID');
+  if (value.session_date !== expectedSession || value.stage !== expectedStage) fail('E2E_COMPLETION_IDENTITY_INVALID');
+  if (!E2E_STATUSES[expectedStage]?.has(value.stage_status)) fail('E2E_COMPLETION_STATUS_INVALID');
+  sha(value.schedule_attestation_sha256, 'E2E_COMPLETION_SCHEDULE_SHA_INVALID');
+  sha(value.input_manifest_sha256, 'E2E_COMPLETION_INPUT_SHA_INVALID');
+  gitSha(object(value.code_identity, 'E2E_COMPLETION_CODE_IDENTITY_INVALID').commit, 'E2E_COMPLETION_CODE_SHA_INVALID');
+  falseGuardSet(value.guards, ['outcome_accessed', 'protected_forward_accessed', 'model_refit', 'retroactive_execution_authorized'], 'E2E_COMPLETION_GUARDS_INVALID');
+  const resultRef = childHash(childHashes, value.result, 'E2E_COMPLETION_RESULT_INVALID');
+  const snapshotRef = childHash(childHashes, value.snapshot, 'E2E_COMPLETION_SNAPSHOT_INVALID');
+  if (resultBytes !== undefined) {
+    const payload = parseJson(resultBytes, 'E2E_COMPLETION_RESULT_JSON_INVALID');
+    if (payload.schema_version !== 'idx_trade_e2e_paper_cloud_runtime_v1' || payload.session_date !== expectedSession || payload.stage !== expectedStage || payload.stage_status !== value.stage_status) fail('E2E_COMPLETION_RESULT_IDENTITY_INVALID');
+    if (payload.observed_availability_only !== true || payload.outcome_accessed !== false || payload.protected_forward_accessed !== false || payload.model_refit !== false) fail('E2E_COMPLETION_RESULT_GUARDS_INVALID');
+  }
+  if (snapshotSha256 !== undefined && snapshotSha256 !== snapshotRef.sha256) fail('E2E_COMPLETION_SNAPSHOT_SHA_INVALID');
+  return result({ family: 'E2E', grain: COMPLETION_GRAIN.E2E, key: completionKey ?? value.commit_key ?? null, sha256: completionSha256 ?? value.commit_sha256 ?? null });
+}
+
+export function validateOfficialOpenCompletion({ manifest, expectedSession, expectedSlot, childHashes = {}, completionKey, completionSha256 }) {
+  const value = object(manifest, 'OFFICIAL_OPEN_COMPLETION_NOT_OBJECT');
+  if (value.schema_version !== 'idx_official_open_cloud_archive_v1' || value.commit_state !== 'COMMITTED') fail('OFFICIAL_OPEN_COMPLETION_COMMIT_INVALID');
+  if (value.session_date !== expectedSession || value.slot !== expectedSlot) fail('OFFICIAL_OPEN_COMPLETION_IDENTITY_INVALID');
+  if (value.execution_admission !== 'CAPTURE_ONLY_NOT_EXECUTION_ADMITTED') fail('OFFICIAL_OPEN_COMPLETION_ADMISSION_INVALID');
+  if (value.authority !== 'IDX' || value.field_semantics !== 'IDX_OFFICIAL_OPENPRICE' || value.source_execution_grade !== true) fail('OFFICIAL_OPEN_COMPLETION_SOURCE_INVALID');
+  falseGuardSet(value.guards, ['model_accessed', 'outcome_accessed', 'paper_state_mutated', 'forward_counter_mutated', 'order_created', 'fill_created', 'retroactive_execution_authorized'], 'OFFICIAL_OPEN_COMPLETION_GUARDS_INVALID');
+  const artifacts = object(value.artifacts, 'OFFICIAL_OPEN_COMPLETION_ARTIFACTS_INVALID');
+  for (const name of ['raw_response', 'open_prices', 'source_manifest']) {
+    const ref = object(artifacts[name], 'OFFICIAL_OPEN_COMPLETION_ARTIFACT_REF_INVALID');
+    safeArchiveKey(ref.key, 'OFFICIAL_OPEN_COMPLETION_ARTIFACT_KEY_INVALID');
+    childHash(childHashes, ref, 'OFFICIAL_OPEN_COMPLETION_ARTIFACT_HASH_INVALID');
+  }
+  return result({ family: 'OFFICIAL_OPEN', grain: COMPLETION_GRAIN.OFFICIAL_OPEN, key: completionKey ?? value.commit_key ?? null, sha256: completionSha256 ?? value.commit_sha256 ?? null });
+}
+
+export function validateIntradayCompletion({ commit, resultBytes, snapshotSha256, claimSha256, expectedSession, expectedSlot, childHashes = {}, completionKey, completionSha256 }) {
+  const value = object(commit, 'INTRADAY_COMPLETION_NOT_OBJECT');
+  if (value.schema_version !== 'idx_trade_stockbit_intraday_cloud_slot_v1' || value.commit_state !== 'COMMITTED') fail('INTRADAY_COMPLETION_COMMIT_INVALID');
+  if (value.session_date !== expectedSession || value.slot !== expectedSlot || value.status !== 'ADMISSIBLE_COMPLETE') fail('INTRADAY_COMPLETION_IDENTITY_OR_STATUS_INVALID');
+  falseGuardSet(value.guards, ['synthetic_fill_used', 'retroactive_capture_used', 'outcome_accessed'], 'INTRADAY_COMPLETION_GUARDS_INVALID');
+  sha(value.eod_manifest_sha256, 'INTRADAY_COMPLETION_EOD_SHA_INVALID');
+  sha(value.session_manifest_sha256, 'INTRADAY_COMPLETION_SESSION_SHA_INVALID');
+  const resultRef = childHash(childHashes, value.result, 'INTRADAY_COMPLETION_RESULT_INVALID');
+  const snapshotRef = childHash(childHashes, value.snapshot, 'INTRADAY_COMPLETION_SNAPSHOT_INVALID');
+  const declaredClaim = sha(value.claim_sha256, 'INTRADAY_COMPLETION_CLAIM_SHA_INVALID');
+  if (claimSha256 !== undefined && declaredClaim !== claimSha256) fail('INTRADAY_COMPLETION_CLAIM_BINDING_INVALID');
+  if (resultBytes !== undefined) {
+    const payload = parseJson(resultBytes, 'INTRADAY_COMPLETION_RESULT_JSON_INVALID');
+    if (payload.session_date !== expectedSession || payload.slot !== expectedSlot || payload.status !== 'ADMISSIBLE_COMPLETE') fail('INTRADAY_COMPLETION_RESULT_IDENTITY_INVALID');
+    if (payload.synthetic_fill_used !== false || payload.retroactive_capture_used !== false || payload.outcome_accessed !== false) fail('INTRADAY_COMPLETION_RESULT_GUARDS_INVALID');
+  }
+  if (snapshotSha256 !== undefined && snapshotSha256 !== snapshotRef.sha256) fail('INTRADAY_COMPLETION_SNAPSHOT_SHA_INVALID');
+  return result({ family: 'INTRADAY', grain: COMPLETION_GRAIN.INTRADAY, key: completionKey ?? value.commit_key ?? null, sha256: completionSha256 ?? value.commit_sha256 ?? null });
+}
+
+export function validateExistingCompletion(family, args) {
+  switch (family) {
+    case 'E2E': return validateE2ECompletion(args);
+    case 'OFFICIAL_OPEN': return validateOfficialOpenCompletion(args);
+    case 'INTRADAY': return validateIntradayCompletion(args);
+    default: fail('UNKNOWN_COMPLETION_FAMILY');
+  }
+}
+
+export function captureCompletionProof({ family, sessionDate, slotId, completionKey, completionSha256 }) {
+  const grain = COMPLETION_GRAIN[family];
+  if (!['E2E', 'OFFICIAL_OPEN', 'INTRADAY'].includes(family) || !grain || typeof sessionDate !== 'string' || typeof slotId !== 'string' || typeof completionKey !== 'string' || !safeArchiveKey(completionKey, 'CAPTURE_COMPLETION_PROOF_INVALID') || !SHA256.test(String(completionSha256))) fail('CAPTURE_COMPLETION_PROOF_INVALID');
+  return {
+    capture_complete: true,
+    state: CAPTURE_COMPLETION_STATE,
+    family,
+    grain,
+    session_date: sessionDate,
+    slot_id: slotId,
+    completion_key: completionKey,
+    completion_sha256: completionSha256,
+  };
+}

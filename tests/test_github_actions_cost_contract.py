@@ -97,3 +97,24 @@ def test_frozen_protocol_change_is_not_ignored_by_ci() -> None:
     text = _workflow_text("tests.yml")
     assert "docs/checkpoints/2026-08-24_V4_X1_PROSPECTIVE_EVALUATION_PROTOCOL_V1.md" not in text
     assert "paths-ignore:" in text
+
+
+def test_intraday_complete_archive_preflight_skips_expensive_capture_bootstrap() -> None:
+    text = _workflow_text("stockbit-intraday-cloud-production.yml")
+    check = text.index("  completion_check:")
+    capture = text.index("  capture:")
+    archive_check = text.index("scripts/check_stockbit_intraday_completion.py")
+    setup = text.index("uses: actions/setup-python@v5", capture)
+    provider = text.index("ZAPI_API_KEY:", capture)
+
+    assert check < archive_check < capture < setup < provider
+    assert "needs: completion_check" in text[capture:]
+    assert "needs.completion_check.outputs.complete != 'true'" in text[capture:]
+    assert "AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}" in text[:capture]
+    assert "AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}" in text[:capture]
+    assert "STOCKBIT_INTRADAY_EXPECTED_IMPLEMENTATION_REF" not in text[:capture]
+
+
+def test_stream_remains_outside_cloudflare_completion_redundancy() -> None:
+    scheduler = (REPO_ROOT / "infra" / "cloudflare_github_scheduler" / "src" / "core.mjs").read_text(encoding="utf-8")
+    assert "stockbit-stream-prospective-capture.yml" not in scheduler

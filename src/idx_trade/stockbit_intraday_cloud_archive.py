@@ -238,6 +238,41 @@ class StockbitIntradayCloudArchive:
             payload=payload,
         )
 
+    def existing_complete_slot(self, session_date: str | date, slot: str) -> IntradaySlotCommit | None:
+        """Return only a fully validated durable completion, if one exists.
+
+        This is the canonical read-only completion check used by cheap retry
+        preflights.  Intermediate commit records are not completion, and a
+        completed slot must retain the immutable claim that authorized its
+        provider stage.  No current runner code or provider boundary is
+        invoked here.
+        """
+        commit = self.existing_slot(session_date, slot)
+        if commit is None or commit.status != "ADMISSIBLE_COMPLETE":
+            return None
+        payload = commit.payload
+        for field in ("eod_manifest_sha256", "session_manifest_sha256"):
+            value = str(payload.get(field) or "").lower()
+            if len(value) != 64 or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+                raise StockbitIntradayCloudError(
+                    f"STOCKBIT_INTRADAY_COMPLETE_{field.upper()}_INVALID"
+                )
+        code_identity = payload.get("code_identity")
+        if (
+            not isinstance(code_identity, dict)
+            or re.fullmatch(r"[0-9a-f]{40}", str(code_identity.get("commit") or "")) is None
+        ):
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CODE_IDENTITY_INVALID")
+        claim_sha = str(payload.get("claim_sha256") or "").lower()
+        if len(claim_sha) != 64 or re.fullmatch(r"[0-9a-f]{64}", claim_sha) is None:
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CLAIM_BINDING_INVALID")
+        claim = self.existing_claim(session_date, slot)
+        if claim is None or claim[1] != claim_sha:
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CLAIM_BINDING_INVALID")
+        if claim[0].get("code_identity") != code_identity:
+            raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CLAIM_CODE_IDENTITY_INVALID")
+        return commit
+
     def claim_slot(
         self,
         *,
@@ -251,9 +286,13 @@ class StockbitIntradayCloudArchive:
     ) -> str:
         """Reserve a slot before any provider-stage work begins.
 
-        The claim is immutable and create-only.  A concurrent/restarted caller
-        must observe the claim and fail closed until the slot has a committed
-        result; it may never run a second provider history for the same key.
+        The claim is immutable and create-only. A concurrent caller must
+        observe the claim and fail closed until the slot has a committed
+        result. A stale immutable claim is not reclaimable here: without a
+        fencing token enforced at every provider boundary, the original
+        process could still be active and a takeover could create two active
+        provider writers. Residual progress remains readable, but recovery is
+        blocked rather than risking duplicate provider history.
         """
         session = _session(session_date)
         normalized_slot = _slot(slot)
@@ -293,7 +332,9 @@ class StockbitIntradayCloudArchive:
                 raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_SLOT_ALREADY_CLAIMED")
             if progress[0].get("claim_sha256") != existing_sha:
                 raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_PROGRESS_CLAIM_MISMATCH")
-            return existing_sha
+            raise StockbitIntradayCloudError(
+                "STOCKBIT_INTRADAY_STALE_CLAIM_FENCING_UNPROVEN"
+            )
         try:
             result = self.store.put_if_absent(key, encoded, "application/json")
         except StorageImmutabilityConflict as exc:

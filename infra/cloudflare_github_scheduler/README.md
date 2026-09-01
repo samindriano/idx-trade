@@ -39,7 +39,7 @@ been audited. It names `idx-trade-github-scheduler-v1` and explicitly sets
 Cloudflare Cron (independent clock)
   -> Worker due-slot resolver (Asia/Jakarta, actual observed time)
   -> one global SQLite-backed Durable Object
-     -> durable per-date/per-slot marker / short dispatch lease
+     -> durable per-date/per-slot coordination marker / short dispatch lease
      -> query exact native GitHub schedule evidence
      -> if absent, workflow_dispatch existing workflow on main
 
@@ -121,29 +121,68 @@ The timestamp is never used to infer the logical slot. Consequently:
 - an ambiguous manual run never suppresses Cloudflare fallback.
 
 An unknown or ambiguous run is **not** accepted as exact slot evidence. Exact
-coverage is persisted as the generic `covered_exact` marker, with provenance
-preserving the real GitHub event: `native_schedule` or `workflow_dispatch`.
+coverage is persisted as the generic `covered_exact` coordination marker, with
+provenance preserving the real GitHub event: `native_schedule` or
+`workflow_dispatch`. It is not capture completion. A visible run, an accepted
+dispatch, and an operational block are all non-final scheduler states. Only a
+separate validator that reads the existing family archive and verifies its
+immutable commit plus hash-bound children may produce `capture_complete`.
 A Cloudflare-originated dispatch is additionally identified by the coordinator's
 durable marker and the returned workflow run id when GitHub provides one.
 
 Ambiguity fails toward another invocation of the existing idempotent cloud
 workflow, never toward silently suppressing a required slot.
 
+## Completion grain
+
+Completion is a property of existing archive evidence, not of a scheduler
+marker or GitHub run. The family contracts are:
+
+- E2E: `session + stage/phase`;
+- Official Open: `session + exact observation slot`;
+- Intraday: `session recovery objective`, retaining slot provenance and
+  residual progress;
+- Stream: `exact observation slot + universe/source identity`, but Stream is
+  not admitted to this Cloudflare scheduler until its identity/indexing and
+  zero-provider completion path are independently proven.
+
+The Cloudflare package defines contract validators for only the admitted E2E,
+Official Open, and Intraday archive records. A future archive-reading caller
+must supply bytes/hashes obtained from the existing authority; the Worker does
+not gain an R2 binding or a parallel archive authority in this phase. The
+Stream grain is documented for the cross-family contract and is intentionally
+not a Cloudflare trigger path.
+
 ## Failure semantics
 
 - GitHub run-query error -> fail closed; no dispatch.
 - Native exact schedule or exact watchdog dispatch -> durable `covered_exact`
-  marker with `native_schedule` or `workflow_dispatch` provenance; no dispatch.
+  marker with `native_schedule` or `workflow_dispatch` provenance; no dispatch
+  and no completion claim.
 - Missing native run in `observe_only` -> non-final `would_dispatch` marker and
   `WOULD_DISPATCH` result; no dispatch POST.
 - Missing native run in `active` -> durable short `dispatching` lease, then
   dispatch.
-- Successful dispatch -> durable `dispatched` marker.
+- Successful dispatch -> non-final `dispatch_requested` marker; the workflow
+  must produce independently validated archive completion.
 - Retryable GitHub error (408/409/429/5xx) -> retryable marker; a later cron may
   re-query and retry while the slot is still valid.
 - Non-retryable GitHub error -> durable `blocked` marker; no repeated calls.
 - Expired market window -> no dispatch, no backfill.
 - Missing or invalid `DISPATCH_MODE` -> fail closed; never defaults to active.
+
+The Intraday GitHub workflow has a provider-free preflight that validates the
+existing canonical archive before Python setup, accepted-E2E checkout, package
+installation, or provider access. A validated complete archive skips the
+capture job with zero provider calls. Missing completion continues to the
+existing runner; malformed or conflicting archive evidence fails closed.
+
+Intraday stale-claim recovery remains blocked when the create-only claim store
+cannot prove a fence against a still-running old provider writer. Residual
+progress is preserved, but takeover is not inferred to be safe. Stream remains
+outside Cloudflare redundancy because its archive identity depends on its
+universe/source hashes and its current runner has no proven zero-provider
+completion gate.
 
 ## GitHub credential
 

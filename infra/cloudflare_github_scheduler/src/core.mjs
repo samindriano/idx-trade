@@ -1,6 +1,8 @@
 export const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
 export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
-export const FINAL_MARKER_STATES = Object.freeze(['covered_exact', 'dispatched', 'blocked']);
+// Scheduler state is not capture evidence.  Only an independently validated
+// existing archive commit may become capture-final.
+export const CAPTURE_FINAL_MARKER_STATES = Object.freeze(['capture_complete']);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
@@ -100,20 +102,35 @@ export function exactSlotCoverageRuns(runs, slot, epochMs) {
   });
 }
 
-export function isFinalMarkerState(state) {
-  return FINAL_MARKER_STATES.includes(state);
+export function isCaptureFinalMarkerState(state) {
+  return CAPTURE_FINAL_MARKER_STATES.includes(state);
 }
 
 export function durableMarkerDecision(prior, observedEpochMs) {
-  if (prior && isFinalMarkerState(prior.state)) {
+  if (prior && isCaptureFinalMarkerState(prior.state)) {
     return {
-      status: 'DURABLE_MARKER_ALREADY_FINAL',
+      status: 'CAPTURE_ALREADY_COMPLETE',
       state: prior.state,
       runId: prior.run_id ?? null,
     };
   }
-  if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
-    return { status: 'DISPATCH_LEASE_IN_FLIGHT' };
+  if (
+    prior &&
+    ['dispatching', 'dispatch_requested', 'dispatched'].includes(prior.state) &&
+    observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS
+  ) {
+    return {
+      status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
+      state: prior.state,
+      runId: prior.run_id ?? null,
+    };
+  }
+  if (prior?.state === 'blocked') {
+    return {
+      status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
+      state: prior.state,
+      runId: prior.run_id ?? null,
+    };
   }
   return null;
 }

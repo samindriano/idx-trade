@@ -106,7 +106,14 @@ export class SchedulerCoordinator extends DurableObject {
         runId: Number.isInteger(run.id) ? run.id : null,
         detail: { event: run.event, provenance, createdAt: run.created_at ?? null },
       });
-      return { slot: slotId, status: 'EXACT_SLOT_COVERED', provenance, event: run.event, runId: run.id ?? null };
+      return {
+        slot: slotId,
+        status: 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+        capture_complete: false,
+        provenance,
+        event: run.event,
+        runId: run.id ?? null,
+      };
     }
 
     const attemptId = crypto.randomUUID();
@@ -132,12 +139,17 @@ export class SchedulerCoordinator extends DurableObject {
       };
     }
     if (dispatch.ok) {
-      this._write(slotKey, 'dispatched', Date.now(), {
+      this._write(slotKey, 'dispatch_requested', Date.now(), {
         attemptId,
         runId: dispatch.runId,
         detail: { githubStatus: dispatch.status },
       });
-      return { slot: slotId, status: 'WORKFLOW_DISPATCHED', runId: dispatch.runId };
+      return {
+        slot: slotId,
+        status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
+        capture_complete: false,
+        runId: dispatch.runId,
+      };
     }
 
     if (dispatch.retryable) {
@@ -152,7 +164,12 @@ export class SchedulerCoordinator extends DurableObject {
       attemptId,
       detail: { githubStatus: dispatch.status },
     });
-    return { slot: slotId, status: 'DISPATCH_BLOCKED_NON_RETRYABLE', githubStatus: dispatch.status };
+    return {
+      slot: slotId,
+      status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
+      capture_complete: false,
+      githubStatus: dispatch.status,
+    };
   }
 }
 

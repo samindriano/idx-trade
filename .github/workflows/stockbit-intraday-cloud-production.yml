@@ -30,11 +30,81 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  completion_check:
+    # This cheap, provider-free preflight reads only the existing canonical
+    # Intraday archive. A validated complete archive skips the expensive
+    # accepted-E2E checkout, Python setup, package install, and provider stage.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      complete: ${{ steps.archive_check.outputs.complete }}
+      slot: ${{ steps.resolve_slot.outputs.slot }}
+    env:
+      STOCKBIT_INTRADAY_STORAGE_PREFIX: stockbit-intraday-v1
+      STOCKBIT_INTRADAY_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      STOCKBIT_INTRADAY_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+      - name: Checkout exact production implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Resolve scheduled slot
+        id: resolve_slot
+        shell: bash
+        env:
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+          DISPATCH_SLOT: ${{ inputs.slot || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            slot="$DISPATCH_SLOT"
+          else
+            case "$EVENT_SCHEDULE" in
+              "30 11 * * 1-5") slot="1830" ;;
+              "30 12 * * 1-5") slot="1930" ;;
+              "30 13 * * 1-5") slot="2030" ;;
+              *) echo "Unknown Stockbit Intraday schedule: $EVENT_SCHEDULE" >&2; exit 2 ;;
+            esac
+          fi
+          case "$slot" in
+            1830|1930|2030) ;;
+            *) echo "Invalid Stockbit Intraday slot: $slot" >&2; exit 2 ;;
+          esac
+          echo "slot=$slot" >> "$GITHUB_OUTPUT"
+
+      - name: Validate existing archive before capture bootstrap
+        id: archive_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          python3 scripts/check_stockbit_intraday_completion.py --slot "${{ steps.resolve_slot.outputs.slot }}" | tee "$output"
+          python3 - "$output" <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              result = json.load(handle)
+          if result.get("status") == "COMPLETE" and result.get("capture_complete") is True:
+              print("complete=true")
+          elif result.get("status") == "NOT_COMPLETE" and result.get("capture_complete") is False:
+              print("complete=false")
+          else:
+              raise SystemExit("unexpected completion probe result")
+          PY
+
   capture:
     # Scheduled runs are created on the default branch. Manual runs are
     # intentionally restricted to main so a feature ref cannot write the
     # production prefix.
-    if: github.ref == 'refs/heads/main'
+    needs: completion_check
+    if: github.ref == 'refs/heads/main' && needs.completion_check.outputs.complete != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

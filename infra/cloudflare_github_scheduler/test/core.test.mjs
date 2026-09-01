@@ -7,7 +7,7 @@ import {
   durableMarkerDecision,
   dueSlots,
   exactSlotCoverageRuns,
-  isFinalMarkerState,
+  isCaptureFinalMarkerState,
   localTimeEpochMs,
   markerKey,
   slotWindow,
@@ -122,25 +122,35 @@ test('dispatch body preserves exact workflow input', () => {
   assert.deepEqual(dispatchBody(SLOT_BY_ID.get('OFFICIAL_OPEN_0902')), { ref: 'main', inputs: { slot: '0902' } });
 });
 
-test('durable final marker states suppress repeats while retryable errors remain retryable', () => {
-  assert.equal(isFinalMarkerState('covered_exact'), true);
-  assert.equal(isFinalMarkerState('covered_native'), false);
-  assert.equal(isFinalMarkerState('dispatched'), true);
-  assert.equal(isFinalMarkerState('blocked'), true);
-  assert.equal(isFinalMarkerState('retryable_error'), false);
-  assert.equal(isFinalMarkerState('would_dispatch'), false);
+test('only validated archive completion is capture-final', () => {
+  assert.equal(isCaptureFinalMarkerState('capture_complete'), true);
+  assert.equal(isCaptureFinalMarkerState('covered_exact'), false);
+  assert.equal(isCaptureFinalMarkerState('dispatched'), false);
+  assert.equal(isCaptureFinalMarkerState('blocked'), false);
+  assert.equal(isCaptureFinalMarkerState('retryable_error'), false);
+  assert.equal(isCaptureFinalMarkerState('would_dispatch'), false);
   assert.equal(markerKey('2026-08-27', 'E2E_POST_EOD_1835'), '2026-08-27::E2E_POST_EOD_1835');
 });
 
-test('durable marker decision keeps active dispatch idempotent', () => {
+test('scheduler markers never masquerade as capture completion', () => {
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000),
-    { status: 'DURABLE_MARKER_ALREADY_FINAL', state: 'dispatched', runId: 123 },
+    durableMarkerDecision({ state: 'capture_complete', run_id: 123 }, 10_000),
+    { status: 'CAPTURE_ALREADY_COMPLETE', state: 'capture_complete', runId: 123 },
   );
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatching', updated_at_ms: 9_000 }, 10_000),
-    { status: 'DISPATCH_LEASE_IN_FLIGHT' },
+    durableMarkerDecision({ state: 'dispatch_requested', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatch_requested', runId: null },
   );
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'dispatched', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatched', runId: null },
+  );
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'blocked', run_id: 123 }, 10_000),
+    { status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE', state: 'blocked', runId: 123 },
+  );
+  assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
+  assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
 });
 

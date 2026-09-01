@@ -47,7 +47,7 @@ print(",".join(calls))
 '''
 
 
-def test_fresh_process_after_hard_kill_restores_cloud_progress(tmp_path: Path) -> None:
+def test_fresh_process_after_hard_kill_blocks_unfenced_recovery(tmp_path: Path) -> None:
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(
         [str(Path.cwd() / "src"), str(Path.cwd()), env.get("PYTHONPATH", "")]
@@ -71,6 +71,6 @@ def test_fresh_process_after_hard_kill_restores_cloud_progress(tmp_path: Path) -
         timeout=30,
         check=False,
     )
-    assert resumed.returncode == 0, resumed.stderr
-    assert "ADMISSIBLE_COMPLETE" in resumed.stdout
-    assert resumed.stdout.splitlines()[-1] == "ZERO"
+    assert resumed.returncode != 0
+    assert "STOCKBIT_INTRADAY_STALE_CLAIM_FENCING_UNPROVEN" in resumed.stderr
+    assert resumed.stdout == ""

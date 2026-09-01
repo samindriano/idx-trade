@@ -41,10 +41,12 @@ test('staging has no production Cron schedule and production retains exact Cron 
   ]);
 });
 
-test('durable final markers remain the active-mode idempotency guard before dispatch', () => {
+test('scheduler markers remain a coordination guard without claiming capture completion', () => {
   assert.match(indexSource, /durableMarkerDecision\(prior, observedEpochMs\)/);
-  assert.match(indexSource, /this\._write\(slotKey, 'dispatched'/);
+  assert.match(indexSource, /this\._write\(slotKey, 'dispatch_requested'/);
   assert.match(indexSource, /dispatchWithMode/);
   assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
   assert.match(indexSource, /provenance = run\.event === 'schedule' \? 'native_schedule' : 'workflow_dispatch'/);
+  assert.match(indexSource, /capture_complete: false/);
+  assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
 });
