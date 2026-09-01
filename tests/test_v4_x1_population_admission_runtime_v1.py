@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -399,6 +400,18 @@ def _write_runtime_fixture(
         json.dumps(feature_manifest, sort_keys=True) + "\n", encoding="utf-8"
     )
     runner = Path(__file__).resolve().parents[1] / "scripts" / "run_e2e_paper_cloud_v2.py"
+    trusted_contract = {
+        "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+        "implementation_repository": "samindriano/idx-trade",
+        "implementation_ref": "git://test-producer",
+        "implementation_commit": "1" * 40,
+        "implementation_sha256": producer_child["sha256"],
+        "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+        "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
+    }
+    trusted_contract["trust_contract_sha256"] = hashlib.sha256(
+        gate._canonical_json(trusted_contract)
+    ).hexdigest()
     return {
         "runtime_root": runtime_root,
         "clean_panel": clean_panel,
@@ -410,16 +423,7 @@ def _write_runtime_fixture(
         "runner_path": runner,
         "expected_baseline_sha256": sha256_file(baseline),
         "expected_model_manifest_sha256": sha256_file(model_manifest),
-        "trusted_producer_contract": {
-            "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
-            "implementation_repository": "samindriano/idx-trade",
-            "implementation_ref": "git://test-producer",
-            "implementation_commit": "1" * 40,
-            "implementation_sha256": producer_child["sha256"],
-            "policy_id": gate.FEATURE_BASIS_POLICY_ID,
-            "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
-            "trust_contract_sha256": "3" * 64,
-        },
+        "trusted_producer_contract": trusted_contract,
     }
 
 

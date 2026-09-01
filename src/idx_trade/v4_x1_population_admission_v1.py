@@ -369,6 +369,11 @@ def _verify_trusted_producer_contract(
     trust_sha = str(trusted["trust_contract_sha256"]).lower()
     if not HEX64_RE.fullmatch(trust_sha):
         raise ValueError("PRODUCER_TRUST_CONTRACT_SHA_INVALID")
+    canonical_contract = dict(trusted)
+    canonical_contract.pop("trust_contract_sha256", None)
+    expected_trust_sha = hashlib.sha256(_canonical_json(canonical_contract)).hexdigest()
+    if trust_sha != expected_trust_sha:
+        raise ValueError("PRODUCER_TRUST_CONTRACT_SHA_MISMATCH")
     if not GIT_RE.fullmatch(str(trusted["implementation_commit"]).lower()):
         raise ValueError("PRODUCER_TRUST_COMMIT_INVALID")
     if not HEX64_RE.fullmatch(str(trusted["implementation_sha256"]).lower()):

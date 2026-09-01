@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -215,6 +216,18 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
     evidence_path.write_text(json.dumps(evidence, sort_keys=True) + "\n", encoding="utf-8")
     manifest["evidence_sha256"] = sha256_file(evidence_path)
     manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
+    trusted_contract = {
+        "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+        "implementation_repository": "samindriano/idx-trade",
+        "implementation_ref": "git://test-producer",
+        "implementation_commit": "1" * 40,
+        "implementation_sha256": producer_child["sha256"],
+        "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+        "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
+    }
+    trusted_contract["trust_contract_sha256"] = hashlib.sha256(
+        gate._canonical_json(trusted_contract)
+    ).hexdigest()
     context = {
         "session_date": SESSION,
         "model_input_tickers": ["AAAA"],
@@ -236,16 +249,7 @@ def _fixture(tmp_path: Path) -> tuple[dict[str, object], dict[str, object]]:
         "manifest_sha256": sha256_file(manifest_path),
         "candidate_ohlcv_path": candidate_path,
         "candidate_ohlcv_sha256": sha256_file(candidate_path),
-        "trusted_producer_contract": {
-            "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
-            "implementation_repository": "samindriano/idx-trade",
-            "implementation_ref": "git://test-producer",
-            "implementation_commit": "1" * 40,
-            "implementation_sha256": producer_child["sha256"],
-            "policy_id": gate.FEATURE_BASIS_POLICY_ID,
-            "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
-            "trust_contract_sha256": "3" * 64,
-        },
+        "trusted_producer_contract": trusted_contract,
     }
     return context, record
 
@@ -323,6 +327,16 @@ def test_external_producer_anchor_mismatch_is_not_admitted(
 ) -> None:
     context, _ = _fixture(tmp_path / field)
     context["trusted_producer_contract"][field] = value
+    contract = context["trusted_producer_contract"]
+    contract["trust_contract_sha256"] = hashlib.sha256(
+        gate._canonical_json(
+            {
+                key: item
+                for key, item in contract.items()
+                if key != "trust_contract_sha256"
+            }
+        )
+    ).hexdigest()
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
     assert reason in result["reason_codes"]
@@ -334,6 +348,31 @@ def test_external_trust_contract_sha_must_be_valid(tmp_path: Path) -> None:
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
     assert "PRODUCER_TRUST_CONTRACT_SHA_INVALID" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("producer_id", "tampered-producer"),
+        ("implementation_repository", "other/repository"),
+        ("implementation_ref", "git://tampered"),
+        ("implementation_commit", "2" * 40),
+        ("implementation_sha256", "b" * 64),
+        ("policy_id", "TAMPERED_POLICY"),
+        ("schema_version", "tampered-schema"),
+    ],
+)
+def test_trust_contract_digest_binds_every_trusted_field(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    context, _ = _fixture(tmp_path / field)
+    contract = context["trusted_producer_contract"]
+    original_digest = contract["trust_contract_sha256"]
+    contract[field] = value
+    assert contract["trust_contract_sha256"] == original_digest
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "PRODUCER_TRUST_CONTRACT_SHA_MISMATCH" in result["reason_codes"]
 
 
 def test_no_known_transition_is_not_a_certified_no_event(tmp_path: Path) -> None:

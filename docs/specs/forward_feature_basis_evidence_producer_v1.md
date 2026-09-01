@@ -23,6 +23,10 @@ does not reach scientific admission. No production producer anchor is implied
 by this contract; a future production anchor must be independently reviewed
 and configured.
 
+`trust_contract_sha256` is the SHA-256 of the canonical JSON bytes of the
+trusted contract with only its own digest field omitted. Changing any other
+trusted field without recomputing the digest is rejected.
+
 ## Required inputs
 
 The producer must bind, at minimum:
