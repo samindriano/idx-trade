@@ -1,6 +1,6 @@
 # ACTIONS_COST_OPTIMIZATION_V1_POST_RESET_MEASUREMENT
 
-Status: `WAITING_FOR_ALLOWANCE_RESET`
+Status: `WAITING_FOR_REPRESENTATIVE_SCHEDULED_PRODUCTION_RUNS`
 
 This is the Phase-1 measurement package for the bounded GitHub Actions cost
 optimization integrated on `main@898864b4a8934877dc81086403a2a1068f7a6566`.
@@ -16,10 +16,12 @@ or numeric savings claim is made.
   compileall and `git diff --check` passed.
 - Post-fast-forward local evidence: focused suite `74 passed`, YAML parse
   `10` workflows, and `git diff --check` passed.
-- Automatic push CI: `tests` run `33415223869`, job `pytest`
-  `99564153351`, conclusion `failure`; the job had no steps or log. This is a
-  runner/billing pre-start failure, not a test result or capture result. It was
-  not rerun.
+- Automatic push CI after allowance recovery: `tests` run `33415425851`, job
+  `pytest` `99727108225`, conclusion `success`. The run was created at
+  `2026-08-31T16:40:41Z` and started at `2026-09-01T03:29:49Z`, so the delay
+  was recorded rather than hidden. Job duration was about `125 s`; install
+  was `16 s`; Test was `102.90 s`; the log reported `377 passed, 7 warnings`.
+  This is one successful CI sample, not a production-capture proof.
 
 ## Hosted runs and measurement boundary
 
@@ -33,25 +35,33 @@ measurements:
 | `33169532655` | Stockbit Intraday | 96 s | 19 s install | 65 s capture |
 | `33355320532` | normal tests | not recorded | 17 s install | 88 s pytest |
 
-Post-reset after-values for total duration, bootstrap/install, useful runtime,
-provider-call count, retries/no-op runs, workflow conclusion, and durable
-capture status are all `NOT_AVAILABLE_ALLOWANCE_NOT_RESET`. The push CI failure
-above produced no runner steps and cannot be used as an after benchmark.
+The first available post-reset successful sample is CI run `33415425851`:
+`125 s` job duration, `16 s` install, and `102.90 s` pytest. Against the
+historical `17 s` install sample, this is a measured single-sample `1 s`
+install delta; it is not yet a representative aggregate saving.
 
-Actual measurable savings: `NOT_YET_MEASURABLE`. The bounded changes have only
-estimated opportunities from removing pip self-upgrade, removing unused Stream
-test installation, and omitting the exact coordination-only CI run; these are
-not reported as measured savings.
+Post-reset production after-values for total duration, bootstrap/install,
+useful runtime, provider-call count, retries/no-op runs, workflow conclusion,
+and durable capture status are `NOT_AVAILABLE_AWAITING_SCHEDULED_PRODUCTION_RUNS`.
+The CI values above are available, but CI is not a production capture path.
+
+Actual measurable savings: one CI install sample shows `1 s` lower install
+time than the historical sample; production and aggregate savings remain
+`NOT_YET_MEASURABLE`. Estimated opportunities from removing pip self-upgrade,
+removing unused Stream test installation, and omitting the exact
+coordination-only CI run remain estimates, not measured savings.
 
 ## Capture integrity and next measurement
 
-No new prospective production capture proof was produced by this integration.
+No new prospective production capture proof was produced by this integration
+or by the CI run above.
 The existing capture/recovery contracts remain authoritative, and the
 2026-08-27 prospective result remains governed by the coordination ledger.
 If scheduled capture fails after allowance reset, prospective data recovery has
 priority over cost measurement under the existing approved recovery semantics.
 
-After the reset, observe several representative successful scheduled/CI runs
+After the reset, observe several representative successful scheduled production
+runs (and retain CI as a separate measurement class)
 without changing schedules. Record exact run IDs and total, bootstrap, useful
 runtime, provider-call, retry/no-op, conclusion, and durable-status evidence;
 separate measured values from estimates. Phase-2 completion-aware retry is
