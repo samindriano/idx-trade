@@ -8,11 +8,18 @@
     "GITHUB_OWNER": "samindriano",
     "GITHUB_REPO": "idx-trade",
     "GITHUB_REF": "main",
-    "DISPATCH_MODE": "active"
+    "DISPATCH_MODE": "active",
+    "E2E_EXPECTED_CODE_COMMIT": "82007457522d6e268de8bd6e1b75762fb76accfe"
   },
   "secrets": {
     "required": ["GITHUB_ACTIONS_TOKEN"]
   },
+  "r2_buckets": [
+    {
+      "binding": "ARCHIVE",
+      "bucket_name": "idx-trade-stockbit-stream-v1"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {

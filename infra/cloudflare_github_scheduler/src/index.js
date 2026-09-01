@@ -4,7 +4,6 @@ import {
   durableMarkerDecision,
   dispatchBody,
   dueSlots,
-  exactRunRecoveryDecision,
   markerKey,
   slotWindow,
 } from './core.mjs';
@@ -14,6 +13,7 @@ import {
   queryExactSlotCoverage,
 } from './github.mjs';
 import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
+import { evaluateShadowSlot } from './archive.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
 function safeError(error) {
@@ -90,41 +90,57 @@ export class SchedulerCoordinator extends DurableObject {
 
     const slotKey = markerKey(window.dateKey, slotId);
     const prior = this._read(slotKey);
-    const markerDecision = durableMarkerDecision(prior, observedEpochMs);
-    if (markerDecision) return { slot: slotId, ...markerDecision };
+    let exactCoverage = [];
+    let githubError = null;
+    try {
+      exactCoverage = await queryExactSlotCoverage({
+        owner,
+        repo,
+        token,
+        slot,
+        epochMs: observedEpochMs,
+      });
+    } catch (error) {
+      githubError = safeError(error);
+    }
 
-    const exactCoverage = await queryExactSlotCoverage({
-      owner,
-      repo,
-      token,
+    const shadow = await evaluateShadowSlot({
+      archive: this.env.ARCHIVE,
       slot,
-      epochMs: observedEpochMs,
+      session: window.dateKey,
+      observedEpochMs,
+      exactRuns: exactCoverage,
+      githubError,
+      expectedCodeCommit: this.env.E2E_EXPECTED_CODE_COMMIT,
     });
     if (exactCoverage.length) {
       const run = exactCoverage[0];
-      const provenance = run.event === 'schedule' ? 'native_schedule' : 'workflow_dispatch';
       this._write(slotKey, 'covered_exact', observedEpochMs, {
         runId: Number.isInteger(run.id) ? run.id : null,
-        detail: {
-          event: run.event,
-          provenance,
-          createdAt: run.created_at ?? null,
-          status: run.status ?? null,
-          conclusion: run.conclusion ?? null,
-        },
+        detail: shadow.github_exact_run_evidence,
       });
-      const inFlight = exactCoverage
-        .map((candidate) => exactRunRecoveryDecision(candidate, observedEpochMs))
-        .find((decision) => decision.defer);
-      if (inFlight) {
-        return {
-          slot: slotId,
-          ...inFlight,
-          capture_complete: false,
-          provenance,
-          event: run.event,
-        };
-      }
+    }
+    if (shadow.durable_completion.capture_complete) {
+      return { ...shadow, status: 'SHADOW_DURABLE_COMPLETION_VERIFIED' };
+    }
+    if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
+      return { ...shadow, status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH' };
+    }
+
+    // A coordination marker can defer a duplicate request, but it cannot
+    // manufacture durable completion. A stale final marker is therefore
+    // ignored and fails closed until the archive validator succeeds.
+    const markerDecision = durableMarkerDecision(prior, observedEpochMs);
+    if (prior && markerDecision?.status === 'CAPTURE_ALREADY_COMPLETE') {
+      return {
+        ...shadow,
+        status: 'SHADOW_MARKER_NOT_TRUSTED_NO_DISPATCH',
+        active_mode_decision: 'FAIL_CLOSED_STALE_COMPLETION_MARKER',
+      };
+    }
+    if (markerDecision) return { ...shadow, status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE', ...markerDecision };
+    if (shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE') {
+      return { ...shadow, status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE' };
     }
 
     const attemptId = crypto.randomUUID();
@@ -140,10 +156,10 @@ export class SchedulerCoordinator extends DurableObject {
     });
     if (dispatch.status === 'WOULD_DISPATCH') {
       this._write(slotKey, 'would_dispatch', observedEpochMs, {
-        detail: { dispatchMode, inputs: dispatchInputs },
+        detail: { dispatchMode, inputs: dispatchInputs, shadow },
       });
       return {
-        slot: slotId,
+        ...shadow,
         status: 'WOULD_DISPATCH',
         dispatchMode,
         inputs: dispatchInputs,
@@ -156,7 +172,7 @@ export class SchedulerCoordinator extends DurableObject {
         detail: { githubStatus: dispatch.status },
       });
       return {
-        slot: slotId,
+        ...shadow,
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
         runId: dispatch.runId,
@@ -168,7 +184,7 @@ export class SchedulerCoordinator extends DurableObject {
         attemptId,
         detail: { githubStatus: dispatch.status },
       });
-      return { slot: slotId, status: 'DISPATCH_RETRYABLE_ERROR', githubStatus: dispatch.status };
+      return { ...shadow, status: 'DISPATCH_RETRYABLE_ERROR', githubStatus: dispatch.status };
     }
 
     this._write(slotKey, 'blocked', Date.now(), {
@@ -176,7 +192,7 @@ export class SchedulerCoordinator extends DurableObject {
       detail: { githubStatus: dispatch.status },
     });
     return {
-      slot: slotId,
+      ...shadow,
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
       githubStatus: dispatch.status,

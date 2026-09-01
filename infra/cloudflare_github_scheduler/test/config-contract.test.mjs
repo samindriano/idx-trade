@@ -21,6 +21,10 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(staging.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(stagingLive.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(production.vars.DISPATCH_MODE, 'active');
+  for (const config of [staging, stagingLive, production]) {
+    assert.deepEqual(config.r2_buckets, [{ binding: 'ARCHIVE', bucket_name: 'idx-trade-stockbit-stream-v1' }]);
+    assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT.length, 40);
+  }
 });
 
 test('staging has no production Cron schedule and production retains exact Cron schedule', () => {
@@ -46,10 +50,10 @@ test('scheduler markers remain a coordination guard without claiming capture com
   assert.match(indexSource, /this\._write\(slotKey, 'dispatch_requested'/);
   assert.match(indexSource, /dispatchWithMode/);
   assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
-  assert.match(indexSource, /provenance = run\.event === 'schedule' \? 'native_schedule' : 'workflow_dispatch'/);
-  assert.match(indexSource, /exactRunRecoveryDecision/);
-  assert.match(indexSource, /if \(inFlight\)/);
-  assert.match(indexSource, /capture_complete: false/);
+  assert.match(indexSource, /evaluateShadowSlot/);
+  assert.match(indexSource, /githubError/);
+  assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);
+  assert.match(indexSource, /capture_complete/);
   assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
 });
 

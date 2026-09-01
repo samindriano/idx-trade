@@ -88,6 +88,31 @@ function parseJson(value, code) {
   fail(code);
 }
 
+// This helper is intentionally limited to read planning.  It does not validate
+// completion and it never emits a completion result; the family validator
+// below remains the only completion authority.
+export function completionChildRefs(family, completionBytes) {
+  const value = parseJson(completionBytes, 'COMPLETION_PARENT_JSON_INVALID');
+  const refs = (() => {
+    switch (family) {
+      case 'E2E':
+        return [value.result, value.snapshot];
+      case 'PREOPEN_CA':
+        return [value.snapshot, value.result];
+      case 'OFFICIAL_OPEN':
+        return [value.artifacts?.raw_response, value.artifacts?.open_prices, value.artifacts?.source_manifest];
+      case 'INTRADAY':
+        return [value.result, value.snapshot];
+      default:
+        fail('UNKNOWN_COMPLETION_FAMILY');
+    }
+  })();
+  if (refs.some((ref) => !ref || typeof ref !== 'object' || Array.isArray(ref) || typeof ref.key !== 'string')) {
+    fail('COMPLETION_PARENT_CHILD_REFS_INVALID');
+  }
+  return { value, refs };
+}
+
 function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -180,7 +205,7 @@ export async function validateOfficialOpenCompletion({ manifest, expectedSession
   return result({ family: 'OFFICIAL_OPEN', grain: COMPLETION_GRAIN.OFFICIAL_OPEN, key: parent.key, sha256: parent.sha256 });
 }
 
-export async function validateIntradayCompletion({ commit, resultBytes, snapshotSha256, claimSha256, expectedSession, expectedSlot, childHashes = {}, completionKey, completionSha256, completionBytes }) {
+export async function validateIntradayCompletion({ commit, resultBytes, snapshotSha256, claimSha256, claimBytes, expectedSession, expectedSlot, childHashes = {}, completionKey, completionSha256, completionBytes }) {
   const parent = await completionIdentity({
     completionKey,
     completionSha256,
@@ -199,6 +224,22 @@ export async function validateIntradayCompletion({ commit, resultBytes, snapshot
   const snapshotRef = childHash(childHashes, value.snapshot, 'INTRADAY_COMPLETION_SNAPSHOT_INVALID');
   const declaredClaim = sha(value.claim_sha256, 'INTRADAY_COMPLETION_CLAIM_SHA_INVALID');
   if (claimSha256 !== undefined && declaredClaim !== claimSha256) fail('INTRADAY_COMPLETION_CLAIM_BINDING_INVALID');
+  if (claimBytes !== undefined) {
+    const codeIdentity = object(value.code_identity, 'INTRADAY_COMPLETION_CODE_IDENTITY_INVALID');
+    gitSha(codeIdentity.commit, 'INTRADAY_COMPLETION_CODE_IDENTITY_INVALID');
+    const claim = parseJson(claimBytes, 'INTRADAY_COMPLETION_CLAIM_JSON_INVALID');
+    if (
+      claim.schema_version !== 'idx_trade_stockbit_intraday_cloud_claim_v1'
+      || claim.claim_state !== 'CLAIMED'
+      || claim.session_date !== expectedSession
+      || claim.slot !== expectedSlot
+      || typeof claim.claim_id !== 'string'
+      || !claim.claim_id
+    ) fail('INTRADAY_COMPLETION_CLAIM_INVALID');
+    const claimGuards = object(claim.guards, 'INTRADAY_COMPLETION_CLAIM_INVALID');
+    falseGuardSet(claimGuards, ['synthetic_fill_used', 'retroactive_capture_used', 'outcome_accessed'], 'INTRADAY_COMPLETION_CLAIM_INVALID');
+    if (canonicalJson(claim.code_identity) !== canonicalJson(codeIdentity)) fail('INTRADAY_COMPLETION_CLAIM_CODE_IDENTITY_INVALID');
+  }
   if (resultBytes !== undefined) {
     const payload = parseJson(resultBytes, 'INTRADAY_COMPLETION_RESULT_JSON_INVALID');
     if (payload.session_date !== expectedSession || payload.slot !== expectedSlot || payload.status !== 'ADMISSIBLE_COMPLETE') fail('INTRADAY_COMPLETION_RESULT_IDENTITY_INVALID');

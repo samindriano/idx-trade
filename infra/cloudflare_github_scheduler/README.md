@@ -5,9 +5,10 @@ Trigger-only redundancy for IDX-Trade production GitHub Actions workflows.
 ## Safety boundary
 
 This Worker is **not** a market-data collector. It has no Zapi, IDX, Stockbit,
-R2, PaperState, scoring, order/fill, counter, target, or outcome credentials or
-code paths. Its only external authority is GitHub Actions metadata +
-`workflow_dispatch`.
+PaperState, scoring, order/fill, counter, target, or outcome credentials or code
+paths. Its archive binding is read-only in this Worker: it performs known-key
+`get()` calls only and never writes, deletes, lists, or becomes a second archive
+authority. GitHub Actions metadata remains provenance only.
 
 The production capture implementations remain the existing GitHub workflows on
 `main`.
@@ -40,8 +41,9 @@ Cloudflare Cron (independent clock)
   -> Worker due-slot resolver (Asia/Jakarta, actual observed time)
   -> one global SQLite-backed Durable Object
      -> durable per-date/per-slot coordination marker / short dispatch lease
-     -> query exact native GitHub schedule evidence
-     -> if absent, workflow_dispatch existing workflow on main
+     -> read existing archive parent and hash-bound children
+     -> query exact native GitHub schedule/dispatch evidence separately
+     -> shadow decision: would dispatch existing workflow on main if active
 
 GitHub Actions
   -> existing production runtime
@@ -104,7 +106,7 @@ hours. The three production workflows therefore expose a deterministic
 - Stockbit Intraday derives the identity from its native cron or exact `slot`
   input.
 
-The Worker accepts coverage only when all of these hold:
+The Worker accepts exact-run provenance only when all of these hold:
 
 - the event is `schedule` or `workflow_dispatch`;
 - the run is on production `main` (validated from branch/ref metadata);
@@ -120,15 +122,14 @@ The timestamp is never used to infer the logical slot. Consequently:
   slot identity;
 - an ambiguous manual run never suppresses Cloudflare fallback.
 
-An unknown or ambiguous run is **not** accepted as exact slot evidence. Exact
-coverage is persisted as the generic `covered_exact` coordination marker, with
-provenance preserving the real GitHub event: `native_schedule` or
-`workflow_dispatch`. It is not capture completion. A visible run, an accepted
-dispatch, and an operational block are all non-final scheduler states. Only a
-separate validator that reads the existing family archive and verifies its
-immutable commit plus hash-bound children may produce `capture_complete`.
-A Cloudflare-originated dispatch is additionally identified by the coordinator's
-durable marker and the returned workflow run id when GitHub provides one.
+An unknown or ambiguous run is **not** accepted as exact slot evidence. Shadow
+output and the non-final `covered_exact` coordination marker retain the real
+GitHub event as `native_schedule` or `workflow_dispatch`, but never treat a
+visible run, an accepted dispatch, or a scheduler marker as capture completion.
+Only the existing family validators,
+after the read-only archive adapter verifies the parent and hash-bound children,
+may produce `capture_complete`. The output records the exact-run evidence and
+the active-mode decision separately.
 
 Ambiguity fails toward another invocation of the existing idempotent cloud
 workflow, never toward silently suppressing a required slot.
@@ -149,16 +150,19 @@ marker or GitHub run. The family contracts are:
 The Cloudflare package defines contract validators for the admitted E2E,
 PREOPEN_CA checkpoint, Official Open, and Intraday archive records. The
 PREOPEN_CA validator is intentionally separate from the normal E2E stage-commit
-schema. An archive-reading caller must supply bytes/hashes obtained from the
-existing authority; the Worker does not gain an R2 binding or a parallel
-archive authority in this phase. The Stream grain is documented for the
-cross-family contract and is intentionally not a Cloudflare trigger path.
+schema. The Worker reads the existing shared R2 bucket through the `ARCHIVE`
+binding using the established prefixes (`e2e-paper-v1`, `official-open-v1`, and
+`stockbit-intraday-v1`), then passes the raw parent and child bytes to those
+validators. Missing parents are not complete; malformed, mismatched, or
+ambiguous existing evidence is blocked fail-closed. The Stream grain is
+documented for the cross-family contract and is intentionally not a Cloudflare
+trigger path.
 
 ## Failure semantics
 
 - GitHub run-query error -> fail closed; no dispatch.
-- Native exact schedule or exact watchdog dispatch -> non-final `covered_exact`
-  marker with `native_schedule` or `workflow_dispatch` provenance. A recent
+- Native exact schedule or exact watchdog dispatch -> non-final provenance in
+  shadow output with `native_schedule` or `workflow_dispatch`. A recent
   in-flight run may receive a short grace period; terminal success, failure, or
   cancellation without validated archive completion remains recovery-eligible.
 - Missing native run in `observe_only` -> non-final `would_dispatch` marker and
@@ -178,7 +182,9 @@ The Intraday GitHub workflow has a provider-free preflight that validates the
 existing canonical archive before Python setup, accepted-E2E checkout, package
 installation, or provider access. A validated complete archive skips the
 capture job with zero provider calls. Missing completion continues to the
-existing runner; malformed or conflicting archive evidence fails closed.
+existing runner; malformed or conflicting archive evidence fails closed. This
+Phase-2B Worker integration is shadow-only: it does not invoke that workflow or
+any provider while `DISPATCH_MODE=observe_only`.
 
 Intraday stale-claim recovery remains blocked when the create-only claim store
 cannot prove a fence against a still-running old provider writer. Residual
