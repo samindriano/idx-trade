@@ -53,6 +53,23 @@ measurements:
 - Against the historical Stream install sample of `20 s`, this sample measured
   `23 s` (a single-sample `+3 s` variance, not a saving). Aggregate savings and
   the requested 12:07 measurement remain pending.
+- Stream run `33494770035`, job `99814281125`, was a scheduled success on
+  `main@75c3e8ed5fdb45b0d4f99e5340f8103d225d3d24` with
+  `EVENT_SCHEDULE=7 5 * * *` and `STOCKBIT_STREAM_SLOT=midday`, the requested
+  `12:07 WIB` logical slot. It was created at `2026-09-01T09:55:47Z`
+  (`16:55 WIB`), about `4 h 48 m` after the logical slot, so it is a delayed
+  scheduled observation rather than on-time timing proof.
+- The Stream job ran from `09:55:50Z` to `10:03:33Z` (about `463 s`). Install
+  ran from `09:55:57Z` to `09:56:15Z` (about `18 s`); the capture step ran from
+  `09:56:15Z` to `10:03:30Z` (about `435 s`). Runtime evidence reported
+  `completed_calls=200`, `successful_responses=200`, `status=DATA_READY`,
+  `counter_mutated=false`, `model_accessed=false`, and `outcome_accessed=false`
+  for run `2026-09-01_midday_dd6d14a0f8ac4f24_466550e9eed9e789`.
+- Against the historical Stream samples (`20 s` install and `462 s` useful
+  capture), this sample measured `18 s` install (`-2 s`) and `435 s` capture
+  (`-27 s`). These are two isolated Stream observations, with one delayed
+  pre-open sample and one delayed midday sample; they are not yet a robust
+  aggregate production saving.
 - Delayed E2E PREOPEN_CA runs `33477900776`, `33478995730`, and `33479797175`
   failed with `MISSED_PREOPEN_CA_CAPTURE`; their controller evidence reported
   no provider calls, no outcome access, and no PaperState mutation. Delayed
@@ -66,10 +83,14 @@ The first available post-reset successful sample is CI run `33415425851`:
 historical `17 s` install sample, this is a measured single-sample `1 s`
 install delta; it is not yet a representative aggregate saving.
 
-Post-reset production after-values for total duration, bootstrap/install,
-useful runtime, provider-call count, retries/no-op runs, workflow conclusion,
-and durable capture status are `NOT_AVAILABLE_AWAITING_SCHEDULED_PRODUCTION_RUNS`.
-The CI values above are available, but CI is not a production capture path.
+Post-reset production after-values are now available for two delayed Stream
+observations, including their runner/install/capture durations, provider-call
+counts, conclusions, and `DATA_READY` status. Intraday and E2E POST_EOD
+production after-values remain
+`NOT_AVAILABLE_AWAITING_SCHEDULED_PRODUCTION_RUNS`; the E2E runs observed so
+far were delayed PREOPEN no-op/availability observations, not captures. The CI
+values above remain a separate measurement class and are not production
+capture evidence.
 
 Actual measurable savings: one CI install sample shows `1 s` lower install
 time than the historical sample; production and aggregate savings remain
@@ -79,8 +100,10 @@ coordination-only CI run remain estimates, not measured savings.
 
 ## Capture integrity and next measurement
 
-No new prospective production capture proof was produced by this integration
-or by the CI run above.
+The two Stream runs produced `DATA_READY` archive results, but no new E2E
+prospective acceptance proof was produced by this integration or by the CI run
+above. The Stream results are delayed observations and are reported separately
+from E2E acceptance.
 The existing capture/recovery contracts remain authoritative, and the
 2026-08-27 prospective result remains governed by the coordination ledger.
 If scheduled capture fails after allowance reset, prospective data recovery has
