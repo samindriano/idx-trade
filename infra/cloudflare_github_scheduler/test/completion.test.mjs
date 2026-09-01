@@ -130,25 +130,27 @@ test('completion validators expose the explicit completion grain for each family
 });
 
 test('completion validators fail closed on malformed or mismatched evidence', async () => {
+  const e2eCommit = {
+    schema_version: 'idx_trade_e2e_paper_cloud_stage_commit_v1',
+    commit_state: 'COMMITTED',
+    contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
+    session_date: '2026-08-27',
+    stage: 'POST_EOD',
+    stage_status: 'POST_EOD_PREPARED',
+    schedule_attestation_sha256: sha('a'),
+    input_manifest_sha256: sha('b'),
+    code_identity: { commit: git('c') },
+    guards: { outcome_accessed: false, protected_forward_accessed: false, model_refit: false, retroactive_execution_authorized: false },
+    result: { key: 'result.json', sha256: sha('d') },
+    snapshot: { key: 'snapshot.zip', sha256: sha('e') },
+  };
   await assert.rejects(
     validateE2ECompletion({
-      commit: {
-        schema_version: 'idx_trade_e2e_paper_cloud_stage_commit_v1',
-        commit_state: 'COMMITTED',
-        contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
-        session_date: '2026-08-27',
-        stage: 'POST_EOD',
-        stage_status: 'POST_EOD_PREPARED',
-        schedule_attestation_sha256: sha('a'),
-        input_manifest_sha256: sha('b'),
-        code_identity: { commit: git('c') },
-        guards: { outcome_accessed: false, protected_forward_accessed: false, model_refit: false, retroactive_execution_authorized: false },
-        result: { key: 'result.json', sha256: sha('d') },
-        snapshot: { key: 'snapshot.zip', sha256: sha('e') },
-      },
+      commit: e2eCommit,
       expectedSession: '2026-08-27',
       expectedStage: 'POST_EOD',
       childHashes: { 'result.json': sha('x'), 'snapshot.zip': sha('e') },
+      ...parentIdentity('sessions/2026-08-27/stages/POST_EOD/commit.json', e2eCommit),
     }),
     (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_RESULT_INVALID',
   );
@@ -158,6 +160,10 @@ test('completion validators fail closed on malformed or mismatched evidence', as
       manifest: { schema_version: 'idx_official_open_cloud_archive_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '0922' },
       expectedSession: '2026-08-27',
       expectedSlot: '0922',
+      ...parentIdentity(
+        'session_date=2026-08-27/slot=0922/slot_manifest.json',
+        { schema_version: 'idx_official_open_cloud_archive_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '0922' },
+      ),
     }),
     (error) => error instanceof CompletionContractError && error.code === 'OFFICIAL_OPEN_COMPLETION_ADMISSION_INVALID',
   );
@@ -167,6 +173,10 @@ test('completion validators fail closed on malformed or mismatched evidence', as
       commit: { schema_version: 'idx_trade_stockbit_intraday_cloud_slot_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '1930', status: 'WAITING_RECOVERY_RETRY' },
       expectedSession: '2026-08-27',
       expectedSlot: '1930',
+      ...parentIdentity(
+        'sessions/2026-08-27/slots/1930/commit.json',
+        { schema_version: 'idx_trade_stockbit_intraday_cloud_slot_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '1930', status: 'WAITING_RECOVERY_RETRY' },
+      ),
     }),
     (error) => error instanceof CompletionContractError && error.code === 'INTRADAY_COMPLETION_IDENTITY_OR_STATUS_INVALID',
   );
@@ -252,6 +262,7 @@ test('PREOPEN_CA completion validates the canonical content-addressed checkpoint
       expectedInputManifestSha256: sha('input'),
       expectedCodeCommit: git('c'),
       childHashes: {},
+      ...parentIdentity(`sessions/${session}/checkpoints/PREOPEN_CA/commit.json`, wrongStage),
     }),
     (error) => error instanceof CompletionContractError && error.code === 'PREOPEN_CA_COMPLETION_IDENTITY_INVALID',
   );
@@ -321,4 +332,41 @@ test('completion identity is required and hash-bound before capture_complete', a
     validateE2ECompletion({ ...base, completionSha256: '0'.repeat(64) }),
     (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_SHA_MISMATCH',
   );
+});
+
+test('completion semantic validation is bound to the hashed parent bytes', async () => {
+  const base = e2eCompletionEvidence();
+  const differentParent = { ...base.commit, stage_status: 'NOT_COMPLETE' };
+
+  await assert.rejects(
+    validateE2ECompletion({ ...base, commit: differentParent }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_SEMANTIC_MISMATCH',
+  );
+
+  const changedStatusParent = { ...base.commit, stage_status: 'NOT_COMPLETE' };
+  const changedStatusIdentity = parentIdentity(base.completionKey, changedStatusParent);
+  const { commit: _ignoredCommit, ...withoutExternalParent } = base;
+  await assert.rejects(
+    validateE2ECompletion({ ...withoutExternalParent, ...changedStatusIdentity }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_STATUS_INVALID',
+  );
+  await assert.rejects(
+    validateE2ECompletion({ ...base, ...changedStatusIdentity, commit: base.commit }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_SEMANTIC_MISMATCH',
+  );
+
+  const malformedBytes = Buffer.from('{malformed');
+  await assert.rejects(
+    validateE2ECompletion({
+      ...base,
+      completionBytes: malformedBytes,
+      completionSha256: digest(malformedBytes),
+      commit: base.commit,
+    }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_JSON_INVALID',
+  );
+
+  const valid = await validateE2ECompletion(base);
+  assert.equal(valid.capture_complete, true);
+  assert.equal(valid.completion_sha256, base.completionSha256);
 });
