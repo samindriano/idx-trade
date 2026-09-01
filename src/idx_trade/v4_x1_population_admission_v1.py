@@ -22,6 +22,7 @@ from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
 
 from .e2e_cloud_security_master_v1 import (
@@ -76,11 +77,15 @@ _ATTESTATION_RUNTIME_HASH_FIELDS = (
     "tradability_coverage_sha256",
     "tradability_anchors_sha256",
     "feature_basis_evidence_sha256",
+    "feature_basis_manifest_sha256",
 )
 
 FEATURE_BASIS_SCHEMA_VERSION = "idx_trade_forward_feature_basis_v1"
 FEATURE_BASIS_POLICY_ID = "FORWARD_FEATURE_BASIS_ACCEPTANCE_GATE_V1"
 FEATURE_BASIS_EVIDENCE_FILENAME = "feature_basis_evidence.json"
+FEATURE_BASIS_MANIFEST_SCHEMA_VERSION = "idx_trade_forward_feature_basis_manifest_v1"
+FEATURE_BASIS_MANIFEST_FILENAME = "feature_basis_evidence_manifest.json"
+FEATURE_BASIS_PRODUCER_ID = "idx_trade_forward_feature_basis_producer_v1"
 BASIS_SAFE = "BASIS_SAFE"
 BASIS_TRANSITION_OVERLAP = "BASIS_TRANSITION_OVERLAP"
 BASIS_UNRESOLVED = "BASIS_UNRESOLVED"
@@ -236,6 +241,151 @@ def _sha(value: object, label: str) -> str:
     return result
 
 
+def _manifest_relative_path(base: Path, value: object, label: str) -> Path:
+    """Resolve a manifest child without allowing absolute or escaping paths."""
+
+    raw = str(value or "").strip()
+    declared = Path(raw)
+    if not raw or declared.is_absolute():
+        raise ValueError(f"{label}_PATH_INVALID")
+    resolved_base = base.expanduser().resolve()
+    resolved = (resolved_base / declared).resolve()
+    if resolved != resolved_base and resolved_base not in resolved.parents:
+        raise ValueError(f"{label}_PATH_OUTSIDE_ROOT")
+    return resolved
+
+
+def _feature_basis_manifest_identity(manifest: Mapping[str, Any]) -> str:
+    """Hash stable manifest policy/content fields without circular evidence hash."""
+
+    payload = dict(manifest)
+    payload.pop("manifest_id", None)
+    payload.pop("evidence_sha256", None)
+    return hashlib.sha256(_canonical_json(payload)).hexdigest()
+
+
+def _verify_feature_basis_manifest(
+    manifest_path: Path,
+    evidence_path: Path,
+    evidence: Mapping[str, Any],
+) -> tuple[str, dict[str, Mapping[str, Any]], str]:
+    """Verify the detached root manifest and every declared retained child."""
+
+    if not manifest_path.is_file():
+        raise ValueError("FEATURE_BASIS_MANIFEST_ARTIFACT_MISSING")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("FEATURE_BASIS_MANIFEST_INVALID") from exc
+    if not isinstance(manifest, Mapping):
+        raise ValueError("FEATURE_BASIS_MANIFEST_INVALID")
+    if manifest.get("schema_version") != FEATURE_BASIS_MANIFEST_SCHEMA_VERSION:
+        raise ValueError("FEATURE_BASIS_MANIFEST_SCHEMA_INVALID")
+    if manifest.get("policy_id") != FEATURE_BASIS_POLICY_ID:
+        raise ValueError("FEATURE_BASIS_MANIFEST_POLICY_INVALID")
+    manifest_id = str(manifest.get("manifest_id") or "").lower()
+    if not HEX64_RE.fullmatch(manifest_id) or manifest_id != _feature_basis_manifest_identity(manifest):
+        raise ValueError("FEATURE_BASIS_MANIFEST_ID_MISMATCH")
+    declared_evidence = _manifest_relative_path(
+        manifest_path.parent, manifest.get("evidence_path"), "FEATURE_BASIS_MANIFEST_EVIDENCE"
+    )
+    if declared_evidence != evidence_path.resolve():
+        raise ValueError("FEATURE_BASIS_MANIFEST_EVIDENCE_PATH_MISMATCH")
+    declared_evidence_sha = str(manifest.get("evidence_sha256") or "").lower()
+    if not HEX64_RE.fullmatch(declared_evidence_sha) or declared_evidence_sha != sha256_file(evidence_path):
+        raise ValueError("FEATURE_BASIS_MANIFEST_EVIDENCE_HASH_MISMATCH")
+    if str(evidence.get("root_manifest_id") or "").lower() != manifest_id:
+        raise ValueError("FEATURE_BASIS_ROOT_MANIFEST_ID_MISMATCH")
+
+    producer = manifest.get("producer")
+    if not isinstance(producer, Mapping) or producer.get("producer_id") != FEATURE_BASIS_PRODUCER_ID:
+        raise ValueError("FEATURE_BASIS_PRODUCER_ID_INVALID")
+    if not str(producer.get("implementation_ref") or "").strip():
+        raise ValueError("FEATURE_BASIS_PRODUCER_REF_MISSING")
+    if not GIT_RE.fullmatch(str(producer.get("implementation_commit") or "").lower()):
+        raise ValueError("FEATURE_BASIS_PRODUCER_COMMIT_INVALID")
+    producer_sha = str(producer.get("implementation_sha256") or "").lower()
+    if not HEX64_RE.fullmatch(producer_sha):
+        raise ValueError("FEATURE_BASIS_PRODUCER_SHA_INVALID")
+
+    children = manifest.get("children")
+    if not isinstance(children, list) or not children:
+        raise ValueError("FEATURE_BASIS_MANIFEST_CHILDREN_INVALID")
+    by_id: dict[str, Mapping[str, Any]] = {}
+    by_path: set[Path] = set()
+    for child in children:
+        if not isinstance(child, Mapping):
+            raise ValueError("FEATURE_BASIS_MANIFEST_CHILD_INVALID")
+        evidence_id = str(child.get("evidence_id") or "").strip()
+        if not evidence_id or evidence_id in by_id:
+            raise ValueError("FEATURE_BASIS_MANIFEST_DUPLICATE_EVIDENCE_ID")
+        child_path = _manifest_relative_path(
+            manifest_path.parent, child.get("path"), "FEATURE_BASIS_MANIFEST_CHILD"
+        )
+        if child_path in by_path:
+            raise ValueError("FEATURE_BASIS_MANIFEST_DUPLICATE_CHILD_PATH")
+        by_path.add(child_path)
+        child_sha = str(child.get("sha256") or "").lower()
+        if not HEX64_RE.fullmatch(child_sha):
+            raise ValueError("FEATURE_BASIS_MANIFEST_CHILD_SHA_INVALID")
+        if not child_path.is_file() or sha256_file(child_path) != child_sha:
+            raise ValueError(f"FEATURE_BASIS_MANIFEST_CHILD_HASH_MISMATCH:{evidence_id}")
+        if not str(child.get("kind") or "").strip():
+            raise ValueError("FEATURE_BASIS_MANIFEST_CHILD_KIND_MISSING")
+        by_id[evidence_id] = child
+
+    producer_evidence_id = str(producer.get("implementation_evidence_id") or "").strip()
+    producer_child = by_id.get(producer_evidence_id)
+    if producer_child is None or producer_child.get("kind") != "producer_implementation":
+        raise ValueError("FEATURE_BASIS_PRODUCER_EVIDENCE_INVALID")
+    if str(producer_child.get("sha256") or "").lower() != producer_sha:
+        raise ValueError("FEATURE_BASIS_PRODUCER_SHA_UNBOUND")
+    return sha256_file(manifest_path), by_id, manifest_id
+
+
+def _manifest_child(
+    children: Mapping[str, Mapping[str, Any]], evidence_id: object, label: str
+) -> Mapping[str, Any]:
+    key = str(evidence_id or "").strip()
+    child = children.get(key)
+    if child is None:
+        raise ValueError(f"{label}_EVIDENCE_UNDECLARED")
+    return child
+
+
+def _verify_candidate_session_ohlcv(
+    path: Path,
+    expected_sha256: str,
+    session: str,
+    observed: pd.Timestamp,
+    expected_tickers: Sequence[str],
+) -> None:
+    if not path.is_file():
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_MISSING")
+    if str(expected_sha256 or "").lower() != sha256_file(path):
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_HASH_MISMATCH")
+    frame = pd.read_parquet(path)
+    required = {"ticker", "session_date", "open"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_COLUMNS_MISSING")
+    tickers = tuple(sorted({_safe_ticker(value) for value in frame["ticker"].tolist()}))
+    if tickers != tuple(sorted(set(expected_tickers))):
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_TICKER_SET_MISMATCH")
+    dates = _frame_date_series(frame["session_date"], "FEATURE_BASIS_SESSION_OHLCV")
+    if not dates.eq(pd.Timestamp(session)).all() or frame["ticker"].duplicated().any():
+        raise ValueError("FEATURE_BASIS_SESSION_OHLCV_SESSION_MISMATCH")
+    opens = pd.to_numeric(frame["open"], errors="coerce").astype(float)
+    if opens.isna().any() or not np.isfinite(opens.to_numpy()).all() or (opens <= 0).any():
+        raise ValueError("FEATURE_BASIS_OPEN_VALUE_UNRESOLVED")
+    if pd.Timestamp(session) > observed.tz_localize(None).normalize():
+        raise ValueError("FEATURE_BASIS_SESSION_AFTER_OBSERVATION")
+    if "observed_retrieved_at_utc" in frame.columns:
+        retrieved = pd.to_datetime(frame["observed_retrieved_at_utc"], errors="coerce", utc=True)
+        if retrieved.notna().any() and (retrieved.dropna() > observed.tz_convert("UTC")).any():
+            raise ValueError("FEATURE_BASIS_SESSION_OHLCV_FUTURE_DATED")
+
+
 def _feature_basis_failure(
     status: str,
     *reasons: str,
@@ -264,6 +414,10 @@ def evaluate_feature_basis_admission(
     observed_at: str,
     evidence_path: str | Path | None = None,
     evidence_sha256: str | None = None,
+    manifest_path: str | Path | None = None,
+    manifest_sha256: str | None = None,
+    candidate_ohlcv_path: str | Path | None = None,
+    candidate_ohlcv_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Admit a model-input basis without changing the frozen scorer."""
 
@@ -276,6 +430,12 @@ def evaluate_feature_basis_admission(
             else ""
         ),
         "feature_basis_evidence_sha256": str(evidence_sha256 or "").lower(),
+        "feature_basis_manifest_path": (
+            str(Path(manifest_path).expanduser().resolve())
+            if manifest_path is not None
+            else ""
+        ),
+        "feature_basis_manifest_sha256": str(manifest_sha256 or "").lower(),
         "feature_basis_window_contract_sha256": (
             _feature_basis_window_contract_sha256()
         ),
@@ -321,6 +481,60 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_POLICY_INVALID",
                 metadata=metadata,
             )
+        if evidence_path is None:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_EVIDENCE_PATH_MISSING",
+                metadata=metadata,
+            )
+        evidence_file = Path(evidence_path).expanduser().resolve()
+        if not evidence_file.is_file():
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_EVIDENCE_ARTIFACT_MISSING",
+                metadata=metadata,
+            )
+        declared_manifest = str(evidence.get("root_manifest_path") or "").strip()
+        if manifest_path is None:
+            if not declared_manifest:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    "FEATURE_BASIS_MANIFEST_PATH_MISSING",
+                    metadata=metadata,
+                )
+            root_manifest_file = Path(declared_manifest).expanduser().resolve()
+        else:
+            root_manifest_file = Path(manifest_path).expanduser().resolve()
+            if declared_manifest and Path(declared_manifest).expanduser().resolve() != root_manifest_file:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    "FEATURE_BASIS_MANIFEST_PATH_MISMATCH",
+                    metadata=metadata,
+                )
+        try:
+            actual_manifest_sha256, manifest_children, manifest_id = _verify_feature_basis_manifest(
+                root_manifest_file, evidence_file, evidence
+            )
+        except (OSError, TypeError, ValueError, KeyError) as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc) or "FEATURE_BASIS_MANIFEST_INVALID",
+                metadata=metadata,
+            )
+        if manifest_sha256 and str(manifest_sha256).lower() != actual_manifest_sha256:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MANIFEST_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        metadata.update(
+            {
+                "feature_basis_manifest_path": str(root_manifest_file),
+                "feature_basis_manifest_sha256": actual_manifest_sha256,
+                "feature_basis_manifest_id": manifest_id,
+                "feature_basis_manifest_child_count": len(manifest_children),
+            }
+        )
         if _safe_session(evidence.get("session_date")) != session:
             return _feature_basis_failure(
                 SOURCE_CAPTURE_UNRESOLVED,
@@ -437,6 +651,132 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_SCORER_BOUNDARY_HASH_MISMATCH",
                 metadata=metadata,
             )
+        if candidate_ohlcv_path is None or not str(candidate_ohlcv_sha256 or "").strip():
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_OHLCV_ARTIFACT_MISSING",
+                metadata=metadata,
+            )
+        candidate_path = Path(candidate_ohlcv_path).expanduser().resolve()
+        try:
+            _verify_candidate_session_ohlcv(
+                candidate_path,
+                str(candidate_ohlcv_sha256),
+                session,
+                observed,
+                observed_tickers,
+            )
+        except (OSError, TypeError, ValueError, KeyError) as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc) or "FEATURE_BASIS_SESSION_OHLCV_INVALID",
+                metadata=metadata,
+            )
+        geometry_open = evidence.get("geometry_open")
+        if not isinstance(geometry_open, Mapping):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_EVIDENCE_MISSING",
+                metadata=metadata,
+            )
+        if geometry_open.get("status") != "CERTIFIED_SAME_BASIS":
+            return _feature_basis_failure(
+                BASIS_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_NOT_CERTIFIED",
+                metadata=metadata,
+            )
+        declared_candidate = Path(
+            str(geometry_open.get("session_ohlcv_path") or "")
+        ).expanduser().resolve()
+        if declared_candidate != candidate_path:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_OHLCV_PATH_MISMATCH",
+                metadata=metadata,
+            )
+        if str(geometry_open.get("session_ohlcv_sha256") or "").lower() != sha256_file(candidate_path):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_OHLCV_HASH_MISMATCH",
+                metadata=metadata,
+            )
+        if _safe_session(geometry_open.get("session_date")) != session:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_SESSION_MISMATCH",
+                metadata=metadata,
+            )
+        if str(geometry_open.get("ticker_set_sha256") or "").lower() != _set_hash(
+            observed_tickers
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_TICKER_SET_MISMATCH",
+                metadata=metadata,
+            )
+        try:
+            open_knowledge_at = pd.Timestamp(
+                _safe_observed_at(geometry_open.get("knowledge_at"))
+            )
+        except ValueError as exc:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                str(exc).replace("OBSERVED_AT", "FEATURE_BASIS_OPEN_KNOWLEDGE_AT"),
+                metadata=metadata,
+            )
+        if open_knowledge_at > observed:
+            return _feature_basis_failure(
+                BASIS_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_KNOWLEDGE_AT_AFTER_OBSERVATION",
+                metadata=metadata,
+            )
+        open_source = geometry_open.get("open_source_identity")
+        if not isinstance(open_source, Mapping):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_SOURCE_INVALID",
+                metadata=metadata,
+            )
+        open_child = _manifest_child(
+            manifest_children, open_source.get("evidence_id"), "FEATURE_BASIS_OPEN_SOURCE"
+        )
+        open_sha = str(geometry_open.get("open_evidence_sha256") or "").lower()
+        if (
+            not str(open_source.get("source") or "").strip()
+            or not str(open_source.get("source_ref") or "").strip()
+            or not HEX64_RE.fullmatch(open_sha)
+            or str(open_child.get("sha256") or "").lower() != open_sha
+            or str(open_child.get("kind") or "") != "open_source"
+            or str(open_child.get("source_ref") or "") != str(open_source.get("source_ref") or "")
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_OPEN_SOURCE_UNBOUND",
+                metadata=metadata,
+            )
+        ohlcv_child = _manifest_child(
+            manifest_children,
+            geometry_open.get("session_ohlcv_evidence_id"),
+            "FEATURE_BASIS_SESSION_OHLCV",
+        )
+        if (
+            str(ohlcv_child.get("kind") or "") != "session_ohlcv"
+            or str(ohlcv_child.get("sha256") or "").lower() != sha256_file(candidate_path)
+            or _manifest_relative_path(root_manifest_file.parent, ohlcv_child.get("path"), "FEATURE_BASIS_SESSION_OHLCV")
+            != candidate_path
+        ):
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_SESSION_OHLCV_MANIFEST_UNBOUND",
+                metadata=metadata,
+            )
+        metadata.update(
+            {
+                "feature_basis_session_ohlcv_path": str(candidate_path),
+                "feature_basis_session_ohlcv_sha256": sha256_file(candidate_path),
+                "feature_basis_open_evidence_sha256": open_sha,
+            }
+        )
         for name in (
             "identity_attestation",
             "calendar_attestation",
@@ -462,6 +802,30 @@ def evaluate_feature_basis_admission(
                 return _feature_basis_failure(
                     SOURCE_CAPTURE_UNRESOLVED,
                     f"FEATURE_BASIS_{name.upper()}_BINDING_INVALID",
+                    metadata=metadata,
+                )
+            try:
+                attestation_child = _manifest_child(
+                    manifest_children,
+                    attestation.get("evidence_id"),
+                    f"FEATURE_BASIS_{name.upper()}",
+                )
+            except ValueError as exc:
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    str(exc),
+                    metadata=metadata,
+                )
+            if (
+                str(attestation_child.get("kind") or "") != "attestation"
+                or str(attestation_child.get("sha256") or "").lower()
+                != str(attestation.get("sha256") or "").lower()
+                or str(attestation_child.get("source_ref") or "")
+                != str(attestation.get("ref") or "")
+            ):
+                return _feature_basis_failure(
+                    SOURCE_CAPTURE_UNRESOLVED,
+                    f"FEATURE_BASIS_{name.upper()}_EVIDENCE_UNBOUND",
                     metadata=metadata,
                 )
         if str(evidence["pit_attestation"].get("knowledge_at") or ""):
@@ -567,11 +931,41 @@ def evaluate_feature_basis_admission(
             ):
                 unresolved.append(f"FEATURE_BASIS_SOURCE_HASH_UNRESOLVED:{ticker}")
                 continue
+            source_evidence_ids = record.get("source_evidence_ids")
+            if not isinstance(source_evidence_ids, Mapping) or set(source_evidence_ids) != set(
+                FEATURE_BASIS_FIELDS
+            ):
+                unresolved.append(f"FEATURE_BASIS_SOURCE_EVIDENCE_UNRESOLVED:{ticker}")
+                continue
+            source_children: list[Mapping[str, Any]] = []
+            try:
+                for field in FEATURE_BASIS_FIELDS:
+                    child = _manifest_child(
+                        manifest_children,
+                        source_evidence_ids.get(field),
+                        f"FEATURE_BASIS_SOURCE:{ticker}:{field}",
+                    )
+                    if str(child.get("kind") or "") != "field_source":
+                        raise ValueError(f"FEATURE_BASIS_SOURCE_KIND_INVALID:{ticker}:{field}")
+                    if str(child.get("sha256") or "").lower() != str(
+                        source_hashes[field]
+                    ).lower():
+                        raise ValueError(f"FEATURE_BASIS_SOURCE_HASH_UNBOUND:{ticker}:{field}")
+                    source_children.append(child)
+            except ValueError as exc:
+                unresolved.append(str(exc))
+                continue
             source_refs = record.get("source_refs")
             if not isinstance(source_refs, list) or not source_refs or any(
                 not str(value or "").strip() for value in source_refs
             ):
                 unresolved.append(f"FEATURE_BASIS_SOURCE_REF_UNRESOLVED:{ticker}")
+                continue
+            declared_source_refs = {
+                str(child.get("source_ref") or "") for child in source_children
+            }
+            if not set(str(value) for value in source_refs).issubset(declared_source_refs):
+                unresolved.append(f"FEATURE_BASIS_SOURCE_REF_UNBOUND:{ticker}")
                 continue
             authority = record.get("authority")
             if not isinstance(authority, Mapping):
@@ -583,6 +977,24 @@ def evaluate_feature_basis_admission(
                 str(authority.get("sha256") or "").lower()
             ):
                 unresolved.append(f"FEATURE_BASIS_AUTHORITY_UNRESOLVED:{ticker}")
+                continue
+            try:
+                authority_child = _manifest_child(
+                    manifest_children,
+                    authority.get("evidence_id"),
+                    f"FEATURE_BASIS_AUTHORITY:{ticker}",
+                )
+            except ValueError as exc:
+                unresolved.append(str(exc))
+                continue
+            if (
+                str(authority_child.get("kind") or "") != "authority"
+                or str(authority_child.get("sha256") or "").lower()
+                != str(authority.get("sha256") or "").lower()
+                or str(authority_child.get("source_ref") or "")
+                != str(authority.get("ref") or "")
+            ):
+                unresolved.append(f"FEATURE_BASIS_AUTHORITY_UNBOUND:{ticker}")
                 continue
             transition_dates = record.get("transition_dates")
             if not isinstance(transition_dates, list):
@@ -1142,6 +1554,8 @@ def evaluate_population_admission(
         "tradability_evidence_source",
         "feature_basis_evidence_path",
         "feature_basis_evidence_sha256",
+        "feature_basis_manifest_path",
+        "feature_basis_manifest_sha256",
     ):
         if field in evidence_metadata:
             metadata[field] = evidence_metadata[field]
@@ -1154,6 +1568,7 @@ def evaluate_population_admission(
             "tradability_anchors_sha256",
             "tradability_evidence_source",
             "feature_basis_evidence_sha256",
+            "feature_basis_manifest_sha256",
         )
     )
 
@@ -1581,6 +1996,20 @@ def build_runtime_population_admission(
                 reasons=(str(exc) or "FEATURE_BASIS_EVIDENCE_INVALID",),
             )
         feature_basis_sha256 = sha256_file(feature_basis_path)
+        feature_basis_manifest_path = eod_path.parent / FEATURE_BASIS_MANIFEST_FILENAME
+        if not feature_basis_manifest_path.is_file():
+            return _runtime_failure(
+                session_date=session,
+                reasons=("FEATURE_BASIS_MANIFEST_ARTIFACT_MISSING",),
+            )
+        feature_basis_manifest_sha256 = sha256_file(feature_basis_manifest_path)
+        session_ohlcv_path = Path(str(eod.get("session_ohlcv_path") or "")).expanduser().resolve()
+        session_ohlcv_sha256 = str(eod.get("session_ohlcv_sha256") or "").lower()
+        if not session_ohlcv_path.is_file() or session_ohlcv_sha256 != sha256_file(session_ohlcv_path):
+            return _runtime_failure(
+                session_date=session,
+                reasons=("SAME_SESSION_OHLCV_ARTIFACT_INVALID",),
+            )
         feature_basis_result = evaluate_feature_basis_admission(
             session_date=session,
             model_input_tickers=model_input["ticker"].tolist()
@@ -1595,11 +2024,19 @@ def build_runtime_population_admission(
             observed_at=observed_by,
             evidence_path=feature_basis_path,
             evidence_sha256=feature_basis_sha256,
+            manifest_path=feature_basis_manifest_path,
+            manifest_sha256=feature_basis_manifest_sha256,
+            candidate_ohlcv_path=session_ohlcv_path,
+            candidate_ohlcv_sha256=session_ohlcv_sha256,
         )
         security_evidence["feature_basis_evidence_path"] = str(
             feature_basis_path.resolve()
         )
         security_evidence["feature_basis_evidence_sha256"] = feature_basis_sha256
+        security_evidence["feature_basis_manifest_path"] = str(
+            feature_basis_manifest_path.resolve()
+        )
+        security_evidence["feature_basis_manifest_sha256"] = feature_basis_manifest_sha256
         expected_blobs, actual_blobs = _git_blobs(Path(repo_root).expanduser().resolve())
         code_identity = {
             "repo": "samindriano/idx-trade",
@@ -1762,6 +2199,7 @@ def _validate_attestation_payload(
             "tradability_coverage_path",
             "tradability_anchors_path",
             "feature_basis_evidence_path",
+            "feature_basis_manifest_path",
         ):
             if not str(metadata.get(field) or "").strip():
                 raise ValueError(f"POPULATION_ATTESTATION_{field.upper()}_MISSING")
@@ -1978,7 +2416,10 @@ __all__ = [
     "BASIS_UNRESOLVED",
     "FREEZE_LOCAL_DATE",
     "FEATURE_BASIS_EVIDENCE_FILENAME",
+    "FEATURE_BASIS_MANIFEST_FILENAME",
+    "FEATURE_BASIS_MANIFEST_SCHEMA_VERSION",
     "FEATURE_BASIS_POLICY_ID",
+    "FEATURE_BASIS_PRODUCER_ID",
     "FEATURE_BASIS_SCHEMA_VERSION",
     "FEATURE_BASIS_WINDOW_CONTRACT",
     "FROZEN_POLICY",

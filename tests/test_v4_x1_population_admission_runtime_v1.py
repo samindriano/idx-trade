@@ -218,6 +218,59 @@ def _write_runtime_fixture(
         clean_panel,
     )
     feature_basis_path = session_root / gate.FEATURE_BASIS_EVIDENCE_FILENAME
+    feature_manifest_path = session_root / gate.FEATURE_BASIS_MANIFEST_FILENAME
+    feature_child_root = session_root / "feature_basis_children"
+    feature_child_root.mkdir()
+
+    def feature_child(
+        name: str, kind: str, source_ref: str, content: str
+    ) -> dict[str, str]:
+        path = feature_child_root / f"{name}.json"
+        path.write_text(content, encoding="utf-8")
+        return {
+            "evidence_id": name,
+            "kind": kind,
+            "path": str(path.relative_to(session_root)),
+            "sha256": sha256_file(path),
+            "source_ref": source_ref,
+        }
+
+    producer_child = feature_child(
+        "producer", "producer_implementation", "git://producer", "producer-v1\n"
+    )
+    field_children = {
+        field: feature_child(
+            f"field-{field}", "field_source", f"test://basis/{field}", f"{field}-basis\n"
+        )
+        for field in gate.FEATURE_BASIS_FIELDS
+    }
+    authority_child = feature_child(
+        "authority", "authority", "test://authority", "authority-v1\n"
+    )
+    attestation_children = {
+        name: feature_child(name, "attestation", f"test://{name}", f"{name}-v1\n")
+        for name in (
+            "identity_attestation",
+            "calendar_attestation",
+            "revision_attestation",
+            "pit_attestation",
+        )
+    }
+    open_child = feature_child("open-source", "open_source", "test://open", "open-v1\n")
+    feature_children = [
+        producer_child,
+        *field_children.values(),
+        authority_child,
+        *attestation_children.values(),
+        open_child,
+        {
+            "evidence_id": "session-ohlcv",
+            "kind": "session_ohlcv",
+            "path": str(ohlcv_path.relative_to(session_root)),
+            "sha256": sha256_file(ohlcv_path),
+            "source_ref": "test://ohlcv",
+        },
+    ]
     feature_records = []
     if include_model:
         feature_records = [
@@ -234,24 +287,37 @@ def _write_runtime_fixture(
                 "transition_dates": [],
                 "authority": {
                     "name": "TEST_AUTHORITY",
-                    "ref": "test://authority",
-                    "sha256": "d" * 64,
+                    "ref": authority_child["source_ref"],
+                    "sha256": authority_child["sha256"],
+                    "evidence_id": "authority",
                 },
-                "source_refs": ["test://basis"],
+                "source_refs": [child["source_ref"] for child in field_children.values()],
+                "source_evidence_ids": {
+                    field: field_children[field]["evidence_id"]
+                    for field in gate.FEATURE_BASIS_FIELDS
+                },
                 "source_hashes": {
-                    "high": "a" * 64,
-                    "low": "b" * 64,
-                    "close": "c" * 64,
-                    "volume": "d" * 64,
-                    "regular_market_value": "e" * 64,
+                    field: field_children[field]["sha256"]
+                    for field in gate.FEATURE_BASIS_FIELDS
                 },
             }
         ]
+    feature_attestations = {
+        name: {
+            "status": "VERIFIED",
+            "ref": attestation_children[name]["source_ref"],
+            "sha256": attestation_children[name]["sha256"],
+            "evidence_id": name,
+        }
+        for name in attestation_children
+    }
+    feature_attestations["pit_attestation"]["knowledge_at"] = "2026-08-28T18:35:00+07:00"
     feature_basis_payload = {
         "schema_version": gate.FEATURE_BASIS_SCHEMA_VERSION,
         "policy_id": gate.FEATURE_BASIS_POLICY_ID,
         "session_date": SESSION,
         "knowledge_at": "2026-08-28T18:35:00+07:00",
+        "root_manifest_path": str(feature_manifest_path.resolve()),
         "model_input_path": str(snapshot_path.resolve()),
         "model_input_sha256": sha256_file(snapshot_path),
         "model_input_set_sha256": gate._set_hash(
@@ -264,26 +330,21 @@ def _write_runtime_fixture(
             "historical_end": SESSION,
             "clean_panel_sha256": sha256_file(clean_panel),
         },
-        "identity_attestation": {
-            "status": "VERIFIED",
-            "ref": "test://identity",
-            "sha256": "e" * 64,
-        },
-        "calendar_attestation": {
-            "status": "VERIFIED",
-            "ref": "test://calendar",
-            "sha256": "f" * 64,
-        },
-        "revision_attestation": {
-            "status": "VERIFIED",
-            "ref": "test://revision",
-            "sha256": "1" * 64,
-        },
-        "pit_attestation": {
-            "status": "VERIFIED",
-            "ref": "test://pit",
-            "sha256": "2" * 64,
+        **feature_attestations,
+        "geometry_open": {
+            "status": "CERTIFIED_SAME_BASIS",
+            "session_ohlcv_path": str(ohlcv_path.resolve()),
+            "session_ohlcv_sha256": sha256_file(ohlcv_path),
+            "session_ohlcv_evidence_id": "session-ohlcv",
+            "session_date": SESSION,
             "knowledge_at": "2026-08-28T18:35:00+07:00",
+            "ticker_set_sha256": gate._set_hash(["AAAA"] if include_model else []),
+            "open_source_identity": {
+                "source": "TEST_OPEN",
+                "source_ref": open_child["source_ref"],
+                "evidence_id": "open-source",
+            },
+            "open_evidence_sha256": open_child["sha256"],
         },
         "window_contract": [
             {
@@ -295,9 +356,29 @@ def _write_runtime_fixture(
         "window_contract_sha256": gate._feature_basis_window_contract_sha256(),
         "records": feature_records,
     }
+    feature_manifest = {
+        "schema_version": gate.FEATURE_BASIS_MANIFEST_SCHEMA_VERSION,
+        "policy_id": gate.FEATURE_BASIS_POLICY_ID,
+        "evidence_path": str(feature_basis_path.relative_to(session_root)),
+        "evidence_sha256": "0" * 64,
+        "producer": {
+            "producer_id": gate.FEATURE_BASIS_PRODUCER_ID,
+            "implementation_ref": "git://test-producer",
+            "implementation_commit": "1" * 40,
+            "implementation_sha256": producer_child["sha256"],
+            "implementation_evidence_id": "producer",
+        },
+        "children": feature_children,
+    }
+    feature_manifest["manifest_id"] = gate._feature_basis_manifest_identity(feature_manifest)
+    feature_basis_payload["root_manifest_id"] = feature_manifest["manifest_id"]
     feature_basis_path.write_text(
         json.dumps(feature_basis_payload, sort_keys=True) + "\n",
         encoding="utf-8",
+    )
+    feature_manifest["evidence_sha256"] = sha256_file(feature_basis_path)
+    feature_manifest_path.write_text(
+        json.dumps(feature_manifest, sort_keys=True) + "\n", encoding="utf-8"
     )
     runner = Path(__file__).resolve().parents[1] / "scripts" / "run_e2e_paper_cloud_v2.py"
     return {
@@ -337,6 +418,10 @@ def test_build_runtime_population_admission_uses_real_data_ready_fixture(tmp_pat
     )
     assert admission.metadata["tradability_anchors_sha256"] == sha256_file(
         paths.tradability_root / "idx_stock_summary_anchors.csv"
+    )
+    feature_manifest = paths.session_root / SESSION / gate.FEATURE_BASIS_MANIFEST_FILENAME
+    assert admission.metadata["feature_basis_manifest_sha256"] == sha256_file(
+        feature_manifest
     )
 
 
@@ -430,6 +515,9 @@ def test_runtime_safe_attestation_binds_refresh_and_tradability_artifacts(
     assert payload["metadata"]["tradability_anchors_sha256"] == admission.metadata[
         "tradability_anchors_sha256"
     ]
+    assert payload["metadata"]["feature_basis_manifest_sha256"] == admission.metadata[
+        "feature_basis_manifest_sha256"
+    ]
     assert (
         classify_retained_population_attestation(
             payload,
@@ -521,3 +609,16 @@ def test_runtime_missing_feature_basis_certificate_fails_before_scientific_admis
 
     assert admission.status == V1_POPULATION_NOT_PROVABLE
     assert "FEATURE_BASIS_EVIDENCE_ARTIFACT_MISSING" in admission.reason_codes
+
+
+def test_runtime_missing_feature_basis_root_manifest_fails_closed(tmp_path: Path) -> None:
+    fixture = _write_runtime_fixture(tmp_path)
+    paths = forward_monitoring.runtime_paths(fixture["runtime_root"])
+    (
+        paths.session_root / SESSION / gate.FEATURE_BASIS_MANIFEST_FILENAME
+    ).unlink()
+
+    admission = build_runtime_population_admission(**fixture)
+
+    assert admission.status == V1_POPULATION_NOT_PROVABLE
+    assert "FEATURE_BASIS_MANIFEST_ARTIFACT_MISSING" in admission.reason_codes
