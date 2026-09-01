@@ -35,6 +35,32 @@ measurements:
 | `33169532655` | Stockbit Intraday | 96 s | 19 s install | 65 s capture |
 | `33355320532` | normal tests | not recorded | 17 s install | 88 s pytest |
 
+## Post-reset production observations
+
+- Stockbit Stream run `33479015238`, job `99764254815`, was a scheduled
+  success on `main@be1391fecbba4a7cac0c7a11a6661ea1612a882a`. The run was
+  created at `2026-09-01T06:45:49Z` (`13:45 WIB`) but its log carried
+  `EVENT_SCHEDULE=47 1 * * *`, the `08:47 WIB` pre-open slot, not the requested
+  `12:07 WIB` slot. It is therefore a delayed scheduled observation, not an
+  on-time 12:07 proof.
+- The Stream job ran from `06:45:52Z` to `06:53:31Z` (about `459 s`). Install
+  ran from `06:45:54Z` to `06:46:17Z` (about `23 s`); the capture step ran from
+  `06:46:17Z` to `06:53:28Z` (about `431 s`). Runtime evidence reported
+  `completed_calls=200`, `successful_responses=200`, `status=DATA_READY`,
+  `counter_mutated=false`, `model_accessed=false`, and `outcome_accessed=false`.
+  This is the first post-reset successful production capture sample, with no
+  claim beyond the evidence exposed by the run.
+- Against the historical Stream install sample of `20 s`, this sample measured
+  `23 s` (a single-sample `+3 s` variance, not a saving). Aggregate savings and
+  the requested 12:07 measurement remain pending.
+- Delayed E2E PREOPEN_CA runs `33477900776`, `33478995730`, and `33479797175`
+  failed with `MISSED_PREOPEN_CA_CAPTURE`; their controller evidence reported
+  no provider calls, no outcome access, and no PaperState mutation. Delayed
+  Official Open run `33480505350` failed before execution admission with
+  `OFFICIAL_OPEN_TRANSPORT_CHAIN_FAILED`; it reported no outcome access or
+  forward-counter mutation. These delayed events are not acceptance proofs and
+  were not rerun or backfilled.
+
 The first available post-reset successful sample is CI run `33415425851`:
 `125 s` job duration, `16 s` install, and `102.90 s` pytest. Against the
 historical `17 s` install sample, this is a measured single-sample `1 s`
