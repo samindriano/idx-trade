@@ -14,8 +14,12 @@ import {
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const sha = (value) => digest(String(value));
 const git = (letter) => letter.repeat(40);
+const parentIdentity = (key, value) => {
+  const bytes = Buffer.from(JSON.stringify(value));
+  return { completionKey: key, completionBytes: bytes, completionSha256: digest(bytes) };
+};
 
-test('completion validators expose the explicit completion grain for each family', () => {
+test('completion validators expose the explicit completion grain for each family', async () => {
   const resultBytes = Buffer.from(JSON.stringify({
     schema_version: 'idx_trade_e2e_paper_cloud_runtime_v1',
     session_date: '2026-08-27',
@@ -27,8 +31,7 @@ test('completion validators expose the explicit completion grain for each family
     model_refit: false,
   }));
   const snapshotBytes = Buffer.from('e2e-snapshot');
-  const e2e = validateE2ECompletion({
-    commit: {
+  const e2eCommit = {
       schema_version: 'idx_trade_e2e_paper_cloud_stage_commit_v1',
       commit_state: 'COMMITTED',
       contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
@@ -46,14 +49,16 @@ test('completion validators expose the explicit completion grain for each family
       },
       result: { key: 'e2e/result.json', sha256: sha('d') },
       snapshot: { key: 'e2e/snapshot.zip', sha256: digest(snapshotBytes) },
-    },
+  };
+  const e2eParent = parentIdentity('sessions/2026-08-27/stages/POST_EOD/commit.json', e2eCommit);
+  const e2e = await validateE2ECompletion({
+    commit: e2eCommit,
     resultBytes,
     snapshotSha256: digest(snapshotBytes),
     expectedSession: '2026-08-27',
     expectedStage: 'POST_EOD',
     childHashes: { 'e2e/result.json': sha('d'), 'e2e/snapshot.zip': digest(snapshotBytes) },
-    completionKey: 'sessions/2026-08-27/stages/POST_EOD/commit.json',
-    completionSha256: sha('e'),
+    ...e2eParent,
   });
   assert.deepEqual(e2e, {
     capture_complete: true,
@@ -61,11 +66,10 @@ test('completion validators expose the explicit completion grain for each family
     family: 'E2E',
     grain: COMPLETION_GRAIN.E2E,
     completion_key: 'sessions/2026-08-27/stages/POST_EOD/commit.json',
-    completion_sha256: sha('e'),
+    completion_sha256: e2eParent.completionSha256,
   });
 
-  const official = validateOfficialOpenCompletion({
-    manifest: {
+  const officialManifest = {
       schema_version: 'idx_official_open_cloud_archive_v1',
       commit_state: 'COMMITTED',
       session_date: '2026-08-27',
@@ -88,15 +92,17 @@ test('completion validators expose the explicit completion grain for each family
         open_prices: { key: 'open.parquet', sha256: sha('g') },
         source_manifest: { key: 'source.json', sha256: sha('h') },
       },
-    },
+  };
+  const official = await validateOfficialOpenCompletion({
+    manifest: officialManifest,
     expectedSession: '2026-08-27',
     expectedSlot: '0922',
     childHashes: { 'raw.json': sha('f'), 'open.parquet': sha('g'), 'source.json': sha('h') },
+    ...parentIdentity('session_date=2026-08-27/slot=0922/slot_manifest.json', officialManifest),
   });
   assert.equal(official.grain, COMPLETION_GRAIN.OFFICIAL_OPEN);
 
-  const intraday = validateIntradayCompletion({
-    commit: {
+  const intradayCommit = {
       schema_version: 'idx_trade_stockbit_intraday_cloud_slot_v1',
       commit_state: 'COMMITTED',
       session_date: '2026-08-27',
@@ -108,11 +114,14 @@ test('completion validators expose the explicit completion grain for each family
       result: { key: 'result.json', sha256: sha('k') },
       snapshot: { key: 'snapshot.zip', sha256: sha('l') },
       claim_sha256: sha('m'),
-    },
+  };
+  const intraday = await validateIntradayCompletion({
+    commit: intradayCommit,
     expectedSession: '2026-08-27',
     expectedSlot: '1930',
     claimSha256: sha('m'),
     childHashes: { 'result.json': sha('k'), 'snapshot.zip': sha('l') },
+    ...parentIdentity('sessions/2026-08-27/slots/1930/commit.json', intradayCommit),
   });
   assert.equal(intraday.grain, COMPLETION_GRAIN.INTRADAY);
 
@@ -120,9 +129,9 @@ test('completion validators expose the explicit completion grain for each family
   assert.equal(COMPLETION_GRAIN.PREOPEN_CA, 'session_preopen_ca_checkpoint');
 });
 
-test('completion validators fail closed on malformed or mismatched evidence', () => {
-  assert.throws(
-    () => validateE2ECompletion({
+test('completion validators fail closed on malformed or mismatched evidence', async () => {
+  await assert.rejects(
+    validateE2ECompletion({
       commit: {
         schema_version: 'idx_trade_e2e_paper_cloud_stage_commit_v1',
         commit_state: 'COMMITTED',
@@ -144,8 +153,8 @@ test('completion validators fail closed on malformed or mismatched evidence', ()
     (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_RESULT_INVALID',
   );
 
-  assert.throws(
-    () => validateOfficialOpenCompletion({
+  await assert.rejects(
+    validateOfficialOpenCompletion({
       manifest: { schema_version: 'idx_official_open_cloud_archive_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '0922' },
       expectedSession: '2026-08-27',
       expectedSlot: '0922',
@@ -153,8 +162,8 @@ test('completion validators fail closed on malformed or mismatched evidence', ()
     (error) => error instanceof CompletionContractError && error.code === 'OFFICIAL_OPEN_COMPLETION_ADMISSION_INVALID',
   );
 
-  assert.throws(
-    () => validateIntradayCompletion({
+  await assert.rejects(
+    validateIntradayCompletion({
       commit: { schema_version: 'idx_trade_stockbit_intraday_cloud_slot_v1', commit_state: 'COMMITTED', session_date: '2026-08-27', slot: '1930', status: 'WAITING_RECOVERY_RETRY' },
       expectedSession: '2026-08-27',
       expectedSlot: '1930',
@@ -162,13 +171,13 @@ test('completion validators fail closed on malformed or mismatched evidence', ()
     (error) => error instanceof CompletionContractError && error.code === 'INTRADAY_COMPLETION_IDENTITY_OR_STATUS_INVALID',
   );
 
-  assert.throws(
-    () => validateExistingCompletion('STREAM', {}),
+  await assert.rejects(
+    validateExistingCompletion('STREAM', {}),
     (error) => error instanceof CompletionContractError && error.code === 'UNKNOWN_COMPLETION_FAMILY',
   );
 });
 
-test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, and result guards', () => {
+test('PREOPEN_CA completion validates the canonical content-addressed checkpoint', async () => {
   const session = '2026-08-27';
   const snapshot = Buffer.from('preopen-ca-snapshot');
   const resultBytes = Buffer.from(JSON.stringify({
@@ -195,11 +204,11 @@ test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, an
     input_manifest_sha256: sha('input'),
     code_identity: { repo: 'samindriano/idx-trade', commit: git('c'), runner_sha256: sha('runner') },
     snapshot: {
-      key: `sessions/${session}/checkpoints/PREOPEN_CA/runtime_snapshot.zip`,
+      key: `sessions/${session}/checkpoints/PREOPEN_CA/snapshots/${digest(snapshot)}.zip`,
       sha256: digest(snapshot),
       metadata: { schema_version: 'idx_trade_e2e_paper_cloud_snapshot_v1', roots: ['paper'], file_count: 1, snapshot_sha256: digest(snapshot) },
     },
-    result: { key: `sessions/${session}/checkpoints/PREOPEN_CA/result.json`, sha256: digest(resultBytes) },
+    result: { key: `sessions/${session}/checkpoints/PREOPEN_CA/results/${digest(resultBytes)}.json`, sha256: digest(resultBytes) },
     guards: {
       outcome_accessed: false,
       protected_forward_accessed: false,
@@ -210,7 +219,8 @@ test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, an
       retroactive_execution_authorized: false,
     },
   };
-  const result = validatePreopenCaCompletion({
+  const preopenParent = parentIdentity(`sessions/${session}/checkpoints/PREOPEN_CA/commit.json`, checkpoint);
+  const result = await validatePreopenCaCompletion({
     checkpoint,
     resultBytes,
     snapshotSha256: digest(snapshot),
@@ -222,21 +232,20 @@ test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, an
       [checkpoint.snapshot.key]: digest(snapshot),
       [checkpoint.result.key]: digest(resultBytes),
     },
-    completionKey: checkpoint.result.key,
-    completionSha256: sha('commit'),
+    ...preopenParent,
   });
   assert.deepEqual(result, {
     capture_complete: true,
     state: 'capture_complete',
     family: 'PREOPEN_CA',
     grain: 'session_preopen_ca_checkpoint',
-    completion_key: checkpoint.result.key,
-    completion_sha256: sha('commit'),
+    completion_key: preopenParent.completionKey,
+    completion_sha256: preopenParent.completionSha256,
   });
 
   const wrongStage = { ...checkpoint, stage: 'POST_EOD' };
-  assert.throws(
-    () => validatePreopenCaCompletion({
+  await assert.rejects(
+    validatePreopenCaCompletion({
       checkpoint: wrongStage,
       expectedSession: session,
       expectedScheduleSha256: sha('schedule'),
@@ -245,5 +254,71 @@ test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, an
       childHashes: {},
     }),
     (error) => error instanceof CompletionContractError && error.code === 'PREOPEN_CA_COMPLETION_IDENTITY_INVALID',
+  );
+});
+
+function e2eCompletionEvidence() {
+  const resultBytes = Buffer.from(JSON.stringify({
+    schema_version: 'idx_trade_e2e_paper_cloud_runtime_v1',
+    session_date: '2026-08-27',
+    stage: 'POST_EOD',
+    stage_status: 'POST_EOD_PREPARED',
+    observed_availability_only: true,
+    outcome_accessed: false,
+    protected_forward_accessed: false,
+    model_refit: false,
+  }));
+  const snapshotBytes = Buffer.from('parent-identity-snapshot');
+  const commit = {
+    schema_version: 'idx_trade_e2e_paper_cloud_stage_commit_v1',
+    commit_state: 'COMMITTED',
+    contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
+    session_date: '2026-08-27',
+    stage: 'POST_EOD',
+    stage_status: 'POST_EOD_PREPARED',
+    schedule_attestation_sha256: sha('schedule'),
+    input_manifest_sha256: sha('input'),
+    code_identity: { commit: git('d') },
+    guards: {
+      outcome_accessed: false,
+      protected_forward_accessed: false,
+      model_refit: false,
+      retroactive_execution_authorized: false,
+    },
+    result: { key: 'result.json', sha256: digest(resultBytes) },
+    snapshot: { key: 'snapshot.zip', sha256: digest(snapshotBytes) },
+  };
+  return {
+    commit,
+    resultBytes,
+    snapshotSha256: digest(snapshotBytes),
+    expectedSession: '2026-08-27',
+    expectedStage: 'POST_EOD',
+    childHashes: { 'result.json': digest(resultBytes), 'snapshot.zip': digest(snapshotBytes) },
+    ...parentIdentity('sessions/2026-08-27/stages/POST_EOD/commit.json', commit),
+  };
+}
+
+test('completion identity is required and hash-bound before capture_complete', async () => {
+  const base = e2eCompletionEvidence();
+  await assert.rejects(
+    validateE2ECompletion({ ...base, completionKey: undefined }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_KEY_INVALID',
+  );
+  await assert.rejects(
+    validateE2ECompletion({ ...base, completionSha256: undefined }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_SHA_INVALID',
+  );
+  await assert.rejects(
+    validateE2ECompletion({ ...base, completionKey: 'sessions/2026-08-27/stages/POST_EOD/../commit.json' }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_KEY_INVALID',
+  );
+  await assert.rejects(
+    validateE2ECompletion({ ...base, completionKey: 'sessions/2026-08-27/stages/PREOPEN/commit.json' }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_KEY_INVALID',
+  );
+  await assert.rejects(
+    validateE2ECompletion({ ...base, completionSha256: '0'.repeat(64) }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_PARENT_SHA_MISMATCH',
   );
 });

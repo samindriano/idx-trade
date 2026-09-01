@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from argparse import Namespace
 from datetime import datetime
+import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -60,6 +64,47 @@ def test_missing_commit_is_not_complete_and_never_requests_provider_work(tmp_pat
         expected_code_ref=CODE["commit"],
     )
     assert result == {"status": "NOT_COMPLETE", "capture_complete": False, "provider_calls": 0}
+
+
+def test_clean_preflight_imports_without_provider_dependencies(tmp_path: Path):
+    """The same-job gate must run before package/provider bootstrap on a clean runner."""
+
+    guard = tmp_path / "import-guard"
+    guard.mkdir()
+    (guard / "sitecustomize.py").write_text(
+        """import builtins
+
+_real_import = builtins.__import__
+_blocked = {\"boto3\", \"requests\"}
+
+def _guarded_import(name, *args, **kwargs):
+    if name.split(\".\", 1)[0] in _blocked:
+        raise AssertionError(f\"unexpected third-party import during completion preflight: {name}\")
+    return _real_import(name, *args, **kwargs)
+
+builtins.__import__ = _guarded_import
+""",
+        encoding="utf-8",
+    )
+    empty_root = tmp_path / "empty"
+    script = Path(__file__).resolve().parents[1] / "scripts" / "check_stockbit_intraday_completion.py"
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join(
+        [str(guard), str(script.parents[1] / "src")]
+    )
+    completed = subprocess.run(
+        [sys.executable, str(script), "--slot", "1930", "--local-root", str(empty_root)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=environment,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    assert json.loads(completed.stdout) == {
+        "status": "NOT_COMPLETE",
+        "capture_complete": False,
+        "provider_calls": 0,
+    }
 
 
 def test_intermediate_archive_is_not_completion(tmp_path: Path):

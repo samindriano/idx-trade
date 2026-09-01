@@ -14,9 +14,6 @@ from .stockbit_intraday_cloud_storage import (
     canonical_json_bytes,
     sha256_bytes,
 )
-from .stockbit_stream_archive import StorageImmutabilityConflict
-
-
 SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_slot_v1"
 POLICY_SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_policy_v1"
 CLAIM_SCHEMA_VERSION = "idx_trade_stockbit_intraday_cloud_claim_v1"
@@ -341,6 +338,8 @@ class StockbitIntradayCloudArchive:
             raise StockbitIntradayCloudError(
                 "STOCKBIT_INTRADAY_STALE_CLAIM_FENCING_UNPROVEN"
             )
+        from .stockbit_stream_archive import StorageImmutabilityConflict
+
         try:
             result = self.store.put_if_absent(key, encoded, "application/json")
         except StorageImmutabilityConflict as exc:
@@ -608,6 +607,8 @@ class StockbitIntradayCloudArchive:
         self.store.put_if_absent(snapshot_key, snapshot_bytes, "application/zip")
         self.store.put_if_absent(result_key, result_bytes, "application/json")
         commit_key = self.commit_key(session, slot)
+        from .stockbit_stream_archive import StorageImmutabilityConflict
+
         try:
             self.store.put_if_absent(commit_key, encoded, "application/json")
         except StorageImmutabilityConflict:
