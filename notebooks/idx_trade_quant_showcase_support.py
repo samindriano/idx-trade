@@ -14,7 +14,15 @@ from pathlib import Path
 import re
 from typing import Any, Iterable
 
+import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
+
+from idx_trade.prospective_evaluation_v1 import (
+    bootstrap_interval,
+    evaluate_alpha_metrics as _evaluate_alpha_metrics,
+    moving_block_bootstrap_distribution,
+)
 
 
 HISTORICAL_REPLAY = "HISTORICAL_REPLAY"
@@ -25,6 +33,40 @@ VALID_MODES = {HISTORICAL_REPLAY, FORWARD_LIVE, FORWARD_MATURED}
 _FORBIDDEN_COMPONENT = re.compile(
     r"(?i)(outcome|vault|protected|realized|return|label)"
 )
+_FORWARD_ACCESS_GUARD_KEYS = frozenset(
+    {
+        "forward_outcomes_accessed",
+        "fresh_forward_outcomes_accessed",
+        "protected_outcome_accessed",
+        "protected_outcomes_accessed",
+        "realized_forward_outcome_loaded",
+        "real_protected_loader_called",
+        "forward_outcome_access_marker_written",
+        "real_outcome_access_marker_written",
+    }
+)
+_FORWARD_SCORE_FORBIDDEN_COLUMNS = frozenset(
+    {
+        "canonical_target",
+        "realized_consensus",
+        "realized_return",
+        "forward_return",
+        "target_label",
+        "realized_outcome",
+        "forward_outcome",
+        "future_return",
+        "target_h5",
+        "target_h10",
+        "label",
+        "outcome",
+        "target",
+    }
+)
+_HISTORICAL_BOUNDARY_SCHEMA = "ranking_v4_x1_clean_historical_oos_access_boundary_v1"
+_HISTORICAL_BOUNDARY_STATUS = "CLEAN_HISTORICAL_OOS_TARGET_ACCESS_COMMENCED"
+_HISTORICAL_MANIFEST_SCHEMA = "ranking_v4_x1_clean_historical_oos_replay_manifest_v1"
+_HISTORICAL_MANIFEST_STATUS = "V4_X1_CLEAN_HISTORICAL_OOS_REPLAY_COMPLETE_REVIEW_REQUIRED"
+_HISTORICAL_GENERATION = "V4_X1_CLEAN_GEOMETRY3_PROSPECTIVE_V1"
 _SHOWCASE_CSVS = (
     "sessions.csv",
     "scores.csv",
@@ -138,6 +180,141 @@ def _read_csv(path: Path) -> pd.DataFrame:
         raise ShowcaseDataError(f"Cannot read CSV artifact {path}: {exc}") from exc
 
 
+def _csv_columns(path: Path) -> list[str]:
+    _reject_unsafe_path(path)
+    try:
+        return [str(column) for column in pd.read_csv(path, nrows=0).columns]
+    except (OSError, ValueError) as exc:
+        raise ShowcaseDataError(f"Cannot inspect CSV artifact {path}: {exc}") from exc
+
+
+def _parquet_columns(path: Path) -> list[str]:
+    _reject_unsafe_path(path)
+    try:
+        return [str(column) for column in pq.ParquetFile(path).schema_arrow.names]
+    except (OSError, ValueError, ImportError) as exc:
+        raise ShowcaseDataError(f"Cannot inspect Parquet artifact {path}: {exc}") from exc
+
+
+def _normalized_column_name(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+
+
+def _assert_safe_forward_schema(columns: Iterable[object], *, label: str) -> None:
+    normalized = {
+        _normalized_column_name(column): str(column)
+        for column in columns
+    }
+    forbidden = sorted(
+        original
+        for name, original in normalized.items()
+        if name in _FORWARD_SCORE_FORBIDDEN_COLUMNS
+    )
+    if forbidden:
+        raise ShowcaseDataError(
+            f"{label} contains protected outcome columns: {forbidden}"
+        )
+
+
+def _assert_outcome_blind_payload(payload: object, *, label: str) -> None:
+    """Reject an access-bearing guard anywhere in a loaded forward manifest."""
+
+    def visit(value: object, location: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                key_text = str(key)
+                child_location = f"{location}.{key_text}"
+                if key_text in _FORWARD_ACCESS_GUARD_KEYS:
+                    if child is True or (
+                        isinstance(child, str) and child.strip().lower() == "true"
+                    ):
+                        raise ShowcaseDataError(
+                            f"{label} indicates prospective outcome access at {child_location}"
+                        )
+                    if child is not False:
+                        raise ShowcaseDataError(
+                            f"{label} has an invalid outcome-access guard at {child_location}"
+                        )
+                visit(child, child_location)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{location}[{index}]")
+
+    visit(payload, label)
+    if isinstance(payload, dict) and "outcome_blind" in payload and payload["outcome_blind"] is not True:
+        raise ShowcaseDataError(f"{label} is not explicitly outcome-blind")
+
+
+def _validate_historical_authority(
+    boundary: dict[str, Any],
+    manifest: dict[str, Any],
+    *,
+    required: dict[str, Path],
+) -> None:
+    """Validate the accepted historical export boundary before using its rows."""
+
+    if boundary.get("schema_version") != _HISTORICAL_BOUNDARY_SCHEMA:
+        raise ShowcaseDataError("Historical OOS access boundary schema is not accepted")
+    if boundary.get("status") != _HISTORICAL_BOUNDARY_STATUS:
+        raise ShowcaseDataError("Historical OOS access boundary status is not accepted")
+    if boundary.get("generation_id") != _HISTORICAL_GENERATION:
+        raise ShowcaseDataError("Historical OOS boundary generation does not match")
+    if boundary.get("measurement_only") is not True:
+        raise ShowcaseDataError("Historical OOS boundary is not measurement-only")
+
+    if manifest.get("schema_version") != _HISTORICAL_MANIFEST_SCHEMA:
+        raise ShowcaseDataError("Historical OOS manifest schema is not accepted")
+    if manifest.get("status") != _HISTORICAL_MANIFEST_STATUS:
+        raise ShowcaseDataError("Historical OOS manifest status is not accepted")
+    if manifest.get("generation_id") != _HISTORICAL_GENERATION:
+        raise ShowcaseDataError("Historical OOS manifest generation does not match")
+    if manifest.get("measurement_only") is not True:
+        raise ShowcaseDataError("Historical OOS manifest is not measurement-only")
+
+    false_guards = (
+        "deployed_model_mutated",
+        "forward_counter_mutated",
+        "fresh_forward_accessed",
+        "network_calls",
+        "model_change_authorized",
+        "protected_forward_accessed",
+        "provider_calls",
+        "forward_outcomes_accessed",
+    )
+    for payload_name, payload in (("boundary", boundary), ("manifest", manifest)):
+        for key in false_guards:
+            if key in payload and payload[key] is not False:
+                raise ShowcaseDataError(
+                    f"Historical OOS {payload_name} guard {key} is not false"
+                )
+
+    output_hashes = manifest.get("output_hashes")
+    if not isinstance(output_hashes, dict):
+        raise ShowcaseDataError("Historical OOS manifest output hash bindings are missing")
+    hash_bindings = {
+        "access_boundary": required["access_boundary"],
+        "scores_challenger": required["scores"],
+        "target_ledger": required["targets"],
+    }
+    for name, path in hash_bindings.items():
+        declared = output_hashes.get(name)
+        if not isinstance(declared, str) or declared.lower() != _sha256(path):
+            raise ShowcaseDataError(
+                f"Historical OOS manifest hash binding mismatch: output_hashes.{name}"
+            )
+
+    input_hashes = manifest.get("input_hashes")
+    if isinstance(input_hashes, dict):
+        for name, path in {
+            "scores_challenger": required["scores"],
+            "target_ledger": required["targets"],
+        }.items():
+            if name in input_hashes and str(input_hashes[name]).lower() != _sha256(path):
+                raise ShowcaseDataError(
+                    f"Historical OOS manifest hash binding mismatch: input_hashes.{name}"
+                )
+
+
 def _normalize_dates(frame: pd.DataFrame, column: str) -> pd.DataFrame:
     if frame.empty or column not in frame.columns:
         return frame
@@ -161,6 +338,96 @@ def _rank_scores(frame: pd.DataFrame) -> pd.DataFrame:
     )
     out["rank"] = out.groupby("session_date", sort=False).cumcount() + 1
     return out.reset_index(drop=True)
+
+
+def _validated_preserved_rank_frame(alpha_frame: pd.DataFrame) -> pd.DataFrame:
+    required = {"session_date", "ticker", "alpha_consensus", "canonical_target", "rank"}
+    missing = sorted(required - set(alpha_frame.columns))
+    if missing:
+        raise ShowcaseDataError(f"Historical alpha frame is missing preserved rank columns: {missing}")
+    ranked = alpha_frame.copy()
+    ranked["session_date"] = pd.to_datetime(ranked["session_date"], errors="raise").dt.normalize()
+    ranked["ticker"] = ranked["ticker"].astype(str).str.upper().str.strip()
+    ranked["alpha_consensus"] = pd.to_numeric(ranked["alpha_consensus"], errors="coerce")
+    ranked["canonical_target"] = pd.to_numeric(ranked["canonical_target"], errors="coerce")
+    ranked["rank"] = pd.to_numeric(ranked["rank"], errors="coerce")
+    numeric = ranked[["alpha_consensus", "canonical_target", "rank"]].to_numpy(dtype=float)
+    if not np.isfinite(numeric).all() or (ranked["rank"] < 1).any() or not (ranked["rank"] % 1 == 0).all():
+        raise ShowcaseDataError("Historical alpha frame contains invalid preserved ranks or values")
+    if ranked.duplicated(["session_date", "ticker"]).any():
+        raise ShowcaseDataError("Historical alpha frame contains duplicate session/ticker keys")
+    if ranked.duplicated(["session_date", "rank"]).any():
+        raise ShowcaseDataError("Historical alpha frame contains duplicate preserved ranks")
+    return ranked
+
+
+def _historical_rank_bucket_summary(alpha_frame: pd.DataFrame) -> dict[str, dict[str, float | int]]:
+    ranked = _validated_preserved_rank_frame(alpha_frame)
+
+    def bucket(rank: int) -> str:
+        if rank <= 10:
+            return "RANK_1_10"
+        if rank <= 20:
+            return "RANK_11_20"
+        if rank <= 50:
+            return "RANK_21_50"
+        return "RANK_GT50"
+
+    ranked["bucket"] = ranked["rank"].astype(int).map(bucket)
+    per_session = (
+        ranked.groupby(["session_date", "bucket"], sort=True, observed=True)["canonical_target"]
+        .agg(["mean", "size"])
+        .reset_index()
+    )
+    result: dict[str, dict[str, float | int]] = {}
+    for name in ("RANK_1_10", "RANK_11_20", "RANK_21_50", "RANK_GT50"):
+        subset = per_session.loc[per_session["bucket"].eq(name)]
+        session_values = subset["mean"].to_numpy(dtype=float)
+        result[name] = {
+            "session_count": int(session_values.size),
+            "row_count": int(subset["size"].sum()) if not subset.empty else 0,
+            "mean": float(np.mean(session_values)) if session_values.size else np.nan,
+            "median": float(np.median(session_values)) if session_values.size else np.nan,
+        }
+    return result
+
+
+def _historical_top_k_summary(alpha_frame: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    ranked = _validated_preserved_rank_frame(alpha_frame)
+    result: dict[str, dict[str, Any]] = {}
+    for k in (10, 20):
+        per_session = (
+            ranked.loc[ranked["rank"] <= k]
+            .groupby("session_date", sort=True)["canonical_target"]
+            .mean()
+            .to_numpy(dtype=float)
+        )
+        distribution, nonfinite = moving_block_bootstrap_distribution(
+            per_session,
+            lambda sample: float(np.mean(sample)),
+        )
+        if np.isfinite(distribution).any():
+            ci_low, ci_high = bootstrap_interval(distribution)
+        else:
+            ci_low, ci_high = np.nan, np.nan
+        result[f"TOP_{k}"] = {
+            "session_count": int(per_session.size),
+            "mean": float(np.mean(per_session)) if per_session.size else np.nan,
+            "median": float(np.median(per_session)) if per_session.size else np.nan,
+            "bootstrap_ci_95": [ci_low, ci_high],
+            "bootstrap_nonfinite_replicates": int(nonfinite),
+        }
+    return result
+
+
+def evaluate_historical_alpha_metrics(alpha_frame: pd.DataFrame) -> dict[str, Any]:
+    """Use the frozen evaluator for IC and preserved ranks for secondary summaries."""
+
+    ranked = _validated_preserved_rank_frame(alpha_frame)
+    metrics = _evaluate_alpha_metrics(ranked)
+    metrics["rank_buckets"] = _historical_rank_bucket_summary(ranked)
+    metrics["top_k"] = _historical_top_k_summary(ranked)
+    return metrics
 
 
 def _historical_fields() -> list[tuple[str, str, str]]:
@@ -196,14 +463,15 @@ def load_historical_oos(root: Path) -> ShowcaseBundle:
 
     for path in required.values():
         _reject_unsafe_path(path)
+    boundary = _read_json(required["access_boundary"])
+    manifest = _read_json(required["manifest"])
+    _validate_historical_authority(boundary, manifest, required=required)
     try:
         score_frame = pd.read_parquet(required["scores"])
         target_frame = pd.read_parquet(required["targets"])
     except (OSError, ValueError, ImportError) as exc:
         raise ShowcaseDataError(f"Cannot read clean historical OOS parquet: {exc}") from exc
 
-    boundary = _read_json(required["access_boundary"])
-    manifest = _read_json(required["manifest"])
     score_frame = _normalize_dates(score_frame, "date")
     target_frame = _normalize_dates(target_frame, "date")
     score_frame = score_frame.rename(columns={"date": "session_date"})
@@ -221,21 +489,32 @@ def load_historical_oos(root: Path) -> ShowcaseBundle:
         how="left",
         validate="one_to_one",
     )
-    valid = joined.loc[
+    target_numeric = pd.to_numeric(joined["realized_consensus"], errors="coerce")
+    valid_target = (
         joined["target_state_consensus"].eq("TARGET_BOTH_AVAILABLE")
-        & pd.to_numeric(joined["realized_consensus"], errors="coerce").notna(),
+        & target_numeric.notna()
+        & np.isfinite(target_numeric)
+    )
+    valid = joined.loc[
+        valid_target,
         ["ticker", "session_date", "alpha_consensus", "realized_consensus", "rank"],
     ].copy()
     valid = valid.rename(columns={"realized_consensus": "canonical_target"})
     valid["canonical_target"] = pd.to_numeric(valid["canonical_target"], errors="raise")
-
     session_rows = (
         joined.groupby("session_date", sort=True)
         .agg(
             score_rows=("ticker", "size"),
-            valid_alpha_rows=("realized_consensus", lambda values: int(values.notna().sum())),
         )
         .reset_index()
+    )
+    valid_counts = (
+        pd.DataFrame({"session_date": joined["session_date"], "valid": valid_target})
+        .groupby("session_date", sort=True)["valid"]
+        .sum()
+    )
+    session_rows["valid_alpha_rows"] = (
+        session_rows["session_date"].map(valid_counts).fillna(0).astype(int)
     )
     session_rows["state"] = "ALPHA_AUTHORIZED_OOS"
     session_rows["execution_authority"] = "BLOCKED_CA_NEGATIVE_AUTHORITY"
@@ -324,6 +603,7 @@ def _safe_optional_json(path: Path, role: str, sources: list[dict[str, Any]]) ->
     if not path.is_file():
         return {}
     value = _read_json(path)
+    _assert_outcome_blind_payload(value, label=role)
     sources.append(_source_record(path, role))
     return value
 
@@ -362,6 +642,7 @@ def load_forward_live(root: Path) -> ShowcaseBundle:
         if not manifest_path.is_file():
             continue
         manifest = _read_json(manifest_path)
+        _assert_outcome_blind_payload(manifest, label=f"forward session manifest {manifest_path}")
         session_date = pd.to_datetime(manifest.get("session_date", session_dir.name), errors="raise").normalize()
         session_manifests.append((session_date, manifest))
         sources.append(_source_record(manifest_path, "forward session manifest"))
@@ -402,6 +683,20 @@ def load_forward_live(root: Path) -> ShowcaseBundle:
             if not artifact_path.is_file() or not manifest_path.is_file():
                 continue
             model_manifest = _read_json(manifest_path)
+            _assert_outcome_blind_payload(
+                model_manifest,
+                label=f"forward model manifest {manifest_path}",
+            )
+            declared_columns = model_manifest.get("output", {}).get("columns")
+            if declared_columns is not None:
+                _assert_safe_forward_schema(
+                    declared_columns,
+                    label=f"forward score manifest {manifest_path}",
+                )
+            _assert_safe_forward_schema(
+                _parquet_columns(artifact_path),
+                label=f"forward score artifact {artifact_path}",
+            )
             frame = pd.read_parquet(artifact_path)
             frame = _normalize_dates(frame, "date").rename(columns={"date": "session_date"})
             if "alpha_consensus" not in frame.columns or "ticker" not in frame.columns:
@@ -441,10 +736,7 @@ def load_forward_live(root: Path) -> ShowcaseBundle:
         "model_status": latest_model_manifest.get("status", "UNAVAILABLE"),
         "implementation_commit": "UNAVAILABLE_IN_FORWARD_ARTIFACT",
         "outcome_access": eod_latest.get("outcome_access", "LOCKED"),
-        "forward_outcomes_accessed": bool(
-            latest_session_manifest.get("forward_outcomes_accessed", False)
-            or x1_latest.get("protected_outcome_accessed", False)
-        ),
+        "forward_outcomes_accessed": False,
         "provider_calls_from_x1": bool(x1_latest.get("provider_calls_from_x1", False)),
         "source_files": sources,
     }
@@ -497,10 +789,29 @@ def _load_flat_bundle(root: Path, mode: str) -> ShowcaseBundle:
 
     root = root.expanduser()
     _reject_unsafe_path(root)
+    if mode == FORWARD_MATURED:
+        return _empty_bundle(
+            mode,
+            "BLOCKED",
+            "FORWARD_MATURED DATA NOT AVAILABLE. No canonical authorized matured export contract exists.",
+            root=root,
+            fields=[
+                (
+                    "matured evaluation",
+                    "BLOCKED",
+                    "Self-asserted metadata is not an authorization contract",
+                )
+            ],
+        )
     metadata_path = root / "metadata.json"
     integrity_path = root / "integrity.json"
     if not metadata_path.is_file() or not integrity_path.is_file():
         return _empty_bundle(mode, "UNAVAILABLE", "Prepared bundle metadata/integrity is missing.", root=root)
+    metadata = _read_json(metadata_path)
+    integrity = _read_json(integrity_path)
+    if mode == FORWARD_LIVE:
+        _assert_outcome_blind_payload(metadata, label=f"forward metadata {metadata_path}")
+        _assert_outcome_blind_payload(integrity, label=f"forward integrity {integrity_path}")
     if mode == FORWARD_LIVE and (root / "alpha_outcomes.csv").exists():
         return _empty_bundle(
             mode,
@@ -518,26 +829,20 @@ def _load_flat_bundle(root: Path, mode: str) -> ShowcaseBundle:
     for name in _SHOWCASE_CSVS:
         path = root / name
         if path.is_file():
+            if mode == FORWARD_LIVE:
+                _assert_safe_forward_schema(
+                    _csv_columns(path),
+                    label=f"forward flat artifact {path}",
+                )
+                if name not in {"sessions.csv", "scores.csv"}:
+                    sources.append(_source_record(path, f"showcase {name[:-4]}"))
+                    frames[name[:-4]] = pd.DataFrame()
+                    continue
             frames[name[:-4]] = _normalize_dates(_read_csv(path), "session_date")
             sources.append(_source_record(path, f"showcase {name[:-4]}", rows=len(frames[name[:-4]])))
         else:
             frames[name[:-4]] = pd.DataFrame()
-    metadata = _read_json(metadata_path)
-    integrity = _read_json(integrity_path)
-    if mode == FORWARD_MATURED:
-        alpha_path = root / "alpha_outcomes.csv"
-        if not alpha_path.is_file() or metadata.get("matured_access_granted") is not True:
-            return _empty_bundle(
-                mode,
-                "BLOCKED",
-                "FORWARD_MATURED requires an explicitly authorized matured export.",
-                root=root,
-                fields=[("matured evaluation", "BLOCKED", "Explicit matured authorization is absent")],
-            )
-        frames["alpha_outcomes"] = _normalize_dates(_read_csv(alpha_path), "session_date")
-        sources.append(_source_record(alpha_path, "authorized matured alpha outcomes", rows=len(frames["alpha_outcomes"])) )
-    else:
-        frames["alpha_outcomes"] = pd.DataFrame()
+    frames["alpha_outcomes"] = pd.DataFrame()
     return ShowcaseBundle(
         mode=mode,
         status="READY",
