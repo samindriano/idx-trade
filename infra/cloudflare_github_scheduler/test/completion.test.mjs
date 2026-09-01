@@ -4,9 +4,9 @@ import { createHash } from 'node:crypto';
 import {
   COMPLETION_GRAIN,
   CompletionContractError,
-  captureCompletionProof,
   validateE2ECompletion,
   validateOfficialOpenCompletion,
+  validatePreopenCaCompletion,
   validateIntradayCompletion,
   validateExistingCompletion,
 } from '../src/completion.mjs';
@@ -117,6 +117,7 @@ test('completion validators expose the explicit completion grain for each family
   assert.equal(intraday.grain, COMPLETION_GRAIN.INTRADAY);
 
   assert.equal(COMPLETION_GRAIN.STREAM, 'observation_slot_universe_source_identity');
+  assert.equal(COMPLETION_GRAIN.PREOPEN_CA, 'session_preopen_ca_checkpoint');
 });
 
 test('completion validators fail closed on malformed or mismatched evidence', () => {
@@ -167,32 +168,82 @@ test('completion validators fail closed on malformed or mismatched evidence', ()
   );
 });
 
-test('capture completion proof is explicit and requires an archive identity hash', () => {
-  assert.deepEqual(
-    captureCompletionProof({
-      family: 'INTRADAY',
-      sessionDate: '2026-08-27',
-      slotId: 'STOCKBIT_INTRADAY_1930',
-      completionKey: 'sessions/2026-08-27/slots/1930/commit.json',
-      completionSha256: sha('r'),
-    }),
-    {
-      capture_complete: true,
-      state: 'capture_complete',
-      family: 'INTRADAY',
-      grain: 'session_recovery_objective',
-      session_date: '2026-08-27',
-      slot_id: 'STOCKBIT_INTRADAY_1930',
-      completion_key: 'sessions/2026-08-27/slots/1930/commit.json',
-      completion_sha256: sha('r'),
+test('PREOPEN_CA completion validates its dedicated checkpoint, child hashes, and result guards', () => {
+  const session = '2026-08-27';
+  const snapshot = Buffer.from('preopen-ca-snapshot');
+  const resultBytes = Buffer.from(JSON.stringify({
+    schema_version: 'idx_trade_e2e_paper_preopen_ca_result_v1',
+    session_date: session,
+    stage: 'PREOPEN_CA',
+    controller_status: 'PREOPEN_CA_READY',
+    outcome_accessed: false,
+    protected_forward_accessed: false,
+    model_refit: false,
+    paper_state_mutated: false,
+    order_created: false,
+    fill_created: false,
+    retroactive_execution_authorized: false,
+  }));
+  const checkpoint = {
+    schema_version: 'idx_trade_e2e_paper_preopen_ca_checkpoint_v1',
+    contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
+    commit_state: 'COMMITTED',
+    session_date: session,
+    stage: 'PREOPEN_CA',
+    stage_status: 'PREOPEN_CA_READY',
+    schedule_attestation_sha256: sha('schedule'),
+    input_manifest_sha256: sha('input'),
+    code_identity: { repo: 'samindriano/idx-trade', commit: git('c'), runner_sha256: sha('runner') },
+    snapshot: {
+      key: `sessions/${session}/checkpoints/PREOPEN_CA/runtime_snapshot.zip`,
+      sha256: digest(snapshot),
+      metadata: { schema_version: 'idx_trade_e2e_paper_cloud_snapshot_v1', roots: ['paper'], file_count: 1, snapshot_sha256: digest(snapshot) },
     },
-  );
+    result: { key: `sessions/${session}/checkpoints/PREOPEN_CA/result.json`, sha256: digest(resultBytes) },
+    guards: {
+      outcome_accessed: false,
+      protected_forward_accessed: false,
+      model_refit: false,
+      paper_state_mutated: false,
+      order_created: false,
+      fill_created: false,
+      retroactive_execution_authorized: false,
+    },
+  };
+  const result = validatePreopenCaCompletion({
+    checkpoint,
+    resultBytes,
+    snapshotSha256: digest(snapshot),
+    expectedSession: session,
+    expectedScheduleSha256: sha('schedule'),
+    expectedInputManifestSha256: sha('input'),
+    expectedCodeCommit: git('c'),
+    childHashes: {
+      [checkpoint.snapshot.key]: digest(snapshot),
+      [checkpoint.result.key]: digest(resultBytes),
+    },
+    completionKey: checkpoint.result.key,
+    completionSha256: sha('commit'),
+  });
+  assert.deepEqual(result, {
+    capture_complete: true,
+    state: 'capture_complete',
+    family: 'PREOPEN_CA',
+    grain: 'session_preopen_ca_checkpoint',
+    completion_key: checkpoint.result.key,
+    completion_sha256: sha('commit'),
+  });
+
+  const wrongStage = { ...checkpoint, stage: 'POST_EOD' };
   assert.throws(
-    () => captureCompletionProof({ family: 'INTRADAY', sessionDate: '2026-08-27', slotId: 'STOCKBIT_INTRADAY_1930', completionKey: 'commit.json', completionSha256: 'bad' }),
-    (error) => error instanceof CompletionContractError && error.code === 'CAPTURE_COMPLETION_PROOF_INVALID',
-  );
-  assert.throws(
-    () => captureCompletionProof({ family: 'STREAM', sessionDate: '2026-08-27', slotId: 'STOCKBIT_STREAM_1207', completionKey: 'manifest.json', completionSha256: sha('s') }),
-    (error) => error instanceof CompletionContractError && error.code === 'CAPTURE_COMPLETION_PROOF_INVALID',
+    () => validatePreopenCaCompletion({
+      checkpoint: wrongStage,
+      expectedSession: session,
+      expectedScheduleSha256: sha('schedule'),
+      expectedInputManifestSha256: sha('input'),
+      expectedCodeCommit: git('c'),
+      childHashes: {},
+    }),
+    (error) => error instanceof CompletionContractError && error.code === 'PREOPEN_CA_COMPLETION_IDENTITY_INVALID',
   );
 });

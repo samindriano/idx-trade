@@ -47,6 +47,13 @@ test('scheduler markers remain a coordination guard without claiming capture com
   assert.match(indexSource, /dispatchWithMode/);
   assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
   assert.match(indexSource, /provenance = run\.event === 'schedule' \? 'native_schedule' : 'workflow_dispatch'/);
+  assert.match(indexSource, /exactRunRecoveryDecision/);
+  assert.match(indexSource, /if \(inFlight\)/);
   assert.match(indexSource, /capture_complete: false/);
   assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
+});
+
+test('a completion-final marker is not manufactured by a generic hash helper', async () => {
+  const completion = await import('../src/completion.mjs');
+  assert.equal('captureCompletionProof' in completion, false);
 });

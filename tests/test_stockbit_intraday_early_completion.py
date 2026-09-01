@@ -28,19 +28,19 @@ def _reader(root: Path, tmp_path: Path) -> ObjectReader:
     )
 
 
-def _complete_archive(tmp_path: Path) -> tuple[Path, StockbitIntradayCloudArchive]:
+def _complete_archive(tmp_path: Path, slot: str = "1930") -> tuple[Path, StockbitIntradayCloudArchive]:
     root = tmp_path / "cloud"
     archive = StockbitIntradayCloudArchive(LocalConditionalStore(root))
     claim = archive.claim_slot(
         session_date=SESSION,
-        slot="1930",
+        slot=slot,
         claimed_at_utc=datetime(2026, 8, 26, 19, 30, tzinfo=JAKARTA).isoformat(),
         code_identity=CODE,
         claim_id="claim-1",
     )
     archive.commit_slot(
         session_date=SESSION,
-        slot="1930",
+        slot=slot,
         status="ADMISSIBLE_COMPLETE",
         snapshot_bytes=b"snapshot",
         result_payload={"session_manifest_sha256": "b" * 64},
@@ -95,6 +95,46 @@ def test_valid_archive_is_complete_before_capture_runtime_or_provider(tmp_path: 
     assert result["capture_complete"] is True
     assert result["completion_grain"] == "session_recovery_objective"
     assert result["provider_calls"] == 0
+
+
+@pytest.mark.parametrize("requested_slot", ["1930", "2030"])
+def test_earlier_admissible_complete_slot_completes_later_recovery_objective(tmp_path: Path, requested_slot: str):
+    root, _ = _complete_archive(tmp_path, slot="1830")
+    result = validate_completion(
+        _reader(root, tmp_path),
+        session=SESSION,
+        slot=requested_slot,
+    )
+    assert result["status"] == "COMPLETE"
+    assert result["capture_complete"] is True
+    assert result["requested_slot"] == requested_slot
+    assert result["completion_slot"] == "1830"
+
+
+def test_earlier_waiting_commit_does_not_suppress_later_recovery(tmp_path: Path):
+    root = tmp_path / "cloud"
+    archive = StockbitIntradayCloudArchive(LocalConditionalStore(root))
+    archive.commit_slot(
+        session_date=SESSION,
+        slot="1830",
+        status="WAITING_RECOVERY_RETRY",
+        snapshot_bytes=b"waiting",
+        result_payload={"summary": {"complete": False}},
+        code_identity=CODE,
+        eod_manifest_sha256="c" * 64,
+        session_manifest_sha256=None,
+    )
+    result = validate_completion(_reader(root, tmp_path), session=SESSION, slot="1930")
+    assert result == {"status": "NOT_COMPLETE", "capture_complete": False, "provider_calls": 0}
+
+
+def test_malformed_earlier_completion_fails_closed(tmp_path: Path):
+    root, archive = _complete_archive(tmp_path, slot="1830")
+    commit = archive.existing_slot(SESSION, "1830")
+    assert commit is not None
+    (root / archive.result_key(SESSION, "1830", commit.result_sha256)).write_bytes(b"tampered")
+    with pytest.raises(CompletionProbeError, match="SLOT_RESULT_INVALID"):
+        validate_completion(_reader(root, tmp_path), session=SESSION, slot="1930")
 
 
 def test_changed_child_bytes_block_completion_instead_of_becoming_false_green(tmp_path: Path):

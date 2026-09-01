@@ -6,6 +6,7 @@ import {
   canonicalSlotRunName,
   durableMarkerDecision,
   dueSlots,
+  exactRunRecoveryDecision,
   exactSlotCoverageRuns,
   isCaptureFinalMarkerState,
   localTimeEpochMs,
@@ -145,13 +146,43 @@ test('scheduler markers never masquerade as capture completion', () => {
     durableMarkerDecision({ state: 'dispatched', updated_at_ms: 9_000 }, 10_000),
     { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatched', runId: null },
   );
-  assert.deepEqual(
-    durableMarkerDecision({ state: 'blocked', run_id: 123 }, 10_000),
-    { status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE', state: 'blocked', runId: 123 },
-  );
+  assert.equal(durableMarkerDecision({ state: 'blocked', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('exact run metadata never becomes capture completion and only fresh in-flight runs defer fallback', () => {
+  const observed = Date.parse('2026-08-27T11:40:00.000Z');
+  const recent = new Date(observed - 30_000).toISOString();
+  const old = new Date(observed - 3 * 60_000).toISOString();
+
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 1, status: 'in_progress', conclusion: null, updated_at: recent }, observed),
+    {
+      defer: true,
+      recoveryEligible: false,
+      final: false,
+      status: 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE',
+      runId: 1,
+    },
+  );
+  for (const conclusion of ['failure', 'cancelled']) {
+    assert.deepEqual(
+      exactRunRecoveryDecision({ id: 2, status: 'completed', conclusion, updated_at: recent }, observed),
+      { defer: false, recoveryEligible: true, final: false },
+    );
+  }
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 3, status: 'in_progress', conclusion: null, updated_at: old }, observed),
+    {
+      defer: false,
+      recoveryEligible: true,
+      final: false,
+      status: 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+      runId: 3,
+    },
+  );
 });
 
 test('GitHub URLs safely encode workflow filename and date filter', () => {

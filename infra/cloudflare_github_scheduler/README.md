@@ -146,19 +146,21 @@ marker or GitHub run. The family contracts are:
   not admitted to this Cloudflare scheduler until its identity/indexing and
   zero-provider completion path are independently proven.
 
-The Cloudflare package defines contract validators for only the admitted E2E,
-Official Open, and Intraday archive records. A future archive-reading caller
-must supply bytes/hashes obtained from the existing authority; the Worker does
-not gain an R2 binding or a parallel archive authority in this phase. The
-Stream grain is documented for the cross-family contract and is intentionally
-not a Cloudflare trigger path.
+The Cloudflare package defines contract validators for the admitted E2E,
+PREOPEN_CA checkpoint, Official Open, and Intraday archive records. The
+PREOPEN_CA validator is intentionally separate from the normal E2E stage-commit
+schema. An archive-reading caller must supply bytes/hashes obtained from the
+existing authority; the Worker does not gain an R2 binding or a parallel
+archive authority in this phase. The Stream grain is documented for the
+cross-family contract and is intentionally not a Cloudflare trigger path.
 
 ## Failure semantics
 
 - GitHub run-query error -> fail closed; no dispatch.
-- Native exact schedule or exact watchdog dispatch -> durable `covered_exact`
-  marker with `native_schedule` or `workflow_dispatch` provenance; no dispatch
-  and no completion claim.
+- Native exact schedule or exact watchdog dispatch -> non-final `covered_exact`
+  marker with `native_schedule` or `workflow_dispatch` provenance. A recent
+  in-flight run may receive a short grace period; terminal success, failure, or
+  cancellation without validated archive completion remains recovery-eligible.
 - Missing native run in `observe_only` -> non-final `would_dispatch` marker and
   `WOULD_DISPATCH` result; no dispatch POST.
 - Missing native run in `active` -> durable short `dispatching` lease, then
@@ -167,7 +169,8 @@ not a Cloudflare trigger path.
   must produce independently validated archive completion.
 - Retryable GitHub error (408/409/429/5xx) -> retryable marker; a later cron may
   re-query and retry while the slot is still valid.
-- Non-retryable GitHub error -> durable `blocked` marker; no repeated calls.
+- Non-retryable GitHub error -> non-final `blocked` marker; recovery remains
+  eligible while the semantic window is still valid.
 - Expired market window -> no dispatch, no backfill.
 - Missing or invalid `DISPATCH_MODE` -> fail closed; never defaults to active.
 

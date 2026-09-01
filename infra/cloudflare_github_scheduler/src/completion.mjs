@@ -6,6 +6,7 @@
 
 export const COMPLETION_GRAIN = Object.freeze({
   E2E: 'session_stage',
+  PREOPEN_CA: 'session_preopen_ca_checkpoint',
   OFFICIAL_OPEN: 'session_observation_slot',
   INTRADAY: 'session_recovery_objective',
   STREAM: 'observation_slot_universe_source_identity',
@@ -20,6 +21,15 @@ const E2E_STATUSES = Object.freeze({
   POST_EOD: new Set(['POST_EOD_PREPARED', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
   PREOPEN: new Set(['EXECUTION_COMPLETE', 'ALREADY_COMPLETE', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
 });
+const PREOPEN_CA_GUARDS = Object.freeze([
+  'outcome_accessed',
+  'protected_forward_accessed',
+  'model_refit',
+  'paper_state_mutated',
+  'order_created',
+  'fill_created',
+  'retroactive_execution_authorized',
+]);
 
 export class CompletionContractError extends Error {
   constructor(code) {
@@ -146,26 +156,50 @@ export function validateIntradayCompletion({ commit, resultBytes, snapshotSha256
   return result({ family: 'INTRADAY', grain: COMPLETION_GRAIN.INTRADAY, key: completionKey ?? value.commit_key ?? null, sha256: completionSha256 ?? value.commit_sha256 ?? null });
 }
 
+export function validatePreopenCaCompletion({ checkpoint, resultBytes, snapshotSha256, expectedSession, expectedScheduleSha256, expectedInputManifestSha256, expectedCodeCommit, childHashes = {}, completionKey, completionSha256 }) {
+  const value = object(checkpoint, 'PREOPEN_CA_COMPLETION_NOT_OBJECT');
+  if (value.schema_version !== 'idx_trade_e2e_paper_preopen_ca_checkpoint_v1' || value.contract_version !== 'CLOUD_FIRST_E2E_PAPER_V1' || value.commit_state !== 'COMMITTED') fail('PREOPEN_CA_COMPLETION_COMMIT_INVALID');
+  if (value.session_date !== expectedSession || value.stage !== 'PREOPEN_CA' || value.stage_status !== 'PREOPEN_CA_READY') fail('PREOPEN_CA_COMPLETION_IDENTITY_INVALID');
+  sha(value.schedule_attestation_sha256, 'PREOPEN_CA_COMPLETION_SCHEDULE_SHA_INVALID');
+  if (value.schedule_attestation_sha256 !== expectedScheduleSha256) fail('PREOPEN_CA_COMPLETION_SCHEDULE_SHA_INVALID');
+  sha(value.input_manifest_sha256, 'PREOPEN_CA_COMPLETION_INPUT_SHA_INVALID');
+  if (value.input_manifest_sha256 !== expectedInputManifestSha256) fail('PREOPEN_CA_COMPLETION_INPUT_SHA_INVALID');
+
+  const identity = object(value.code_identity, 'PREOPEN_CA_COMPLETION_CODE_IDENTITY_INVALID');
+  if (identity.repo !== 'samindriano/idx-trade') fail('PREOPEN_CA_COMPLETION_CODE_REPO_INVALID');
+  const commit = gitSha(identity.commit, 'PREOPEN_CA_COMPLETION_CODE_SHA_INVALID');
+  if (expectedCodeCommit !== undefined && commit !== expectedCodeCommit) fail('PREOPEN_CA_COMPLETION_CODE_SHA_MISMATCH');
+  sha(identity.runner_sha256, 'PREOPEN_CA_COMPLETION_RUNNER_SHA_INVALID');
+  falseGuardSet(value.guards, PREOPEN_CA_GUARDS, 'PREOPEN_CA_COMPLETION_GUARDS_INVALID');
+
+  const snapshot = object(value.snapshot, 'PREOPEN_CA_COMPLETION_CHILD_REF_INVALID');
+  const resultRef = object(value.result, 'PREOPEN_CA_COMPLETION_CHILD_REF_INVALID');
+  const expectedSnapshotKey = `sessions/${expectedSession}/checkpoints/PREOPEN_CA/runtime_snapshot.zip`;
+  const expectedResultKey = `sessions/${expectedSession}/checkpoints/PREOPEN_CA/result.json`;
+  if (snapshot.key !== expectedSnapshotKey || resultRef.key !== expectedResultKey) fail('PREOPEN_CA_COMPLETION_CHILD_KEY_INVALID');
+  const snapshotChild = childHash(childHashes, snapshot, 'PREOPEN_CA_COMPLETION_SNAPSHOT_HASH_INVALID');
+  const resultChild = childHash(childHashes, resultRef, 'PREOPEN_CA_COMPLETION_RESULT_HASH_INVALID');
+  if (snapshotSha256 !== undefined && snapshotSha256 !== snapshotChild.sha256) fail('PREOPEN_CA_COMPLETION_SNAPSHOT_SHA_INVALID');
+
+  const metadata = object(snapshot.metadata, 'PREOPEN_CA_COMPLETION_SNAPSHOT_METADATA_INVALID');
+  if (metadata.schema_version !== 'idx_trade_e2e_paper_cloud_snapshot_v1' || metadata.snapshot_sha256 !== snapshotChild.sha256) fail('PREOPEN_CA_COMPLETION_SNAPSHOT_METADATA_INVALID');
+  if (!Array.isArray(metadata.roots) || metadata.roots.some((root) => typeof root !== 'string' || !root) || new Set(metadata.roots).size !== metadata.roots.length) fail('PREOPEN_CA_COMPLETION_SNAPSHOT_METADATA_INVALID');
+  if (typeof metadata.file_count !== 'number' || !Number.isInteger(metadata.file_count) || metadata.file_count < 0) fail('PREOPEN_CA_COMPLETION_SNAPSHOT_METADATA_INVALID');
+
+  if (resultBytes !== undefined) {
+    const payload = parseJson(resultBytes, 'PREOPEN_CA_COMPLETION_RESULT_JSON_INVALID');
+    if (payload.schema_version !== 'idx_trade_e2e_paper_preopen_ca_result_v1' || payload.session_date !== expectedSession || payload.stage !== 'PREOPEN_CA' || payload.controller_status !== 'PREOPEN_CA_READY') fail('PREOPEN_CA_COMPLETION_RESULT_IDENTITY_INVALID');
+    falseGuardSet(payload, PREOPEN_CA_GUARDS, 'PREOPEN_CA_COMPLETION_RESULT_GUARDS_INVALID');
+  }
+  return result({ family: 'PREOPEN_CA', grain: COMPLETION_GRAIN.PREOPEN_CA, key: completionKey ?? value.commit_key ?? null, sha256: completionSha256 ?? value.commit_sha256 ?? null });
+}
+
 export function validateExistingCompletion(family, args) {
   switch (family) {
     case 'E2E': return validateE2ECompletion(args);
+    case 'PREOPEN_CA': return validatePreopenCaCompletion(args);
     case 'OFFICIAL_OPEN': return validateOfficialOpenCompletion(args);
     case 'INTRADAY': return validateIntradayCompletion(args);
     default: fail('UNKNOWN_COMPLETION_FAMILY');
   }
-}
-
-export function captureCompletionProof({ family, sessionDate, slotId, completionKey, completionSha256 }) {
-  const grain = COMPLETION_GRAIN[family];
-  if (!['E2E', 'OFFICIAL_OPEN', 'INTRADAY'].includes(family) || !grain || typeof sessionDate !== 'string' || typeof slotId !== 'string' || typeof completionKey !== 'string' || !safeArchiveKey(completionKey, 'CAPTURE_COMPLETION_PROOF_INVALID') || !SHA256.test(String(completionSha256))) fail('CAPTURE_COMPLETION_PROOF_INVALID');
-  return {
-    capture_complete: true,
-    state: CAPTURE_COMPLETION_STATE,
-    family,
-    grain,
-    session_date: sessionDate,
-    slot_id: slotId,
-    completion_key: completionKey,
-    completion_sha256: completionSha256,
-  };
 }

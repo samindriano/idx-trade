@@ -25,6 +25,33 @@ export const SLOTS = Object.freeze([
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
 
+const IN_FLIGHT_RUN_STATUSES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
+
+/**
+ * GitHub run metadata is never completion evidence. A recent in-flight run
+ * may receive a short grace period to avoid duplicate dispatches, but every
+ * other non-final observation remains recovery-eligible until an archive
+ * validator supplies capture completion.
+ */
+export function exactRunRecoveryDecision(run, observedEpochMs) {
+  const status = typeof run?.status === 'string' ? run.status.trim().toLowerCase() : '';
+  const conclusion = typeof run?.conclusion === 'string' ? run.conclusion.trim().toLowerCase() : '';
+  const active = IN_FLIGHT_RUN_STATUSES.has(status) && !conclusion;
+  if (!active) {
+    return { defer: false, recoveryEligible: true, final: false };
+  }
+
+  const updatedMs = Date.parse(run?.updated_at ?? run?.created_at ?? '');
+  const fresh = Number.isFinite(updatedMs) && observedEpochMs - updatedMs < DISPATCH_LEASE_MS;
+  return {
+    defer: fresh,
+    recoveryEligible: !fresh,
+    final: false,
+    status: fresh ? 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE' : 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+    runId: run?.id ?? null,
+  };
+}
+
 export function jakartaDateKey(epochMs) {
   return new Date(epochMs + JAKARTA_OFFSET_MS).toISOString().slice(0, 10);
 }
@@ -121,13 +148,6 @@ export function durableMarkerDecision(prior, observedEpochMs) {
   ) {
     return {
       status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
-      state: prior.state,
-      runId: prior.run_id ?? null,
-    };
-  }
-  if (prior?.state === 'blocked') {
-    return {
-      status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       state: prior.state,
       runId: prior.run_id ?? null,
     };

@@ -153,10 +153,16 @@ def run_cloud_slot(
         raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_CLOUD_CLOCK_NOT_TIMEZONE_AWARE")
     validate_intraday_capture_window(expected_date=expected_date, slot=slot, now=now)
 
+    existing_complete = archive.existing_complete_slot(expected_date, slot)
+    if existing_complete is not None:
+        _repair_policy_from_existing_final(archive, existing_complete)
+        return existing_complete
+
     existing = archive.existing_slot(expected_date, slot)
     if existing is not None:
-        _repair_policy_from_existing_final(archive, existing)
-        return existing
+        if existing.status == "ADMISSIBLE_COMPLETE":
+            _repair_policy_from_existing_final(archive, existing)
+            return existing
 
     # Do not permit a delayed/manual earlier slot to run after a later slot has
     # already committed. That would create an alternate provider-call history.

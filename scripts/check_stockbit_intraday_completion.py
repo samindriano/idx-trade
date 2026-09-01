@@ -136,6 +136,8 @@ def validate_completion(
         "capture_complete": True,
         "completion_grain": "session_recovery_objective",
         "session_date": commit.session_date,
+        "requested_slot": slot,
+        "completion_slot": commit.slot,
         "slot": commit.slot,
         "commit_key": commit.commit_key,
         "commit_sha256": commit.commit_sha256,

@@ -101,18 +101,20 @@ def test_frozen_protocol_change_is_not_ignored_by_ci() -> None:
 
 def test_intraday_complete_archive_preflight_skips_expensive_capture_bootstrap() -> None:
     text = _workflow_text("stockbit-intraday-cloud-production.yml")
-    check = text.index("  completion_check:")
+    check = text.index("Validate existing archive before capture bootstrap")
     capture = text.index("  capture:")
+    accepted = text.index("Checkout accepted E2E runtime bridge")
     archive_check = text.index("scripts/check_stockbit_intraday_completion.py")
-    setup = text.index("uses: actions/setup-python@v5", capture)
+    setup = text.index("uses: actions/setup-python@v5")
     provider = text.index("ZAPI_API_KEY:", capture)
 
-    assert check < archive_check < capture < setup < provider
-    assert "needs: completion_check" in text[capture:]
-    assert "needs.completion_check.outputs.complete != 'true'" in text[capture:]
-    assert "AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}" in text[:capture]
-    assert "AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}" in text[:capture]
-    assert "STOCKBIT_INTRADAY_EXPECTED_IMPLEMENTATION_REF" not in text[:capture]
+    assert text.count("  capture:") == 1
+    assert "  completion_check:" not in text
+    assert check < archive_check < accepted < setup < provider
+    assert "needs: completion_check" not in text
+    assert "if: steps.archive_check.outputs.complete != 'true'" in text
+    assert "AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}" in text
+    assert "AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}" in text
 
 
 def test_stream_remains_outside_cloudflare_completion_redundancy() -> None:

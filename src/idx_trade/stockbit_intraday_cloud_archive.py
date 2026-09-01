@@ -247,8 +247,14 @@ class StockbitIntradayCloudArchive:
         provider stage.  No current runner code or provider boundary is
         invoked here.
         """
-        commit = self.existing_slot(session_date, slot)
-        if commit is None or commit.status != "ADMISSIBLE_COMPLETE":
+        session = _session(session_date)
+        target = _slot(slot)
+        for candidate_slot in SLOTS[: SLOTS.index(target) + 1]:
+            commit = self.existing_slot(session, candidate_slot)
+            if commit is None or commit.status != "ADMISSIBLE_COMPLETE":
+                continue
+            break
+        else:
             return None
         payload = commit.payload
         for field in ("eod_manifest_sha256", "session_manifest_sha256"):
@@ -266,7 +272,7 @@ class StockbitIntradayCloudArchive:
         claim_sha = str(payload.get("claim_sha256") or "").lower()
         if len(claim_sha) != 64 or re.fullmatch(r"[0-9a-f]{64}", claim_sha) is None:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CLAIM_BINDING_INVALID")
-        claim = self.existing_claim(session_date, slot)
+        claim = self.existing_claim(session, commit.slot)
         if claim is None or claim[1] != claim_sha:
             raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_COMPLETE_CLAIM_BINDING_INVALID")
         if claim[0].get("code_identity") != code_identity:

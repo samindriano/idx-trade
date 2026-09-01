@@ -4,6 +4,7 @@ import {
   durableMarkerDecision,
   dispatchBody,
   dueSlots,
+  exactRunRecoveryDecision,
   markerKey,
   slotWindow,
 } from './core.mjs';
@@ -104,16 +105,26 @@ export class SchedulerCoordinator extends DurableObject {
       const provenance = run.event === 'schedule' ? 'native_schedule' : 'workflow_dispatch';
       this._write(slotKey, 'covered_exact', observedEpochMs, {
         runId: Number.isInteger(run.id) ? run.id : null,
-        detail: { event: run.event, provenance, createdAt: run.created_at ?? null },
+        detail: {
+          event: run.event,
+          provenance,
+          createdAt: run.created_at ?? null,
+          status: run.status ?? null,
+          conclusion: run.conclusion ?? null,
+        },
       });
-      return {
-        slot: slotId,
-        status: 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
-        capture_complete: false,
-        provenance,
-        event: run.event,
-        runId: run.id ?? null,
-      };
+      const inFlight = exactCoverage
+        .map((candidate) => exactRunRecoveryDecision(candidate, observedEpochMs))
+        .find((decision) => decision.defer);
+      if (inFlight) {
+        return {
+          slot: slotId,
+          ...inFlight,
+          capture_complete: false,
+          provenance,
+          event: run.event,
+        };
+      }
     }
 
     const attemptId = crypto.randomUUID();
