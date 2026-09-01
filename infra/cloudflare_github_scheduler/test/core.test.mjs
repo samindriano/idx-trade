@@ -6,6 +6,7 @@ import {
   canonicalSlotRunName,
   durableMarkerDecision,
   dueSlots,
+  effectiveActiveModeDecision,
   exactRunRecoveryDecision,
   exactSlotCoverageRuns,
   isCaptureFinalMarkerState,
@@ -150,6 +151,22 @@ test('scheduler markers never masquerade as capture completion', () => {
   assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('process-level active decision defers for every fresh coordinator dispatch lease', () => {
+  const shadow = { archive_github_decision: 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE' };
+  for (const state of ['dispatching', 'dispatch_requested']) {
+    const markerDecision = durableMarkerDecision({ state, updated_at_ms: 9_500 }, 10_000);
+    assert.equal(markerDecision.status, 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE');
+    assert.equal(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'DEFER_COORDINATOR_DISPATCH_LEASE',
+    );
+    assert.notEqual(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE',
+    );
+  }
 });
 
 test('exact run metadata never becomes capture completion and only fresh in-flight runs defer fallback', () => {

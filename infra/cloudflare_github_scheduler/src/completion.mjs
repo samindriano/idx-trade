@@ -21,6 +21,10 @@ const E2E_STATUSES = Object.freeze({
   POST_EOD: new Set(['POST_EOD_PREPARED', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
   PREOPEN: new Set(['EXECUTION_COMPLETE', 'ALREADY_COMPLETE', 'MISSED_EXECUTION_NO_CERTIFIED_OPEN']),
 });
+export const INTRADAY_RECOVERABLE_INTERMEDIATE_STATES = Object.freeze([
+  'WAITING_CANONICAL_EOD_GATE',
+  'WAITING_RECOVERY_RETRY',
+]);
 const PREOPEN_CA_GUARDS = Object.freeze([
   'outcome_accessed',
   'protected_forward_accessed',
@@ -149,6 +153,94 @@ async function completionIdentity({ completionKey, completionSha256, completionB
     key,
     sha256: declaredSha256,
     value: parseJson(completionBytes, `${code}_JSON_INVALID`),
+  };
+}
+
+export async function validateIntradayRecoverableCommit({
+  resultBytes,
+  snapshotSha256,
+  claimSha256,
+  claimBytes,
+  expectedSession,
+  expectedSlot,
+  childHashes = {},
+  completionKey,
+  completionSha256,
+  completionBytes,
+}) {
+  const parent = await completionIdentity({
+    completionKey,
+    completionSha256,
+    completionBytes,
+    expectedKey: `sessions/${expectedSession}/slots/${expectedSlot}/commit.json`,
+    code: 'INTRADAY_RECOVERABLE_PARENT',
+  });
+  const value = parent.value;
+  if (
+    value.schema_version !== 'idx_trade_stockbit_intraday_cloud_slot_v1'
+    || value.commit_state !== 'COMMITTED'
+    || value.session_date !== expectedSession
+    || value.slot !== expectedSlot
+    || !INTRADAY_RECOVERABLE_INTERMEDIATE_STATES.includes(value.status)
+  ) fail('INTRADAY_RECOVERABLE_PARENT_INVALID');
+  falseGuardSet(
+    value.guards,
+    ['synthetic_fill_used', 'retroactive_capture_used', 'outcome_accessed'],
+    'INTRADAY_RECOVERABLE_GUARDS_INVALID',
+  );
+
+  const codeIdentity = object(value.code_identity, 'INTRADAY_RECOVERABLE_CODE_IDENTITY_INVALID');
+  gitSha(codeIdentity.commit, 'INTRADAY_RECOVERABLE_CODE_IDENTITY_INVALID');
+  const resultRef = childHash(childHashes, value.result, 'INTRADAY_RECOVERABLE_RESULT_INVALID');
+  const snapshotRef = childHash(childHashes, value.snapshot, 'INTRADAY_RECOVERABLE_SNAPSHOT_INVALID');
+  if (!(resultBytes instanceof Uint8Array)) fail('INTRADAY_RECOVERABLE_RESULT_BYTES_INVALID');
+  const result = parseJson(resultBytes, 'INTRADAY_RECOVERABLE_RESULT_JSON_INVALID');
+  if (
+    result.session_date !== expectedSession
+    || result.slot !== expectedSlot
+    || result.status !== value.status
+    || result.synthetic_fill_used !== false
+    || result.retroactive_capture_used !== false
+    || result.outcome_accessed !== false
+  ) fail('INTRADAY_RECOVERABLE_RESULT_IDENTITY_INVALID');
+  if (snapshotSha256 !== undefined && snapshotSha256 !== snapshotRef.sha256) {
+    fail('INTRADAY_RECOVERABLE_SNAPSHOT_SHA_INVALID');
+  }
+
+  const declaredClaim = sha(value.claim_sha256, 'INTRADAY_RECOVERABLE_CLAIM_HASH_INVALID');
+  if (!(claimBytes instanceof Uint8Array)) fail('INTRADAY_RECOVERABLE_CLAIM_MISSING');
+  const actualClaimSha = Array.from(
+    new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', claimBytes)),
+  ).map((item) => item.toString(16).padStart(2, '0')).join('');
+  if (actualClaimSha !== declaredClaim || claimSha256 !== declaredClaim) {
+    fail('INTRADAY_RECOVERABLE_CLAIM_BINDING_INVALID');
+  }
+  const claim = parseJson(claimBytes, 'INTRADAY_RECOVERABLE_CLAIM_JSON_INVALID');
+  if (
+    claim.schema_version !== 'idx_trade_stockbit_intraday_cloud_claim_v1'
+    || claim.claim_state !== 'CLAIMED'
+    || claim.session_date !== expectedSession
+    || claim.slot !== expectedSlot
+    || typeof claim.claim_id !== 'string'
+    || !claim.claim_id
+  ) fail('INTRADAY_RECOVERABLE_CLAIM_INVALID');
+  falseGuardSet(
+    claim.guards,
+    ['synthetic_fill_used', 'retroactive_capture_used', 'outcome_accessed'],
+    'INTRADAY_RECOVERABLE_CLAIM_INVALID',
+  );
+  if (canonicalJson(claim.code_identity) !== canonicalJson(codeIdentity)) {
+    fail('INTRADAY_RECOVERABLE_CLAIM_CODE_IDENTITY_INVALID');
+  }
+
+  return {
+    recoverable_intermediate: true,
+    status: value.status,
+    completion_key: parent.key,
+    completion_sha256: parent.sha256,
+    result_key: resultRef.key,
+    snapshot_key: snapshotRef.key,
+    claim_sha256: declaredClaim,
   };
 }
 

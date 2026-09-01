@@ -4,6 +4,7 @@ import {
   durableMarkerDecision,
   dispatchBody,
   dueSlots,
+  effectiveActiveModeDecision,
   markerKey,
   slotWindow,
 } from './core.mjs';
@@ -16,6 +17,16 @@ import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
 import { evaluateShadowSlot } from './archive.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
+
+function finalizeShadowDecision(shadow, decision, extra = {}) {
+  return {
+    ...shadow,
+    ...extra,
+    active_mode_decision: decision,
+    effective_active_mode_decision: decision,
+  };
+}
+
 function safeError(error) {
   if (error instanceof GithubApiError) return error.code;
   if (error instanceof Error && /^[A-Z0-9_:.-]+$/.test(error.message)) return error.message;
@@ -121,10 +132,18 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
     if (shadow.durable_completion.capture_complete) {
-      return { ...shadow, status: 'SHADOW_DURABLE_COMPLETION_VERIFIED' };
+      return finalizeShadowDecision(
+        shadow,
+        effectiveActiveModeDecision(shadow),
+        { status: 'SHADOW_DURABLE_COMPLETION_VERIFIED' },
+      );
     }
     if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
-      return { ...shadow, status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH' };
+      return finalizeShadowDecision(
+        shadow,
+        effectiveActiveModeDecision(shadow),
+        { status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH' },
+      );
     }
 
     // A coordination marker can defer a duplicate request, but it cannot
@@ -132,15 +151,25 @@ export class SchedulerCoordinator extends DurableObject {
     // ignored and fails closed until the archive validator succeeds.
     const markerDecision = durableMarkerDecision(prior, observedEpochMs);
     if (prior && markerDecision?.status === 'CAPTURE_ALREADY_COMPLETE') {
-      return {
-        ...shadow,
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_STALE_COMPLETION_MARKER', {
         status: 'SHADOW_MARKER_NOT_TRUSTED_NO_DISPATCH',
-        active_mode_decision: 'FAIL_CLOSED_STALE_COMPLETION_MARKER',
-      };
+      });
     }
-    if (markerDecision) return { ...shadow, status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE', ...markerDecision };
+    if (markerDecision) {
+      return finalizeShadowDecision(
+        shadow,
+        effectiveActiveModeDecision(shadow, markerDecision),
+        {
+          ...markerDecision,
+          status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE',
+          coordinator_marker_decision: markerDecision,
+        },
+      );
+    }
     if (shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE') {
-      return { ...shadow, status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE' };
+      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+        status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
+      });
     }
 
     const attemptId = crypto.randomUUID();
@@ -158,12 +187,11 @@ export class SchedulerCoordinator extends DurableObject {
       this._write(slotKey, 'would_dispatch', observedEpochMs, {
         detail: { dispatchMode, inputs: dispatchInputs, shadow },
       });
-      return {
-        ...shadow,
+      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'WOULD_DISPATCH',
         dispatchMode,
         inputs: dispatchInputs,
-      };
+      });
     }
     if (dispatch.ok) {
       this._write(slotKey, 'dispatch_requested', Date.now(), {
@@ -171,12 +199,11 @@ export class SchedulerCoordinator extends DurableObject {
         runId: dispatch.runId,
         detail: { githubStatus: dispatch.status },
       });
-      return {
-        ...shadow,
+      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
         runId: dispatch.runId,
-      };
+      });
     }
 
     if (dispatch.retryable) {
@@ -184,19 +211,21 @@ export class SchedulerCoordinator extends DurableObject {
         attemptId,
         detail: { githubStatus: dispatch.status },
       });
-      return { ...shadow, status: 'DISPATCH_RETRYABLE_ERROR', githubStatus: dispatch.status };
+      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+        status: 'DISPATCH_RETRYABLE_ERROR',
+        githubStatus: dispatch.status,
+      });
     }
 
     this._write(slotKey, 'blocked', Date.now(), {
       attemptId,
       detail: { githubStatus: dispatch.status },
     });
-    return {
-      ...shadow,
+    return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
       githubStatus: dispatch.status,
-    };
+    });
   }
 }
 

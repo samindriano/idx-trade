@@ -1,7 +1,9 @@
 import {
   CompletionContractError,
   completionChildRefs,
+  INTRADAY_RECOVERABLE_INTERMEDIATE_STATES,
   validateE2ECompletion,
+  validateIntradayRecoverableCommit,
   validateIntradayCompletion,
   validateOfficialOpenCompletion,
   validatePreopenCaCompletion,
@@ -163,9 +165,12 @@ function childRoles(family) {
 }
 
 async function readChildren(archive, family, parentBytes) {
+  let parent;
   let refs;
   try {
-    refs = completionChildRefs(family, parentBytes).refs;
+    const parsed = completionChildRefs(family, parentBytes);
+    parent = parsed.value;
+    refs = parsed.refs;
   } catch (error) {
     if (error instanceof CompletionContractError) fail(error.code);
     throw error;
@@ -187,7 +192,7 @@ async function readChildren(archive, family, parentBytes) {
     childHashes[key] = actual;
     children[roles[index]] = { key, bytes, sha256: actual };
   }
-  return { childHashes, children };
+  return { parent, childHashes, children };
 }
 
 async function readPreopenExpectations(archive, expectedCodeCommit) {
@@ -266,21 +271,12 @@ async function readPreopenExpectations(archive, expectedCodeCommit) {
   };
 }
 
-function isKnownIntradayWaiting(parentBytes, session, slot) {
-  try {
-    const value = parseJson(parentBytes, 'ARCHIVE_INTRADAY_PARENT_INVALID');
-    const guards = value.guards;
-    return value.schema_version === 'idx_trade_stockbit_intraday_cloud_slot_v1'
-      && value.commit_state === 'COMMITTED'
-      && value.session_date === session
-      && value.slot === slot
-      && value.status === 'WAITING_RECOVERY_RETRY'
-      && guards && guards.synthetic_fill_used === false
-      && guards.retroactive_capture_used === false
-      && guards.outcome_accessed === false;
-  } catch {
-    return false;
-  }
+async function readIntradayClaim(archive, session, slot, parent) {
+  if (parent.claim_sha256 === undefined) return { claimBytes: undefined, claimSha256: undefined };
+  const claimKey = `sessions/${session}/slots/${slot}/claim.json`;
+  const claimBytes = await readLogicalObject(archive, 'INTRADAY', claimKey);
+  if (claimBytes === null) fail('ARCHIVE_INTRADAY_CLAIM_MISSING');
+  return { claimBytes, claimSha256: await digest(claimBytes) };
 }
 
 async function validateSingle({ archive, family, slot, session, expectedCodeCommit }) {
@@ -356,10 +352,25 @@ async function validateIntraday({ archive, slot, session }) {
     const key = `sessions/${session}/slots/${candidateSlot}/commit.json`;
     const parentBytes = await readLogicalObject(archive, family, key);
     if (parentBytes === null) continue;
-    if (isKnownIntradayWaiting(parentBytes, session, candidateSlot)) continue;
 
     try {
       const child = await readChildren(archive, family, parentBytes);
+      if (INTRADAY_RECOVERABLE_INTERMEDIATE_STATES.includes(child.parent.status)) {
+        const claim = await readIntradayClaim(archive, session, candidateSlot, child.parent);
+        await validateIntradayRecoverableCommit({
+          expectedSession: session,
+          expectedSlot: candidateSlot,
+          resultBytes: child.children.result.bytes,
+          snapshotSha256: child.children.snapshot.sha256,
+          claimSha256: claim.claimSha256,
+          claimBytes: claim.claimBytes,
+          childHashes: child.childHashes,
+          completionKey: key,
+          completionSha256: await digest(parentBytes),
+          completionBytes: parentBytes,
+        });
+        continue;
+      }
       const claimKey = `sessions/${session}/slots/${candidateSlot}/claim.json`;
       const claimBytes = await readLogicalObject(archive, family, claimKey);
       if (claimBytes === null) fail('ARCHIVE_INTRADAY_CLAIM_MISSING');
@@ -467,7 +478,9 @@ export async function evaluateShadowSlot({ archive, slot, session, observedEpoch
       error: githubError,
       runs: exactRuns.map((run) => sanitizedRun(run)),
     },
+    archive_github_decision: activeModeDecision,
     active_mode_decision: activeModeDecision,
+    effective_active_mode_decision: activeModeDecision,
     native_watchdog_agreement: sourceAgreement(exactRuns, durable),
   };
 }

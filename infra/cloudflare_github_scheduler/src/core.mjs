@@ -155,6 +155,13 @@ export function durableMarkerDecision(prior, observedEpochMs) {
   return null;
 }
 
+export function effectiveActiveModeDecision(shadow, markerDecision = null) {
+  if (markerDecision) return 'DEFER_COORDINATOR_DISPATCH_LEASE';
+  return shadow?.archive_github_decision
+    ?? shadow?.active_mode_decision
+    ?? 'FAIL_CLOSED_ACTIVE_MODE_DECISION_UNAVAILABLE';
+}
+
 export function workflowRunsUrl({ owner, repo, workflow, startMs, endMs }) {
   const params = new URLSearchParams({
     per_page: '100',

@@ -47,6 +47,9 @@ test('staging has no production Cron schedule and production retains exact Cron 
 
 test('scheduler markers remain a coordination guard without claiming capture completion', () => {
   assert.match(indexSource, /durableMarkerDecision\(prior, observedEpochMs\)/);
+  assert.match(indexSource, /effectiveActiveModeDecision/);
+  assert.match(indexSource, /effective_active_mode_decision/);
+  assert.match(indexSource, /status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE'/);
   assert.match(indexSource, /this\._write\(slotKey, 'dispatch_requested'/);
   assert.match(indexSource, /dispatchWithMode/);
   assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);

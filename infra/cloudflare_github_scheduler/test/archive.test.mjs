@@ -303,6 +303,77 @@ test('Intraday session recovery uses a prior valid completion but does not hide 
   assert.equal(later.completion_slot, '1930');
 });
 
+test('valid WAITING_CANONICAL_EOD_GATE remains recoverable for later Intraday slots', async () => {
+  for (const targetSlot of ['1930', '2030']) {
+    const objects = {};
+    intradayFixture(objects, '1830', 'WAITING_CANONICAL_EOD_GATE');
+    const result = await readDurableCompletion({
+      archive: new ReadOnlyArchive(objects),
+      slot: SLOT_BY_ID.get(`STOCKBIT_INTRADAY_${targetSlot}`),
+      session,
+    });
+    assert.equal(result.capture_complete, false);
+    assert.equal(result.state, 'not_complete');
+    assert.equal(result.reason, 'ARCHIVE_PARENT_MISSING_OR_NOT_COMPLETE');
+  }
+});
+
+test('valid WAITING_RECOVERY_RETRY remains recoverable without becoming completion', async () => {
+  const objects = {};
+  intradayFixture(objects, '1830', 'WAITING_RECOVERY_RETRY');
+  const result = await readDurableCompletion({
+    archive: new ReadOnlyArchive(objects),
+    slot: SLOT_BY_ID.get('STOCKBIT_INTRADAY_1930'),
+    session,
+  });
+  assert.equal(result.capture_complete, false);
+  assert.equal(result.state, 'not_complete');
+});
+
+test('tampered or identity-mismatched waiting Intraday commits fail closed', async () => {
+  const missingChild = {};
+  const missingParent = intradayFixture(missingChild, '1830', 'WAITING_CANONICAL_EOD_GATE');
+  delete missingChild[prefixed('INTRADAY', missingParent.snapshot.key)];
+  const missing = await readDurableCompletion({
+    archive: new ReadOnlyArchive(missingChild),
+    slot: SLOT_BY_ID.get('STOCKBIT_INTRADAY_1930'),
+    session,
+  });
+  assert.equal(missing.state, 'archive_completion_blocked');
+
+  const claimTampered = {};
+  const claimParent = intradayFixture(claimTampered, '1830', 'WAITING_RECOVERY_RETRY');
+  const claimKey = prefixed('INTRADAY', `sessions/${session}/slots/1830/claim.json`);
+  claimTampered[claimKey] = bytes({
+    schema_version: 'idx_trade_stockbit_intraday_cloud_claim_v1',
+    claim_state: 'CLAIMED',
+    session_date: session,
+    slot: '1830',
+    claim_id: 'tampered',
+    code_identity: claimParent.code_identity,
+    guards: { synthetic_fill_used: false, retroactive_capture_used: false, outcome_accessed: false },
+  });
+  const claimMismatch = await readDurableCompletion({
+    archive: new ReadOnlyArchive(claimTampered),
+    slot: SLOT_BY_ID.get('STOCKBIT_INTRADAY_1930'),
+    session,
+  });
+  assert.equal(claimMismatch.state, 'archive_completion_blocked');
+
+  const identityTampered = {};
+  const identityParent = intradayFixture(identityTampered, '1830', 'WAITING_CANONICAL_EOD_GATE');
+  identityTampered[prefixed('INTRADAY', `sessions/${session}/slots/1830/commit.json`)] = bytes({
+    ...identityParent,
+    session_date: '2026-08-28',
+  });
+  const identityMismatch = await readDurableCompletion({
+    archive: new ReadOnlyArchive(identityTampered),
+    slot: SLOT_BY_ID.get('STOCKBIT_INTRADAY_1930'),
+    session,
+  });
+  assert.equal(identityMismatch.state, 'archive_completion_blocked');
+});
+
 test('Stream remains excluded and does not even read the archive', async () => {
   const archive = new ReadOnlyArchive({});
   const result = await readDurableCompletion({
@@ -337,6 +408,8 @@ test('shadow output separates durable completion from exact GitHub provenance an
   assert.equal(output.github_exact_run_evidence.runs.length, 1);
   assert.equal(output.github_exact_run_evidence.runs[0].conclusion, 'failure');
   assert.equal(output.active_mode_decision, 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE');
+  assert.equal(output.archive_github_decision, 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE');
+  assert.equal(output.effective_active_mode_decision, 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE');
   assert.equal(output.native_watchdog_agreement.workflow_dispatch.agrees_with_durable, false);
 });
 
@@ -354,6 +427,7 @@ test('observe-only shadow cannot dispatch or mutate archive state', async () => 
     dispatchFn: async () => { dispatched = true; throw new Error('DISPATCH_FORBIDDEN'); },
   });
   assert.equal(output.active_mode_decision, 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE');
+  assert.equal(output.effective_active_mode_decision, 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE');
   assert.equal(dispatch.status, 'WOULD_DISPATCH');
   assert.equal(dispatched, false);
   assert.ok(archive.reads.length > 0);

@@ -129,7 +129,8 @@ visible run, an accepted dispatch, or a scheduler marker as capture completion.
 Only the existing family validators,
 after the read-only archive adapter verifies the parent and hash-bound children,
 may produce `capture_complete`. The output records the exact-run evidence and
-the active-mode decision separately.
+the archive/GitHub decision separately from the final
+`effective_active_mode_decision`, which also includes the coordinator lease.
 
 Ambiguity fails toward another invocation of the existing idempotent cloud
 workflow, never toward silently suppressing a required slot.
@@ -168,7 +169,8 @@ trigger path.
 - Missing native run in `observe_only` -> non-final `would_dispatch` marker and
   `WOULD_DISPATCH` result; no dispatch POST.
 - Missing native run in `active` -> durable short `dispatching` lease, then
-  dispatch.
+  dispatch. A fresh `dispatching`/`dispatch_requested` lease is exposed as a
+  final coordinator defer, not as dispatch eligibility.
 - Successful dispatch -> non-final `dispatch_requested` marker; the workflow
   must produce independently validated archive completion.
 - Retryable GitHub error (408/409/429/5xx) -> retryable marker; a later cron may
@@ -182,7 +184,9 @@ The Intraday GitHub workflow has a provider-free preflight that validates the
 existing canonical archive before Python setup, accepted-E2E checkout, package
 installation, or provider access. A validated complete archive skips the
 capture job with zero provider calls. Missing completion continues to the
-existing runner; malformed or conflicting archive evidence fails closed. This
+existing runner; a canonical `WAITING_CANONICAL_EOD_GATE` or
+`WAITING_RECOVERY_RETRY` parent is validated as recoverable intermediate
+evidence, while malformed or conflicting archive evidence fails closed. This
 Phase-2B Worker integration is shadow-only: it does not invoke that workflow or
 any provider while `DISPATCH_MODE=observe_only`.
 
