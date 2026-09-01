@@ -494,14 +494,21 @@ def evaluate_feature_basis_admission(
                 "FEATURE_BASIS_EVIDENCE_ARTIFACT_MISSING",
                 metadata=metadata,
             )
+        actual_evidence_sha256 = sha256_file(evidence_file)
+        if evidence_sha256 and str(evidence_sha256).lower() != actual_evidence_sha256:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_EVIDENCE_HASH_MISMATCH",
+                metadata=metadata,
+            )
         declared_manifest = str(evidence.get("root_manifest_path") or "").strip()
+        if not declared_manifest:
+            return _feature_basis_failure(
+                SOURCE_CAPTURE_UNRESOLVED,
+                "FEATURE_BASIS_MANIFEST_PATH_MISSING",
+                metadata=metadata,
+            )
         if manifest_path is None:
-            if not declared_manifest:
-                return _feature_basis_failure(
-                    SOURCE_CAPTURE_UNRESOLVED,
-                    "FEATURE_BASIS_MANIFEST_PATH_MISSING",
-                    metadata=metadata,
-                )
             root_manifest_file = Path(declared_manifest).expanduser().resolve()
         else:
             root_manifest_file = Path(manifest_path).expanduser().resolve()

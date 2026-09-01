@@ -363,8 +363,15 @@ def test_future_open_knowledge_is_not_admitted(tmp_path: Path) -> None:
 
 def test_root_manifest_binds_evidence_bytes_and_ids(tmp_path: Path) -> None:
     context, _ = _fixture(tmp_path)
+    context["evidence_sha256"] = "0" * 64
+    result = gate.evaluate_feature_basis_admission(**context)
+    assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
+    assert "FEATURE_BASIS_EVIDENCE_HASH_MISMATCH" in result["reason_codes"]
+
+    context, _ = _fixture(tmp_path / "evidence-bytes")
     evidence_path = Path(context["evidence_path"])
     evidence_path.write_text(evidence_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    context["evidence_sha256"] = sha256_file(evidence_path)
     result = gate.evaluate_feature_basis_admission(**context)
     assert result["status"] == gate.SOURCE_CAPTURE_UNRESOLVED
     assert "FEATURE_BASIS_MANIFEST_EVIDENCE_HASH_MISMATCH" in result["reason_codes"]
@@ -385,6 +392,7 @@ def test_manifest_rejects_duplicate_ids_and_unapproved_producer(tmp_path: Path) 
     context["evidence"]["root_manifest_id"] = manifest["manifest_id"]
     evidence_path = Path(context["evidence_path"])
     evidence_path.write_text(json.dumps(context["evidence"], sort_keys=True) + "\n", encoding="utf-8")
+    context["evidence_sha256"] = sha256_file(evidence_path)
     manifest["evidence_sha256"] = sha256_file(evidence_path)
     manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
     result = gate.evaluate_feature_basis_admission(**context)
@@ -399,6 +407,7 @@ def test_manifest_rejects_duplicate_ids_and_unapproved_producer(tmp_path: Path) 
     context["evidence"]["root_manifest_id"] = manifest["manifest_id"]
     evidence_path = Path(context["evidence_path"])
     evidence_path.write_text(json.dumps(context["evidence"], sort_keys=True) + "\n", encoding="utf-8")
+    context["evidence_sha256"] = sha256_file(evidence_path)
     manifest["evidence_sha256"] = sha256_file(evidence_path)
     manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
     result = gate.evaluate_feature_basis_admission(**context)
