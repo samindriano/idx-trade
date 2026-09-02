@@ -19,6 +19,7 @@ import {
   isOfficialOpenSlot,
   officialOpenAttestedDispatchBody,
 } from './official_open_attestation.mjs';
+import { validateOfficialOpenRecoveryAdmission } from './official_open_recovery_admission.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
 
@@ -135,11 +136,40 @@ export class SchedulerCoordinator extends DurableObject {
         detail: shadow.github_exact_run_evidence,
       });
     }
+
+    let officialOpenRecoveryAdmission = null;
+    if (shadow.family === 'OFFICIAL_OPEN' && shadow.durable_completion.capture_complete) {
+      try {
+        officialOpenRecoveryAdmission = await validateOfficialOpenRecoveryAdmission({
+          archive: this.env.ARCHIVE,
+          session: window.dateKey,
+          slot: slot.inputValue,
+          expectedCompletionSha256: shadow.durable_completion.completion_sha256,
+          expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
+        });
+      } catch (error) {
+        return finalizeShadowDecision(
+          shadow,
+          'FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
+          {
+            status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH',
+            official_open_recovery_admission: {
+              recovery_admissible: false,
+              error: safeError(error),
+            },
+          },
+        );
+      }
+    }
+
     if (shadow.durable_completion.capture_complete) {
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
-        { status: 'SHADOW_DURABLE_COMPLETION_VERIFIED' },
+        {
+          status: 'SHADOW_DURABLE_COMPLETION_VERIFIED',
+          official_open_recovery_admission: officialOpenRecoveryAdmission,
+        },
       );
     }
     if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
