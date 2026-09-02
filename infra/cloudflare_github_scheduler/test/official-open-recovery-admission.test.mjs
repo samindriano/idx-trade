@@ -173,3 +173,12 @@ test('process path validates Official Open admission before accepting durable co
   assert.match(source, /FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID/);
   assert.match(source, /OFFICIAL_OPEN_EXPECTED_CODE_COMMIT/);
 });
+
+test('Official Open in-flight GitHub metadata cannot consume the sole recovery opportunity', () => {
+  const source = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  assert.match(
+    source,
+    /shadow\.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'[\s\S]*&& !isOfficialOpenSlot\(slot\)/,
+  );
+  assert.match(source, /producer's early immutable-commit check keep this fail-safe/);
+});
