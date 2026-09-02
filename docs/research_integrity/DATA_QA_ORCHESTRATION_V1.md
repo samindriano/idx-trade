@@ -16,6 +16,16 @@ Use `DIRECT` only for a small local check with no useful independent audit lane.
 
 The orchestrator must explicitly justify de-escalation when the requested QA could materially affect scientific validity.
 
+HEAVY describes logical audit concurrency, not the number of user-facing chats. When native local child-agent execution is available, Lane A through Lane G should normally run as `LOCAL_CHILD_AGENT` workers under one visible MAIN session.
+
+Execution-surface preference:
+
+1. `LOCAL_CHILD_AGENT` — default for read-only and safely disjoint audit work.
+2. `LOCAL_ISOLATED_WORKTREE` — only when concurrent repository writes require filesystem/Git isolation.
+3. `EXTERNAL_OR_REMOTE_WORKER` — exception only, with an explicit reason.
+
+A local worktree is filesystem isolation, not a new user-facing control plane. Do not create one worktree or one project chat per audit lane merely because HEAVY was selected.
+
 ## Mandatory preflight
 
 MAIN must:
@@ -26,9 +36,24 @@ MAIN must:
 4. inventory exact available artifacts before opening any sensitive evidence;
 5. define what evidence is forbidden, especially protected outcomes;
 6. define the gate being certified and the exact verdict vocabulary;
-7. identify independent workstreams before MAIN begins duplicating them.
+7. identify independent workstreams before MAIN begins duplicating them;
+8. assign an execution surface to each worker, preferring `LOCAL_CHILD_AGENT` and recording the reason for any external/remote worker.
+
+A typical preflight should make the topology explicit:
+
+```text
+execution surface:
+- MAIN: LOCAL_PARENT
+- source-semantics worker: LOCAL_CHILD_AGENT
+- PIT/provenance worker: LOCAL_CHILD_AGENT
+- adversarial worker: LOCAL_CHILD_AGENT
+```
+
+Use `LOCAL_ISOLATED_WORKTREE` only where write-collision risk makes it necessary.
 
 ## Standard QA lanes
+
+The lanes below are logical audit responsibilities. They do not imply separate user-facing sessions or mandatory worktrees.
 
 ### Lane A — Source semantics and contract
 
@@ -172,6 +197,7 @@ MAIN owns:
 
 - scope and frozen-boundary protection;
 - lane allocation;
+- execution-surface selection;
 - preventing duplicate writes;
 - reconciliation of conflicting findings;
 - deciding whether differences are numerically/economically material;
@@ -179,7 +205,7 @@ MAIN owns:
 - deciding whether remediation is authorized;
 - converting confirmed incidents into permanent regression protection.
 
-Workers provide evidence, not the final scientific authority.
+Workers provide evidence, not the final scientific authority. Worker results report back to MAIN. The default user-facing session count remains one even under HEAVY orchestration.
 
 ## Mandatory verdict shape
 
