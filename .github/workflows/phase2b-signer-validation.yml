@@ -1,0 +1,30 @@
+name: phase2b-signer-validation
+
+on:
+  pull_request:
+    branches: [ops/phase2b-official-open-signer-review-base-v1]
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/cloudflare_github_scheduler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: infra/cloudflare_github_scheduler/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Wrangler dry-run staging-live
+        run: npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
+      - name: Wrangler dry-run production
+        run: npx wrangler deploy --dry-run --config wrangler.production.jsonc
