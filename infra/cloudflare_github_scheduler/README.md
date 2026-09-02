@@ -199,12 +199,18 @@ completion gate.
 
 ## GitHub credential
 
-The only secret is `GITHUB_ACTIONS_TOKEN`.
+Observe-only staging configs require the distinct secret
+`GITHUB_ACTIONS_READ_TOKEN`. It must be a fine-grained credential scoped only
+to `samindriano/idx-trade` with repository permission **Actions: read-only**.
+The active production config continues to require `GITHUB_ACTIONS_TOKEN` and is
+unchanged by this staging credential plumbing.
 
-Use a fine-grained credential scoped to **only** `samindriano/idx-trade` with
-GitHub repository permission **Actions: write** and an expiry/rotation policy.
-Do not put the value in Wrangler vars, git, logs, CLI arguments, or test
-fixtures. Configure it as a Cloudflare Worker secret.
+The Worker selects the credential from the validated dispatch mode and has no
+fallback from the staging read-only binding to the production binding. Do not
+reuse local `gh` credentials, classic PATs with `repo`/`workflow`, or any token
+with Actions write capability. Do not put token values in Wrangler vars, git,
+logs, CLI arguments, or test fixtures; configure the dedicated read-only value
+as a Cloudflare Worker secret only after its repository permission is verified.
 
 ## Local validation
 
@@ -226,8 +232,9 @@ Do not activate production Cron until all of these are true:
 2. `npm test` passes from a clean checkout.
 3. Wrangler config/dry-run validation passes.
 4. Cloudflare secret exists with least privilege and no provider credentials.
-5. A provider-free GitHub diagnostic proves the Worker can query + dispatch a
-   synthetic/read-only workflow.
+5. A provider-free GitHub diagnostic proves the staging Worker can query the
+   required workflow-runs metadata endpoint using the dedicated read-only
+   credential; no dispatch POST is used as a permission test.
 6. Windows watchdog is not retired until one genuine Cloudflare-covered future
    slot is proven.
 7. Stockbit Stream remains excluded until its early zero-provider dedupe gate

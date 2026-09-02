@@ -91,8 +91,11 @@ export class SchedulerCoordinator extends DurableObject {
     const owner = requireEnv(this.env, 'GITHUB_OWNER');
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
-    const token = requireEnv(this.env, 'GITHUB_ACTIONS_TOKEN');
     const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    const tokenName = dispatchMode === 'observe_only'
+      ? 'GITHUB_ACTIONS_READ_TOKEN'
+      : 'GITHUB_ACTIONS_TOKEN';
+    const token = requireEnv(this.env, tokenName);
 
     const window = slotWindow(slot, observedEpochMs);
     if (observedEpochMs < window.checkMs || observedEpochMs >= window.cutoffMs) {

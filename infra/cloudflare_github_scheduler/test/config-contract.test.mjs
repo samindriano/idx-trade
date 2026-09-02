@@ -21,10 +21,20 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(staging.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(stagingLive.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(production.vars.DISPATCH_MODE, 'active');
+  assert.deepEqual(staging.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(stagingLive.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(production.secrets.required, ['GITHUB_ACTIONS_TOKEN']);
   for (const config of [staging, stagingLive, production]) {
     assert.deepEqual(config.r2_buckets, [{ binding: 'ARCHIVE', bucket_name: 'idx-trade-stockbit-stream-v1' }]);
     assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT.length, 40);
   }
+});
+
+test('observe-only and active modes use separate GitHub credential bindings', () => {
+  assert.match(
+    indexSource,
+    /const tokenName = dispatchMode === 'observe_only'\s+\? 'GITHUB_ACTIONS_READ_TOKEN'\s+: 'GITHUB_ACTIONS_TOKEN';/,
+  );
 });
 
 test('staging has no production Cron schedule and production retains exact Cron schedule', () => {
