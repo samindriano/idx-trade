@@ -13,7 +13,11 @@
     "OFFICIAL_OPEN_EXPECTED_CODE_COMMIT": "ac29a0552b1785045906f8d608b5371d93e01b73"
   },
   "secrets": {
-    "required": ["GITHUB_ACTIONS_TOKEN", "OFFICIAL_OPEN_SCHEDULER_HMAC_KEY"]
+    "required": [
+      "GITHUB_ACTIONS_READ_TOKEN",
+      "GITHUB_ACTIONS_WRITE_TOKEN",
+      "OFFICIAL_OPEN_SCHEDULER_HMAC_KEY"
+    ]
   },
   "r2_buckets": [
     {
