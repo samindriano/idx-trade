@@ -11,11 +11,11 @@ WORKFLOW = (
 )
 
 
-def test_production_workflow_dispatches_v3_and_all_phases() -> None:
+def test_production_workflow_dispatches_v4_and_all_phases() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "python scripts/run_e2e_paper_cloud_v3.py" in text
-    assert "python scripts/run_e2e_paper_cloud_v2.py" not in text
+    assert "python scripts/run_e2e_paper_cloud_v4.py" in text
+    assert "python scripts/run_e2e_paper_cloud_v3.py" not in text
     assert "options: [auto, PREOPEN_CA, PREOPEN, POST_EOD]" in text
     assert '"30 1 * * 1-5"' in text
     assert '"45 1 * * 1-5"' in text
@@ -31,7 +31,7 @@ def test_production_workflow_dispatches_v3_and_all_phases() -> None:
 def test_preopen_ca_and_preopen_have_independent_serialized_groups() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "idx-trade-e2e-paper-cloud-v3-${{" in text
+    assert "idx-trade-e2e-paper-cloud-v4-${{" in text
     assert "'preopen-ca'" in text
     assert "'preopen'" in text
     assert "'post-eod'" in text
