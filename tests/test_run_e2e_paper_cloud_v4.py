@@ -6,6 +6,10 @@ import pytest
 
 import idx_trade.e2e_paper_operational_controller_v1 as controller_v1
 from idx_trade import v4_x1_clean_forward_score as clean_x1
+from idx_trade.e2e_official_open_admission_v2 import (
+    materialize_official_open_from_cloud_v2,
+)
+from scripts import run_e2e_paper_cloud_v1 as v1
 from scripts import run_e2e_paper_cloud_v2 as v2
 from scripts import run_e2e_paper_cloud_v3 as v3
 from scripts import run_e2e_paper_cloud_v4 as v4
@@ -125,6 +129,7 @@ def test_real_score_status_delegates_to_existing_strict_verifier(monkeypatch):
 def test_run_once_applies_and_restores_v3_contract_patches(monkeypatch):
     original_runtime = v2._with_runtime_security_master
     original_verify = controller_v1._verify_score_pointer
+    original_materialize = v1.materialize_official_open_from_cloud
     seen: dict[str, bool] = {}
 
     def fake_v3_run_once(*, phase=None, session_date=None):
@@ -135,12 +140,39 @@ def test_run_once_applies_and_restores_v3_contract_patches(monkeypatch):
             controller_v1._verify_score_pointer
             is v4._verify_score_pointer_semantic_first
         )
+        seen["open_patch_active"] = (
+            v1.materialize_official_open_from_cloud
+            is materialize_official_open_from_cloud_v2
+        )
         return {"status": "WAITING", "phase": phase, "session_date": session_date}
 
     monkeypatch.setattr(v3, "run_once", fake_v3_run_once)
     result = v4.run_once(phase="POST_EOD", session_date="2026-09-02")
 
     assert result["status"] == "WAITING"
-    assert seen == {"runtime_patch_active": True, "score_patch_active": True}
+    assert seen == {
+        "runtime_patch_active": True,
+        "score_patch_active": True,
+        "open_patch_active": True,
+    }
     assert v2._with_runtime_security_master is original_runtime
     assert controller_v1._verify_score_pointer is original_verify
+    assert v1.materialize_official_open_from_cloud is original_materialize
+
+
+def test_operational_contracts_restore_even_when_v3_raises(monkeypatch):
+    original_runtime = v2._with_runtime_security_master
+    original_verify = controller_v1._verify_score_pointer
+    original_materialize = v1.materialize_official_open_from_cloud
+
+    def boom(*, phase=None, session_date=None):
+        assert v1.materialize_official_open_from_cloud is materialize_official_open_from_cloud_v2
+        raise RuntimeError("sentinel")
+
+    monkeypatch.setattr(v3, "run_once", boom)
+    with pytest.raises(RuntimeError, match="sentinel"):
+        v4.run_once(phase="PREOPEN", session_date="2026-09-02")
+
+    assert v2._with_runtime_security_master is original_runtime
+    assert controller_v1._verify_score_pointer is original_verify
+    assert v1.materialize_official_open_from_cloud is original_materialize
