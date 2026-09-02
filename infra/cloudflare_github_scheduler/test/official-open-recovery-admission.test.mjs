@@ -178,7 +178,13 @@ test('Official Open in-flight GitHub metadata cannot consume the sole recovery o
   const source = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   assert.match(
     source,
-    /shadow\.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'[\s\S]*&& !isOfficialOpenSlot\(slot\)/,
+    /const openInFlightRecoveryOverride = isOfficialOpenSlot\(slot\)[\s\S]*&& shadow\.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'/,
   );
-  assert.match(source, /producer's early immutable-commit check keep this fail-safe/);
+  assert.match(
+    source,
+    /shadow\.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'[\s\S]*&& !openInFlightRecoveryOverride/,
+  );
+  assert.match(source, /const activeModeDecision = openInFlightRecoveryOverride/);
+  assert.match(source, /OPEN_IN_FLIGHT_RECOVERY_DECISION/);
+  assert.match(source, /open_inflight_recovery_override: openInFlightRecoveryOverride/);
 });
