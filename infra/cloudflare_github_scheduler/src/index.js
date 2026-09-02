@@ -97,8 +97,11 @@ export class SchedulerCoordinator extends DurableObject {
     const owner = requireEnv(this.env, 'GITHUB_OWNER');
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
-    const token = requireEnv(this.env, 'GITHUB_ACTIONS_TOKEN');
     const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    // Run discovery is always read-only. Observe-only environments never carry
+    // a workflow-dispatch credential at all; active mode accesses the write
+    // credential lazily only after every recovery gate says dispatch is needed.
+    const readToken = requireEnv(this.env, 'GITHUB_ACTIONS_READ_TOKEN');
 
     const window = slotWindow(slot, observedEpochMs);
     if (observedEpochMs < window.checkMs || observedEpochMs >= window.cutoffMs) {
@@ -113,7 +116,7 @@ export class SchedulerCoordinator extends DurableObject {
       exactCoverage = await queryExactSlotCoverage({
         owner,
         repo,
-        token,
+        token: readToken,
         slot,
         epochMs: observedEpochMs,
       });
@@ -204,8 +207,9 @@ export class SchedulerCoordinator extends DurableObject {
 
     // Official Open has only one recovery check inside each narrow slot window.
     // A visible in-flight run is not durable capture evidence, so it must not
-    // consume that sole recovery opportunity. Same-slot workflow concurrency
-    // plus the producer's early immutable-commit check keep this fail-safe.
+    // consume that sole recovery opportunity. The producer's pre-provider
+    // timing/auth gate plus its conditional immutable slot commit keep parallel
+    // native/recovery contenders fail-closed instead of allowing overwrite.
     const openInFlightRecoveryOverride = isOfficialOpenSlot(slot)
       && shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE';
     if (
@@ -230,9 +234,9 @@ export class SchedulerCoordinator extends DurableObject {
     const dispatch = await dispatchWithMode({
       mode: dispatchMode,
       // dispatchWithMode does not invoke this function in observe_only mode.
-      // Therefore staging shadow does not need the signing key and cannot
-      // accidentally create an attested workflow_dispatch.
+      // Staging therefore has no write credential or signing key to access.
       dispatchFn: async () => {
+        const writeToken = requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN');
         let body = dispatchBody(slot, ref);
         if (isOfficialOpenSlot(slot)) {
           body = await officialOpenAttestedDispatchBody({
@@ -244,7 +248,7 @@ export class SchedulerCoordinator extends DurableObject {
             nonce: crypto.randomUUID(),
           });
         }
-        return dispatchWorkflow({ owner, repo, token, ref, slot, body });
+        return dispatchWorkflow({ owner, repo, token: writeToken, ref, slot, body });
       },
     });
     if (dispatch.status === 'WOULD_DISPATCH') {
