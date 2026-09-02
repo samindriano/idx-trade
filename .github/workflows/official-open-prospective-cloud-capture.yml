@@ -63,8 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # Immutable recovery producer pin. Change only through reviewed integration.
-      OFFICIAL_OPEN_CAPTURE_CODE_REF: 99434723fec6f9cdf88b14807d3cec4698407b2f
+      # Immutable timing-gated recovery producer pin. Change only through reviewed integration.
+      OFFICIAL_OPEN_CAPTURE_CODE_REF: ac29a0552b1785045906f8d608b5371d93e01b73
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       OFFICIAL_OPEN_STORAGE_BACKEND: s3
       OFFICIAL_OPEN_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
