@@ -27,6 +27,15 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   }
 });
 
+test('active production requires signer secret while observe-only configs do not', () => {
+  assert.deepEqual(staging.secrets.required, ['GITHUB_ACTIONS_TOKEN']);
+  assert.deepEqual(stagingLive.secrets.required, ['GITHUB_ACTIONS_TOKEN']);
+  assert.deepEqual(production.secrets.required, [
+    'GITHUB_ACTIONS_TOKEN',
+    'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY',
+  ]);
+});
+
 test('staging has no production Cron schedule and production retains exact Cron schedule', () => {
   assert.deepEqual(staging.triggers, { crons: [] });
   assert.deepEqual(stagingLive.triggers.crons, [
@@ -58,6 +67,14 @@ test('scheduler markers remain a coordination guard without claiming capture com
   assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);
   assert.match(indexSource, /capture_complete/);
   assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
+});
+
+test('Official Open signing is confined to lazy active dispatch path', () => {
+  assert.match(indexSource, /officialOpenAttestedDispatchBody/);
+  assert.match(indexSource, /isOfficialOpenSlot\(slot\)/);
+  assert.match(indexSource, /requireEnv\(this\.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
+  assert.match(indexSource, /dispatchFn: async \(\) =>/);
+  assert.match(indexSource, /official_open_attestation_required/);
 });
 
 test('a completion-final marker is not manufactured by a generic hash helper', async () => {
