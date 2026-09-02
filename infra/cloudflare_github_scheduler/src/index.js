@@ -22,6 +22,7 @@ import {
 import { validateOfficialOpenRecoveryAdmission } from './official_open_recovery_admission.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
+const OPEN_IN_FLIGHT_RECOVERY_DECISION = 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE_OPEN_IN_FLIGHT_NOT_CAPTURE_COMPLETE';
 
 function finalizeShadowDecision(shadow, decision, extra = {}) {
   return {
@@ -200,18 +201,24 @@ export class SchedulerCoordinator extends DurableObject {
         },
       );
     }
+
     // Official Open has only one recovery check inside each narrow slot window.
     // A visible in-flight run is not durable capture evidence, so it must not
     // consume that sole recovery opportunity. Same-slot workflow concurrency
     // plus the producer's early immutable-commit check keep this fail-safe.
+    const openInFlightRecoveryOverride = isOfficialOpenSlot(slot)
+      && shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE';
     if (
       shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'
-      && !isOfficialOpenSlot(slot)
+      && !openInFlightRecoveryOverride
     ) {
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
       });
     }
+    const activeModeDecision = openInFlightRecoveryOverride
+      ? OPEN_IN_FLIGHT_RECOVERY_DECISION
+      : effectiveActiveModeDecision(shadow);
 
     const attemptId = crypto.randomUUID();
     this._write(slotKey, 'dispatching', observedEpochMs, {
@@ -246,14 +253,16 @@ export class SchedulerCoordinator extends DurableObject {
           dispatchMode,
           inputs: dispatchInputs,
           officialOpenAttestationRequired: isOfficialOpenSlot(slot),
+          openInFlightRecoveryOverride,
           shadow,
         },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WOULD_DISPATCH',
         dispatchMode,
         inputs: dispatchInputs,
         official_open_attestation_required: isOfficialOpenSlot(slot),
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
       });
     }
     if (dispatch.ok) {
@@ -263,12 +272,14 @@ export class SchedulerCoordinator extends DurableObject {
         detail: {
           githubStatus: dispatch.status,
           officialOpenAttestationUsed: isOfficialOpenSlot(slot),
+          openInFlightRecoveryOverride,
         },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
         official_open_attestation_used: isOfficialOpenSlot(slot),
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
         runId: dispatch.runId,
       });
     }
@@ -276,21 +287,23 @@ export class SchedulerCoordinator extends DurableObject {
     if (dispatch.retryable) {
       this._write(slotKey, 'retryable_error', Date.now(), {
         attemptId,
-        detail: { githubStatus: dispatch.status },
+        detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'DISPATCH_RETRYABLE_ERROR',
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
         githubStatus: dispatch.status,
       });
     }
 
     this._write(slotKey, 'blocked', Date.now(), {
       attemptId,
-      detail: { githubStatus: dispatch.status },
+      detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
     });
-    return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+    return finalizeShadowDecision(shadow, activeModeDecision, {
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
+      open_inflight_recovery_override: openInFlightRecoveryOverride,
       githubStatus: dispatch.status,
     });
   }
