@@ -22,13 +22,16 @@ from . import official_open_evidence_v1 as v1
 
 TOP_LEVEL_RAW_ENVELOPE = "top_level_idx_raw"
 LEGACY_PROJECT_ENVELOPE = "legacy_project_data"
+_ORIGINAL_ZAPI_INNER_PAYLOAD = v1._zapi_inner_payload
 
 
 def _strict_zapi_payload(payload: Mapping[str, object]) -> tuple[dict[str, object], str]:
     """Return the exact IDX raw object and its admitted gateway shape."""
 
     if "project" in payload:
-        inner = v1._zapi_inner_payload(payload)
+        # Preserve the accepted legacy envelope contract byte-for-byte in
+        # semantics: exact project marker, timestamp, and nested object.
+        inner = _ORIGINAL_ZAPI_INNER_PAYLOAD(payload)
         envelope = LEGACY_PROJECT_ENVELOPE
     else:
         # Project-less responses are admitted only when they are already the
@@ -44,6 +47,11 @@ def _strict_zapi_payload(payload: Mapping[str, object]) -> tuple[dict[str, objec
     if not isinstance(inner.get("data"), list):
         raise v1.OfficialOpenEvidenceError("OFFICIAL_OPEN_ZAPI_RAW_DATA_MISSING")
     return inner, envelope
+
+
+def _zapi_inner_payload_v2(payload: Mapping[str, object]) -> dict[str, object]:
+    inner, _ = _strict_zapi_payload(payload)
+    return inner
 
 
 def validate_zapi_raw_provenance_v2(raw_bytes: bytes) -> str:
@@ -97,13 +105,16 @@ def fetch_zapi_raw_idx_stock_summary_v2(
 
 
 @contextmanager
-def _patched_zapi_fetch() -> Iterator[None]:
-    original = v1.fetch_zapi_raw_idx_stock_summary
+def _patched_zapi_transport() -> Iterator[None]:
+    original_fetch = v1.fetch_zapi_raw_idx_stock_summary
+    original_inner = v1._zapi_inner_payload
     v1.fetch_zapi_raw_idx_stock_summary = fetch_zapi_raw_idx_stock_summary_v2
+    v1._zapi_inner_payload = _zapi_inner_payload_v2
     try:
         yield
     finally:
-        v1.fetch_zapi_raw_idx_stock_summary = original
+        v1.fetch_zapi_raw_idx_stock_summary = original_fetch
+        v1._zapi_inner_payload = original_inner
 
 
 def capture_official_open_with_transport_fallback_v2(
@@ -115,9 +126,12 @@ def capture_official_open_with_transport_fallback_v2(
     zapi_get=None,
     timeout_seconds: float = 30.0,
 ):
-    """Run the accepted V1 fallback policy with only the ZAPI fetch adapted."""
+    """Run accepted V1 fallback/certification with strict ZAPI compatibility."""
 
-    with _patched_zapi_fetch():
+    # Certification revalidates the same immutable raw bytes after the fetch.
+    # Keep both V1 dynamic lookups patched for the complete single capture, then
+    # restore them even when any transport/certification guard fails.
+    with _patched_zapi_transport():
         return v1.capture_official_open_with_transport_fallback(
             session_date,
             output_root=output_root,
