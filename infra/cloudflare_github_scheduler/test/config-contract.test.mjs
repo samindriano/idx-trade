@@ -31,13 +31,25 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   }
 });
 
-test('active production requires signer secret while observe-only configs do not', () => {
-  assert.deepEqual(staging.secrets.required, ['GITHUB_ACTIONS_TOKEN']);
-  assert.deepEqual(stagingLive.secrets.required, ['GITHUB_ACTIONS_TOKEN']);
+test('GitHub read and dispatch credentials are capability-separated by environment', () => {
+  assert.deepEqual(staging.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(stagingLive.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
   assert.deepEqual(production.secrets.required, [
-    'GITHUB_ACTIONS_TOKEN',
+    'GITHUB_ACTIONS_READ_TOKEN',
+    'GITHUB_ACTIONS_WRITE_TOKEN',
     'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY',
   ]);
+  for (const config of [staging, stagingLive]) {
+    assert.equal(config.secrets.required.includes('GITHUB_ACTIONS_WRITE_TOKEN'), false);
+    assert.equal(config.secrets.required.includes('OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'), false);
+  }
+  assert.match(indexSource, /const readToken = requireEnv\(this\.env, 'GITHUB_ACTIONS_READ_TOKEN'\)/);
+  assert.match(indexSource, /token: readToken/);
+  const dispatchFn = indexSource.indexOf('dispatchFn: async () =>');
+  const writeToken = indexSource.indexOf("requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN')");
+  assert.ok(dispatchFn >= 0);
+  assert.ok(writeToken > dispatchFn);
+  assert.doesNotMatch(indexSource, /GITHUB_ACTIONS_TOKEN/);
 });
 
 test('staging has no production Cron schedule and production retains exact Cron schedule', () => {
