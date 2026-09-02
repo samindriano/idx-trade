@@ -60,10 +60,10 @@ permissions:
 concurrency:
   # PREOPEN_CA retries share one serialized group, but are isolated from the
   # PREOPEN group. A hung/late CA attempt therefore cannot queue-block the
-  # valid PREOPEN consumer. The V3 runner independently enforces the 09:02
-  # Jakarta cutoff and fails closed after it.
+  # valid PREOPEN consumer. The V4 runner independently preserves the V3
+  # PREOPEN_CA cutoff and continuity behavior.
   group: >-
-    idx-trade-e2e-paper-cloud-v3-${{
+    idx-trade-e2e-paper-cloud-v4-${{
       (inputs.phase == 'PREOPEN_CA' || github.event.schedule == '30 1 * * 1-5' || github.event.schedule == '45 1 * * 1-5' || github.event.schedule == '55 1 * * 1-5') && 'preopen-ca' ||
       (inputs.phase == 'PREOPEN' || github.event.schedule == '3 2 * * 1-5' || github.event.schedule == '13 2 * * 1-5' || github.event.schedule == '22 2 * * 1-5') && 'preopen' ||
       (inputs.phase == 'POST_EOD' || github.event.schedule == '35 11 * * 1-5' || github.event.schedule == '5 12 * * 1-5' || github.event.schedule == '35 12 * * 1-5') && 'post-eod' ||
@@ -76,9 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # Exact reviewed successor implementation accepted into the E2E integration baseline.
-      # Change only through a reviewed provenance update.
-      E2E_CLOUD_IMPLEMENTATION_REF: 82007457522d6e268de8bd6e1b75762fb76accfe
+      # Immutable reviewed V4 recovery implementation pin.
+      E2E_CLOUD_IMPLEMENTATION_REF: 8bc3ee3efd65e8b16478e404e4b226451b105c48
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
@@ -86,8 +85,8 @@ jobs:
       E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
       E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1
-      # Must equal the accepted Official Open producer implementation SHA.
-      E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
+      # Must equal the exact producer pin persisted in Official Open provenance.
+      E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: 99434723fec6f9cdf88b14807d3cec4698407b2f
       E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
       # External provider source must not live under the attested deployment worktree.
       E2E_CLOUD_PROVIDER_CHECKOUT: /tmp/idx-bei-provider
@@ -192,4 +191,4 @@ jobs:
           if [[ -n "$E2E_CLOUD_DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$E2E_CLOUD_DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_e2e_paper_cloud_v3.py "${args[@]}"
+          python scripts/run_e2e_paper_cloud_v4.py "${args[@]}"
