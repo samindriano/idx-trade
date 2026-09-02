@@ -46,17 +46,11 @@ on:
 permissions:
   contents: read
 
-# Keep slots independent. A delayed 09:02 job must not serialize and thereby
-# force the 09:12/09:22 observations to wait behind it.
-concurrency:
-  group: >-
-    official-open-cloud-${{
-      (github.event.schedule == '2 2 * * 1-5' || inputs.slot == '0902') && '0902' ||
-      (github.event.schedule == '12 2 * * 1-5' || inputs.slot == '0912') && '0912' ||
-      (github.event.schedule == '22 2 * * 1-5' || inputs.slot == '0922') && '0922' ||
-      'ambiguous'
-    }}
-  cancel-in-progress: false
+# Native and trusted recovery runs intentionally have no workflow-level
+# concurrency group. A hung native run must not hold a trusted recovery behind
+# it until the prospective cutoff. Exactly-once durable authority is the
+# conditional immutable slot_manifest.json commit; conflicting contenders
+# fail closed instead of overwriting the winner.
 
 jobs:
   capture:
