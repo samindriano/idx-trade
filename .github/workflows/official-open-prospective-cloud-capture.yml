@@ -27,6 +27,21 @@ on:
         description: Optional YYYY-MM-DD session date; blank uses current Jakarta date
         required: false
         default: ""
+      scheduler_issued_at:
+        description: Trusted external scheduler UTC issue timestamp
+        required: false
+        default: ""
+        type: string
+      scheduler_nonce:
+        description: Trusted external scheduler nonce
+        required: false
+        default: ""
+        type: string
+      scheduler_signature:
+        description: HMAC-SHA256 scheduler attestation signature
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -48,10 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # Pin the evidence implementation independently of the default-branch
-      # launcher. The repository variable is intentionally repinnable only
-      # after PR #92 has an accepted integration merge SHA.
-      OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
+      # Immutable recovery producer pin. Change only through reviewed integration.
+      OFFICIAL_OPEN_CAPTURE_CODE_REF: 99434723fec6f9cdf88b14807d3cec4698407b2f
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       OFFICIAL_OPEN_STORAGE_BACKEND: s3
       OFFICIAL_OPEN_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
@@ -62,6 +75,12 @@ jobs:
       DISPATCH_SLOT: ${{ inputs.slot || '' }}
       DISPATCH_SESSION_DATE: ${{ inputs.session_date || '' }}
       EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+      # Native schedule ignores these. workflow_dispatch is admitted only when
+      # all fields verify against the shared scheduler HMAC key in producer V3.
+      OFFICIAL_OPEN_SCHEDULER_ISSUED_AT: ${{ inputs.scheduler_issued_at || '' }}
+      OFFICIAL_OPEN_SCHEDULER_NONCE: ${{ inputs.scheduler_nonce || '' }}
+      OFFICIAL_OPEN_SCHEDULER_SIGNATURE: ${{ inputs.scheduler_signature || '' }}
+      OFFICIAL_OPEN_SCHEDULER_HMAC_KEY: ${{ secrets.OFFICIAL_OPEN_SCHEDULER_HMAC_KEY }}
 
     steps:
       - name: Require accepted producer implementation pin
@@ -75,6 +94,10 @@ jobs:
         with:
           ref: ${{ env.OFFICIAL_OPEN_CAPTURE_CODE_REF }}
           persist-credentials: false
+
+      - name: Verify pinned implementation
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$OFFICIAL_OPEN_CAPTURE_CODE_REF"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -108,4 +131,4 @@ jobs:
           if [[ -n "$DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_official_open_cloud_capture_v1.py "${args[@]}"
+          python scripts/run_official_open_cloud_capture_v3.py "${args[@]}"
