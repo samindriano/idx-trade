@@ -15,6 +15,10 @@ import {
 } from './github.mjs';
 import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
 import { evaluateShadowSlot } from './archive.mjs';
+import {
+  isOfficialOpenSlot,
+  officialOpenAttestedDispatchBody,
+} from './official_open_attestation.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
 
@@ -181,27 +185,53 @@ export class SchedulerCoordinator extends DurableObject {
     const dispatchInputs = dispatchBody(slot, ref).inputs;
     const dispatch = await dispatchWithMode({
       mode: dispatchMode,
-      dispatchFn: () => dispatchWorkflow({ owner, repo, token, ref, slot }),
+      // dispatchWithMode does not invoke this function in observe_only mode.
+      // Therefore staging shadow does not need the signing key and cannot
+      // accidentally create an attested workflow_dispatch.
+      dispatchFn: async () => {
+        let body = dispatchBody(slot, ref);
+        if (isOfficialOpenSlot(slot)) {
+          body = await officialOpenAttestedDispatchBody({
+            slot,
+            ref,
+            secret: requireEnv(this.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'),
+            sessionDate: window.dateKey,
+            issuedAtEpochMs: observedEpochMs,
+            nonce: crypto.randomUUID(),
+          });
+        }
+        return dispatchWorkflow({ owner, repo, token, ref, slot, body });
+      },
     });
     if (dispatch.status === 'WOULD_DISPATCH') {
       this._write(slotKey, 'would_dispatch', observedEpochMs, {
-        detail: { dispatchMode, inputs: dispatchInputs, shadow },
+        detail: {
+          dispatchMode,
+          inputs: dispatchInputs,
+          officialOpenAttestationRequired: isOfficialOpenSlot(slot),
+          shadow,
+        },
       });
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'WOULD_DISPATCH',
         dispatchMode,
         inputs: dispatchInputs,
+        official_open_attestation_required: isOfficialOpenSlot(slot),
       });
     }
     if (dispatch.ok) {
       this._write(slotKey, 'dispatch_requested', Date.now(), {
         attemptId,
         runId: dispatch.runId,
-        detail: { githubStatus: dispatch.status },
+        detail: {
+          githubStatus: dispatch.status,
+          officialOpenAttestationUsed: isOfficialOpenSlot(slot),
+        },
       });
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
+        official_open_attestation_used: isOfficialOpenSlot(slot),
         runId: dispatch.runId,
       });
     }
