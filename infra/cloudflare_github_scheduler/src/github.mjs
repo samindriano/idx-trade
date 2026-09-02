@@ -7,6 +7,7 @@ import {
 } from './core.mjs';
 
 const API_VERSION = '2026-03-10';
+const MAX_RUN_QUERY_PAGES = 20;
 
 function headers(token, contentType = false) {
   const result = {
@@ -17,6 +18,17 @@ function headers(token, contentType = false) {
   };
   if (contentType) result['Content-Type'] = 'application/json';
   return result;
+}
+
+function pageUrl(baseUrl, page) {
+  const url = new URL(baseUrl);
+  url.searchParams.set('page', String(page));
+  return url.toString();
+}
+
+function hasNextPage(response) {
+  const link = response?.headers?.get?.('link');
+  return typeof link === 'string' && /<[^>]+>;\s*rel="next"/.test(link);
 }
 
 export class GithubApiError extends Error {
@@ -32,36 +44,61 @@ export async function queryExactSlotCoverage({ fetchFn = fetch, owner, repo, tok
   const { dateStartMs, cutoffMs } = slotWindow(slot, epochMs);
   const endMs = Math.min(epochMs, cutoffMs - 1);
   if (endMs < dateStartMs) return [];
-  const url = workflowRunsUrl({
+  const baseUrl = workflowRunsUrl({
     owner,
     repo,
     workflow: slot.workflow,
     startMs: dateStartMs,
     endMs,
   });
-  const response = await fetchFn(url, { method: 'GET', headers: headers(token) });
-  if (!response.ok) throw new GithubApiError(`GITHUB_RUN_QUERY_HTTP_${response.status}`, response.status);
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new GithubApiError('GITHUB_RUN_QUERY_INVALID_JSON', response.status);
+
+  for (let page = 1; page <= MAX_RUN_QUERY_PAGES; page += 1) {
+    const response = await fetchFn(pageUrl(baseUrl, page), {
+      method: 'GET',
+      headers: headers(token),
+    });
+    if (!response.ok) {
+      throw new GithubApiError(`GITHUB_RUN_QUERY_HTTP_${response.status}`, response.status);
+    }
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new GithubApiError('GITHUB_RUN_QUERY_INVALID_JSON', response.status);
+    }
+    if (!Array.isArray(payload?.workflow_runs)) {
+      throw new GithubApiError('GITHUB_RUN_QUERY_MISSING_LIST', response.status);
+    }
+    const exact = exactSlotCoverageRuns(payload.workflow_runs, slot, epochMs);
+    if (exact.length) return exact;
+
+    const next = hasNextPage(response);
+    if (!next) return [];
+    if (page === MAX_RUN_QUERY_PAGES) {
+      throw new GithubApiError('GITHUB_RUN_QUERY_PAGINATION_LIMIT', response.status);
+    }
   }
-  if (!Array.isArray(payload?.workflow_runs)) {
-    throw new GithubApiError('GITHUB_RUN_QUERY_MISSING_LIST', response.status);
-  }
-  return exactSlotCoverageRuns(payload.workflow_runs, slot, epochMs);
+  throw new GithubApiError('GITHUB_RUN_QUERY_PAGINATION_LIMIT');
 }
 
 export function isRetryableGithubStatus(status) {
   return status === 408 || status === 409 || status === 429 || status >= 500;
 }
 
-export async function dispatchWorkflow({ fetchFn = fetch, owner, repo, token, ref = 'main', slot }) {
+export async function dispatchWorkflow({
+  fetchFn = fetch,
+  owner,
+  repo,
+  token,
+  ref = 'main',
+  slot,
+  body = null,
+}) {
+  const requestBody = body ?? dispatchBody(slot, ref);
   const response = await fetchFn(workflowDispatchUrl({ owner, repo, workflow: slot.workflow }), {
     method: 'POST',
     headers: headers(token, true),
-    body: JSON.stringify(dispatchBody(slot, ref)),
+    body: JSON.stringify(requestBody),
   });
   if (!response.ok) {
     return {
@@ -82,3 +119,5 @@ export async function dispatchWorkflow({ fetchFn = fetch, owner, repo, token, re
   }
   return { ok: true, status: response.status, retryable: false, runId };
 }
+
+export { MAX_RUN_QUERY_PAGES };

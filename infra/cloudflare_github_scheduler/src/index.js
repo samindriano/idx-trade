@@ -15,8 +15,14 @@ import {
 } from './github.mjs';
 import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
 import { evaluateShadowSlot } from './archive.mjs';
+import {
+  isOfficialOpenSlot,
+  officialOpenAttestedDispatchBody,
+} from './official_open_attestation.mjs';
+import { validateOfficialOpenRecoveryAdmission } from './official_open_recovery_admission.mjs';
 
 const SCHEMA_VERSION = 'idx_trade_cloudflare_github_scheduler_v1';
+const OPEN_IN_FLIGHT_RECOVERY_DECISION = 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE_OPEN_IN_FLIGHT_NOT_CAPTURE_COMPLETE';
 
 function finalizeShadowDecision(shadow, decision, extra = {}) {
   return {
@@ -91,8 +97,11 @@ export class SchedulerCoordinator extends DurableObject {
     const owner = requireEnv(this.env, 'GITHUB_OWNER');
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
-    const token = requireEnv(this.env, 'GITHUB_ACTIONS_TOKEN');
     const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    // Run discovery is always read-only. Observe-only environments never carry
+    // a workflow-dispatch credential at all; active mode accesses the write
+    // credential lazily only after every recovery gate says dispatch is needed.
+    const readToken = requireEnv(this.env, 'GITHUB_ACTIONS_READ_TOKEN');
 
     const window = slotWindow(slot, observedEpochMs);
     if (observedEpochMs < window.checkMs || observedEpochMs >= window.cutoffMs) {
@@ -107,7 +116,7 @@ export class SchedulerCoordinator extends DurableObject {
       exactCoverage = await queryExactSlotCoverage({
         owner,
         repo,
-        token,
+        token: readToken,
         slot,
         epochMs: observedEpochMs,
       });
@@ -131,11 +140,40 @@ export class SchedulerCoordinator extends DurableObject {
         detail: shadow.github_exact_run_evidence,
       });
     }
+
+    let officialOpenRecoveryAdmission = null;
+    if (shadow.family === 'OFFICIAL_OPEN' && shadow.durable_completion.capture_complete) {
+      try {
+        officialOpenRecoveryAdmission = await validateOfficialOpenRecoveryAdmission({
+          archive: this.env.ARCHIVE,
+          session: window.dateKey,
+          slot: slot.inputValue,
+          expectedCompletionSha256: shadow.durable_completion.completion_sha256,
+          expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
+        });
+      } catch (error) {
+        return finalizeShadowDecision(
+          shadow,
+          'FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
+          {
+            status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH',
+            official_open_recovery_admission: {
+              recovery_admissible: false,
+              error: safeError(error),
+            },
+          },
+        );
+      }
+    }
+
     if (shadow.durable_completion.capture_complete) {
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
-        { status: 'SHADOW_DURABLE_COMPLETION_VERIFIED' },
+        {
+          status: 'SHADOW_DURABLE_COMPLETION_VERIFIED',
+          official_open_recovery_admission: officialOpenRecoveryAdmission,
+        },
       );
     }
     if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
@@ -166,11 +204,25 @@ export class SchedulerCoordinator extends DurableObject {
         },
       );
     }
-    if (shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE') {
+
+    // Official Open has only one recovery check inside each narrow slot window.
+    // A visible in-flight run is not durable capture evidence, so it must not
+    // consume that sole recovery opportunity. The producer's pre-provider
+    // timing/auth gate plus its conditional immutable slot commit keep parallel
+    // native/recovery contenders fail-closed instead of allowing overwrite.
+    const openInFlightRecoveryOverride = isOfficialOpenSlot(slot)
+      && shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE';
+    if (
+      shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'
+      && !openInFlightRecoveryOverride
+    ) {
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
       });
     }
+    const activeModeDecision = openInFlightRecoveryOverride
+      ? OPEN_IN_FLIGHT_RECOVERY_DECISION
+      : effectiveActiveModeDecision(shadow);
 
     const attemptId = crypto.randomUUID();
     this._write(slotKey, 'dispatching', observedEpochMs, {
@@ -181,27 +233,57 @@ export class SchedulerCoordinator extends DurableObject {
     const dispatchInputs = dispatchBody(slot, ref).inputs;
     const dispatch = await dispatchWithMode({
       mode: dispatchMode,
-      dispatchFn: () => dispatchWorkflow({ owner, repo, token, ref, slot }),
+      // dispatchWithMode does not invoke this function in observe_only mode.
+      // Staging therefore has no write credential or signing key to access.
+      dispatchFn: async () => {
+        const writeToken = requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN');
+        let body = dispatchBody(slot, ref);
+        if (isOfficialOpenSlot(slot)) {
+          body = await officialOpenAttestedDispatchBody({
+            slot,
+            ref,
+            secret: requireEnv(this.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'),
+            sessionDate: window.dateKey,
+            issuedAtEpochMs: observedEpochMs,
+            nonce: crypto.randomUUID(),
+          });
+        }
+        return dispatchWorkflow({ owner, repo, token: writeToken, ref, slot, body });
+      },
     });
     if (dispatch.status === 'WOULD_DISPATCH') {
       this._write(slotKey, 'would_dispatch', observedEpochMs, {
-        detail: { dispatchMode, inputs: dispatchInputs, shadow },
+        detail: {
+          dispatchMode,
+          inputs: dispatchInputs,
+          officialOpenAttestationRequired: isOfficialOpenSlot(slot),
+          openInFlightRecoveryOverride,
+          shadow,
+        },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WOULD_DISPATCH',
         dispatchMode,
         inputs: dispatchInputs,
+        official_open_attestation_required: isOfficialOpenSlot(slot),
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
       });
     }
     if (dispatch.ok) {
       this._write(slotKey, 'dispatch_requested', Date.now(), {
         attemptId,
         runId: dispatch.runId,
-        detail: { githubStatus: dispatch.status },
+        detail: {
+          githubStatus: dispatch.status,
+          officialOpenAttestationUsed: isOfficialOpenSlot(slot),
+          openInFlightRecoveryOverride,
+        },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
+        official_open_attestation_used: isOfficialOpenSlot(slot),
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
         runId: dispatch.runId,
       });
     }
@@ -209,21 +291,23 @@ export class SchedulerCoordinator extends DurableObject {
     if (dispatch.retryable) {
       this._write(slotKey, 'retryable_error', Date.now(), {
         attemptId,
-        detail: { githubStatus: dispatch.status },
+        detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
       });
-      return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+      return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'DISPATCH_RETRYABLE_ERROR',
+        open_inflight_recovery_override: openInFlightRecoveryOverride,
         githubStatus: dispatch.status,
       });
     }
 
     this._write(slotKey, 'blocked', Date.now(), {
       attemptId,
-      detail: { githubStatus: dispatch.status },
+      detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
     });
-    return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
+    return finalizeShadowDecision(shadow, activeModeDecision, {
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
+      open_inflight_recovery_override: openInFlightRecoveryOverride,
       githubStatus: dispatch.status,
     });
   }
