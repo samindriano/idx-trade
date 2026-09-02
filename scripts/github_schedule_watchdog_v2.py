@@ -1,8 +1,11 @@
 """Trusted-dispatch successor for the GitHub schedule watchdog.
 
-All V1 scheduling, slot windows, coverage checks, markers, and non-Official-Open
-behavior remain unchanged.  Only Official Open workflow_dispatch requests are
-augmented with the HMAC attestation required by the recovery producer.
+All V1 scheduling, slot windows, markers, and non-Official-Open behavior remain
+unchanged. Only Official Open recovery semantics are hardened:
+
+* workflow_dispatch requests carry the HMAC attestation required by the producer;
+* arbitrary/manual workflow_dispatch metadata cannot suppress trusted recovery;
+* a native run suppresses recovery only after it completed successfully.
 
 The signing key is read from the watchdog process environment and is never
 placed on the gh command line, marker files, events, or child environment.
@@ -17,7 +20,7 @@ import hmac
 import json
 import os
 import secrets
-from typing import Callable, Iterator, Sequence
+from typing import Callable, Iterator, Mapping, Sequence
 
 from scripts import github_schedule_watchdog as v1
 
@@ -159,9 +162,43 @@ def _dispatch_v2(
     return return_code
 
 
+def _official_open_trigger_coverage(
+    *,
+    runs: Sequence[Mapping[str, object]],
+    slot: v1.Slot,
+    due: datetime,
+    observation: datetime | None = None,
+) -> list[dict[str, object]]:
+    """Return V1 coverage except that Official Open requires native success.
+
+    GitHub run metadata cannot prove that a workflow_dispatch carried the HMAC
+    fields. Therefore an external/manual dispatch is never used as coverage by
+    the Windows watchdog. A prior watchdog dispatch is still deduplicated by
+    V1's durable local marker. An in-flight native run also stays recovery-
+    eligible because this watchdog has only one check inside the narrow slot.
+    """
+
+    exact = v1._exact_slot_runs(
+        runs=runs,
+        slot=slot,
+        due=due,
+        observation=observation,
+    )
+    if slot.workflow_file != OFFICIAL_OPEN_WORKFLOW:
+        return exact
+    return [
+        row
+        for row in exact
+        if row.get("event") == "schedule"
+        and row.get("status") == "completed"
+        and row.get("conclusion") == "success"
+    ]
+
+
 @contextmanager
-def _patched_dispatch(current: datetime) -> Iterator[None]:
-    original = v1._dispatch
+def _patched_v1_hooks(current: datetime) -> Iterator[None]:
+    original_dispatch = v1._dispatch
+    original_exact_slot_runs = v1._exact_slot_runs
 
     def bound_dispatch(*, runner, repository, slot, gh_exe):
         return _dispatch_v2(
@@ -172,11 +209,32 @@ def _patched_dispatch(current: datetime) -> Iterator[None]:
             current=current,
         )
 
+    def bound_exact_slot_runs(*, runs, slot, due, observation=None):
+        # Call the saved V1 implementation directly to avoid recursion after
+        # patching the module global used by run_once.
+        exact = original_exact_slot_runs(
+            runs=runs,
+            slot=slot,
+            due=due,
+            observation=observation,
+        )
+        if slot.workflow_file != OFFICIAL_OPEN_WORKFLOW:
+            return exact
+        return [
+            row
+            for row in exact
+            if row.get("event") == "schedule"
+            and row.get("status") == "completed"
+            and row.get("conclusion") == "success"
+        ]
+
     v1._dispatch = bound_dispatch
+    v1._exact_slot_runs = bound_exact_slot_runs
     try:
         yield
     finally:
-        v1._dispatch = original
+        v1._dispatch = original_dispatch
+        v1._exact_slot_runs = original_exact_slot_runs
 
 
 def run_once(
@@ -189,7 +247,7 @@ def run_once(
 ):
     current = (now or datetime.now(v1.JAKARTA)).astimezone(v1.JAKARTA)
     safe_runner = runner or _default_runner_v2
-    with _patched_dispatch(current):
+    with _patched_v1_hooks(current):
         return v1.run_once(
             repository=repository,
             state_root=state_root,
