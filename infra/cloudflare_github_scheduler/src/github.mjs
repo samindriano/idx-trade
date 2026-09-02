@@ -57,11 +57,20 @@ export function isRetryableGithubStatus(status) {
   return status === 408 || status === 409 || status === 429 || status >= 500;
 }
 
-export async function dispatchWorkflow({ fetchFn = fetch, owner, repo, token, ref = 'main', slot }) {
+export async function dispatchWorkflow({
+  fetchFn = fetch,
+  owner,
+  repo,
+  token,
+  ref = 'main',
+  slot,
+  body = null,
+}) {
+  const requestBody = body ?? dispatchBody(slot, ref);
   const response = await fetchFn(workflowDispatchUrl({ owner, repo, workflow: slot.workflow }), {
     method: 'POST',
     headers: headers(token, true),
-    body: JSON.stringify(dispatchBody(slot, ref)),
+    body: JSON.stringify(requestBody),
   });
   if (!response.ok) {
     return {
