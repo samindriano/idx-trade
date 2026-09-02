@@ -42,6 +42,8 @@ def test_official_open_recovery_wrapper_is_exactly_pinned_and_attested():
     ]
     assert "timeout-minutes: 10" in text
     assert "OFFICIAL_OPEN_STORAGE_PREFIX: official-open-v1" in text
+    assert "\nconcurrency:\n" not in text
+    assert "conditional immutable slot_manifest.json commit" in text
 
 
 def test_e2e_recovery_wrapper_is_exactly_pinned_to_matching_open_producer():
@@ -68,3 +70,5 @@ def test_e2e_recovery_wrapper_is_exactly_pinned_to_matching_open_producer():
     assert "E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1" in text
     assert "E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1" in text
     assert "E2E_CLOUD_PROVIDER_COMMIT: 75d6c0f74fa360d225794c70c383348977de6798" in text
+    assert "\nconcurrency:\n" not in text
+    assert "conditional immutable R2 stage/checkpoint commit" in text
