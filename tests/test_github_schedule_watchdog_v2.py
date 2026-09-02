@@ -12,6 +12,22 @@ def _slot(slot_id: str):
     return next(slot for slot in v1.SLOTS if slot.slot_id == slot_id)
 
 
+def _runner_with_open_runs(runs: list[dict[str, object]]):
+    calls: list[list[str]] = []
+
+    def runner(command):
+        args = list(command)
+        calls.append(args)
+        if "api" in args:
+            workflow = args[2].split("/")[-2]
+            return 0, json.dumps(
+                {"workflow_runs": runs if workflow == v2.OFFICIAL_OPEN_WORKFLOW else []}
+            )
+        return 0, ""
+
+    return runner, calls
+
+
 def test_official_open_hmac_matches_independent_vector() -> None:
     fields = v2._official_open_attestation_fields(
         repository="samindriano/idx-trade",
@@ -99,6 +115,116 @@ def test_non_open_dispatch_remains_unattested(monkeypatch) -> None:
     assert "scheduler_nonce=" not in joined
 
 
+def test_manual_open_workflow_dispatch_cannot_suppress_trusted_recovery(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
+    runner, calls = _runner_with_open_runs(
+        [
+            {
+                "id": 901,
+                "event": "workflow_dispatch",
+                "head_branch": "main",
+                "status": "completed",
+                "conclusion": "failure",
+                "created_at": "2026-09-02T02:03:00Z",
+                "display_title": "IDX-SLOT:OFFICIAL_OPEN_0902",
+            }
+        ]
+    )
+    result = v2.run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 9, 2, 9, 6, tzinfo=v1.JAKARTA),
+        runner=runner,
+        gh_exe="gh",
+    )
+    action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
+    assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
+    assert action["ambiguous_run_ids"] == [901]
+    dispatch = next(call for call in calls if "workflow" in call and "run" in call)
+    assert "scheduler_signature=" in " ".join(dispatch)
+
+
+def test_inflight_native_open_run_does_not_consume_sole_recovery_check(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
+    runner, calls = _runner_with_open_runs(
+        [
+            {
+                "id": 902,
+                "event": "schedule",
+                "head_branch": "main",
+                "status": "in_progress",
+                "conclusion": None,
+                "created_at": "2026-09-02T02:02:00Z",
+                "display_title": "IDX-SLOT:OFFICIAL_OPEN_0902",
+            }
+        ]
+    )
+    result = v2.run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 9, 2, 9, 6, tzinfo=v1.JAKARTA),
+        runner=runner,
+        gh_exe="gh",
+    )
+    action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
+    assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
+    assert any("scheduler_signature=" in " ".join(call) for call in calls if "workflow" in call)
+
+
+def test_completed_successful_native_open_run_suppresses_recovery(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
+    runner, calls = _runner_with_open_runs(
+        [
+            {
+                "id": 903,
+                "event": "schedule",
+                "head_branch": "main",
+                "status": "completed",
+                "conclusion": "success",
+                "created_at": "2026-09-02T02:02:00Z",
+                "display_title": "IDX-SLOT:OFFICIAL_OPEN_0902",
+            }
+        ]
+    )
+    result = v2.run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 9, 2, 9, 6, tzinfo=v1.JAKARTA),
+        runner=runner,
+        gh_exe="gh",
+    )
+    action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
+    assert action["status"] == "ALREADY_COVERED"
+    assert action["run_ids"] == [903]
+    assert not any("workflow" in call and "run" in call for call in calls)
+
+
+def test_prior_local_marker_deduplicates_own_visible_dispatch(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
+    marker = tmp_path / "dispatch_markers" / "2026-09-02__OFFICIAL_OPEN_0902.json"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("{}\n", encoding="utf-8")
+    runner, calls = _runner_with_open_runs(
+        [
+            {
+                "id": 904,
+                "event": "workflow_dispatch",
+                "head_branch": "main",
+                "status": "in_progress",
+                "conclusion": None,
+                "created_at": "2026-09-02T02:05:00Z",
+                "display_title": "IDX-SLOT:OFFICIAL_OPEN_0902",
+            }
+        ]
+    )
+    result = v2.run_once(
+        state_root=tmp_path,
+        now=datetime(2026, 9, 2, 9, 6, tzinfo=v1.JAKARTA),
+        runner=runner,
+        gh_exe="gh",
+    )
+    action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
+    assert action["status"] == "DISPATCH_ALREADY_REQUESTED_NO_VISIBLE_RUN"
+    assert not any("workflow" in call and "run" in call for call in calls)
+
+
 def test_run_once_persists_no_signature_or_nonce(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
     calls: list[list[str]] = []
@@ -130,9 +256,10 @@ def test_run_once_persists_no_signature_or_nonce(monkeypatch, tmp_path: Path) ->
     assert "test-secret" not in events_text
 
 
-def test_patch_restores_v1_dispatch(monkeypatch, tmp_path: Path) -> None:
+def test_patch_restores_v1_hooks(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv(v2.SIGNING_KEY_ENV, "test-secret")
-    original = v1._dispatch
+    original_dispatch = v1._dispatch
+    original_exact_slot_runs = v1._exact_slot_runs
 
     def runner(command):
         args = list(command)
@@ -146,4 +273,5 @@ def test_patch_restores_v1_dispatch(monkeypatch, tmp_path: Path) -> None:
         runner=runner,
         gh_exe="gh",
     )
-    assert v1._dispatch is original
+    assert v1._dispatch is original_dispatch
+    assert v1._exact_slot_runs is original_exact_slot_runs
