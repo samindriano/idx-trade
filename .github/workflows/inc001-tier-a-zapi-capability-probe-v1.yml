@@ -1,0 +1,17 @@
+name: INC001 Tier A ZAPI CA capability probe V1 (frozen)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Historical router is frozen
+        run: |
+          echo "Automatic Tier-A ZAPI routing is frozen after accepted run 33357587316."
+          echo "Use commit 6875cef4587c88b8fc0cba45a19b87f4a9456ab0 for the exact historical router implementation."
+          echo "ZAPI remains discovery/router evidence only, not transition, negative, population, or historical-as-of authority."

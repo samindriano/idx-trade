@@ -54,13 +54,43 @@ MAIN must not keep independent critical-path work merely because one model could
 
 De-escalate when dependencies collapse the execution frontier back to sequential work. Do not spawn workers merely because capacity exists.
 
+## Worker execution surface
+
+Logical workers are execution units, not new user-facing conversations. The default UX invariant is:
+
+`ONE user request -> ONE visible MAIN session -> N internal/local workers`
+
+Use this execution-surface preference order whenever the runtime supports it:
+
+1. **`LOCAL_CHILD_AGENT`** — default. Spawn a native local child/subagent under the same MAIN session.
+2. **`LOCAL_ISOLATED_WORKTREE`** — use only when concurrent filesystem/Git writes need isolation. The worker still belongs to MAIN; a local worktree is filesystem isolation, not a new user-facing chat.
+3. **`EXTERNAL_OR_REMOTE_WORKER`** — exception only. Use when the user explicitly requests it, the needed capability exists only remotely, native local child agents are unavailable, or machine/resource isolation genuinely requires it. Record the reason.
+
+Read-only workers, source/document inspection, semantic audits, PIT/provenance review, code inspection, adversarial review, and independent recomputation that does not collide on repository writes should normally use `LOCAL_CHILD_AGENT` in the same checkout.
+
+A separate worktree is driven by write-collision risk, **not by worker count**. If concurrent writers have provably disjoint ownership and the local runtime can safely isolate their writes, local child-agent execution remains preferred. When a worktree is required, prefer a local Git worktree/branch and keep MAIN as the parent control plane.
+
+Do not create a standalone ChatGPT/Codex project chat, cloud task, or remote worktree solely because LIGHT or HEAVY orchestration was selected. If local child-agent execution is unavailable and remote execution is not materially necessary, prefer graceful de-escalation or local sequential execution over silently multiplying user-facing chats.
+
+The orchestration preflight should state the selected execution surface, for example:
+
+```text
+execution surface:
+- MAIN: LOCAL_PARENT
+- worker A: LOCAL_CHILD_AGENT
+- worker B: LOCAL_CHILD_AGENT
+- worker C: LOCAL_ISOLATED_WORKTREE  # only if write isolation is required
+```
+
+Any `EXTERNAL_OR_REMOTE_WORKER` entry requires an explicit reason.
+
 ## Worker and integration rules
 
 - Default MAIN/root model: `Luna xhigh` unless the user overrides it.
 - Default worker model: `Luna xhigh` unless the user overrides it.
 - `Sol High` is a bounded decision-changing escalation for unresolved architecture conflict, repeated integration failure, methodology certification, suspiciously strong evidence, or a final high-risk gate; HEAVY does not imply Sol.
 - Workers never spawn nested workers.
-- Concurrent writers require isolated worktrees/branches or otherwise provably disjoint ownership.
+- Concurrent writers require local isolated worktrees/branches or otherwise provably disjoint ownership; read-only workers do not require separate worktrees.
 - Workers do not merge, rebase, force-push, rewrite history, or integrate their own branches.
 - MAIN alone integrates after reviewing scope, diff, validation, provenance, and branch-specific frozen boundaries.
 - Spawn a delegated worker before MAIN begins doing the same delegated scope.
@@ -95,6 +125,8 @@ For a material QA task, MAIN should allocate independent lanes covering as appli
 5. **anomaly / distribution census** — search for unexplained extremes and regime breaks rather than checking only expected cases;
 6. **independent recomputation / blast radius** — recompute critical quantities through an implementation independent of the possibly faulty production helper and trace exact downstream identities;
 7. **adversarial falsification** — actively try to prove the suspected bug harmless and try to falsify any proposed remediation.
+
+These are logical audit lanes. Under HEAVY, they should normally run as local child agents under the same MAIN session; HEAVY means wider useful local concurrency, not seven new project chats.
 
 The same worker should not both establish a decision-changing ground-truth claim and certify its independent falsification when independent capacity is available.
 
@@ -135,7 +167,7 @@ The objective is that a bug class discovered once becomes materially harder to r
 
 ### MAIN owns final judgment
 
-Workers produce evidence. MAIN owns scope protection, reconciliation, materiality judgment, final gate verdict, and whether remediation is actually authorized.
+Workers produce evidence. MAIN owns scope protection, reconciliation, materiality judgment, final gate verdict, and whether remediation is actually authorized. Worker findings should report back to MAIN rather than creating parallel user-facing control planes.
 
 ## Status freshness
 

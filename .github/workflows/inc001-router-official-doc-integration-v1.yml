@@ -1,0 +1,298 @@
+name: INC001 Router Official Doc Integration V1
+
+on:
+  push:
+    branches:
+      - data/ca-aware-feature-basis-remediation-v1
+    paths:
+      - .github/workflows/inc001-router-official-doc-integration-v1.yml
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install deterministic PDF extractor
+        run: python -m pip install --quiet pypdf==6.16.2
+
+      - name: Fetch and certify bounded first-party documents
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv
+          import hashlib
+          import json
+          import pathlib
+          import re
+          import urllib.error
+          import urllib.request
+          from datetime import datetime, timezone
+
+          from pypdf import PdfReader
+
+          ROOT = pathlib.Path("inc001-router-official-doc-integration-v1")
+          RAW = ROOT / "raw"
+          TEXT = ROOT / "text"
+          RAW.mkdir(parents=True, exist_ok=True)
+          TEXT.mkdir(parents=True, exist_ok=True)
+
+          ROUTER_LINEAGE = {
+              "workflow_run": 33357587316,
+              "artifact_id": 9745620372,
+              "artifact_zip_sha256": "9e9a9797ad498d4b1a64ecca85523bebc531b2e5feca17a04cf0a64c2f93edc1",
+              "artifact_internal_manifest_sha256": "7d2c14719f759fb02a4bb48ed843b6e168d9f4dc57a0bb8c3903521618aa8a01",
+              "role": "DISCOVERY_ROUTER_ONLY_NOT_TRANSITION_AUTHORITY",
+          }
+
+          # Exactly the eight already-known residual events returned by the bounded
+          # Tier-A router.  Candidate dates are assertions to be falsified by the
+          # first-party documents below; they are not accepted truth by construction.
+          TARGETS = [
+              {
+                  "ticker": "DIVA", "family": "STOCK_SPLIT", "candidate": "2021-09-02",
+                  "url": "https://www.ptdvn.com/_files/ugd/dd7571_1a11e12d80ae4042a49a65e7539c90af.pdf",
+                  "owner": "PT Distribusi Voucher Nusantara Tbk",
+                  "source_kind": "ISSUER_STOCK_SPLIT_SCHEDULE",
+                  "date_native": r"2\s+September\s+2021|2\s+September,?\s+2021|02\s+September\s+2021|2\s+September\s+2021",
+                  "semantic": r"(?:Mulai|Awal|Start|Commencement).*?perdagangan.*?(?:Nilai\s+Nominal\s+Baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*2|1\s+berbanding\s+2", r"100", r"50"],
+              },
+              {
+                  "ticker": "BBRM", "family": "REVERSE_SPLIT", "candidate": "2022-02-18",
+                  "url": "https://bbr.co.id/wp-content/uploads/2024/12/Pengumuman%20Jadwal%20Reverse%20BBRM_16%20FEB%202022.pdf",
+                  "owner": "PT Pelayaran Nasional Bina Buana Raya Tbk",
+                  "source_kind": "ISSUER_REVERSE_STOCK_SCHEDULE",
+                  "date_native": r"18\s+Feb(?:ruari|ruary)\s+2022",
+                  "semantic": r"(?:Mulai|Awal|Start|Commencement).*?perdagangan.*?(?:Nilai\s+Nominal\s+Baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)|(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market).*?(?:18\s+Feb(?:ruari|ruary)\s+2022)",
+                  "mechanics": [r"reverse\s*stock|penggabungan\s+nominal", r"100", r"150"],
+              },
+              {
+                  "ticker": "BYAN", "family": "STOCK_SPLIT", "candidate": "2022-12-02",
+                  "url": "https://www.bayan.com.sg/cfind/source/files/ar-2022-byan-final.pdf",
+                  "owner": "PT Bayan Resources Tbk",
+                  "source_kind": "ISSUER_ANNUAL_REPORT",
+                  "date_native": r"2\s+Desember\s+2022|2\s+December\s+2022",
+                  "semantic": r"(?:awal|beginning).*?perdagangan.*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*10|1\s+banding\s+10", r"100", r"10"],
+                  "require_date_near_semantic": True,
+              },
+              {
+                  "ticker": "SKRN", "family": "STOCK_SPLIT", "candidate": "2023-01-06",
+                  "url": "https://superkrane.com/wp-content/uploads/2023/08/Final-Report-Q1-SKRN-2023.pdf",
+                  "owner": "PT Superkrane Mitra Utama Tbk",
+                  "source_kind": "ISSUER_FINANCIAL_REPORT",
+                  "date_native": r"6\s+Januari\s+2023|January\s+6,?\s+2023",
+                  "semantic": r"(?:awal\s+perdagangan|initial\s+trading).*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:pasar\s+reguler|regular\s+market).*?(?:pasar\s+negosiasi|negotiat(?:ed|ing)\s+market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"100", r"20"],
+              },
+              {
+                  "ticker": "SMDR", "family": "STOCK_SPLIT", "candidate": "2023-01-31",
+                  "url": "https://www.ksei.co.id/Announcement/Files/SMDR_MCONV_20230201_ID.pdf",
+                  "owner": "PT Kustodian Sentral Efek Indonesia",
+                  "source_kind": "KSEI_STOCK_SPLIT_SCHEDULE",
+                  "date_native": r"31\s+Januari\s+2023|31\s+January\s+2023",
+                  "semantic": r"(?:Mulai|Awal|Start).*?perdagangan.*?(?:Nilai\s+Nominal\s+Baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*5|1\s+berbanding\s+5", r"25", r"5"],
+              },
+              {
+                  "ticker": "BMRI", "family": "STOCK_SPLIT", "candidate": "2023-04-04",
+                  "url": "https://www.ksei.co.id/Announcement/Files/BMRI_MCONV_20230405_ID.pdf",
+                  "owner": "PT Kustodian Sentral Efek Indonesia",
+                  "source_kind": "KSEI_STOCK_SPLIT_SCHEDULE",
+                  "date_native": r"4\s+April\s+2023",
+                  "semantic": r"(?:Mulai|Awal|Start).*?perdagangan.*?(?:Nilai\s+Nominal\s+Baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*2|1\s+berbanding\s+2", r"250", r"125"],
+              },
+              {
+                  "ticker": "TMAS", "family": "STOCK_SPLIT", "candidate": "2023-05-23",
+                  "url": "https://temas.id/storage/uploads/files/investors/TMO6zTHxEGoxuWEwU7HihTmyTVB6Zkb82UbNtKE4.pdf",
+                  "owner": "PT TEMAS Tbk",
+                  "source_kind": "ISSUER_STOCK_SPLIT_SCHEDULE",
+                  "date_native": r"23\s+Mei\s+2023|May\s+23(?:th)?,?\s+2023",
+                  "semantic": r"(?:Awal|Start).*?perdagangan.*?(?:nilai\s+nominal\s+baru|new\s+nominal\s+value).*?(?:Pasar\s+Reguler|Regular\s+Market).*?(?:Pasar\s+Negosiasi|Negotiated\s+Market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*10|1\s+berbanding\s+sepuluh", r"25", r"2[,.]5"],
+              },
+              {
+                  "ticker": "TUGU", "family": "STOCK_SPLIT", "candidate": "2023-05-24",
+                  "url": "https://cms-tpi.tugu.com/files/2020/01/TUGU-Laporan-Tahunan-2023.pdf",
+                  "owner": "PT Asuransi Tugu Pratama Indonesia Tbk",
+                  "source_kind": "ISSUER_ANNUAL_REPORT",
+                  "date_native": r"24\s+Mei\s+2023|24\s+May\s+2023",
+                  "semantic": r"(?:awal\s+perdagangan|share\s+trading).*?(?:nilai\s+nominal\s+baru|new\s+nominal).*?(?:pasar\s+regular|regular\s+market).*?(?:pasar\s+negosiasi|negotiat(?:ed|ion)\s+market)",
+                  "mechanics": [r"stock\s*split|pemecahan", r"1\s*[:\-]\s*2|1\s+berbanding\s+2", r"100", r"50"],
+              },
+          ]
+
+          def sha256(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+          def normalize(value: str) -> str:
+              return " ".join(value.replace("\x00", " ").split())
+
+          def fetch(url: str):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": "Mozilla/5.0 IDX-Trade/INC001-router-official-doc-integration-v1",
+                      "Accept": "application/pdf,*/*;q=0.8",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as response:
+                      body = response.read()
+                      return int(response.status), response.geturl(), body, "", str(response.headers.get("Content-Type", ""))
+              except urllib.error.HTTPError as exc:
+                  body = exc.read()
+                  return int(exc.code), str(exc.geturl()), body, f"HTTPError:{exc.code}", str(exc.headers.get("Content-Type", "")) if exc.headers else ""
+              except Exception as exc:
+                  return 0, url, b"", f"{type(exc).__name__}:{exc}", ""
+
+          def extract_pdf(path: pathlib.Path):
+              try:
+                  reader = PdfReader(str(path))
+                  chunks = []
+                  for page in reader.pages:
+                      try:
+                          chunks.append(page.extract_text() or "")
+                      except Exception as exc:
+                          chunks.append(f" [PAGE_EXTRACT_ERROR:{type(exc).__name__}] ")
+                  return "\n".join(chunks), ""
+              except Exception as exc:
+                  return "", f"{type(exc).__name__}:{exc}"
+
+          def snippet(text: str, match: re.Match | None, width: int = 900) -> str:
+              if not match:
+                  return ""
+              start = max(0, match.start() - width // 2)
+              end = min(len(text), match.end() + width // 2)
+              return text[start:end]
+
+          ledger = []
+          for index, target in enumerate(TARGETS, 1):
+              started = datetime.now(timezone.utc).isoformat()
+              status, final_url, body, fetch_error, content_type = fetch(target["url"])
+              raw_path = RAW / f"{index:02d}_{target['ticker']}.pdf"
+              raw_path.write_bytes(body)
+              raw_sha = sha256(body) if body else ""
+
+              extracted = ""
+              extract_error = ""
+              if status == 200 and body:
+                  extracted, extract_error = extract_pdf(raw_path)
+              text_path = TEXT / f"{index:02d}_{target['ticker']}.txt"
+              text_path.write_text(extracted, encoding="utf-8")
+              normalized = normalize(extracted)
+              text_sha = sha256(text_path.read_bytes())
+
+              date_match = re.search(target["date_native"], normalized, re.IGNORECASE | re.DOTALL)
+              semantic_match = re.search(target["semantic"], normalized, re.IGNORECASE | re.DOTALL)
+              mechanics = [bool(re.search(pattern, normalized, re.IGNORECASE | re.DOTALL)) for pattern in target["mechanics"]]
+
+              near_ok = True
+              if target.get("require_date_near_semantic"):
+                  near_ok = False
+                  if date_match and semantic_match:
+                      near_ok = abs(date_match.start() - semantic_match.start()) <= 1800
+
+              if status != 200 or not body:
+                  verdict = "OFFICIAL_DOC_UNAVAILABLE"
+              elif extract_error or not normalized:
+                  verdict = "OFFICIAL_DOC_FOUND_SEMANTIC_INSUFFICIENT"
+              elif date_match and semantic_match and all(mechanics) and near_ok:
+                  verdict = "RESOLVED_EXACT_OFFICIAL"
+              else:
+                  verdict = "OFFICIAL_DOC_FOUND_SEMANTIC_INSUFFICIENT"
+
+              # A source is never allowed to create negative/no-event authority here.
+              row = {
+                  "ticker": target["ticker"],
+                  "family": target["family"],
+                  "candidate_transition": target["candidate"],
+                  "accepted_semantic": "REGULAR_MARKET_FIRST_NEW_BASIS_TRADING_DATE",
+                  "source_owner": target["owner"],
+                  "source_kind": target["source_kind"],
+                  "requested_url": target["url"],
+                  "final_url": final_url,
+                  "http_status": status,
+                  "content_type": content_type,
+                  "fetch_error": fetch_error,
+                  "response_bytes": len(body),
+                  "evidence_sha256": raw_sha,
+                  "text_sha256": text_sha,
+                  "extract_error": extract_error,
+                  "date_match": bool(date_match),
+                  "semantic_match": bool(semantic_match),
+                  "mechanics_checks": mechanics,
+                  "date_near_semantic": near_ok,
+                  "verdict": verdict,
+                  "date_snippet": snippet(normalized, date_match),
+                  "semantic_snippet": snippet(normalized, semantic_match),
+                  "retrieved_utc": started,
+                  "negative_authority": "NOT_CLAIMED",
+                  "router_role": ROUTER_LINEAGE["role"],
+                  "raw_file": str(raw_path.relative_to(ROOT)),
+                  "text_file": str(text_path.relative_to(ROOT)),
+              }
+              ledger.append(row)
+              print("EVIDENCE", target["ticker"], f"status={status}", f"bytes={len(body)}", f"sha={raw_sha or '-'}", f"date={bool(date_match)}", f"semantic={bool(semantic_match)}", f"mechanics={mechanics}", f"near={near_ok}", f"verdict={verdict}", f"error={fetch_error or extract_error or '-'}")
+
+          counts = {}
+          for row in ledger:
+              counts[row["verdict"]] = counts.get(row["verdict"], 0) + 1
+
+          summary = {
+              "schema_version": "inc001_router_official_doc_integration_v1",
+              "read_only": True,
+              "outcome_blind": True,
+              "production_mutation": False,
+              "router_lineage": ROUTER_LINEAGE,
+              "target_count": len(TARGETS),
+              "verdict_counts": counts,
+              "negative_authority": "NOT_CLAIMED",
+              "population_completeness_authority": "NOT_EVALUATED_BY_THIS_WAVE",
+              "historical_asof_authority": "NOT_EVALUATED_BY_THIS_WAVE",
+              "transition_admission_rule": "EXPLICIT_REGULAR_MARKET_FIRST_NEW_BASIS_SEMANTIC_PLUS_DATE_PLUS_MECHANICS_PLUS_HASHED_FIRST_PARTY_BYTES",
+              "targets": ledger,
+          }
+
+          with (ROOT / "evidence_ledger.csv").open("w", encoding="utf-8", newline="") as handle:
+              fields = [
+                  "ticker", "family", "candidate_transition", "accepted_semantic", "source_owner", "source_kind",
+                  "requested_url", "final_url", "http_status", "content_type", "fetch_error", "response_bytes",
+                  "evidence_sha256", "text_sha256", "extract_error", "date_match", "semantic_match",
+                  "mechanics_checks", "date_near_semantic", "verdict", "negative_authority", "router_role",
+                  "raw_file", "text_file", "retrieved_utc",
+              ]
+              writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore", lineterminator="\n")
+              writer.writeheader()
+              writer.writerows(ledger)
+
+          (ROOT / "summary.json").write_text(json.dumps(summary, ensure_ascii=True, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+          manifest_files = {}
+          for path in sorted(ROOT.rglob("*")):
+              if path.is_file() and path.name != "MANIFEST.json":
+                  manifest_files[str(path.relative_to(ROOT)).replace("\\", "/")] = {
+                      "bytes": path.stat().st_size,
+                      "sha256": sha256(path.read_bytes()),
+                  }
+          manifest = {
+              "manifest_version": "inc001_router_official_doc_integration_v1_manifest",
+              "files": manifest_files,
+              "self_hash_policy": "MANIFEST.json excluded from its own hash",
+          }
+          (ROOT / "MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=True, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("SUMMARY", json.dumps({k: v for k, v in summary.items() if k != "targets"}, sort_keys=True))
+          print("MANIFEST_SHA256", sha256((ROOT / "MANIFEST.json").read_bytes()))
+          PY
+
+      - name: Upload immutable official-document evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: inc001-router-official-doc-integration-v1
+          path: inc001-router-official-doc-integration-v1/
+          if-no-files-found: error
+          retention-days: 14
