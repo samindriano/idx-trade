@@ -200,7 +200,14 @@ export class SchedulerCoordinator extends DurableObject {
         },
       );
     }
-    if (shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE') {
+    // Official Open has only one recovery check inside each narrow slot window.
+    // A visible in-flight run is not durable capture evidence, so it must not
+    // consume that sole recovery opportunity. Same-slot workflow concurrency
+    // plus the producer's early immutable-commit check keep this fail-safe.
+    if (
+      shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'
+      && !isOfficialOpenSlot(slot)
+    ) {
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
       });
