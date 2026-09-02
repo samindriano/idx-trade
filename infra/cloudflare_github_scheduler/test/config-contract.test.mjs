@@ -8,6 +8,9 @@ const stagingLive = readJson('wrangler.staging-live.jsonc');
 const production = readJson('wrangler.production.jsonc');
 const indexSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
 
+const E2E_RECOVERY_PIN = '8bc3ee3efd65e8b16478e404e4b226451b105c48';
+const OFFICIAL_OPEN_RECOVERY_PIN = 'ac29a0552b1785045906f8d608b5371d93e01b73';
+
 test('staging and production use isolated Worker and Durable Object namespaces', () => {
   assert.notEqual(staging.name, production.name);
   assert.notEqual(stagingLive.name, production.name);
@@ -23,7 +26,8 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(production.vars.DISPATCH_MODE, 'active');
   for (const config of [staging, stagingLive, production]) {
     assert.deepEqual(config.r2_buckets, [{ binding: 'ARCHIVE', bucket_name: 'idx-trade-stockbit-stream-v1' }]);
-    assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT.length, 40);
+    assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT, E2E_RECOVERY_PIN);
+    assert.equal(config.vars.OFFICIAL_OPEN_EXPECTED_CODE_COMMIT, OFFICIAL_OPEN_RECOVERY_PIN);
   }
 });
 
@@ -75,6 +79,13 @@ test('Official Open signing is confined to lazy active dispatch path', () => {
   assert.match(indexSource, /requireEnv\(this\.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
   assert.match(indexSource, /dispatchFn: async \(\) =>/);
   assert.match(indexSource, /official_open_attestation_required/);
+});
+
+test('Official Open durable archive completion requires separate recovery admission', () => {
+  assert.match(indexSource, /validateOfficialOpenRecoveryAdmission/);
+  assert.match(indexSource, /OFFICIAL_OPEN_EXPECTED_CODE_COMMIT/);
+  assert.match(indexSource, /FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID/);
+  assert.match(indexSource, /official_open_recovery_admission/);
 });
 
 test('a completion-final marker is not manufactured by a generic hash helper', async () => {
