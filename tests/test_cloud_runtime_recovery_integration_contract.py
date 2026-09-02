@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OPEN_WORKFLOW = ROOT / ".github" / "workflows" / "official-open-prospective-cloud-capture.yml"
 E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml"
 
-OPEN_PIN = "99434723fec6f9cdf88b14807d3cec4698407b2f"
+OPEN_PIN = "ac29a0552b1785045906f8d608b5371d93e01b73"
 E2E_PIN = "8bc3ee3efd65e8b16478e404e4b226451b105c48"
 
 
