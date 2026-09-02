@@ -1,13 +1,16 @@
 """Cloud E2E PAPER V4 operational recovery adapter.
 
 V3 remains the accepted PREOPEN_CA continuity implementation.  This adapter
-repairs two operational contract bugs without changing frozen science:
+repairs three operational contract bugs without changing frozen science:
 
 * the current cloud observation time is still used for mutable runtime identity
   refresh/population admission, while the downstream prospective scorer keeps
   its preregistered frozen ``DEFAULT_OBSERVED_BY`` boundary;
 * a legitimate ``V4_X1_NO_ELIGIBLE_SAME_DAY_SCORE`` result is interpreted as a
-  semantic waiting state before any score-manifest path is dereferenced.
+  semantic waiting state before any score-manifest path is dereferenced;
+* PREOPEN consumes Official Open through the successor admission contract that
+  recognises only native GitHub schedules or producer-verified trusted external
+  scheduler attestations. Arbitrary/manual dispatch remains forbidden.
 
 No model, feature, target, outcome, refit, score formula, sizing, execution, or
 retroactive rule is changed here.
@@ -31,13 +34,18 @@ if str(SRC_ROOT) not in sys.path:
 
 import idx_trade.e2e_paper_operational_controller_v1 as controller_v1  # noqa: E402
 from idx_trade import v4_x1_clean_forward_score as clean_x1  # noqa: E402
+from idx_trade.e2e_official_open_admission_v2 import (  # noqa: E402
+    materialize_official_open_from_cloud_v2,
+)
 from idx_trade.v4_x1_eod_pipeline import NO_SCORE_ERRORS  # noqa: E402
+from scripts import run_e2e_paper_cloud_v1 as v1  # noqa: E402
 from scripts import run_e2e_paper_cloud_v2 as v2  # noqa: E402
 from scripts import run_e2e_paper_cloud_v3 as v3  # noqa: E402
 
 
 _ORIGINAL_WITH_RUNTIME_SECURITY_MASTER = v2._with_runtime_security_master
 _ORIGINAL_VERIFY_SCORE_POINTER = controller_v1._verify_score_pointer
+_ORIGINAL_MATERIALIZE_OFFICIAL_OPEN = v1.materialize_official_open_from_cloud
 _SCORE_MANIFEST_STATUSES = frozenset(
     {
         "V4_X1_SCORE_ALREADY_DONE_VERIFIED",
@@ -128,13 +136,16 @@ def _verify_score_pointer_semantic_first(
 def _patched_v3_operational_contracts() -> Iterator[None]:
     original_with_runtime = v2._with_runtime_security_master
     original_verify_score = controller_v1._verify_score_pointer
+    original_materialize_open = v1.materialize_official_open_from_cloud
     v2._with_runtime_security_master = _with_split_observation_clock
     controller_v1._verify_score_pointer = _verify_score_pointer_semantic_first
+    v1.materialize_official_open_from_cloud = materialize_official_open_from_cloud_v2
     try:
         yield
     finally:
         v2._with_runtime_security_master = original_with_runtime
         controller_v1._verify_score_pointer = original_verify_score
+        v1.materialize_official_open_from_cloud = original_materialize_open
 
 
 def run_once(*, phase: str | None = None, session_date: str | None = None) -> dict[str, object]:
