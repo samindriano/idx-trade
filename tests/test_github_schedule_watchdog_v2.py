@@ -28,6 +28,16 @@ def _runner_with_open_runs(runs: list[dict[str, object]]):
     return runner, calls
 
 
+def _official_open_dispatch_calls(calls: list[list[str]]) -> list[list[str]]:
+    return [
+        call
+        for call in calls
+        if "workflow" in call
+        and "run" in call
+        and v2.OFFICIAL_OPEN_WORKFLOW in call
+    ]
+
+
 def test_official_open_hmac_matches_independent_vector() -> None:
     fields = v2._official_open_attestation_fields(
         repository="samindriano/idx-trade",
@@ -139,7 +149,7 @@ def test_manual_open_workflow_dispatch_cannot_suppress_trusted_recovery(monkeypa
     action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
     assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
     assert action["ambiguous_run_ids"] == [901]
-    dispatch = next(call for call in calls if "workflow" in call and "run" in call)
+    dispatch = next(call for call in _official_open_dispatch_calls(calls))
     assert "scheduler_signature=" in " ".join(dispatch)
 
 
@@ -166,7 +176,7 @@ def test_inflight_native_open_run_does_not_consume_sole_recovery_check(monkeypat
     )
     action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
     assert action["status"] == "DISPATCH_REQUESTED_AMBIGUOUS_RUN"
-    assert any("scheduler_signature=" in " ".join(call) for call in calls if "workflow" in call)
+    assert any("scheduler_signature=" in " ".join(call) for call in _official_open_dispatch_calls(calls))
 
 
 def test_completed_successful_native_open_run_suppresses_recovery(monkeypatch, tmp_path: Path) -> None:
@@ -193,7 +203,7 @@ def test_completed_successful_native_open_run_suppresses_recovery(monkeypatch, t
     action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
     assert action["status"] == "ALREADY_COVERED"
     assert action["run_ids"] == [903]
-    assert not any("workflow" in call and "run" in call for call in calls)
+    assert _official_open_dispatch_calls(calls) == []
 
 
 def test_prior_local_marker_deduplicates_own_visible_dispatch(monkeypatch, tmp_path: Path) -> None:
@@ -222,7 +232,7 @@ def test_prior_local_marker_deduplicates_own_visible_dispatch(monkeypatch, tmp_p
     )
     action = next(item for item in result["actions"] if item["slot"] == "OFFICIAL_OPEN_0902")
     assert action["status"] == "DISPATCH_ALREADY_REQUESTED_NO_VISIBLE_RUN"
-    assert not any("workflow" in call and "run" in call for call in calls)
+    assert _official_open_dispatch_calls(calls) == []
 
 
 def test_run_once_persists_no_signature_or_nonce(monkeypatch, tmp_path: Path) -> None:
