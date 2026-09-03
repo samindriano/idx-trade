@@ -262,8 +262,6 @@ def test_delayed_native_execution_is_still_seen_without_covering_a_later_slot(
                     "head_branch": "main",
                     "status": "in_progress",
                     "conclusion": None,
-                    # The run was enqueued at the 18:35 schedule, although its
-                    # execution is still delayed at 19:05.
                     "created_at": "2026-08-27T11:35:00Z",
                     "display_title": "IDX-SLOT:E2E_POST_EOD_1835",
                 }
@@ -341,8 +339,6 @@ def test_delayed_1830_run_near_1930_cannot_cover_stockbit_1930(tmp_path: Path) -
                     "head_branch": "main",
                     "status": "in_progress",
                     "conclusion": None,
-                    # A severely delayed 18:30 run appears one minute before
-                    # the 19:30 slot.  The API exposes no slot input.
                     "created_at": "2026-08-27T12:29:00Z",
                     "display_title": "IDX-SLOT:STOCKBIT_INTRADAY_1830",
                 }
@@ -444,8 +440,6 @@ def test_out_of_order_delayed_schedule_cannot_suppress_later_valid_slot(tmp_path
                     "head_branch": "main",
                     "status": "queued",
                     "conclusion": None,
-                    # This is before the exact 19:30 slot boundary and is
-                    # therefore not evidence for STOCKBIT_INTRADAY_1930.
                     "created_at": "2026-08-27T12:29:59Z",
                     "display_title": "IDX-SLOT:STOCKBIT_INTRADAY_1830",
                 }
@@ -867,7 +861,7 @@ def test_installer_contract_has_morning_and_post_close_checks() -> None:
     assert "-MultipleInstances IgnoreNew" in text
 
 
-def test_production_workflows_keep_trigger_paths_and_phase_concurrency_isolated() -> None:
+def test_production_workflows_keep_trigger_paths_and_recovery_topology_safe() -> None:
     root = Path(__file__).parents[1]
     e2e = (root / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml").read_text(
         encoding="utf-8"
@@ -890,8 +884,9 @@ def test_production_workflows_keep_trigger_paths_and_phase_concurrency_isolated(
         assert schedule in e2e
     for phase in ("PREOPEN_CA", "PREOPEN", "POST_EOD"):
         assert phase in e2e
-    assert "cancel-in-progress: false" in e2e
-    assert "'preopen-ca'" in e2e
-    assert "'preopen'" in e2e
-    assert "'post-eod'" in e2e
+
+    assert "\nconcurrency:\n" not in e2e
+    assert "no workflow-level concurrency group" in e2e
+    assert "conditional immutable R2 stage/checkpoint commit" in e2e
+    # Intraday retains its independently reviewed same-session provider fencing.
     assert "cancel-in-progress: false" in stockbit

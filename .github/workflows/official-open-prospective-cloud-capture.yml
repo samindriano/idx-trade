@@ -27,31 +27,38 @@ on:
         description: Optional YYYY-MM-DD session date; blank uses current Jakarta date
         required: false
         default: ""
+      scheduler_issued_at:
+        description: Trusted external scheduler UTC issue timestamp
+        required: false
+        default: ""
+        type: string
+      scheduler_nonce:
+        description: Trusted external scheduler nonce
+        required: false
+        default: ""
+        type: string
+      scheduler_signature:
+        description: HMAC-SHA256 scheduler attestation signature
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
 
-# Keep slots independent. A delayed 09:02 job must not serialize and thereby
-# force the 09:12/09:22 observations to wait behind it.
-concurrency:
-  group: >-
-    official-open-cloud-${{
-      (github.event.schedule == '2 2 * * 1-5' || inputs.slot == '0902') && '0902' ||
-      (github.event.schedule == '12 2 * * 1-5' || inputs.slot == '0912') && '0912' ||
-      (github.event.schedule == '22 2 * * 1-5' || inputs.slot == '0922') && '0922' ||
-      'ambiguous'
-    }}
-  cancel-in-progress: false
+# Native and trusted recovery runs intentionally have no workflow-level
+# concurrency group. A hung native run must not hold a trusted recovery behind
+# it until the prospective cutoff. Exactly-once durable authority is the
+# conditional immutable slot_manifest.json commit; conflicting contenders
+# fail closed instead of overwriting the winner.
 
 jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # Pin the evidence implementation independently of the default-branch
-      # launcher. The repository variable is intentionally repinnable only
-      # after PR #92 has an accepted integration merge SHA.
-      OFFICIAL_OPEN_CAPTURE_CODE_REF: ${{ vars.IDX_TRADE_OFFICIAL_OPEN_CAPTURE_CODE_REF }}
+      # Immutable timing-gated recovery producer pin. Change only through reviewed integration.
+      OFFICIAL_OPEN_CAPTURE_CODE_REF: ac29a0552b1785045906f8d608b5371d93e01b73
       ZAPI_API_KEY: ${{ secrets.ZAPI_API_KEY }}
       OFFICIAL_OPEN_STORAGE_BACKEND: s3
       OFFICIAL_OPEN_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
@@ -62,6 +69,12 @@ jobs:
       DISPATCH_SLOT: ${{ inputs.slot || '' }}
       DISPATCH_SESSION_DATE: ${{ inputs.session_date || '' }}
       EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+      # Native schedule ignores these. workflow_dispatch is admitted only when
+      # all fields verify against the shared scheduler HMAC key in producer V3.
+      OFFICIAL_OPEN_SCHEDULER_ISSUED_AT: ${{ inputs.scheduler_issued_at || '' }}
+      OFFICIAL_OPEN_SCHEDULER_NONCE: ${{ inputs.scheduler_nonce || '' }}
+      OFFICIAL_OPEN_SCHEDULER_SIGNATURE: ${{ inputs.scheduler_signature || '' }}
+      OFFICIAL_OPEN_SCHEDULER_HMAC_KEY: ${{ secrets.OFFICIAL_OPEN_SCHEDULER_HMAC_KEY }}
 
     steps:
       - name: Require accepted producer implementation pin
@@ -75,6 +88,10 @@ jobs:
         with:
           ref: ${{ env.OFFICIAL_OPEN_CAPTURE_CODE_REF }}
           persist-credentials: false
+
+      - name: Verify pinned implementation
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$OFFICIAL_OPEN_CAPTURE_CODE_REF"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -108,4 +125,4 @@ jobs:
           if [[ -n "$DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_official_open_cloud_capture_v1.py "${args[@]}"
+          python scripts/run_official_open_cloud_capture_v3.py "${args[@]}"

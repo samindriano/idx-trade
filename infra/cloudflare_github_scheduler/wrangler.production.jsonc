@@ -8,11 +8,23 @@
     "GITHUB_OWNER": "samindriano",
     "GITHUB_REPO": "idx-trade",
     "GITHUB_REF": "main",
-    "DISPATCH_MODE": "active"
+    "DISPATCH_MODE": "active",
+    "E2E_EXPECTED_CODE_COMMIT": "8bc3ee3efd65e8b16478e404e4b226451b105c48",
+    "OFFICIAL_OPEN_EXPECTED_CODE_COMMIT": "ac29a0552b1785045906f8d608b5371d93e01b73"
   },
   "secrets": {
-    "required": ["GITHUB_ACTIONS_TOKEN"]
+    "required": [
+      "GITHUB_ACTIONS_READ_TOKEN",
+      "GITHUB_ACTIONS_WRITE_TOKEN",
+      "OFFICIAL_OPEN_SCHEDULER_HMAC_KEY"
+    ]
   },
+  "r2_buckets": [
+    {
+      "binding": "ARCHIVE",
+      "bucket_name": "idx-trade-stockbit-stream-v1"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {

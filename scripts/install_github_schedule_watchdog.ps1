@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path -LiteralPath $RepoRoot).Path
 $state = [System.IO.Path]::GetFullPath($StateRoot)
-$runner = Join-Path $repo "scripts\github_schedule_watchdog.py"
+$runner = Join-Path $repo "scripts\github_schedule_watchdog_v2.py"
 
 if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
     throw "WATCHDOG_RUNNER_MISSING"
@@ -24,6 +24,18 @@ if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
 if (Get-ScheduledTask -TaskName $TaskName -TaskPath "\" -ErrorAction SilentlyContinue) {
     throw "WATCHDOG_TASK_ALREADY_EXISTS"
 }
+
+# The installer never accepts, prints, or embeds the shared signing key.  The
+# scheduled process must inherit a persistent user-level key configured out of
+# band. This keeps the key out of Task Scheduler XML and command arguments.
+$signingKey = [Environment]::GetEnvironmentVariable(
+    "OFFICIAL_OPEN_SCHEDULER_HMAC_KEY",
+    "User"
+)
+if ([string]::IsNullOrWhiteSpace($signingKey)) {
+    throw "OFFICIAL_OPEN_SCHEDULER_HMAC_KEY_USER_ENV_MISSING"
+}
+$signingKey = $null
 
 $resolvedPython = (Get-Command $PythonExe -ErrorAction Stop).Source
 $resolvedGh = (Get-Command gh -ErrorAction Stop).Source
