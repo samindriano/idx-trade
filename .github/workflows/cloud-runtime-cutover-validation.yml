@@ -1,0 +1,62 @@
+name: cloud runtime cutover validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/e2e-paper-cloud-orchestration.yml'
+      - '.github/workflows/official-open-prospective-cloud-capture.yml'
+      - 'scripts/github_schedule_watchdog_v2.py'
+      - 'scripts/install_github_schedule_watchdog.ps1'
+      - 'tests/test_cloud_runtime_recovery_integration_contract.py'
+      - 'tests/test_e2e_paper_cloud_activation_v1.py'
+      - 'tests/test_github_schedule_watchdog.py'
+      - 'tests/test_github_schedule_watchdog_v2.py'
+      - 'infra/cloudflare_github_scheduler/**'
+      - '.github/workflows/cloud-runtime-cutover-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-runtime-cutover-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  python-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install test runtime
+        run: python -m pip install -e ".[dev]"
+      - name: Focused recovery contracts
+        run: >-
+          python -m pytest
+          tests/test_cloud_runtime_recovery_integration_contract.py
+          tests/test_e2e_paper_cloud_activation_v1.py
+          tests/test_github_schedule_watchdog.py
+          tests/test_github_schedule_watchdog_v2.py
+
+  cloudflare-contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/cloudflare_github_scheduler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: infra/cloudflare_github_scheduler/package-lock.json
+      - name: Install pinned worker dependencies
+        run: npm ci
+      - name: Run scheduler contract tests
+        run: npm test
+      - name: Staging-live dry run
+        run: npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
+      - name: Production dry run
+        run: npx wrangler deploy --dry-run --config wrangler.production.jsonc
