@@ -93,7 +93,27 @@ export async function dispatchWorkflow({
   ref = 'main',
   slot,
   body = null,
+  nowFn = Date.now,
 }) {
+  // Revalidate wall-clock eligibility immediately before the GitHub POST.
+  // GitHub/R2 reads can consume enough time that the coordinator's initial
+  // observation is stale; that earlier timestamp must never authorize a late
+  // workflow_dispatch after the prospective cutoff.
+  const dispatchEpochMs = Number(nowFn());
+  const dispatchWindow = slotWindow(slot, dispatchEpochMs);
+  if (
+    !Number.isFinite(dispatchEpochMs)
+    || dispatchEpochMs < dispatchWindow.checkMs
+    || dispatchEpochMs >= dispatchWindow.cutoffMs
+  ) {
+    return {
+      ok: false,
+      status: 'DISPATCH_WINDOW_EXPIRED',
+      retryable: false,
+      runId: null,
+    };
+  }
+
   const requestBody = body ?? dispatchBody(slot, ref);
   const response = await fetchFn(workflowDispatchUrl({ owner, repo, workflow: slot.workflow }), {
     method: 'POST',
