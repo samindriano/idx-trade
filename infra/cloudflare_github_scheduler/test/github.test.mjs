@@ -84,21 +84,45 @@ test('dispatch sends exact ref and input and captures returned run id', async ()
     seen = { url, init };
     return jsonResponse({ workflow_run_id: 12345, run_url: 'x', html_url: 'y' }, 200);
   };
-  const result = await dispatchWorkflow({ fetchFn, owner: 'samindriano', repo: 'idx-trade', token: 'secret', ref: 'main', slot });
+  const result = await dispatchWorkflow({ fetchFn, owner: 'samindriano', repo: 'idx-trade', token: 'secret', ref: 'main', slot, nowFn: () => epoch('18:40') });
   assert.equal(result.ok, true);
   assert.equal(result.runId, 12345);
   assert.deepEqual(JSON.parse(seen.init.body), { ref: 'main', inputs: { phase: 'POST_EOD', trigger_slot: 'E2E_POST_EOD_1835' } });
   assert.equal(seen.init.headers.Authorization, 'Bearer secret');
 });
 
+test('dispatch rechecks the live clock and refuses a post-cutoff GitHub POST', async () => {
+  const slot = SLOT_BY_ID.get('OFFICIAL_OPEN_0922');
+  let calls = 0;
+  const result = await dispatchWorkflow({
+    fetchFn: async () => {
+      calls += 1;
+      return jsonResponse({ workflow_run_id: 99 }, 200);
+    },
+    owner: 'samindriano',
+    repo: 'idx-trade',
+    token: 'secret',
+    ref: 'main',
+    slot,
+    nowFn: () => epoch('09:23'),
+  });
+  assert.deepEqual(result, {
+    ok: false,
+    status: 'DISPATCH_WINDOW_EXPIRED',
+    retryable: false,
+    runId: null,
+  });
+  assert.equal(calls, 0);
+});
+
 test('dispatch classifies GitHub 429 as retryable without throwing', async () => {
   const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
-  const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 429 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot });
+  const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 429 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, nowFn: () => epoch('18:40') });
   assert.deepEqual(result, { ok: false, status: 429, retryable: true, runId: null });
 });
 
 test('dispatch classifies auth failure as non-retryable', async () => {
   const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
-  const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 403 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot });
+  const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 403 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, nowFn: () => epoch('18:40') });
   assert.equal(result.retryable, false);
 });
