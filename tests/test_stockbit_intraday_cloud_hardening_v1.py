@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import json
 from pathlib import Path
+from threading import Event, Thread
 import time
 
 import pytest
@@ -64,7 +65,68 @@ def test_same_slot_claim_allows_one_provider_stage_only(tmp_path: Path) -> None:
     assert replay is not None
 
 
-def test_fresh_process_resumes_durable_mid_batch_progress_without_refetch(tmp_path: Path) -> None:
+def test_stale_recovery_cannot_enter_while_old_provider_owner_is_active(tmp_path: Path) -> None:
+    store = LocalConditionalStore(tmp_path / "cloud")
+    archive = StockbitIntradayCloudArchive(store)
+    provider_started = Event()
+    release_provider = Event()
+    owner_calls: list[str] = []
+    owner_errors: list[BaseException] = []
+
+    def owner_requester(ticker: str):
+        owner_calls.append(ticker)
+        if ticker == "ZERO":
+            provider_started.set()
+            assert release_provider.wait(5)
+        return _payload(ticker), {"status": 200, "classification": "SUCCESS"}
+
+    def owner():
+        try:
+            run_cloud_slot(
+                expected_date=SESSION,
+                slot="1830",
+                now=datetime(2026, 8, 26, 18, 30, tzinfo=JAKARTA),
+                schedule=_schedule(),
+                context=_context(tmp_path),
+                archive=archive,
+                journal_root=tmp_path / "journal-owner",
+                requester=owner_requester,
+                code_identity={"commit": "f" * 40},
+            )
+        except BaseException as exc:  # surfaced below after the overlap proof
+            owner_errors.append(exc)
+
+    thread = Thread(target=owner)
+    thread.start()
+    assert provider_started.wait(5)
+
+    takeover_calls: list[str] = []
+
+    def takeover_requester(ticker: str):
+        takeover_calls.append(ticker)
+        raise AssertionError("stale recovery must not enter the provider boundary")
+
+    with pytest.raises(StockbitIntradayCloudError, match="STALE_CLAIM_FENCING_UNPROVEN"):
+        run_cloud_slot(
+            expected_date=SESSION,
+            slot="1830",
+            now=datetime(2026, 8, 26, 22, 31, tzinfo=JAKARTA),
+            schedule=_schedule(),
+            context=_context(tmp_path),
+            archive=StockbitIntradayCloudArchive(store),
+            journal_root=tmp_path / "journal-takeover",
+            requester=takeover_requester,
+            code_identity={"commit": "f" * 40},
+        )
+    assert takeover_calls == []
+    release_provider.set()
+    thread.join(timeout=10)
+    assert not thread.is_alive()
+    assert owner_errors == []
+    assert owner_calls == ["BBCA", "ZERO"]
+
+
+def test_stale_recovery_blocks_when_provider_fencing_is_unproven(tmp_path: Path) -> None:
     store = LocalConditionalStore(tmp_path / "cloud")
     archive = StockbitIntradayCloudArchive(store)
     first_calls: list[str] = []
@@ -96,19 +158,20 @@ def test_fresh_process_resumes_durable_mid_batch_progress_without_refetch(tmp_pa
         resumed_calls.append(ticker)
         return None, _not_found()
 
-    resumed = run_cloud_slot(
-        expected_date=SESSION,
-        slot="1830",
-        now=datetime(2026, 8, 26, 22, 31, tzinfo=JAKARTA),
-        schedule=_schedule(),
-        context=_context(tmp_path),
-        archive=StockbitIntradayCloudArchive(store),
-        journal_root=tmp_path / "journal-b",
-        requester=resumed_request,
-        code_identity={"commit": "d" * 40},
-    )
-    assert resumed.status == "ADMISSIBLE_COMPLETE"
-    assert resumed_calls == ["ZERO"]
+    with pytest.raises(StockbitIntradayCloudError, match="STALE_CLAIM_FENCING_UNPROVEN"):
+        run_cloud_slot(
+            expected_date=SESSION,
+            slot="1830",
+            now=datetime(2026, 8, 26, 22, 31, tzinfo=JAKARTA),
+            schedule=_schedule(),
+            context=_context(tmp_path),
+            archive=StockbitIntradayCloudArchive(store),
+            journal_root=tmp_path / "journal-b",
+            requester=resumed_request,
+            code_identity={"commit": "d" * 40},
+        )
+    assert resumed_calls == []
+    assert archive.latest_progress(SESSION, "1830") is not None
 
 
 def test_existing_slot_rejects_noncanonical_child_keys(tmp_path: Path) -> None:

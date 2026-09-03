@@ -6,8 +6,10 @@ import {
   canonicalSlotRunName,
   durableMarkerDecision,
   dueSlots,
+  effectiveActiveModeDecision,
+  exactRunRecoveryDecision,
   exactSlotCoverageRuns,
-  isFinalMarkerState,
+  isCaptureFinalMarkerState,
   localTimeEpochMs,
   markerKey,
   slotWindow,
@@ -122,26 +124,82 @@ test('dispatch body preserves exact workflow input', () => {
   assert.deepEqual(dispatchBody(SLOT_BY_ID.get('OFFICIAL_OPEN_0902')), { ref: 'main', inputs: { slot: '0902' } });
 });
 
-test('durable final marker states suppress repeats while retryable errors remain retryable', () => {
-  assert.equal(isFinalMarkerState('covered_exact'), true);
-  assert.equal(isFinalMarkerState('covered_native'), false);
-  assert.equal(isFinalMarkerState('dispatched'), true);
-  assert.equal(isFinalMarkerState('blocked'), true);
-  assert.equal(isFinalMarkerState('retryable_error'), false);
-  assert.equal(isFinalMarkerState('would_dispatch'), false);
+test('only validated archive completion is capture-final', () => {
+  assert.equal(isCaptureFinalMarkerState('capture_complete'), true);
+  assert.equal(isCaptureFinalMarkerState('covered_exact'), false);
+  assert.equal(isCaptureFinalMarkerState('dispatched'), false);
+  assert.equal(isCaptureFinalMarkerState('blocked'), false);
+  assert.equal(isCaptureFinalMarkerState('retryable_error'), false);
+  assert.equal(isCaptureFinalMarkerState('would_dispatch'), false);
   assert.equal(markerKey('2026-08-27', 'E2E_POST_EOD_1835'), '2026-08-27::E2E_POST_EOD_1835');
 });
 
-test('durable marker decision keeps active dispatch idempotent', () => {
+test('scheduler markers never masquerade as capture completion', () => {
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000),
-    { status: 'DURABLE_MARKER_ALREADY_FINAL', state: 'dispatched', runId: 123 },
+    durableMarkerDecision({ state: 'capture_complete', run_id: 123 }, 10_000),
+    { status: 'CAPTURE_ALREADY_COMPLETE', state: 'capture_complete', runId: 123 },
   );
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatching', updated_at_ms: 9_000 }, 10_000),
-    { status: 'DISPATCH_LEASE_IN_FLIGHT' },
+    durableMarkerDecision({ state: 'dispatch_requested', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatch_requested', runId: null },
   );
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'dispatched', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatched', runId: null },
+  );
+  assert.equal(durableMarkerDecision({ state: 'blocked', run_id: 123 }, 10_000), null);
+  assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
+  assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('process-level active decision defers for every fresh coordinator dispatch lease', () => {
+  const shadow = { archive_github_decision: 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE' };
+  for (const state of ['dispatching', 'dispatch_requested']) {
+    const markerDecision = durableMarkerDecision({ state, updated_at_ms: 9_500 }, 10_000);
+    assert.equal(markerDecision.status, 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE');
+    assert.equal(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'DEFER_COORDINATOR_DISPATCH_LEASE',
+    );
+    assert.notEqual(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE',
+    );
+  }
+});
+
+test('exact run metadata never becomes capture completion and only fresh in-flight runs defer fallback', () => {
+  const observed = Date.parse('2026-08-27T11:40:00.000Z');
+  const recent = new Date(observed - 30_000).toISOString();
+  const old = new Date(observed - 3 * 60_000).toISOString();
+
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 1, status: 'in_progress', conclusion: null, updated_at: recent }, observed),
+    {
+      defer: true,
+      recoveryEligible: false,
+      final: false,
+      status: 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE',
+      runId: 1,
+    },
+  );
+  for (const conclusion of ['failure', 'cancelled']) {
+    assert.deepEqual(
+      exactRunRecoveryDecision({ id: 2, status: 'completed', conclusion, updated_at: recent }, observed),
+      { defer: false, recoveryEligible: true, final: false },
+    );
+  }
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 3, status: 'in_progress', conclusion: null, updated_at: old }, observed),
+    {
+      defer: false,
+      recoveryEligible: true,
+      final: false,
+      status: 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+      runId: 3,
+    },
+  );
 });
 
 test('GitHub URLs safely encode workflow filename and date filter', () => {

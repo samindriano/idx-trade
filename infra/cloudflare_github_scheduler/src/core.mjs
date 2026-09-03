@@ -1,6 +1,8 @@
 export const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
 export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
-export const FINAL_MARKER_STATES = Object.freeze(['covered_exact', 'dispatched', 'blocked']);
+// Scheduler state is not capture evidence.  Only an independently validated
+// existing archive commit may become capture-final.
+export const CAPTURE_FINAL_MARKER_STATES = Object.freeze(['capture_complete']);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
@@ -22,6 +24,33 @@ export const SLOTS = Object.freeze([
 ]);
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
+
+const IN_FLIGHT_RUN_STATUSES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
+
+/**
+ * GitHub run metadata is never completion evidence. A recent in-flight run
+ * may receive a short grace period to avoid duplicate dispatches, but every
+ * other non-final observation remains recovery-eligible until an archive
+ * validator supplies capture completion.
+ */
+export function exactRunRecoveryDecision(run, observedEpochMs) {
+  const status = typeof run?.status === 'string' ? run.status.trim().toLowerCase() : '';
+  const conclusion = typeof run?.conclusion === 'string' ? run.conclusion.trim().toLowerCase() : '';
+  const active = IN_FLIGHT_RUN_STATUSES.has(status) && !conclusion;
+  if (!active) {
+    return { defer: false, recoveryEligible: true, final: false };
+  }
+
+  const updatedMs = Date.parse(run?.updated_at ?? run?.created_at ?? '');
+  const fresh = Number.isFinite(updatedMs) && observedEpochMs - updatedMs < DISPATCH_LEASE_MS;
+  return {
+    defer: fresh,
+    recoveryEligible: !fresh,
+    final: false,
+    status: fresh ? 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE' : 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+    runId: run?.id ?? null,
+  };
+}
 
 export function jakartaDateKey(epochMs) {
   return new Date(epochMs + JAKARTA_OFFSET_MS).toISOString().slice(0, 10);
@@ -100,22 +129,37 @@ export function exactSlotCoverageRuns(runs, slot, epochMs) {
   });
 }
 
-export function isFinalMarkerState(state) {
-  return FINAL_MARKER_STATES.includes(state);
+export function isCaptureFinalMarkerState(state) {
+  return CAPTURE_FINAL_MARKER_STATES.includes(state);
 }
 
 export function durableMarkerDecision(prior, observedEpochMs) {
-  if (prior && isFinalMarkerState(prior.state)) {
+  if (prior && isCaptureFinalMarkerState(prior.state)) {
     return {
-      status: 'DURABLE_MARKER_ALREADY_FINAL',
+      status: 'CAPTURE_ALREADY_COMPLETE',
       state: prior.state,
       runId: prior.run_id ?? null,
     };
   }
-  if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
-    return { status: 'DISPATCH_LEASE_IN_FLIGHT' };
+  if (
+    prior &&
+    ['dispatching', 'dispatch_requested', 'dispatched'].includes(prior.state) &&
+    observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS
+  ) {
+    return {
+      status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
+      state: prior.state,
+      runId: prior.run_id ?? null,
+    };
   }
   return null;
+}
+
+export function effectiveActiveModeDecision(shadow, markerDecision = null) {
+  if (markerDecision) return 'DEFER_COORDINATOR_DISPATCH_LEASE';
+  return shadow?.archive_github_decision
+    ?? shadow?.active_mode_decision
+    ?? 'FAIL_CLOSED_ACTIVE_MODE_DECISION_UNAVAILABLE';
 }
 
 export function workflowRunsUrl({ owner, repo, workflow, startMs, endMs }) {
