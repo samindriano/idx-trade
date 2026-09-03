@@ -1,0 +1,33 @@
+name: cloud runtime cutover validation
+
+on:
+  pull_request:
+    paths:
+      - 'infra/cloudflare_github_scheduler/**'
+      - '.github/workflows/cloud-runtime-cutover-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/cloudflare_github_scheduler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: infra/cloudflare_github_scheduler/package-lock.json
+      - name: Install pinned worker dependencies
+        run: npm ci
+      - name: Run scheduler contract tests
+        run: npm test
+      - name: Staging-live dry run
+        run: npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
+      - name: Production dry run
+        run: npx wrangler deploy --dry-run --config wrangler.production.jsonc
