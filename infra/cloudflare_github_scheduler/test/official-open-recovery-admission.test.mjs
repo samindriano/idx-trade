@@ -164,6 +164,64 @@ test('completion hash and accepted producer pin are both mandatory', async () =>
   );
 });
 
+test('trusted recovery attestation remains narrow on schema, slot, timing, and bytes', async () => {
+  const invalidAttestation = await fixture(manifest({
+    event: 'workflow_dispatch',
+    authority: 'TRUSTED_EXTERNAL_SCHEDULER_V1',
+  }));
+  const invalidBytes = JSON.parse(new TextDecoder().decode(invalidAttestation.archive.bytes));
+  invalidBytes.runner_provenance.scheduler_attestation_sha256 = 'not-a-sha';
+  const invalidArchive = await fixture(invalidBytes);
+  await assert.rejects(
+    validateOfficialOpenRecoveryAdmission({
+      ...invalidArchive,
+      session: SESSION,
+      slot: SLOT,
+      expectedCodeCommit: CODE,
+    }),
+    (error) => error instanceof OfficialOpenRecoveryAdmissionError
+      && error.code === 'OFFICIAL_OPEN_RECOVERY_EXTERNAL_AUTHORITY_INVALID',
+  );
+
+  const native = await fixture(manifest());
+  await assert.rejects(
+    validateOfficialOpenRecoveryAdmission({
+      ...native,
+      session: SESSION,
+      slot: '0912',
+      expectedCodeCommit: CODE,
+    }),
+    (error) => error instanceof OfficialOpenRecoveryAdmissionError
+      && error.code === 'OFFICIAL_OPEN_RECOVERY_MANIFEST_MISSING',
+  );
+
+  const early = await fixture(manifest({ capture: '2026-09-02T09:01:59+07:00' }));
+  await assert.rejects(
+    validateOfficialOpenRecoveryAdmission({
+      ...early,
+      session: SESSION,
+      slot: SLOT,
+      expectedCodeCommit: CODE,
+    }),
+    (error) => error instanceof OfficialOpenRecoveryAdmissionError
+      && error.code === 'OFFICIAL_OPEN_RECOVERY_CAPTURE_BEFORE_SLOT',
+  );
+
+  const tampered = await fixture(manifest());
+  const wrongBytes = new TextEncoder().encode('{"tampered":true}');
+  tampered.archive.bytes = wrongBytes;
+  await assert.rejects(
+    validateOfficialOpenRecoveryAdmission({
+      ...tampered,
+      session: SESSION,
+      slot: SLOT,
+      expectedCodeCommit: CODE,
+    }),
+    (error) => error instanceof OfficialOpenRecoveryAdmissionError
+      && error.code === 'OFFICIAL_OPEN_RECOVERY_COMPLETION_SHA_MISMATCH',
+  );
+});
+
 test('process path validates Official Open admission before accepting durable completion', () => {
   const source = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
   const admission = source.indexOf('validateOfficialOpenRecoveryAdmission({');
@@ -172,6 +230,18 @@ test('process path validates Official Open admission before accepting durable co
   assert.ok(durableAccept > admission);
   assert.match(source, /FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID/);
   assert.match(source, /OFFICIAL_OPEN_EXPECTED_CODE_COMMIT/);
+});
+
+test('fresh pre-POST Official Open completion is re-admitted from canonical archive bytes', () => {
+  const source = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const freshRead = source.indexOf('const freshCompletion = await readDurableCompletion({');
+  const freshAdmission = source.indexOf('validateOfficialOpenRecoveryAdmission({', freshRead);
+  const freshAccept = source.indexOf("reason: 'DURABLE_COMPLETION_VERIFIED'", freshAdmission);
+  assert.ok(freshRead >= 0);
+  assert.ok(freshAdmission > freshRead);
+  assert.ok(freshAccept > freshAdmission);
+  assert.match(source.slice(freshAdmission, freshAccept), /expectedCompletionSha256: freshCompletion\.completion_sha256/);
+  assert.match(source.slice(freshAdmission, freshAccept), /expectedCodeCommit: requireEnv\(this\.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'\)/);
 });
 
 test('Official Open in-flight GitHub metadata cannot consume the sole recovery opportunity', () => {

@@ -92,6 +92,8 @@ test('scheduler markers remain a coordination guard without claiming capture com
   assert.match(indexSource, /githubError/);
   assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);
   assert.match(indexSource, /capture_complete/);
+  assert.match(indexSource, /requiredImplementationPin\(this\.env, slot\)/);
+  assert.match(indexSource, /post_attempted === false/);
   assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
 });
 

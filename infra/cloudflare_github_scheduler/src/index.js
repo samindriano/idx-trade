@@ -7,6 +7,7 @@ import {
   dueSlots,
   effectiveActiveModeDecision,
   markerKey,
+  requiredImplementationPin,
   slotWindow,
 } from './core.mjs';
 import {
@@ -17,7 +18,7 @@ import {
 import { requireDispatchMode } from './dispatch_mode.mjs';
 import { dispatchWithLeaseBoundary } from './dispatch_lifecycle.mjs';
 import { prepareActiveDispatch } from './dispatch_prepare.mjs';
-import { evaluateShadowSlot } from './archive.mjs';
+import { evaluateShadowSlot, readDurableCompletion } from './archive.mjs';
 import {
   isOfficialOpenSlot,
 } from './official_open_attestation.mjs';
@@ -130,6 +131,9 @@ export class SchedulerCoordinator extends DurableObject {
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
     const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    // A missing or malformed producer pin is a configuration failure, not an
+    // empty archive.  Require it before any active dispatch can be considered.
+    const expectedCodeCommit = requiredImplementationPin(this.env, slot);
     // Run discovery is always read-only. Observe-only environments never carry
     // a workflow-dispatch credential at all; active mode accesses the write
     // credential lazily only after every recovery gate says dispatch is needed.
@@ -164,7 +168,7 @@ export class SchedulerCoordinator extends DurableObject {
       observedEpochMs,
       exactRuns: exactCoverage,
       githubError,
-      expectedCodeCommit: this.env.E2E_EXPECTED_CODE_COMMIT,
+      expectedCodeCommit,
     });
     let officialOpenRecoveryAdmission = null;
     if (shadow.family === 'OFFICIAL_OPEN' && shadow.durable_completion.capture_complete) {
@@ -316,6 +320,52 @@ export class SchedulerCoordinator extends DurableObject {
         sessionDate: window.dateKey,
         issuedAtEpochMs: observedEpochMs,
       }),
+      beforePost: async () => {
+        // Re-read the canonical archive after preparation/signing and before
+        // dispatchWorkflow can cross the GitHub POST boundary.  The earlier
+        // shadow is intentionally not authoritative for this final decision.
+        const freshCompletion = await readDurableCompletion({
+          archive: this.env.ARCHIVE,
+          slot,
+          session: window.dateKey,
+          expectedCodeCommit,
+        });
+        if (freshCompletion.capture_complete) {
+          let freshOfficialOpenRecoveryAdmission = null;
+          if (isOfficialOpenSlot(slot)) {
+            try {
+              freshOfficialOpenRecoveryAdmission = await validateOfficialOpenRecoveryAdmission({
+                archive: this.env.ARCHIVE,
+                session: window.dateKey,
+                slot: slot.inputValue,
+                expectedCompletionSha256: freshCompletion.completion_sha256,
+                expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
+              });
+            } catch (error) {
+              return {
+                allow: false,
+                reason: 'OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
+                completion: {
+                  ...freshCompletion,
+                  capture_complete: false,
+                  state: 'archive_completion_blocked',
+                  reason: safeError(error),
+                },
+              };
+            }
+          }
+          return {
+            allow: false,
+            reason: 'DURABLE_COMPLETION_VERIFIED',
+            completion: freshCompletion,
+            officialOpenRecoveryAdmission: freshOfficialOpenRecoveryAdmission,
+          };
+        }
+        if (freshCompletion.state === 'archive_completion_blocked') {
+          return { allow: false, reason: 'ARCHIVE_COMPLETION_AMBIGUOUS', completion: freshCompletion };
+        }
+        return { allow: true, completion: freshCompletion };
+      },
       leaseOwned: () => this._ownsDispatchLease(slotKey, attemptId),
       onPreDispatchFailure: (error) => this._writeOwnedDispatchLease(
         slotKey,
@@ -346,6 +396,44 @@ export class SchedulerCoordinator extends DurableObject {
         status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
       });
     }
+    if (dispatchBoundary.phase === 'pre_post_blocked') {
+      const freshCompletion = dispatchBoundary.decision?.completion;
+      const complete = freshCompletion?.capture_complete === true;
+      const state = complete ? 'archive_completion_observed' : 'archive_completion_blocked';
+      const recorded = this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        state,
+        Date.now(),
+        { detail: { completion: freshCompletion, reason: dispatchBoundary.decision?.reason } },
+      );
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
+      return finalizeShadowDecision(
+        shadow,
+        complete ? 'CAPTURE_ALREADY_COMPLETE' : 'FAIL_CLOSED_ARCHIVE_COMPLETION_AMBIGUOUS',
+        {
+          status: complete ? 'SHADOW_DURABLE_COMPLETION_VERIFIED' : 'SHADOW_FAIL_CLOSED_NO_DISPATCH',
+          fresh_durable_completion: freshCompletion,
+          fresh_official_open_recovery_admission: dispatchBoundary.decision?.officialOpenRecoveryAdmission ?? null,
+          fresh_completion_check: dispatchBoundary.decision?.reason,
+        },
+      );
+    }
+    const dispatch = dispatchBoundary.response;
+    if (dispatch?.post_attempted === false) {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'pre_dispatch_blocked', Date.now(), {
+        detail: { error: dispatch.status },
+      });
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: dispatch.status,
+        pre_dispatch_lease_released: recorded,
+      });
+    }
     if (dispatchBoundary.phase === 'post_attempt_uncertain') {
       // Do not write a reacquirable state here.  The fetch may have reached
       // GitHub despite rejecting locally, and GitHub has no invalidating
@@ -357,7 +445,6 @@ export class SchedulerCoordinator extends DurableObject {
         dispatch_error: safeError(dispatchBoundary.error),
       });
     }
-    const dispatch = dispatchBoundary.response;
     if (dispatch.status === 'WOULD_DISPATCH') {
       const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'would_dispatch', observedEpochMs, {
         detail: {
@@ -408,7 +495,7 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     if (dispatch.retryable) {
-      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'retryable_error', Date.now(), {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_response_uncertain', Date.now(), {
         attemptId,
         detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
       });
@@ -424,7 +511,7 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
 
-    const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'blocked', Date.now(), {
+    const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_response_uncertain', Date.now(), {
       attemptId,
       detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
     });

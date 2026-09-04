@@ -288,6 +288,9 @@ async function validateSingle({ archive, family, slot, session, expectedCodeComm
   const key = completionKey(family, session, slot);
   const parentBytes = await readLogicalObject(archive, family, key);
   if (parentBytes === null) return noCompletion(family, grain, 'ARCHIVE_PARENT_MISSING');
+  if (family === 'E2E' && (typeof expectedCodeCommit !== 'string' || !GIT_SHA.test(expectedCodeCommit))) {
+    return blocked(family, grain, 'ARCHIVE_E2E_EXPECTED_CODE_COMMIT_INVALID');
+  }
 
   let child;
   try {
@@ -298,6 +301,7 @@ async function validateSingle({ archive, family, slot, session, expectedCodeComm
       validated = await validateE2ECompletion({
         expectedSession: session,
         expectedStage: slot.inputValue,
+        expectedCodeCommit,
         resultBytes: child.children.result.bytes,
         snapshotSha256: child.children.snapshot.sha256,
         childHashes: child.childHashes,

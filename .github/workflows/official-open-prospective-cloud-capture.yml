@@ -54,6 +54,9 @@ permissions:
 
 jobs:
   capture:
+    # Only the production main ref may write the canonical archive. Native
+    # and trusted recovery provenance remains independently validated below.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:

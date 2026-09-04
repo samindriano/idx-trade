@@ -252,7 +252,7 @@ test('shadow reads each canonical family through R2 and validates durable comple
   preopenFixture(objects);
   const archive = new ReadOnlyArchive(objects);
 
-  const e2e = await readDurableCompletion({ archive, slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session });
+  const e2e = await readDurableCompletion({ archive, slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session, expectedCodeCommit: git('c') });
   assert.equal(e2e.status, 'DURABLE_COMPLETION_VERIFIED');
   assert.equal(e2e.completion_key, `sessions/${session}/stages/POST_EOD/commit.json`);
   assert.equal(e2e.completion_sha256.length, 64);
@@ -270,15 +270,30 @@ test('shadow reads each canonical family through R2 and validates durable comple
   assert.equal(ARCHIVE_BUCKET_NAME, 'idx-trade-stockbit-stream-v1');
 });
 
+test('E2E durable completion rejects a parent from a different implementation pin', async () => {
+  const objects = {};
+  e2eFixture(objects);
+  const archive = new ReadOnlyArchive(objects);
+  const result = await readDurableCompletion({
+    archive,
+    slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'),
+    session,
+    expectedCodeCommit: git('e'),
+  });
+  assert.equal(result.capture_complete, false);
+  assert.equal(result.state, 'archive_completion_blocked');
+  assert.equal(result.reason, 'E2E_COMPLETION_CODE_SHA_MISMATCH');
+});
+
 test('shadow fails closed for missing child, malformed parent, and invalid PREOPEN_CA expectations', async () => {
   const missingChild = {};
   const parent = e2eFixture(missingChild);
   delete missingChild[prefixed('E2E', parent.snapshot.key)];
-  const missing = await readDurableCompletion({ archive: new ReadOnlyArchive(missingChild), slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session });
+  const missing = await readDurableCompletion({ archive: new ReadOnlyArchive(missingChild), slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session, expectedCodeCommit: git('c') });
   assert.equal(missing.state, 'archive_completion_blocked');
 
   const malformed = { [prefixed('E2E', `sessions/${session}/stages/POST_EOD/commit.json`)]: Buffer.from('{') };
-  const result = await readDurableCompletion({ archive: new ReadOnlyArchive(malformed), slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session });
+  const result = await readDurableCompletion({ archive: new ReadOnlyArchive(malformed), slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'), session, expectedCodeCommit: git('c') });
   assert.equal(result.state, 'archive_completion_blocked');
 
   const preopen = {};
@@ -403,6 +418,7 @@ test('shadow output separates durable completion from exact GitHub provenance an
       status: 'completed',
       conclusion: 'failure',
     }],
+    expectedCodeCommit: git('c'),
   });
   assert.equal(output.durable_completion.capture_complete, false);
   assert.equal(output.github_exact_run_evidence.runs.length, 1);
@@ -420,6 +436,7 @@ test('observe-only shadow cannot dispatch or mutate archive state', async () => 
     slot: SLOT_BY_ID.get('E2E_POST_EOD_1835'),
     session,
     observedEpochMs: localTimeEpochMs(session, '18:40'),
+    expectedCodeCommit: git('c'),
   });
   let dispatched = false;
   const dispatch = await dispatchWithMode({

@@ -110,16 +110,38 @@ test('dispatch rechecks the live clock and refuses a post-cutoff GitHub POST', a
   assert.deepEqual(result, {
     ok: false,
     status: 'DISPATCH_WINDOW_EXPIRED',
+    post_attempted: false,
     retryable: false,
     runId: null,
   });
   assert.equal(calls, 0);
 });
 
+test('known pre-POST dispatch rejection is explicitly safe to reacquire', async () => {
+  const slot = SLOT_BY_ID.get('OFFICIAL_OPEN_0922');
+  let calls = 0;
+  const result = await dispatchWorkflow({
+    fetchFn: async () => {
+      calls += 1;
+      return jsonResponse({ workflow_run_id: 99 }, 200);
+    },
+    owner: 'samindriano',
+    repo: 'idx-trade',
+    token: 'secret',
+    ref: 'main',
+    slot,
+    body: { ref: 'main', inputs: { slot: '0922' } },
+    nowFn: () => epoch('09:23'),
+  });
+  assert.equal(result.post_attempted, false);
+  assert.equal(result.status, 'DISPATCH_WINDOW_EXPIRED');
+  assert.equal(calls, 0);
+});
+
 test('dispatch classifies GitHub 429 as retryable without throwing', async () => {
   const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
   const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 429 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, body: { ref: 'main', inputs: { slot: '1830' } }, nowFn: () => epoch('18:40') });
-  assert.deepEqual(result, { ok: false, status: 429, retryable: true, runId: null });
+  assert.deepEqual(result, { ok: false, status: 429, post_attempted: true, retryable: true, runId: null });
 });
 
 test('dispatch classifies auth failure as non-retryable', async () => {
@@ -131,5 +153,5 @@ test('dispatch classifies auth failure as non-retryable', async () => {
 test('dispatch classifies a completed 5xx response as retryable', async () => {
   const slot = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
   const result = await dispatchWorkflow({ fetchFn: async () => new Response('', { status: 503 }), owner: 'samindriano', repo: 'idx-trade', token: 'x', slot, body: { ref: 'main', inputs: { slot: '1830' } }, nowFn: () => epoch('18:40') });
-  assert.deepEqual(result, { ok: false, status: 503, retryable: true, runId: null });
+  assert.deepEqual(result, { ok: false, status: 503, post_attempted: true, retryable: true, runId: null });
 });

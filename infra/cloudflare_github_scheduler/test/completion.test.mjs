@@ -370,3 +370,30 @@ test('completion semantic validation is bound to the hashed parent bytes', async
   assert.equal(valid.capture_complete, true);
   assert.equal(valid.completion_sha256, base.completionSha256);
 });
+
+test('E2E completion binds the canonical parent code identity to the expected implementation pin', async () => {
+  const base = e2eCompletionEvidence();
+  const accepted = await validateE2ECompletion({ ...base, expectedCodeCommit: git('d') });
+  assert.equal(accepted.capture_complete, true);
+
+  await assert.rejects(
+    validateE2ECompletion({ ...base, expectedCodeCommit: git('e') }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_CODE_SHA_MISMATCH',
+  );
+
+  const missingIdentity = { ...base.commit };
+  delete missingIdentity.code_identity;
+  const missing = parentIdentity(base.completionKey, missingIdentity);
+  const { commit: _ignoredCommit, ...withoutExternalParent } = base;
+  await assert.rejects(
+    validateE2ECompletion({ ...withoutExternalParent, ...missing, expectedCodeCommit: git('d') }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_CODE_IDENTITY_INVALID',
+  );
+
+  const malformedIdentity = { ...base.commit, code_identity: { commit: 'not-a-git-sha' } };
+  const malformed = parentIdentity(base.completionKey, malformedIdentity);
+  await assert.rejects(
+    validateE2ECompletion({ ...withoutExternalParent, ...malformed, expectedCodeCommit: git('d') }),
+    (error) => error instanceof CompletionContractError && error.code === 'E2E_COMPLETION_CODE_SHA_INVALID',
+  );
+});

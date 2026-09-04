@@ -64,6 +64,10 @@ permissions:
 
 jobs:
   paper:
+    # Only the production main ref may write the canonical archive. The
+    # workflow's pinned implementation is not a substitute for this ref
+    # boundary because feature-branch runs can otherwise reach the archive.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:

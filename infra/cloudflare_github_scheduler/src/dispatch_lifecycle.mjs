@@ -12,6 +12,7 @@ import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
 export async function dispatchWithLeaseBoundary({
   mode,
   prepare,
+  beforePost,
   dispatch,
   leaseOwned,
   onPreDispatchFailure,
@@ -45,6 +46,43 @@ export async function dispatchWithLeaseBoundary({
     };
   }
 
+  if (!leaseOwned()) {
+    return {
+      phase: 'lease_lost_before_post',
+      prepared,
+    };
+  }
+
+  if (beforePost) {
+    try {
+      const decision = await beforePost();
+      if (decision && decision.allow === false) {
+        return {
+          phase: 'pre_post_blocked',
+          decision,
+          prepared,
+        };
+      }
+    } catch (error) {
+      let released = false;
+      let releaseError = null;
+      try {
+        released = (await onPreDispatchFailure(error)) === true;
+      } catch (callbackError) {
+        releaseError = callbackError;
+      }
+      return {
+        phase: 'pre_dispatch_failure',
+        error,
+        released,
+        releaseError,
+        prepared,
+      };
+    }
+  }
+
+  // The fresh completion read is awaited. Revalidate ownership after it so
+  // an old owner cannot cross the POST boundary after another attempt wins.
   if (!leaseOwned()) {
     return {
       phase: 'lease_lost_before_post',

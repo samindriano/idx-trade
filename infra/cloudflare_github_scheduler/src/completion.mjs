@@ -244,7 +244,7 @@ export async function validateIntradayRecoverableCommit({
   };
 }
 
-export async function validateE2ECompletion({ commit, resultBytes, snapshotSha256, expectedSession, expectedStage, childHashes = {}, completionKey, completionSha256, completionBytes }) {
+export async function validateE2ECompletion({ commit, resultBytes, snapshotSha256, expectedSession, expectedStage, expectedCodeCommit, childHashes = {}, completionKey, completionSha256, completionBytes }) {
   const parent = await completionIdentity({
     completionKey,
     completionSha256,
@@ -260,7 +260,12 @@ export async function validateE2ECompletion({ commit, resultBytes, snapshotSha25
   if (!E2E_STATUSES[expectedStage]?.has(value.stage_status)) fail('E2E_COMPLETION_STATUS_INVALID');
   sha(value.schedule_attestation_sha256, 'E2E_COMPLETION_SCHEDULE_SHA_INVALID');
   sha(value.input_manifest_sha256, 'E2E_COMPLETION_INPUT_SHA_INVALID');
-  gitSha(object(value.code_identity, 'E2E_COMPLETION_CODE_IDENTITY_INVALID').commit, 'E2E_COMPLETION_CODE_SHA_INVALID');
+  const codeIdentity = object(value.code_identity, 'E2E_COMPLETION_CODE_IDENTITY_INVALID');
+  const codeCommit = gitSha(codeIdentity.commit, 'E2E_COMPLETION_CODE_SHA_INVALID');
+  if (expectedCodeCommit !== undefined) {
+    if (!GIT_SHA.test(expectedCodeCommit)) fail('E2E_COMPLETION_EXPECTED_CODE_SHA_INVALID');
+    if (codeCommit !== expectedCodeCommit) fail('E2E_COMPLETION_CODE_SHA_MISMATCH');
+  }
   falseGuardSet(value.guards, ['outcome_accessed', 'protected_forward_accessed', 'model_refit', 'retroactive_execution_authorized'], 'E2E_COMPLETION_GUARDS_INVALID');
   const resultRef = childHash(childHashes, value.result, 'E2E_COMPLETION_RESULT_INVALID');
   const snapshotRef = childHash(childHashes, value.snapshot, 'E2E_COMPLETION_SNAPSHOT_INVALID');

@@ -43,6 +43,11 @@ test('E2E provider checkout cannot dirty the attested deployment worktree', () =
   assert.doesNotMatch(e2e, /path: idx-bei-provider/);
 });
 
+test('E2E and Official Open archive writers are restricted to production main', () => {
+  assert.match(e2e, /paper:\s*\n(?:\s+#.*\n)*\s+if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(officialOpen, /capture:\s*\n(?:\s+#.*\n)*\s+if: github\.ref == 'refs\/heads\/main'/);
+});
+
 test('E2E manual exact identity is trusted only for a matching explicit phase', () => {
   const trustedManualSlot = (phase, slot) => {
     if (phase === 'PREOPEN_CA' && slot.startsWith('E2E_PREOPEN_CA_')) return slot;

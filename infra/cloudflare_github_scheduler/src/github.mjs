@@ -101,6 +101,7 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_TOKEN_INVALID',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
@@ -109,6 +110,7 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
@@ -120,6 +122,7 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
@@ -128,6 +131,7 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
@@ -146,11 +150,15 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_WINDOW_EXPIRED',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
   }
 
+  // Everything above this point is local and side-effect-free.  From the
+  // moment fetchFn is invoked, even a later HTTP response is fenced because
+  // the request may already have reached GitHub.
   const response = await fetchFn(workflowDispatchUrl({ owner, repo, workflow: slot.workflow }), {
     method: 'POST',
     headers: headers(token, true),
@@ -160,6 +168,7 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: response.status,
+      post_attempted: true,
       retryable: isRetryableGithubStatus(response.status),
       runId: null,
     };
@@ -173,7 +182,7 @@ export async function dispatchWorkflow({
       // A successful dispatch without a readable body is still an accepted trigger request.
     }
   }
-  return { ok: true, status: response.status, retryable: false, runId };
+  return { ok: true, status: response.status, post_attempted: true, retryable: false, runId };
 }
 
 export { MAX_RUN_QUERY_PAGES };
