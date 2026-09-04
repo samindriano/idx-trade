@@ -3,6 +3,22 @@ export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
 // Scheduler state is not capture evidence.  Only an independently validated
 // existing archive commit may become capture-final.
 export const CAPTURE_FINAL_MARKER_STATES = Object.freeze(['capture_complete']);
+// A dispatching/requested marker may correspond to an external GitHub POST
+// that is still in flight.  There is no provider-side fencing token in the
+// current GitHub API contract, so a later coordinator must never reclaim one
+// of these markers merely because it is old.  Reclamation would permit a
+// stale request to race a new request and break at-most-one dispatch.
+export const COORDINATOR_LEASE_MARKER_STATES = Object.freeze([
+  'dispatching',
+  'dispatch_requested',
+  'dispatched',
+  // These response markers are retained as historical aliases for
+  // post-attempt outcomes.  An HTTP response does not prove that GitHub did
+  // not accept the request, so none may be reclaimed automatically.
+  'dispatch_response_uncertain',
+  'retryable_error',
+  'blocked',
+]);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
@@ -24,6 +40,25 @@ export const SLOTS = Object.freeze([
 ]);
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
+
+const GIT_SHA = /^[0-9a-f]{40}$/;
+
+// A producer pin is a dispatch prerequisite for archive-writing families. An
+// empty archive must not turn a missing or malformed pin into an eligible
+// active dispatch.
+export function requiredImplementationPin(env, slot) {
+  const name = slot?.workflow === 'official-open-prospective-cloud-capture.yml'
+    ? 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'
+    : slot?.workflow === 'e2e-paper-cloud-orchestration.yml'
+      ? 'E2E_EXPECTED_CODE_COMMIT'
+      : null;
+  if (!name) return null;
+  const value = env?.[name];
+  if (typeof value !== 'string' || !GIT_SHA.test(value.trim())) {
+    throw new Error(`INVALID_${name}`);
+  }
+  return value.trim();
+}
 
 const IN_FLIGHT_RUN_STATUSES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
 
@@ -143,7 +178,7 @@ export function durableMarkerDecision(prior, observedEpochMs) {
   }
   if (
     prior &&
-    ['dispatching', 'dispatch_requested', 'dispatched'].includes(prior.state) &&
+    COORDINATOR_LEASE_MARKER_STATES.includes(prior.state) &&
     observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS
   ) {
     return {
@@ -153,6 +188,31 @@ export function durableMarkerDecision(prior, observedEpochMs) {
     };
   }
   return null;
+}
+
+/**
+ * Decide whether this coordinator invocation may create a dispatch lease.
+ *
+ * This is intentionally stricter than durableMarkerDecision: that helper is
+ * a bounded duplicate-delay policy, while this helper protects the actual
+ * external dispatch side effect.  Without an external fence, stale lease
+ * takeover is not safe and therefore remains fail-closed.
+ */
+export function dispatchLeaseDecision(prior) {
+  if (!prior) return { action: 'ACQUIRE' };
+  if (isCaptureFinalMarkerState(prior.state)) {
+    return { action: 'VALIDATE_ARCHIVE_ONLY', state: prior.state };
+  }
+  if (COORDINATOR_LEASE_MARKER_STATES.includes(prior.state)) {
+    return {
+      action: 'DEFER',
+      status: 'DISPATCH_LEASE_HELD_FENCING_UNPROVEN',
+      state: prior.state,
+      attemptId: prior.attempt_id ?? null,
+      runId: prior.run_id ?? null,
+    };
+  }
+  return { action: 'ACQUIRE' };
 }
 
 export function effectiveActiveModeDecision(shadow, markerDecision = null) {

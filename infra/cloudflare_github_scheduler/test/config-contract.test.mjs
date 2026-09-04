@@ -7,6 +7,8 @@ const staging = readJson('wrangler.jsonc');
 const stagingLive = readJson('wrangler.staging-live.jsonc');
 const production = readJson('wrangler.production.jsonc');
 const indexSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+const prepareSource = readFileSync(new URL('../src/dispatch_prepare.mjs', import.meta.url), 'utf8');
+const lifecycleSource = readFileSync(new URL('../src/dispatch_lifecycle.mjs', import.meta.url), 'utf8');
 
 const E2E_RECOVERY_PIN = '8bc3ee3efd65e8b16478e404e4b226451b105c48';
 const OFFICIAL_OPEN_RECOVERY_PIN = 'ac29a0552b1785045906f8d608b5371d93e01b73';
@@ -45,10 +47,13 @@ test('GitHub read and dispatch credentials are capability-separated by environme
   }
   assert.match(indexSource, /const readToken = requireEnv\(this\.env, 'GITHUB_ACTIONS_READ_TOKEN'\)/);
   assert.match(indexSource, /token: readToken/);
-  const dispatchFn = indexSource.indexOf('dispatchFn: async () =>');
-  const writeToken = indexSource.indexOf("requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN')");
-  assert.ok(dispatchFn >= 0);
-  assert.ok(writeToken > dispatchFn);
+  assert.match(indexSource, /dispatchWithLeaseBoundary/);
+  assert.match(indexSource, /prepareActiveDispatch/);
+  assert.match(prepareSource, /requiredEnv\(env, 'GITHUB_ACTIONS_WRITE_TOKEN'\)/);
+  assert.match(prepareSource, /requiredEnv\(env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
+  assert.match(lifecycleSource, /prepare\(\)/);
+  assert.match(lifecycleSource, /dispatchWithMode/);
+  assert.doesNotMatch(lifecycleSource, /finally/);
   assert.doesNotMatch(indexSource, /GITHUB_ACTIONS_TOKEN/);
 });
 
@@ -71,25 +76,32 @@ test('staging has no production Cron schedule and production retains exact Cron 
 });
 
 test('scheduler markers remain a coordination guard without claiming capture completion', () => {
+  const leaseAcquire = indexSource.indexOf('this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs)');
+  const githubQuery = indexSource.indexOf('await queryExactSlotCoverage');
+  assert.ok(leaseAcquire >= 0);
+  assert.ok(githubQuery > leaseAcquire);
+  assert.match(indexSource, /_writeOwnedDispatchLease/);
   assert.match(indexSource, /durableMarkerDecision\(prior, observedEpochMs\)/);
   assert.match(indexSource, /effectiveActiveModeDecision/);
   assert.match(indexSource, /effective_active_mode_decision/);
   assert.match(indexSource, /status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE'/);
-  assert.match(indexSource, /this\._write\(slotKey, 'dispatch_requested'/);
-  assert.match(indexSource, /dispatchWithMode/);
-  assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
+  assert.match(indexSource, /_writeOwnedDispatchLease\(slotKey, attemptId, 'dispatch_requested'/);
+  assert.match(indexSource, /dispatchWithLeaseBoundary/);
+  assert.match(indexSource, /this\._write\(slotKey, 'dispatching'/);
   assert.match(indexSource, /evaluateShadowSlot/);
   assert.match(indexSource, /githubError/);
   assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);
   assert.match(indexSource, /capture_complete/);
+  assert.match(indexSource, /requiredImplementationPin\(this\.env, slot\)/);
+  assert.match(indexSource, /post_attempted === false/);
   assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
 });
 
 test('Official Open signing is confined to lazy active dispatch path', () => {
-  assert.match(indexSource, /officialOpenAttestedDispatchBody/);
+  assert.match(prepareSource, /officialOpenAttestedDispatchBody/);
   assert.match(indexSource, /isOfficialOpenSlot\(slot\)/);
-  assert.match(indexSource, /requireEnv\(this\.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
-  assert.match(indexSource, /dispatchFn: async \(\) =>/);
+  assert.match(prepareSource, /requiredEnv\(env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
+  assert.match(indexSource, /prepare: \(\) => prepareActiveDispatch/);
   assert.match(indexSource, /official_open_attestation_required/);
 });
 

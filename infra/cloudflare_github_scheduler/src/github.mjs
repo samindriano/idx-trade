@@ -1,5 +1,4 @@
 import {
-  dispatchBody,
   exactSlotCoverageRuns,
   slotWindow,
   workflowDispatchUrl,
@@ -92,9 +91,51 @@ export async function dispatchWorkflow({
   token,
   ref = 'main',
   slot,
-  body = null,
+  body,
   nowFn = Date.now,
 }) {
+  // Body construction belongs to the pre-dispatch preparation phase.  Do
+  // not synthesize a request body here after the side-effect boundary has
+  // been entered.
+  if (typeof token !== 'string' || !token.trim()) {
+    return {
+      ok: false,
+      status: 'DISPATCH_TOKEN_INVALID',
+      post_attempted: false,
+      retryable: false,
+      runId: null,
+    };
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return {
+      ok: false,
+      status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
+      retryable: false,
+      runId: null,
+    };
+  }
+  let serializedBody;
+  try {
+    serializedBody = JSON.stringify(body);
+  } catch {
+    return {
+      ok: false,
+      status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
+      retryable: false,
+      runId: null,
+    };
+  }
+  if (typeof serializedBody !== 'string') {
+    return {
+      ok: false,
+      status: 'DISPATCH_BODY_INVALID',
+      post_attempted: false,
+      retryable: false,
+      runId: null,
+    };
+  }
   // Revalidate wall-clock eligibility immediately before the GitHub POST.
   // GitHub/R2 reads can consume enough time that the coordinator's initial
   // observation is stale; that earlier timestamp must never authorize a late
@@ -109,21 +150,25 @@ export async function dispatchWorkflow({
     return {
       ok: false,
       status: 'DISPATCH_WINDOW_EXPIRED',
+      post_attempted: false,
       retryable: false,
       runId: null,
     };
   }
 
-  const requestBody = body ?? dispatchBody(slot, ref);
+  // Everything above this point is local and side-effect-free.  From the
+  // moment fetchFn is invoked, even a later HTTP response is fenced because
+  // the request may already have reached GitHub.
   const response = await fetchFn(workflowDispatchUrl({ owner, repo, workflow: slot.workflow }), {
     method: 'POST',
     headers: headers(token, true),
-    body: JSON.stringify(requestBody),
+    body: serializedBody,
   });
   if (!response.ok) {
     return {
       ok: false,
       status: response.status,
+      post_attempted: true,
       retryable: isRetryableGithubStatus(response.status),
       runId: null,
     };
@@ -137,7 +182,7 @@ export async function dispatchWorkflow({
       // A successful dispatch without a readable body is still an accepted trigger request.
     }
   }
-  return { ok: true, status: response.status, retryable: false, runId };
+  return { ok: true, status: response.status, post_attempted: true, retryable: false, runId };
 }
 
 export { MAX_RUN_QUERY_PAGES };

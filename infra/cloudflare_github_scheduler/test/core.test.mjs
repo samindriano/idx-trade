@@ -4,6 +4,7 @@ import {
   SLOTS,
   SLOT_BY_ID,
   canonicalSlotRunName,
+  dispatchLeaseDecision,
   durableMarkerDecision,
   dueSlots,
   effectiveActiveModeDecision,
@@ -12,6 +13,7 @@ import {
   isCaptureFinalMarkerState,
   localTimeEpochMs,
   markerKey,
+  requiredImplementationPin,
   slotWindow,
   dispatchBody,
   workflowDispatchUrl,
@@ -19,6 +21,23 @@ import {
 } from '../src/core.mjs';
 
 const ms = (dateKey, hhmm) => localTimeEpochMs(dateKey, hhmm);
+
+test('archive-writing families require a valid implementation pin before dispatch', () => {
+  const e2e = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const open = SLOT_BY_ID.get('OFFICIAL_OPEN_0922');
+  const intraday = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
+  const pin = 'a'.repeat(40);
+  assert.equal(requiredImplementationPin({ E2E_EXPECTED_CODE_COMMIT: pin }, e2e), pin);
+  assert.equal(requiredImplementationPin({ OFFICIAL_OPEN_EXPECTED_CODE_COMMIT: pin }, open), pin);
+  assert.equal(requiredImplementationPin({}, intraday), null);
+  for (const [env, slot, name] of [
+    [{}, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{ ["E2E_EXPECTED_CODE_COMMIT"]: '' }, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{ E2E_EXPECTED_CODE_COMMIT: 'not-a-sha' }, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{}, open, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'],
+    [{ OFFICIAL_OPEN_EXPECTED_CODE_COMMIT: 'z'.repeat(40) }, open, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'],
+  ]) assert.throws(() => requiredImplementationPin(env, slot), new RegExp(`INVALID_${name}`));
+});
 
 test('Stockbit Stream is intentionally not part of the Cloudflare scheduler', () => {
   assert.equal(SLOTS.some((slot) => slot.workflow.includes('stream-prospective')), false);
@@ -151,6 +170,41 @@ test('scheduler markers never masquerade as capture completion', () => {
   assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('same-slot coordinator contenders cannot reclaim an existing dispatch lease', () => {
+  const first = dispatchLeaseDecision(null);
+  assert.deepEqual(first, { action: 'ACQUIRE' });
+
+  for (const state of ['dispatching', 'dispatch_requested', 'dispatched', 'dispatch_response_uncertain', 'retryable_error', 'blocked']) {
+    const second = dispatchLeaseDecision({
+      state,
+      attempt_id: 'first-attempt',
+      run_id: 41,
+      updated_at_ms: 1,
+    });
+    assert.deepEqual(second, {
+      action: 'DEFER',
+      status: 'DISPATCH_LEASE_HELD_FENCING_UNPROVEN',
+      state,
+      attemptId: 'first-attempt',
+      runId: 41,
+    });
+  }
+
+  // Age alone cannot authorize a takeover because the external POST has no
+  // fence token that would invalidate the old request.
+  assert.equal(
+    dispatchLeaseDecision({ state: 'dispatching', updated_at_ms: 1 }).action,
+    'DEFER',
+  );
+  assert.deepEqual(
+    dispatchLeaseDecision({ state: 'capture_complete' }),
+    { action: 'VALIDATE_ARCHIVE_ONLY', state: 'capture_complete' },
+  );
+  for (const state of ['dispatch_response_uncertain', 'retryable_error', 'blocked']) {
+    assert.equal(dispatchLeaseDecision({ state }).action, 'DEFER');
+  }
 });
 
 test('process-level active decision defers for every fresh coordinator dispatch lease', () => {

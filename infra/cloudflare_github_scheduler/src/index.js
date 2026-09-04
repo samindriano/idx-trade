@@ -3,9 +3,11 @@ import {
   SLOT_BY_ID,
   durableMarkerDecision,
   dispatchBody,
+  dispatchLeaseDecision,
   dueSlots,
   effectiveActiveModeDecision,
   markerKey,
+  requiredImplementationPin,
   slotWindow,
 } from './core.mjs';
 import {
@@ -13,11 +15,12 @@ import {
   dispatchWorkflow,
   queryExactSlotCoverage,
 } from './github.mjs';
-import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
-import { evaluateShadowSlot } from './archive.mjs';
+import { requireDispatchMode } from './dispatch_mode.mjs';
+import { dispatchWithLeaseBoundary } from './dispatch_lifecycle.mjs';
+import { prepareActiveDispatch } from './dispatch_prepare.mjs';
+import { evaluateShadowSlot, readDurableCompletion } from './archive.mjs';
 import {
   isOfficialOpenSlot,
-  officialOpenAttestedDispatchBody,
 } from './official_open_attestation.mjs';
 import { validateOfficialOpenRecoveryAdmission } from './official_open_recovery_admission.mjs';
 
@@ -90,6 +93,36 @@ export class SchedulerCoordinator extends DurableObject {
     return { slotKey, state, attemptId, updatedAtMs: nowMs, runId, detail };
   }
 
+  // This method deliberately performs the read and write without an await.
+  // Durable Objects serialize that synchronous prefix, so two same-slot
+  // requests cannot both observe an unleased marker before one records its
+  // attempt.  Stale external dispatches cannot be fenced by GitHub's API;
+  // therefore an existing dispatch lease is never reclaimed automatically.
+  _acquireDispatchLease(slotKey, nowMs, scheduledEpochMs) {
+    const prior = this._read(slotKey);
+    const decision = dispatchLeaseDecision(prior);
+    if (decision.action !== 'ACQUIRE') return { prior, decision, attemptId: null };
+
+    const attemptId = crypto.randomUUID();
+    this._write(slotKey, 'dispatching', nowMs, {
+      attemptId,
+      detail: { scheduledEpochMs },
+    });
+    return { prior, decision, attemptId };
+  }
+
+  _ownsDispatchLease(slotKey, attemptId) {
+    if (!attemptId) return false;
+    const marker = this._read(slotKey);
+    return marker?.state === 'dispatching' && marker.attempt_id === attemptId;
+  }
+
+  _writeOwnedDispatchLease(slotKey, attemptId, state, nowMs, options = {}) {
+    if (!this._ownsDispatchLease(slotKey, attemptId)) return false;
+    this._write(slotKey, state, nowMs, options);
+    return true;
+  }
+
   async processSlot(slotId, observedEpochMs, scheduledEpochMs) {
     const slot = SLOT_BY_ID.get(slotId);
     if (!slot) throw new Error('UNKNOWN_SLOT');
@@ -98,6 +131,9 @@ export class SchedulerCoordinator extends DurableObject {
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
     const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    // A missing or malformed producer pin is a configuration failure, not an
+    // empty archive.  Require it before any active dispatch can be considered.
+    const expectedCodeCommit = requiredImplementationPin(this.env, slot);
     // Run discovery is always read-only. Observe-only environments never carry
     // a workflow-dispatch credential at all; active mode accesses the write
     // credential lazily only after every recovery gate says dispatch is needed.
@@ -109,7 +145,8 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     const slotKey = markerKey(window.dateKey, slotId);
-    const prior = this._read(slotKey);
+    const lease = this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs);
+    const { prior, attemptId } = lease;
     let exactCoverage = [];
     let githubError = null;
     try {
@@ -131,16 +168,8 @@ export class SchedulerCoordinator extends DurableObject {
       observedEpochMs,
       exactRuns: exactCoverage,
       githubError,
-      expectedCodeCommit: this.env.E2E_EXPECTED_CODE_COMMIT,
+      expectedCodeCommit,
     });
-    if (exactCoverage.length) {
-      const run = exactCoverage[0];
-      this._write(slotKey, 'covered_exact', observedEpochMs, {
-        runId: Number.isInteger(run.id) ? run.id : null,
-        detail: shadow.github_exact_run_evidence,
-      });
-    }
-
     let officialOpenRecoveryAdmission = null;
     if (shadow.family === 'OFFICIAL_OPEN' && shadow.durable_completion.capture_complete) {
       try {
@@ -152,6 +181,13 @@ export class SchedulerCoordinator extends DurableObject {
           expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
         });
       } catch (error) {
+        this._writeOwnedDispatchLease(
+          slotKey,
+          attemptId,
+          'archive_completion_blocked',
+          observedEpochMs,
+          { detail: { error: safeError(error) } },
+        );
         return finalizeShadowDecision(
           shadow,
           'FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
@@ -167,6 +203,13 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     if (shadow.durable_completion.capture_complete) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'archive_completion_observed',
+        observedEpochMs,
+        { detail: { completion: shadow.durable_completion } },
+      );
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
@@ -177,11 +220,28 @@ export class SchedulerCoordinator extends DurableObject {
       );
     }
     if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        githubError ? 'github_query_error' : 'archive_completion_blocked',
+        observedEpochMs,
+        { detail: { error: githubError ?? shadow.durable_completion.reason } },
+      );
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
         { status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH' },
       );
+    }
+
+    // A prior dispatch lease is a coordination defer, not archive completion.
+    // The archive was still checked above so a completion that appeared while
+    // the first request was running is never hidden by the marker.
+    if (lease.decision.action === 'DEFER') {
+      return finalizeShadowDecision(shadow, 'DEFER_COORDINATOR_DISPATCH_LEASE', {
+        status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE',
+        coordinator_marker_decision: lease.decision,
+      });
     }
 
     // A coordination marker can defer a duplicate request, but it cannot
@@ -216,6 +276,13 @@ export class SchedulerCoordinator extends DurableObject {
       shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'
       && !openInFlightRecoveryOverride
     ) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'in_flight_grace',
+        observedEpochMs,
+        { detail: shadow.github_exact_run_evidence },
+      );
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
       });
@@ -224,35 +291,162 @@ export class SchedulerCoordinator extends DurableObject {
       ? OPEN_IN_FLIGHT_RECOVERY_DECISION
       : effectiveActiveModeDecision(shadow);
 
-    const attemptId = crypto.randomUUID();
-    this._write(slotKey, 'dispatching', observedEpochMs, {
-      attemptId,
-      detail: { scheduledEpochMs },
-    });
+    if (!this._ownsDispatchLease(slotKey, attemptId)) {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
 
-    const dispatchInputs = dispatchBody(slot, ref).inputs;
-    const dispatch = await dispatchWithMode({
+    let dispatchInputs;
+    try {
+      dispatchInputs = dispatchBody(slot, ref).inputs;
+    } catch (error) {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'pre_dispatch_blocked', Date.now(), {
+        detail: { error: safeError(error) },
+      });
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: safeError(error),
+        pre_dispatch_lease_released: recorded,
+      });
+    }
+
+    const dispatchBoundary = await dispatchWithLeaseBoundary({
       mode: dispatchMode,
-      // dispatchWithMode does not invoke this function in observe_only mode.
-      // Staging therefore has no write credential or signing key to access.
-      dispatchFn: async () => {
-        const writeToken = requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN');
-        let body = dispatchBody(slot, ref);
-        if (isOfficialOpenSlot(slot)) {
-          body = await officialOpenAttestedDispatchBody({
-            slot,
-            ref,
-            secret: requireEnv(this.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'),
-            sessionDate: window.dateKey,
-            issuedAtEpochMs: observedEpochMs,
-            nonce: crypto.randomUUID(),
-          });
+      prepare: () => prepareActiveDispatch({
+        env: this.env,
+        slot,
+        ref,
+        sessionDate: window.dateKey,
+        issuedAtEpochMs: observedEpochMs,
+      }),
+      beforePost: async () => {
+        // Re-read the canonical archive after preparation/signing and before
+        // dispatchWorkflow can cross the GitHub POST boundary.  The earlier
+        // shadow is intentionally not authoritative for this final decision.
+        const freshCompletion = await readDurableCompletion({
+          archive: this.env.ARCHIVE,
+          slot,
+          session: window.dateKey,
+          expectedCodeCommit,
+        });
+        if (freshCompletion.capture_complete) {
+          let freshOfficialOpenRecoveryAdmission = null;
+          if (isOfficialOpenSlot(slot)) {
+            try {
+              freshOfficialOpenRecoveryAdmission = await validateOfficialOpenRecoveryAdmission({
+                archive: this.env.ARCHIVE,
+                session: window.dateKey,
+                slot: slot.inputValue,
+                expectedCompletionSha256: freshCompletion.completion_sha256,
+                expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
+              });
+            } catch (error) {
+              return {
+                allow: false,
+                reason: 'OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
+                completion: {
+                  ...freshCompletion,
+                  capture_complete: false,
+                  state: 'archive_completion_blocked',
+                  reason: safeError(error),
+                },
+              };
+            }
+          }
+          return {
+            allow: false,
+            reason: 'DURABLE_COMPLETION_VERIFIED',
+            completion: freshCompletion,
+            officialOpenRecoveryAdmission: freshOfficialOpenRecoveryAdmission,
+          };
         }
-        return dispatchWorkflow({ owner, repo, token: writeToken, ref, slot, body });
+        if (freshCompletion.state === 'archive_completion_blocked') {
+          return { allow: false, reason: 'ARCHIVE_COMPLETION_AMBIGUOUS', completion: freshCompletion };
+        }
+        return { allow: true, completion: freshCompletion };
       },
+      leaseOwned: () => this._ownsDispatchLease(slotKey, attemptId),
+      onPreDispatchFailure: (error) => this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'pre_dispatch_blocked',
+        Date.now(),
+        { detail: { error: safeError(error) } },
+      ),
+      dispatch: (prepared) => dispatchWorkflow({
+        owner,
+        repo,
+        token: prepared.token,
+        ref,
+        slot,
+        body: prepared.body,
+      }),
     });
+    if (dispatchBoundary.phase === 'pre_dispatch_failure') {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: safeError(dispatchBoundary.error),
+        pre_dispatch_lease_released: dispatchBoundary.released,
+        pre_dispatch_release_error: dispatchBoundary.releaseError ? safeError(dispatchBoundary.releaseError) : null,
+      });
+    }
+    if (dispatchBoundary.phase === 'lease_lost_before_post') {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
+    if (dispatchBoundary.phase === 'pre_post_blocked') {
+      const freshCompletion = dispatchBoundary.decision?.completion;
+      const complete = freshCompletion?.capture_complete === true;
+      const state = complete ? 'archive_completion_observed' : 'archive_completion_blocked';
+      const recorded = this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        state,
+        Date.now(),
+        { detail: { completion: freshCompletion, reason: dispatchBoundary.decision?.reason } },
+      );
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
+      return finalizeShadowDecision(
+        shadow,
+        complete ? 'CAPTURE_ALREADY_COMPLETE' : 'FAIL_CLOSED_ARCHIVE_COMPLETION_AMBIGUOUS',
+        {
+          status: complete ? 'SHADOW_DURABLE_COMPLETION_VERIFIED' : 'SHADOW_FAIL_CLOSED_NO_DISPATCH',
+          fresh_durable_completion: freshCompletion,
+          fresh_official_open_recovery_admission: dispatchBoundary.decision?.officialOpenRecoveryAdmission ?? null,
+          fresh_completion_check: dispatchBoundary.decision?.reason,
+        },
+      );
+    }
+    const dispatch = dispatchBoundary.response;
+    if (dispatch?.post_attempted === false) {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'pre_dispatch_blocked', Date.now(), {
+        detail: { error: dispatch.status },
+      });
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: dispatch.status,
+        pre_dispatch_lease_released: recorded,
+      });
+    }
+    if (dispatchBoundary.phase === 'post_attempt_uncertain') {
+      // Do not write a reacquirable state here.  The fetch may have reached
+      // GitHub despite rejecting locally, and GitHub has no invalidating
+      // fencing token.  The owned dispatching marker remains the fence.
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_POST_ATTEMPT_UNCERTAIN', {
+        status: 'SHADOW_FAIL_CLOSED_POST_ATTEMPT_UNCERTAIN',
+        capture_complete: false,
+        post_attempt_uncertain: true,
+        dispatch_error: safeError(dispatchBoundary.error),
+      });
+    }
     if (dispatch.status === 'WOULD_DISPATCH') {
-      this._write(slotKey, 'would_dispatch', observedEpochMs, {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'would_dispatch', observedEpochMs, {
         detail: {
           dispatchMode,
           inputs: dispatchInputs,
@@ -261,6 +455,11 @@ export class SchedulerCoordinator extends DurableObject {
           shadow,
         },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WOULD_DISPATCH',
         dispatchMode,
@@ -270,7 +469,7 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
     if (dispatch.ok) {
-      this._write(slotKey, 'dispatch_requested', Date.now(), {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_requested', Date.now(), {
         attemptId,
         runId: dispatch.runId,
         detail: {
@@ -279,6 +478,13 @@ export class SchedulerCoordinator extends DurableObject {
           openInFlightRecoveryOverride,
         },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST_AFTER_DISPATCH',
+          capture_complete: false,
+          runId: dispatch.runId,
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
@@ -289,10 +495,15 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     if (dispatch.retryable) {
-      this._write(slotKey, 'retryable_error', Date.now(), {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_response_uncertain', Date.now(), {
         attemptId,
         detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'DISPATCH_RETRYABLE_ERROR',
         open_inflight_recovery_override: openInFlightRecoveryOverride,
@@ -300,10 +511,15 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
 
-    this._write(slotKey, 'blocked', Date.now(), {
+    const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_response_uncertain', Date.now(), {
       attemptId,
       detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
     });
+    if (!recorded) {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
     return finalizeShadowDecision(shadow, activeModeDecision, {
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
