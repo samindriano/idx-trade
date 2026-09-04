@@ -26,7 +26,7 @@ Detailed report and all tabular outputs are in:
 `D:\Documents\Project\idx-foreign-flow-behavioral-forensics-20260904-v1`
 
 Artifact manifest SHA-256:
-`11bc134349a8e6c0c138a93b53747b5d4a192063f65811904f7626e96ec2c12c`
+`23f8a8bd729c9162e57a6c244c10a69a83730a73494bf52d1ac0f002d294dc6b`
 
 ## Hash-bound sources
 
@@ -61,7 +61,9 @@ Artifact manifest SHA-256:
 - Raw contract: all 1,288 normalized `foreign_flow.parquet` files independently
   matched the archive manifest SHA-256 and byte count. The per-file evidence is
   in `source_file_hash_audit.csv` (expected hash, observed hash, expected and
-  observed bytes, verdict for every file). All units are `SHARES`; zero
+  observed bytes, verdict for every file). The normalized path population is
+  cross-checked against both the archive manifest and the pinned input
+  manifest, including declared row totals and per-file SHA-256. All units are `SHARES`; zero
   buy/sell negatives; zero `foreign_net` identity mismatches; zero duplicate
   ticker/session rows; no active zero-volume rows.
 - Listing contract: zero invalid intervals; one pre-listing row excluded
@@ -98,9 +100,11 @@ the following for each accepted field:
 The replay also passed exact `acceleration = mean_5 - mean_20`, cross-sectional
 eligibility, listing masks, own-history exclusion, 10-prior-RMV/5- and
 20-session/60-of-120 warm-up rules, zero duplicate output keys/infinities, and
-`feature_session = next_official(flow_through_session)`. Arithmetic and
-mechanical causality are `PASS`; complete universe certification remains
-`UNKNOWN` because the context/identity scope is not fully reconciled.
+`feature_session = next_official(flow_through_session)`. The comparison key is
+the full `(ticker, feature_session, flow_through_session)` identity and uses
+strict zero-relative-tolerance comparison. Arithmetic and mechanical causality
+are `PASS`; complete universe certification remains `UNKNOWN` because the
+context/identity scope is not fully reconciled.
 
 ## Behavioral and anomaly findings
 
@@ -130,8 +134,10 @@ mechanical causality are `PASS`; complete universe certification remains
 ## CA, PIT, and adversarial boundary
 
 - CA comparison used only the bounded resolved transition-attestation ledger:
-  55 rows / 52 tickers, all `stockSplit`. None of the 12 ranked anomaly names
-  appears in it. Exhaustive CA absence and anomaly cleanliness are `UNKNOWN`.
+  168 rows / 125 tickers across five event families (`BONUS_SHARES`,
+  `MANDATORY_CONVERSION`, `RIGHTS_HMETD`, `STOCK_DIVIDEND`, `STOCK_SPLIT`).
+  None of the 12 ranked anomaly names appears in it. Exhaustive CA absence and
+  anomaly cleanliness are `UNKNOWN`.
 - All raw sessions are `RETROSPECTIVELY_ACQUIRED`; manifest
   `publication_time_known=false`. Retrieval `knowledge_at_utc` is not a
   historical first-known timestamp. PIT publication/revision validity is
