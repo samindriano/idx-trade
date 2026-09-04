@@ -1,8 +1,8 @@
 # Cloud Runtime Recovery Adversarial Audit V1
 
-Date: 2026-09-04 Asia/Jakarta  
-Audit checkout: `remediation/main-cloud-runtime-recovery-v1`  
-Source under audit: PR #120, `ops/cloud-runtime-recovery-cutover-v1@c397c08aadc48adee53f635752ca38704c4c370b`  
+Date: 2026-09-04 Asia/Jakarta
+Audit checkout: `remediation/main-cloud-runtime-recovery-v1`
+Source under audit: PR #120, `ops/cloud-runtime-recovery-cutover-v1@c397c08aadc48adee53f635752ca38704c4c370b`
 Main comparison: `origin/main@00e6640578d70bfc3bf84d083838edbefb30708b`
 
 ## Status
