@@ -4,8 +4,9 @@ Status: `WAITING_FOR_REPRESENTATIVE_SCHEDULED_PRODUCTION_RUNS`
 
 This is the Phase-1 measurement package for the bounded GitHub Actions cost
 optimization integrated on `main@898864b4a8934877dc81086403a2a1068f7a6566`.
-No post-reset successful hosted run is available yet, so no after-measurement
-or numeric savings claim is made.
+Post-reset successful CI and delayed Stream observations are available, but no
+on-time representative production set is complete, so aggregate production
+savings are not claimed.
 
 ## Integration and validation
 
@@ -70,6 +71,26 @@ measurements:
   (`-27 s`). These are two isolated Stream observations, with one delayed
   pre-open sample and one delayed midday sample; they are not yet a robust
   aggregate production saving.
+- Stockbit Stream run `33858609781`, job `100977586460`, was the scheduled
+  `12:07 WIB` logical `midday` observation on `main@d7ec68775dc10e04d36c3ff5a9cce317414e08ca`.
+  It was created at `2026-09-04T09:29:37Z` (`16:29 WIB`), about `4 h 22 m`
+  after the logical slot, so it is a delayed scheduled observation rather
+  than on-time timing proof. The job completed successfully at
+  `2026-09-04T09:38:05Z` after about `505 s`; install ran about `17 s` and the
+  capture step about `478 s`. Runtime evidence reported `planned_calls=200`,
+  `completed_calls=200`, `successful_responses=200`,
+  `normalized_post_rows=5933`, `status=DATA_READY`,
+  `counter_mutated=false`, `outcome_accessed=false`, and
+  `model_accessed=false`, with no validation diagnostics. The exposed
+  manifest and universe hashes were
+  `40aba18838c9e9a92b52d1c9f6c9e58d9bfd477611c8e314c9bf5c43d518f6de` and
+  `391a37bd725a38086267c96f660ac24603a585b3a3ac15f12d4ce2ed52d64405`.
+- Against the historical Stream sample (`20 s` install and `462 s` useful
+  capture), this observation measured `17 s` install (`-3 s`) and `478 s`
+  capture (`+16 s`). Its job duration was about `505 s` versus the historical
+  `496 s` total sample (`+9 s`), with differing run shapes; these are measured
+  single-run deltas, not aggregate savings. This is the third delayed Stream
+  observation after reset; no on-time production proof is available yet.
 - Delayed E2E PREOPEN_CA runs `33477900776`, `33478995730`, and `33479797175`
   failed with `MISSED_PREOPEN_CA_CAPTURE`; their controller evidence reported
   no provider calls, no outcome access, and no PaperState mutation. Delayed
@@ -83,7 +104,7 @@ The first available post-reset successful sample is CI run `33415425851`:
 historical `17 s` install sample, this is a measured single-sample `1 s`
 install delta; it is not yet a representative aggregate saving.
 
-Post-reset production after-values are now available for two delayed Stream
+Post-reset production after-values are now available for three delayed Stream
 observations, including their runner/install/capture durations, provider-call
 counts, conclusions, and `DATA_READY` status. Intraday and E2E POST_EOD
 production after-values remain

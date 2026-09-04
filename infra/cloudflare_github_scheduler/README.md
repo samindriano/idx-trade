@@ -165,8 +165,11 @@ they can occupy a new slot.
   existing workflow.
 - Successful dispatch -> non-final `dispatch_requested`; workflow output still
   must become independently validated archive completion.
-- Retryable GitHub error -> retryable marker; later valid wake-up may retry.
-- Non-retryable GitHub error -> non-final blocked marker.
+- Any HTTP response after the POST boundary -> fenced non-final response marker;
+  status codes do not prove that GitHub did not accept the request, so no
+  automatic reclaim is permitted.
+- Pre-request preparation failure -> explicitly reacquirable
+  `pre_dispatch_blocked` marker only after zero POST is proven.
 - Expired market window -> no dispatch and no backfill.
 - Missing/invalid `DISPATCH_MODE` -> fail closed; never defaults to active.
 

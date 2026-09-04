@@ -90,6 +90,63 @@ test('a rejected fetch is POST-uncertain and does not reclaim the dispatching fe
   assert.equal(result.posts, 1);
 });
 
+test('a pre-POST completion check blocks a resumed owner without reaching POST', async () => {
+  const marker = { state: 'dispatching', attemptId: 'attempt-a' };
+  let durableComplete = false;
+  let posts = 0;
+  const result = await dispatchWithLeaseBoundary({
+    mode: 'active',
+    prepare: async () => ({ token: 'write-token', body: { ref: 'main', inputs: {} } }),
+    beforePost: async () => ({
+      allow: !durableComplete,
+      reason: durableComplete ? 'DURABLE_COMPLETION_VERIFIED' : 'NOT_COMPLETE',
+      completion: { capture_complete: durableComplete },
+    }),
+    leaseOwned: () => marker.state === 'dispatching' && marker.attemptId === 'attempt-a',
+    onPreDispatchFailure: () => false,
+    dispatch: async () => { posts += 1; return { ok: true, status: 204, retryable: false, runId: null }; },
+  });
+  assert.equal(result.phase, 'response');
+  assert.equal(posts, 1);
+
+  durableComplete = true;
+  const resumed = await dispatchWithLeaseBoundary({
+    mode: 'active',
+    prepare: async () => ({ token: 'write-token', body: { ref: 'main', inputs: {} } }),
+    beforePost: async () => ({
+      allow: !durableComplete,
+      reason: durableComplete ? 'DURABLE_COMPLETION_VERIFIED' : 'NOT_COMPLETE',
+      completion: { capture_complete: durableComplete },
+    }),
+    leaseOwned: () => marker.state === 'dispatching' && marker.attemptId === 'attempt-a',
+    onPreDispatchFailure: () => false,
+    dispatch: async () => { posts += 1; return { ok: true, status: 204, retryable: false, runId: null }; },
+  });
+  assert.equal(resumed.phase, 'pre_post_blocked');
+  assert.equal(resumed.decision.reason, 'DURABLE_COMPLETION_VERIFIED');
+  assert.equal(posts, 1);
+  assert.equal(marker.state, 'dispatching');
+});
+
+test('ownership is rechecked after fresh completion validation before POST', async () => {
+  const marker = { state: 'dispatching', attemptId: 'attempt-a' };
+  let posts = 0;
+  const result = await dispatchWithLeaseBoundary({
+    mode: 'active',
+    prepare: async () => ({ token: 'write-token', body: { ref: 'main', inputs: {} } }),
+    beforePost: async () => {
+      marker.attemptId = 'attempt-b';
+      return { allow: true, completion: { capture_complete: false } };
+    },
+    leaseOwned: () => marker.state === 'dispatching' && marker.attemptId === 'attempt-a',
+    onPreDispatchFailure: () => false,
+    dispatch: async () => { posts += 1; return { ok: true, status: 204, retryable: false, runId: null }; },
+  });
+  assert.equal(result.phase, 'lease_lost_before_post');
+  assert.equal(posts, 0);
+  assert.equal(marker.attemptId, 'attempt-b');
+});
+
 test('observe-only does not prepare credentials or reach dispatch side effect', async () => {
   let prepared = false;
   let dispatched = false;
@@ -105,7 +162,7 @@ test('observe-only does not prepare credentials or reach dispatch side effect', 
   assert.equal(dispatched, false);
 });
 
-test('deterministic same-slot interleaving has one dispatch boundary and preserves read-only B', async () => {
+test('deterministic same-slot interleaving revalidates completion before dispatch', async () => {
   const marker = { state: null, attemptId: null };
   let dispatchBoundaries = 0;
   let durableComplete = false;
@@ -131,6 +188,11 @@ test('deterministic same-slot interleaving has one dispatch boundary and preserv
       await aPaused;
       return { token: 'write-token', body: { ref: 'main', inputs: {} } };
     },
+    beforePost: async () => ({
+      allow: !durableComplete,
+      reason: durableComplete ? 'DURABLE_COMPLETION_VERIFIED' : 'NOT_COMPLETE',
+      completion: { capture_complete: durableComplete },
+    }),
     leaseOwned: () => marker.state === 'dispatching' && marker.attemptId === 'attempt-a',
     onPreDispatchFailure: () => false,
     dispatch: async () => {
@@ -152,8 +214,9 @@ test('deterministic same-slot interleaving has one dispatch boundary and preserv
 
   releaseA();
   const aResult = await a;
-  assert.equal(aResult.phase, 'response');
-  assert.equal(dispatchBoundaries, 1);
+  assert.equal(aResult.phase, 'pre_post_blocked');
+  assert.equal(aResult.decision.reason, 'DURABLE_COMPLETION_VERIFIED');
+  assert.equal(dispatchBoundaries, 0);
   assert.equal(marker.attemptId, 'attempt-a');
   assert.equal(bObservation.capture_complete, true);
 });
@@ -203,12 +266,21 @@ test('owner loss before POST and owner loss before marker transition prevent ove
   assert.equal(marker.attemptId, 'attempt-b');
 });
 
-test('response classes stay explicit after the POST boundary', async () => {
-  for (const [status, expected] of [[400, { ok: false, retryable: false }], [503, { ok: false, retryable: true }], [202, { ok: true, retryable: false }]]) {
+test('response classes stay explicit and fenced after the POST boundary', async () => {
+  for (const [status, expected] of [
+    [400, { ok: false, retryable: false }],
+    [409, { ok: false, retryable: true }],
+    [429, { ok: false, retryable: true }],
+    [500, { ok: false, retryable: true }],
+    [502, { ok: false, retryable: true }],
+    [503, { ok: false, retryable: true }],
+    [202, { ok: true, retryable: false }],
+  ]) {
     const result = await runPrepared({ fetchFn: async () => new Response('', { status }) });
     assert.equal(result.boundary.phase, 'response');
     assert.equal(result.posts, 1);
     assert.equal(result.boundary.response.ok, expected.ok);
     assert.equal(result.boundary.response.retryable, expected.retryable);
+    if (!expected.ok) assert.equal(dispatchLeaseDecision({ state: 'dispatch_response_uncertain' }).action, 'DEFER');
   }
 });

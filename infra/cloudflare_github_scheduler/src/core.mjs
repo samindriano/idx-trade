@@ -12,6 +12,12 @@ export const COORDINATOR_LEASE_MARKER_STATES = Object.freeze([
   'dispatching',
   'dispatch_requested',
   'dispatched',
+  // These response markers are retained as historical aliases for
+  // post-attempt outcomes.  An HTTP response does not prove that GitHub did
+  // not accept the request, so none may be reclaimed automatically.
+  'dispatch_response_uncertain',
+  'retryable_error',
+  'blocked',
 ]);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
@@ -34,6 +40,25 @@ export const SLOTS = Object.freeze([
 ]);
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
+
+const GIT_SHA = /^[0-9a-f]{40}$/;
+
+// A producer pin is a dispatch prerequisite for archive-writing families. An
+// empty archive must not turn a missing or malformed pin into an eligible
+// active dispatch.
+export function requiredImplementationPin(env, slot) {
+  const name = slot?.workflow === 'official-open-prospective-cloud-capture.yml'
+    ? 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'
+    : slot?.workflow === 'e2e-paper-cloud-orchestration.yml'
+      ? 'E2E_EXPECTED_CODE_COMMIT'
+      : null;
+  if (!name) return null;
+  const value = env?.[name];
+  if (typeof value !== 'string' || !GIT_SHA.test(value.trim())) {
+    throw new Error(`INVALID_${name}`);
+  }
+  return value.trim();
+}
 
 const IN_FLIGHT_RUN_STATUSES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
 
