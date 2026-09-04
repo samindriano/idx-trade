@@ -28,6 +28,11 @@ Detailed report and all tabular outputs are in:
 Artifact manifest SHA-256:
 `23f8a8bd729c9162e57a6c244c10a69a83730a73494bf52d1ac0f002d294dc6b`
 
+Final hardening materializer commit:
+`236c19f86eddd05b04b42b1b7032e295f0e2652d`.
+Materializer SHA-256:
+`baff9b7b677d7759902ddea6638b3fab3495b5a41c17035af368cc1d9629d186`.
+
 ## Hash-bound sources
 
 - Representation V2 manifest:
