@@ -157,6 +157,36 @@ def path_key(path: Path) -> str:
     return ntpath.normcase(ntpath.normpath(str(path)))
 
 
+REPORT_PROVENANCE_START = "<!-- HARDENING_PROVENANCE_START -->"
+REPORT_PROVENANCE_END = "<!-- HARDENING_PROVENANCE_END -->"
+
+
+def refresh_report_provenance(summary: dict[str, object]) -> None:
+    report_path = OUT / "REPORT.md"
+    text = report_path.read_text(encoding="utf-8")
+    start = text.find(REPORT_PROVENANCE_START)
+    end = text.find(REPORT_PROVENANCE_END)
+    if start < 0 or end < 0 or end < start:
+        raise RuntimeError("REPORT.md is missing hardening provenance markers")
+    end += len(REPORT_PROVENANCE_END)
+    generator = summary["generator"]
+    block = "\n".join(
+        [
+            REPORT_PROVENANCE_START,
+            "## Reproducibility hardening provenance",
+            f"- Materializer commit: `{generator['commit']}`",
+            f"- Materializer path: `{generator['path']}`",
+            f"- Materializer SHA-256: `{generator['sha256']}`",
+            f"- Generated at (UTC): `{generator['generated_at_utc']}`",
+            f"- V2 replay: `{summary['v2_recomputation']['result']}`",
+            f"- Raw contract: `{summary['raw_contract']['result']}`",
+            f"- Input provenance: `{summary['input_provenance']['result']}`",
+            REPORT_PROVENANCE_END,
+        ]
+    )
+    report_path.write_text(text[:start] + block + text[end:], encoding="utf-8")
+
+
 def rank_corr(frame: pd.DataFrame, left: str, right: str) -> tuple[int, float | None]:
     values = frame[[left, right]].apply(pd.to_numeric, errors="coerce")
     values = values.replace([np.inf, -np.inf], np.nan).dropna()
@@ -559,7 +589,41 @@ def main() -> int:
     normalized_duplicate_paths = len(normalized_manifest_keys) - len(normalized_manifest_key_set)
     normalized_missing_paths = len(normalized_manifest_key_set - actual_normalized_keys)
     normalized_unexpected_paths = len(actual_normalized_keys - normalized_manifest_key_set)
-    declared_normalized_rows = int(sum(int(item.get("rows", 0)) for item in normalized_items))
+    input_normalized_items = input_manifest["archive_manifest"]["archive_normalized_artifacts"]
+    input_normalized_keys = [
+        path_key((ARCH / str(item["path"])).resolve()) for item in input_normalized_items
+    ]
+    input_normalized_key_set = set(input_normalized_keys)
+    input_normalized_duplicate_paths = len(input_normalized_keys) - len(input_normalized_key_set)
+    normalized_declaration_missing_paths = len(
+        normalized_manifest_key_set - input_normalized_key_set
+    )
+    normalized_declaration_unexpected_paths = len(
+        input_normalized_key_set - normalized_manifest_key_set
+    )
+    archive_items_by_key: dict[str, list[dict[str, object]]] = {}
+    for key, item in zip(normalized_manifest_keys, normalized_items):
+        archive_items_by_key.setdefault(key, []).append(item)
+    input_items_by_key: dict[str, list[dict[str, object]]] = {}
+    for key, item in zip(input_normalized_keys, input_normalized_items):
+        input_items_by_key.setdefault(key, []).append(item)
+    normalized_declaration_hash_mismatches = 0
+    for key in normalized_manifest_key_set | input_normalized_key_set:
+        archive_entries = archive_items_by_key.get(key, [])
+        input_entries = input_items_by_key.get(key, [])
+        if (
+            len(archive_entries) != 1
+            or len(input_entries) != 1
+            or str(archive_entries[0].get("sha256", ""))
+            != str(input_entries[0].get("sha256", ""))
+        ):
+            normalized_declaration_hash_mismatches += 1
+    input_declared_row_count = int(
+        input_manifest["archive_manifest"]["archive_normalized_row_count"]
+    )
+    declared_normalized_rows = int(
+        sum(int(item["rows"]) for item in input_normalized_items)
+    )
     for item in manifest_items:
         relative = item.get("path")
         if not relative or not str(relative).endswith("foreign_flow.parquet"):
@@ -804,12 +868,15 @@ def main() -> int:
         [
             {"check": "archive_manifest_sha256", "value": archive_manifest_sha, "status": "PASS" if archive_manifest_sha == PINNED_INPUT_HASHES["archive_manifest"] else "FAIL"},
             {"check": "normalized_archive_file_count_expected", "value": {"expected": len(normalized_items), "declared": input_manifest["archive_manifest"]["archive_normalized_artifact_count"], "actual": len(actual_normalized_keys)}, "status": "PASS" if len(normalized_items) == input_manifest["archive_manifest"]["archive_normalized_artifact_count"] and len(actual_normalized_keys) == len(normalized_manifest_key_set) else "FAIL"},
+            {"check": "input_manifest_normalized_path_set", "value": {"archive_manifest": len(normalized_manifest_key_set), "input_manifest": len(input_normalized_key_set), "missing": normalized_declaration_missing_paths, "unexpected": normalized_declaration_unexpected_paths, "duplicate_input": input_normalized_duplicate_paths}, "status": "PASS" if normalized_declaration_missing_paths == 0 and normalized_declaration_unexpected_paths == 0 and input_normalized_duplicate_paths == 0 else "FAIL"},
+            {"check": "input_manifest_normalized_hashes", "value": normalized_declaration_hash_mismatches, "status": "PASS" if normalized_declaration_hash_mismatches == 0 else "FAIL"},
             {"check": "normalized_archive_manifest_duplicate_paths", "value": normalized_duplicate_paths, "status": "PASS" if normalized_duplicate_paths == 0 else "FAIL"},
             {"check": "normalized_archive_missing_paths", "value": normalized_missing_paths, "status": "PASS" if normalized_missing_paths == 0 else "FAIL"},
             {"check": "normalized_archive_unexpected_paths", "value": normalized_unexpected_paths, "status": "PASS" if normalized_unexpected_paths == 0 else "FAIL"},
             {"check": "normalized_archive_file_hashes_and_bytes", "value": {"pass": int((source_file_hash_audit["verdict"] == "PASS").sum()), "fail": source_hash_failures}, "status": "PASS" if source_population_failures == 0 else "FAIL"},
             {"check": "normalized_archive_files_loaded", "value": len(pieces), "status": "PASS" if not missing_files and source_population_failures == 0 else "FAIL"},
-            {"check": "raw_flow_rows_all_archive", "value": len(flow), "status": "PASS" if len(flow) == declared_normalized_rows else "FAIL"},
+            {"check": "input_manifest_normalized_row_declaration", "value": {"sum_item_rows": declared_normalized_rows, "declared_total": input_declared_row_count}, "status": "PASS" if declared_normalized_rows == input_declared_row_count else "FAIL"},
+            {"check": "raw_flow_rows_all_archive", "value": len(flow), "status": "PASS" if len(flow) == input_declared_row_count else "FAIL"},
             {"check": "raw_flow_rows_official_calendar", "value": len(official), "status": "INFO"},
             {"check": "calendar_sorted_unique", "value": len(sessions), "status": "PASS" if calendar_valid else "FAIL"},
             {"check": "raw_duplicate_ticker_session", "value": duplicate_rows, "status": "PASS" if duplicate_rows == 0 else "FAIL"},
@@ -971,7 +1038,7 @@ def main() -> int:
         "coverage": {"raw_rows_all_archive": len(flow), "raw_rows_official": len(official), "raw_sessions_official": official["session_date"].nunique(), "raw_tickers": official["ticker"].nunique(), "feature_rows": len(features), "feature_tickers": features["ticker"].nunique(), "feature_sessions": features["feature_session"].nunique(), "panel_rows": len(panel), "panel_tickers": panel["ticker"].nunique()},
         "period": {"official": [sessions.min().date().isoformat(), sessions.max().date().isoformat()], "flow_official": [official["session_date"].min().date().isoformat(), official["session_date"].max().date().isoformat()], "feature": [features["feature_session"].min().date().isoformat(), features["feature_session"].max().date().isoformat()]},
         "v2_recomputation": {"result": "PASS" if v2_result else "FAIL", "checks": checks, "invariant_checks": invariant_rows, "independent_source": "notebooks/foreign_flow/build_behavioral_forensics_artifacts.py"},
-        "raw_contract": {"result": "PASS" if raw_contract_result else "FAIL", "unit": "SHARES", "net_identity_mismatches": int((~net_identity).sum()), "archive_manifest_sha256": archive_manifest_sha, "normalized_archive_files_expected": int(len(source_file_hash_audit)), "normalized_archive_files_verified": int((source_file_hash_audit["verdict"] == "PASS").sum()), "normalized_archive_file_failures": source_hash_failures, "normalized_archive_population_failures": source_population_failures, "normalized_archive_manifest_duplicate_paths": normalized_duplicate_paths, "normalized_archive_missing_paths": normalized_missing_paths, "normalized_archive_unexpected_paths": normalized_unexpected_paths, "source_file_hash_audit": "source_file_hash_audit.csv"},
+        "raw_contract": {"result": "PASS" if raw_contract_result else "FAIL", "unit": "SHARES", "net_identity_mismatches": int((~net_identity).sum()), "archive_manifest_sha256": archive_manifest_sha, "normalized_archive_files_expected": int(len(source_file_hash_audit)), "normalized_archive_files_verified": int((source_file_hash_audit["verdict"] == "PASS").sum()), "normalized_archive_file_failures": source_hash_failures, "normalized_archive_population_failures": source_population_failures, "normalized_archive_manifest_duplicate_paths": normalized_duplicate_paths, "normalized_archive_missing_paths": normalized_missing_paths, "normalized_archive_unexpected_paths": normalized_unexpected_paths, "input_manifest_normalized_path_set_failures": normalized_declaration_missing_paths + normalized_declaration_unexpected_paths + input_normalized_duplicate_paths, "input_manifest_normalized_hash_failures": normalized_declaration_hash_mismatches, "source_file_hash_audit": "source_file_hash_audit.csv"},
         "input_provenance": {"result": "PASS" if input_provenance_result else "FAIL", "verified_files": int((input_provenance["verdict"] == "PASS").sum()), "rows": int(len(input_provenance)), "audit": "input_provenance_audit.csv"},
         "listing": {"excluded_rows": listing_excluded_rows, "excluded_tickers": listing_excluded_tickers, "security_master_invalid_intervals": master_invalid_intervals, "security_master_overlapping_intervals": master_overlaps},
         "ca_scope": {"resolved_rows": int(len(resolved_ca)), "resolved_tickers": int(resolved_ca["ticker"].nunique()), "resolved_event_families": sorted(resolved_ca["event_family"].dropna().astype(str).unique().tolist()), "exhaustive_absence": "UNKNOWN"},
@@ -984,11 +1051,12 @@ def main() -> int:
     if missing_outputs:
         raise RuntimeError(f"output root is missing expected generated files: {missing_outputs}")
     (OUT / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    refresh_report_provenance(summary)
     files = {path.name: {"bytes": path.stat().st_size, "sha256": sha256(path)} for path in sorted(OUT.iterdir()) if path.is_file() and path.name != "MANIFEST.json"}
     manifest = {"schema": "idx-trade/foreign-flow-behavioral-forensics-v1", "status": summary["status"], "created_at": "2026-09-04", "generator": summary["generator"], "source_artifact_manifest": str(ART / "manifest.json"), "source_artifact_manifest_sha256": sha256(ART / "manifest.json"), "input_manifest": str(ART / "input_manifest.json"), "input_manifest_sha256": sha256(ART / "input_manifest.json"), "archive_manifest": str(archive_manifest_path), "archive_manifest_sha256": sha256(archive_manifest_path), "ca_manifest": str(CA_MANIFEST_PATH), "ca_manifest_sha256": PINNED_INPUT_HASHES["ca_manifest"], "ca_ledger": str(CA_PATH), "ca_ledger_sha256": PINNED_INPUT_HASHES["ca_ledger"], "summary": summary, "files": files, "no_provider_calls": True, "outcome_blind": True}
     (OUT / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({"output_root": str(OUT), "manifest_sha256": sha256(OUT / "MANIFEST.json"), "files": len(files), "v2": summary["v2_recomputation"]}, indent=2))
-    return 0
+    return 0 if complete else 1
 
 
 if __name__ == "__main__":
