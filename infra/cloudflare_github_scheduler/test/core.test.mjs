@@ -4,6 +4,7 @@ import {
   SLOTS,
   SLOT_BY_ID,
   canonicalSlotRunName,
+  dispatchLeaseDecision,
   durableMarkerDecision,
   dueSlots,
   effectiveActiveModeDecision,
@@ -151,6 +152,42 @@ test('scheduler markers never masquerade as capture completion', () => {
   assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('same-slot coordinator contenders cannot reclaim an existing dispatch lease', () => {
+  const first = dispatchLeaseDecision(null);
+  assert.deepEqual(first, { action: 'ACQUIRE' });
+
+  for (const state of ['dispatching', 'dispatch_requested', 'dispatched']) {
+    const second = dispatchLeaseDecision({
+      state,
+      attempt_id: 'first-attempt',
+      run_id: 41,
+      updated_at_ms: 1,
+    });
+    assert.deepEqual(second, {
+      action: 'DEFER',
+      status: 'DISPATCH_LEASE_HELD_FENCING_UNPROVEN',
+      state,
+      attemptId: 'first-attempt',
+      runId: 41,
+    });
+  }
+
+  // Age alone cannot authorize a takeover because the external POST has no
+  // fence token that would invalidate the old request.
+  assert.equal(
+    dispatchLeaseDecision({ state: 'dispatching', updated_at_ms: 1 }).action,
+    'DEFER',
+  );
+  assert.deepEqual(
+    dispatchLeaseDecision({ state: 'capture_complete' }),
+    { action: 'VALIDATE_ARCHIVE_ONLY', state: 'capture_complete' },
+  );
+  assert.deepEqual(
+    dispatchLeaseDecision({ state: 'retryable_error' }),
+    { action: 'ACQUIRE' },
+  );
 });
 
 test('process-level active decision defers for every fresh coordinator dispatch lease', () => {

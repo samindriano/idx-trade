@@ -71,13 +71,18 @@ test('staging has no production Cron schedule and production retains exact Cron 
 });
 
 test('scheduler markers remain a coordination guard without claiming capture completion', () => {
+  const leaseAcquire = indexSource.indexOf('this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs)');
+  const githubQuery = indexSource.indexOf('await queryExactSlotCoverage');
+  assert.ok(leaseAcquire >= 0);
+  assert.ok(githubQuery > leaseAcquire);
+  assert.match(indexSource, /_writeOwnedDispatchLease/);
   assert.match(indexSource, /durableMarkerDecision\(prior, observedEpochMs\)/);
   assert.match(indexSource, /effectiveActiveModeDecision/);
   assert.match(indexSource, /effective_active_mode_decision/);
   assert.match(indexSource, /status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE'/);
-  assert.match(indexSource, /this\._write\(slotKey, 'dispatch_requested'/);
+  assert.match(indexSource, /_writeOwnedDispatchLease\(slotKey, attemptId, 'dispatch_requested'/);
   assert.match(indexSource, /dispatchWithMode/);
-  assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
+  assert.match(indexSource, /this\._write\(slotKey, 'dispatching'/);
   assert.match(indexSource, /evaluateShadowSlot/);
   assert.match(indexSource, /githubError/);
   assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);

@@ -3,6 +3,7 @@ import {
   SLOT_BY_ID,
   durableMarkerDecision,
   dispatchBody,
+  dispatchLeaseDecision,
   dueSlots,
   effectiveActiveModeDecision,
   markerKey,
@@ -90,6 +91,36 @@ export class SchedulerCoordinator extends DurableObject {
     return { slotKey, state, attemptId, updatedAtMs: nowMs, runId, detail };
   }
 
+  // This method deliberately performs the read and write without an await.
+  // Durable Objects serialize that synchronous prefix, so two same-slot
+  // requests cannot both observe an unleased marker before one records its
+  // attempt.  Stale external dispatches cannot be fenced by GitHub's API;
+  // therefore an existing dispatch lease is never reclaimed automatically.
+  _acquireDispatchLease(slotKey, nowMs, scheduledEpochMs) {
+    const prior = this._read(slotKey);
+    const decision = dispatchLeaseDecision(prior);
+    if (decision.action !== 'ACQUIRE') return { prior, decision, attemptId: null };
+
+    const attemptId = crypto.randomUUID();
+    this._write(slotKey, 'dispatching', nowMs, {
+      attemptId,
+      detail: { scheduledEpochMs },
+    });
+    return { prior, decision, attemptId };
+  }
+
+  _ownsDispatchLease(slotKey, attemptId) {
+    if (!attemptId) return false;
+    const marker = this._read(slotKey);
+    return marker?.state === 'dispatching' && marker.attempt_id === attemptId;
+  }
+
+  _writeOwnedDispatchLease(slotKey, attemptId, state, nowMs, options = {}) {
+    if (!this._ownsDispatchLease(slotKey, attemptId)) return false;
+    this._write(slotKey, state, nowMs, options);
+    return true;
+  }
+
   async processSlot(slotId, observedEpochMs, scheduledEpochMs) {
     const slot = SLOT_BY_ID.get(slotId);
     if (!slot) throw new Error('UNKNOWN_SLOT');
@@ -109,7 +140,8 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     const slotKey = markerKey(window.dateKey, slotId);
-    const prior = this._read(slotKey);
+    const lease = this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs);
+    const { prior, attemptId } = lease;
     let exactCoverage = [];
     let githubError = null;
     try {
@@ -133,14 +165,6 @@ export class SchedulerCoordinator extends DurableObject {
       githubError,
       expectedCodeCommit: this.env.E2E_EXPECTED_CODE_COMMIT,
     });
-    if (exactCoverage.length) {
-      const run = exactCoverage[0];
-      this._write(slotKey, 'covered_exact', observedEpochMs, {
-        runId: Number.isInteger(run.id) ? run.id : null,
-        detail: shadow.github_exact_run_evidence,
-      });
-    }
-
     let officialOpenRecoveryAdmission = null;
     if (shadow.family === 'OFFICIAL_OPEN' && shadow.durable_completion.capture_complete) {
       try {
@@ -152,6 +176,13 @@ export class SchedulerCoordinator extends DurableObject {
           expectedCodeCommit: requireEnv(this.env, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'),
         });
       } catch (error) {
+        this._writeOwnedDispatchLease(
+          slotKey,
+          attemptId,
+          'archive_completion_blocked',
+          observedEpochMs,
+          { detail: { error: safeError(error) } },
+        );
         return finalizeShadowDecision(
           shadow,
           'FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID',
@@ -167,6 +198,13 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     if (shadow.durable_completion.capture_complete) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'archive_completion_observed',
+        observedEpochMs,
+        { detail: { completion: shadow.durable_completion } },
+      );
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
@@ -177,11 +215,28 @@ export class SchedulerCoordinator extends DurableObject {
       );
     }
     if (shadow.durable_completion.state === 'archive_completion_blocked' || githubError) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        githubError ? 'github_query_error' : 'archive_completion_blocked',
+        observedEpochMs,
+        { detail: { error: githubError ?? shadow.durable_completion.reason } },
+      );
       return finalizeShadowDecision(
         shadow,
         effectiveActiveModeDecision(shadow),
         { status: 'SHADOW_FAIL_CLOSED_NO_DISPATCH' },
       );
+    }
+
+    // A prior dispatch lease is a coordination defer, not archive completion.
+    // The archive was still checked above so a completion that appeared while
+    // the first request was running is never hidden by the marker.
+    if (lease.decision.action === 'DEFER') {
+      return finalizeShadowDecision(shadow, 'DEFER_COORDINATOR_DISPATCH_LEASE', {
+        status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE',
+        coordinator_marker_decision: lease.decision,
+      });
     }
 
     // A coordination marker can defer a duplicate request, but it cannot
@@ -216,6 +271,13 @@ export class SchedulerCoordinator extends DurableObject {
       shadow.active_mode_decision === 'DEFER_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE'
       && !openInFlightRecoveryOverride
     ) {
+      this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'in_flight_grace',
+        observedEpochMs,
+        { detail: shadow.github_exact_run_evidence },
+      );
       return finalizeShadowDecision(shadow, effectiveActiveModeDecision(shadow), {
         status: 'SHADOW_DEFERRED_BY_GITHUB_IN_FLIGHT_GRACE',
       });
@@ -224,11 +286,11 @@ export class SchedulerCoordinator extends DurableObject {
       ? OPEN_IN_FLIGHT_RECOVERY_DECISION
       : effectiveActiveModeDecision(shadow);
 
-    const attemptId = crypto.randomUUID();
-    this._write(slotKey, 'dispatching', observedEpochMs, {
-      attemptId,
-      detail: { scheduledEpochMs },
-    });
+    if (!this._ownsDispatchLease(slotKey, attemptId)) {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
 
     const dispatchInputs = dispatchBody(slot, ref).inputs;
     const dispatch = await dispatchWithMode({
@@ -252,7 +314,7 @@ export class SchedulerCoordinator extends DurableObject {
       },
     });
     if (dispatch.status === 'WOULD_DISPATCH') {
-      this._write(slotKey, 'would_dispatch', observedEpochMs, {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'would_dispatch', observedEpochMs, {
         detail: {
           dispatchMode,
           inputs: dispatchInputs,
@@ -261,6 +323,11 @@ export class SchedulerCoordinator extends DurableObject {
           shadow,
         },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WOULD_DISPATCH',
         dispatchMode,
@@ -270,7 +337,7 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
     if (dispatch.ok) {
-      this._write(slotKey, 'dispatch_requested', Date.now(), {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'dispatch_requested', Date.now(), {
         attemptId,
         runId: dispatch.runId,
         detail: {
@@ -279,6 +346,13 @@ export class SchedulerCoordinator extends DurableObject {
           openInFlightRecoveryOverride,
         },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST_AFTER_DISPATCH',
+          capture_complete: false,
+          runId: dispatch.runId,
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'WORKFLOW_DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
         capture_complete: false,
@@ -289,10 +363,15 @@ export class SchedulerCoordinator extends DurableObject {
     }
 
     if (dispatch.retryable) {
-      this._write(slotKey, 'retryable_error', Date.now(), {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'retryable_error', Date.now(), {
         attemptId,
         detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
       });
+      if (!recorded) {
+        return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+          status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+        });
+      }
       return finalizeShadowDecision(shadow, activeModeDecision, {
         status: 'DISPATCH_RETRYABLE_ERROR',
         open_inflight_recovery_override: openInFlightRecoveryOverride,
@@ -300,10 +379,15 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
 
-    this._write(slotKey, 'blocked', Date.now(), {
+    const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'blocked', Date.now(), {
       attemptId,
       detail: { githubStatus: dispatch.status, openInFlightRecoveryOverride },
     });
+    if (!recorded) {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
     return finalizeShadowDecision(shadow, activeModeDecision, {
       status: 'DISPATCH_BLOCKED_NOT_CAPTURE_COMPLETE',
       capture_complete: false,
