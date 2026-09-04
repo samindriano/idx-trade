@@ -14,11 +14,12 @@ import {
   dispatchWorkflow,
   queryExactSlotCoverage,
 } from './github.mjs';
-import { dispatchWithMode, requireDispatchMode } from './dispatch_mode.mjs';
+import { requireDispatchMode } from './dispatch_mode.mjs';
+import { dispatchWithLeaseBoundary } from './dispatch_lifecycle.mjs';
+import { prepareActiveDispatch } from './dispatch_prepare.mjs';
 import { evaluateShadowSlot } from './archive.mjs';
 import {
   isOfficialOpenSlot,
-  officialOpenAttestedDispatchBody,
 } from './official_open_attestation.mjs';
 import { validateOfficialOpenRecoveryAdmission } from './official_open_recovery_admission.mjs';
 
@@ -292,27 +293,71 @@ export class SchedulerCoordinator extends DurableObject {
       });
     }
 
-    const dispatchInputs = dispatchBody(slot, ref).inputs;
-    const dispatch = await dispatchWithMode({
+    let dispatchInputs;
+    try {
+      dispatchInputs = dispatchBody(slot, ref).inputs;
+    } catch (error) {
+      const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'pre_dispatch_blocked', Date.now(), {
+        detail: { error: safeError(error) },
+      });
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: safeError(error),
+        pre_dispatch_lease_released: recorded,
+      });
+    }
+
+    const dispatchBoundary = await dispatchWithLeaseBoundary({
       mode: dispatchMode,
-      // dispatchWithMode does not invoke this function in observe_only mode.
-      // Staging therefore has no write credential or signing key to access.
-      dispatchFn: async () => {
-        const writeToken = requireEnv(this.env, 'GITHUB_ACTIONS_WRITE_TOKEN');
-        let body = dispatchBody(slot, ref);
-        if (isOfficialOpenSlot(slot)) {
-          body = await officialOpenAttestedDispatchBody({
-            slot,
-            ref,
-            secret: requireEnv(this.env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'),
-            sessionDate: window.dateKey,
-            issuedAtEpochMs: observedEpochMs,
-            nonce: crypto.randomUUID(),
-          });
-        }
-        return dispatchWorkflow({ owner, repo, token: writeToken, ref, slot, body });
-      },
+      prepare: () => prepareActiveDispatch({
+        env: this.env,
+        slot,
+        ref,
+        sessionDate: window.dateKey,
+        issuedAtEpochMs: observedEpochMs,
+      }),
+      leaseOwned: () => this._ownsDispatchLease(slotKey, attemptId),
+      onPreDispatchFailure: (error) => this._writeOwnedDispatchLease(
+        slotKey,
+        attemptId,
+        'pre_dispatch_blocked',
+        Date.now(),
+        { detail: { error: safeError(error) } },
+      ),
+      dispatch: (prepared) => dispatchWorkflow({
+        owner,
+        repo,
+        token: prepared.token,
+        ref,
+        slot,
+        body: prepared.body,
+      }),
     });
+    if (dispatchBoundary.phase === 'pre_dispatch_failure') {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_PRE_DISPATCH_VALIDATION', {
+        status: 'SHADOW_FAIL_CLOSED_PRE_DISPATCH_NO_POST',
+        dispatch_error: safeError(dispatchBoundary.error),
+        pre_dispatch_lease_released: dispatchBoundary.released,
+        pre_dispatch_release_error: dispatchBoundary.releaseError ? safeError(dispatchBoundary.releaseError) : null,
+      });
+    }
+    if (dispatchBoundary.phase === 'lease_lost_before_post') {
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_COORDINATOR_LEASE_LOST', {
+        status: 'SHADOW_FAIL_CLOSED_COORDINATOR_LEASE_LOST',
+      });
+    }
+    if (dispatchBoundary.phase === 'post_attempt_uncertain') {
+      // Do not write a reacquirable state here.  The fetch may have reached
+      // GitHub despite rejecting locally, and GitHub has no invalidating
+      // fencing token.  The owned dispatching marker remains the fence.
+      return finalizeShadowDecision(shadow, 'FAIL_CLOSED_POST_ATTEMPT_UNCERTAIN', {
+        status: 'SHADOW_FAIL_CLOSED_POST_ATTEMPT_UNCERTAIN',
+        capture_complete: false,
+        post_attempt_uncertain: true,
+        dispatch_error: safeError(dispatchBoundary.error),
+      });
+    }
+    const dispatch = dispatchBoundary.response;
     if (dispatch.status === 'WOULD_DISPATCH') {
       const recorded = this._writeOwnedDispatchLease(slotKey, attemptId, 'would_dispatch', observedEpochMs, {
         detail: {

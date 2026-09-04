@@ -110,10 +110,14 @@ and Stream exact slot plus universe/source identity (outside this fallback).
 ## Validation boundary
 
 The remediation adds only the Cloudflare coordinator lease decision/ownership
-path and focused regression coverage. It does not alter production schedules,
-workflow semantics, provider code, archive authority, Stream, Windows tasks,
-or frozen science. Final validation results and exact commit identity are
-reported with the independent-review handoff.
+path, explicit pre-dispatch preparation, post-attempt uncertainty handling,
+and focused regression coverage. Preparation failures are recorded as a
+reacquirable `pre_dispatch_blocked` state only while the current owner is
+proven to have made no POST. A rejected `fetch()` leaves the owned
+`dispatching` marker fenced. It does not alter production schedules, workflow
+semantics, provider code, archive authority, Stream, Windows tasks, or frozen
+science. Final validation results and exact commit identity are reported with
+the independent-review handoff.
 
 Pre-commit validation on this checkout:
 
@@ -122,6 +126,9 @@ Pre-commit validation on this checkout:
 - Focused Python scheduler/recovery suite: **46 passed, 0 failed**.
 - Full repository pytest: **406 passed, 0 failed**, with 3 pre-existing
   pandas `FutureWarning` messages.
+- Hosted PR CI run `33842072612`: **406 passed, 0 failed**, with 7 warnings in
+  the hosted output. This is a separate hosted observation from the local
+  count above; the warning counts are not combined.
 - `python -m compileall -q src/idx_trade scripts`: PASS.
 - Wrangler types for baseline staging, staging-live, and production: PASS
   (Wrangler emitted its existing advisory to install `@types/node`).
