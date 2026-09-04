@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -15,7 +16,7 @@ from idx_trade.stockbit_intraday_cloud_archive import (
     StockbitIntradayCloudError,
     build_intraday_store_from_env,
 )
-from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot
+from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot, validate_intraday_capture_window
 from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
 from idx_trade.stockbit_intraday_e2e_bridge import (
     StockbitIntradayE2EBridgeError,
@@ -75,6 +76,27 @@ def test_cloud_slot_rejects_naive_clock_before_provider_call(tmp_path: Path):
             code_identity={"commit": "a" * 40},
         )
     assert called is False
+
+
+@pytest.mark.parametrize(
+    ("now", "error"),
+    [
+        (datetime(2026, 8, 26, 18, 29, tzinfo=ZoneInfo("Asia/Jakarta")), "SLOT_TOO_EARLY"),
+        (datetime(2026, 8, 27, 18, 30, tzinfo=ZoneInfo("Asia/Jakarta")), "RETROACTIVE_SESSION_FORBIDDEN"),
+        (datetime(2026, 8, 25, 18, 30, tzinfo=ZoneInfo("Asia/Jakarta")), "RETROACTIVE_SESSION_FORBIDDEN"),
+    ],
+)
+def test_runner_window_admission_is_current_session_and_after_slot_due(now: datetime, error: str):
+    with pytest.raises(StockbitIntradayCloudError, match=error):
+        validate_intraday_capture_window(expected_date=SESSION, slot="1830", now=now)
+
+
+def test_runner_window_admission_allows_delayed_same_day_recovery():
+    validate_intraday_capture_window(
+        expected_date=SESSION,
+        slot="1830",
+        now=datetime(2026, 8, 26, 23, 59, tzinfo=ZoneInfo("Asia/Jakarta")),
+    )
 
 
 def test_dry_run_requires_no_cloud_or_provider_environment():

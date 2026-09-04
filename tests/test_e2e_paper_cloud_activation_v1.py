@@ -11,11 +11,11 @@ WORKFLOW = (
 )
 
 
-def test_production_workflow_dispatches_v3_and_all_phases() -> None:
+def test_production_workflow_dispatches_v4_and_all_phases() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "python scripts/run_e2e_paper_cloud_v3.py" in text
-    assert "python scripts/run_e2e_paper_cloud_v2.py" not in text
+    assert "python scripts/run_e2e_paper_cloud_v4.py" in text
+    assert "python scripts/run_e2e_paper_cloud_v3.py" not in text
     assert "options: [auto, PREOPEN_CA, PREOPEN, POST_EOD]" in text
     assert '"30 1 * * 1-5"' in text
     assert '"45 1 * * 1-5"' in text
@@ -28,15 +28,13 @@ def test_production_workflow_dispatches_v3_and_all_phases() -> None:
     assert '"35 12 * * 1-5"' in text
 
 
-def test_preopen_ca_and_preopen_have_independent_serialized_groups() -> None:
+def test_recovery_attempts_are_not_workflow_serialized() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "idx-trade-e2e-paper-cloud-v3-${{" in text
-    assert "'preopen-ca'" in text
-    assert "'preopen'" in text
-    assert "'post-eod'" in text
-    assert "cancel-in-progress: false" in text
-    assert "cannot queue-block the" in text
+    assert "\nconcurrency:\n" not in text
+    assert "no workflow-level concurrency group" in text
+    assert "must never queue-block" in text
+    assert "conditional immutable R2 stage/checkpoint commit" in text
 
 
 def test_schedule_resolution_explicitly_maps_preopen_ca() -> None:
