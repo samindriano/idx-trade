@@ -26,7 +26,7 @@ Detailed report and all tabular outputs are in:
 `D:\Documents\Project\idx-foreign-flow-behavioral-forensics-20260904-v1`
 
 Artifact manifest SHA-256:
-`349a6757a306210a001f734729927641abd4e51e72ca1d2844871aa4d016054b`
+`11bc134349a8e6c0c138a93b53747b5d4a192063f65811904f7626e96ec2c12c`
 
 ## Hash-bound sources
 
@@ -58,9 +58,12 @@ Artifact manifest SHA-256:
   2021-04-30–2026-07-31; source flow-through ends 2026-07-30.
 - Causal context: 981,939 rows / 945 tickers. HLCV panel: 981,940 rows /
   945 tickers.
-- Raw contract: all normalized archive hashes/bytes matched; all units are
-  `SHARES`; zero buy/sell negatives; zero `foreign_net` identity mismatches;
-  zero duplicate ticker/session rows; no active zero-volume rows.
+- Raw contract: all 1,288 normalized `foreign_flow.parquet` files independently
+  matched the archive manifest SHA-256 and byte count. The per-file evidence is
+  in `source_file_hash_audit.csv` (expected hash, observed hash, expected and
+  observed bytes, verdict for every file). All units are `SHARES`; zero
+  buy/sell negatives; zero `foreign_net` identity mismatches; zero duplicate
+  ticker/session rows; no active zero-volume rows.
 - Listing contract: zero invalid intervals; one pre-listing row excluded
   (`KOCI`, 2023-10-06).
 - Blocking identity coverage: `CNTX`, `GOTOM`, `MAMIP`, and `MYRXP` are flow
@@ -70,16 +73,34 @@ Artifact manifest SHA-256:
 
 ## Independent V2 replay
 
-The independent replay did not import or call the V2 feature helper. All 15
-accepted fields passed with 1,102,400 matching keys, zero finite mismatches,
-zero NaN-pattern mismatches, and maximum absolute difference `0.0`.
+The independent replay did not import or call the V2 feature helper. The
+regenerated machine-readable `representation_recomputation_audit.csv` records
+the following for each accepted field:
 
-The replay also passed the raw net/participation/shock checks, exact
-`acceleration = mean_5 - mean_20` identity, cross-sectional rank scope,
-listing masks, warm-up rules, zero duplicate keys/infinities, and
+| Field | Keys expected/recomputed | Finite expected/recomputed | Finite mismatches | NaN-pattern mismatches | Max abs difference | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| `foreign_participation_1` | 1,102,400 / 1,102,400 | 981,109 / 981,109 | 0 | 0 | 0.0 | PASS |
+| `foreign_participation_mean_5` | 1,102,400 / 1,102,400 | 942,516 / 942,516 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_shock_1` | 1,102,400 / 1,102,400 | 963,971 / 963,971 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_shock_mean_5` | 1,102,400 / 1,102,400 | 930,448 / 930,448 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_shock_mean_20` | 1,102,400 / 1,102,400 | 870,581 / 870,581 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_shock_percentile_120` | 1,102,400 / 1,102,400 | 899,158 / 899,158 | 0 | 0 | 0.0 | PASS |
+| `xs_rank_foreign_flow_shock_1` | 1,102,400 / 1,102,400 | 347,837 / 347,837 | 0 | 0 | 0.0 | PASS |
+| `xs_rank_foreign_flow_shock_mean_5` | 1,102,400 / 1,102,400 | 346,420 / 346,420 | 0 | 0 | 0.0 | PASS |
+| `xs_rank_foreign_flow_shock_mean_20` | 1,102,400 / 1,102,400 | 336,691 / 336,691 | 0 | 0 | 0.0 | PASS |
+| `foreign_weighted_persistence_5` | 1,102,400 / 1,102,400 | 930,448 / 930,448 | 0 | 0 | 0.0 | PASS |
+| `foreign_weighted_persistence_20` | 1,102,400 / 1,102,400 | 870,581 / 870,581 | 0 | 0 | 0.0 | PASS |
+| `foreign_signed_streak_10` | 1,102,400 / 1,102,400 | 1,101,832 / 1,101,832 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_acceleration_5_20` | 1,102,400 / 1,102,400 | 870,581 / 870,581 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_price_divergence_5` | 1,102,400 / 1,102,400 | 346,420 / 346,420 | 0 | 0 | 0.0 | PASS |
+| `foreign_flow_price_divergence_20` | 1,102,400 / 1,102,400 | 336,691 / 336,691 | 0 | 0 | 0.0 | PASS |
+
+The replay also passed exact `acceleration = mean_5 - mean_20`, cross-sectional
+eligibility, listing masks, own-history exclusion, 10-prior-RMV/5- and
+20-session/60-of-120 warm-up rules, zero duplicate output keys/infinities, and
 `feature_session = next_official(flow_through_session)`. Arithmetic and
-mechanical causality are `PASS`; complete universe certification is `UNKNOWN`
-because the context/identity scope is not fully reconciled.
+mechanical causality are `PASS`; complete universe certification remains
+`UNKNOWN` because the context/identity scope is not fully reconciled.
 
 ## Behavioral and anomaly findings
 

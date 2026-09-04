@@ -53,6 +53,14 @@ FEATURES = [
     "foreign_flow_price_divergence_20",
 ]
 
+PRIOR_LIQUIDITY_LOOKBACK = 20
+MIN_PRIOR_LIQUIDITY_OBSERVATIONS = 10
+HISTORY_PERCENTILE_LOOKBACK = 120
+MIN_HISTORY_PERCENTILE_OBSERVATIONS = 60
+SHORT_WINDOW = 5
+MEDIUM_WINDOW = 20
+STREAK_CAP = 10
+
 
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -82,6 +90,210 @@ def listed_mask(dates: pd.Series, ticker: str, master: pd.DataFrame) -> np.ndarr
     return result
 
 
+def historical_percentile(current: float, history: np.ndarray) -> float:
+    valid = history[np.isfinite(history)]
+    if not np.isfinite(current) or len(valid) < MIN_HISTORY_PERCENTILE_OBSERVATIONS:
+        return np.nan
+    less = float(np.sum(valid < current))
+    equal = float(np.sum(valid == current))
+    return (less + 0.5 * equal) / float(len(valid))
+
+
+def signed_streak(values: np.ndarray) -> float:
+    if len(values) == 0 or not np.isfinite(values[-1]):
+        return np.nan
+    last_sign = float(np.sign(values[-1]))
+    if last_sign == 0.0:
+        return 0.0
+    count = 0
+    for value in values[::-1]:
+        if not np.isfinite(value) or float(np.sign(value)) != last_sign:
+            break
+        count += 1
+        if count >= STREAK_CAP:
+            break
+    return last_sign * float(count) / float(STREAK_CAP)
+
+
+def weighted_persistence(values: np.ndarray) -> float:
+    if len(values) == 0 or not np.isfinite(values).all():
+        return np.nan
+    denominator = float(np.abs(values).sum())
+    if denominator == 0.0:
+        return 0.0
+    return float(values.sum() / denominator)
+
+
+def independent_v2_recompute(
+    expected: pd.DataFrame,
+    official: pd.DataFrame,
+    panel: pd.DataFrame,
+    context: pd.DataFrame,
+    master: pd.DataFrame,
+    sessions: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Rebuild the accepted V2 fields without importing the V2 implementation."""
+    flow_index = official.set_index(["ticker", "session_date"])["foreign_net"]
+    volume_index = panel.set_index(["ticker", "date"])["volume"]
+    context_index = context.set_index(["ticker", "date"])
+    master_tickers = set(master["ticker"])
+    rows: list[pd.DataFrame] = []
+    for ticker in sorted(set(expected["ticker"])):
+        if ticker not in master_tickers:
+            continue
+        master_rows = master.loc[master["ticker"].eq(ticker)]
+        listed = listed_mask(pd.Series(sessions), ticker, master)
+        listed_at_feature = np.zeros(len(sessions), dtype=bool)
+        listed_at_feature[:-1] = listed[1:]
+        key = pd.MultiIndex.from_product([[ticker], sessions], names=["ticker", "date"])
+        net = flow_index.reindex(key.set_names(["ticker", "session_date"])).to_numpy(dtype=float)
+        volume = volume_index.reindex(key).to_numpy(dtype=float)
+        close = context_index["close"].reindex(key).to_numpy(dtype=float)
+        regular_value = context_index["regular_market_value"].reindex(key).to_numpy(dtype=float)
+        net[~listed] = np.nan
+        volume[~listed] = np.nan
+        close[~listed] = np.nan
+        regular_value[~listed] = np.nan
+
+        participation = np.full(len(sessions), np.nan, dtype=float)
+        valid_current = np.isfinite(net) & np.isfinite(volume) & (volume > 0.0)
+        participation[valid_current] = net[valid_current] / volume[valid_current]
+
+        shock = np.full(len(sessions), np.nan, dtype=float)
+        net_notional = net * close
+        for index in range(len(sessions)):
+            prior = regular_value[max(0, index - PRIOR_LIQUIDITY_LOOKBACK) : index]
+            prior = prior[np.isfinite(prior) & (prior >= 0.0)]
+            if len(prior) < MIN_PRIOR_LIQUIDITY_OBSERVATIONS or not np.isfinite(net_notional[index]):
+                continue
+            baseline = float(np.median(prior))
+            if baseline > 0.0:
+                shock[index] = net_notional[index] / baseline
+
+        participation_mean_5 = np.full(len(sessions), np.nan, dtype=float)
+        shock_mean_5 = np.full(len(sessions), np.nan, dtype=float)
+        shock_mean_20 = np.full(len(sessions), np.nan, dtype=float)
+        persistence_5 = np.full(len(sessions), np.nan, dtype=float)
+        persistence_20 = np.full(len(sessions), np.nan, dtype=float)
+        streak_10 = np.full(len(sessions), np.nan, dtype=float)
+        percentile_120 = np.full(len(sessions), np.nan, dtype=float)
+        for index in range(len(sessions)):
+            if index + 1 >= SHORT_WINDOW:
+                participation_window = participation[index - SHORT_WINDOW + 1 : index + 1]
+                shock_window_5 = shock[index - SHORT_WINDOW + 1 : index + 1]
+                if np.isfinite(participation_window).all():
+                    participation_mean_5[index] = float(np.mean(participation_window))
+                if np.isfinite(shock_window_5).all():
+                    shock_mean_5[index] = float(np.mean(shock_window_5))
+                    persistence_5[index] = weighted_persistence(shock_window_5)
+            if index + 1 >= MEDIUM_WINDOW:
+                shock_window_20 = shock[index - MEDIUM_WINDOW + 1 : index + 1]
+                if np.isfinite(shock_window_20).all():
+                    shock_mean_20[index] = float(np.mean(shock_window_20))
+                    persistence_20[index] = weighted_persistence(shock_window_20)
+            streak_10[index] = signed_streak(net[max(0, index - STREAK_CAP + 1) : index + 1])
+            percentile_120[index] = historical_percentile(
+                shock[index], shock[max(0, index - HISTORY_PERCENTILE_LOOKBACK) : index]
+            )
+
+        rows.append(
+            pd.DataFrame(
+                {
+                    "ticker": ticker,
+                    "source_session": sessions,
+                    "listed_at_source_session": listed,
+                    "listed_at_feature_session": listed_at_feature,
+                    "foreign_participation_1": participation,
+                    "foreign_participation_mean_5": participation_mean_5,
+                    "foreign_flow_shock_1": shock,
+                    "foreign_flow_shock_mean_5": shock_mean_5,
+                    "foreign_flow_shock_mean_20": shock_mean_20,
+                    "foreign_flow_shock_percentile_120": percentile_120,
+                    "foreign_weighted_persistence_5": persistence_5,
+                    "foreign_weighted_persistence_20": persistence_20,
+                    "foreign_signed_streak_10": streak_10,
+                    "foreign_flow_acceleration_5_20": shock_mean_5 - shock_mean_20,
+                }
+            )
+        )
+
+    source = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
+    if source.empty:
+        return pd.DataFrame(columns=["ticker", "feature_session", "flow_through_session", *FEATURES])
+    source = source.merge(
+        context,
+        left_on=["ticker", "source_session"],
+        right_on=["ticker", "date"],
+        how="left",
+        validate="one_to_one",
+    ).drop(columns=["date"])
+    rank_specs = [
+        ("foreign_flow_shock_1", "xs_rank_foreign_flow_shock_1"),
+        ("foreign_flow_shock_mean_5", "xs_rank_foreign_flow_shock_mean_5"),
+        ("foreign_flow_shock_mean_20", "xs_rank_foreign_flow_shock_mean_20"),
+        ("close_return_5", "xs_rank_close_return_5_source"),
+        ("close_return_20", "xs_rank_close_return_20_source"),
+    ]
+    for _, output in rank_specs:
+        source[output] = np.nan
+    primary = source["listed_at_source_session"] & source["universe_primary_liquid"].fillna(False).astype(bool)
+    for raw, output in rank_specs:
+        ranks = source.loc[primary].groupby("source_session", sort=True)[raw].rank(
+            method="average", pct=True
+        )
+        source.loc[ranks.index, output] = ranks.astype(float)
+    source["foreign_flow_price_divergence_5"] = (
+        source["xs_rank_foreign_flow_shock_mean_5"] - source["xs_rank_close_return_5_source"]
+    )
+    source["foreign_flow_price_divergence_20"] = (
+        source["xs_rank_foreign_flow_shock_mean_20"] - source["xs_rank_close_return_20_source"]
+    )
+    next_by_day = {sessions[i]: sessions[i + 1] for i in range(len(sessions) - 1)}
+    source["feature_session"] = source["source_session"].map(next_by_day)
+    source = source[
+        source["feature_session"].notna()
+        & source["listed_at_source_session"]
+        & source["listed_at_feature_session"]
+    ].copy()
+    source = source.rename(columns={"source_session": "flow_through_session"})
+    return source[["ticker", "feature_session", "flow_through_session", *FEATURES]].sort_values(
+        ["feature_session", "ticker"], kind="mergesort"
+    ).reset_index(drop=True)
+
+
+def compare_recomputed_fields(expected: pd.DataFrame, recomputed: pd.DataFrame) -> list[dict[str, object]]:
+    key_columns = ["ticker", "feature_session"]
+    checks: list[dict[str, object]] = []
+    for feature in FEATURES:
+        left = expected[key_columns + [feature]].rename(columns={feature: "expected"})
+        right = recomputed[key_columns + [feature]].rename(columns={feature: "recomputed"})
+        aligned = left.merge(right, on=key_columns, how="outer", indicator=True, validate="one_to_one")
+        a = pd.to_numeric(aligned["expected"], errors="coerce").to_numpy(dtype=float)
+        b = pd.to_numeric(aligned["recomputed"], errors="coerce").to_numpy(dtype=float)
+        finite_a = np.isfinite(a)
+        finite_b = np.isfinite(b)
+        both_finite = finite_a & finite_b
+        finite_mismatch = both_finite & ~np.isclose(a, b, rtol=1e-10, atol=1e-12)
+        nan_mismatch = finite_a ^ finite_b
+        differences = np.abs(a[both_finite] - b[both_finite])
+        key_mismatch = int((aligned["_merge"] != "both").sum())
+        checks.append(
+            {
+                "check": feature,
+                "result": "PASS" if key_mismatch == 0 and not finite_mismatch.any() and not nan_mismatch.any() else "FAIL",
+                "keys_expected": int(len(left)),
+                "keys_recomputed": int(len(right)),
+                "key_set_mismatches": key_mismatch,
+                "finite_expected": int(finite_a.sum()),
+                "finite_recomputed": int(finite_b.sum()),
+                "finite_value_mismatches": int(finite_mismatch.sum()),
+                "nan_pattern_mismatches": int(nan_mismatch.sum()),
+                "max_abs_difference": float(differences.max()) if len(differences) else None,
+            }
+        )
+    return checks
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -99,16 +311,45 @@ def main() -> int:
 
     pieces: list[pd.DataFrame] = []
     missing_files: list[str] = []
+    source_file_hash_rows: list[dict[str, object]] = []
     manifest_items = archive_manifest.get("artifacts", archive_manifest.get("normalized_artifacts", []))
     for item in manifest_items:
         relative = item.get("path")
         if not relative or not str(relative).endswith("foreign_flow.parquet"):
             continue
         source = ARCH / relative
+        expected_sha = str(item.get("sha256", ""))
+        expected_bytes = item.get("bytes")
         if not source.exists():
             missing_files.append(str(source))
+            source_file_hash_rows.append(
+                {
+                    "path": str(relative),
+                    "expected_sha256": expected_sha,
+                    "observed_sha256": None,
+                    "expected_bytes": expected_bytes,
+                    "observed_bytes": None,
+                    "verdict": "FAIL_MISSING",
+                }
+            )
             continue
-        pieces.append(pd.read_parquet(source))
+        observed_sha = sha256(source)
+        observed_bytes = source.stat().st_size
+        hash_ok = bool(expected_sha) and observed_sha == expected_sha
+        bytes_ok = expected_bytes is None or int(expected_bytes) == observed_bytes
+        verdict = "PASS" if hash_ok and bytes_ok else "FAIL_HASH_OR_BYTES"
+        source_file_hash_rows.append(
+            {
+                "path": str(relative),
+                "expected_sha256": expected_sha,
+                "observed_sha256": observed_sha,
+                "expected_bytes": expected_bytes,
+                "observed_bytes": observed_bytes,
+                "verdict": verdict,
+            }
+        )
+        if verdict == "PASS":
+            pieces.append(pd.read_parquet(source))
     flow = pd.concat(pieces, ignore_index=True)
     flow["ticker"] = flow["ticker"].astype(str).str.upper().str.strip()
     flow["session_date"] = pd.to_datetime(flow["session_date"]).dt.normalize()
@@ -141,99 +382,50 @@ def main() -> int:
     panel["range_fraction"] = (panel["close"] - panel["low"]) / panel["close"]
     panel["intraday_range_fraction"] = (panel["high"] - panel["low"]) / panel["close"]
 
-    # Independent checks: raw net identity, participation, shock_1, and the
-    # explicitly declared acceleration identity.  The code does not import V2.
-    flow_index = official.set_index(["ticker", "session_date"])["foreign_net"]
-    market_index = panel.set_index(["ticker", "date"])
-    recalc_rows: list[dict[str, object]] = []
-    for ticker in sorted(set(features["ticker"])):
-        if ticker not in set(master["ticker"]):
-            continue
-        dates = sessions.to_series(index=sessions)
-        listed = listed_mask(dates, ticker, master)
-        net = flow_index.reindex(pd.MultiIndex.from_product([[ticker], sessions])).to_numpy(dtype=float)
-        close = market_index["close"].reindex(
-            pd.MultiIndex.from_product([[ticker], sessions], names=["ticker", "date"])
-        ).to_numpy(dtype=float)
-        rmv = market_index["regular_market_value"].reindex(
-            pd.MultiIndex.from_product([[ticker], sessions], names=["ticker", "date"])
-        ).to_numpy(dtype=float)
-        volume = market_index["volume"].reindex(
-            pd.MultiIndex.from_product([[ticker], sessions], names=["ticker", "date"])
-        ).to_numpy(dtype=float)
-        net[~listed] = np.nan
-        close[~listed] = np.nan
-        rmv[~listed] = np.nan
-        volume[~listed] = np.nan
-        participation = np.full(len(sessions), np.nan)
-        valid = np.isfinite(net) & np.isfinite(volume) & (volume > 0)
-        participation[valid] = net[valid] / volume[valid]
-        shock = np.full(len(sessions), np.nan)
-        for index in range(len(sessions)):
-            baseline = rmv[max(0, index - 20) : index]
-            baseline = baseline[np.isfinite(baseline) & (baseline >= 0)]
-            if len(baseline) >= 10 and np.isfinite(net[index] * close[index]):
-                median = float(np.median(baseline))
-                if median > 0:
-                    shock[index] = net[index] * close[index] / median
-        next_session = {sessions[i]: sessions[i + 1] for i in range(len(sessions) - 1)}
-        feature_dates = [next_session.get(day) for day in sessions]
-        for index, feature_date in enumerate(feature_dates):
-            if feature_date is not None and listed[index] and listed[index + 1] if index + 1 < len(sessions) else False:
-                recalc_rows.append(
-                    {
-                        "ticker": ticker,
-                        "feature_session": feature_date,
-                        "recomputed_participation_1": participation[index],
-                        "recomputed_shock_1": shock[index],
-                    }
-                )
-    recalc = pd.DataFrame(recalc_rows)
-    compared = features.merge(recalc, on=["ticker", "feature_session"], how="left", validate="one_to_one")
-    checks: list[dict[str, object]] = []
-    for accepted, recomputed in [
-        ("foreign_participation_1", "recomputed_participation_1"),
-        ("foreign_flow_shock_1", "recomputed_shock_1"),
-    ]:
-        a = pd.to_numeric(compared[accepted], errors="coerce").to_numpy(dtype=float)
-        b = pd.to_numeric(compared[recomputed], errors="coerce").to_numpy(dtype=float)
-        equal = np.isclose(a, b, rtol=1e-10, atol=1e-12, equal_nan=True)
-        checks.append(
-            {
-                "check": f"independent_{accepted}",
-                "result": "PASS" if bool(equal.all()) else "FAIL",
-                "rows_compared": len(compared),
-                "mismatches": int((~equal).sum()),
-                "max_abs_diff": float(np.nanmax(np.abs(a - b))) if np.isfinite(a - b).any() else None,
-            }
-        )
-    accel = pd.to_numeric(features["foreign_flow_acceleration_5_20"], errors="coerce")
-    expected_accel = pd.to_numeric(features["foreign_flow_shock_mean_5"], errors="coerce") - pd.to_numeric(
-        features["foreign_flow_shock_mean_20"], errors="coerce"
+    context = pd.read_parquet(ART / "causal_market_context.parquet")
+    context["ticker"] = context["ticker"].astype(str).str.upper().str.strip()
+    context["date"] = pd.to_datetime(context["date"]).dt.normalize()
+    context["universe_primary_liquid"] = context["universe_primary_liquid"].fillna(False).astype(bool)
+    context = context.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+
+    # This is a full independent reconstruction of every accepted V2 field.
+    # No V2 module or helper is imported or called here.
+    recalc = independent_v2_recompute(features, official, panel, context, master, sessions)
+    checks = compare_recomputed_fields(features, recalc)
+    causal = bool(
+        (
+            features["feature_session"].to_numpy()
+            == features["flow_through_session"].map(
+                {sessions[i]: sessions[i + 1] for i in range(len(sessions) - 1)}
+            ).to_numpy()
+        ).all()
     )
-    accel_equal = np.isclose(accel, expected_accel, rtol=1e-12, atol=1e-12, equal_nan=True)
     checks.append(
         {
-            "check": "independent_acceleration_identity",
-            "result": "PASS" if bool(accel_equal.all()) else "FAIL",
-            "rows_compared": len(features),
-            "mismatches": int((~accel_equal).sum()),
-            "max_abs_diff": float(np.nanmax(np.abs(accel - expected_accel))) if np.isfinite(accel - expected_accel).any() else None,
+            "check": "feature_session_next_official_session",
+            "result": "PASS" if causal else "FAIL",
+            "keys_expected": int(len(features)),
+            "keys_recomputed": int(len(features)),
+            "finite_expected": None,
+            "finite_recomputed": None,
+            "finite_value_mismatches": 0 if causal else int(len(features)),
+            "nan_pattern_mismatches": 0,
+            "max_abs_difference": None,
         }
     )
-    causal = all(
-        sessions[sessions.get_loc(row.flow_through_session) + 1] == row.feature_session
-        for row in features.itertuples(index=False)
-        if sessions.get_loc(row.flow_through_session) + 1 < len(sessions)
-    )
-    checks.append({"check": "independent_next_official_session", "result": "PASS" if causal else "FAIL", "rows_compared": len(features), "mismatches": 0})
     emit(pd.DataFrame(checks), "representation_recomputation_audit.csv")
+    emit(pd.DataFrame(source_file_hash_rows), "source_file_hash_audit.csv")
 
+    source_file_hash_audit = pd.DataFrame(source_file_hash_rows)
+    source_hash_failures = int((source_file_hash_audit["verdict"] != "PASS").sum())
+    archive_manifest_sha = sha256(archive_manifest_path)
     net_identity = flow["foreign_net"].eq(flow["foreign_buy"] - flow["foreign_sell"])
     raw_contract = pd.DataFrame(
         [
-            {"check": "archive_manifest_sha256", "value": sha256(archive_manifest_path), "status": "PASS" if sha256(archive_manifest_path) == input_manifest["archive_manifest"]["archive_manifest_sha256"] else "FAIL"},
-            {"check": "normalized_archive_files_loaded", "value": len(pieces), "status": "PASS" if not missing_files else "FAIL"},
+            {"check": "archive_manifest_sha256", "value": archive_manifest_sha, "status": "PASS" if archive_manifest_sha == input_manifest["archive_manifest"]["archive_manifest_sha256"] else "FAIL"},
+            {"check": "normalized_archive_file_count_expected", "value": len(source_file_hash_audit), "status": "PASS" if len(source_file_hash_audit) == 1288 else "FAIL"},
+            {"check": "normalized_archive_file_hashes_and_bytes", "value": {"pass": int((source_file_hash_audit["verdict"] == "PASS").sum()), "fail": source_hash_failures}, "status": "PASS" if source_hash_failures == 0 else "FAIL"},
+            {"check": "normalized_archive_files_loaded", "value": len(pieces), "status": "PASS" if not missing_files and source_hash_failures == 0 else "FAIL"},
             {"check": "raw_flow_rows_all_archive", "value": len(flow), "status": "PASS"},
             {"check": "raw_flow_rows_official_calendar", "value": len(official), "status": "PASS"},
             {"check": "raw_duplicate_ticker_session", "value": int(flow.duplicated(["ticker", "session_date"]).sum()), "status": "PASS" if not flow.duplicated(["ticker", "session_date"]).any() else "FAIL"},
@@ -360,8 +552,8 @@ def main() -> int:
         "status": "FOREIGN_FLOW_BEHAVIORAL_FORENSICS_V1_OFFLINE_COMPLETE",
         "coverage": {"raw_rows_all_archive": len(flow), "raw_rows_official": len(official), "raw_sessions_official": official["session_date"].nunique(), "raw_tickers": official["ticker"].nunique(), "feature_rows": len(features), "feature_tickers": features["ticker"].nunique(), "feature_sessions": features["feature_session"].nunique(), "panel_rows": len(panel), "panel_tickers": panel["ticker"].nunique()},
         "period": {"official": [sessions.min().date().isoformat(), sessions.max().date().isoformat()], "flow_official": [official["session_date"].min().date().isoformat(), official["session_date"].max().date().isoformat()], "feature": [features["feature_session"].min().date().isoformat(), features["feature_session"].max().date().isoformat()]},
-        "v2_recomputation": {"result": "PASS" if all(row["result"] == "PASS" for row in checks) else "FAIL", "checks": checks},
-        "raw_contract": {"result": "PASS" if bool(net_identity.all()) and not missing_files else "FAIL", "unit": "SHARES", "net_identity_mismatches": int((~net_identity).sum()), "archive_manifest_sha256": sha256(archive_manifest_path)},
+        "v2_recomputation": {"result": "PASS" if all(row["result"] == "PASS" for row in checks) else "FAIL", "checks": checks, "independent_source": "notebooks/foreign_flow/build_behavioral_forensics_artifacts.py"},
+        "raw_contract": {"result": "PASS" if bool(net_identity.all()) and not missing_files and source_hash_failures == 0 else "FAIL", "unit": "SHARES", "net_identity_mismatches": int((~net_identity).sum()), "archive_manifest_sha256": archive_manifest_sha, "normalized_archive_files_expected": int(len(source_file_hash_audit)), "normalized_archive_files_verified": int((source_file_hash_audit["verdict"] == "PASS").sum()), "normalized_archive_file_failures": source_hash_failures, "source_file_hash_audit": "source_file_hash_audit.csv"},
         "outcome_firewall": {"outcomes_loaded": False, "future_returns_loaded": False, "model_fit": False, "provider_calls": False, "production_state_mutation": False},
         "known_ca_scope": "bounded resolved transition attestations only; exhaustive historical CA absence UNKNOWN",
         "decision": "INTERESTING_BUT_TOO_QUALIFIED",
