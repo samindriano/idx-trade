@@ -23,10 +23,19 @@ shadow proof. Neither observe-only config carries a GitHub workflow-dispatch
 credential or the Official Open signing key; both require only
 `GITHUB_ACTIONS_READ_TOKEN`.
 
+`wrangler.production-preparation.jsonc` is the inert same-Worker preparation
+configuration: observe-only, no Cron Triggers, and read capability only.
 `wrangler.production.jsonc` is the explicit active configuration and remains
-undeployed. It requires separate read and write GitHub credentials plus the
-Official Open HMAC signing key. The write credential is accessed lazily only
-inside the active dispatch function.
+undeployed. For the checked-in bounded Intraday scope it requires only separate
+read and write GitHub credentials. The Official Open HMAC signing key is not a
+blanket deploy-time prerequisite; it is required lazily by the runtime only when
+an Official Open slot is explicitly placed in the active recovery scope.
+
+The deployment readiness checker enforces this relationship before any deploy.
+If a future scope expansion includes an Official Open slot, the checker requires
+`OFFICIAL_OPEN_SCHEDULER_HMAC_KEY` to be declared before Wrangler is invoked.
+The runtime `prepareActiveDispatch()` check remains fail-closed even if a
+configuration is bypassed or a secret is absent.
 
 Production also requires `RECOVERY_ALLOWED_SLOTS` as a JSON array of exact
 `IDX-SLOT` identifiers. Missing, malformed, duplicated, or unknown identifiers
@@ -213,30 +222,66 @@ npm test
 node --check src/index.js
 node --check src/core.mjs
 node --check src/github.mjs
+npm run check:preparation-readiness
+npm run check:production-readiness
 npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
 npx wrangler deploy --dry-run --config wrangler.production.jsonc
 ```
 
 Dry-run is validation only; it is not deployment.
 
+## Deployment transaction contract
+
+Never use `wrangler secret put` as evidence that the application bundle is
+deployed. On a Worker with no accepted application version, a secret operation
+can create a valid-looking Worker/version containing only a stub. The safe local
+sequence is:
+
+1. Run the readiness checker against the source entrypoint and record its
+   config hash, bundle size, and bundle SHA-256.
+2. Run Wrangler dry-run with `--outdir` and `--metafile`, then run the checker
+   against the emitted `index.js`. It must prove a scheduled handler, non-stub
+   bytes, the expected R2/DO references, exact active scope, and non-empty Cron
+   configuration when active.
+3. During preparation, deploy only
+   `wrangler.production-preparation.jsonc`. It has no Cron Triggers and is
+   `observe_only`; provisioning its read token cannot activate automatic
+   recovery. Read back the Worker/version and keep the compiled bundle hash.
+4. Provision any separately authorized secrets by the approved secure channel,
+   then repeat the bundle/config read-back. Secret presence is never bundle
+   identity proof.
+5. At the maintenance handoff, outside every relevant slot window, disable the
+   Windows controller and prove quiescence. Activate the recorded production
+   config only after the Windows state and zero-in-flight checks pass. A failed
+   activation/read-back immediately rolls back the active Cron/config and
+   restores the last verified Windows task.
+
+The normalized post-deploy read-back contract is checked by
+`validateDeploymentReadback()` and must match the Worker name, new version ID,
+compiled bundle hash/size, entrypoint, scheduled handler, vars/scope, Cron set,
+R2 bucket, and Durable Object class. Worker existence, secret existence, or a
+new version ID alone is insufficient.
+
 ## Activation gate
 
 Production activation remains blocked until all of these are independently
 proven:
 
-1. final branch tests and both Wrangler dry-runs are green;
+1. final branch tests, readiness checks, and all Wrangler dry-runs are green;
 2. staging-live is deployed **observe-only only** with the dedicated
    `GITHUB_ACTIONS_READ_TOKEN`;
 3. the staging credential's declared GitHub permission is Actions read-only and
    a safe authenticated GET proves workflow-run metadata access;
 4. staging shadow produces zero workflow dispatches and zero R2 write/delete/list
    operations across representative morning and post-close observations;
-5. production `GITHUB_ACTIONS_WRITE_TOKEN` and the shared Official Open HMAC key
-   are provisioned separately only when active activation is authorized;
-6. production config is not deployed merely because staging shadow is green;
-7. Windows watchdog is retained until a genuine Cloudflare-covered future slot
+5. production `GITHUB_ACTIONS_WRITE_TOKEN` is provisioned separately only when
+   active activation is authorized; the Official Open HMAC is additionally
+   required only if the active scope is expanded to Official Open;
+6. the preparation Worker/config has passed bundle and binding read-back;
+7. production config is not deployed merely because staging shadow is green;
+8. Windows watchdog is retained until a genuine Cloudflare-covered future slot
    is proven;
-8. Stockbit Stream remains excluded.
+9. Stockbit Stream remains excluded.
 
 Do not perform a negative workflow-dispatch POST merely to test that the
 staging token cannot write. Permission declaration plus safe read behavior is

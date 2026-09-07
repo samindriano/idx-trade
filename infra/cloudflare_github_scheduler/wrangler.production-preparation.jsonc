@@ -8,16 +8,10 @@
     "GITHUB_OWNER": "samindriano",
     "GITHUB_REPO": "idx-trade",
     "GITHUB_REF": "main",
-    "DISPATCH_MODE": "active",
-    "RECOVERY_ALLOWED_SLOTS": "[\"STOCKBIT_INTRADAY_2030\"]",
-    "E2E_EXPECTED_CODE_COMMIT": "8bc3ee3efd65e8b16478e404e4b226451b105c48",
-    "OFFICIAL_OPEN_EXPECTED_CODE_COMMIT": "ac29a0552b1785045906f8d608b5371d93e01b73"
+    "DISPATCH_MODE": "observe_only"
   },
   "secrets": {
-    "required": [
-      "GITHUB_ACTIONS_READ_TOKEN",
-      "GITHUB_ACTIONS_WRITE_TOKEN"
-    ]
+    "required": ["GITHUB_ACTIONS_READ_TOKEN"]
   },
   "r2_buckets": [
     {
@@ -40,12 +34,6 @@
     }
   },
   "triggers": {
-    "crons": [
-      "35,50 1 * * 1-5",
-      "0,5,15,22 2 * * 1-5",
-      "40 11 * * 1-5",
-      "10,40 12 * * 1-5",
-      "40 13 * * 1-5"
-    ]
+    "crons": []
   }
 }

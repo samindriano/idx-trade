@@ -46,8 +46,8 @@ test('Stockbit Stream is intentionally not part of the Cloudflare scheduler', ()
 });
 
 test('active recovery scope allows only the exact bounded Intraday canary slot', () => {
-  const scope = parseRecoveryScope('["STOCKBIT_INTRADAY_1830"]', 'active');
-  assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_1830').eligible, true);
+  const scope = parseRecoveryScope('["STOCKBIT_INTRADAY_2030"]', 'active');
+  assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_2030').eligible, true);
   assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
   assert.equal(recoveryScopeSlotDecision(scope, 'OFFICIAL_OPEN_0922').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
   assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').failClosed, false);

@@ -90,6 +90,93 @@ Stockbit Intraday. Stockbit Stream remains outside Cloudflare recovery.
    pins and separate read/write/HMAC capabilities. Do not use Official Open as
    the first active canary.
 
+## REMEDIATED DEPLOYMENT TRANSACTION — V1
+
+The prior incident was a deployment-transaction failure, not a scheduler-logic
+failure. `wrangler.production.jsonc` previously declared
+`OFFICIAL_OPEN_SCHEDULER_HMAC_KEY` in an unconditional `secrets.required` list.
+Wrangler validates that list before upload; it does not evaluate the runtime
+`RECOVERY_ALLOWED_SLOTS` branch to decide whether the key is needed. The active
+candidate scope was Intraday-only, but the blanket declaration blocked the full
+deploy. Later `secret put` operations created versions without proving the
+candidate application bytes, which left a stub Worker and no Cron configuration.
+
+The remediation is scope-aware:
+
+- `wrangler.production.jsonc` requires only read/write GitHub credentials for
+  `RECOVERY_ALLOWED_SLOTS=["STOCKBIT_INTRADAY_2030"]`.
+- `prepareActiveDispatch()` still requires the Official Open HMAC lazily for an
+  Official Open slot. An Official Open scope expansion is rejected by the
+  readiness checker unless its HMAC declaration is added, and runtime absence
+  remains fail-closed.
+- `wrangler.production-preparation.jsonc` uses the same Worker name and
+  bindings, but is `observe_only` with no recovery scope and no Cron Triggers.
+  It is the only configuration allowed for the preparation deployment.
+- `scripts/check-deployment-readiness.mjs` verifies scope-aware secret names,
+  entrypoint and scheduled handler, non-stub bundle bytes, deterministic hash/
+  size, R2/DO bindings, and expected Cron configuration. Its readback mode
+  rejects a wrong Worker/version, wrong bytes, missing handler/binding, or empty
+  active Cron set.
+
+### Exact next-attempt sequence
+
+1. **Candidate gate.** Merge PR #122 only through the normal review path, then
+   record the exact `main` SHA. Recompute the candidate branch SHA from a clean
+   checkout and require exact-head hosted CI. Do not use the pre-merge branch
+   as production `GITHUB_REF` evidence.
+2. **Build/readiness gate.** Run `npm ci`, `npm test`, Python focused/full tests,
+   `node --check` for the Worker modules, and both the preparation and production
+   readiness checks. Run Wrangler dry-runs with `--outdir` and `--metafile`, then
+   run the checker against the emitted bundle. Record config hash, bundle size,
+   and bundle SHA-256. Any missing binding, handler, scope, or Cron is a stop.
+3. **Preparation.** With Windows still the sole automatic controller, deploy
+   only `wrangler.production-preparation.jsonc`. This deployment has no Cron
+   Triggers and cannot dispatch. Provision only the separately authorized read
+   token by the secure operator channel; never paste its value into a command,
+   log, checkpoint, or repository. A secret operation is not deployment proof.
+4. **Preparation read-back.** Confirm the same Worker identity, the new version
+   ID, compiled bundle hash/size, scheduled handler, `observe_only` mode, empty
+   Cron set, `ARCHIVE -> idx-trade-stockbit-stream-v1`, and
+   `COORDINATOR -> SchedulerCoordinator`. If any field is UNKNOWN, retain
+   Windows and stop.
+5. **Active secret readiness.** Only after preparation read-back passes, stage
+   the separately authorized write token. The bounded Intraday scope does not
+   require the Official Open HMAC. If scope is ever expanded, add and verify
+   that HMAC through the same secure channel before the readiness checker can
+   pass. Re-run the bundle/readback checks after any secret operation.
+6. **Handoff precheck.** Announce a maintenance window outside all due/cutoff
+   windows. Freeze manual dispatches. Verify no relevant GitHub run, provider
+   capture, or watchdog process is in flight, and export/hash the Windows task
+   again. Do not start the task manually.
+7. **Single handoff transaction.** Disable Windows and prove `Disabled` plus
+   zero watchdog processes. Immediately deploy the recorded
+   `wrangler.production.jsonc` active configuration, then perform the complete
+   post-deploy read-back before leaving the maintenance window. The active
+   read-back must show the exact production scope, five Cron expressions,
+   non-stub scheduled bytes, both bindings, and the recorded new version/hash.
+   If activation or read-back fails, do not retry the POST/deploy blindly: keep
+   Cloudflare inert if possible and restore the last verified Windows task.
+8. **Natural canary.** Wait for the next natural
+   `STOCKBIT_INTRADAY_2030` recovery opportunity. Do not manually dispatch, retry
+   an uncertain POST, call the provider, backfill, or treat a GitHub success or
+   Worker version as completion. Require the immutable Intraday R2 completion
+   contract, exact run identity, and no forbidden side effects.
+9. **Rollback.** On any unknown or failed canary/read-back gate, remove active
+   Cloudflare scheduling using the approved inert/previous configuration,
+   verify no active Cloudflare recovery remains, re-enable the exported Windows
+   task, and preserve all version IDs, hashes, markers, run IDs, and logs. Do not
+   mutate counters or repair historical EOD state.
+
+The cross-platform switch has no provider-supported atomic transaction with
+Windows Task Scheduler. Therefore the handoff is a bounded maintenance
+transaction outside every eligible slot, with the Windows rollback package
+already verified before the first mutation. The validator rejects both stable
+unsafe states—Windows OFF while Cloudflare is not ready, and Windows ON while
+Cloudflare active recovery is ready—and the operator must not leave the
+intermediate handoff state unresolved. This preserves controller coverage for
+every eligible recovery opportunity without treating a brief, explicitly
+bounded maintenance switch as a production canary.
+
 ## CLOUDFLARE CANARY — post-close recovery only
 
 Use the bounded `STOCKBIT_INTRADAY_2030` post-close recovery opportunity first.
