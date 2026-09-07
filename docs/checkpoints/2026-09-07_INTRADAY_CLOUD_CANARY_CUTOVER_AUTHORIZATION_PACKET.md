@@ -38,7 +38,7 @@ POST_EOD opportunities while retaining one exact recovery slot.
 | E. Isolation | PASS | `RECOVERY_ALLOWED_SLOTS=["STOCKBIT_INTRADAY_2030"]`. All E2E, Official Open, and Intraday 18:30/19:30 slots fail closed before lease/archive/token/POST; Stream is outside the scheduler slot table. Native GitHub Intraday schedules remain unchanged. |
 | F. Canonical EOD prerequisite | PASS for selected-slot timing / cross-slot contract | Accepted E2E bridge `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2` requires the canonical EOD manifest/commit and guards. The selected 20:30 path checks at 20:40, after the 18:35/19:05/19:35 E2E opportunities. `WAITING_CANONICAL_EOD_GATE` is validated as recoverable intermediate state for a later logical slot; same-slot lease takeover remains correctly fenced. |
 | G. Deployment | NOT EXECUTED | `wrangler.production.jsonc` dry-run passed and showed the intended Worker/bindings/scope. No production Worker deployment, cron activation, secret mutation, or dispatch was performed. Worker deployment/secret listing reported no existing production Worker. |
-| H. Hosted validation | PASS for static/local; fresh hosted check pending | `npm test`: 95/95. Focused Intraday recovery/early-completion pytest: pass. Full pytest: exit 0, three existing FutureWarnings. All three Wrangler deploy dry-runs passed. Prior PR merge-ref run `34089534040` passed pytest (406 passed, 7 warnings); its preflight was skipped. Fresh CI for `eb6955b6` is required after the packet push. None of these checks establish provider calls, production R2 completion, or cutover. |
+| H. Hosted validation | PASS for static/local/hosted checks | `npm test`: 95/95. Focused Intraday recovery/early-completion pytest: pass. Full pytest: exit 0, three existing FutureWarnings. All three Wrangler deploy dry-runs passed. Fresh hosted run `34092731780` passed the full pytest job at packet-parent head `da4a346834791b72e943bbaaad6e4633cfb3416e`; `e2e-preflight` run `34092731777` was skipped by workflow policy. PR #122 is open/draft and clean/mergeable. None of these checks establish provider calls, production R2 completion, or cutover. |
 | I. Cutover/rollback authorization | **NO-GO** | Cutover prerequisites are not all satisfied. Keep Windows watchdog and current workflow state unchanged. Do not deploy or dispatch. |
 
 ## Exact implementation and runtime evidence
@@ -105,6 +105,11 @@ were absent, so historical valid canonical POST_EOD completion was not proven.
 GitHub history likewise showed the sampled Sep 3-4 POST_EOD runs failing and
 scheduled creation delayed by hours; this supports selecting 20:30 structurally
 but is not a production completion claim.
+
+The implementation scope commit is
+`eb6955b6fac53805360cae603d9867745e895df2`; the packet-parent evidence commit
+is `da4a346834791b72e943bbaaad6e4633cfb3416e`. Both were pushed to
+`codex/cloud-runtime-recovery-integration-v1` and PR #122 remains draft/unmerged.
 
 ## Required closure before any cutover request
 
