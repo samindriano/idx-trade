@@ -31,7 +31,7 @@ inside the active dispatch function.
 Production also requires `RECOVERY_ALLOWED_SLOTS` as a JSON array of exact
 `IDX-SLOT` identifiers. Missing, malformed, duplicated, or unknown identifiers
 fail closed in active mode; `[]` is a deterministic no-op. The checked-in
-canary scope is exactly `["STOCKBIT_INTRADAY_1830"]`, so E2E and Official Open
+canary scope is exactly `["STOCKBIT_INTRADAY_2030"]`, so E2E and Official Open
 objectives cannot acquire a lease, read the write credential, dispatch, or claim
 completion. Observe-only mode may omit the variable and then remains read-only
 for all known slots; an invalid explicit scope is a visible non-mutating no-op.

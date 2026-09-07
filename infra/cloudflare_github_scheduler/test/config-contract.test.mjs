@@ -26,7 +26,7 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(staging.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(stagingLive.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(production.vars.DISPATCH_MODE, 'active');
-  assert.equal(production.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_1830"]');
+  assert.equal(production.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_2030"]');
   assert.equal('RECOVERY_ALLOWED_SLOTS' in staging.vars, false);
   assert.equal('RECOVERY_ALLOWED_SLOTS' in stagingLive.vars, false);
   for (const config of [staging, stagingLive, production]) {

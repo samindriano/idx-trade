@@ -92,7 +92,13 @@ Stockbit Intraday. Stockbit Stream remains outside Cloudflare recovery.
 
 ## CLOUDFLARE CANARY — post-close recovery only
 
-Use one bounded post-close E2E POST_EOD or Intraday recovery opportunity first.
+Use the bounded `STOCKBIT_INTRADAY_2030` post-close recovery opportunity first.
+The 20:30 slot is selected because its 20:40 recovery admission follows the
+18:35, 19:05, and 19:35 E2E POST_EOD opportunities. The native GitHub workflow
+remains scheduled at 18:30/19:30/20:30; this selection changes only the
+Cloudflare active recovery scope. `WAITING_CANONICAL_EOD_GATE` is an explicitly
+recoverable intermediate state for the next logical Intraday slot, not a reason
+to reclaim the same slot's external dispatch lease.
 For the selected slot, retain:
 
 - exact Cloudflare/DO dispatch marker and ownership transition;
