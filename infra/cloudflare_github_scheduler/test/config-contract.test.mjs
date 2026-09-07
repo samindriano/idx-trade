@@ -26,6 +26,9 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(staging.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(stagingLive.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(production.vars.DISPATCH_MODE, 'active');
+  assert.equal(production.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_1830"]');
+  assert.equal('RECOVERY_ALLOWED_SLOTS' in staging.vars, false);
+  assert.equal('RECOVERY_ALLOWED_SLOTS' in stagingLive.vars, false);
   for (const config of [staging, stagingLive, production]) {
     assert.deepEqual(config.r2_buckets, [{ binding: 'ARCHIVE', bucket_name: 'idx-trade-stockbit-stream-v1' }]);
     assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT, E2E_RECOVERY_PIN);
@@ -103,6 +106,18 @@ test('Official Open signing is confined to lazy active dispatch path', () => {
   assert.match(prepareSource, /requiredEnv\(env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
   assert.match(indexSource, /prepare: \(\) => prepareActiveDispatch/);
   assert.match(indexSource, /official_open_attestation_required/);
+});
+
+test('recovery scope gates active objectives before lease or dispatch', () => {
+  const scopeGate = indexSource.indexOf('const recoveryScope = parseRecoveryScope');
+  const leaseAcquire = indexSource.indexOf('this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs)');
+  const prepare = indexSource.indexOf('prepare: () => prepareActiveDispatch');
+  assert.ok(scopeGate >= 0);
+  assert.ok(scopeGate < leaseAcquire);
+  assert.ok(scopeGate < prepare);
+  assert.match(indexSource, /recoveryScopeSlotDecision\(recoveryScope, slotId\)/);
+  assert.match(indexSource, /scopeDecision\.status/);
+  assert.match(indexSource, /capture_complete: false/);
 });
 
 test('Official Open durable archive completion requires separate recovery admission', () => {

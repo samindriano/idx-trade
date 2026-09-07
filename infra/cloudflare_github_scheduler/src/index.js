@@ -8,6 +8,8 @@ import {
   effectiveActiveModeDecision,
   markerKey,
   requiredImplementationPin,
+  parseRecoveryScope,
+  recoveryScopeSlotDecision,
   slotWindow,
 } from './core.mjs';
 import {
@@ -127,10 +129,24 @@ export class SchedulerCoordinator extends DurableObject {
     const slot = SLOT_BY_ID.get(slotId);
     if (!slot) throw new Error('UNKNOWN_SLOT');
 
+    const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
+    const recoveryScope = parseRecoveryScope(this.env.RECOVERY_ALLOWED_SLOTS, dispatchMode);
+    const scopeDecision = recoveryScopeSlotDecision(recoveryScope, slotId);
+    if (!scopeDecision.eligible) {
+      return {
+        slot: slotId,
+        status: scopeDecision.status,
+        recovery_scope_allowed: false,
+        recovery_scope_configured: recoveryScope.configured,
+        recovery_scope_reason: scopeDecision.reason,
+        capture_complete: false,
+        dispatch_allowed: false,
+      };
+    }
+
     const owner = requireEnv(this.env, 'GITHUB_OWNER');
     const repo = requireEnv(this.env, 'GITHUB_REPO');
     const ref = requireEnv(this.env, 'GITHUB_REF');
-    const dispatchMode = requireDispatchMode(this.env.DISPATCH_MODE);
     // A missing or malformed producer pin is a configuration failure, not an
     // empty archive.  Require it before any active dispatch can be considered.
     const expectedCodeCommit = requiredImplementationPin(this.env, slot);
@@ -532,6 +548,18 @@ export class SchedulerCoordinator extends DurableObject {
 export default {
   async scheduled(controller, env, ctx) {
     const observedEpochMs = Date.now();
+    const dispatchMode = requireDispatchMode(env.DISPATCH_MODE);
+    const recoveryScope = parseRecoveryScope(env.RECOVERY_ALLOWED_SLOTS, dispatchMode);
+    if (recoveryScope.failClosed) {
+      console.log(JSON.stringify({
+        schema_version: SCHEMA_VERSION,
+        status: recoveryScope.status,
+        recovery_scope_reason: recoveryScope.reason,
+        scheduled_time_ms: controller.scheduledTime,
+        observed_time_ms: observedEpochMs,
+      }));
+      return;
+    }
     const slots = dueSlots(observedEpochMs);
     if (!slots.length) {
       console.log(JSON.stringify({
@@ -546,6 +574,19 @@ export default {
     const coordinator = env.COORDINATOR.getByName('idx-trade-global-scheduler-v1');
     const results = [];
     for (const slot of slots) {
+      const scopeDecision = recoveryScopeSlotDecision(recoveryScope, slot.id);
+      if (!scopeDecision.eligible) {
+        results.push({
+          slot: slot.id,
+          status: scopeDecision.status,
+          recovery_scope_allowed: false,
+          recovery_scope_configured: recoveryScope.configured,
+          recovery_scope_reason: scopeDecision.reason,
+          capture_complete: false,
+          dispatch_allowed: false,
+        });
+        continue;
+      }
       try {
         results.push(await coordinator.processSlot(slot.id, observedEpochMs, controller.scheduledTime));
       } catch (error) {

@@ -13,6 +13,8 @@ import {
   isCaptureFinalMarkerState,
   localTimeEpochMs,
   markerKey,
+  parseRecoveryScope,
+  recoveryScopeSlotDecision,
   requiredImplementationPin,
   slotWindow,
   dispatchBody,
@@ -41,6 +43,35 @@ test('archive-writing families require a valid implementation pin before dispatc
 
 test('Stockbit Stream is intentionally not part of the Cloudflare scheduler', () => {
   assert.equal(SLOTS.some((slot) => slot.workflow.includes('stream-prospective')), false);
+});
+
+test('active recovery scope allows only the exact bounded Intraday canary slot', () => {
+  const scope = parseRecoveryScope('["STOCKBIT_INTRADAY_1830"]', 'active');
+  assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_1830').eligible, true);
+  assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
+  assert.equal(recoveryScopeSlotDecision(scope, 'OFFICIAL_OPEN_0922').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
+  assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').failClosed, false);
+});
+
+test('active recovery scope fails closed for missing, malformed, duplicate, and unknown values', () => {
+  for (const raw of [undefined, '', '{"slot":"STOCKBIT_INTRADAY_1830"}', '["STOCKBIT_INTRADAY_1830", "STOCKBIT_INTRADAY_1830"]', '["UNKNOWN_SLOT"]']) {
+    const scope = parseRecoveryScope(raw, 'active');
+    assert.equal(scope.failClosed, true);
+    assert.equal(scope.allowedSlotIds.size, 0);
+    assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_1830').eligible, false);
+  }
+});
+
+test('empty active scope is deterministic no-op and observe-only remains useful without scope', () => {
+  const empty = parseRecoveryScope('[]', 'active');
+  assert.equal(empty.status, 'RECOVERY_SCOPE_EMPTY_NOOP');
+  assert.equal(recoveryScopeSlotDecision(empty, 'STOCKBIT_INTRADAY_1830').eligible, false);
+  const observe = parseRecoveryScope(undefined, 'observe_only');
+  assert.equal(observe.status, 'RECOVERY_SCOPE_UNCONFIGURED_OBSERVE_ONLY');
+  assert.equal(recoveryScopeSlotDecision(observe, 'STOCKBIT_INTRADAY_1830').eligible, true);
+  const malformedObserve = parseRecoveryScope('["UNKNOWN_SLOT"]', 'observe_only');
+  assert.equal(malformedObserve.status, 'RECOVERY_SCOPE_INVALID_OBSERVE_ONLY_NOOP');
+  assert.equal(recoveryScopeSlotDecision(malformedObserve, 'STOCKBIT_INTRADAY_1830').eligible, false);
 });
 
 test('18:40 WIB makes both 18:30 intraday and 18:35 POST_EOD due', () => {

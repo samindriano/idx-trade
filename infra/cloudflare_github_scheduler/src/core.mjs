@@ -40,6 +40,107 @@ export const SLOTS = Object.freeze([
 ]);
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
+export const RECOVERY_ALLOWED_SLOTS_ENV = 'RECOVERY_ALLOWED_SLOTS';
+
+const ALL_RECOVERY_SLOT_IDS = Object.freeze(SLOTS.map((slot) => slot.id));
+
+function invalidRecoveryScope(reason, mode) {
+  const observeOnly = mode === 'observe_only';
+  return {
+    configured: true,
+    valid: false,
+    failClosed: !observeOnly,
+    status: observeOnly ? 'RECOVERY_SCOPE_INVALID_OBSERVE_ONLY_NOOP' : 'RECOVERY_SCOPE_FAIL_CLOSED',
+    reason,
+    allowedSlotIds: new Set(),
+  };
+}
+
+/**
+ * Parse the explicit recovery objective scope.
+ *
+ * Active mode never defaults to a broad scope: missing, malformed, duplicate,
+ * or unknown identifiers produce a fail-closed empty scope. Observe-only may
+ * remain useful when the variable is absent by observing all known slots, but
+ * an explicitly malformed scope remains a deterministic non-mutating no-op.
+ */
+export function parseRecoveryScope(raw, mode) {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    if (mode === 'observe_only') {
+      return {
+        configured: false,
+        valid: true,
+        failClosed: false,
+        status: 'RECOVERY_SCOPE_UNCONFIGURED_OBSERVE_ONLY',
+        reason: null,
+        allowedSlotIds: new Set(ALL_RECOVERY_SLOT_IDS),
+      };
+    }
+    return {
+      configured: false,
+      valid: false,
+      failClosed: true,
+      status: 'RECOVERY_SCOPE_FAIL_CLOSED',
+      reason: 'MISSING_RECOVERY_ALLOWED_SLOTS',
+      allowedSlotIds: new Set(),
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_NOT_JSON', mode);
+  }
+  if (!Array.isArray(parsed)) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_NOT_ARRAY', mode);
+  if (parsed.some((slotId) => typeof slotId !== 'string' || slotId.length === 0 || slotId.trim() !== slotId)) {
+    return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_IDENTIFIER_INVALID', mode);
+  }
+  if (new Set(parsed).size !== parsed.length) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_DUPLICATE', mode);
+  if (parsed.some((slotId) => !SLOT_BY_ID.has(slotId))) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_UNKNOWN_SLOT', mode);
+
+  return {
+    configured: true,
+    valid: true,
+    failClosed: false,
+    status: parsed.length ? 'RECOVERY_SCOPE_CONFIGURED' : 'RECOVERY_SCOPE_EMPTY_NOOP',
+    reason: null,
+    allowedSlotIds: new Set(parsed),
+  };
+}
+
+export function recoveryScopeSlotDecision(scope, slotId) {
+  if (!SLOT_BY_ID.has(slotId)) {
+    return {
+      eligible: false,
+      failClosed: true,
+      status: 'UNKNOWN_SLOT_FAIL_CLOSED',
+      reason: 'UNKNOWN_SLOT',
+    };
+  }
+  if (scope.failClosed) {
+    return {
+      eligible: false,
+      failClosed: true,
+      status: scope.status,
+      reason: scope.reason,
+    };
+  }
+  if (!scope.allowedSlotIds.has(slotId)) {
+    return {
+      eligible: false,
+      failClosed: false,
+      status: 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH',
+      reason: 'SLOT_OUTSIDE_RECOVERY_SCOPE',
+    };
+  }
+  return {
+    eligible: true,
+    failClosed: false,
+    status: 'RECOVERY_SCOPE_SLOT_ENABLED',
+    reason: null,
+  };
+}
 
 const GIT_SHA = /^[0-9a-f]{40}$/;
 
