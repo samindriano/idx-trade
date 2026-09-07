@@ -83,7 +83,7 @@ production attempt, not evidence of a production cutover.
 
 ## Validation evidence
 
-At candidate HEAD `3125246c5db905adb73ca4e0ef02f18255492c74`:
+At remediation HEAD `f2ae413a5620985f09665729963bf2e8b461e3cc`:
 
 - Cloudflare Node suite: **104/104 passed**.
 - Full Python suite with the checkout on `PYTHONPATH`: **406 passed**, with the
@@ -113,9 +113,10 @@ At candidate HEAD `3125246c5db905adb73ca4e0ef02f18255492c74`:
 
 PR #122 remains the cleanest review vehicle: open, draft, mergeable, and based
 on `codex/cloud-runtime-recovery-integration-v1`. No successor branch was
-created. The worktree contained a pre-existing uncommitted change to the
-2026-09-07 canary authorization packet; it was preserved and is not silently
-included in this remediation. No push or merge was performed during this run.
+created. The remediation commit was pushed to this existing PR branch; no merge
+was performed. The worktree still contains a pre-existing uncommitted change to
+the 2026-09-07 canary authorization packet; it was preserved and is not
+silently included in this remediation.
 
 Before a production attempt, reviewers must still verify the merged `main` SHA,
 production credentials/binding authorization, post-deploy read-back, the
