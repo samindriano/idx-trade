@@ -16,6 +16,8 @@ function usage() {
     '  --config <wrangler jsonc>',
     '  --profile <staging_live_observe_only|production_preparation|production_active_intraday_2030>',
     '  [--bundle <compiled Wrangler bundle>]',
+    '  [--modules-dir <compiled Wrangler module directory>]',
+    '  [--main-module <compiled main module name>]',
     '  [--manifest-out <output JSON>]',
   ].join('\n'));
 }
@@ -87,6 +89,36 @@ function findBundle(root) {
   return candidates[0];
 }
 
+function contentTypeFor(name) {
+  if (/\.(?:js|mjs|cjs)$/i.test(name)) return 'application/javascript+module';
+  if (/\.wasm$/i.test(name)) return 'application/wasm';
+  if (/\.json$/i.test(name)) return 'application/json';
+  if (/\.txt$/i.test(name)) return 'text/plain';
+  return 'application/octet-stream';
+}
+
+function readCompiledModules(root, bundlePath, mainModule) {
+  const paths = [];
+  function visit(directory) {
+    for (const name of readdirSync(directory)) {
+      const path = join(directory, name);
+      const info = statSync(path);
+      if (info.isDirectory()) visit(path);
+      else if (!/^(?:README\.md|meta\.json)$/i.test(name) && !/\.map$/i.test(name)) paths.push(path);
+    }
+  }
+  visit(root);
+  if (!paths.length) throw new Error('COMPILED_MODULE_DISCOVERY_EMPTY');
+  const bundleResolved = resolve(bundlePath);
+  const modules = paths.map((path) => ({
+    name: path === bundleResolved ? mainModule : relative(root, path).replaceAll('\\', '/'),
+    content_type: contentTypeFor(path),
+    bytes: readFileSync(path),
+  }));
+  if (!modules.some(({ name }) => name === mainModule)) throw new Error('COMPILED_MAIN_MODULE_NOT_FOUND');
+  return modules;
+}
+
 function gitSha(cwd) {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
 }
@@ -123,6 +155,7 @@ if (args.has('--help') || !args.has('--config') || !args.has('--profile')) {
   const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: configDir, encoding: 'utf8' }).trim();
   assertCandidateInputsClean(repoRoot, configDir);
   let bundlePath = pathArg(args.get('--bundle'), configDir);
+  const mainModule = typeof args.get('--main-module') === 'string' ? args.get('--main-module') : 'index.js';
   let generated = false;
   let tempRoot = null;
   try {
@@ -136,12 +169,20 @@ if (args.has('--help') || !args.has('--config') || !args.has('--profile')) {
       bundlePath = findBundle(tempRoot);
     }
     const bundleBytes = readFileSync(bundlePath);
+    const modulesDir = pathArg(args.get('--modules-dir'), configDir);
+    const compiledModules = modulesDir
+      ? readCompiledModules(modulesDir, bundlePath, mainModule)
+      : generated
+        ? readCompiledModules(tempRoot, bundlePath, mainModule)
+        : [{ name: mainModule, content_type: 'application/javascript+module', bytes: bundleBytes }];
     const result = buildCandidateIdentityManifest({
       gitCommitSha: gitSha(repoRoot),
       profile: args.get('--profile'),
       wranglerVersion: wranglerVersion(configDir),
       entrypoint: config.main,
       bundleBytes,
+      compiledModules,
+      mainModule,
       configBytes: configRaw,
       config,
     });

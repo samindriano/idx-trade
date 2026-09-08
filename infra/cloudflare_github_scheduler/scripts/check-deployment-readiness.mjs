@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import {
   canonicalJson,
@@ -16,19 +16,25 @@ import {
   validateDeploymentReadback,
 } from '../src/deployment_readiness.mjs';
 import { normalizeWranglerReadback } from '../src/cloudflare_readback.mjs';
+import {
+  verifyExactDeploymentAllocation,
+  verifyVersionModulesAgainstCandidate,
+} from '../src/version_attestation.mjs';
 
 function usage() {
   console.error([
     'Usage: node scripts/check-deployment-readiness.mjs',
     '  --config <wrangler jsonc>',
     '  --profile <staging_live_observe_only|production_preparation|production_active_intraday_2030>',
-    '  --bundle <compiled Wrangler bundle>',
+    '  --bundle <compiled Wrangler main module>',
+    '  [--modules-dir <compiled Wrangler module directory>]',
     '  --manifest <generated candidate identity manifest>',
-    '  --deployment-list <wrangler deployments list --json>',
-    '  --version-view <wrangler versions view --json>',
-    '  --trigger-readback <sanitized Cron read API JSON>',
-    '  --settings <worker settings read API JSON>',
-    '  --identity-receipt <generated deployment identity receipt>',
+    '  --version-id <exact uploaded Version ID>',
+    '  --raw-version-response <raw Version API JSON>',
+    '  [--raw-deployment-response <raw deployments API JSON>]',
+    '  --trigger-readback <raw Cron read API JSON>',
+    '  --settings <raw Worker settings API JSON>',
+    '  [--identity-receipt <generated V2 receipt JSON>]',
   ].join('\n'));
 }
 
@@ -38,10 +44,8 @@ function argsFrom(argv) {
     const item = argv[index];
     if (!item.startsWith('--')) continue;
     const next = argv[index + 1];
-    if (next && !next.startsWith('--')) {
-      args.set(item, next);
-      index += 1;
-    } else args.set(item, true);
+    if (next && !next.startsWith('--')) { args.set(item, next); index += 1; }
+    else args.set(item, true);
   }
   return args;
 }
@@ -56,17 +60,12 @@ function stripJsonComments(text) {
     const current = text[index];
     const next = text[index + 1];
     if (lineComment) {
-      if (current === '\n') {
-        lineComment = false;
-        output += current;
-      }
+      if (current === '\n') { lineComment = false; output += current; }
       continue;
     }
     if (blockComment) {
-      if (current === '*' && next === '/') {
-        blockComment = false;
-        index += 1;
-      } else if (current === '\n') output += current;
+      if (current === '*' && next === '/') { blockComment = false; index += 1; }
+      else if (current === '\n') output += current;
       continue;
     }
     if (inString) {
@@ -76,16 +75,10 @@ function stripJsonComments(text) {
       else if (current === '"') inString = false;
       continue;
     }
-    if (current === '"') {
-      inString = true;
-      output += current;
-    } else if (current === '/' && next === '/') {
-      lineComment = true;
-      index += 1;
-    } else if (current === '/' && next === '*') {
-      blockComment = true;
-      index += 1;
-    } else output += current;
+    if (current === '"') { inString = true; output += current; }
+    else if (current === '/' && next === '/') { lineComment = true; index += 1; }
+    else if (current === '/' && next === '*') { blockComment = true; index += 1; }
+    else output += current;
   }
   return output.replace(/,\s*([}\]])/g, '$1');
 }
@@ -99,18 +92,19 @@ function pathArg(value, baseDir) {
   return isAbsolute(value) ? value : resolve(baseDir, value);
 }
 
-function safeReadJson(path, issues, code) {
+function readJsonArtifact(path, issues, code, required = true) {
   if (!path) {
-    issues.push({ code });
+    if (required) issues.push({ code });
     return null;
   }
   try {
-    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    const bytes = readFileSync(path);
+    const parsed = JSON.parse(bytes.toString('utf8'));
     if (!parsed || typeof parsed !== 'object') {
       issues.push({ code: `${code}_INVALID`, detail: 'JSON_OBJECT_OR_ARRAY_REQUIRED' });
       return null;
     }
-    return parsed;
+    return { value: parsed, bytes, sha256: sha256Bytes(bytes) };
   } catch (error) {
     issues.push({ code: `${code}_INVALID`, detail: String(error.message ?? error) });
     return null;
@@ -141,6 +135,61 @@ function installedWranglerVersion(cwd) {
   return versions.at(-1);
 }
 
+function contentTypeFor(name) {
+  if (/\.(?:js|mjs|cjs)$/i.test(name)) return 'application/javascript+module';
+  if (/\.wasm$/i.test(name)) return 'application/wasm';
+  if (/\.json$/i.test(name)) return 'application/json';
+  if (/\.txt$/i.test(name)) return 'text/plain';
+  return 'application/octet-stream';
+}
+
+function localCompiledModules(root, bundlePath, mainModule) {
+  const files = [];
+  function visit(directory) {
+    for (const name of readdirSync(directory)) {
+      const path = join(directory, name);
+      const info = statSync(path);
+      if (info.isDirectory()) visit(path);
+      else if (!/^(?:README\.md|meta\.json)$/i.test(name) && !/\.map$/i.test(name)) files.push(path);
+    }
+  }
+  visit(root);
+  const bundle = resolve(bundlePath);
+  const modules = files.map((path) => ({
+    name: resolve(path) === bundle ? mainModule : relative(root, path).replaceAll('\\', '/'),
+    content_type: contentTypeFor(path),
+    bytes: readFileSync(path),
+  }));
+  if (!modules.some(({ name }) => name === mainModule)) modules.push({
+    name: mainModule,
+    content_type: 'application/javascript+module',
+    bytes: readFileSync(bundlePath),
+  });
+  return modules;
+}
+
+function receiptIssues(receipt, manifest, versionAttestation, deploymentAttestation) {
+  if (!receipt) return [];
+  const expected = {
+    worker_name: manifest.worker_name,
+    version_id: versionAttestation.version?.version_id,
+    main_module: manifest.compiled_main_module,
+    compiled_module_set_sha256: manifest.compiled_module_set_sha256,
+    direct_version_byte_attestation: 'DIRECT_VERSION_BYTE_ATTESTATION_PROVEN',
+    raw_version_response_sha256: versionAttestation.version?.raw_response_sha256,
+  };
+  if (deploymentAttestation?.ok) {
+    expected.deployment_id = deploymentAttestation.deployment?.id;
+    expected.raw_deployment_response_sha256 = deploymentAttestation.raw_response_sha256;
+  }
+  return Object.entries(expected)
+    .filter(([field, value]) => receipt[field] !== value)
+    .map(([field, expectedValue]) => ({
+      code: `IDENTITY_RECEIPT_${field.toUpperCase()}_MISMATCH`,
+      detail: { actual: receipt[field], expected: expectedValue },
+    }));
+}
+
 const args = argsFrom(process.argv.slice(2));
 if (args.has('--help')) {
   usage();
@@ -154,12 +203,8 @@ if (args.has('--help')) {
   } else {
     const configDir = dirname(configPath);
     let config = null;
-    try {
-      config = readJsonc(configPath);
-    } catch (error) {
-      issues.push({ code: 'CONFIG_READ_INVALID', detail: String(error.message ?? error) });
-    }
-
+    try { config = readJsonc(configPath); }
+    catch (error) { issues.push({ code: 'CONFIG_READ_INVALID', detail: String(error.message ?? error) }); }
     const profile = args.get('--profile');
     const configReport = config
       ? validateDeploymentConfig(config, { profile })
@@ -173,39 +218,56 @@ if (args.has('--help')) {
     }
 
     const bundlePath = pathArg(args.get('--bundle'), configDir);
+    const modulesDir = pathArg(args.get('--modules-dir'), configDir);
+    const mainModule = typeof args.get('--main-module') === 'string' ? args.get('--main-module') : 'index.js';
     const manifestPath = pathArg(args.get('--manifest'), configDir);
+    const versionPath = pathArg(args.get('--raw-version-response'), process.cwd());
+    const deploymentPath = pathArg(args.get('--raw-deployment-response'), process.cwd());
+    const triggerPath = pathArg(args.get('--trigger-readback'), process.cwd());
+    const settingsPath = pathArg(args.get('--settings'), process.cwd());
+    const receiptPath = pathArg(args.get('--identity-receipt'), process.cwd());
+    const versionId = args.get('--version-id');
     if (!bundlePath) issues.push({ code: 'COMPILED_BUNDLE_REQUIRED' });
     if (!manifestPath) issues.push({ code: 'CANDIDATE_MANIFEST_REQUIRED' });
+    if (!versionId) issues.push({ code: 'EXPECTED_VERSION_ID_REQUIRED' });
+
     let bundleBytes = null;
     let configBytes = null;
     let manifest = null;
-    if (bundlePath) {
-      try { bundleBytes = readFileSync(bundlePath); }
-      catch (error) { issues.push({ code: 'COMPILED_BUNDLE_READ_INVALID', detail: String(error.message ?? error) }); }
+    try { if (bundlePath) bundleBytes = readFileSync(bundlePath); }
+    catch (error) { issues.push({ code: 'COMPILED_BUNDLE_READ_INVALID', detail: String(error.message ?? error) }); }
+    try { if (config) configBytes = readFileSync(configPath); }
+    catch (error) { issues.push({ code: 'CONFIG_BYTES_READ_INVALID', detail: String(error.message ?? error) }); }
+    const manifestArtifact = readJsonArtifact(manifestPath, issues, 'CANDIDATE_MANIFEST_REQUIRED');
+    if (manifestArtifact) manifest = manifestArtifact.value;
+    const versionArtifact = readJsonArtifact(versionPath, issues, 'RAW_VERSION_RESPONSE_REQUIRED');
+    const triggerArtifact = readJsonArtifact(triggerPath, issues, 'RAW_CRON_READBACK_REQUIRED');
+    const settingsArtifact = readJsonArtifact(settingsPath, issues, 'RAW_SETTINGS_REQUIRED');
+    const deploymentRequired = configReport.profile === 'production_active_intraday_2030';
+    const deploymentArtifact = readJsonArtifact(deploymentPath, issues, 'RAW_DEPLOYMENT_RESPONSE_REQUIRED', deploymentRequired);
+    const receiptArtifact = readJsonArtifact(receiptPath, issues, 'DEPLOYMENT_IDENTITY_RECEIPT', false);
+    let localModules = null;
+    if (bundleBytes && configBytes && manifest && config) {
+      try {
+        localModules = modulesDir
+          ? localCompiledModules(modulesDir, bundlePath, mainModule)
+          : [{ name: mainModule, content_type: 'application/javascript+module', bytes: bundleBytes }];
+        const manifestReport = validateCandidateIdentityManifest(manifest, {
+          gitCommitSha: currentGitSha(configDir),
+          profile,
+          wranglerVersion: installedWranglerVersion(configDir),
+          entrypoint: config.main,
+          bundleBytes,
+          compiledModules: localModules,
+          mainModule,
+          configBytes,
+          config,
+        });
+        issues.push(...manifestReport.issues);
+      } catch (error) {
+        issues.push({ code: 'CANDIDATE_MANIFEST_INPUT_INVALID', detail: String(error.message ?? error) });
+      }
     }
-    if (config) configBytes = readFileSync(configPath);
-    manifest = safeReadJson(manifestPath, issues, 'CANDIDATE_MANIFEST_REQUIRED');
-
-    let gitCommitSha = null;
-    let wranglerVersion = null;
-    try { gitCommitSha = currentGitSha(configDir); }
-    catch (error) { issues.push({ code: 'GIT_COMMIT_SHA_UNRESOLVED', detail: String(error.message ?? error) }); }
-    try { wranglerVersion = installedWranglerVersion(configDir); }
-    catch (error) { issues.push({ code: 'WRANGLER_VERSION_UNRESOLVED', detail: String(error.message ?? error) }); }
-
-    if (bundleBytes && configBytes && manifest && config && gitCommitSha && wranglerVersion) {
-      const manifestReport = validateCandidateIdentityManifest(manifest, {
-        gitCommitSha,
-        profile,
-        wranglerVersion,
-        entrypoint: config.main,
-        bundleBytes,
-        configBytes,
-        config,
-      });
-      issues.push(...manifestReport.issues);
-    }
-
     if (bundleBytes) {
       const bundleIdentity = validateBundleIdentity({
         actualSha256: sha256Bytes(bundleBytes),
@@ -221,45 +283,51 @@ if (args.has('--help')) {
       issues.push(...bundleReport.issues);
     }
 
-    const deploymentList = safeReadJson(pathArg(args.get('--deployment-list'), process.cwd()), issues, 'RAW_DEPLOYMENT_LIST_REQUIRED');
-    const versionView = safeReadJson(pathArg(args.get('--version-view'), process.cwd()), issues, 'RAW_VERSION_VIEW_REQUIRED');
-    const triggerReadback = safeReadJson(pathArg(args.get('--trigger-readback'), process.cwd()), issues, 'RAW_CRON_READBACK_REQUIRED');
-    const settings = safeReadJson(pathArg(args.get('--settings'), process.cwd()), issues, 'RAW_SETTINGS_REQUIRED');
-    const identityReceipt = safeReadJson(pathArg(args.get('--identity-receipt'), process.cwd()), issues, 'DEPLOYMENT_IDENTITY_RECEIPT_REQUIRED');
+    let versionAttestation = { ok: false, verdict: 'BLOCKED', issues: [], version: null };
+    if (manifest && versionArtifact) {
+      versionAttestation = verifyVersionModulesAgainstCandidate({
+        candidateModuleSet: {
+          main_module: manifest.compiled_main_module,
+          modules: manifest.compiled_modules,
+          module_set_sha256: manifest.compiled_module_set_sha256,
+        },
+        rawVersionResponse: versionArtifact.value,
+        rawResponseBytes: versionArtifact.bytes,
+        expectedWorkerName: config?.name,
+        expectedVersionId: versionId,
+      });
+      issues.push(...versionAttestation.issues);
+    }
+
+    let deploymentAttestation = { ok: false, verdict: 'NOT_REQUIRED', issues: [], deployment: null, raw_response_sha256: null };
+    if (deploymentArtifact) {
+      deploymentAttestation = verifyExactDeploymentAllocation({
+        rawDeploymentResponse: deploymentArtifact.value,
+        rawResponseBytes: deploymentArtifact.bytes,
+        attestedVersionId: versionId,
+      });
+      issues.push(...deploymentAttestation.issues);
+    }
+
     let normalized = null;
-    if (config && deploymentList && versionView && triggerReadback && settings && identityReceipt) {
+    if (config && versionArtifact && triggerArtifact && settingsArtifact) {
       const normalizedReport = normalizeWranglerReadback({
         workerName: config.name,
-        deploymentList,
-        versionView,
-        triggerReadback,
-        settings,
-        identityReceipt,
+        deploymentList: deploymentArtifact?.value,
+        versionView: versionArtifact.value,
+        triggerReadback: triggerArtifact.value,
+        settings: settingsArtifact.value,
+        identityReceipt: receiptArtifact?.value,
       });
       normalized = normalizedReport.readback;
       issues.push(...normalizedReport.issues);
-      if (normalized && configReport && manifest) {
-        const manifestSha256 = sha256Bytes(Buffer.from(canonicalJson(manifest), 'utf8'));
-        const receiptChecks = [
-          ['candidate_manifest_sha256', manifestSha256, 'IDENTITY_RECEIPT_MANIFEST_MISMATCH'],
-          ['worker_name', config.name, 'IDENTITY_RECEIPT_WORKER_MISMATCH'],
-          ['entrypoint', manifest.entrypoint, 'IDENTITY_RECEIPT_ENTRYPOINT_MISMATCH'],
-          ['bundle_sha256', manifest.compiled_bundle_sha256, 'IDENTITY_RECEIPT_BUNDLE_MISMATCH'],
-          ['bundle_size_bytes', manifest.compiled_bundle_size_bytes, 'IDENTITY_RECEIPT_BUNDLE_SIZE_MISMATCH'],
-          ['config_sha256', manifest.config_sha256, 'IDENTITY_RECEIPT_CONFIG_MISMATCH'],
-          ['manifest_sha256', manifestSha256, 'IDENTITY_RECEIPT_MANIFEST_FIELD_MISMATCH'],
-        ];
-        for (const [field, expected, code] of receiptChecks) {
-          if (identityReceipt[field] !== expected) issues.push({ code, detail: { actual: identityReceipt[field], expected } });
-        }
+      if (normalized && manifest) {
         const readbackReport = validateDeploymentReadback(normalized, {
           workerName: config.name,
-          versionId: normalized.version_id,
-          deploymentId: normalized.deployment_id,
+          versionId,
+          deploymentId: deploymentAttestation.deployment?.id,
           bundleSha256: manifest.compiled_bundle_sha256,
           bundleSizeBytes: manifest.compiled_bundle_size_bytes,
-          configSha256: manifest.config_sha256,
-          manifestSha256,
           mode: configReport.mode,
           allowedSlotIds: manifest.recovery_scope,
           crons: manifest.cron,
@@ -269,12 +337,17 @@ if (args.has('--help')) {
           expectedImplementationPins: manifest.expected_implementation_pins,
           compatibilityDate: manifest.compatibility_date,
           workersDev: manifest.workers_dev,
-          expectedTrafficPercentage: manifest.traffic_contract?.percentage ?? 100,
+          expectedTrafficPercentage: deploymentAttestation.deployment?.versions?.[0]?.percentage ?? 100,
+          requireTraffic: deploymentRequired,
+          mainModule: manifest.compiled_main_module,
         });
         issues.push(...readbackReport.issues);
+        issues.push(...receiptIssues(receiptArtifact?.value, manifest, versionAttestation, deploymentAttestation));
       }
     }
 
+    if (deploymentRequired && !deploymentAttestation.ok) issues.push({ code: 'ACTIVE_DEPLOYMENT_ALLOCATION_NOT_PROVEN' });
+    if (!versionAttestation.ok) issues.push({ code: 'DIRECT_VERSION_BYTE_ATTESTATION_NOT_PROVEN' });
     const status = issues.length === 0
       ? configReport.profile === 'production_active_intraday_2030'
         ? 'CLOUDFLARE_PRODUCTION_ACTIVE_CONFIGURATION_PROVEN'
@@ -285,9 +358,24 @@ if (args.has('--help')) {
     console.log(JSON.stringify({
       status,
       profile: configReport.profile,
+      authorities: {
+        local_compiled_candidate: manifest ? 'LOCAL_COMPILED_CANDIDATE_PROVEN' : 'BLOCKED',
+        direct_version_byte_attestation: versionAttestation.verdict,
+        active_deployment_allocation: deploymentAttestation.verdict,
+        etag: 'INFORMATIONAL_ONLY',
+        receipt: 'INDEX_ONLY_NOT_AUTHORITY',
+      },
       config: config ? { path: configPath, worker_name: config.name, sha256: configBytes ? sha256Bytes(configBytes) : null } : null,
       candidate_manifest: manifest ? { path: manifestPath, sha256: sha256Bytes(Buffer.from(canonicalJson(manifest), 'utf8')) } : null,
       bundle: bundleBytes ? { path: bundlePath, size_bytes: bundleBytes.length, sha256: sha256Bytes(bundleBytes) } : null,
+      version_attestation: versionAttestation,
+      deployment_attestation: deploymentAttestation,
+      raw_evidence_sha256: {
+        version_response: versionArtifact?.sha256 ?? null,
+        deployment_response: deploymentArtifact?.sha256 ?? null,
+        trigger_readback: triggerArtifact?.sha256 ?? null,
+        settings: settingsArtifact?.sha256 ?? null,
+      },
       readback: normalized,
       issues,
     }, null, 2));

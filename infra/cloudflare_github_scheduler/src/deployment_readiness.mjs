@@ -408,6 +408,8 @@ export function validateDeploymentReadback(readback, {
   scopeConfigured = true,
   expectedImplementationPins = {},
   expectedTrafficPercentage = 100,
+  requireTraffic = true,
+  mainModule = 'index.js',
 } = {}) {
   const issues = [];
   if (!readback || typeof readback !== 'object') return { ok: false, issues: [issue('READBACK_MISSING')] };
@@ -415,11 +417,12 @@ export function validateDeploymentReadback(readback, {
   if (!workerName || readback.worker_name !== workerName) issues.push(issue('READBACK_WORKER_IDENTITY_MISMATCH'));
   if (!versionId || readback.version_id !== versionId) issues.push(issue('READBACK_VERSION_ID_MISMATCH'));
   if (deploymentId !== undefined && readback.deployment_id !== deploymentId) issues.push(issue('READBACK_DEPLOYMENT_ID_MISMATCH'));
-  if (!bundleSha256 || readback.bundle_sha256 !== bundleSha256) issues.push(issue('READBACK_BUNDLE_SHA256_MISMATCH'));
-  if (!Number.isInteger(bundleSizeBytes) || readback.bundle_size_bytes !== bundleSizeBytes) issues.push(issue('READBACK_BUNDLE_SIZE_MISMATCH'));
-  if (configSha256 !== undefined && readback.config_sha256 !== configSha256) issues.push(issue('READBACK_CONFIG_SHA256_MISMATCH'));
-  if (manifestSha256 !== undefined && readback.manifest_sha256 !== manifestSha256) issues.push(issue('READBACK_MANIFEST_SHA256_MISMATCH'));
-  if (readback.entrypoint !== 'src/index.js') issues.push(issue('READBACK_ENTRYPOINT_MISMATCH'));
+  // Local compiled module metadata and raw Version modules are the byte
+  // authorities. Legacy receipt/bundle fields remain optional diagnostics.
+  if (readback.bundle_sha256 !== undefined && bundleSha256 && readback.bundle_sha256 !== bundleSha256) issues.push(issue('READBACK_BUNDLE_SHA256_MISMATCH'));
+  if (readback.bundle_size_bytes !== undefined && Number.isInteger(bundleSizeBytes) && readback.bundle_size_bytes !== bundleSizeBytes) issues.push(issue('READBACK_BUNDLE_SIZE_MISMATCH'));
+  if (readback.entrypoint !== undefined && readback.entrypoint !== 'src/index.js') issues.push(issue('READBACK_ENTRYPOINT_MISMATCH'));
+  if (readback.main_module !== mainModule) issues.push(issue('READBACK_MAIN_MODULE_MISMATCH', { actual: readback.main_module, expected: mainModule }));
   if (!sameArray(readback.handlers, expectedHandlers)) issues.push(issue('READBACK_HANDLER_SET_MISMATCH', { actual: readback.handlers, expected: expectedHandlers }));
   if (readback.stub !== false) issues.push(issue('READBACK_STUB_BUNDLE'));
   if (readback.compatibility_date !== compatibilityDate) issues.push(issue('READBACK_COMPATIBILITY_DATE_MISMATCH'));
@@ -448,11 +451,10 @@ export function validateDeploymentReadback(readback, {
   }
   if (!sameArray(readback.secret_names, expectedSecretNames)) issues.push(issue('READBACK_SECRET_DECLARATION_MISMATCH'));
   if (!sameArray(readback.crons, crons)) issues.push(issue('READBACK_CRON_MISMATCH'));
-  if (readback.traffic_percentage !== expectedTrafficPercentage) issues.push(issue('READBACK_TRAFFIC_NOT_EXACT', { actual: readback.traffic_percentage, expected: expectedTrafficPercentage }));
-  if (readback.traffic_ambiguous === true) issues.push(issue('READBACK_TRAFFIC_AMBIGUOUS'));
-  if (typeof readback.remote_script_etag !== 'string' || readback.remote_script_etag.length === 0) issues.push(issue('READBACK_REMOTE_SCRIPT_IDENTITY_UNKNOWN'));
-  if (readback.config_sha256 === undefined) issues.push(issue('READBACK_CONFIG_SHA256_UNKNOWN'));
-  if (readback.manifest_sha256 === undefined) issues.push(issue('READBACK_MANIFEST_SHA256_UNKNOWN'));
+  if (requireTraffic) {
+    if (readback.traffic_percentage !== expectedTrafficPercentage) issues.push(issue('READBACK_TRAFFIC_NOT_EXACT', { actual: readback.traffic_percentage, expected: expectedTrafficPercentage }));
+    if (readback.traffic_ambiguous === true) issues.push(issue('READBACK_TRAFFIC_AMBIGUOUS'));
+  }
   if (readbackBinding(readback, 'ARCHIVE')?.type !== 'r2_bucket' || readbackBinding(readback, 'ARCHIVE')?.bucket_name !== r2BucketName) issues.push(issue('READBACK_R2_BINDING_MISSING_OR_WRONG'));
   if (readbackBinding(readback, 'COORDINATOR')?.type !== 'durable_object' || readbackBinding(readback, 'COORDINATOR')?.class_name !== durableObjectClassName) issues.push(issue('READBACK_DURABLE_OBJECT_BINDING_MISSING_OR_WRONG'));
   if (readback.exports?.SchedulerCoordinator?.type !== 'durable-object' || readback.exports?.SchedulerCoordinator?.storage !== durableObjectStorage) issues.push(issue('READBACK_DURABLE_OBJECT_EXPORT_MISSING_OR_WRONG'));

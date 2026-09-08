@@ -1,6 +1,7 @@
 {
   "id": "e99303b4-0fc5-49e3-91f3-92c43cc4e919",
   "number": 4,
+  "main_module": "index.js",
   "metadata": {
     "created_on": "2026-09-07T08:29:56.337705Z",
     "source": "wrangler",

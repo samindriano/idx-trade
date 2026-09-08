@@ -112,6 +112,7 @@ function readback(overrides = {}) {
     schema_version: 'IDX-CLOUDFLARE-READBACK-V1',
     worker_name: production.name,
     version_id: 'version-1',
+    main_module: 'index.js',
     bundle_sha256: 'a'.repeat(64),
     bundle_size_bytes: 10,
     config_sha256: 'c'.repeat(64),

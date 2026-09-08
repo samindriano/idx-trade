@@ -3,17 +3,27 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 
-import { CANDIDATE_MANIFEST_SCHEMA, canonicalJson, sha256Bytes } from '../src/candidate_manifest.mjs';
+import {
+  CANDIDATE_MANIFEST_SCHEMA,
+  canonicalJson,
+  sha256Bytes,
+} from '../src/candidate_manifest.mjs';
+import {
+  DEPLOYMENT_ALLOCATION_ATTESTATION_SCHEMA,
+  DIRECT_VERSION_BYTE_ATTESTATION_PROVEN,
+  verifyExactDeploymentAllocation,
+  verifyVersionModulesAgainstCandidate,
+} from '../src/version_attestation.mjs';
 
-const RECEIPT_SCHEMA = 'IDX-CLOUDFLARE-DEPLOYMENT-RECEIPT-V1';
-const SHA256 = /^[0-9a-f]{64}$/;
+const RECEIPT_SCHEMA = 'IDX-CLOUDFLARE-DEPLOYMENT-RECEIPT-V2';
 
 function usage() {
   console.error([
     'Usage: node scripts/generate-deployment-receipt.mjs',
     '  --manifest <generated candidate identity manifest>',
-    '  --deployment-list <wrangler deployments list --json>',
-    '  --version-view <wrangler versions view --json>',
+    '  --raw-deployment-response <raw deployments API JSON>',
+    '  --raw-version-response <raw Version API JSON>',
+    '  --version-id <exact uploaded Version ID>',
     '  --out <receipt JSON>',
   ].join('\n'));
 }
@@ -34,56 +44,68 @@ function pathArg(value) {
   return typeof value === 'string' ? (isAbsolute(value) ? value : resolve(process.cwd(), value)) : null;
 }
 
-function readJson(path) {
-  return JSON.parse(readFileSync(path, 'utf8'));
+function rawJson(path, code) {
+  if (!path) throw new Error(`${code}_REQUIRED`);
+  const bytes = readFileSync(path);
+  return { bytes, value: JSON.parse(bytes.toString('utf8')) };
 }
 
 const args = argsFrom(process.argv.slice(2));
-if (args.has('--help') || !args.has('--manifest') || !args.has('--deployment-list') || !args.has('--version-view') || !args.has('--out')) {
+const required = ['--manifest', '--raw-deployment-response', '--raw-version-response', '--version-id', '--out'];
+if (args.has('--help') || required.some((name) => !args.has(name))) {
   usage();
   process.exitCode = args.has('--help') ? 0 : 2;
 } else {
-  const manifestPath = pathArg(args.get('--manifest'));
-  const deploymentPath = pathArg(args.get('--deployment-list'));
-  const versionPath = pathArg(args.get('--version-view'));
-  const outPath = pathArg(args.get('--out'));
-  const manifest = readJson(manifestPath);
-  const deployments = readJson(deploymentPath);
-  const version = readJson(versionPath);
+  const manifest = JSON.parse(readFileSync(pathArg(args.get('--manifest')), 'utf8'));
+  const deployment = rawJson(pathArg(args.get('--raw-deployment-response')), 'RAW_DEPLOYMENT_RESPONSE');
+  const version = rawJson(pathArg(args.get('--raw-version-response')), 'RAW_VERSION_RESPONSE');
+  const expectedVersionId = args.get('--version-id');
   if (manifest.schema_version !== CANDIDATE_MANIFEST_SCHEMA) throw new Error('CANDIDATE_MANIFEST_SCHEMA_INVALID');
-  if (typeof manifest.worker_name !== 'string' || typeof manifest.entrypoint !== 'string') {
-    throw new Error('CANDIDATE_MANIFEST_IDENTITY_INVALID');
-  }
-  const list = Array.isArray(deployments) ? deployments : deployments.deployments;
-  const matches = (list ?? []).filter((deployment) => deployment?.versions?.some((entry) => entry.version_id === version.id));
-  if (!version.id || matches.length !== 1) throw new Error('DEPLOYMENT_RECEIPT_VERSION_MAPPING_AMBIGUOUS');
-  const deployment = matches[0];
-  const remoteBundleSha256 = version.resources?.script?.sha256;
-  const remoteBundleSizeBytes = version.resources?.script?.size_bytes;
-  if (!SHA256.test(remoteBundleSha256 ?? '')
-    || !Number.isInteger(remoteBundleSizeBytes)
-    || remoteBundleSizeBytes <= 0) {
-    throw new Error('RAW_BUNDLE_CONTENT_IDENTITY_REQUIRED');
-  }
-  if (remoteBundleSha256 !== manifest.compiled_bundle_sha256
-    || remoteBundleSizeBytes !== manifest.compiled_bundle_size_bytes) {
-    throw new Error('DEPLOYED_BUNDLE_IDENTITY_MISMATCH');
-  }
+  if (!manifest.compiled_module_set_sha256 || !Array.isArray(manifest.compiled_modules)) throw new Error('CANDIDATE_MODULE_SET_REQUIRED');
+  if (typeof manifest.worker_name !== 'string' || typeof manifest.compiled_main_module !== 'string') throw new Error('CANDIDATE_MANIFEST_IDENTITY_INVALID');
+  const candidateManifestSha256 = sha256Bytes(Buffer.from(canonicalJson(manifest), 'utf8'));
+
+  const byteAttestation = verifyVersionModulesAgainstCandidate({
+    candidateModuleSet: {
+      main_module: manifest.compiled_main_module,
+      modules: manifest.compiled_modules,
+      module_set_sha256: manifest.compiled_module_set_sha256,
+    },
+    rawVersionResponse: version.value,
+    rawResponseBytes: version.bytes,
+    expectedWorkerName: manifest.worker_name,
+    expectedVersionId,
+  });
+  if (!byteAttestation.ok) throw new Error(`DIRECT_VERSION_BYTE_ATTESTATION_BLOCKED:${canonicalJson(byteAttestation.issues)}`);
+
+  const allocation = verifyExactDeploymentAllocation({
+    rawDeploymentResponse: deployment.value,
+    rawResponseBytes: deployment.bytes,
+    attestedVersionId: expectedVersionId,
+  });
+  if (!allocation.ok) throw new Error(`EXACT_DEPLOYMENT_ALLOCATION_BLOCKED:${canonicalJson(allocation.issues)}`);
+
   const receipt = {
     schema_version: RECEIPT_SCHEMA,
     candidate_manifest_schema: CANDIDATE_MANIFEST_SCHEMA,
-    candidate_manifest_sha256: sha256Bytes(Buffer.from(canonicalJson(manifest), 'utf8')),
+    candidate_manifest_sha256: candidateManifestSha256,
     worker_name: manifest.worker_name,
-    version_id: version.id,
-    deployment_id: deployment.id,
-    bundle_sha256: manifest.compiled_bundle_sha256,
-    bundle_size_bytes: manifest.compiled_bundle_size_bytes,
-    config_sha256: manifest.config_sha256,
-    manifest_sha256: sha256Bytes(Buffer.from(canonicalJson(manifest), 'utf8')),
-    entrypoint: manifest.entrypoint,
-    remote_script_etag: version.resources?.script?.etag,
-    source: 'generated-from-wrangler-json-readback',
+    version_id: expectedVersionId,
+    version_number: byteAttestation.version.number,
+    version_created_on: byteAttestation.version.created_on,
+    version_annotations: byteAttestation.version.annotations,
+    main_module: byteAttestation.version.main_module,
+    compiled_module_set_sha256: manifest.compiled_module_set_sha256,
+    compiled_modules: manifest.compiled_modules,
+    direct_version_byte_attestation: DIRECT_VERSION_BYTE_ATTESTATION_PROVEN,
+    raw_version_response_sha256: byteAttestation.version.raw_response_sha256,
+    deployment_id: allocation.deployment.id,
+    deployment_allocation_attestation: DEPLOYMENT_ALLOCATION_ATTESTATION_SCHEMA,
+    raw_deployment_response_sha256: allocation.raw_response_sha256,
+    traffic_percentage: 100,
+    remote_script_etag: byteAttestation.version.resources?.script?.etag,
+    source: 'generated-from-raw-cloudflare-version-and-deployment-api',
   };
-  writeFileSync(outPath, `${canonicalJson(receipt)}\n`, 'utf8');
-  console.log(JSON.stringify({ status: 'DEPLOYMENT_IDENTITY_RECEIPT_GENERATED', path: outPath, receipt }, null, 2));
+  writeFileSync(pathArg(args.get('--out')), `${canonicalJson(receipt)}\n`, 'utf8');
+  console.log(JSON.stringify({ status: 'DEPLOYMENT_IDENTITY_RECEIPT_V2_GENERATED', path: pathArg(args.get('--out')), receipt }, null, 2));
 }

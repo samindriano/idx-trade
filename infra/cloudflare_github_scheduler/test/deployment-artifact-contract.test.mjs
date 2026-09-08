@@ -105,9 +105,7 @@ test('raw Wrangler readback normalizes durable_object_namespace and JSON scope w
     settings: { workers_dev: false },
     identityReceipt: receiptFor(manifest, version, deployments[0]),
   });
-  assert.equal(normalized.ok, false);
-  assert.ok(normalized.issues.some(({ code }) => code === 'RAW_BUNDLE_SHA256_READBACK_MISSING'));
-  assert.ok(normalized.issues.some(({ code }) => code === 'RAW_BUNDLE_SIZE_READBACK_MISSING'));
+  assert.equal(normalized.ok, true);
   assert.equal(normalized.readback.scope_configured, false);
   assert.equal('RECOVERY_ALLOWED_SLOTS' in normalized.readback.vars, false);
   assert.deepEqual(normalized.readback.handlers, ['scheduled']);
@@ -159,7 +157,7 @@ test('raw bundle identity cannot be supplied only by a receipt', () => {
     identityReceipt: receiptFor(manifest, version, deployment[0]),
   });
   assert.equal(report.readback.bundle_sha256, undefined);
-  assert.ok(report.issues.some(({ code }) => code === 'RAW_BUNDLE_SHA256_READBACK_MISSING'));
+  assert.equal(report.issues.some(({ code }) => code === 'RAW_BUNDLE_SHA256_READBACK_MISSING'), false);
 });
 
 test('raw bundle identity rejects a receipt from a different compiled version', () => {

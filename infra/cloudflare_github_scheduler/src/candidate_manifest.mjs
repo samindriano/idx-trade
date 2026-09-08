@@ -5,6 +5,7 @@ import {
   validateBundleSource,
   validateDeploymentConfig,
 } from './deployment_readiness.mjs';
+import { buildCompiledModuleSet } from './version_attestation.mjs';
 
 export const CANDIDATE_MANIFEST_SCHEMA = 'IDX-CLOUDFLARE-CANDIDATE-IDENTITY-V1';
 
@@ -50,6 +51,8 @@ export function buildCandidateIdentityManifest({
   wranglerVersion,
   entrypoint,
   bundleBytes,
+  compiledModules,
+  mainModule = 'index.js',
   configBytes,
   config,
 } = {}) {
@@ -67,6 +70,16 @@ export function buildCandidateIdentityManifest({
     expectedHandlers: ['scheduled'],
   });
   if (!bundleReport.ok) throw new Error(`BUNDLE_NOT_READY:${canonicalJson(bundleReport.issues)}`);
+  const moduleSet = buildCompiledModuleSet({
+    mainModule,
+    modules: compiledModules ?? [{ name: mainModule, content_type: 'application/javascript+module', bytes: bundle }],
+  });
+  const mainModuleMetadata = moduleSet.modules.find(({ name }) => name === mainModule);
+  if (!mainModuleMetadata
+    || mainModuleMetadata.sha256 !== sha256Bytes(bundle)
+    || mainModuleMetadata.byte_size !== bundle.length) {
+    throw new TypeError('LOCAL_MAIN_MODULE_BYTES_MISMATCH');
+  }
 
   const manifest = {
     schema_version: CANDIDATE_MANIFEST_SCHEMA,
@@ -77,6 +90,9 @@ export function buildCandidateIdentityManifest({
     entrypoint: resolvedEntrypoint,
     compiled_bundle_sha256: sha256Bytes(bundle),
     compiled_bundle_size_bytes: bundle.length,
+    compiled_main_module: moduleSet.main_module,
+    compiled_modules: moduleSet.modules,
+    compiled_module_set_sha256: moduleSet.module_set_sha256,
     config_sha256: sha256Bytes(configRaw),
     compatibility_date: config.compatibility_date,
     workers_dev: config.workers_dev,
@@ -114,6 +130,8 @@ export function validateCandidateIdentityManifest(manifest, {
   wranglerVersion,
   entrypoint,
   bundleBytes,
+  compiledModules,
+  mainModule = 'index.js',
   configBytes,
   config,
 } = {}) {
@@ -127,6 +145,8 @@ export function validateCandidateIdentityManifest(manifest, {
       wranglerVersion,
       entrypoint,
       bundleBytes,
+      compiledModules,
+      mainModule,
       configBytes,
       config,
     });

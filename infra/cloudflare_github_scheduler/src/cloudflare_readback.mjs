@@ -1,6 +1,8 @@
 export const CLOUDFLARE_READBACK_SCHEMA = 'IDX-CLOUDFLARE-READBACK-V1';
 const SHA256 = /^[0-9a-f]{64}$/;
 
+import { unwrapRawVersionResponse } from './version_attestation.mjs';
+
 function issue(code, detail = undefined) {
   return detail === undefined ? { code } : { code, detail };
 }
@@ -132,19 +134,27 @@ export function normalizeWranglerReadback({
 } = {}) {
   const issues = [];
   if (!versionView || typeof versionView !== 'object') return { ok: false, issues: [issue('RAW_VERSION_VIEW_MISSING')], readback: null };
+  const unwrapped = unwrapRawVersionResponse(versionView);
+  issues.push(...unwrapped.issues);
+  const rawVersion = unwrapped.payload;
+  if (!rawVersion) return { ok: false, issues, readback: null };
   // Never let an operator-supplied receipt fill in the raw version identity.
-  // The version view itself must identify the version mapped to 100% traffic.
-  const versionId = versionView.id;
+  // The exact Version module attestation and Deployment API verifier are the
+  // authorities for bytes and traffic. This adapter only normalizes the raw
+  // runtime/config fields used by the existing profile checks.
+  const versionId = rawVersion.id;
   if (typeof versionId !== 'string' || versionId.length === 0) issues.push(issue('RAW_VERSION_ID_MISSING'));
-  const selected = selectDeployment(deploymentList, versionId);
+  const selected = deploymentList === undefined
+    ? { deployment: null, issues: [] }
+    : selectDeployment(deploymentList, versionId);
   issues.push(...selected.issues);
   const traffic = trafficFor(selected.deployment, versionId);
-  const handlers = rawHandlers(versionView);
+  const handlers = rawHandlers(rawVersion);
   if (!handlers) issues.push(issue('RAW_HANDLER_SET_UNKNOWN'));
-  const normalizedBindings = normalizeBindings(versionView.resources?.bindings);
+  const normalizedBindings = normalizeBindings(rawVersion.resources?.bindings);
   issues.push(...(normalizedBindings.issues ?? []));
   if (!normalizedBindings.bindings || !normalizedBindings.vars || !normalizedBindings.secretNames) issues.push(issue('RAW_BINDING_SHAPE_UNKNOWN'));
-  const runtime = versionView.resources?.script_runtime;
+  const runtime = rawVersion.resources?.script_runtime;
   const exports = runtime?.exports;
   const compatibilityDate = runtime?.compatibility_date;
   const cronResult = cronArray(triggerReadback);
@@ -155,14 +165,8 @@ export function normalizeWranglerReadback({
   if (typeof workersDev !== 'boolean') issues.push(issue('RAW_WORKERS_DEV_READBACK_MISSING'));
   if (!exports || typeof exports !== 'object') issues.push(issue('RAW_EXPORT_READBACK_MISSING'));
   if (typeof compatibilityDate !== 'string') issues.push(issue('RAW_COMPATIBILITY_DATE_MISSING'));
-  const rawBundleSha256 = versionView.resources?.script?.sha256;
-  const rawBundleSizeBytes = versionView.resources?.script?.size_bytes;
-  if (typeof rawBundleSha256 !== 'string' || !SHA256.test(rawBundleSha256)) {
-    issues.push(issue('RAW_BUNDLE_SHA256_READBACK_MISSING'));
-  }
-  if (!Number.isInteger(rawBundleSizeBytes) || rawBundleSizeBytes <= 0) {
-    issues.push(issue('RAW_BUNDLE_SIZE_READBACK_MISSING'));
-  }
+  const rawBundleSha256 = rawVersion.resources?.script?.sha256;
+  const rawBundleSizeBytes = rawVersion.resources?.script?.size_bytes;
 
   if (identityReceipt) {
     if (identityReceipt.worker_name !== undefined && identityReceipt.worker_name !== workerName) {
@@ -171,17 +175,19 @@ export function normalizeWranglerReadback({
     if (identityReceipt.version_id !== versionId) issues.push(issue('IDENTITY_RECEIPT_VERSION_MISMATCH'));
     if (identityReceipt.deployment_id !== undefined && identityReceipt.deployment_id !== selected.deployment?.id) issues.push(issue('IDENTITY_RECEIPT_DEPLOYMENT_MISMATCH'));
     if (identityReceipt.remote_script_etag !== undefined
-      && identityReceipt.remote_script_etag !== versionView.resources?.script?.etag) {
+      && identityReceipt.remote_script_etag !== rawVersion.resources?.script?.etag) {
       issues.push(issue('IDENTITY_RECEIPT_ETAG_MISMATCH'));
     }
-    if (identityReceipt.bundle_sha256 !== undefined && identityReceipt.bundle_sha256 !== rawBundleSha256) {
+    if (rawBundleSha256 !== undefined
+      && identityReceipt.bundle_sha256 !== undefined
+      && identityReceipt.bundle_sha256 !== rawBundleSha256) {
       issues.push(issue('IDENTITY_RECEIPT_BUNDLE_MISMATCH'));
     }
-    if (identityReceipt.bundle_size_bytes !== undefined && identityReceipt.bundle_size_bytes !== rawBundleSizeBytes) {
+    if (rawBundleSizeBytes !== undefined
+      && identityReceipt.bundle_size_bytes !== undefined
+      && identityReceipt.bundle_size_bytes !== rawBundleSizeBytes) {
       issues.push(issue('IDENTITY_RECEIPT_BUNDLE_SIZE_MISMATCH'));
     }
-  } else {
-    issues.push(issue('DEPLOYMENT_IDENTITY_RECEIPT_MISSING'));
   }
 
   const requiredBindings = normalizedBindings.bindings ?? {};
@@ -218,7 +224,12 @@ export function normalizeWranglerReadback({
     created_on: selected.deployment?.created_on,
     handlers,
     stub,
+    // The source entrypoint is local candidate evidence. The remote API's
+    // module identity is carried independently as main_module.
     entrypoint: identityReceipt?.entrypoint,
+    main_module: rawVersion.main_module,
+    version_number: rawVersion.number,
+    annotations: rawVersion.annotations ?? {},
     compatibility_date: compatibilityDate,
     workers_dev: workersDev,
     scope_configured: scopeConfigured,
@@ -227,9 +238,9 @@ export function normalizeWranglerReadback({
     bindings: requiredBindings,
     exports,
     crons,
-    remote_script_etag: versionView.resources?.script?.etag,
-    // Bundle identity must originate in raw version evidence. The receipt is
-    // checked against these fields but is never allowed to supply them.
+    remote_script_etag: rawVersion.resources?.script?.etag,
+    // These legacy fields are optional diagnostics only. The direct module
+    // attestation is the byte authority and never reads them as a substitute.
     bundle_sha256: rawBundleSha256,
     bundle_size_bytes: rawBundleSizeBytes,
     config_sha256: identityReceipt?.config_sha256,

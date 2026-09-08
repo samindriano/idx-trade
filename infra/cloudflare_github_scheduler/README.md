@@ -224,24 +224,94 @@ npm test
 node --check src/index.js
 node --check src/core.mjs
 node --check src/github.mjs
-npm run check:preparation-readiness -- --bundle <compiled-index.js> --manifest <candidate.json> \
-  --deployment-list <deployments.json> --version-view <version.json> \
-  --trigger-readback <triggers.json> --settings <settings.json> \
-  --identity-receipt <receipt.json>
-npm run check:production-readiness -- --bundle <compiled-index.js> --manifest <candidate.json> \
-  --deployment-list <deployments.json> --version-view <version.json> \
-  --trigger-readback <triggers.json> --settings <settings.json> \
-  --identity-receipt <receipt.json>
 npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
+npx wrangler deploy --dry-run --config wrangler.production-preparation.jsonc
 npx wrangler deploy --dry-run --config wrangler.production.jsonc
 ```
 
-The readiness commands intentionally return `BLOCKED` when any artifact is
-omitted; use `scripts/generate-candidate-manifest.mjs` after the dry-run and
-`scripts/generate-deployment-receipt.mjs` from the raw deployment/version
-readback to produce the required artifacts.
+The readiness checker consumes the raw artifacts directly. Its Version input
+must be the exact response from the beta Version API with `include=modules`; a
+hand-normalized summary is not accepted. Preparation does not require a
+Deployment API response, because an uploaded Version may correctly remain at
+0% traffic. Active production requires the raw Deployment API response and an
+unambiguous latest deployment containing exactly the attested Version at 100%.
+
+```bash
+node scripts/generate-candidate-manifest.mjs \
+  --config wrangler.production-preparation.jsonc \
+  --profile production_preparation \
+  --manifest-out <candidate.json>
+
+node scripts/check-deployment-readiness.mjs \
+  --config wrangler.production-preparation.jsonc \
+  --profile production_preparation \
+  --bundle <compiled-index.js> --manifest <candidate.json> \
+  --version-id <uploaded-version-id> \
+  --raw-version-response <exact-version-response.json> \
+  --trigger-readback <raw-cron-readback.json> \
+  --settings <raw-settings-readback.json>
+
+node scripts/check-deployment-readiness.mjs \
+  --config wrangler.production.jsonc \
+  --profile production_active_intraday_2030 \
+  --bundle <compiled-index.js> --manifest <candidate.json> \
+  --version-id <attested-version-id> \
+  --raw-version-response <exact-version-response.json> \
+  --raw-deployment-response <raw-deployment-response.json> \
+  --trigger-readback <raw-cron-readback.json> \
+  --settings <raw-settings-readback.json> \
+  --identity-receipt <receipt.json>
+```
+
+The V2 receipt is an index/provenance object, not authority. Generate it only
+from the same raw Version and Deployment responses after active allocation is
+proven:
+
+```bash
+node scripts/generate-deployment-receipt.mjs \
+  --manifest <candidate.json> \
+  --raw-version-response <exact-version-response.json> \
+  --raw-deployment-response <raw-deployment-response.json> \
+  --version-id <attested-version-id> --out <receipt.json>
+```
 
 Dry-run is validation only; it is not deployment.
+
+## V2 authority and readiness contract
+
+The direct byte-attestation dependency is
+`DIRECT_VERSION_BYTE_ATTESTATION_DEPENDS_ON_CLOUDFLARE_VERSION_MODULE_READBACK_CAPABILITY`.
+It currently uses Cloudflare's beta Version endpoint:
+`GET /accounts/{account_id}/workers/workers/{worker_id}/versions/{version_id}?include=modules`.
+If `include=modules` disappears, the response shape changes, modules are
+omitted, or module bytes cannot be decoded, readiness blocks. There is no
+ETag-only fallback. The capability probe and real-shaped API evidence are
+recorded in
+`docs/checkpoints/2026-09-08_CLOUDFLARE_VERSION_LEVEL_DEPLOYED_BYTE_ATTESTATION_CAPABILITY_PROBE_V1.md`;
+the mutation cases in the Node tests are explicitly synthetic.
+
+Three authorities remain separate:
+
+1. `LOCAL_COMPILED_CANDIDATE_PROVEN`: the generated manifest and actual
+   compiled Wrangler module bytes, including per-module type, size, and
+   SHA-256.
+2. `DIRECT_VERSION_BYTE_ATTESTATION_PROVEN`: the exact raw Version response for
+   the requested Version ID, with a complete order-independent module-set
+   match against the local compiled modules. This proves uploaded Version
+   bytes, not production traffic or capture success.
+3. `EXACT_CANDIDATE_VERSION_100_PERCENT_ACTIVE`: the raw Deployment API's
+   latest unambiguous allocation has exactly that Version ID at 100% with no
+   second allocation. This proves active allocation, not Cron execution or
+   capture success.
+
+The module set is canonicalized by `main_module` plus sorted module name,
+content type, exact decoded byte length, and SHA-256. Missing, extra,
+duplicated, reordered-with-different-content, malformed, or unknown modules
+fail closed. ETags, version numbers, tags/messages, and receipts are
+informational or indexing evidence only. The observed Wrangler upload path did
+not preserve `workers/commit_sha`, so that annotation is not treated as a
+required remote authority; the exact Git SHA remains bound in local candidate
+evidence.
 
 ## Deployment transaction contract
 
@@ -252,34 +322,37 @@ sequence is:
 
 1. Run the candidate-manifest generator against the selected profile. It runs a
    Wrangler dry-run when no compiled bundle is supplied and records the exact
-   config bytes, compiled bundle size/SHA-256, Git commit, Wrangler version,
-   vars, pins, bindings, scope, and Cron contract.
-2. Run the readiness checker against that compiled bundle and manifest. The
-   checker requires raw deployment/version/trigger/settings readback plus a
-   generated identity receipt; missing artifacts are intentionally BLOCKED.
-   It must prove a scheduled handler, non-stub bytes, the expected R2/DO
-   references, exact active scope, and non-empty Cron configuration when active.
-3. During preparation, deploy only
-   `wrangler.production-preparation.jsonc`. It has no Cron Triggers and is
-   `observe_only`; provision its declared READ/WRITE names only through the
-   approved secure channel. Observe-only runtime cannot prepare or use the
-   write credential. Read back the Worker/version and keep the compiled bundle
-   hash.
-4. After any separately authorized secret operation, repeat the bundle/config
-   read-back. Secret presence is never bundle identity proof.
-5. At the maintenance handoff, outside every relevant slot window, disable the
-   Windows controller and prove quiescence. Activate the recorded production
-   config only after the Windows state and zero-in-flight checks pass. A failed
-   activation/read-back immediately rolls back the active Cron/config and
-   restores the last verified Windows task.
+   config bytes, compiled module set, Git commit, Wrangler version, vars, pins,
+   bindings, scope, and Cron contract. Candidate input files under the config
+   directory must be clean.
+2. Upload a Worker Version without deploying candidate traffic, capture its
+   exact Version ID, and GET that exact Version with `include=modules`. Preserve
+   the raw JSON bytes.
+3. Run the preparation readiness checker. It directly attests the raw Version
+   modules, checks runtime/bindings/profile, and proves the preparation Cron is
+   absent/inert. A 0% Version can yield
+   `CLOUDFLARE_PRODUCTION_PREPARED_NONAUTOMATIC`; this is not activation.
+4. During preparation, use only
+   `wrangler.production-preparation.jsonc`. It is `observe_only` and has no
+   Cron Triggers; provision declared secret names only through the approved
+   secure channel. Observe-only runtime cannot use the write credential.
+5. After any separately authorized secret operation, repeat the raw Version and
+   runtime/config readback. Secret presence is never bundle identity proof.
+6. Only after a separately authorized activation, deploy/promote the already
+   attested Version ID, read the raw Deployment API, and require
+   `EXACT_CANDIDATE_VERSION_100_PERCENT_ACTIVE`. Then verify active bindings,
+   exact Cron, Windows quiescence, and the bounded Intraday scope. This remains
+   configuration proof, not natural canary or capture-success proof.
 
-The raw Wrangler readback adapter produces a normalized contract checked by
-`validateDeploymentReadback()`. It must match the Worker name, new version ID,
-candidate identity receipt, compiled bundle hash/size, entrypoint, scheduled
-handler, vars/pins/scope, secret names, Cron set, R2 bucket/type, and Durable
-Object class/type/export. Worker existence, secret existence, or a new version
-ID alone is insufficient. A missing or ambiguous raw field remains UNKNOWN and
-blocks readiness; no hand-edited normalized readback is accepted.
+The raw Wrangler readback adapter produces a normalized diagnostic contract
+checked by `validateDeploymentReadback()`. It matches the Worker name, exact
+Version ID, main module, runtime/profile fields, scheduled handler, vars/pins,
+scope, secret names, Cron set, R2 bucket/type, and Durable Object
+class/type/export. Direct raw Version module attestation and raw Deployment
+allocation remain the authorities for bytes and traffic. Worker existence,
+secret existence, ETag, receipt, or a new Version ID alone is insufficient. A
+missing or ambiguous raw field remains UNKNOWN and blocks readiness; no
+hand-edited normalized readback is accepted.
 
 ## Activation gate
 
