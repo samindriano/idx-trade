@@ -174,3 +174,15 @@ Workers produce evidence. MAIN owns scope protection, reconciliation, materialit
 A branch must bootstrap from its newest authoritative project/status documents, not from stale orchestration snapshots. When `docs/CURRENT_STATUS.md` exists, treat it as the first-read status layer unless a newer branch-local checkpoint explicitly supersedes it.
 
 The separate `samindriano/codex-orchestra` repository is a control-plane/template snapshot and is not a live mirror. Stale orchestra state never overrides this repository.
+
+## Project language and user-facing status
+
+Read `docs/PROJECT_LANGUAGE_V1.md` before writing or updating current-facing project status, roadmap text, dashboards, handoffs, or user-facing summaries.
+
+For current-facing project coordination, use only the small status vocabulary defined there: `ACTIVE`, `WAITING`, `BLOCKED`, `DONE`, `PARKED`, `ARCHIVED`. Scientific/integrity gates use only `PASS`, `FAIL`, or `UNKNOWN` as the primary verdict.
+
+Do not invent a new long compound status/verdict merely to encode every implementation detail in one token. State the simple status first, then one short plain-language reason. Exact historical/machine status strings may be retained in forensic detail when contract-relevant.
+
+Do not rewrite historical checkpoints or machine enums only to simplify wording. Historical evidence remains immutable; simplification applies to the current-facing layer.
+
+When reporting to the user, lead with what is running, blocked, waiting, done, or parked. Branches, hashes, schemas, exact machine codes, and detailed provenance follow only when decision-relevant or explicitly requested.
