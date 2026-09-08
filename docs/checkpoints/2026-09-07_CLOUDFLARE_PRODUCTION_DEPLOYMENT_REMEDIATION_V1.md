@@ -1,11 +1,11 @@
 # Cloudflare Production Deployment Remediation V1
 
-Status: local candidate ready for review; production remains inert. Prepared
-2026-09-07 (Asia/Jakarta) on `codex/cloud-runtime-recovery-integration-v1`.
+Status: adversarial re-audit rework required; production remains inert. Re-audited
+2026-09-08 (Asia/Jakarta) on `codex/cloud-runtime-recovery-integration-v1`.
 
 ## Verdict
 
-`CLOUDFLARE_DEPLOYMENT_REMEDIATION_READY_FOR_REVIEW`
+`CLOUDFLARE_DEPLOYMENT_REMEDIATION_ADVERSARIAL_REWORK_REQUIRED`
 
 This checkpoint records only repository/configuration/test work. No Cloudflare
 production deploy, secret mutation, Cron mutation, Windows task mutation, GitHub
@@ -84,9 +84,9 @@ production attempt, not evidence of a production cutover.
 
 ## Validation evidence
 
-At remediation HEAD `fca622852d4de2759f8a02b25b6a4f51cc05329d`:
+At remediation HEAD `5bf0ecdd76dd3872e7ef50b0c695fab2a9c56b46`:
 
-- Cloudflare Node suite: **111/111 passed**.
+- Cloudflare Node suite: **117/117 passed**.
 - Full Python suite with the checkout on `PYTHONPATH`: **406 passed**, with the
   existing three `FutureWarning` messages from `stockbit_intraday_eod_gate.py`.
 - Raw `pytest -q` without the checkout import path failed collection because the
