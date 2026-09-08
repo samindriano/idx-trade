@@ -1,0 +1,25 @@
+{
+  "id": "e99303b4-0fc5-49e3-91f3-92c43cc4e919",
+  "number": 4,
+  "main_module": "index.js",
+  "metadata": {
+    "created_on": "2026-09-07T08:29:56.337705Z",
+    "source": "wrangler",
+    "author_id": "redacted",
+    "author_email": "redacted@example.invalid",
+    "has_preview": false
+  },
+  "annotations": {"workers/triggered_by": "secret"},
+  "resources": {
+    "script": {
+      "etag": "0200961f1c76a48e1f13e5e4bbb1706d73723ef7b14e130a69096bf32a6e6364",
+      "handlers": ["fetch"],
+      "last_deployed_from": "wrangler"
+    },
+    "script_runtime": {"usage_model": "standard"},
+    "bindings": [
+      {"name": "GITHUB_ACTIONS_READ_TOKEN", "type": "secret_text"},
+      {"name": "GITHUB_ACTIONS_WRITE_TOKEN", "type": "secret_text"}
+    ]
+  }
+}

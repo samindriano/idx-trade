@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, time
+from datetime import date, datetime
 import json
 import os
 from pathlib import Path
@@ -23,19 +23,15 @@ from idx_trade.stockbit_intraday_cloud_archive import (  # noqa: E402
     StockbitIntradayCloudArchive,
     build_intraday_store_from_env,
 )
-from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot  # noqa: E402
+from idx_trade.stockbit_intraday_cloud_runner import (  # noqa: E402
+    run_cloud_slot,
+    validate_intraday_capture_window,
+)
 from idx_trade.stockbit_intraday_e2e_bridge import (  # noqa: E402
     ACCEPTED_E2E_IMPLEMENTATION_SHA,
     materialize_accepted_e2e_context,
 )
 from idx_trade.stockbit_intraday_runtime import JAKARTA, request_chart  # noqa: E402
-
-
-SLOT_MINIMUMS = {
-    "1830": time(18, 30),
-    "1930": time(19, 30),
-    "2030": time(20, 30),
-}
 
 
 def _now() -> datetime:
@@ -63,14 +59,6 @@ def _require_current_session(value: str | None, *, now: datetime) -> date:
     if requested != current:
         raise RuntimeError("STOCKBIT_INTRADAY_RETROACTIVE_SESSION_FORBIDDEN")
     return requested
-
-
-def _validate_slot_clock(slot: str, *, now: datetime) -> None:
-    _require_aware(now)
-    local = now.astimezone(JAKARTA)
-    minimum = SLOT_MINIMUMS[slot]
-    if local.time().replace(tzinfo=None) < minimum:
-        raise RuntimeError(f"STOCKBIT_INTRADAY_SLOT_TOO_EARLY:{slot}")
 
 
 def _verify_code_pin() -> str:
@@ -105,7 +93,7 @@ def _result_payload(archive: StockbitIntradayCloudArchive, commit) -> dict[str, 
 def run_once(*, slot: str, session_date: str | None = None) -> dict[str, Any]:
     now = _now()
     session = _require_current_session(session_date, now=now)
-    _validate_slot_clock(slot, now=now)
+    validate_intraday_capture_window(expected_date=session, slot=slot, now=now)
     code_ref = _verify_code_pin()
 
     if os.getenv("STOCKBIT_INTRADAY_STORAGE_BACKEND", "s3").strip().lower() != "s3":

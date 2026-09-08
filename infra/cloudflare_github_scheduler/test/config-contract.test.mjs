@@ -5,8 +5,14 @@ import { readFileSync } from 'node:fs';
 const readJson = (name) => JSON.parse(readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'));
 const staging = readJson('wrangler.jsonc');
 const stagingLive = readJson('wrangler.staging-live.jsonc');
+const preparation = readJson('wrangler.production-preparation.jsonc');
 const production = readJson('wrangler.production.jsonc');
 const indexSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+const prepareSource = readFileSync(new URL('../src/dispatch_prepare.mjs', import.meta.url), 'utf8');
+const lifecycleSource = readFileSync(new URL('../src/dispatch_lifecycle.mjs', import.meta.url), 'utf8');
+
+const E2E_RECOVERY_PIN = '8bc3ee3efd65e8b16478e404e4b226451b105c48';
+const OFFICIAL_OPEN_RECOVERY_PIN = 'ac29a0552b1785045906f8d608b5371d93e01b73';
 
 test('staging and production use isolated Worker and Durable Object namespaces', () => {
   assert.notEqual(staging.name, production.name);
@@ -21,6 +27,52 @@ test('staging and production use isolated Worker and Durable Object namespaces',
   assert.equal(staging.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(stagingLive.vars.DISPATCH_MODE, 'observe_only');
   assert.equal(production.vars.DISPATCH_MODE, 'active');
+  assert.equal(production.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_2030"]');
+  assert.equal('RECOVERY_ALLOWED_SLOTS' in staging.vars, false);
+  assert.equal('RECOVERY_ALLOWED_SLOTS' in stagingLive.vars, false);
+  for (const config of [staging, stagingLive, production]) {
+    assert.deepEqual(config.r2_buckets, [{ binding: 'ARCHIVE', bucket_name: 'idx-trade-stockbit-stream-v1' }]);
+    assert.equal(config.vars.E2E_EXPECTED_CODE_COMMIT, E2E_RECOVERY_PIN);
+    assert.equal(config.vars.OFFICIAL_OPEN_EXPECTED_CODE_COMMIT, OFFICIAL_OPEN_RECOVERY_PIN);
+  }
+});
+
+test('production preparation is the same Worker in inert observe-only/no-Cron mode', () => {
+  assert.equal(preparation.name, production.name);
+  assert.equal(preparation.main, production.main);
+  assert.equal(preparation.vars.DISPATCH_MODE, 'observe_only');
+  assert.equal(preparation.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_2030"]');
+  assert.deepEqual(preparation.triggers, { crons: [] });
+  assert.deepEqual(preparation.secrets.required, [
+    'GITHUB_ACTIONS_READ_TOKEN',
+    'GITHUB_ACTIONS_WRITE_TOKEN',
+  ]);
+  assert.deepEqual(preparation.r2_buckets, production.r2_buckets);
+  assert.deepEqual(preparation.durable_objects, production.durable_objects);
+  assert.deepEqual(preparation.exports, production.exports);
+});
+
+test('GitHub read and dispatch credentials are capability-separated by environment', () => {
+  assert.deepEqual(staging.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(stagingLive.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(production.secrets.required, [
+    'GITHUB_ACTIONS_READ_TOKEN',
+    'GITHUB_ACTIONS_WRITE_TOKEN',
+  ]);
+  for (const config of [staging, stagingLive]) {
+    assert.equal(config.secrets.required.includes('GITHUB_ACTIONS_WRITE_TOKEN'), false);
+    assert.equal(config.secrets.required.includes('OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'), false);
+  }
+  assert.match(indexSource, /const readToken = requireEnv\(this\.env, 'GITHUB_ACTIONS_READ_TOKEN'\)/);
+  assert.match(indexSource, /token: readToken/);
+  assert.match(indexSource, /dispatchWithLeaseBoundary/);
+  assert.match(indexSource, /prepareActiveDispatch/);
+  assert.match(prepareSource, /requiredEnv\(env, 'GITHUB_ACTIONS_WRITE_TOKEN'\)/);
+  assert.match(prepareSource, /requiredEnv\(env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
+  assert.match(lifecycleSource, /prepare\(\)/);
+  assert.match(lifecycleSource, /dispatchWithMode/);
+  assert.doesNotMatch(lifecycleSource, /finally/);
+  assert.doesNotMatch(indexSource, /GITHUB_ACTIONS_TOKEN/);
 });
 
 test('staging has no production Cron schedule and production retains exact Cron schedule', () => {
@@ -41,10 +93,56 @@ test('staging has no production Cron schedule and production retains exact Cron 
   ]);
 });
 
-test('durable final markers remain the active-mode idempotency guard before dispatch', () => {
+test('scheduler markers remain a coordination guard without claiming capture completion', () => {
+  const leaseAcquire = indexSource.indexOf('this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs)');
+  const githubQuery = indexSource.indexOf('await queryExactSlotCoverage');
+  assert.ok(leaseAcquire >= 0);
+  assert.ok(githubQuery > leaseAcquire);
+  assert.match(indexSource, /_writeOwnedDispatchLease/);
   assert.match(indexSource, /durableMarkerDecision\(prior, observedEpochMs\)/);
-  assert.match(indexSource, /this\._write\(slotKey, 'dispatched'/);
-  assert.match(indexSource, /dispatchWithMode/);
-  assert.match(indexSource, /this\._write\(slotKey, 'covered_exact'/);
-  assert.match(indexSource, /provenance = run\.event === 'schedule' \? 'native_schedule' : 'workflow_dispatch'/);
+  assert.match(indexSource, /effectiveActiveModeDecision/);
+  assert.match(indexSource, /effective_active_mode_decision/);
+  assert.match(indexSource, /status: 'SHADOW_DEFERRED_BY_DISPATCH_LEASE'/);
+  assert.match(indexSource, /_writeOwnedDispatchLease\(slotKey, attemptId, 'dispatch_requested'/);
+  assert.match(indexSource, /dispatchWithLeaseBoundary/);
+  assert.match(indexSource, /this\._write\(slotKey, 'dispatching'/);
+  assert.match(indexSource, /evaluateShadowSlot/);
+  assert.match(indexSource, /githubError/);
+  assert.match(indexSource, /SHADOW_DURABLE_COMPLETION_VERIFIED/);
+  assert.match(indexSource, /capture_complete/);
+  assert.match(indexSource, /requiredImplementationPin\(this\.env, slot\)/);
+  assert.match(indexSource, /post_attempted === false/);
+  assert.doesNotMatch(indexSource, /this\._write\(slotKey, 'capture_complete'/);
+});
+
+test('Official Open signing is confined to lazy active dispatch path', () => {
+  assert.match(prepareSource, /officialOpenAttestedDispatchBody/);
+  assert.match(indexSource, /isOfficialOpenSlot\(slot\)/);
+  assert.match(prepareSource, /requiredEnv\(env, 'OFFICIAL_OPEN_SCHEDULER_HMAC_KEY'\)/);
+  assert.match(indexSource, /prepare: \(\) => prepareActiveDispatch/);
+  assert.match(indexSource, /official_open_attestation_required/);
+});
+
+test('recovery scope gates active objectives before lease or dispatch', () => {
+  const scopeGate = indexSource.indexOf('const recoveryScope = parseRecoveryScope');
+  const leaseAcquire = indexSource.indexOf('this._acquireDispatchLease(slotKey, observedEpochMs, scheduledEpochMs)');
+  const prepare = indexSource.indexOf('prepare: () => prepareActiveDispatch');
+  assert.ok(scopeGate >= 0);
+  assert.ok(scopeGate < leaseAcquire);
+  assert.ok(scopeGate < prepare);
+  assert.match(indexSource, /recoveryScopeSlotDecision\(recoveryScope, slotId\)/);
+  assert.match(indexSource, /scopeDecision\.status/);
+  assert.match(indexSource, /capture_complete: false/);
+});
+
+test('Official Open durable archive completion requires separate recovery admission', () => {
+  assert.match(indexSource, /validateOfficialOpenRecoveryAdmission/);
+  assert.match(indexSource, /OFFICIAL_OPEN_EXPECTED_CODE_COMMIT/);
+  assert.match(indexSource, /FAIL_CLOSED_OFFICIAL_OPEN_RECOVERY_ADMISSION_INVALID/);
+  assert.match(indexSource, /official_open_recovery_admission/);
+});
+
+test('a completion-final marker is not manufactured by a generic hash helper', async () => {
+  const completion = await import('../src/completion.mjs');
+  assert.equal('captureCompletionProof' in completion, false);
 });

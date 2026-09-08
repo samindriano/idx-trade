@@ -6,7 +6,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "check:production-readiness": "node scripts/check-deployment-readiness.mjs --profile production --config wrangler.production.jsonc",
+    "check:preparation-readiness": "node scripts/check-deployment-readiness.mjs --profile preparation --config wrangler.production-preparation.jsonc"
   },
   "devDependencies": {
     "wrangler": "4.127.0"

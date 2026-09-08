@@ -8,14 +8,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Protocol
 import zipfile
 
-from .stockbit_stream_archive import (
-    PutResult,
-    StorageArchiveError,
-    StorageConfigurationError,
-    StorageImmutabilityConflict,
-)
-
-
 FORBIDDEN_SNAPSHOT_PARTS = {
     ".env", "credentials", "secrets", "tokens", "outcomes",
     "outcome_vault", "realized_outcomes",
@@ -86,6 +78,11 @@ class LocalConditionalStore:
             return None
 
     def put_if_absent(self, key: str, payload: bytes, content_type: str) -> PutResult:
+        # Keep the read-only completion probe free of the Stream provider
+        # dependency. Write paths retain the existing shared exception/result
+        # types without importing Stream during module import.
+        from .stockbit_stream_archive import PutResult, StorageImmutabilityConflict
+
         del content_type
         path = self._path(key)
         digest = sha256_bytes(payload)
@@ -134,8 +131,12 @@ class ConditionalS3Store:
         try:
             import boto3
         except ImportError as exc:  # pragma: no cover - deployment only
+            from .stockbit_stream_archive import StorageConfigurationError
+
             raise StorageConfigurationError("boto3 is required for Stockbit Intraday cloud storage") from exc
         if not endpoint_url or not bucket or not access_key_id or not secret_access_key:
+            from .stockbit_stream_archive import StorageConfigurationError
+
             raise StorageConfigurationError("Stockbit Intraday cloud storage credentials are incomplete")
         self.bucket = bucket
         self.prefix = str(prefix).strip("/")
@@ -152,6 +153,8 @@ class ConditionalS3Store:
         return f"{self.prefix}/{safe}" if self.prefix else safe
 
     def read(self, key: str) -> bytes | None:
+        from .stockbit_stream_archive import StorageArchiveError
+
         try:
             response = self.client.get_object(Bucket=self.bucket, Key=self._key(key))
         except Exception as exc:
@@ -163,6 +166,8 @@ class ConditionalS3Store:
         return response["Body"].read()
 
     def put_if_absent(self, key: str, payload: bytes, content_type: str) -> PutResult:
+        from .stockbit_stream_archive import PutResult, StorageImmutabilityConflict
+
         digest = sha256_bytes(payload)
         try:
             self.client.put_object(

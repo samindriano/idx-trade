@@ -1,6 +1,24 @@
 export const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
 export const DISPATCH_LEASE_MS = 2 * 60 * 1000;
-export const FINAL_MARKER_STATES = Object.freeze(['covered_exact', 'dispatched', 'blocked']);
+// Scheduler state is not capture evidence.  Only an independently validated
+// existing archive commit may become capture-final.
+export const CAPTURE_FINAL_MARKER_STATES = Object.freeze(['capture_complete']);
+// A dispatching/requested marker may correspond to an external GitHub POST
+// that is still in flight.  There is no provider-side fencing token in the
+// current GitHub API contract, so a later coordinator must never reclaim one
+// of these markers merely because it is old.  Reclamation would permit a
+// stale request to race a new request and break at-most-one dispatch.
+export const COORDINATOR_LEASE_MARKER_STATES = Object.freeze([
+  'dispatching',
+  'dispatch_requested',
+  'dispatched',
+  // These response markers are retained as historical aliases for
+  // post-attempt outcomes.  An HTTP response does not prove that GitHub did
+  // not accept the request, so none may be reclaimed automatically.
+  'dispatch_response_uncertain',
+  'retryable_error',
+  'blocked',
+]);
 export const SLOT_RUN_NAME_PREFIX = 'IDX-SLOT:';
 
 export const SLOTS = Object.freeze([
@@ -22,6 +40,153 @@ export const SLOTS = Object.freeze([
 ]);
 
 export const SLOT_BY_ID = new Map(SLOTS.map((slot) => [slot.id, slot]));
+export const RECOVERY_ALLOWED_SLOTS_ENV = 'RECOVERY_ALLOWED_SLOTS';
+
+const ALL_RECOVERY_SLOT_IDS = Object.freeze(SLOTS.map((slot) => slot.id));
+
+function invalidRecoveryScope(reason, mode) {
+  const observeOnly = mode === 'observe_only';
+  return {
+    configured: true,
+    valid: false,
+    failClosed: !observeOnly,
+    status: observeOnly ? 'RECOVERY_SCOPE_INVALID_OBSERVE_ONLY_NOOP' : 'RECOVERY_SCOPE_FAIL_CLOSED',
+    reason,
+    allowedSlotIds: new Set(),
+  };
+}
+
+/**
+ * Parse the explicit recovery objective scope.
+ *
+ * Active mode never defaults to a broad scope: missing, malformed, duplicate,
+ * or unknown identifiers produce a fail-closed empty scope. Observe-only may
+ * remain useful when the variable is absent by observing all known slots, but
+ * an explicitly malformed scope remains a deterministic non-mutating no-op.
+ */
+export function parseRecoveryScope(raw, mode) {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    if (mode === 'observe_only') {
+      return {
+        configured: false,
+        valid: true,
+        failClosed: false,
+        status: 'RECOVERY_SCOPE_UNCONFIGURED_OBSERVE_ONLY',
+        reason: null,
+        allowedSlotIds: new Set(ALL_RECOVERY_SLOT_IDS),
+      };
+    }
+    return {
+      configured: false,
+      valid: false,
+      failClosed: true,
+      status: 'RECOVERY_SCOPE_FAIL_CLOSED',
+      reason: 'MISSING_RECOVERY_ALLOWED_SLOTS',
+      allowedSlotIds: new Set(),
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_NOT_JSON', mode);
+  }
+  if (!Array.isArray(parsed)) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_NOT_ARRAY', mode);
+  if (parsed.some((slotId) => typeof slotId !== 'string' || slotId.length === 0 || slotId.trim() !== slotId)) {
+    return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_IDENTIFIER_INVALID', mode);
+  }
+  if (new Set(parsed).size !== parsed.length) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_DUPLICATE', mode);
+  if (parsed.some((slotId) => !SLOT_BY_ID.has(slotId))) return invalidRecoveryScope('RECOVERY_ALLOWED_SLOTS_UNKNOWN_SLOT', mode);
+
+  return {
+    configured: true,
+    valid: true,
+    failClosed: false,
+    status: parsed.length ? 'RECOVERY_SCOPE_CONFIGURED' : 'RECOVERY_SCOPE_EMPTY_NOOP',
+    reason: null,
+    allowedSlotIds: new Set(parsed),
+  };
+}
+
+export function recoveryScopeSlotDecision(scope, slotId) {
+  if (!SLOT_BY_ID.has(slotId)) {
+    return {
+      eligible: false,
+      failClosed: true,
+      status: 'UNKNOWN_SLOT_FAIL_CLOSED',
+      reason: 'UNKNOWN_SLOT',
+    };
+  }
+  if (scope.failClosed) {
+    return {
+      eligible: false,
+      failClosed: true,
+      status: scope.status,
+      reason: scope.reason,
+    };
+  }
+  if (!scope.allowedSlotIds.has(slotId)) {
+    return {
+      eligible: false,
+      failClosed: false,
+      status: 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH',
+      reason: 'SLOT_OUTSIDE_RECOVERY_SCOPE',
+    };
+  }
+  return {
+    eligible: true,
+    failClosed: false,
+    status: 'RECOVERY_SCOPE_SLOT_ENABLED',
+    reason: null,
+  };
+}
+
+const GIT_SHA = /^[0-9a-f]{40}$/;
+
+// A producer pin is a dispatch prerequisite for archive-writing families. An
+// empty archive must not turn a missing or malformed pin into an eligible
+// active dispatch.
+export function requiredImplementationPin(env, slot) {
+  const name = slot?.workflow === 'official-open-prospective-cloud-capture.yml'
+    ? 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'
+    : slot?.workflow === 'e2e-paper-cloud-orchestration.yml'
+      ? 'E2E_EXPECTED_CODE_COMMIT'
+      : null;
+  if (!name) return null;
+  const value = env?.[name];
+  if (typeof value !== 'string' || !GIT_SHA.test(value.trim())) {
+    throw new Error(`INVALID_${name}`);
+  }
+  return value.trim();
+}
+
+const IN_FLIGHT_RUN_STATUSES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
+
+/**
+ * GitHub run metadata is never completion evidence. A recent in-flight run
+ * may receive a short grace period to avoid duplicate dispatches, but every
+ * other non-final observation remains recovery-eligible until an archive
+ * validator supplies capture completion.
+ */
+export function exactRunRecoveryDecision(run, observedEpochMs) {
+  const status = typeof run?.status === 'string' ? run.status.trim().toLowerCase() : '';
+  const conclusion = typeof run?.conclusion === 'string' ? run.conclusion.trim().toLowerCase() : '';
+  const active = IN_FLIGHT_RUN_STATUSES.has(status) && !conclusion;
+  if (!active) {
+    return { defer: false, recoveryEligible: true, final: false };
+  }
+
+  const updatedMs = Date.parse(run?.updated_at ?? run?.created_at ?? '');
+  const fresh = Number.isFinite(updatedMs) && observedEpochMs - updatedMs < DISPATCH_LEASE_MS;
+  return {
+    defer: fresh,
+    recoveryEligible: !fresh,
+    final: false,
+    status: fresh ? 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE' : 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+    runId: run?.id ?? null,
+  };
+}
 
 export function jakartaDateKey(epochMs) {
   return new Date(epochMs + JAKARTA_OFFSET_MS).toISOString().slice(0, 10);
@@ -100,22 +265,62 @@ export function exactSlotCoverageRuns(runs, slot, epochMs) {
   });
 }
 
-export function isFinalMarkerState(state) {
-  return FINAL_MARKER_STATES.includes(state);
+export function isCaptureFinalMarkerState(state) {
+  return CAPTURE_FINAL_MARKER_STATES.includes(state);
 }
 
 export function durableMarkerDecision(prior, observedEpochMs) {
-  if (prior && isFinalMarkerState(prior.state)) {
+  if (prior && isCaptureFinalMarkerState(prior.state)) {
     return {
-      status: 'DURABLE_MARKER_ALREADY_FINAL',
+      status: 'CAPTURE_ALREADY_COMPLETE',
       state: prior.state,
       runId: prior.run_id ?? null,
     };
   }
-  if (prior?.state === 'dispatching' && observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS) {
-    return { status: 'DISPATCH_LEASE_IN_FLIGHT' };
+  if (
+    prior &&
+    COORDINATOR_LEASE_MARKER_STATES.includes(prior.state) &&
+    observedEpochMs - Number(prior.updated_at_ms) < DISPATCH_LEASE_MS
+  ) {
+    return {
+      status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE',
+      state: prior.state,
+      runId: prior.run_id ?? null,
+    };
   }
   return null;
+}
+
+/**
+ * Decide whether this coordinator invocation may create a dispatch lease.
+ *
+ * This is intentionally stricter than durableMarkerDecision: that helper is
+ * a bounded duplicate-delay policy, while this helper protects the actual
+ * external dispatch side effect.  Without an external fence, stale lease
+ * takeover is not safe and therefore remains fail-closed.
+ */
+export function dispatchLeaseDecision(prior) {
+  if (!prior) return { action: 'ACQUIRE' };
+  if (isCaptureFinalMarkerState(prior.state)) {
+    return { action: 'VALIDATE_ARCHIVE_ONLY', state: prior.state };
+  }
+  if (COORDINATOR_LEASE_MARKER_STATES.includes(prior.state)) {
+    return {
+      action: 'DEFER',
+      status: 'DISPATCH_LEASE_HELD_FENCING_UNPROVEN',
+      state: prior.state,
+      attemptId: prior.attempt_id ?? null,
+      runId: prior.run_id ?? null,
+    };
+  }
+  return { action: 'ACQUIRE' };
+}
+
+export function effectiveActiveModeDecision(shadow, markerDecision = null) {
+  if (markerDecision) return 'DEFER_COORDINATOR_DISPATCH_LEASE';
+  return shadow?.archive_github_decision
+    ?? shadow?.active_mode_decision
+    ?? 'FAIL_CLOSED_ACTIVE_MODE_DECISION_UNAVAILABLE';
 }
 
 export function workflowRunsUrl({ owner, repo, workflow, startMs, endMs }) {

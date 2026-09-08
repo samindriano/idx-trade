@@ -4,12 +4,18 @@ import {
   SLOTS,
   SLOT_BY_ID,
   canonicalSlotRunName,
+  dispatchLeaseDecision,
   durableMarkerDecision,
   dueSlots,
+  effectiveActiveModeDecision,
+  exactRunRecoveryDecision,
   exactSlotCoverageRuns,
-  isFinalMarkerState,
+  isCaptureFinalMarkerState,
   localTimeEpochMs,
   markerKey,
+  parseRecoveryScope,
+  recoveryScopeSlotDecision,
+  requiredImplementationPin,
   slotWindow,
   dispatchBody,
   workflowDispatchUrl,
@@ -18,8 +24,54 @@ import {
 
 const ms = (dateKey, hhmm) => localTimeEpochMs(dateKey, hhmm);
 
+test('archive-writing families require a valid implementation pin before dispatch', () => {
+  const e2e = SLOT_BY_ID.get('E2E_POST_EOD_1835');
+  const open = SLOT_BY_ID.get('OFFICIAL_OPEN_0922');
+  const intraday = SLOT_BY_ID.get('STOCKBIT_INTRADAY_1830');
+  const pin = 'a'.repeat(40);
+  assert.equal(requiredImplementationPin({ E2E_EXPECTED_CODE_COMMIT: pin }, e2e), pin);
+  assert.equal(requiredImplementationPin({ OFFICIAL_OPEN_EXPECTED_CODE_COMMIT: pin }, open), pin);
+  assert.equal(requiredImplementationPin({}, intraday), null);
+  for (const [env, slot, name] of [
+    [{}, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{ ["E2E_EXPECTED_CODE_COMMIT"]: '' }, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{ E2E_EXPECTED_CODE_COMMIT: 'not-a-sha' }, e2e, 'E2E_EXPECTED_CODE_COMMIT'],
+    [{}, open, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'],
+    [{ OFFICIAL_OPEN_EXPECTED_CODE_COMMIT: 'z'.repeat(40) }, open, 'OFFICIAL_OPEN_EXPECTED_CODE_COMMIT'],
+  ]) assert.throws(() => requiredImplementationPin(env, slot), new RegExp(`INVALID_${name}`));
+});
+
 test('Stockbit Stream is intentionally not part of the Cloudflare scheduler', () => {
   assert.equal(SLOTS.some((slot) => slot.workflow.includes('stream-prospective')), false);
+});
+
+test('active recovery scope allows only the exact bounded Intraday canary slot', () => {
+  const scope = parseRecoveryScope('["STOCKBIT_INTRADAY_2030"]', 'active');
+  assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_2030').eligible, true);
+  assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
+  assert.equal(recoveryScopeSlotDecision(scope, 'OFFICIAL_OPEN_0922').status, 'RECOVERY_SCOPE_SLOT_DISABLED_NO_DISPATCH');
+  assert.equal(recoveryScopeSlotDecision(scope, 'E2E_POST_EOD_1835').failClosed, false);
+});
+
+test('active recovery scope fails closed for missing, malformed, duplicate, and unknown values', () => {
+  for (const raw of [undefined, '', '{"slot":"STOCKBIT_INTRADAY_1830"}', '["STOCKBIT_INTRADAY_1830", "STOCKBIT_INTRADAY_1830"]', '["UNKNOWN_SLOT"]']) {
+    const scope = parseRecoveryScope(raw, 'active');
+    assert.equal(scope.failClosed, true);
+    assert.equal(scope.allowedSlotIds.size, 0);
+    assert.equal(recoveryScopeSlotDecision(scope, 'STOCKBIT_INTRADAY_1830').eligible, false);
+  }
+});
+
+test('empty active scope is deterministic no-op and observe-only remains useful without scope', () => {
+  const empty = parseRecoveryScope('[]', 'active');
+  assert.equal(empty.status, 'RECOVERY_SCOPE_EMPTY_NOOP');
+  assert.equal(recoveryScopeSlotDecision(empty, 'STOCKBIT_INTRADAY_1830').eligible, false);
+  const observe = parseRecoveryScope(undefined, 'observe_only');
+  assert.equal(observe.status, 'RECOVERY_SCOPE_UNCONFIGURED_OBSERVE_ONLY');
+  assert.equal(recoveryScopeSlotDecision(observe, 'STOCKBIT_INTRADAY_1830').eligible, true);
+  const malformedObserve = parseRecoveryScope('["UNKNOWN_SLOT"]', 'observe_only');
+  assert.equal(malformedObserve.status, 'RECOVERY_SCOPE_INVALID_OBSERVE_ONLY_NOOP');
+  assert.equal(recoveryScopeSlotDecision(malformedObserve, 'STOCKBIT_INTRADAY_1830').eligible, false);
 });
 
 test('18:40 WIB makes both 18:30 intraday and 18:35 POST_EOD due', () => {
@@ -122,26 +174,117 @@ test('dispatch body preserves exact workflow input', () => {
   assert.deepEqual(dispatchBody(SLOT_BY_ID.get('OFFICIAL_OPEN_0902')), { ref: 'main', inputs: { slot: '0902' } });
 });
 
-test('durable final marker states suppress repeats while retryable errors remain retryable', () => {
-  assert.equal(isFinalMarkerState('covered_exact'), true);
-  assert.equal(isFinalMarkerState('covered_native'), false);
-  assert.equal(isFinalMarkerState('dispatched'), true);
-  assert.equal(isFinalMarkerState('blocked'), true);
-  assert.equal(isFinalMarkerState('retryable_error'), false);
-  assert.equal(isFinalMarkerState('would_dispatch'), false);
+test('only validated archive completion is capture-final', () => {
+  assert.equal(isCaptureFinalMarkerState('capture_complete'), true);
+  assert.equal(isCaptureFinalMarkerState('covered_exact'), false);
+  assert.equal(isCaptureFinalMarkerState('dispatched'), false);
+  assert.equal(isCaptureFinalMarkerState('blocked'), false);
+  assert.equal(isCaptureFinalMarkerState('retryable_error'), false);
+  assert.equal(isCaptureFinalMarkerState('would_dispatch'), false);
   assert.equal(markerKey('2026-08-27', 'E2E_POST_EOD_1835'), '2026-08-27::E2E_POST_EOD_1835');
 });
 
-test('durable marker decision keeps active dispatch idempotent', () => {
+test('scheduler markers never masquerade as capture completion', () => {
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000),
-    { status: 'DURABLE_MARKER_ALREADY_FINAL', state: 'dispatched', runId: 123 },
+    durableMarkerDecision({ state: 'capture_complete', run_id: 123 }, 10_000),
+    { status: 'CAPTURE_ALREADY_COMPLETE', state: 'capture_complete', runId: 123 },
   );
   assert.deepEqual(
-    durableMarkerDecision({ state: 'dispatching', updated_at_ms: 9_000 }, 10_000),
-    { status: 'DISPATCH_LEASE_IN_FLIGHT' },
+    durableMarkerDecision({ state: 'dispatch_requested', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatch_requested', runId: null },
   );
+  assert.deepEqual(
+    durableMarkerDecision({ state: 'dispatched', updated_at_ms: 9_000 }, 10_000),
+    { status: 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE', state: 'dispatched', runId: null },
+  );
+  assert.equal(durableMarkerDecision({ state: 'blocked', run_id: 123 }, 10_000), null);
+  assert.equal(durableMarkerDecision({ state: 'covered_exact', run_id: 123 }, 10_000), null);
+  assert.equal(durableMarkerDecision({ state: 'dispatched', run_id: 123 }, 10_000), null);
   assert.equal(durableMarkerDecision({ state: 'would_dispatch', updated_at_ms: 1 }, 10_000), null);
+});
+
+test('same-slot coordinator contenders cannot reclaim an existing dispatch lease', () => {
+  const first = dispatchLeaseDecision(null);
+  assert.deepEqual(first, { action: 'ACQUIRE' });
+
+  for (const state of ['dispatching', 'dispatch_requested', 'dispatched', 'dispatch_response_uncertain', 'retryable_error', 'blocked']) {
+    const second = dispatchLeaseDecision({
+      state,
+      attempt_id: 'first-attempt',
+      run_id: 41,
+      updated_at_ms: 1,
+    });
+    assert.deepEqual(second, {
+      action: 'DEFER',
+      status: 'DISPATCH_LEASE_HELD_FENCING_UNPROVEN',
+      state,
+      attemptId: 'first-attempt',
+      runId: 41,
+    });
+  }
+
+  // Age alone cannot authorize a takeover because the external POST has no
+  // fence token that would invalidate the old request.
+  assert.equal(
+    dispatchLeaseDecision({ state: 'dispatching', updated_at_ms: 1 }).action,
+    'DEFER',
+  );
+  assert.deepEqual(
+    dispatchLeaseDecision({ state: 'capture_complete' }),
+    { action: 'VALIDATE_ARCHIVE_ONLY', state: 'capture_complete' },
+  );
+  for (const state of ['dispatch_response_uncertain', 'retryable_error', 'blocked']) {
+    assert.equal(dispatchLeaseDecision({ state }).action, 'DEFER');
+  }
+});
+
+test('process-level active decision defers for every fresh coordinator dispatch lease', () => {
+  const shadow = { archive_github_decision: 'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE' };
+  for (const state of ['dispatching', 'dispatch_requested']) {
+    const markerDecision = durableMarkerDecision({ state, updated_at_ms: 9_500 }, 10_000);
+    assert.equal(markerDecision.status, 'DISPATCH_REQUESTED_NOT_CAPTURE_COMPLETE');
+    assert.equal(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'DEFER_COORDINATOR_DISPATCH_LEASE',
+    );
+    assert.notEqual(
+      effectiveActiveModeDecision(shadow, markerDecision),
+      'WORKFLOW_DISPATCH_WOULD_BE_ELIGIBLE',
+    );
+  }
+});
+
+test('exact run metadata never becomes capture completion and only fresh in-flight runs defer fallback', () => {
+  const observed = Date.parse('2026-08-27T11:40:00.000Z');
+  const recent = new Date(observed - 30_000).toISOString();
+  const old = new Date(observed - 3 * 60_000).toISOString();
+
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 1, status: 'in_progress', conclusion: null, updated_at: recent }, observed),
+    {
+      defer: true,
+      recoveryEligible: false,
+      final: false,
+      status: 'RUN_VISIBLE_IN_FLIGHT_GRACE_NOT_CAPTURE_COMPLETE',
+      runId: 1,
+    },
+  );
+  for (const conclusion of ['failure', 'cancelled']) {
+    assert.deepEqual(
+      exactRunRecoveryDecision({ id: 2, status: 'completed', conclusion, updated_at: recent }, observed),
+      { defer: false, recoveryEligible: true, final: false },
+    );
+  }
+  assert.deepEqual(
+    exactRunRecoveryDecision({ id: 3, status: 'in_progress', conclusion: null, updated_at: old }, observed),
+    {
+      defer: false,
+      recoveryEligible: true,
+      final: false,
+      status: 'RUN_VISIBLE_NOT_CAPTURE_COMPLETE',
+      runId: 3,
+    },
+  );
 });
 
 test('GitHub URLs safely encode workflow filename and date filter', () => {

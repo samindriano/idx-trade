@@ -16,11 +16,6 @@ const officialSlots = [
   ['22 2 * * 1-5', '0922', 'OFFICIAL_OPEN_0922'],
 ];
 
-const officialConcurrencyKey = ({ schedule = '', slot = '' }) => {
-  const resolved = officialSlots.find(([cron, input]) => cron === schedule || input === slot)?.[1] ?? 'ambiguous';
-  return `official-open-cloud-${resolved}`;
-};
-
 test('E2E workflow exposes all exact provenance-only trigger slots', () => {
   const slots = SLOTS.filter((slot) => slot.workflow === 'e2e-paper-cloud-orchestration.yml').map((slot) => slot.id);
   const workflowSlots = [...e2e.matchAll(/\bE2E_(?:PREOPEN_CA_\d{4}|PREOPEN_\d{4}|POST_EOD_\d{4})\b/g)].map((match) => match[0]);
@@ -48,6 +43,11 @@ test('E2E provider checkout cannot dirty the attested deployment worktree', () =
   assert.doesNotMatch(e2e, /path: idx-bei-provider/);
 });
 
+test('E2E and Official Open archive writers are restricted to production main', () => {
+  assert.match(e2e, /paper:\s*\n(?:\s+#.*\n)*\s+if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(officialOpen, /capture:\s*\n(?:\s+#.*\n)*\s+if: github\.ref == 'refs\/heads\/main'/);
+});
+
 test('E2E manual exact identity is trusted only for a matching explicit phase', () => {
   const trustedManualSlot = (phase, slot) => {
     if (phase === 'PREOPEN_CA' && slot.startsWith('E2E_PREOPEN_CA_')) return slot;
@@ -60,14 +60,13 @@ test('E2E manual exact identity is trusted only for a matching explicit phase', 
   assert.equal(trustedManualSlot('auto', 'E2E_PREOPEN_CA_0830'), 'AMBIGUOUS_MANUAL');
 });
 
-test('Official Open native and dispatch same-slot concurrency keys are identical', () => {
+test('Official Open workflow exposes exact native and dispatch slot identities', () => {
   for (const [cron, slot, id] of officialSlots) {
-    assert.equal(officialConcurrencyKey({ schedule: cron }), `official-open-cloud-${slot}`);
-    assert.equal(officialConcurrencyKey({ slot }), `official-open-cloud-${slot}`);
     assert.ok(officialOpen.includes(`github.event.schedule == '${cron}' || inputs.slot == '${slot}'`));
     assert.ok(officialOpen.includes(id));
   }
-  assert.notEqual(officialConcurrencyKey({ schedule: officialSlots[0][0] }), officialConcurrencyKey({ slot: '0912' }));
+  // GitHub workflow concurrency is deliberately not treated as completion or
+  // recovery-safety evidence here. Durable archive admission remains authoritative.
 });
 
 test('Intraday native cron and exact input both expose canonical slot identities', () => {

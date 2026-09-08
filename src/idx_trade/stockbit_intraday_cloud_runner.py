@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 import json
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -17,10 +17,40 @@ from .stockbit_intraday_cloud_archive import (
 from .stockbit_intraday_cloud_storage import build_runtime_snapshot, restore_runtime_snapshot
 from .stockbit_intraday_daily_v2 import DailyCycleResult, default_policy, run_daily_cycle
 from .stockbit_intraday_eod_context import VerifiedIntradayEodContext
-from .stockbit_intraday_runtime import SessionJournal
+from .stockbit_intraday_runtime import JAKARTA, SessionJournal
 
 
 INTRADAY_ROOT_NAME = "intraday"
+SLOT_DUE_TIMES = {
+    "1830": time(18, 30),
+    "1930": time(19, 30),
+    "2030": time(20, 30),
+}
+
+
+def validate_intraday_capture_window(
+    *, expected_date: date, slot: str, now: datetime
+) -> None:
+    """Admit only a current-session intraday recovery objective.
+
+    Intraday completion is a session recovery objective with slot provenance,
+    not a second instantaneous observation at the scheduler's nominal wake-up.
+    A delayed same-day retry may therefore resume residual work, but a future
+    or prior Jakarta date is retroactive/ambiguous and is rejected before any
+    provider stage.  The observation contract closes at the end of the current
+    Jakarta session date; Cloudflare ``latest`` values are dispatch wake-up
+    bounds, not this runner's semantic admission rule.
+    """
+
+    if slot not in SLOT_DUE_TIMES:
+        raise StockbitIntradayCloudError(f"STOCKBIT_INTRADAY_SLOT_INVALID:{slot}")
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_CLOUD_CLOCK_NOT_TIMEZONE_AWARE")
+    local = now.astimezone(JAKARTA)
+    if local.date() != expected_date:
+        raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_RETROACTIVE_SESSION_FORBIDDEN")
+    if local.timetz().replace(tzinfo=None) < SLOT_DUE_TIMES[slot]:
+        raise StockbitIntradayCloudError(f"STOCKBIT_INTRADAY_SLOT_TOO_EARLY:{slot}")
 
 
 def _slot_result_payload(archive: StockbitIntradayCloudArchive, commit: IntradaySlotCommit) -> dict[str, Any]:
@@ -121,11 +151,18 @@ def run_cloud_slot(
 
     if now.tzinfo is None or now.utcoffset() is None:
         raise StockbitIntradayCloudError("STOCKBIT_INTRADAY_CLOUD_CLOCK_NOT_TIMEZONE_AWARE")
+    validate_intraday_capture_window(expected_date=expected_date, slot=slot, now=now)
+
+    existing_complete = archive.existing_complete_slot(expected_date, slot)
+    if existing_complete is not None:
+        _repair_policy_from_existing_final(archive, existing_complete)
+        return existing_complete
 
     existing = archive.existing_slot(expected_date, slot)
     if existing is not None:
-        _repair_policy_from_existing_final(archive, existing)
-        return existing
+        if existing.status == "ADMISSIBLE_COMPLETE":
+            _repair_policy_from_existing_final(archive, existing)
+            return existing
 
     # Do not permit a delayed/manual earlier slot to run after a later slot has
     # already committed. That would create an alternate provider-call history.
