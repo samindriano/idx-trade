@@ -84,7 +84,7 @@ production attempt, not evidence of a production cutover.
 
 ## Validation evidence
 
-At remediation HEAD `5bf0ecdd76dd3872e7ef50b0c695fab2a9c56b46`:
+At remediation HEAD `98d972cd2fcbdc8ec447b739e86ef843edf4848a`:
 
 - Cloudflare Node suite: **117/117 passed**.
 - Full Python suite with the checkout on `PYTHONPATH`: **406 passed**, with the
