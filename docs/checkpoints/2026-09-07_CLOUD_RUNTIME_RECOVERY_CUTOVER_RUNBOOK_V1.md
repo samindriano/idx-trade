@@ -110,8 +110,10 @@ The remediation is scope-aware:
   readiness checker unless its HMAC declaration is added, and runtime absence
   remains fail-closed.
 - `wrangler.production-preparation.jsonc` uses the same Worker name and
-  bindings, but is `observe_only` with no recovery scope and no Cron Triggers.
-  It is the only configuration allowed for the preparation deployment.
+  bindings, but is `observe_only` with the exact
+  `STOCKBIT_INTRADAY_2030` scope and no Cron Triggers. It is the only
+  configuration allowed for the preparation deployment; the declared
+  READ/WRITE secret names do not grant observe-only runtime a dispatch path.
 - `scripts/check-deployment-readiness.mjs` verifies scope-aware secret names,
   entrypoint and scheduled handler, non-stub bundle bytes, deterministic hash/
   size, R2/DO bindings, and expected Cron configuration. Its readback mode
@@ -131,19 +133,22 @@ The remediation is scope-aware:
    and bundle SHA-256. Any missing binding, handler, scope, or Cron is a stop.
 3. **Preparation.** With Windows still the sole automatic controller, deploy
    only `wrangler.production-preparation.jsonc`. This deployment has no Cron
-   Triggers and cannot dispatch. Provision only the separately authorized read
-   token by the secure operator channel; never paste its value into a command,
-   log, checkpoint, or repository. A secret operation is not deployment proof.
+   Triggers and cannot dispatch. Provision the declared READ/WRITE names only
+   through the separately authorized secure operator channel; never paste a
+   value into a command, log, checkpoint, or repository. Observe-only runtime
+   cannot prepare or use the write credential. A secret operation is not
+   deployment proof.
 4. **Preparation read-back.** Confirm the same Worker identity, the new version
    ID, compiled bundle hash/size, scheduled handler, `observe_only` mode, empty
    Cron set, `ARCHIVE -> idx-trade-stockbit-stream-v1`, and
    `COORDINATOR -> SchedulerCoordinator`. If any field is UNKNOWN, retain
    Windows and stop.
-5. **Active secret readiness.** Only after preparation read-back passes, stage
-   the separately authorized write token. The bounded Intraday scope does not
-   require the Official Open HMAC. If scope is ever expanded, add and verify
-   that HMAC through the same secure channel before the readiness checker can
-   pass. Re-run the bundle/readback checks after any secret operation.
+5. **Active secret readiness.** Only after preparation read-back passes, confirm
+   the separately authorized READ/WRITE names remain present. The bounded
+   Intraday scope does not require the Official Open HMAC. If scope is ever
+   expanded, add and verify that HMAC through the same secure channel before
+   the readiness checker can pass. Re-run the bundle/readback checks after any
+   secret operation.
 6. **Handoff precheck.** Announce a maintenance window outside all due/cutoff
    windows. Freeze manual dispatches. Verify no relevant GitHub run, provider
    capture, or watchdog process is in flight, and export/hash the Windows task

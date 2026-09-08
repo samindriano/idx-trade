@@ -24,7 +24,9 @@ credential or the Official Open signing key; both require only
 `GITHUB_ACTIONS_READ_TOKEN`.
 
 `wrangler.production-preparation.jsonc` is the inert same-Worker preparation
-configuration: observe-only, no Cron Triggers, and read capability only.
+configuration: observe-only, the exact Intraday canary scope, no Cron Triggers,
+and declared READ/WRITE secret bindings. Observe-only runtime never prepares or
+uses the write credential.
 `wrangler.production.jsonc` is the explicit active configuration and remains
 undeployed. For the checked-in bounded Intraday scope it requires only separate
 read and write GitHub credentials. The Official Open HMAC signing key is not a
@@ -222,11 +224,22 @@ npm test
 node --check src/index.js
 node --check src/core.mjs
 node --check src/github.mjs
-npm run check:preparation-readiness
-npm run check:production-readiness
+npm run check:preparation-readiness -- --bundle <compiled-index.js> --manifest <candidate.json> \
+  --deployment-list <deployments.json> --version-view <version.json> \
+  --trigger-readback <triggers.json> --settings <settings.json> \
+  --identity-receipt <receipt.json>
+npm run check:production-readiness -- --bundle <compiled-index.js> --manifest <candidate.json> \
+  --deployment-list <deployments.json> --version-view <version.json> \
+  --trigger-readback <triggers.json> --settings <settings.json> \
+  --identity-receipt <receipt.json>
 npx wrangler deploy --dry-run --config wrangler.staging-live.jsonc
 npx wrangler deploy --dry-run --config wrangler.production.jsonc
 ```
+
+The readiness commands intentionally return `BLOCKED` when any artifact is
+omitted; use `scripts/generate-candidate-manifest.mjs` after the dry-run and
+`scripts/generate-deployment-receipt.mjs` from the raw deployment/version
+readback to produce the required artifacts.
 
 Dry-run is validation only; it is not deployment.
 
@@ -237,30 +250,36 @@ deployed. On a Worker with no accepted application version, a secret operation
 can create a valid-looking Worker/version containing only a stub. The safe local
 sequence is:
 
-1. Run the readiness checker against the source entrypoint and record its
-   config hash, bundle size, and bundle SHA-256.
-2. Run Wrangler dry-run with `--outdir` and `--metafile`, then run the checker
-   against the emitted `index.js`. It must prove a scheduled handler, non-stub
-   bytes, the expected R2/DO references, exact active scope, and non-empty Cron
-   configuration when active.
+1. Run the candidate-manifest generator against the selected profile. It runs a
+   Wrangler dry-run when no compiled bundle is supplied and records the exact
+   config bytes, compiled bundle size/SHA-256, Git commit, Wrangler version,
+   vars, pins, bindings, scope, and Cron contract.
+2. Run the readiness checker against that compiled bundle and manifest. The
+   checker requires raw deployment/version/trigger/settings readback plus a
+   generated identity receipt; missing artifacts are intentionally BLOCKED.
+   It must prove a scheduled handler, non-stub bytes, the expected R2/DO
+   references, exact active scope, and non-empty Cron configuration when active.
 3. During preparation, deploy only
    `wrangler.production-preparation.jsonc`. It has no Cron Triggers and is
-   `observe_only`; provisioning its read token cannot activate automatic
-   recovery. Read back the Worker/version and keep the compiled bundle hash.
-4. Provision any separately authorized secrets by the approved secure channel,
-   then repeat the bundle/config read-back. Secret presence is never bundle
-   identity proof.
+   `observe_only`; provision its declared READ/WRITE names only through the
+   approved secure channel. Observe-only runtime cannot prepare or use the
+   write credential. Read back the Worker/version and keep the compiled bundle
+   hash.
+4. After any separately authorized secret operation, repeat the bundle/config
+   read-back. Secret presence is never bundle identity proof.
 5. At the maintenance handoff, outside every relevant slot window, disable the
    Windows controller and prove quiescence. Activate the recorded production
    config only after the Windows state and zero-in-flight checks pass. A failed
    activation/read-back immediately rolls back the active Cron/config and
    restores the last verified Windows task.
 
-The normalized post-deploy read-back contract is checked by
-`validateDeploymentReadback()` and must match the Worker name, new version ID,
-compiled bundle hash/size, entrypoint, scheduled handler, vars/scope, Cron set,
-R2 bucket, and Durable Object class. Worker existence, secret existence, or a
-new version ID alone is insufficient.
+The raw Wrangler readback adapter produces a normalized contract checked by
+`validateDeploymentReadback()`. It must match the Worker name, new version ID,
+candidate identity receipt, compiled bundle hash/size, entrypoint, scheduled
+handler, vars/pins/scope, secret names, Cron set, R2 bucket/type, and Durable
+Object class/type/export. Worker existence, secret existence, or a new version
+ID alone is insufficient. A missing or ambiguous raw field remains UNKNOWN and
+blocks readiness; no hand-edited normalized readback is accepted.
 
 ## Activation gate
 

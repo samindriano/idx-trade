@@ -41,9 +41,12 @@ test('production preparation is the same Worker in inert observe-only/no-Cron mo
   assert.equal(preparation.name, production.name);
   assert.equal(preparation.main, production.main);
   assert.equal(preparation.vars.DISPATCH_MODE, 'observe_only');
-  assert.equal('RECOVERY_ALLOWED_SLOTS' in preparation.vars, false);
+  assert.equal(preparation.vars.RECOVERY_ALLOWED_SLOTS, '["STOCKBIT_INTRADAY_2030"]');
   assert.deepEqual(preparation.triggers, { crons: [] });
-  assert.deepEqual(preparation.secrets.required, ['GITHUB_ACTIONS_READ_TOKEN']);
+  assert.deepEqual(preparation.secrets.required, [
+    'GITHUB_ACTIONS_READ_TOKEN',
+    'GITHUB_ACTIONS_WRITE_TOKEN',
+  ]);
   assert.deepEqual(preparation.r2_buckets, production.r2_buckets);
   assert.deepEqual(preparation.durable_objects, production.durable_objects);
   assert.deepEqual(preparation.exports, production.exports);

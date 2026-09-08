@@ -47,9 +47,10 @@ new version ID are not bundle or readiness evidence.
   any POST. Expanding active scope to Official Open requires the HMAC declaration
   to be added; the readiness checker rejects a mismatch.
 - `wrangler.production-preparation.jsonc` uses the same Worker/bindings in
-  `observe_only` mode with no `RECOVERY_ALLOWED_SLOTS` and no Cron Triggers. It
-  is the safe preparation configuration while Windows remains the automatic
-  controller.
+  `observe_only` mode with the exact `STOCKBIT_INTRADAY_2030` scope and no Cron
+  Triggers. It declares the READ/WRITE secret names for a complete binding
+  shape, while observe-only runtime cannot prepare or use the write token. It
+  is the safe preparation configuration while Windows remains automatic.
 - `src/deployment_readiness.mjs` and
   `scripts/check-deployment-readiness.mjs` provide pure/static checks for:
   scope-aware secret declarations, exact entrypoint, non-stub scheduled bundle,

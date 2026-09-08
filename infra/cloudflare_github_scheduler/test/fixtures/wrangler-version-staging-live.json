@@ -1,0 +1,42 @@
+{
+  "id": "87050d4a-87e8-4d80-b15b-9acc77940e16",
+  "number": 8,
+  "metadata": {
+    "created_on": "2026-09-07T07:10:06.106902Z",
+    "source": "wrangler",
+    "author_id": "redacted",
+    "author_email": "redacted@example.invalid",
+    "has_preview": false
+  },
+  "annotations": {
+    "workers/triggered_by": "upload"
+  },
+  "resources": {
+    "script": {
+      "etag": "6057eb0d7762ceab41bb9c800e416040d447b67e6cbdf7f5944c03ae4221183d",
+      "handlers": ["scheduled"],
+      "named_handlers": [
+        {"name": "SchedulerCoordinator", "handlers": ["class"]}
+      ],
+      "last_deployed_from": "wrangler"
+    },
+    "script_runtime": {
+      "exports": {
+        "SchedulerCoordinator": {"type": "durable-object", "storage": "sqlite"}
+      },
+      "compatibility_date": "2026-08-27",
+      "usage_model": "standard"
+    },
+    "bindings": [
+      {"bucket_name": "idx-trade-stockbit-stream-v1", "name": "ARCHIVE", "type": "r2_bucket"},
+      {"class_name": "SchedulerCoordinator", "name": "COORDINATOR", "namespace_id": "d08b6c3ba065457091f1795eaf03a5c1", "type": "durable_object_namespace"},
+      {"name": "DISPATCH_MODE", "text": "observe_only", "type": "plain_text"},
+      {"name": "E2E_EXPECTED_CODE_COMMIT", "text": "8bc3ee3efd65e8b16478e404e4b226451b105c48", "type": "plain_text"},
+      {"name": "GITHUB_ACTIONS_READ_TOKEN", "type": "secret_text"},
+      {"name": "GITHUB_OWNER", "text": "samindriano", "type": "plain_text"},
+      {"name": "GITHUB_REF", "text": "main", "type": "plain_text"},
+      {"name": "GITHUB_REPO", "text": "idx-trade", "type": "plain_text"},
+      {"name": "OFFICIAL_OPEN_EXPECTED_CODE_COMMIT", "text": "ac29a0552b1785045906f8d608b5371d93e01b73", "type": "plain_text"}
+    ]
+  }
+}
