@@ -144,6 +144,23 @@ test('raw Wrangler readback normalizes durable_object_namespace and JSON scope w
   assert.equal(report.ok, true);
 });
 
+test('raw Wrangler readback accepts the Cloudflare Deployment API result envelope', () => {
+  const version = readJson('wrangler-version-staging-live.json');
+  const deployments = readJson('wrangler-deployments-staging-live.json');
+  const manifest = candidate(stagingLive, 'staging-live');
+  const normalized = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: { success: true, result: { deployments } },
+    versionView: version,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receiptFor(manifest, version, deployments[0]),
+  });
+  assert.equal(normalized.ok, true);
+  assert.equal(normalized.readback.deployment_id, deployments[0].id);
+  assert.equal(normalized.readback.traffic_percentage, 100);
+});
+
 test('raw bundle identity cannot be supplied only by a receipt', () => {
   const version = readJson('wrangler-version-staging-live.json');
   const deployment = readJson('wrangler-deployments-staging-live.json');

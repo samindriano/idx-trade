@@ -10,6 +10,7 @@ function issue(code, detail = undefined) {
 function deploymentArray(raw) {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.deployments)) return raw.deployments;
+  if (Array.isArray(raw?.result?.deployments)) return raw.result.deployments;
   return null;
 }
 
