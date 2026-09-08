@@ -41,14 +41,16 @@ validation_run:
   - Full pytest: 223 passed, exit 0.
   - py_compile/import: PASS.
   - git diff --check: PASS.
-  - Real metadata-only audit: PASS, overall ACCUMULATING_OUTCOME_BLIND.
+  - Real metadata-only audit: `PASS`; protected evaluation remains blocked.
   - Provider calls: false.
   - Protected outcome access: false.
 recommended_next_action: Review the remediation; do not run protected evaluation, publish a real score projection, or create a target materializer in this lane.
 
 ## Remediation addendum
 
-remediation_verdict: V4_X1_PREACCESS_ADAPTER_V1_REMEDIATED_REVIEW_READY
+status: `WAITING`
+status_reason: remediation is ready for review; protected evaluation remains blocked.
+historical_result: `V4_X1_PREACCESS_ADAPTER_V1_REMEDIATED_REVIEW_READY`
 remediation_commit: a1038ae4ba6fcbe6bd4ad0e72e6c230f00705464
 
 The adapter now separates `rolling_partial_inventory_sha256` from

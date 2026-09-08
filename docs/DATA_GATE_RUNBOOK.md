@@ -1,5 +1,12 @@
 # DATA GATE runbook
 
+Status: `WAITING`
+
+Reason: the data foundation gate must pass before model or portfolio research can proceed.
+
+Next: complete the identity, calendar, tradability, price, corporate-action, and
+adversarial checks below, then record the gate result.
+
 The project remains in the **data foundation** phase. Model, support/resistance, probability and Kelly work must stay blocked until the required research period passes this gate.
 
 ## 1. Build official identity reference

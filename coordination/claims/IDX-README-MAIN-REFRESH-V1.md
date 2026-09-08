@@ -1,6 +1,7 @@
 # IDX README Main Refresh V1
 
-- Status: ACTIVE
+- Status: DONE
+- Reason: the README refresh is incorporated in the current repository surface.
 - Owner: ChatGPT/README-Main-Refresh
 - Branch: `docs/readme-main-refresh-v1`
 - Scope: documentation-only refresh of root `README.md`.

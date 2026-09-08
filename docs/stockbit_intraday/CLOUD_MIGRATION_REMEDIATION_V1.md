@@ -75,7 +75,8 @@ The accepted E2E path has a successful manual full-cloud synthetic rehearsal:
 - accepted runtime: `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`
 - production CloudInputBundle manifest SHA-256: `858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee`
 - rehearsal manifest SHA-256: `d6cda2503291c0cc1bf734a10fa741adffea7590090c98487acddfdd8ce40a60`
-- verdict: `SYNTHETIC_FULL_CLOUD_E2E_REHEARSAL_PASS`
+- result: `PASS`
+- technical result code: `SYNTHETIC_FULL_CLOUD_E2E_REHEARSAL_PASS`
 - provider calls: `0`
 - protected outcomes accessed: `false`
 - real R2 create-only/idempotent/conflict/readback behavior: exercised under an isolated throwaway prefix.
@@ -94,8 +95,11 @@ This proves the shared E2E input/R2 boundary exists and is readable. It does **n
 8. If proof fails before a provider call, Windows may remain/return as the live path subject to the prospective window. If cloud already issued provider calls for that session, do not run a duplicate Windows capture merely to compare outputs.
 9. Only after one accepted genuine future-session proof may cloud scheduling be considered for normal operation. Retire Windows scheduling only with explicit acceptance; keep the legacy implementation recoverable for rollback.
 
-## Current verdict
+## Current status
 
-`STOCKBIT_INTRADAY_CLOUD_MIGRATION_REMEDIATION_ACTIVE`
+`WAITING`
+
+The remediation contracts are ready for review. The next step is a dedicated
+smoke, an accepted-E2E bridge preflight, and one genuine future-session proof.
 
 No scheduled Stockbit Intraday GitHub workflow or production `stockbit-intraday-v1` provider capture is authorized merely by this document.

@@ -1,6 +1,7 @@
 # IDX CA-Aware Feature-Basis Remediation V1
 
-Status: `ACTIVE`
+Status: `BLOCKED`
+Reason: source-backed event semantics and market-wide structural-CA coverage remain incomplete.
 Date: 2026-08-27 Asia/Jakarta
 
 Implementation branch: `data/ca-aware-feature-basis-remediation-v1`
@@ -24,7 +25,8 @@ An earlier pre-fix run exposed a faulty synthetic test fixture for rolling-60 re
 
 ## Current boundary
 
-Historical application remains blocked on source-backed event-family semantics, transition sessions/bounds, and market-wide structural-CA no-event coverage.
+The current work is blocked on source-backed event-family semantics, transition
+sessions/bounds, and market-wide structural-CA no-event coverage.
 
 Do not duplicate this remediation lane or silently infer transition dates from listing/record dates or price jumps.
 

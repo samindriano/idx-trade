@@ -1,7 +1,8 @@
 # IDX Stockbit Stream Prospective Archive V2 — Handoff
 
 owner: ChatGPT/Stockbit-Stream-Remediation
-status: `CLOUD_SMOKE_PASS_READY_FOR_ROUTINE_PROMOTION`
+status: `WAITING`
+reason: cloud smoke passed; waiting for the first genuine scheduled run.
 
 ## Decision
 

@@ -8,7 +8,8 @@ Purpose: keep low-priority hypotheses discoverable by future ChatGPT/Codex resea
 
 Recorded: 2026-08-21  
 Priority: low / opportunistic  
-Status: `PARKED_IDEA_ONLY`
+Status: `PARKED`
+Reason: idea only; no experiment is active or authorized.
 
 Source inspiration: Chris Kmer day-trading discussion — https://youtu.be/PL7LKUsCgIQ
 
@@ -26,7 +27,8 @@ Suggested future use: when an agent is explicitly searching for genuinely new al
 
 Recorded: 2026-08-21  
 Priority: medium / opportunistic data capture  
-Status: `PARKED_IDEA_ONLY`
+Status: `PARKED`
+Reason: idea only; no experiment is active or authorized.
 
 Source / acquisition lead: Zapi `finance:stockbit` Stream endpoint — https://zpi.web.id/api/finance/stockbit
 

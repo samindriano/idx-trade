@@ -1,6 +1,7 @@
 # IDX-V4-X1 Decision V1 Rank-Dynamics Diagnosis
 
-- Status: `ACTIVE`
+- Status: `ARCHIVED`
+- Reason: this forensic diagnosis is superseded by the frozen Decision V2 lane.
 - Owner: `ChatGPT/Decision-V1-Rank-Dynamics-Diagnosis`
 - Date: 2026-08-21 Asia/Jakarta
 - Planned branch: `research/idx-v4-x1-decision-v1-rank-dynamics-diagnosis`

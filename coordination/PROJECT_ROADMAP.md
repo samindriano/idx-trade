@@ -1,6 +1,6 @@
 # IDX-Trade — Canonical Project Roadmap
 
-Last updated: 2026-08-22 13:55 Asia/Jakarta
+Last updated: 2026-09-09 Asia/Jakarta
 Canonical location after merge: `origin/main:coordination/PROJECT_ROADMAP.md`
 
 ## Purpose
@@ -47,9 +47,27 @@ Parallel research such as financial PIT, foreign flow, price/trend state, reliab
 
 # 2. Current critical path
 
+## Current summary
+
+| Stage | Status | Progress / blocker | Next |
+|---|---|---|---|
+| 0 — Data / identity / PIT / provenance | `DONE` | The frozen baseline has the required identity, PIT, and provenance structure. | Keep optional historical improvements separate from E2E. |
+| 1 — Alpha / Ranking | `DONE` | V4-X1 Clean is frozen. | Keep alpha unchanged. |
+| 2 — Prospective alpha capture/scoring | `BLOCKED` | Deployment remediation is unresolved; missed sessions cannot be fabricated. | Resolve the operational deployment blocker. |
+| 3 — Decision Policy | `DONE` | Decision V2 is the incumbent and research is closed. | Do not reopen tuning. |
+| 4 — Prospective Decision V2 Shadow | `WAITING` | Waiting to bind fresh frozen alpha ranks to the Decision V2 shadow. | Implement the separate shadow when the E2E lane is ready. |
+| 5 — Portfolio policy + Sizing V1 | `DONE` | Frozen seat-based sizing is retained with residual cash allowed. | Use the existing sizing implementation. |
+| 6 — Execution V1 | `DONE` | Causal next-session execution and pending/non-fill semantics are retained. | Use the existing execution implementation. |
+| 7 — Corporate Action + Accounting Safety | `DONE` | Cash-dividend foundations are complete; unsupported structural CA remains fail-closed. | Use retained safety foundations in E2E. |
+| 8 — E2E Baseline Paper V1 | `ACTIVE` | The primary integration lane is wiring the frozen stack into one restart-safe flow. | Complete the next eligible genuine paper cycle. |
+| 9 — Prospective Paper Evaluation | `WAITING` | Evaluation starts after E2E activation; promotion criteria must be frozen first. | Wait for E2E activation. |
+| 10 — Semi-live / Live | `PARKED` | Later progression is not current work. | Revisit only after whole-stack evaluation and explicit authorization. |
+
 ## Stage 0 — Data / identity / PIT / provenance
 
-**Status:** `MATURE_ENOUGH_FOR_BASELINE`
+**Status:** `DONE`
+
+The frozen baseline has the required identity, PIT, and provenance structure.
 
 The current clean V4-X1 lineage has enough certified identity/PIT/provenance structure for the frozen baseline. Optional historical-data improvements remain useful but must not hold E2E hostage.
 
@@ -65,7 +83,9 @@ Hard rules remain:
 
 ## Stage 1 — Alpha / Ranking
 
-**Status:** `DONE / FROZEN`
+**Status:** `DONE`
+
+V4-X1 Clean is frozen; future alpha changes require a separately named challenger.
 
 Current frozen alpha:
 
@@ -81,7 +101,10 @@ Do not silently modify V4-X1 because downstream Decision/Paper behavior is imper
 
 ## Stage 2 — Prospective alpha capture/scoring
 
-**Status:** `OPERATIONAL BLOCKER TO RESOLVE`
+**Status:** `BLOCKED`
+
+The deployment blocker must be resolved before new prospective score sessions can
+be admitted.
 
 Required path:
 
@@ -105,7 +128,9 @@ The frozen 100-session forward program remains separate and outcome-blind until 
 
 ## Stage 3 — Decision Policy
 
-**Status:** `DONE / FROZEN / RESEARCH CLOSED`
+**Status:** `DONE`
+
+Decision V2 is the frozen incumbent and decision research is closed.
 
 Incumbent: **Decision V2**.
 
@@ -127,7 +152,10 @@ Do not reopen Decision tuning while completing E2E.
 
 ## Stage 4 — Prospective Decision V2 Shadow
 
-**Status:** `NEXT ENGINEERING STEP`
+**Status:** `WAITING`
+
+This stage is waiting for the prospective binding of fresh frozen alpha ranks to
+the Decision V2 shadow.
 
 Bind fresh frozen alpha ranks to Decision V2 prospectively:
 
@@ -151,7 +179,7 @@ No realized outcome/PnL is needed to run this shadow.
 
 ## Stage 5 — Baseline portfolio policy + Sizing V1
 
-**Status:** `DONE / FROZEN`
+**Status:** `DONE`
 
 Baseline is intentionally simple:
 
@@ -172,7 +200,7 @@ Sizing implementation is already present in the retained downstream `integration
 
 ## Stage 6 — Execution V1
 
-**Status:** `DONE / FROZEN / REMEDIATED`
+**Status:** `DONE`
 
 Baseline includes:
 
@@ -193,7 +221,10 @@ Execution code is already retained in `integration/forward-ca-attestation-v1`. D
 
 ## Stage 7 — Corporate Action + Accounting Safety
 
-**Status:** `CASH_DIVIDEND FOUNDATION DONE; STRUCTURAL CA FAIL-CLOSED`
+**Status:** `DONE`
+
+Cash-dividend foundations are complete. Unsupported structural CA transitions
+remain fail-closed; initial E2E integration need not wait for every CA type.
 
 Forward foundations retained:
 
@@ -213,7 +244,7 @@ Do not block initial E2E integration on implementing every possible corporate ac
 
 ## Stage 8 — E2E Baseline Paper V1
 
-**Status:** `HIGHEST PRIORITY`
+**Status:** `ACTIVE`
 
 Planned single primary lane:
 
@@ -295,7 +326,9 @@ Frontend work does not block this milestone.
 
 ## Stage 9 — Prospective Paper Evaluation
 
-**Status:** `FUTURE AFTER E2E ACTIVATION`
+**Status:** `WAITING`
+
+This stage is waiting for E2E activation.
 
 Evaluate the **whole frozen stack**, not just IC.
 
@@ -320,7 +353,10 @@ Promotion criteria must be frozen before using accumulated paper outcomes to jus
 
 ## Stage 10 — Semi-live / Live
 
-**Status:** `FUTURE`
+**Status:** `PARKED`
+
+Semi-live/live progression is not current work and requires explicit future
+authorization.
 
 Possible progression:
 

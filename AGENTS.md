@@ -26,7 +26,7 @@ For every material task:
 1. claim or update the relevant `TEAM_STATUS.md` row before implementation;
 2. do not duplicate another `ACTIVE` scope unless the user explicitly requested independent/adversarial review;
 3. update the row after every material checkpoint, blocker, verdict, ownership change, or branch change;
-4. update it again when the task becomes `REVIEW`, `DONE`, `PARKED`, `WAITING`, or `BLOCKED`;
+4. update it again when the task becomes `ACTIVE`, `WAITING`, `BLOCKED`, `DONE`, `PARKED`, or `ARCHIVED`;
 5. before suggesting a next task, check the ledger first so the suggestion itself does not create duplicate work.
 
 Coordination-only commits directly to `main` are authorized **only for `coordination/TEAM_STATUS.md`**. Implementation/research changes stay on their own branch unless separately authorized. Shared-ledger writes must refetch the latest version, preserve other agents' changes, and never force-push; conflicts are resolved by refetching and reapplying the small status edit.

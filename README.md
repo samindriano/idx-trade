@@ -22,6 +22,16 @@ IDX Trade turns market evidence into a daily cross-sectional research signal, a 
 | Runtime | Cloud-first GitHub Actions + private Cloudflare R2 |
 | Evaluation | Prospective 100-session confirmation separated from model development |
 
+## Current project status
+
+`ACTIVE`
+
+The frozen research and paper stack is being validated through cloud capture and
+prospective operation. The first genuine scheduled cloud market-cycle proof is
+still pending.
+
+Next: observe the next eligible scheduled cycle and verify its immutable evidence.
+
 ## System architecture
 
 ```mermaid
@@ -125,7 +135,8 @@ Foreign flow, reliability/uncertainty, price/trend state, model scoring, Decisio
 
 ## Research stack
 
-The current project is in **prospective system-validation mode**, not continuous model search.
+Project status: **ACTIVE**. The current work is prospective system validation, not
+continuous model search.
 
 ### Alpha
 
@@ -167,13 +178,14 @@ flowchart LR
 
 Current deployment state:
 
-- Official Open cloud capture: **active**;
-- E2E paper cloud scheduler: **active**;
-- Stockbit Stream cloud capture: **active**;
-- synthetic full-cloud E2E rehearsal: **passed**;
-- first genuine scheduled cloud market-cycle acceptance: **pending**;
-- Windows E2E runtime: retained temporarily as fallback until genuine cloud acceptance completes;
-- Stockbit Intraday: still the main capture family being migrated off the local machine.
+| Area | Status | Progress / blocker | Next |
+|---|---|---|---|
+| Official Open cloud capture | `ACTIVE` | Scheduled capture is in place. | Continue scheduled observation. |
+| E2E paper cloud scheduler | `ACTIVE` | Cloud orchestration is active; genuine market-cycle proof is pending. | Verify the next eligible scheduled cycle. |
+| Stockbit Stream cloud capture | `ACTIVE` | Isolated cloud smoke passed; routine production proof is pending. | Observe the next eligible scheduled run. |
+| Synthetic full-cloud rehearsal | `DONE` | Isolated rehearsal passed without provider calls or protected outcomes. | Keep it as regression coverage. |
+| Windows E2E runtime | `WAITING` | Retained as fallback until cloud acceptance is complete. | Keep unchanged for rollback. |
+| Stockbit Intraday migration | `ACTIVE` | Cloud migration is in progress; the local fallback remains available. | Complete one genuine future-session proof. |
 
 The synthetic rehearsal executes the accepted cloud runtime in a real GitHub-hosted runner, reads the production CloudInputBundle from R2, runs the deterministic five-session synthetic replay, verifies snapshot restore and idempotency, and writes only to an isolated throwaway R2 prefix.
 
