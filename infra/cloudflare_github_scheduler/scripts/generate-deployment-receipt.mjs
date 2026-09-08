@@ -6,6 +6,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { CANDIDATE_MANIFEST_SCHEMA, canonicalJson, sha256Bytes } from '../src/candidate_manifest.mjs';
 
 const RECEIPT_SCHEMA = 'IDX-CLOUDFLARE-DEPLOYMENT-RECEIPT-V1';
+const SHA256 = /^[0-9a-f]{64}$/;
 
 function usage() {
   console.error([
@@ -57,6 +58,17 @@ if (args.has('--help') || !args.has('--manifest') || !args.has('--deployment-lis
   const matches = (list ?? []).filter((deployment) => deployment?.versions?.some((entry) => entry.version_id === version.id));
   if (!version.id || matches.length !== 1) throw new Error('DEPLOYMENT_RECEIPT_VERSION_MAPPING_AMBIGUOUS');
   const deployment = matches[0];
+  const remoteBundleSha256 = version.resources?.script?.sha256;
+  const remoteBundleSizeBytes = version.resources?.script?.size_bytes;
+  if (!SHA256.test(remoteBundleSha256 ?? '')
+    || !Number.isInteger(remoteBundleSizeBytes)
+    || remoteBundleSizeBytes <= 0) {
+    throw new Error('RAW_BUNDLE_CONTENT_IDENTITY_REQUIRED');
+  }
+  if (remoteBundleSha256 !== manifest.compiled_bundle_sha256
+    || remoteBundleSizeBytes !== manifest.compiled_bundle_size_bytes) {
+    throw new Error('DEPLOYED_BUNDLE_IDENTITY_MISMATCH');
+  }
   const receipt = {
     schema_version: RECEIPT_SCHEMA,
     candidate_manifest_schema: CANDIDATE_MANIFEST_SCHEMA,

@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import {
   buildCandidateIdentityManifest,
@@ -102,6 +102,15 @@ function wranglerVersion(cwd) {
   return versions.at(-1);
 }
 
+function assertCandidateInputsClean(repoRoot, configDir) {
+  const candidatePath = relative(repoRoot, configDir);
+  if (!candidatePath || candidatePath.startsWith('..')) throw new Error('CANDIDATE_CONFIG_OUTSIDE_REPOSITORY');
+  const status = execFileSync('git', [
+    'status', '--porcelain=v1', '--untracked-files=all', '--', candidatePath,
+  ], { cwd: repoRoot, encoding: 'utf8' }).trim();
+  if (status) throw new Error('CANDIDATE_INPUT_TREE_DIRTY');
+}
+
 const args = argsFrom(process.argv.slice(2));
 if (args.has('--help') || !args.has('--config') || !args.has('--profile')) {
   usage();
@@ -112,6 +121,7 @@ if (args.has('--help') || !args.has('--config') || !args.has('--profile')) {
   const configRaw = readFileSync(configPath);
   const config = JSON.parse(stripJsonComments(configRaw.toString('utf8')));
   const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: configDir, encoding: 'utf8' }).trim();
+  assertCandidateInputsClean(repoRoot, configDir);
   let bundlePath = pathArg(args.get('--bundle'), configDir);
   let generated = false;
   let tempRoot = null;

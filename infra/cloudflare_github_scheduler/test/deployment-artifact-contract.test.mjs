@@ -105,7 +105,9 @@ test('raw Wrangler readback normalizes durable_object_namespace and JSON scope w
     settings: { workers_dev: false },
     identityReceipt: receiptFor(manifest, version, deployments[0]),
   });
-  assert.equal(normalized.ok, true);
+  assert.equal(normalized.ok, false);
+  assert.ok(normalized.issues.some(({ code }) => code === 'RAW_BUNDLE_SHA256_READBACK_MISSING'));
+  assert.ok(normalized.issues.some(({ code }) => code === 'RAW_BUNDLE_SIZE_READBACK_MISSING'));
   assert.equal(normalized.readback.scope_configured, false);
   assert.equal('RECOVERY_ALLOWED_SLOTS' in normalized.readback.vars, false);
   assert.deepEqual(normalized.readback.handlers, ['scheduled']);
@@ -113,7 +115,20 @@ test('raw Wrangler readback normalizes durable_object_namespace and JSON scope w
   assert.equal(normalized.readback.bindings.COORDINATOR.class_name, 'SchedulerCoordinator');
   assert.deepEqual(normalized.readback.secret_names, ['GITHUB_ACTIONS_READ_TOKEN']);
 
-  const report = validateDeploymentReadback(normalized.readback, {
+  const attestedVersion = structuredClone(version);
+  attestedVersion.resources.script.sha256 = manifest.manifest.compiled_bundle_sha256;
+  attestedVersion.resources.script.size_bytes = manifest.manifest.compiled_bundle_size_bytes;
+  const attested = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployments,
+    versionView: attestedVersion,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receiptFor(manifest, attestedVersion, deployments[0]),
+  });
+  assert.equal(attested.ok, true);
+
+  const report = validateDeploymentReadback(attested.readback, {
     workerName: stagingLive.name,
     versionId: version.id,
     deploymentId: deployments[0].id,
@@ -129,6 +144,42 @@ test('raw Wrangler readback normalizes durable_object_namespace and JSON scope w
     expectedImplementationPins: manifest.manifest.expected_implementation_pins,
   });
   assert.equal(report.ok, true);
+});
+
+test('raw bundle identity cannot be supplied only by a receipt', () => {
+  const version = readJson('wrangler-version-staging-live.json');
+  const deployment = readJson('wrangler-deployments-staging-live.json');
+  const manifest = candidate(stagingLive, 'staging-live');
+  const report = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployment,
+    versionView: version,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receiptFor(manifest, version, deployment[0]),
+  });
+  assert.equal(report.readback.bundle_sha256, undefined);
+  assert.ok(report.issues.some(({ code }) => code === 'RAW_BUNDLE_SHA256_READBACK_MISSING'));
+});
+
+test('raw bundle identity rejects a receipt from a different compiled version', () => {
+  const version = readJson('wrangler-version-staging-live.json');
+  const deployment = readJson('wrangler-deployments-staging-live.json');
+  const manifest = candidate(stagingLive, 'staging-live');
+  const differentVersion = structuredClone(version);
+  differentVersion.resources.script.sha256 = 'b'.repeat(64);
+  differentVersion.resources.script.size_bytes = manifest.manifest.compiled_bundle_size_bytes + 1;
+  const report = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployment,
+    versionView: differentVersion,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receiptFor(manifest, differentVersion, deployment[0]),
+  });
+  assert.ok(report.issues.some(({ code }) => code === 'IDENTITY_RECEIPT_BUNDLE_MISMATCH'));
+  assert.ok(report.issues.some(({ code }) => code === 'IDENTITY_RECEIPT_BUNDLE_SIZE_MISMATCH'));
+  assert.equal(report.readback.bundle_sha256, 'b'.repeat(64));
 });
 
 test('known production stub is not deployment proof even at 100 percent traffic', () => {
@@ -223,4 +274,57 @@ test('raw readback fails closed for ambiguous deployment mapping and malformed s
     identityReceipt: wrongReceipt,
   });
   assert.ok(receiptIdentity.issues.some(({ code }) => code === 'IDENTITY_RECEIPT_WORKER_MISMATCH'));
+});
+
+test('raw readback fails closed for duplicate and unknown binding entries', () => {
+  const version = readJson('wrangler-version-staging-live.json');
+  const deployment = readJson('wrangler-deployments-staging-live.json');
+  const manifest = candidate(stagingLive, 'staging-live');
+  const receipt = receiptFor(manifest, version, deployment[0]);
+
+  const duplicate = structuredClone(version);
+  duplicate.resources.bindings.unshift({
+    name: 'ARCHIVE',
+    type: 'r2_bucket',
+    bucket_name: 'wrong-bucket',
+  });
+  const duplicateReport = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployment,
+    versionView: duplicate,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receipt,
+  });
+  assert.ok(duplicateReport.issues.some(({ code }) => code === 'RAW_BINDING_NAME_DUPLICATE'));
+
+  const unknown = structuredClone(version);
+  unknown.resources.bindings.push({ name: 'FUTURE_BINDING', type: 'future_binding_type' });
+  const unknownReport = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployment,
+    versionView: unknown,
+    triggerReadback: { crons: [...PRODUCTION_CRONS] },
+    settings: { workers_dev: false },
+    identityReceipt: receipt,
+  });
+  assert.ok(unknownReport.issues.some(({ code }) => code === 'RAW_BINDING_TYPE_UNKNOWN'));
+});
+
+test('raw readback fails closed for conflicting Cron representations', () => {
+  const version = readJson('wrangler-version-staging-live.json');
+  const deployment = readJson('wrangler-deployments-staging-live.json');
+  const manifest = candidate(stagingLive, 'staging-live');
+  const report = normalizeWranglerReadback({
+    workerName: stagingLive.name,
+    deploymentList: deployment,
+    versionView: version,
+    triggerReadback: {
+      crons: [...PRODUCTION_CRONS],
+      triggers: { crons: [] },
+    },
+    settings: { workers_dev: false },
+    identityReceipt: receiptFor(manifest, version, deployment[0]),
+  });
+  assert.ok(report.issues.some(({ code }) => code === 'RAW_CRON_READBACK_CONFLICTING_SHAPES'));
 });

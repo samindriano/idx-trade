@@ -1,4 +1,5 @@
 export const CLOUDFLARE_READBACK_SCHEMA = 'IDX-CLOUDFLARE-READBACK-V1';
+const SHA256 = /^[0-9a-f]{64}$/;
 
 function issue(code, detail = undefined) {
   return detail === undefined ? { code } : { code, detail };
@@ -11,23 +12,52 @@ function deploymentArray(raw) {
 }
 
 function cronArray(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.crons)) return raw.crons;
-  if (Array.isArray(raw?.triggers?.crons)) return raw.triggers.crons;
-  return undefined;
+  const candidates = [];
+  if (Array.isArray(raw)) candidates.push(raw);
+  if (Array.isArray(raw?.crons)) candidates.push(raw.crons);
+  if (Array.isArray(raw?.triggers?.crons)) candidates.push(raw.triggers.crons);
+  if (!candidates.length) return { value: undefined, issues: [] };
+  const first = JSON.stringify(candidates[0]);
+  const conflicting = candidates.some((candidate) => JSON.stringify(candidate) !== first);
+  return {
+    value: candidates[0],
+    issues: conflicting ? [issue('RAW_CRON_READBACK_CONFLICTING_SHAPES')] : [],
+  };
 }
 
+const KNOWN_BINDING_TYPES = new Set([
+  'plain_text',
+  'secret_text',
+  'r2_bucket',
+  'durable_object_namespace',
+  'durable_object',
+]);
+
 function bindingMap(rawBindings) {
-  if (!Array.isArray(rawBindings)) return null;
-  return rawBindings.reduce((result, binding) => {
-    if (binding && typeof binding.name === 'string') result[binding.name] = binding;
-    return result;
-  }, {});
+  if (!Array.isArray(rawBindings)) return { map: null, issues: [] };
+  const map = {};
+  const issues = [];
+  for (const binding of rawBindings) {
+    if (!binding || typeof binding.name !== 'string' || binding.name.length === 0) {
+      issues.push(issue('RAW_BINDING_ENTRY_INVALID'));
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(map, binding.name)) {
+      issues.push(issue('RAW_BINDING_NAME_DUPLICATE', binding.name));
+      continue;
+    }
+    if (!KNOWN_BINDING_TYPES.has(binding.type)) {
+      issues.push(issue('RAW_BINDING_TYPE_UNKNOWN', { name: binding.name, type: binding.type }));
+    }
+    map[binding.name] = binding;
+  }
+  return { map, issues };
 }
 
 function normalizeBindings(rawBindings) {
-  const raw = bindingMap(rawBindings);
-  if (!raw) return { bindings: null, vars: null, secretNames: null };
+  const mapped = bindingMap(rawBindings);
+  if (!mapped.map) return { bindings: null, vars: null, secretNames: null, issues: [] };
+  const raw = mapped.map;
   const vars = {};
   const secretNames = [];
   const bindings = {};
@@ -54,7 +84,7 @@ function normalizeBindings(rawBindings) {
     }
     bindings[name] = { type: binding.type };
   }
-  return { bindings, vars, secretNames: secretNames.sort() };
+  return { bindings, vars, secretNames: secretNames.sort(), issues: mapped.issues };
 }
 
 function selectDeployment(raw, versionId) {
@@ -112,16 +142,27 @@ export function normalizeWranglerReadback({
   const handlers = rawHandlers(versionView);
   if (!handlers) issues.push(issue('RAW_HANDLER_SET_UNKNOWN'));
   const normalizedBindings = normalizeBindings(versionView.resources?.bindings);
+  issues.push(...(normalizedBindings.issues ?? []));
   if (!normalizedBindings.bindings || !normalizedBindings.vars || !normalizedBindings.secretNames) issues.push(issue('RAW_BINDING_SHAPE_UNKNOWN'));
   const runtime = versionView.resources?.script_runtime;
   const exports = runtime?.exports;
   const compatibilityDate = runtime?.compatibility_date;
-  const crons = cronArray(triggerReadback);
+  const cronResult = cronArray(triggerReadback);
+  const crons = cronResult.value;
+  issues.push(...cronResult.issues);
   const workersDev = settings?.workers_dev;
   if (crons === undefined) issues.push(issue('RAW_CRON_READBACK_MISSING'));
   if (typeof workersDev !== 'boolean') issues.push(issue('RAW_WORKERS_DEV_READBACK_MISSING'));
   if (!exports || typeof exports !== 'object') issues.push(issue('RAW_EXPORT_READBACK_MISSING'));
   if (typeof compatibilityDate !== 'string') issues.push(issue('RAW_COMPATIBILITY_DATE_MISSING'));
+  const rawBundleSha256 = versionView.resources?.script?.sha256;
+  const rawBundleSizeBytes = versionView.resources?.script?.size_bytes;
+  if (typeof rawBundleSha256 !== 'string' || !SHA256.test(rawBundleSha256)) {
+    issues.push(issue('RAW_BUNDLE_SHA256_READBACK_MISSING'));
+  }
+  if (!Number.isInteger(rawBundleSizeBytes) || rawBundleSizeBytes <= 0) {
+    issues.push(issue('RAW_BUNDLE_SIZE_READBACK_MISSING'));
+  }
 
   if (identityReceipt) {
     if (identityReceipt.worker_name !== undefined && identityReceipt.worker_name !== workerName) {
@@ -132,6 +173,12 @@ export function normalizeWranglerReadback({
     if (identityReceipt.remote_script_etag !== undefined
       && identityReceipt.remote_script_etag !== versionView.resources?.script?.etag) {
       issues.push(issue('IDENTITY_RECEIPT_ETAG_MISMATCH'));
+    }
+    if (identityReceipt.bundle_sha256 !== undefined && identityReceipt.bundle_sha256 !== rawBundleSha256) {
+      issues.push(issue('IDENTITY_RECEIPT_BUNDLE_MISMATCH'));
+    }
+    if (identityReceipt.bundle_size_bytes !== undefined && identityReceipt.bundle_size_bytes !== rawBundleSizeBytes) {
+      issues.push(issue('IDENTITY_RECEIPT_BUNDLE_SIZE_MISMATCH'));
     }
   } else {
     issues.push(issue('DEPLOYMENT_IDENTITY_RECEIPT_MISSING'));
@@ -181,8 +228,10 @@ export function normalizeWranglerReadback({
     exports,
     crons,
     remote_script_etag: versionView.resources?.script?.etag,
-    bundle_sha256: identityReceipt?.bundle_sha256,
-    bundle_size_bytes: identityReceipt?.bundle_size_bytes,
+    // Bundle identity must originate in raw version evidence. The receipt is
+    // checked against these fields but is never allowed to supply them.
+    bundle_sha256: rawBundleSha256,
+    bundle_size_bytes: rawBundleSizeBytes,
     config_sha256: identityReceipt?.config_sha256,
     manifest_sha256: identityReceipt?.manifest_sha256,
   };

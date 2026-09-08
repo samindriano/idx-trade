@@ -76,6 +76,14 @@ test('bundle readiness does not treat an unrelated scheduled helper as the handl
   `);
   assert.equal(decoy.ok, false);
   assert.ok(decoy.issues.some(({ code }) => code === 'BUNDLE_HANDLER_SET_MISMATCH'));
+
+  const classDecoy = validateBundleSource(`
+    class NotTheWorkerHandler { scheduled() {} }
+    env.ARCHIVE; env.COORDINATOR; env.RECOVERY_ALLOWED_SLOTS;
+    export default {};
+  `);
+  assert.equal(classDecoy.ok, false);
+  assert.ok(classDecoy.issues.some(({ code }) => code === 'BUNDLE_HANDLER_SET_MISMATCH'));
 });
 
 test('bundle identity rejects wrong bytes and retains exact size/hash checks', () => {
@@ -259,4 +267,14 @@ test('controller preconditions reject zero-controller and dual-controller states
     cloudflare: { mode: 'observe_only', cronActive: false, ready: false },
   });
   assert.equal(windowsPrimary.ok, true);
+});
+
+test('controller state rejects malformed or unknown evidence types', () => {
+  const malformed = validateControllerState({
+    windowsAutomatic: true,
+    watchdogProcessCount: 0,
+    cloudflare: { mode: 'active', cronActive: 'true', ready: true },
+  });
+  assert.equal(malformed.ok, false);
+  assert.ok(malformed.issues.some(({ code }) => code === 'CLOUDFLARE_CRON_STATE_UNKNOWN'));
 });

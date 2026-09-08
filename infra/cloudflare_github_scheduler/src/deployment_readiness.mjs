@@ -262,27 +262,81 @@ export function tokenizeJavaScript(source) {
   return tokens;
 }
 
-function hasFunctionProperty(tokens, name) {
-  return tokens.some((token, index) => {
-    if (token !== name || tokens[index + 1] !== '(') return false;
-    const previous = tokens[index - 1];
-    const beforePrevious = tokens[index - 2];
-    // A helper named `scheduled` is not a Worker handler. Accept method
-    // syntax used by the Wrangler bundle, but reject function declarations.
-    return previous !== 'function'
-      && previous !== '*'
-      && !(previous === 'async' && beforePrevious === 'function');
-  });
-}
-
 function hasMemberAccess(tokens, name) {
   return tokens.some((token, index) => token === '.' && tokens[index + 1] === name);
 }
 
+function matchingDelimiter(tokens, start, open, close) {
+  if (tokens[start] !== open) return null;
+  let depth = 0;
+  for (let index = start; index < tokens.length; index += 1) {
+    if (tokens[index] === open) depth += 1;
+    else if (tokens[index] === close) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return null;
+}
+
+function functionValue(tokens, start, end) {
+  let index = start;
+  if (tokens[index] === 'async') index += 1;
+  if (tokens[index] === 'function') return true;
+  if (tokens[index] !== '(') return false;
+  const close = matchingDelimiter(tokens, index, '(', ')');
+  return close !== null && close < end && tokens[close + 1] === '=>';
+}
+
+function exportedObjectHandlerNames(tokens, openIndex) {
+  const closeIndex = matchingDelimiter(tokens, openIndex, '{', '}');
+  if (closeIndex === null) return [];
+  const names = [];
+  let depth = 1;
+  for (let index = openIndex + 1; index < closeIndex; index += 1) {
+    const token = tokens[index];
+    if (token === '{' || token === '(' || token === '[') {
+      depth += 1;
+      continue;
+    }
+    if (token === '}' || token === ')' || token === ']') {
+      depth -= 1;
+      continue;
+    }
+    if (depth !== 1 || !['scheduled', 'fetch'].includes(token)) continue;
+    if (tokens[index + 1] === '(' || (tokens[index + 1] === ':' && functionValue(tokens, index + 2, closeIndex))) {
+      names.push(token);
+    }
+  }
+  return names;
+}
+
+function defaultExportObjectHandlerNames(tokens) {
+  const names = [];
+  for (let index = 0; index < tokens.length - 2; index += 1) {
+    if (tokens[index] === 'export' && tokens[index + 1] === 'default' && tokens[index + 2] === '{') {
+      names.push(...exportedObjectHandlerNames(tokens, index + 2));
+    }
+    if (tokens[index] !== 'export' || tokens[index + 1] !== '{') continue;
+    const closeIndex = matchingDelimiter(tokens, index + 1, '{', '}');
+    if (closeIndex === null) continue;
+    for (let exportIndex = index + 2; exportIndex < closeIndex - 1; exportIndex += 1) {
+      if (tokens[exportIndex + 1] !== 'as' || tokens[exportIndex + 2] !== 'default') continue;
+      const exportedName = tokens[exportIndex];
+      for (let assignmentIndex = 0; assignmentIndex < index; assignmentIndex += 1) {
+        if (tokens[assignmentIndex] === exportedName && tokens[assignmentIndex + 1] === '=' && tokens[assignmentIndex + 2] === '{') {
+          names.push(...exportedObjectHandlerNames(tokens, assignmentIndex + 2));
+        }
+      }
+    }
+  }
+  return names;
+}
+
 export function inspectBundleStructure(source) {
   const tokens = tokenizeJavaScript(source);
-  const handlerNames = ['scheduled', 'fetch'].filter((name) => hasFunctionProperty(tokens, name));
-  const hasScheduledHandler = hasFunctionProperty(tokens, 'scheduled');
+  const handlerNames = defaultExportObjectHandlerNames(tokens);
+  const hasScheduledHandler = handlerNames.includes('scheduled');
   const references = {
     ARCHIVE: hasMemberAccess(tokens, 'ARCHIVE'),
     COORDINATOR: hasMemberAccess(tokens, 'COORDINATOR'),
@@ -407,8 +461,21 @@ export function validateDeploymentReadback(readback, {
 
 export function validateControllerState({ windowsAutomatic = false, watchdogProcessCount = 0, cloudflare = {} } = {}) {
   const issues = [];
-  const windowsActive = windowsAutomatic || watchdogProcessCount > 0;
-  const cloudflareScheduled = cloudflare.mode === 'active' && cloudflare.cronActive === true;
+  if (typeof windowsAutomatic !== 'boolean') issues.push(issue('WINDOWS_AUTOMATIC_STATE_UNKNOWN'));
+  if (!Number.isInteger(watchdogProcessCount) || watchdogProcessCount < 0) {
+    issues.push(issue('WATCHDOG_PROCESS_COUNT_UNKNOWN'));
+  }
+  if (!cloudflare || typeof cloudflare !== 'object' || Array.isArray(cloudflare)) {
+    issues.push(issue('CLOUDFLARE_STATE_UNKNOWN'));
+  }
+  const cloudflareState = cloudflare && typeof cloudflare === 'object' && !Array.isArray(cloudflare)
+    ? cloudflare
+    : {};
+  if (!['active', 'observe_only'].includes(cloudflareState.mode)) issues.push(issue('CLOUDFLARE_MODE_UNKNOWN'));
+  if (typeof cloudflareState.cronActive !== 'boolean') issues.push(issue('CLOUDFLARE_CRON_STATE_UNKNOWN'));
+  if (typeof cloudflareState.ready !== 'boolean') issues.push(issue('CLOUDFLARE_READINESS_STATE_UNKNOWN'));
+  const windowsActive = windowsAutomatic === true || watchdogProcessCount > 0;
+  const cloudflareScheduled = cloudflareState.mode === 'active' && cloudflareState.cronActive === true;
   // Cron activation is itself an automatic controller, even when its
   // candidate/readiness proof is incomplete. This keeps Windows ON plus any
   // active Cloudflare schedule fail-closed as a dual-controller state.
@@ -417,9 +484,9 @@ export function validateControllerState({ windowsAutomatic = false, watchdogProc
   const cloudflareActive = cloudflareScheduled;
   if (!windowsActive && !cloudflareActive) issues.push(issue('NO_AUTOMATIC_RECOVERY_CONTROLLER'));
   if (windowsActive && cloudflareScheduled) issues.push(issue('MULTIPLE_AUTOMATIC_RECOVERY_CONTROLLERS'));
-  if (cloudflareScheduled && cloudflare.ready !== true) issues.push(issue('CLOUDFLARE_ACTIVE_NOT_READY'));
-  if (!cloudflare.ready && !windowsActive) issues.push(issue('WINDOWS_OFF_CLOUDFLARE_NOT_READY'));
-  if (cloudflareActive && cloudflare.ready === true && cloudflare.bundleReady !== true) {
+  if (cloudflareScheduled && cloudflareState.ready !== true) issues.push(issue('CLOUDFLARE_ACTIVE_NOT_READY'));
+  if (!cloudflareState.ready && !windowsActive) issues.push(issue('WINDOWS_OFF_CLOUDFLARE_NOT_READY'));
+  if (cloudflareActive && cloudflareState.ready === true && cloudflareState.bundleReady !== true) {
     issues.push(issue('CLOUDFLARE_ACTIVE_BUNDLE_NOT_READY'));
   }
   return { ok: issues.length === 0, issues, windowsActive, cloudflareActive, cloudflareScheduled };

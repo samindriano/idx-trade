@@ -2,7 +2,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 import {
   canonicalJson,
@@ -105,7 +105,12 @@ function safeReadJson(path, issues, code) {
     return null;
   }
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    if (!parsed || typeof parsed !== 'object') {
+      issues.push({ code: `${code}_INVALID`, detail: 'JSON_OBJECT_OR_ARRAY_REQUIRED' });
+      return null;
+    }
+    return parsed;
   } catch (error) {
     issues.push({ code: `${code}_INVALID`, detail: String(error.message ?? error) });
     return null;
@@ -114,6 +119,15 @@ function safeReadJson(path, issues, code) {
 
 function currentGitSha(cwd) {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
+}
+
+function candidateInputTreeDirty(cwd) {
+  const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8' }).trim();
+  const candidatePath = relative(repoRoot, cwd);
+  if (!candidatePath || candidatePath.startsWith('..')) throw new Error('CANDIDATE_CONFIG_OUTSIDE_REPOSITORY');
+  return execFileSync('git', [
+    'status', '--porcelain=v1', '--untracked-files=all', '--', candidatePath,
+  ], { cwd: repoRoot, encoding: 'utf8' }).trim();
 }
 
 function installedWranglerVersion(cwd) {
@@ -151,6 +165,12 @@ if (args.has('--help')) {
       ? validateDeploymentConfig(config, { profile })
       : { ok: false, issues: [{ code: 'CONFIG_UNAVAILABLE' }], profile, requiredSecrets: [], scope: { allowedSlotIds: [] }, crons: null };
     issues.push(...configReport.issues);
+    try {
+      const dirty = candidateInputTreeDirty(configDir);
+      if (dirty) issues.push({ code: 'CANDIDATE_INPUT_TREE_DIRTY', detail: dirty });
+    } catch (error) {
+      issues.push({ code: 'CANDIDATE_INPUT_TREE_STATUS_UNRESOLVED', detail: String(error.message ?? error) });
+    }
 
     const bundlePath = pathArg(args.get('--bundle'), configDir);
     const manifestPath = pathArg(args.get('--manifest'), configDir);
@@ -164,10 +184,7 @@ if (args.has('--help')) {
       catch (error) { issues.push({ code: 'COMPILED_BUNDLE_READ_INVALID', detail: String(error.message ?? error) }); }
     }
     if (config) configBytes = readFileSync(configPath);
-    if (manifestPath) {
-      try { manifest = JSON.parse(readFileSync(manifestPath, 'utf8')); }
-      catch (error) { issues.push({ code: 'CANDIDATE_MANIFEST_READ_INVALID', detail: String(error.message ?? error) }); }
-    }
+    manifest = safeReadJson(manifestPath, issues, 'CANDIDATE_MANIFEST_REQUIRED');
 
     let gitCommitSha = null;
     let wranglerVersion = null;
