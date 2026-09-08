@@ -84,9 +84,9 @@ production attempt, not evidence of a production cutover.
 
 ## Validation evidence
 
-At remediation HEAD `f2ae413a5620985f09665729963bf2e8b461e3cc`:
+At remediation HEAD `fca622852d4de2759f8a02b25b6a4f51cc05329d`:
 
-- Cloudflare Node suite: **104/104 passed**.
+- Cloudflare Node suite: **111/111 passed**.
 - Full Python suite with the checkout on `PYTHONPATH`: **406 passed**, with the
   existing three `FutureWarning` messages from `stockbit_intraday_eod_gate.py`.
 - Raw `pytest -q` without the checkout import path failed collection because the
