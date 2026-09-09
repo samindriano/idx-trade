@@ -37,6 +37,10 @@ from idx_trade import v4_x1_clean_forward_score as clean_x1  # noqa: E402
 from idx_trade.e2e_official_open_admission_v2 import (  # noqa: E402
     materialize_official_open_from_cloud_v2,
 )
+from idx_trade.v4_x1_feature_basis_producer_v1 import (  # noqa: E402
+    load_trusted_producer_contract,
+    produce_feature_basis_evidence,
+)
 from idx_trade.v4_x1_eod_pipeline import NO_SCORE_ERRORS  # noqa: E402
 from scripts import run_e2e_paper_cloud_v1 as v1  # noqa: E402
 from scripts import run_e2e_paper_cloud_v2 as v2  # noqa: E402
@@ -88,11 +92,17 @@ def _with_split_observation_clock(
             **forwarded,
         )
 
+    secured_kwargs = dict(kwargs)
+    repo_root = Path(str(secured_kwargs.get("repo_root") or REPO_ROOT)).resolve()
+    secured_kwargs["feature_basis_producer"] = produce_feature_basis_evidence
+    secured_kwargs["trusted_producer_contract"] = load_trusted_producer_contract(
+        repo_root
+    )
     return _ORIGINAL_WITH_RUNTIME_SECURITY_MASTER(
         frozen_pipeline,
         runtime_root,
         model_root,
-        **kwargs,
+        **secured_kwargs,
     )
 
 

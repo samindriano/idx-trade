@@ -77,6 +77,8 @@ def _with_runtime_security_master(
     input_manifest_sha256 = str(
         pipeline_kwargs.pop("population_input_manifest_sha256", "")
     )
+    feature_basis_producer = pipeline_kwargs.pop("feature_basis_producer", None)
+    trusted_producer_contract = pipeline_kwargs.pop("trusted_producer_contract", None)
     gate = PopulationScoreGate(
         clean_x1,
         runtime_root=runtime_root,
@@ -89,6 +91,8 @@ def _with_runtime_security_master(
         runner_path=Path(__file__).resolve(),
         expected_baseline_sha256=clean_x1.EXPECTED_CLEAN_SECURITY_MASTER_SHA256,
         expected_model_manifest_sha256=clean_x1.EXPECTED_MODEL_MANIFEST_SHA256,
+        feature_basis_producer=feature_basis_producer,
+        trusted_producer_contract=trusted_producer_contract,
     )
     try:
         with gate:

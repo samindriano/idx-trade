@@ -494,6 +494,49 @@ def test_score_gate_calls_scorer_once_only_after_safe_admission(
     assert calls == []
 
 
+def test_score_gate_produces_feature_basis_before_admission_and_scorer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = SimpleNamespace()
+    events: list[str] = []
+
+    def scorer(*args, **kwargs):
+        del args, kwargs
+        events.append("score")
+        return {"status": "SCORED"}
+
+    module.score_v4_x1_session = scorer
+    safe = _evaluate()
+
+    def producer(**kwargs):
+        assert kwargs["runtime_root"] == tmp_path
+        events.append("produce")
+        return {"status": gate.BASIS_SAFE, "reason_codes": []}
+
+    def build(**kwargs):
+        assert kwargs["feature_basis_result"]["status"] == gate.BASIS_SAFE
+        events.append("admit")
+        return safe
+
+    monkeypatch.setattr(gate, "build_runtime_population_admission", build)
+    monkeypatch.setattr(
+        gate,
+        "persist_population_attestation",
+        lambda runtime_root, admission: admission,
+    )
+    with gate.PopulationScoreGate(
+        module,
+        runtime_root=tmp_path,
+        clean_panel=tmp_path / "panel.parquet",
+        repo_root=tmp_path,
+        observed_by=f"{SESSION}T18:35:00+07:00",
+        feature_basis_producer=producer,
+    ):
+        result = module.score_v4_x1_session()
+    assert result["status"] == "SCORED"
+    assert events == ["produce", "admit", "score"]
+
+
 def test_shared_delisting_veto_never_invokes_scorer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
