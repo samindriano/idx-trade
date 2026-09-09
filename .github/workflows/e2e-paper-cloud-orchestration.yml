@@ -2,10 +2,14 @@ name: E2E Paper cloud orchestration
 
 on:
   schedule:
-    # GitHub cron is UTC: consumer retries at 09:03/09:13/09:22 and
+    # GitHub cron is UTC: PREOPEN_CA retries at 08:30/08:45/08:55 WIB;
+    # consumer retries at 09:03/09:13/09:22 and
     # 18:35/19:05/19:35 Asia/Jakarta.  The first two retries are deliberately
     # offset from the Official Open producer's 09:02/09:12 slots; the final
     # 09:22 retry remains inside the hard PREOPEN deadline.
+    - cron: "30 1 * * 1-5"
+    - cron: "45 1 * * 1-5"
+    - cron: "55 1 * * 1-5"
     - cron: "3 2 * * 1-5"
     - cron: "13 2 * * 1-5"
     - cron: "22 2 * * 1-5"
@@ -18,7 +22,7 @@ on:
         description: Cloud E2E phase
         required: true
         type: choice
-        options: [auto, PREOPEN, POST_EOD]
+        options: [auto, PREOPEN_CA, PREOPEN, POST_EOD]
       session_date:
         description: Optional current Jakarta session date
         required: false
@@ -35,9 +39,14 @@ concurrency:
 
 jobs:
   paper:
+    # Feature branches may validate code but may never write the canonical
+    # archive or consume production credentials.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
+      # The main-only thin launcher must execute the exact reviewed V4 code.
+      E2E_CLOUD_IMPLEMENTATION_REF: d6fd92a749770fd26da1d730d6ca013d541f5104
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
@@ -59,10 +68,12 @@ jobs:
       - name: Checkout pinned implementation
         uses: actions/checkout@v4
         with:
-          # On the implementation branch this is the exact reviewed commit.
-          # The default-branch thin launcher replaces this with its pinned SHA.
-          ref: ${{ github.sha }}
+          ref: ${{ env.E2E_CLOUD_IMPLEMENTATION_REF }}
           persist-credentials: false
+
+      - name: Verify pinned implementation
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$E2E_CLOUD_IMPLEMENTATION_REF"
 
       - name: Create stable runtime branch identity
         shell: bash
@@ -97,6 +108,7 @@ jobs:
             phase="auto"
           else
             case "$E2E_CLOUD_EVENT_SCHEDULE" in
+              "30 1 * * 1-5"|"45 1 * * 1-5"|"55 1 * * 1-5") phase="PREOPEN_CA" ;;
               "3 2 * * 1-5"|"13 2 * * 1-5"|"22 2 * * 1-5") phase="PREOPEN" ;;
               "35 11 * * 1-5"|"5 12 * * 1-5"|"35 12 * * 1-5") phase="POST_EOD" ;;
               *) echo "Unknown scheduled phase: $E2E_CLOUD_EVENT_SCHEDULE" >&2; exit 2 ;;
@@ -114,4 +126,4 @@ jobs:
           if [[ -n "$E2E_CLOUD_DISPATCH_SESSION_DATE" ]]; then
             args+=(--session-date "$E2E_CLOUD_DISPATCH_SESSION_DATE")
           fi
-          python scripts/run_e2e_paper_cloud_v1.py "${args[@]}"
+          python scripts/run_e2e_paper_cloud_v4.py "${args[@]}"
