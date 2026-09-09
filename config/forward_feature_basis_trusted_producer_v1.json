@@ -1,0 +1,10 @@
+{
+  "producer_id": "idx_trade_forward_feature_basis_producer_v1",
+  "implementation_repository": "samindriano/idx-trade",
+  "implementation_ref": "git://github.com/samindriano/idx-trade@7526b81814ab551a12c96aac9f5dd1bb3b19c638",
+  "implementation_commit": "7526b81814ab551a12c96aac9f5dd1bb3b19c638",
+  "implementation_sha256": "886dc12f2a238bc7b15a81490e6bc1e69dff9788774af067757ebcab0ee6c364",
+  "policy_id": "FORWARD_FEATURE_BASIS_ACCEPTANCE_GATE_V1",
+  "schema_version": "idx_trade_forward_feature_basis_v1",
+  "trust_contract_sha256": "a30fa8c5b3a202cfff3d69b742ab3a10292ee90f01be9abaf6766d21ecc33cd2"
+}
