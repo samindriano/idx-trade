@@ -13,6 +13,7 @@ SMOKE_ROOT_PREFIX = "stockbit-intraday-smoke-v1"
 RESERVED_PRODUCTION_PREFIXES = (
     "stockbit-intraday-v1",
     "e2e-paper-v1",
+    "e2e-paper-v2",
     "official-open-v1",
     "stockbit-stream-v1",
     "stockbit-stream-v2",

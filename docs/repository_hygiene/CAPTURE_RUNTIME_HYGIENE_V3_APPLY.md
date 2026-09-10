@@ -134,7 +134,7 @@ After a successful atomic push:
 3. Prove all 18 intended deleted branch refs are absent (10 merged/contained + 4 superseded sources + 4 temporary archive branches).
 4. Prove protected refs are unchanged from preflight.
 5. Re-read the three workflow files captured before mutation and verify their bytes are unchanged on their owning refs.
-6. Verify Official Open remains pinned by commit SHA / deployment variable contract, Stockbit Stream remains default-branch based, and E2E launcher remains pinned to accepted `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2` unless a separately reviewed deployment changed it.
+6. Verify Official Open remains pinned by commit SHA / deployment variable contract, Stockbit Stream remains default-branch based, and E2E launcher remains pinned to recertified accepted runtime `cbc09210d6a097f2d96c86ada1e58a7c5e591015` unless a separately reviewed deployment changes it.
 7. Do not touch Windows scheduled tasks during this ref cleanup.
 8. Record an exact result checkpoint with pre/post branch count, deleted refs, tag SHAs, main SHA, and confirmation that no runtime/data mutation occurred.
 

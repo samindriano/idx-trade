@@ -21,13 +21,14 @@ from typing import Any, Mapping
 
 
 SCHEMA_VERSION = "idx_trade_e2e_cloud_synthetic_rehearsal_v1"
-ACCEPTED_IMPLEMENTATION_SHA = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
-EXPECTED_INPUT_MANIFEST_SHA256 = "858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee"
-PRODUCTION_INPUT_PREFIX = "e2e-paper-v1"
+ACCEPTED_IMPLEMENTATION_SHA = "cbc09210d6a097f2d96c86ada1e58a7c5e591015"
+EXPECTED_INPUT_MANIFEST_SHA256 = "f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762"
+PRODUCTION_INPUT_PREFIX = "e2e-paper-v2/cbc09210"
 PRODUCTION_INPUT_MANIFEST_KEY = "inputs/manifest.json"
 REHEARSAL_ROOT_PREFIX = "e2e-paper-synthetic-rehearsal-v1"
 RESERVED_WRITE_PREFIXES = (
     "e2e-paper-v1",
+    "e2e-paper-v2",
     "official-open-v1",
     "stockbit-stream-v1",
     "stockbit-stream-v2",
