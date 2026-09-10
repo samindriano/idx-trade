@@ -3,6 +3,12 @@
 Date: 2026-09-10 Asia/Jakarta
 Status: `HISTORICAL_CALENDAR_RECERTIFIED`
 
+Accepted E2E runtime implementation: `cbc09210d6a097f2d96c86ada1e58a7c5e591015`
+with parent `8bc3ee3efd65e8b16478e404e4b226451b105c48`. The runtime's input
+manifest contract binds the historical official calendar and the distinct
+forward-observed session calendar through separate role, summary, source-report,
+coverage, identity, and SHA-256 fields.
+
 ## Scope and boundary
 
 This checkpoint recertifies only the two dates missing from the legacy source

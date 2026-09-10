@@ -32,7 +32,7 @@
       {"bucket_name": "idx-trade-stockbit-stream-v1", "name": "ARCHIVE", "type": "r2_bucket"},
       {"class_name": "SchedulerCoordinator", "name": "COORDINATOR", "namespace_id": "d08b6c3ba065457091f1795eaf03a5c1", "type": "durable_object_namespace"},
       {"name": "DISPATCH_MODE", "text": "observe_only", "type": "plain_text"},
-      {"name": "E2E_EXPECTED_CODE_COMMIT", "text": "8bc3ee3efd65e8b16478e404e4b226451b105c48", "type": "plain_text"},
+      {"name": "E2E_EXPECTED_CODE_COMMIT", "text": "cbc09210d6a097f2d96c86ada1e58a7c5e591015", "type": "plain_text"},
       {"name": "GITHUB_ACTIONS_READ_TOKEN", "type": "secret_text"},
       {"name": "GITHUB_OWNER", "text": "samindriano", "type": "plain_text"},
       {"name": "GITHUB_REF", "text": "main", "type": "plain_text"},

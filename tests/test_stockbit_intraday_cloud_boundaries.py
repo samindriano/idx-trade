@@ -180,6 +180,7 @@ def test_e2e_bridge_accepts_only_exact_recertified_head(monkeypatch, tmp_path: P
     exact = ACCEPTED_E2E_IMPLEMENTATION_SHA
     stale_heads = (
         "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2",
+        "8bc3ee3efd65e8b16478e404e4b226451b105c48",
         "b8ff82373de922455fce7139fb8d144e97cf5bfb",
         "0" * 40,
     )

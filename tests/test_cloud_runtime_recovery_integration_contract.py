@@ -9,7 +9,7 @@ OPEN_WORKFLOW = ROOT / ".github" / "workflows" / "official-open-prospective-clou
 E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml"
 
 OPEN_PIN = "ac29a0552b1785045906f8d608b5371d93e01b73"
-E2E_PIN = "8bc3ee3efd65e8b16478e404e4b226451b105c48"
+E2E_PIN = "cbc09210d6a097f2d96c86ada1e58a7c5e591015"
 
 
 def _cron_values(text: str) -> list[str]:

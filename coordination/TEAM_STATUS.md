@@ -99,7 +99,7 @@ The tables above are the primary view. Exact references remain here for review a
 - **100-session evaluation:** `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1`; `research/idx-v4-x1-prospective-evaluation-protocol-v1`; PR #89 `ops/v4-x1-preaccess-artifact-completion-v1@1c4c6d17`.
 - **Decision:** `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1`.
 - **Sizing/Execution/CA:** `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1`.
-- **E2E cloud:** `.github/workflows/e2e-paper-cloud-orchestration.yml`; Path-A activation `1eaf79c3f949a65346b064521ecb93a14d39b688`; implementation pin `8bc3ee3efd65e8b16478e404e4b226451b105c48`; input bridge `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`.
+- **E2E cloud:** `.github/workflows/e2e-paper-cloud-orchestration.yml`; Path-A activation `1eaf79c3f949a65346b064521ecb93a14d39b688`; implementation pin `cbc09210d6a097f2d96c86ada1e58a7c5e591015`; input bridge `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`.
 - **Cloudflare:** PR #122 `codex/cloud-runtime-recovery-integration-v1@e03893f344c188ae82856bd833c7aa1614f246eb`; final checkpoint `docs/checkpoints/2026-09-08_CLOUDFLARE_VERSION_BYTE_ATTESTATION_V2_FINAL_REWORK.md`.
 - **Cost optimization:** `main@898864b4a8934877dc81086403a2a1068f7a6566`; `docs/checkpoints/ACTIONS_COST_OPTIMIZATION_V1_POST_RESET_MEASUREMENT.md`.
 - **Stockbit Intraday:** `.github/workflows/stockbit-intraday-cloud-production.yml`; activation baseline `53767b2b`; PR #95 implementation and PR #105 schedule.
