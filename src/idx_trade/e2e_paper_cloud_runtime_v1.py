@@ -15,8 +15,9 @@ is accepted.
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 import hashlib
 import io
 import json
@@ -25,6 +26,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any, Iterable, Mapping, Protocol
+from urllib.parse import urlparse
 import zipfile
 
 from .official_trading_schedule_v1 import (
@@ -41,7 +43,8 @@ from .stockbit_stream_archive import (
 
 
 SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_runtime_v1"
-INPUT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_inputs_v1"
+INPUT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_inputs_v2"
+CALENDAR_BINDING_SCHEMA_VERSION = "idx_trade_e2e_calendar_binding_v1"
 SNAPSHOT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_snapshot_v1"
 STAGE_COMMIT_SCHEMA_VERSION = "idx_trade_e2e_paper_cloud_stage_commit_v1"
 CONTRACT_VERSION = "CLOUD_FIRST_E2E_PAPER_V1"
@@ -57,6 +60,12 @@ TERMINAL_STAGE_STATUSES = {
 REQUIRED_INPUT_ROLES = {
     "execution_schedule",
     "execution_schedule_source",
+    "historical_official_calendar",
+    "historical_official_calendar_summary",
+    "historical_official_calendar_sources",
+    "forward_observed_session_calendar",
+    "forward_observed_session_calendar_summary",
+    "forward_observed_session_calendar_sources",
     "clean_panel",
     "clean_security_master",
     "model_manifest",
@@ -66,6 +75,17 @@ REQUIRED_INPUT_ROLES = {
     "model_challenger_h10",
     "model_fit_log",
 }
+CALENDAR_ROLES = (
+    "historical_official_calendar",
+    "forward_observed_session_calendar",
+)
+OFFICIAL_CALENDAR_AUTHORITY = "IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES"
+OFFICIAL_SESSION_SOURCE_IDENTITIES = {
+    "IDX_DIGITAL_STATISTICS_DAILY_TRADING_TABLE",
+    "IDX_DAILY_STATISTICS_PUBLICATION_LISTING",
+}
+OFFICIAL_IDX_HOSTS = {"idx.id", "www.idx.id", "idx.co.id", "www.idx.co.id"}
+CALENDAR_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 FORBIDDEN_SNAPSHOT_PARTS = {
     ".env",
     "credentials",
@@ -79,6 +99,74 @@ FORBIDDEN_SNAPSHOT_PARTS = {
 
 class CloudPaperRuntimeError(RuntimeError):
     """Raised when the cloud runtime cannot prove safe continuation."""
+
+
+def materialize_historical_official_calendar(
+    source: str | Path,
+    runtime_root: str | Path,
+) -> Path:
+    """Materialize the pinned legacy calendar at the scorer's existing fallback path.
+
+    The cloud input bundle verifies the source bytes before this function is
+    called. This second, create-only boundary keeps the frozen scorer's
+    historical-calendar lookup stable across ephemeral cloud runs and refuses
+    to replace a calendar restored from an earlier immutable runtime snapshot.
+    """
+
+    source_path = Path(source).expanduser().resolve()
+    if not source_path.is_file():
+        raise CloudPaperRuntimeError("CLOUD_HISTORICAL_CALENDAR_SOURCE_MISSING")
+    payload = source_path.read_bytes()
+    destination = (
+        Path(runtime_root).expanduser().resolve() / "sessions" / "exchange_sessions.csv"
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        if not destination.is_file() or destination.read_bytes() != payload:
+            raise CloudPaperRuntimeError("CLOUD_HISTORICAL_CALENDAR_LOCAL_COLLISION")
+        return destination
+    try:
+        with destination.open("xb") as handle:
+            handle.write(payload)
+    except FileExistsError:
+        if not destination.is_file() or destination.read_bytes() != payload:
+            raise CloudPaperRuntimeError("CLOUD_HISTORICAL_CALENDAR_LOCAL_COLLISION")
+    return destination
+
+
+def materialize_forward_observed_session_calendar(
+    source: str | Path,
+    runtime_root: str | Path,
+) -> Path:
+    """Materialize the observed-session calendar at the monitor's exact path.
+
+    The observed calendar is a distinct input from the historical scorer
+    prefix.  It is create-only so a restored snapshot or an existing runtime
+    cannot be silently replaced by a stale or role-confused bundle artifact.
+    """
+
+    source_path = Path(source).expanduser().resolve()
+    if not source_path.is_file():
+        raise CloudPaperRuntimeError("CLOUD_FORWARD_OBSERVED_CALENDAR_SOURCE_MISSING")
+    payload = source_path.read_bytes()
+    destination = (
+        Path(runtime_root).expanduser().resolve()
+        / "forward_monitoring"
+        / "calendar"
+        / "exchange_sessions.csv"
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        if not destination.is_file() or destination.read_bytes() != payload:
+            raise CloudPaperRuntimeError("CLOUD_FORWARD_OBSERVED_CALENDAR_LOCAL_COLLISION")
+        return destination
+    try:
+        with destination.open("xb") as handle:
+            handle.write(payload)
+    except FileExistsError:
+        if not destination.is_file() or destination.read_bytes() != payload:
+            raise CloudPaperRuntimeError("CLOUD_FORWARD_OBSERVED_CALENDAR_LOCAL_COLLISION")
+    return destination
 
 
 class CloudObjectStore(Protocol):
@@ -155,6 +243,289 @@ def _json_object(payload: bytes, *, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CloudPaperRuntimeError(f"{label}_NOT_OBJECT")
     return value
+
+
+def _required_calendar_date(value: object, *, label: str) -> str:
+    text = str(value or "").strip()
+    if not CALENDAR_DATE_RE.fullmatch(text):
+        raise CloudPaperRuntimeError(f"{label}_DATE_INVALID")
+    try:
+        parsed = date.fromisoformat(text)
+    except ValueError as exc:
+        raise CloudPaperRuntimeError(f"{label}_DATE_INVALID") from exc
+    if parsed.isoformat() != text:
+        raise CloudPaperRuntimeError(f"{label}_DATE_INVALID")
+    return text
+
+
+def _parse_calendar_csv(payload: bytes, *, role: str) -> tuple[list[str], str]:
+    try:
+        text = payload.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_DATE_SCHEMA_INVALID:" + role) from exc
+    rows = list(csv.reader(io.StringIO(text, newline="")))
+    if not rows or rows[0] != ["date"] or len(rows) == 1:
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_DATE_SCHEMA_INVALID:" + role)
+    dates: list[str] = []
+    for row in rows[1:]:
+        if len(row) != 1:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_DATE_SCHEMA_INVALID:" + role)
+        dates.append(_required_calendar_date(row[0], label="CLOUD_CALENDAR"))
+    if dates != sorted(set(dates)):
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_DATES_NOT_STRICTLY_SORTED:" + role)
+    if any(date.fromisoformat(value).weekday() > 4 for value in dates):
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_WEEKEND_DATE:" + role)
+    canonical = "\n".join(dates).encode("utf-8")
+    return dates, sha256_bytes(canonical)
+
+
+def _official_source_url(value: object, *, role: str) -> str:
+    reference = str(value or "").strip()
+    parsed = urlparse(reference)
+    if (
+        parsed.scheme != "https"
+        or (parsed.hostname or "").lower() not in OFFICIAL_IDX_HOSTS
+    ):
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_AUTHORITY_INVALID:" + role)
+    return reference
+
+
+def _validate_calendar_binding_manifest(
+    payload: Mapping[str, Any],
+    refs: Mapping[str, CloudInputRef],
+    role_paths: Mapping[str, Path],
+) -> dict[str, Mapping[str, Any]]:
+    contract = payload.get("calendar_contract")
+    if not isinstance(contract, Mapping) or contract.get("schema_version") != CALENDAR_BINDING_SCHEMA_VERSION:
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_CONTRACT_MISSING_OR_INVALID")
+    raw_bindings = contract.get("bindings")
+    if not isinstance(raw_bindings, Mapping) or set(raw_bindings) != set(CALENDAR_ROLES):
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_BINDINGS_INVALID")
+
+    bindings: dict[str, Mapping[str, Any]] = {}
+    for role in CALENDAR_ROLES:
+        binding = raw_bindings.get(role)
+        if not isinstance(binding, Mapping) or binding.get("calendar_role") != role:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_ROLE_CONFUSION:" + role)
+        summary_role = f"{role}_summary"
+        source_role = f"{role}_sources"
+        if binding.get("summary_role") != summary_role or binding.get("source_report_role") != source_role:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_COMPANION_ROLE_INVALID:" + role)
+        for companion in (role, summary_role, source_role):
+            if companion not in refs or companion not in role_paths:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_REQUIRED_ROLE_MISSING:" + companion)
+
+        coverage_start = _required_calendar_date(
+            binding.get("coverage_start"), label="CLOUD_CALENDAR_COVERAGE_START"
+        )
+        coverage_end = _required_calendar_date(
+            binding.get("coverage_end"), label="CLOUD_CALENDAR_COVERAGE_END"
+        )
+        if coverage_end < coverage_start:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_COVERAGE_INVALID:" + role)
+        count = binding.get("session_count")
+        if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SESSION_COUNT_INVALID:" + role)
+        expected_sha = _required_sha(
+            binding.get("sessions_sha256"), label="CLOUD_CALENDAR_SESSIONS"
+        )
+        if binding.get("authority") != OFFICIAL_CALENDAR_AUTHORITY:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_AUTHORITY_INVALID:" + role)
+
+        identities = binding.get("source_identities")
+        if not isinstance(identities, list) or not identities:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_IDENTITIES_INVALID:" + role)
+        normalized_identities = [str(value).strip() for value in identities]
+        if len(set(normalized_identities)) != len(normalized_identities) or not set(normalized_identities).issubset(OFFICIAL_SESSION_SOURCE_IDENTITIES):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_IDENTITIES_INVALID:" + role)
+        lineage_status = str(binding.get("lineage_status") or "").strip()
+        expected_lineage = (
+            "OFFICIAL_SINGLE_SOURCE_RESOLVED"
+            if len(normalized_identities) == 1
+            else "OFFICIAL_MULTI_SOURCE_RESOLVED"
+        )
+        if lineage_status != expected_lineage:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_LINEAGE_UNRESOLVED:" + role)
+        source_references = binding.get("source_references")
+        if not isinstance(source_references, list) or not source_references:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REFERENCES_INVALID:" + role)
+        normalized_references = [
+            _official_source_url(value, role=role) for value in source_references
+        ]
+        if len(set(normalized_references)) != len(normalized_references):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REFERENCES_INVALID:" + role)
+
+        calendar_path = role_paths[role]
+        summary_path = role_paths[summary_role]
+        source_path = role_paths[source_role]
+        if role == "historical_official_calendar":
+            if not calendar_path.as_posix().startswith("historical_calendar/"):
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_ROLE_PATH_CONFUSION:" + role)
+            companion_prefix = "historical_calendar/"
+        elif calendar_path.as_posix() != "forward_monitoring/calendar/exchange_sessions.csv":
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_ROLE_PATH_CONFUSION:" + role)
+        else:
+            companion_prefix = "forward_monitoring/calendar/"
+        if not summary_path.as_posix().startswith(companion_prefix) or not source_path.as_posix().startswith(companion_prefix):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_COMPANION_PATH_CONFUSION:" + role)
+        if not summary_path.as_posix().endswith("exchange_session_summary.json"):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_PATH_INVALID:" + role)
+        if not source_path.as_posix().endswith("exchange_session_sources.csv"):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_PATH_INVALID:" + role)
+        for companion in (role, summary_role, source_role):
+            content_type = refs[companion].content_type.lower().split(";", 1)[0].strip()
+            expected_type = "application/json" if companion == summary_role else "text/csv"
+            if content_type != expected_type:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_CONTENT_TYPE_INVALID:" + companion)
+
+        bindings[role] = {
+            **dict(binding),
+            "coverage_start": coverage_start,
+            "coverage_end": coverage_end,
+            "session_count": count,
+            "sessions_sha256": expected_sha,
+            "source_identities": normalized_identities,
+            "source_references": normalized_references,
+        }
+    historical = bindings["historical_official_calendar"]
+    observed = bindings["forward_observed_session_calendar"]
+    if historical["coverage_end"] >= observed["coverage_start"]:
+        raise CloudPaperRuntimeError("CLOUD_CALENDAR_ROLE_COVERAGE_OVERLAP")
+    boundary_cursor = date.fromisoformat(historical["coverage_end"]) + timedelta(days=1)
+    observed_start = date.fromisoformat(observed["coverage_start"])
+    unexplained_weekdays: list[str] = []
+    while boundary_cursor < observed_start:
+        if boundary_cursor.weekday() < 5:
+            unexplained_weekdays.append(boundary_cursor.isoformat())
+        boundary_cursor += timedelta(days=1)
+    if unexplained_weekdays:
+        raise CloudPaperRuntimeError(
+            "CLOUD_CALENDAR_ROLE_COVERAGE_DISCONTINUOUS:"
+            + ",".join(unexplained_weekdays)
+        )
+    return bindings
+
+
+def _validate_calendar_artifacts(
+    payload: Mapping[str, Any],
+    refs: Mapping[str, CloudInputRef],
+    role_paths: Mapping[str, Path],
+    raw_by_role: Mapping[str, bytes],
+) -> None:
+    bindings = _validate_calendar_binding_manifest(payload, refs, role_paths)
+    for role, binding in bindings.items():
+        summary_role = f"{role}_summary"
+        source_role = f"{role}_sources"
+        dates, sessions_sha = _parse_calendar_csv(raw_by_role[role], role=role)
+        if sessions_sha != binding["sessions_sha256"]:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SESSIONS_SHA_MISMATCH:" + role)
+        if len(dates) != binding["session_count"]:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SESSION_COUNT_MISMATCH:" + role)
+        if dates[0] != binding["coverage_start"] or dates[-1] != binding["coverage_end"]:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_COVERAGE_MISMATCH:" + role)
+
+        summary = _json_object(raw_by_role[summary_role], label="CLOUD_CALENDAR_SUMMARY")
+        summary_start = _required_calendar_date(
+            summary.get("start"), label="CLOUD_CALENDAR_SUMMARY_START"
+        )
+        summary_end = _required_calendar_date(
+            summary.get("end"), label="CLOUD_CALENDAR_SUMMARY_END"
+        )
+        summary_count = summary.get("exchange_sessions", summary.get("count"))
+        if not isinstance(summary_count, int) or isinstance(summary_count, bool):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_COUNT_INVALID:" + role)
+        if (
+            summary_start != binding["coverage_start"]
+            or summary_end != binding["coverage_end"]
+            or summary_count != binding["session_count"]
+            or summary.get("sessions_sha256") != sessions_sha
+        ):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_STALE:" + role)
+        if summary.get("source") not in (None, OFFICIAL_CALENDAR_AUTHORITY):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_AUTHORITY_INVALID:" + role)
+        summary_ids = summary.get("source_identities")
+        if not isinstance(summary_ids, list) or set(map(str, summary_ids)) != set(binding["source_identities"]):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_LINEAGE_MISMATCH:" + role)
+        if summary.get("source_identity") in {"MULTI_SOURCE_OR_UNRESOLVED", "IDX_SESSION_SOURCE_UNRESOLVED"}:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_LINEAGE_UNRESOLVED:" + role)
+        summary_references = summary.get("source_references")
+        if summary_references is not None:
+            if not isinstance(summary_references, list):
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_LINEAGE_MISMATCH:" + role)
+            normalized_summary_references = {
+                _official_source_url(value, role=role) for value in summary_references
+            }
+            if normalized_summary_references != set(binding["source_references"]):
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_LINEAGE_MISMATCH:" + role)
+        if summary.get("complete") is False or summary.get("error_months", 0) != 0:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SUMMARY_INCOMPLETE:" + role)
+
+        try:
+            source_text = raw_by_role[source_role].decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_INVALID:" + role) from exc
+        reader = csv.DictReader(io.StringIO(source_text, newline=""))
+        required_columns = {
+            "year",
+            "month",
+            "source_identity",
+            "source_ref",
+            "status",
+            "sessions_in_requested_range",
+            "error",
+        }
+        if not reader.fieldnames or not required_columns.issubset(set(reader.fieldnames)):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_SCHEMA_INVALID:" + role)
+        source_rows = list(reader)
+        if not source_rows:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_EMPTY:" + role)
+        calendar_month_counts: dict[str, int] = {}
+        for session_date in dates:
+            month_key = session_date[:7]
+            calendar_month_counts[month_key] = calendar_month_counts.get(month_key, 0) + 1
+        seen_identities: set[str] = set()
+        seen_references: set[str] = set()
+        reported_month_counts: dict[str, int] = {}
+        reported_count = 0
+        for row in source_rows:
+            if row.get("status") != "PARSED" or str(row.get("error") or "").strip():
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_NOT_PARSED:" + role)
+            identity = str(row.get("source_identity") or "").strip()
+            reference = _official_source_url(row.get("source_ref"), role=role)
+            if identity not in binding["source_identities"] or identity not in OFFICIAL_SESSION_SOURCE_IDENTITIES:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_IDENTITY_INVALID:" + role)
+            if reference not in binding["source_references"]:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_REFERENCE_INVALID:" + role)
+            try:
+                row_count = int(str(row.get("sessions_in_requested_range") or ""))
+            except ValueError as exc:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_COUNT_INVALID:" + role) from exc
+            if row_count < 0:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_COUNT_INVALID:" + role)
+            try:
+                row_year = int(str(row.get("year") or ""))
+                row_month = int(str(row.get("month") or ""))
+            except ValueError as exc:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_PERIOD_INVALID:" + role) from exc
+            if not 1 <= row_month <= 12:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_PERIOD_INVALID:" + role)
+            month_key = f"{row_year:04d}-{row_month:02d}"
+            if month_key not in calendar_month_counts:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_DATE_SCOPE_INVALID:" + role)
+            if month_key in reported_month_counts:
+                raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_MONTH_DUPLICATE:" + role)
+            seen_identities.add(identity)
+            seen_references.add(reference)
+            reported_month_counts[month_key] = row_count
+            reported_count += row_count
+        if seen_identities != set(binding["source_identities"]):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_LINEAGE_MISMATCH:" + role)
+        if seen_references != set(binding["source_references"]):
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_REFERENCE_MISMATCH:" + role)
+        if reported_month_counts != calendar_month_counts:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_COVERAGE_MISMATCH:" + role)
+        if reported_count != binding["session_count"]:
+            raise CloudPaperRuntimeError("CLOUD_CALENDAR_SOURCE_REPORT_COVERAGE_MISMATCH:" + role)
 
 
 def _validate_persisted_official_open_admission(
@@ -444,6 +815,11 @@ class CloudInputBundle:
         for required in REQUIRED_INPUT_ROLES:
             if required not in role_paths:
                 raise CloudPaperRuntimeError("CLOUD_INPUT_ROLE_PATH_MISSING:" + required)
+        _validate_calendar_binding_manifest(
+            payload,
+            {ref.role: ref for ref in refs},
+            role_paths,
+        )
         expected_payload_sha = payload.get("manifest_payload_sha256")
         if expected_payload_sha is not None:
             declared = _required_sha(expected_payload_sha, label="CLOUD_INPUT_PAYLOAD")
@@ -455,13 +831,18 @@ class CloudInputBundle:
 
     def materialize(self, store: CloudObjectStore, root: str | Path) -> dict[str, Path]:
         destination = Path(root).expanduser().resolve()
-        destination.mkdir(parents=True, exist_ok=True)
         by_role = {ref.role: ref for ref in self.refs}
-        output: dict[str, Path] = {}
+        raw_by_role: dict[str, bytes] = {}
         for ref in self.refs:
             raw = store.read(ref.key)
             if raw is None or sha256_bytes(raw) != ref.sha256:
                 raise CloudPaperRuntimeError("CLOUD_INPUT_ARTIFACT_SHA_MISMATCH:" + ref.role)
+            raw_by_role[ref.role] = raw
+        _validate_calendar_artifacts(self.payload, by_role, self.roles, raw_by_role)
+        destination.mkdir(parents=True, exist_ok=True)
+        output: dict[str, Path] = {}
+        for ref in self.refs:
+            raw = raw_by_role[ref.role]
             path = destination / Path(ref.relative_path)
             path.parent.mkdir(parents=True, exist_ok=True)
             if path.exists():
@@ -1169,6 +1550,8 @@ __all__ = [
     "build_runtime_snapshot",
     "canonical_json_bytes",
     "load_schedule_from_bundle",
+    "materialize_forward_observed_session_calendar",
+    "materialize_historical_official_calendar",
     "materialize_official_open_from_cloud",
     "restore_runtime_snapshot",
     "sha256_bytes",

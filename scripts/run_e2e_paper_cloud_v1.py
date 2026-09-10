@@ -38,6 +38,8 @@ from idx_trade.e2e_paper_cloud_runtime_v1 import (  # noqa: E402
     build_cloud_store_from_env,
     build_runtime_snapshot,
     load_schedule_from_bundle,
+    materialize_forward_observed_session_calendar,
+    materialize_historical_official_calendar,
     materialize_official_open_from_cloud,
     OFFICIAL_OPEN_EXECUTION_END,
     restore_runtime_snapshot,
@@ -330,6 +332,14 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
         restore_runtime_snapshot(snapshot_bytes, roots, expected_sha256=snapshot_sha)
     for root in roots.values():
         root.mkdir(parents=True, exist_ok=True)
+    historical_calendar_path = materialize_historical_official_calendar(
+        roles["historical_official_calendar"],
+        roots["forward"],
+    )
+    observed_calendar_path = materialize_forward_observed_session_calendar(
+        roles["forward_observed_session_calendar"],
+        roots["forward"],
+    )
 
     run_id = f"{now.astimezone(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
     archive.record_attempt(
@@ -410,6 +420,10 @@ def run_once(*, phase: str | None = None, session_date: str | None = None) -> di
         status=status,
         official_open_admission=official_open_admission,
     )
+    result["historical_official_calendar_path"] = str(historical_calendar_path)
+    result["historical_official_calendar_sha256"] = _sha(historical_calendar_path)
+    result["forward_observed_session_calendar_path"] = str(observed_calendar_path)
+    result["forward_observed_session_calendar_sha256"] = _sha(observed_calendar_path)
     if controller_status in EXPECTED_TERMINAL:
         snapshot, snapshot_sha, snapshot_meta = build_runtime_snapshot(roots)
         commit = archive.commit_stage(
