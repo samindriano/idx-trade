@@ -71,6 +71,10 @@ A real cloud run requires exact `STOCKBIT_INTRADAY_EXPECTED_IMPLEMENTATION_REF`;
 
 The accepted E2E path has a successful manual full-cloud synthetic rehearsal:
 
+The rehearsal below is historical evidence from the former `043003ee` runtime;
+it is retained as event-time provenance and does not establish current
+production proof for the recertified `8bc3ee3` authority above.
+
 - workflow run: `32959923100`
 - accepted runtime: `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`
 - production CloudInputBundle manifest SHA-256: `858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee`

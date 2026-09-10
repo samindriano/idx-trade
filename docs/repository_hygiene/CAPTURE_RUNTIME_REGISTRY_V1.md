@@ -64,7 +64,7 @@ These heads are already merged/contained in a live canonical lineage. Removing t
 |---|---|
 | `ops/idx-official-open-r2-cloud-capture-v1` | PR #90 merged; implementation retained in accepted E2E integration lineage. |
 | `ops/idx-official-open-cloud-scheduler-v1` | PR #91 merged to `main`; scheduler workflow is retained on default branch. |
-| `integration/e2e-cloud-first-orchestration-v1` | PR #92 merged; accepted integration merge SHA `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`. |
+| `integration/e2e-cloud-first-orchestration-v1` | PR #92 merged; historical integration merge SHA `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`. |
 | `integration/forward-eod-automation-monitoring` | fully contained by current E2E integration ancestry; no active PR. |
 | `integration/v4-x1-eod-auto-score-v1` | fully contained by current E2E integration ancestry; no active PR. |
 | `fix/stockbit-stream-zapi-envelope-v1` | PR #35 merged. |
