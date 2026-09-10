@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      STOCKBIT_INTRADAY_E2E_PREFIX: e2e-paper-v1
+      STOCKBIT_INTRADAY_E2E_PREFIX: e2e-paper-v2/cbc09210
       STOCKBIT_INTRADAY_E2E_INPUT_MANIFEST_KEY: inputs/manifest.json
       STOCKBIT_INTRADAY_ACCEPTED_E2E_ROOT: ${{ github.workspace }}/accepted-e2e
       STOCKBIT_INTRADAY_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com

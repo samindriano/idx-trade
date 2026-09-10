@@ -142,7 +142,7 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
     assert "PYTHONPATH" not in child
     assert "PYTHONNOUSERSITE" not in child
     assert child["E2E_CLOUD_STORAGE_BACKEND"] == "s3"
-    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v1"
+    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v2/cbc09210"
     assert child["PATH"] == values["PATH"]
     assert child["HOME"] == values["HOME"]
     assert "STOCKBIT_INTRADAY_E2E_BRIDGE_WRITE_FORBIDDEN" in _CHILD_CODE
@@ -151,7 +151,7 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
 
 def test_e2e_bridge_rejects_noncanonical_read_prefix_before_child_launch(tmp_path: Path):
     values = _storage_values()
-    for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "../e2e-paper-v1"):
+    for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "e2e-paper-v1", "../e2e-paper-v2"):
         values["STOCKBIT_INTRADAY_E2E_PREFIX"] = prefix
         with pytest.raises(StockbitIntradayE2EBridgeError, match="E2E_PREFIX_INVALID"):
             _child_env(values, tmp_path / "accepted")

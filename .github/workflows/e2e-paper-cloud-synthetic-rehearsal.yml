@@ -16,13 +16,13 @@ jobs:
     timeout-minutes: 60
     env:
       ACCEPTED_RUNTIME_REF: cbc09210d6a097f2d96c86ada1e58a7c5e591015
-      EXPECTED_INPUT_MANIFEST_SHA256: 858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee
+      EXPECTED_INPUT_MANIFEST_SHA256: f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
       E2E_CLOUD_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
+      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v2/cbc09210
       E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json
 
     steps:

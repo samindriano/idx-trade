@@ -59,7 +59,7 @@ Snapshot paths reject traversal, forbidden secret/outcome paths, duplicate entri
 
 ### R7 — canonical schedule and accepted E2E bridge
 
-The bridge reads only `e2e-paper-v1` through exact accepted runtime
+The bridge reads only `e2e-paper-v2/cbc09210` through exact accepted runtime
 `cbc09210d6a097f2d96c86ada1e58a7c5e591015`. The accepted checkout must be
 exact and clean. Its child Python process runs isolated and receives only
 minimal process environment plus R2 credentials; provider/account secrets are
@@ -91,6 +91,21 @@ production proof for the recertified `cbc09210` authority above.
 - real R2 create-only/idempotent/conflict/readback behavior: exercised under an isolated throwaway prefix.
 
 This proves the shared E2E input/R2 boundary exists and is readable. It does **not** substitute for the dedicated Intraday smoke or a genuine future-session Intraday proof.
+
+## Current v2 input bundle binding
+
+The current production input bundle is published under the new immutable
+namespace `e2e-paper-v2/cbc09210`. Its full manifest key is
+`e2e-paper-v2/cbc09210/inputs/manifest.json`, with manifest SHA-256
+`f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762`.
+It contains 16 role-bound objects: the 10 byte-identical v1 schedule/panel/
+security/model inputs plus separate historical-official and forward-observed
+calendar CSV, summary, and source-report roles. The historical role binds the
+recertified 1260-session calendar and the forward role binds the 26-session
+observed package; their union is 1286 sessions. The 17 new objects were created
+with `If-None-Match: *`, the manifest was written last, and each object was read
+back and hash-verified. This is input provisioning evidence only, not capture or
+provider proof.
 
 ## Remaining migration order
 

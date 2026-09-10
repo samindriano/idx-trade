@@ -18,6 +18,7 @@ def test_smoke_prefix_must_be_unique_and_inside_throwaway_root():
         "stockbit-intraday-smoke-v1",
         "stockbit-intraday-v1/run-123",
         "e2e-paper-v1/run-123",
+        "e2e-paper-v2/cbc09210/run-123",
         "stockbit-intraday-smoke-v1/a/b",
         "../stockbit-intraday-smoke-v1/run-123",
     ):
