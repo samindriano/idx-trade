@@ -33,14 +33,14 @@ jobs:
       - name: Checkout exact accepted E2E runtime
         uses: actions/checkout@v4
         with:
-          ref: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+          ref: 8bc3ee3efd65e8b16478e404e4b226451b105c48
           path: accepted-e2e
           persist-credentials: false
 
       - name: Verify accepted E2E checkout
         shell: bash
         run: |
-          test "$(git -C accepted-e2e rev-parse HEAD)" = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
+          test "$(git -C accepted-e2e rev-parse HEAD)" = "8bc3ee3efd65e8b16478e404e4b226451b105c48"
           test -z "$(git -C accepted-e2e status --porcelain=v1 --untracked-files=all)"
 
       - name: Setup Python

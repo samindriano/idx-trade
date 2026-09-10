@@ -19,7 +19,7 @@ from .stockbit_intraday_eod_context import (
 )
 
 
-ACCEPTED_E2E_IMPLEMENTATION_SHA = "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2"
+ACCEPTED_E2E_IMPLEMENTATION_SHA = "8bc3ee3efd65e8b16478e404e4b226451b105c48"
 DEFAULT_E2E_PREFIX = "e2e-paper-v1"
 DEFAULT_INPUT_MANIFEST_KEY = "inputs/manifest.json"
 _PASSTHROUGH_ENV = (

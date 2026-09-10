@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      ACCEPTED_RUNTIME_REF: 043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2
+      ACCEPTED_RUNTIME_REF: 8bc3ee3efd65e8b16478e404e4b226451b105c48
       EXPECTED_INPUT_MANIFEST_SHA256: 858327909343a887c54fbc5e3bea4dafe6f7a8b89f2422a313b954dee04c08ee
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
