@@ -1,7 +1,8 @@
 # CBC09210 Production Candidate Integration V1
 
 Date: 2026-09-10 Asia/Jakarta
-Status: `REVIEW_READY_PENDING_VALIDATION`
+Status: `REVIEW_READY`
+Technical verdict: `CBC09210_PRODUCTION_CANDIDATE_REVIEW_READY`
 
 ## Candidate boundary
 
@@ -58,3 +59,9 @@ Intraday-reader replay, focused and full repository tests, compileall, diff
 check, and stale-pin classification. Static or offline evidence does not
 substitute for genuine scheduled production trigger or provider/capture proof;
 that proof remains pending and outside this candidate integration.
+
+Validation completed: cbc offline replay passed; focused Python contracts passed;
+candidate-wide pytest exited 0; Cloudflare contract tests passed `126/126`;
+compileall exited 0; all 10 workflow YAML files parsed; and `git diff --check`
+was clean. PR #123 hosted `pytest` passed in 2m29s. The hosted E2E preflight was
+skipped by workflow policy and no production-facing preflight was dispatched.
