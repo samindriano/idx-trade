@@ -1,6 +1,6 @@
 # Historical Calendar Provenance Recertification V1
 
-Date: 2026-09-10 Asia/Jakarta  
+Date: 2026-09-10 Asia/Jakarta
 Status: `HISTORICAL_CALENDAR_RECERTIFIED`
 
 ## Scope and boundary
@@ -76,4 +76,3 @@ The prepared authoritative-calendar -> POST_EOD -> canonical Intraday reader
 tests passed. The exact-main reader also accepted the real 2026-09-09 artifact:
 963 records, manifest SHA-256
 `ba795905e51ef4632cbc1dee0964dda642112cd348e94b13ef06a17309712b39`.
-
