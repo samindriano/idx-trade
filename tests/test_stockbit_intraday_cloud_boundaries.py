@@ -192,3 +192,20 @@ def test_e2e_bridge_accepts_only_exact_recertified_head(monkeypatch, tmp_path: P
             match="STOCKBIT_INTRADAY_ACCEPTED_E2E_HEAD_MISMATCH",
         ):
             validate_accepted_e2e_checkout(accepted)
+
+
+def test_operational_refs_match_recertified_e2e_head() -> None:
+    workflow_paths = (
+        REPO_ROOT / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml",
+        REPO_ROOT / ".github" / "workflows" / "e2e-paper-cloud-synthetic-rehearsal.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-cloud-production.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-e2e-bridge-preflight-v1.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-e2e-preflight-pr95.yml",
+    )
+    for path in workflow_paths:
+        text = path.read_text(encoding="utf-8")
+        assert ACCEPTED_E2E_IMPLEMENTATION_SHA in text, path
+    rehearsal = (REPO_ROOT / "scripts" / "run_e2e_cloud_synthetic_rehearsal_v1.py").read_text(
+        encoding="utf-8"
+    )
+    assert ACCEPTED_E2E_IMPLEMENTATION_SHA in rehearsal
