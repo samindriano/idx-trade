@@ -12,8 +12,8 @@ import { exactRunRecoveryDecision } from './core.mjs';
 
 export const ARCHIVE_BUCKET_NAME = 'idx-trade-stockbit-stream-v1';
 export const ARCHIVE_PREFIX = Object.freeze({
-  E2E: 'e2e-paper-v1',
-  PREOPEN_CA: 'e2e-paper-v1',
+  E2E: 'e2e-paper-v2/cbc09210',
+  PREOPEN_CA: 'e2e-paper-v2/cbc09210',
   OFFICIAL_OPEN: 'official-open-v1',
   INTRADAY: 'stockbit-intraday-v1',
 });
@@ -76,6 +76,62 @@ function safeRelative(value) {
     || value.split('/').some((part) => part === '' || part === '.' || part === '..')
   ) fail('ARCHIVE_PREOPEN_INPUT_MANIFEST_INVALID');
   return value;
+}
+
+function validateV2CalendarContract(manifest, refsByRole) {
+  const contract = manifest.calendar_contract;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract) || contract.schema_version !== 'idx_trade_e2e_calendar_binding_v1') {
+    fail('ARCHIVE_PREOPEN_CALENDAR_CONTRACT_INVALID');
+  }
+  const bindings = contract.bindings;
+  const calendarRoles = ['historical_official_calendar', 'forward_observed_session_calendar'];
+  if (!bindings || typeof bindings !== 'object' || Array.isArray(bindings) || Object.keys(bindings).sort().join('|') !== calendarRoles.slice().sort().join('|')) {
+    fail('ARCHIVE_PREOPEN_CALENDAR_BINDINGS_INVALID');
+  }
+  const allowedIdentities = new Set([
+    'IDX_DIGITAL_STATISTICS_DAILY_TRADING_TABLE',
+    'IDX_DAILY_STATISTICS_PUBLICATION_LISTING',
+  ]);
+  for (const role of calendarRoles) {
+    const binding = bindings[role];
+    const summaryRole = `${role}_summary`;
+    const sourceRole = `${role}_sources`;
+    if (!binding || typeof binding !== 'object' || Array.isArray(binding) || binding.calendar_role !== role || binding.summary_role !== summaryRole || binding.source_report_role !== sourceRole) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_ROLE_INVALID');
+    }
+    for (const companion of [role, summaryRole, sourceRole]) {
+      if (!refsByRole.has(companion)) fail('ARCHIVE_PREOPEN_CALENDAR_REQUIRED_ROLE_MISSING');
+    }
+    const calendarRef = refsByRole.get(role);
+    const summaryRef = refsByRole.get(summaryRole);
+    const sourceRef = refsByRole.get(sourceRole);
+    const expectedPrefix = role === 'historical_official_calendar' ? 'historical_calendar/' : 'forward_monitoring/calendar/';
+    if (role === 'forward_observed_session_calendar' && calendarRef.relative_path !== 'forward_monitoring/calendar/exchange_sessions.csv') {
+      fail('ARCHIVE_PREOPEN_CALENDAR_PATH_INVALID');
+    }
+    if (!calendarRef.relative_path.startsWith(expectedPrefix) || !summaryRef.relative_path.startsWith(expectedPrefix) || !sourceRef.relative_path.startsWith(expectedPrefix)) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_PATH_INVALID');
+    }
+    if (!summaryRef.relative_path.endsWith('exchange_session_summary.json') || !sourceRef.relative_path.endsWith('exchange_session_sources.csv')) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_COMPANION_PATH_INVALID');
+    }
+    if (calendarRef.content_type.split(';', 1)[0].trim().toLowerCase() !== 'text/csv' || summaryRef.content_type.split(';', 1)[0].trim().toLowerCase() !== 'application/json' || sourceRef.content_type.split(';', 1)[0].trim().toLowerCase() !== 'text/csv') {
+      fail('ARCHIVE_PREOPEN_CALENDAR_CONTENT_TYPE_INVALID');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(binding.coverage_start) || !/^\d{4}-\d{2}-\d{2}$/.test(binding.coverage_end) || binding.coverage_end < binding.coverage_start || !Number.isInteger(binding.session_count) || binding.session_count <= 0 || !SHA256.test(binding.sessions_sha256)) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_BINDING_FIELDS_INVALID');
+    }
+    if (!Array.isArray(binding.source_identities) || !binding.source_identities.length || new Set(binding.source_identities).size !== binding.source_identities.length || !binding.source_identities.every((value) => allowedIdentities.has(value))) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_LINEAGE_INVALID');
+    }
+    const expectedLineage = binding.source_identities.length === 1 ? 'OFFICIAL_SINGLE_SOURCE_RESOLVED' : 'OFFICIAL_MULTI_SOURCE_RESOLVED';
+    if (binding.lineage_status !== expectedLineage || !Array.isArray(binding.source_references) || !binding.source_references.length || new Set(binding.source_references).size !== binding.source_references.length || !binding.source_references.every((value) => typeof value === 'string' && value.startsWith('https://www.idx.id/'))) {
+      fail('ARCHIVE_PREOPEN_CALENDAR_LINEAGE_INVALID');
+    }
+  }
+  if (bindings.historical_official_calendar.coverage_end >= bindings.forward_observed_session_calendar.coverage_start) {
+    fail('ARCHIVE_PREOPEN_CALENDAR_COVERAGE_OVERLAP');
+  }
 }
 
 async function digest(bytes) {
@@ -204,7 +260,7 @@ async function readPreopenExpectations(archive, expectedCodeCommit) {
   if (manifestBytes === null) fail('ARCHIVE_PREOPEN_INPUT_MANIFEST_MISSING');
   const manifest = parseJson(manifestBytes, 'ARCHIVE_PREOPEN_INPUT_MANIFEST_INVALID');
   if (
-    manifest.schema_version !== 'idx_trade_e2e_paper_cloud_inputs_v1'
+    manifest.schema_version !== 'idx_trade_e2e_paper_cloud_inputs_v2'
     || manifest.contract_version !== 'CLOUD_FIRST_E2E_PAPER_V1'
     || !Array.isArray(manifest.files)
     || !manifest.roles || typeof manifest.roles !== 'object' || Array.isArray(manifest.roles)
@@ -221,6 +277,14 @@ async function readPreopenExpectations(archive, expectedCodeCommit) {
     'model_challenger_h10',
     'model_fit_log',
   ]);
+  for (const role of [
+    'historical_official_calendar',
+    'historical_official_calendar_summary',
+    'historical_official_calendar_sources',
+    'forward_observed_session_calendar',
+    'forward_observed_session_calendar_summary',
+    'forward_observed_session_calendar_sources',
+  ]) requiredRoles.add(role);
   const refsByRole = new Map();
   const relativePaths = new Set();
   for (const ref of manifest.files) {
@@ -245,6 +309,7 @@ async function readPreopenExpectations(archive, expectedCodeCommit) {
       fail('ARCHIVE_PREOPEN_INPUT_MANIFEST_INVALID');
     }
   }
+  validateV2CalendarContract(manifest, refsByRole);
   if (manifest.execution_schedule_sha256 !== undefined && manifest.execution_schedule_sha256 !== refsByRole.get('execution_schedule').sha256) {
     fail('ARCHIVE_PREOPEN_INPUT_MANIFEST_INVALID');
   }

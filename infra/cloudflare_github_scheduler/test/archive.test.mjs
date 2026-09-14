@@ -164,6 +164,15 @@ function intradayFixture(objects, slot = '1830', status = 'ADMISSIBLE_COMPLETE')
 
 function preopenFixture(objects) {
   const schedule = Buffer.from('canonical-schedule');
+  const historicalCalendar = Buffer.from('date\n2021-01-01\n');
+  const forwardCalendar = Buffer.from('date\n2021-01-04\n');
+  const sourceIdentity = 'IDX_DIGITAL_STATISTICS_DAILY_TRADING_TABLE';
+  const sourceRef = 'https://www.idx.id/primary/DigitalStatistic/GetApiData?fixture=cloudflare-test';
+  const historicalSessionsSha = hash(Buffer.from('2021-01-01'));
+  const forwardSessionsSha = hash(Buffer.from('2021-01-04'));
+  const historicalSummary = Buffer.from(JSON.stringify({ start: '2021-01-01', end: '2021-01-01', exchange_sessions: 1, sessions_sha256: historicalSessionsSha }));
+  const forwardSummary = Buffer.from(JSON.stringify({ start: '2021-01-04', end: '2021-01-04', exchange_sessions: 1, sessions_sha256: forwardSessionsSha }));
+  const sourceReport = Buffer.from('year,month,source_identity,source_ref,status,sessions_in_requested_range,error\n2021,1,' + sourceIdentity + ',' + sourceRef + ',PARSED,1,\n');
   const manifestFiles = [
     ['execution_schedule', 'schedule.json', schedule],
     ['execution_schedule_source', 'official-source.pdf', Buffer.from('source')],
@@ -175,20 +184,58 @@ function preopenFixture(objects) {
     ['model_challenger_h5', 'model/challenger_h5.joblib', Buffer.from('challenger-h5')],
     ['model_challenger_h10', 'model/challenger_h10.joblib', Buffer.from('challenger-h10')],
     ['model_fit_log', 'model/fit_log.json', Buffer.from('fit-log')],
+    ['historical_official_calendar', 'historical_calendar/official_exchange_sessions_1260.csv', historicalCalendar],
+    ['historical_official_calendar_summary', 'historical_calendar/exchange_session_summary.json', historicalSummary],
+    ['historical_official_calendar_sources', 'historical_calendar/exchange_session_sources.csv', sourceReport],
+    ['forward_observed_session_calendar', 'forward_monitoring/calendar/exchange_sessions.csv', forwardCalendar],
+    ['forward_observed_session_calendar_summary', 'forward_monitoring/calendar/exchange_session_summary.json', forwardSummary],
+    ['forward_observed_session_calendar_sources', 'forward_monitoring/calendar/exchange_session_sources.csv', sourceReport],
   ];
   const files = manifestFiles.map(([role, relativePath, payload]) => ({
     role,
     key: `inputs/${relativePath}`,
     relative_path: relativePath,
     sha256: hash(payload),
-    content_type: 'application/octet-stream',
+    content_type: role.endsWith('_summary') ? 'application/json' : role.includes('calendar') ? 'text/csv' : 'application/octet-stream',
   }));
+  const calendarContract = {
+    schema_version: 'idx_trade_e2e_calendar_binding_v1',
+    bindings: {
+      historical_official_calendar: {
+        calendar_role: 'historical_official_calendar',
+        summary_role: 'historical_official_calendar_summary',
+        source_report_role: 'historical_official_calendar_sources',
+        coverage_start: '2021-01-01',
+        coverage_end: '2021-01-01',
+        session_count: 1,
+        sessions_sha256: historicalSessionsSha,
+        authority: 'IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES',
+        lineage_status: 'OFFICIAL_SINGLE_SOURCE_RESOLVED',
+        source_identities: [sourceIdentity],
+        source_references: [sourceRef],
+      },
+      forward_observed_session_calendar: {
+        calendar_role: 'forward_observed_session_calendar',
+        summary_role: 'forward_observed_session_calendar_summary',
+        source_report_role: 'forward_observed_session_calendar_sources',
+        coverage_start: '2021-01-04',
+        coverage_end: '2021-01-04',
+        session_count: 1,
+        sessions_sha256: forwardSessionsSha,
+        authority: 'IDX_OFFICIAL_EXCHANGE_SESSION_SOURCES',
+        lineage_status: 'OFFICIAL_SINGLE_SOURCE_RESOLVED',
+        source_identities: [sourceIdentity],
+        source_references: [sourceRef],
+      },
+    },
+  };
   const manifest = {
-    schema_version: 'idx_trade_e2e_paper_cloud_inputs_v1',
+    schema_version: 'idx_trade_e2e_paper_cloud_inputs_v2',
     contract_version: 'CLOUD_FIRST_E2E_PAPER_V1',
     execution_schedule_sha256: hash(schedule),
     files,
     roles: Object.fromEntries(files.map((ref) => [ref.role, ref.relative_path])),
+    calendar_contract: calendarContract,
   };
   const manifestWithPayloadSha = {
     ...manifest,

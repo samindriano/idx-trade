@@ -175,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
                     "slot": args.slot,
                     "session_date": args.session_date or "CURRENT_ASIA_JAKARTA_DATE",
                     "storage_prefix": "stockbit-intraday-v1",
-                    "e2e_source_prefix": "e2e-paper-v1",
+                    "e2e_source_prefix": "e2e-paper-v2/cbc09210",
                     "accepted_e2e_runtime_sha": ACCEPTED_E2E_IMPLEMENTATION_SHA,
                     "provider_calls": 0,
                     "r2_calls": 0,

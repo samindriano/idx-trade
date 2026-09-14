@@ -24,6 +24,7 @@ def test_rehearsal_prefix_requires_unique_isolated_child() -> None:
         "",
         "e2e-paper-synthetic-rehearsal-v1",
         "e2e-paper-v1/rehearsal",
+        "e2e-paper-v2/cbc09210/rehearsal",
         "official-open-v1/rehearsal",
         "other-prefix/run-1",
         "e2e-paper-synthetic-rehearsal-v1/../e2e-paper-v1",
@@ -101,7 +102,11 @@ def test_production_input_manifest_pin_is_frozen() -> None:
 
 def test_rehearsal_contract_keeps_production_prefixes_distinct() -> None:
     assert rehearsal.REHEARSAL_ROOT_PREFIX != rehearsal.PRODUCTION_INPUT_PREFIX
-    assert rehearsal.PRODUCTION_INPUT_PREFIX in rehearsal.RESERVED_WRITE_PREFIXES
+    assert any(
+        rehearsal.PRODUCTION_INPUT_PREFIX == reserved
+        or rehearsal.PRODUCTION_INPUT_PREFIX.startswith(reserved + "/")
+        for reserved in rehearsal.RESERVED_WRITE_PREFIXES
+    )
     assert "official-open-v1" in rehearsal.RESERVED_WRITE_PREFIXES
 
 

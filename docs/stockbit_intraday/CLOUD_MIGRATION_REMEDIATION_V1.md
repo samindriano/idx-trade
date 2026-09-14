@@ -4,7 +4,7 @@ Date: 2026-08-26 Asia/Jakarta
 Branch: `ops/stockbit-intraday-cloud-migration-v1`
 Current authority base: latest `origin/main`; do not reset the lane to its original branch point.
 Legacy implementation reference: `fix/stockbit-intraday-postclose-fix-v1@03d42988b16ced8d5c2656291c629ea3596f91f4`
-Accepted E2E read authority: `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`
+Accepted E2E read authority: `cbc09210d6a097f2d96c86ada1e58a7c5e591015`
 
 ## Goal
 
@@ -59,7 +59,12 @@ Snapshot paths reject traversal, forbidden secret/outcome paths, duplicate entri
 
 ### R7 — canonical schedule and accepted E2E bridge
 
-The bridge reads only `e2e-paper-v1` through exact accepted runtime `043003ee...`. The accepted checkout must be exact and clean. Its child Python process runs isolated and receives only minimal process environment plus R2 credentials; provider/account secrets are not inherited. The E2E store is wrapped read-only so any attempted `put_if_absent` is rejected.
+The bridge reads only `e2e-paper-v2/cbc09210` through exact accepted runtime
+`cbc09210d6a097f2d96c86ada1e58a7c5e591015`. The accepted checkout must be
+exact and clean. Its child Python process runs isolated and receives only
+minimal process environment plus R2 credentials; provider/account secrets are
+not inherited. The E2E store is wrapped read-only so any attempted
+`put_if_absent` is rejected.
 
 A non-session date is a zero-provider-call NOOP. Current-session-only guards prohibit retroactive Stockbit capture.
 
@@ -70,6 +75,10 @@ A real cloud run requires exact `STOCKBIT_INTRADAY_EXPECTED_IMPLEMENTATION_REF`;
 ## External E2E/R2 evidence already available
 
 The accepted E2E path has a successful manual full-cloud synthetic rehearsal:
+
+The rehearsal below is historical evidence from the former `043003ee` runtime;
+it is retained as event-time provenance and does not establish current
+production proof for the recertified `cbc09210` authority above.
 
 - workflow run: `32959923100`
 - accepted runtime: `043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2`
@@ -82,6 +91,21 @@ The accepted E2E path has a successful manual full-cloud synthetic rehearsal:
 - real R2 create-only/idempotent/conflict/readback behavior: exercised under an isolated throwaway prefix.
 
 This proves the shared E2E input/R2 boundary exists and is readable. It does **not** substitute for the dedicated Intraday smoke or a genuine future-session Intraday proof.
+
+## Current v2 input bundle binding
+
+The current production input bundle is published under the new immutable
+namespace `e2e-paper-v2/cbc09210`. Its full manifest key is
+`e2e-paper-v2/cbc09210/inputs/manifest.json`, with manifest SHA-256
+`f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762`.
+It contains 16 role-bound objects: the 10 byte-identical v1 schedule/panel/
+security/model inputs plus separate historical-official and forward-observed
+calendar CSV, summary, and source-report roles. The historical role binds the
+recertified 1260-session calendar and the forward role binds the 26-session
+observed package; their union is 1286 sessions. The 17 new objects were created
+with `If-None-Match: *`, the manifest was written last, and each object was read
+back and hash-verified. This is input provisioning evidence only, not capture or
+provider proof.
 
 ## Remaining migration order
 

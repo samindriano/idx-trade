@@ -72,13 +72,13 @@ jobs:
     timeout-minutes: 90
     env:
       # Immutable reviewed V4 recovery implementation pin.
-      E2E_CLOUD_IMPLEMENTATION_REF: 8bc3ee3efd65e8b16478e404e4b226451b105c48
+      E2E_CLOUD_IMPLEMENTATION_REF: cbc09210d6a097f2d96c86ada1e58a7c5e591015
       E2E_CLOUD_STORAGE_BACKEND: s3
       E2E_CLOUD_S3_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       E2E_CLOUD_S3_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
       E2E_CLOUD_S3_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       E2E_CLOUD_S3_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v1
+      E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v2/cbc09210
       E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1
       # Must equal the exact timing-gated producer pin persisted in Official Open provenance.
       E2E_CLOUD_EXPECTED_OFFICIAL_OPEN_CAPTURE_CODE_REF: ac29a0552b1785045906f8d608b5371d93e01b73

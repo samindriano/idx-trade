@@ -19,12 +19,15 @@ from idx_trade.stockbit_intraday_cloud_archive import (
 from idx_trade.stockbit_intraday_cloud_runner import run_cloud_slot, validate_intraday_capture_window
 from idx_trade.stockbit_intraday_cloud_storage import LocalConditionalStore
 from idx_trade.stockbit_intraday_e2e_bridge import (
+    ACCEPTED_E2E_IMPLEMENTATION_SHA,
     StockbitIntradayE2EBridgeError,
     _CHILD_CODE,
     _child_env,
     _require_within,
     _safe_manifest_key,
+    validate_accepted_e2e_checkout,
 )
+from idx_trade import stockbit_intraday_e2e_bridge as e2e_bridge
 
 
 SESSION = date(2026, 8, 26)
@@ -139,7 +142,7 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
     assert "PYTHONPATH" not in child
     assert "PYTHONNOUSERSITE" not in child
     assert child["E2E_CLOUD_STORAGE_BACKEND"] == "s3"
-    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v1"
+    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v2/cbc09210"
     assert child["PATH"] == values["PATH"]
     assert child["HOME"] == values["HOME"]
     assert "STOCKBIT_INTRADAY_E2E_BRIDGE_WRITE_FORBIDDEN" in _CHILD_CODE
@@ -148,7 +151,7 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
 
 def test_e2e_bridge_rejects_noncanonical_read_prefix_before_child_launch(tmp_path: Path):
     values = _storage_values()
-    for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "../e2e-paper-v1"):
+    for prefix in ("stockbit-intraday-v1", "official-open-v1", "other-prefix", "e2e-paper-v1", "../e2e-paper-v2"):
         values["STOCKBIT_INTRADAY_E2E_PREFIX"] = prefix
         with pytest.raises(StockbitIntradayE2EBridgeError, match="E2E_PREFIX_INVALID"):
             _child_env(values, tmp_path / "accepted")
@@ -165,3 +168,45 @@ def test_e2e_bridge_manifest_key_and_materialized_paths_fail_closed(tmp_path: Pa
     assert _require_within(inside, root, label="TEST") == inside.resolve()
     with pytest.raises(StockbitIntradayE2EBridgeError, match="OUTSIDE_MATERIALIZATION_ROOT"):
         _require_within(tmp_path / "escape" / "schedule.csv", root, label="TEST")
+
+
+def test_e2e_bridge_accepts_only_exact_recertified_head(monkeypatch, tmp_path: Path):
+    accepted = tmp_path / "accepted"
+    module = accepted / "src" / "idx_trade" / "e2e_paper_cloud_runtime_v1.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("# fixture\n", encoding="utf-8")
+    monkeypatch.setattr(e2e_bridge, "_git_status", lambda _: "")
+
+    exact = ACCEPTED_E2E_IMPLEMENTATION_SHA
+    stale_heads = (
+        "043003ee9ae19f9ec6ad4c2db99ab1c19a1401f2",
+        "8bc3ee3efd65e8b16478e404e4b226451b105c48",
+        "b8ff82373de922455fce7139fb8d144e97cf5bfb",
+        "0" * 40,
+    )
+    monkeypatch.setattr(e2e_bridge, "_git_head", lambda _, head=exact: head)
+    assert validate_accepted_e2e_checkout(accepted) == accepted.resolve()
+    for stale in stale_heads:
+        monkeypatch.setattr(e2e_bridge, "_git_head", lambda _, head=stale: head)
+        with pytest.raises(
+            StockbitIntradayE2EBridgeError,
+            match="STOCKBIT_INTRADAY_ACCEPTED_E2E_HEAD_MISMATCH",
+        ):
+            validate_accepted_e2e_checkout(accepted)
+
+
+def test_operational_refs_match_recertified_e2e_head() -> None:
+    workflow_paths = (
+        REPO_ROOT / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml",
+        REPO_ROOT / ".github" / "workflows" / "e2e-paper-cloud-synthetic-rehearsal.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-cloud-production.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-e2e-bridge-preflight-v1.yml",
+        REPO_ROOT / ".github" / "workflows" / "stockbit-intraday-e2e-preflight-pr95.yml",
+    )
+    for path in workflow_paths:
+        text = path.read_text(encoding="utf-8")
+        assert ACCEPTED_E2E_IMPLEMENTATION_SHA in text, path
+    rehearsal = (REPO_ROOT / "scripts" / "run_e2e_cloud_synthetic_rehearsal_v1.py").read_text(
+        encoding="utf-8"
+    )
+    assert ACCEPTED_E2E_IMPLEMENTATION_SHA in rehearsal
