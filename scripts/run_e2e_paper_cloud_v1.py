@@ -53,7 +53,9 @@ from idx_trade.e2e_paper_operational_controller_v2 import (  # noqa: E402
     OperationalControllerConfigV2,
     run_operational_cycle_v2,
 )
-from idx_trade.v4_x1_clean_eod_pipeline import run_clean_eod_pipeline  # noqa: E402
+from idx_trade.v4_x1_clean_eod_legacy_compat import (  # noqa: E402
+    run_with_legacy_attestation_compat as run_clean_eod_pipeline,
+)
 
 
 JAKARTA = ZoneInfo("Asia/Jakarta")

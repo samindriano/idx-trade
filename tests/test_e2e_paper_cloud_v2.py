@@ -3,8 +3,54 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from idx_trade import v4_x1_clean_eod_legacy_compat as calendar_compat
 from scripts import run_e2e_paper_cloud_v1 as v1
 from scripts import run_e2e_paper_cloud_v2 as v2
+
+
+def test_cloud_v1_binds_scoped_calendar_extension_compatibility(
+    tmp_path: Path, monkeypatch
+) -> None:
+    original_verifier = calendar_compat.monitor._verify_ready_row
+    observed: dict[str, object] = {}
+
+    def scoped_verifier(row):
+        del row
+        return True
+
+    def fake_build_scoped(runtime_root, strict_verifier):
+        assert Path(runtime_root) == tmp_path / "forward"
+        assert strict_verifier is original_verifier
+        return scoped_verifier
+
+    def fake_pipeline(runtime_root, model_root, **kwargs):
+        observed["runtime_root"] = Path(runtime_root)
+        observed["model_root"] = Path(model_root)
+        observed["kwargs"] = kwargs
+        observed["verifier"] = calendar_compat.monitor._verify_ready_row
+        return {"status": "PIPELINE_OK_TEST"}
+
+    monkeypatch.setattr(
+        calendar_compat, "build_scoped_ready_verifier", fake_build_scoped
+    )
+    monkeypatch.setattr(
+        calendar_compat.clean_pipeline, "run_clean_eod_pipeline", fake_pipeline
+    )
+
+    result = v1.run_clean_eod_pipeline(
+        tmp_path / "forward",
+        tmp_path / "model",
+        clean_panel=tmp_path / "panel.parquet",
+        clean_security_master=tmp_path / "security-master.csv",
+        repo_root=tmp_path,
+        observed_by="2026-09-15T12:40:00+00:00",
+    )
+
+    assert result == {"status": "PIPELINE_OK_TEST"}
+    assert observed["verifier"] is scoped_verifier
+    assert observed["runtime_root"] == tmp_path / "forward"
+    assert observed["model_root"] == tmp_path / "model"
+    assert calendar_compat.monitor._verify_ready_row is original_verifier
 
 
 def test_v2_refreshes_runtime_master_before_canonical_eod_pipeline(
