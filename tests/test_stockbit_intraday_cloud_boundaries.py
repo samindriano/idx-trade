@@ -142,7 +142,7 @@ def test_e2e_bridge_child_inherits_only_allowed_process_env_and_r2_credentials(t
     assert "PYTHONPATH" not in child
     assert "PYTHONNOUSERSITE" not in child
     assert child["E2E_CLOUD_STORAGE_BACKEND"] == "s3"
-    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v2/cbc09210"
+    assert child["E2E_CLOUD_STORAGE_PREFIX"] == "e2e-paper-v2/045e25a1"
     assert child["PATH"] == values["PATH"]
     assert child["HOME"] == values["HOME"]
     assert "STOCKBIT_INTRADAY_E2E_BRIDGE_WRITE_FORBIDDEN" in _CHILD_CODE

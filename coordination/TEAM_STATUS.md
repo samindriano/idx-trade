@@ -53,7 +53,7 @@ capture systems.
 |---|---|---|---|
 | V4-X1 Clean alpha | `DONE` | Alpha science is frozen. | Keep it unchanged during downstream engineering. |
 | Research Integrity / Data QA Gate V1 | `BLOCKED` | Population completeness and historical as-of authority remain unknown; admission and closure cannot proceed. | Obtain one authoritative population-wide source contract. |
-| EOD Market Capture + prospective V4-X1 scoring | `WAITING` | Accepted E2E path exists; genuine scheduled cloud proof is pending. | Observe the next eligible scheduled run. |
+| EOD Market Capture + prospective V4-X1 scoring | `WAITING` | Runtime `045e25a1` is recertified; production repin remains review-only and genuine scheduled cloud proof is pending. | Review the repin, then observe the next eligible scheduled run after merge. |
 | 100-session prospective alpha evaluation | `BLOCKED` | Frozen access science is in place, but real production evidence is 2/100 and the admitted inventory/target attestation is unavailable. | Complete the separate pre-access closure; do not open protected outcomes. |
 | Decision policy | `DONE` | Decision V2 is the incumbent; decision research is closed. | Do not reopen tuning without explicit reprioritization. |
 | Sizing, Execution, and CA-aware paper foundations | `DONE` | Frozen foundations are retained; unsupported structural CA remains fail-closed. | Use the retained foundations in the E2E path. |
@@ -95,11 +95,11 @@ The tables above are the primary view. Exact references remain here for review a
 
 - **V4-X1 Clean alpha:** `research/idx-v4-x1-clean-historical-oos-replay-v1`; `research/idx-v4-x1-clean-phase-b-final-refit-prep-v1`.
 - **Research Integrity / Data QA:** PR #103 `audit/research-integrity-data-qa-gate-v1@a1096aa1`; PR #108 `data/ca-aware-feature-basis-remediation-v1@c14e00e6b432705babe5e140b802b82031d7b880`; controlling V16 external manifest `3ff25d77dd1d2d85d1ff7526fcef90525dfe60afed026f4c2738b8bfb2a57030`; V17 external manifest `8d2139c9388c6b94c4131ca692f0de3add433c294e4a7b20f2db6d7f22b106e8`.
-- **EOD/scoring:** accepted `integration/idx-e2e-baseline-paper-v1@043003ee`; superseded `data/market-index-forward-eod-v1-monitoring` remains forensic only.
+- **EOD/scoring:** historical baseline lineage `integration/idx-e2e-baseline-paper-v1@043003ee`; superseded `data/market-index-forward-eod-v1-monitoring` remains forensic only.
 - **100-session evaluation:** `research/idx-forward-evaluation-protocol-v1`; `codex/idx-forward-100-evaluator-v1`; `research/idx-v4-x1-prospective-evaluation-protocol-v1`; PR #89 `ops/v4-x1-preaccess-artifact-completion-v1@1c4c6d17`.
 - **Decision:** `research/idx-decision-v2-minimal-implementation-v1`; `research/idx-decision-economic-comparison-v1`; final closure `audit/idx-decision-v4-refill-decoupling-result-v1`.
 - **Sizing/Execution/CA:** `integration/forward-ca-attestation-v1`; `data/idx-v4-corporate-action-continuity-gate-v1`; `integration/idx-v4-ca-target-continuity-bridge-v1`.
-- **E2E cloud:** `.github/workflows/e2e-paper-cloud-orchestration.yml`; Path-A activation `1eaf79c3f949a65346b064521ecb93a14d39b688`; implementation pin `cbc09210d6a097f2d96c86ada1e58a7c5e591015`; input bridge `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`; v2 input namespace `e2e-paper-v2/cbc09210/inputs/manifest.json@f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762`.
+- **E2E cloud:** `.github/workflows/e2e-paper-cloud-orchestration.yml`; production remains unchanged until the repin PR is merged; recertified candidate runtime `045e25a19d9f71170d2c863e768102937e59ad73`; input bridge `ops/e2e-paper-cloud-input-provisioning-v1@13cd07af`; isolated v2 namespace `e2e-paper-v2/045e25a1/inputs/manifest.json@f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762`.
 - **Cloudflare:** PR #122 `codex/cloud-runtime-recovery-integration-v1@e03893f344c188ae82856bd833c7aa1614f246eb`; final checkpoint `docs/checkpoints/2026-09-08_CLOUDFLARE_VERSION_BYTE_ATTESTATION_V2_FINAL_REWORK.md`.
 - **Cost optimization:** `main@898864b4a8934877dc81086403a2a1068f7a6566`; `docs/checkpoints/ACTIONS_COST_OPTIMIZATION_V1_POST_RESET_MEASUREMENT.md`.
 - **Stockbit Intraday:** `.github/workflows/stockbit-intraday-cloud-production.yml`; activation baseline `53767b2b`; PR #95 implementation and PR #105 schedule.

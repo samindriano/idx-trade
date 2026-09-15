@@ -9,7 +9,7 @@ OPEN_WORKFLOW = ROOT / ".github" / "workflows" / "official-open-prospective-clou
 E2E_WORKFLOW = ROOT / ".github" / "workflows" / "e2e-paper-cloud-orchestration.yml"
 
 OPEN_PIN = "ac29a0552b1785045906f8d608b5371d93e01b73"
-E2E_PIN = "cbc09210d6a097f2d96c86ada1e58a7c5e591015"
+E2E_PIN = "045e25a19d9f71170d2c863e768102937e59ad73"
 
 
 def _cron_values(text: str) -> list[str]:
@@ -67,7 +67,7 @@ def test_e2e_recovery_wrapper_is_exactly_pinned_to_matching_open_producer():
         "35 12 * * 1-5",
     ]
     assert "timeout-minutes: 90" in text
-    assert "E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v2/cbc09210" in text
+    assert "E2E_CLOUD_STORAGE_PREFIX: e2e-paper-v2/045e25a1" in text
     assert "E2E_CLOUD_INPUT_MANIFEST_KEY: inputs/manifest.json" in text
     assert "E2E_CLOUD_OFFICIAL_OPEN_PREFIX: official-open-v1" in text
     assert "E2E_CLOUD_PROVIDER_COMMIT: 75d6c0f74fa360d225794c70c383348977de6798" in text

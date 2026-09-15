@@ -12,8 +12,8 @@ import { exactRunRecoveryDecision } from './core.mjs';
 
 export const ARCHIVE_BUCKET_NAME = 'idx-trade-stockbit-stream-v1';
 export const ARCHIVE_PREFIX = Object.freeze({
-  E2E: 'e2e-paper-v2/cbc09210',
-  PREOPEN_CA: 'e2e-paper-v2/cbc09210',
+  E2E: 'e2e-paper-v2/045e25a1',
+  PREOPEN_CA: 'e2e-paper-v2/045e25a1',
   OFFICIAL_OPEN: 'official-open-v1',
   INTRADAY: 'stockbit-intraday-v1',
 });
