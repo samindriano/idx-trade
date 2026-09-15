@@ -21,9 +21,10 @@ from typing import Any, Mapping
 
 
 SCHEMA_VERSION = "idx_trade_e2e_cloud_synthetic_rehearsal_v1"
-ACCEPTED_IMPLEMENTATION_SHA = "cbc09210d6a097f2d96c86ada1e58a7c5e591015"
+ACCEPTED_IMPLEMENTATION_SHA = "045e25a19d9f71170d2c863e768102937e59ad73"
 EXPECTED_INPUT_MANIFEST_SHA256 = "f23f45d8b48d386b6755cd272c5c013c04b2c9ee5df0d35473585f878afb2762"
-PRODUCTION_INPUT_PREFIX = "e2e-paper-v2/cbc09210"
+EXPECTED_INPUT_ROLE_COUNT = 16
+PRODUCTION_INPUT_PREFIX = "e2e-paper-v2/045e25a1"
 PRODUCTION_INPUT_MANIFEST_KEY = "inputs/manifest.json"
 REHEARSAL_ROOT_PREFIX = "e2e-paper-synthetic-rehearsal-v1"
 RESERVED_WRITE_PREFIXES = (
@@ -196,7 +197,10 @@ def run(
     bundle = CloudInputBundle.load(production_store, PRODUCTION_INPUT_MANIFEST_KEY)
     _require_expected_manifest_sha(bundle.manifest_sha256, expected_input_manifest_sha256)
     materialized = bundle.materialize(production_store, output_root / "production-input-readback")
-    if len(materialized) != 10 or len(bundle.refs) != 10:
+    if (
+        len(materialized) != EXPECTED_INPUT_ROLE_COUNT
+        or len(bundle.refs) != EXPECTED_INPUT_ROLE_COUNT
+    ):
         raise RehearsalError("REHEARSAL_PRODUCTION_INPUT_ROLE_COUNT_MISMATCH")
 
     synthetic_payload, synthetic_summary_bytes = _run_existing_synthetic_replay(

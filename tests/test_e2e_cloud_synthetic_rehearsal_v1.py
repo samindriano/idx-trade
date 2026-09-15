@@ -24,7 +24,7 @@ def test_rehearsal_prefix_requires_unique_isolated_child() -> None:
         "",
         "e2e-paper-synthetic-rehearsal-v1",
         "e2e-paper-v1/rehearsal",
-        "e2e-paper-v2/cbc09210/rehearsal",
+        "e2e-paper-v2/045e25a1/rehearsal",
         "official-open-v1/rehearsal",
         "other-prefix/run-1",
         "e2e-paper-synthetic-rehearsal-v1/../e2e-paper-v1",
@@ -78,6 +78,7 @@ def test_rehearsal_rejects_nonmanual_or_unidentified_execution(
 
 
 def test_production_input_manifest_pin_is_frozen() -> None:
+    assert rehearsal.EXPECTED_INPUT_ROLE_COUNT == 16
     rehearsal._require_expected_manifest_sha(
         rehearsal.EXPECTED_INPUT_MANIFEST_SHA256,
         rehearsal.EXPECTED_INPUT_MANIFEST_SHA256,

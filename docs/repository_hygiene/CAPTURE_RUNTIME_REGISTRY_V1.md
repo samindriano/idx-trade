@@ -121,7 +121,7 @@ Branch cleanup is not scheduler retirement.
 
 - Stockbit Stream production workflow checks out the default branch, not old remediation branches.
 - Official Open workflow checks out a commit SHA, not its old implementation branch.
-- E2E cloud launcher checks out the recertified accepted runtime SHA `cbc09210d6a097f2d96c86ada1e58a7c5e591015`.
+- E2E cloud launcher checks out the recertified runtime SHA `045e25a19d9f71170d2c863e768102937e59ad73`.
 - Windows E2E/EOD/intraday tasks remain untouched until their specific cloud replacement proves one genuine prospective cycle and retirement is separately authorized.
 
 ## Next hygiene gate

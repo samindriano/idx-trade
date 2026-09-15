@@ -131,7 +131,7 @@ function readback(overrides = {}) {
       GITHUB_REF: 'main',
       DISPATCH_MODE: 'active',
       RECOVERY_ALLOWED_SLOTS: ['STOCKBIT_INTRADAY_2030'],
-      E2E_EXPECTED_CODE_COMMIT: 'cbc09210d6a097f2d96c86ada1e58a7c5e591015',
+      E2E_EXPECTED_CODE_COMMIT: '045e25a19d9f71170d2c863e768102937e59ad73',
     },
     bindings: {
       ARCHIVE: { type: 'r2_bucket', bucket_name: 'idx-trade-stockbit-stream-v1' },
@@ -156,7 +156,7 @@ test('deployment readback rejects wrong version/bytes, missing handlers, binding
     crons: [...PRODUCTION_CRONS],
     expectedSecretNames: ['GITHUB_ACTIONS_READ_TOKEN', 'GITHUB_ACTIONS_WRITE_TOKEN'],
     expectedImplementationPins: {
-      E2E_EXPECTED_CODE_COMMIT: 'cbc09210d6a097f2d96c86ada1e58a7c5e591015',
+      E2E_EXPECTED_CODE_COMMIT: '045e25a19d9f71170d2c863e768102937e59ad73',
     },
   };
   assert.equal(validateDeploymentReadback(readback(), expected).ok, true);

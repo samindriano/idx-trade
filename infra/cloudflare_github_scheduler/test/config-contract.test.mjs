@@ -11,7 +11,7 @@ const indexSource = readFileSync(new URL('../src/index.js', import.meta.url), 'u
 const prepareSource = readFileSync(new URL('../src/dispatch_prepare.mjs', import.meta.url), 'utf8');
 const lifecycleSource = readFileSync(new URL('../src/dispatch_lifecycle.mjs', import.meta.url), 'utf8');
 
-const E2E_RECOVERY_PIN = 'cbc09210d6a097f2d96c86ada1e58a7c5e591015';
+const E2E_RECOVERY_PIN = '045e25a19d9f71170d2c863e768102937e59ad73';
 const OFFICIAL_OPEN_RECOVERY_PIN = 'ac29a0552b1785045906f8d608b5371d93e01b73';
 
 test('staging and production use isolated Worker and Durable Object namespaces', () => {
