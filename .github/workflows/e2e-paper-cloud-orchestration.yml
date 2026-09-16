@@ -157,7 +157,27 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install cloud runner
-        run: python -m pip install -e ".[archive]"
+        run: |
+          # The frozen model artifacts were serialized with scikit-learn 1.8.0.
+          # Keep hosted deserialization on that exact runtime, not the newest
+          # compatible release selected by the broad package requirement.
+          python -m pip install "scikit-learn==1.8.0"
+          python -m pip install -e ".[archive]"
+
+      - name: Verify effective frozen model runtime
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sklearn
+
+          expected = "1.8.0"
+          actual = sklearn.__version__
+          if actual != expected:
+              raise SystemExit(
+                  f"Effective scikit-learn version {actual!r} != frozen {expected!r}"
+              )
+          print(f"scikit-learn={actual}")
+          PY
 
       - name: Resolve scheduled phase
         shell: bash
