@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-08-31 Asia/Jakarta
+Last coordinated update: 2026-09-18 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -53,13 +53,13 @@ capture systems.
 |---|---|---|---|
 | V4-X1 Clean alpha | `DONE` | Alpha science is frozen. | Keep it unchanged during downstream engineering. |
 | Research Integrity / Data QA Gate V1 | `BLOCKED` | Population completeness and historical as-of authority remain unknown; admission and closure cannot proceed. | Obtain one authoritative population-wide source contract. |
-| EOD Market Capture + prospective V4-X1 scoring | `WAITING` | Runtime `045e25a1` is recertified; production repin remains review-only and genuine scheduled cloud proof is pending. | Review the repin, then observe the next eligible scheduled run after merge. |
+| EOD Market Capture + prospective V4-X1 scoring | `ACTIVE` | Runtime `045e25a1` is live; the 2026-09-17 natural attempts did not create canonical prepared evidence. | Resolve the first production blocker, then observe the next genuine scheduled run. |
 | 100-session prospective alpha evaluation | `BLOCKED` | Frozen access science is in place, but real production evidence is 2/100 and the admitted inventory/target attestation is unavailable. | Complete the separate pre-access closure; do not open protected outcomes. |
 | Decision policy | `DONE` | Decision V2 is the incumbent; decision research is closed. | Do not reopen tuning without explicit reprioritization. |
 | Sizing, Execution, and CA-aware paper foundations | `DONE` | Frozen foundations are retained; unsupported structural CA remains fail-closed. | Use the retained foundations in the E2E path. |
 | E2E Baseline Paper V1 integration | `ACTIVE` | Decision, sizing, execution, EOD/CA state, and the cloud adapter are in one integration lineage. | Verify the next eligible genuine paper cycle. |
 | E2E Paper cloud-first orchestration | `ACTIVE` | Scheduled phases are active; the 2026-08-27 POST_EOD run failed and was not rerun. | Wait for the next genuine scheduled POST_EOD. |
-| Cloudflare production readiness | `WAITING` | Version-byte preparation and dry-runs pass; production remains inert. | Obtain separately authorized production proof. |
+| Cloudflare production readiness | `ACTIVE` | Production remains `observe_only`; fresh version attestation and single-controller handoff are pending natural POST_EOD acceptance. | Keep Windows recovery authoritative while closing the POST_EOD blocker. |
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
@@ -71,7 +71,7 @@ capture systems.
 | Official Open Capture | `ACTIVE` | GitHub Actions capture writes to private R2 under the accepted implementation. | Continue scheduled observation. |
 | Stockbit Stream Capture | `ACTIVE` | Isolated cloud smoke passed; genuine scheduled top-200 proof is pending. | Observe the next eligible scheduled run. |
 | Stockbit Intraday Capture | `ACTIVE` | Cloud schedule is enabled and the Windows fallback remains available but disabled during cloud proof. | Verify the first eligible cloud post-close cycle. |
-| EOD Market Capture | `WAITING` | Stock EOD/OHLCV and official market/index context use one canonical transaction; first genuine cloud proof is pending. | Verify the next accepted POST_EOD result. |
+| EOD Market Capture | `ACTIVE` | The 2026-09-17 natural attempts hit an IDX timeout, then missing same-session EOD input; the delayed final attempt crossed midnight. | Identify and close the first actual blocker without manual proof or backfill. |
 | Corporate Action Capture | `ACTIVE` | CA acquisition and attestation are integrated with the E2E path. | Verify the first genuine cloud cycle before retiring fallback. |
 | Legacy Forward Open scaffold | `PARKED` | Superseded and retained only for exact historical recovery. | Archive the exact head, then remove only the live branch ref when authorized. |
 | Frontend monitoring | `PARKED` | Viewer/operations surface only. | Preserve historical model, score, and hover visibility. |
