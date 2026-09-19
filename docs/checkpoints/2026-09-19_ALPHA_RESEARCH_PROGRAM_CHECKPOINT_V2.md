@@ -359,7 +359,7 @@ incumbent score, or prospective outcome was opened in this lane.
 
 - Repository: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Documentation commits: `ad967925` (checkpoint content), `65025ccd` (metadata correction), `d9bfb868` (structural red-team/capability milestone), `35ce5968` (combination readiness and phase handoff); verify current HEAD before re-entry.
+- Documentation commits: `ad967925` (checkpoint content), `65025ccd` (metadata correction), `d9bfb868` (structural red-team/capability milestone), `35ce5968` (combination readiness and phase handoff), `5d1f97c6` (capacity proxy stress); verify current HEAD before re-entry.
 - Main/canonical branch: not modified.
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
