@@ -296,3 +296,9 @@ The H-VOL-specific CA sensitivity audit then substituted the same retained
 scores and 8,876 ranks, while preserving `99.8307%` mean Top-30 overlap and
 `86.6667%` minimum overlap. This is bounded forensic evidence only: price-basis
 authority remains unresolved and H-VOL stays no-C5.
+
+The protected re-entry packet was revalidated after these additions: it still
+contains exactly C1-C4, with H-LIQ-01 and H-VOL-01 explicitly excluded. Hashes
+for the packet, protocol, implementation, guarded features, and manifest match
+the recorded specification. The packet remains
+`SPECIFICATION_ONLY / BLOCKED_BY_DATA_ADMISSION`.

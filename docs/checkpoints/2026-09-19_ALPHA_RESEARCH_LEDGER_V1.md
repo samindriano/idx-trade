@@ -33,7 +33,7 @@ Latest H-LIQ-01 size-neutral diagnostic: `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_R
 Latest H-VOL-01 compression diagnostic: `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 Latest H-VOL-01 CA sensitivity: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest CA exposure attribution: `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`
-Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V1.md`
+Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
 
