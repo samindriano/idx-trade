@@ -104,3 +104,11 @@ evaluation.
 | Market-wide 2025-12-31 free-float anchor | `PARTIAL / SOURCE_REMEDIATION_REQUIRED` | 956 reported rows, 923 exact-share rows, 33 missing explicit shares; anchor only |
 | Market-wide 2026-03-31 free-float anchor | `PERCENTAGE_ONLY / BLOCKED` | 956 reported rows, zero exact-share rows; no share-basis transition inference |
 | Statutory snapshot lineage/PIT | `BLOCKED` | 2,145 new artifacts plus seven reused sources hash-match, but no continuous daily panel or complete issuer/ISIN/CA/revision/PIT contract |
+
+## HSC ownership event source audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| HSC artifact and normalized-ledger integrity | `PASS_STRUCTURAL_ONLY` | 137/137 manifest artifacts match bytes and SHA-256; 59 event IDs and CSV/JSON parity pass |
+| HSC event replay and target parity | `PASS_STRUCTURAL_ONLY` | 56 originals, two corrections, one removal; replay passes; effective cutoff target is 55 tickers and July target is 51 |
+| HSC PIT/population admission | `BLOCKED` | Event ledger only; no daily population completeness, issuer/ISIN continuity, CA linkage, complete revision/vintage, or public-availability contract |

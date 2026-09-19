@@ -577,3 +577,12 @@ percentage-only. Embedded LBRE lineage remains incomplete. The surface is
 capability-only (`PARTIAL / SOURCE_REMEDIATION_REQUIRED`); no feature,
 candidate, packet, or model status changed. See
 `2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The HSC ownership event ledger was then audited independently. Its 137
+manifest artifacts, 59 unique events, revision counts, replay checkpoints,
+and 55-ticker effective cutoff target all pass structural verification. The
+source remains capability-only (`PARTIAL / EVENT_ONLY`) because it is not a
+daily population-wide PIT panel and lacks complete issuer/ISIN, CA, revision,
+and public-availability authority. No feature, candidate, packet, or model
+status changed. See
+`2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.

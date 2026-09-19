@@ -21,6 +21,6 @@
 | LBRE free-float lineage admission | 58,671-file manifest is byte/hash exact; 868 lineage rows remain unresolved and the source is monthly issuer-report coverage | Resolve original/correction ambiguity, establish issuer/ISIN and CA continuity, and prove daily/PIT/public-availability semantics before use |
 | Statutory free-float anchor admission | 2025-12-31 has 923 exact-share rows; 2026-03-31 is percentage-only; embedded LBRE has 93 excluded lineage rows and 18 parse-unresolved | Require continuous population coverage, explicit-share continuity, issuer/ISIN/CA linkage, and PIT/public-availability evidence |
 | Monthly/statutory free-float history | partial snapshots and monthly corpus | continuous daily panel, public availability, issuer/ISIN/CA linkage, and revision lineage |
-| Ownership event ledger | event-only partial | complete population, event semantics, issuer continuity, and historical revision coverage |
+| Ownership event ledger | structurally verified event-only partial | complete population, event semantics, issuer/ISIN continuity, corporate-action linkage, public availability, and historical revision coverage |
 | Broker/margin category state | one-date snapshot only | historical series, financing-flow semantics, PIT/publication time, and complete coverage |
 | Historical foreign-flow source admission | structurally complete archive, source blocked | independently certified public availability, identity/ISIN/CA continuity, revision/vintage, panel completeness, and missingness policy |

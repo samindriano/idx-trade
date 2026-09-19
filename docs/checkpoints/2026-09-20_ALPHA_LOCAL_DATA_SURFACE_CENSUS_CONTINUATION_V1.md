@@ -67,3 +67,16 @@ surface remains `PARTIAL / SOURCE_REMEDIATION_REQUIRED`; it is not a
 continuous daily PIT panel and no feature, candidate, or protected state
 changed. See
 `2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Independent follow-up — HSC ownership event ledger
+
+The HSC ledger was audited without network access. All 137 manifest artifacts
+match their declared bytes and hashes; the normalized CSV and JSON match
+exactly, with 59 unique event IDs, 56 originals, two corrections, and one
+removal. Replay checkpoints pass and the effective cutoff target contains 55
+tickers; the July target contains 51. The source remains
+`PARTIAL / EVENT_ONLY`: event-level evidence is not a daily population-wide
+PIT panel, and completeness, issuer/ISIN continuity, CA linkage,
+revision/vintage coverage, and public availability are unresolved. No
+feature, candidate, or protected state changed. See
+`2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.

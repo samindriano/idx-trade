@@ -445,3 +445,12 @@ parse-unresolved rows. It remains
 `PARTIAL / SOURCE_REMEDIATION_REQUIRED`, with no feature, candidate, universe
 mask, target, or incumbent state changed. See
 `2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The HSC ownership event ledger was independently audited afterward. All 137
+manifest artifacts match bytes and hashes; the normalized ledger has 59 unique
+events (56 originals, two corrections, one removal), replay passes, and the
+effective cutoff target is 55 tickers. It remains `PARTIAL / EVENT_ONLY`, not
+a daily PIT/population panel: completeness, issuer/ISIN continuity, CA
+linkage, revision/vintage coverage, and public availability are unresolved.
+No feature, candidate, universe mask, target, or incumbent state changed. See
+`2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.

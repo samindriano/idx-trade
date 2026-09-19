@@ -614,3 +614,13 @@ has 1,015 exact target-position rows, 957 admitted lineage rows, 93 excluded,
 and 18 parse-unresolved. It remains `PARTIAL / SOURCE_REMEDIATION_REQUIRED`;
 no feature, universe mask, candidate, or protected state changed. See
 `2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The HSC ownership event ledger was independently audited next. All 137
+manifest artifacts match bytes and hashes; the normalized ledger has 59 unique
+events, 56 originals, two corrections, one removal, and an effective 55-ticker
+cutoff target. The replay and target parity gates pass, but the source remains
+`PARTIAL / EVENT_ONLY`: it is not a daily population-wide PIT ownership panel
+and lacks complete issuer continuity, corporate-action, revision, and public-
+availability contracts. No feature, universe mask, candidate, or protected
+state changed. See
+`2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
