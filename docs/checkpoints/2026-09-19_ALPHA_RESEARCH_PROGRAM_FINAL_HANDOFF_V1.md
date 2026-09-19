@@ -2,15 +2,17 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this handoff addendum: `8ad60569`
-Latest research milestone commit: `8ad60569`
-Latest status/documentation commit: `8ad60569`
+Verified research baseline HEAD before this handoff addendum: `153a9716`
+Latest research milestone commit: `153a9716`
+Latest status/documentation commit: `153a9716`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial result: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+Latest H-LIQ source decomposition result: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
+Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
@@ -60,6 +62,15 @@ The H-LIQ novelty diagnostic supports a distinct temporal-variability
 mechanism relative to C2 overall, but dependence rises in the top-value bucket
 (0.468 versus the turnover-level component). H-LIQ remains a future hypothesis
 and no C5 ID is admitted.
+
+The fixed C2 turnover-level source-decomposition replay was independently
+recomputed. It reduces H-LIQ's mean daily Spearman against that level
+component from `0.1647556` to `0.0157646`, but residual dependence with full C2
+remains `0.0843185`; bottom-value Q1 exposure worsens from `39.6722%` to
+`50.3889%`. This establishes only
+`STRUCTURAL_NONREDUNDANCY_VS_C2_LEVEL_ONLY`, not mechanism-level novelty or
+economic readiness. H-LIQ remains `FUTURE_RESEARCH / NOVELTY_PENDING /
+ECONOMIC_CAUTION` and no C5 ID is created.
 
 Current conclusion:
 

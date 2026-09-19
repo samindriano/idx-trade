@@ -4,7 +4,9 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest evidence content commit: `8ad60569`
+Latest evidence content commit: `153a9716`
+Latest H-LIQ source decomposition: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
+Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
@@ -72,14 +74,20 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
 10. H-LIQ-01 remains distinct from C1/C4 but shares a persistent participation
     component with C2. Its bottom-value Q1 share is `39.67%`, and its early-to-
     late Q1 share moves `51.3%` to `29.5%`; retain no-C5 status.
-11. A bounded local-data inventory found `Dataset-Saham-IDX` (external commit
+11. The fixed C2 turnover-level source decomposition was independently
+    recomputed: mean daily Spearman against the removed level component falls
+    from `0.1647556` to `0.0157646`, but residual dependence with full C2 is
+    `0.0843185` and bottom-value Q1 share worsens to `50.3889%`. This supports
+    only `STRUCTURAL_NONREDUNDANCY_VS_C2_LEVEL_ONLY`; H-LIQ remains
+    `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 ID.
+12. A bounded local-data inventory found `Dataset-Saham-IDX` (external commit
     `bc0ac771`, `1,014` CSVs, `1,146,324` rows, 2019-07-29–2025-02-21). It is
     `BLOCKED`: no row-level knowledge-time/vintage field, 56 duplicate ticker
     groups including 11 non-identical copies, and unclear CA/identity/source
     selection. Its static sector/listing files are `METADATA_ONLY`. A dedicated
     admission audit confirmed 923/1,260 official-session dates intersect and
     left PIT, identity, CA basis, and foreign-flow timing unresolved.
-12. H-VOL-01 compression was tested as one fixed structural representation:
+13. H-VOL-01 compression was tested as one fixed structural representation:
     `-log(median_5((high-low)/close) / median_60((high-low)/close))`. It has
     `308,514` finite eligible rows, low mean Top-30 overlap with C1/C2/C4/
     H-LIQ-01 of `9.5209% / 8.0155% / 15.5676% / 13.5803%`, but `29.2778%`
@@ -87,45 +95,45 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     Prior range-family adjacency and unresolved PIT/CA/capacity prevent C5
     admission; this is structural evidence only. Full result is in
     `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
-13. H-VOL-01 CA sensitivity was separately audited against the retained 188
+14. H-VOL-01 CA sensitivity was separately audited against the retained 188
     unresolved rows. The substitution changed `547` scores and `8,876` ranks;
     mean/minimum Top-30 overlap was `99.8307% / 86.6667%`. This narrows but
     does not clear price-basis risk, and H-VOL remains outside the protected
     packet with no C5 ID. See
     `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
-14. A fixed horizon-stability audit compared H-VOL `5/20`, `5/60`, and
+15. A fixed horizon-stability audit compared H-VOL `5/20`, `5/60`, and
     `20/120`. The baseline reproduced exactly; `5/20` mean turnover was
     `36.2583%`, `5/60` was `29.2778%`, and `20/120` support fell to
     `271,045` rows. Pairwise Top-30 overlap was `58.9675% / 9.9182% /
     29.3193%`; no horizon was selected and no C5 was created. See
     `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
-15. H-EXC-01 tested previous-close high/low excursion asymmetry without Open
+16. H-EXC-01 tested previous-close high/low excursion asymmetry without Open
     or volume. It had `305,814` finite rows, but unbounded score tails
     (`-16.2 / 5.0`) and `40.9694%` mean Top-30 turnover. The exact raw form is
     `STRUCTURALLY_REJECTED_AS_WRITTEN`; no post-result clipping or denominator
     rescue was performed, and the broader mechanism remains an untested future
     question. See `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
-16. H-EXC-02 tested a new preregistered bounded absolute-distance excursion
+17. H-EXC-02 tested a new preregistered bounded absolute-distance excursion
     balance. It has exact score domain `[-1,1]`, `308,067` finite eligible rows,
     `40.7750%` mean Top-30 turnover, and `86.6667%` maximum turnover. It is
     structurally distinct but high-churn; no C5 or protected-packet change.
     See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
-17. The H-EXC-02 188-row CA sensitivity kept support identical and produced
+18. The H-EXC-02 188-row CA sensitivity kept support identical and produced
     `99.9722% / 93.3333%` mean/minimum Top-30 overlap, but changed `3,977`
     ranks. This narrows a specific basis risk only; no C5 or status upgrade.
     See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
-18. The fixed H-EXC-02 horizon audit evaluated `5/20/60`: mean turnover fell
+19. The fixed H-EXC-02 horizon audit evaluated `5/20/60`: mean turnover fell
     to `40.7750% / 20.4944% / 11.7570%`, but pairwise Top-30 overlap was only
     `34.7905% / 24.3750% / 42.3333%`. No horizon was selected; the longer
     forms remain future representations, not a repair or predictive result.
     See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
-19. Historical Open capability is partial: `201,415/310,761` eligible rows
+20. Historical Open capability is partial: `201,415/310,761` eligible rows
     are positive finite and all `1,201` eligible dates have at least 30 rows.
     Mixed IDX/Yahoo provenance, `20,995` source transitions, and missing
     available-at/PIT/execution authority keep H-MICRO-02 blocked. See
     `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
-20. Independent Phase-Q red-team found two historical implementation defects:
+21. Independent Phase-Q red-team found two historical implementation defects:
     robustness lookback variants were positionally misaligned after a merge,
     and combination liquidity percentiles used the full-panel denominator.
     Corrected V2 mean overlaps are C1 h3/h10 `57.2333%/52.0389%`, C2
