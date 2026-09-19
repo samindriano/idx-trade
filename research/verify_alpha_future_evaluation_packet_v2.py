@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,31 @@ EXPECTED_SOURCE_NAMES = {
     "tradability_anchors",
     "guarded_features",
     "stage_manifest",
+}
+EXPECTED_METRICS = [
+    "daily cross-sectional Spearman IC",
+    "six-fold median IC",
+    "six-fold q25 IC",
+    "ICIR",
+    "positive-session/fold fraction",
+    "Top-30 target percentile",
+    "Top-30 minus Bottom-30 spread",
+    "H5 and H10 separately",
+    "fixed block bootstrap lower bound",
+]
+EXPECTED_GATES = {
+    "median_fold_ic": {"operator": ">=", "threshold": 0.025},
+    "q25_fold_ic": {"operator": ">=", "threshold": 0.01},
+    "positive_folds": {"operator": ">=", "threshold": 5},
+    "top30_target_percentile": {"operator": ">=", "threshold": 0.52},
+    "top30_minus_bottom30_spread": {"operator": ">=", "threshold": 0.04},
+    "bootstrap_lower_bound": {"operator": ">", "threshold": 0.0},
+    "paired_mean_ic_delta": {"operator": ">=", "threshold": 0.005},
+    "paired_spread_delta": {"operator": ">=", "threshold": 0.01},
+    "paired_top30_delta": {"operator": ">=", "threshold": 0.005},
+    "paired_q25_delta": {"operator": ">=", "threshold": 0.0},
+    "positive_fold_deltas": {"operator": ">=", "threshold": 4},
+    "both_horizons_present": {"operator": "==", "threshold": True},
 }
 
 
@@ -65,6 +91,7 @@ def main() -> None:
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--contract", type=Path, required=True)
     parser.add_argument("--packet", type=Path, required=True)
+    parser.add_argument("--firewall", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     repo = args.repo.resolve()
@@ -109,6 +136,22 @@ def main() -> None:
     preconditions = contract.get("admission_preconditions", [])
     checks["admission_preconditions_nonempty"] = len(preconditions) >= 9
 
+    packet_binding = contract.get("packet_binding", {})
+    packet_actual_sha256 = sha256_file(args.packet)
+    packet_relative = str(args.packet.resolve().relative_to(repo)).replace("\\", "/")
+    checks["packet_hash_binding"] = (
+        packet_binding.get("path") == packet_relative
+        and packet_actual_sha256 == packet_binding.get("sha256")
+    )
+
+    producer = contract.get("producer_binding", {})
+    manifest_binding = contract.get("manifest_binding", {})
+    producer_commit = producer.get("producer_commit")
+    checks["producer_manifest_head_binding"] = (
+        producer.get("require_manifest_head_equals_producer") is True
+        and manifest_binding.get("manifest_repo_head") == producer_commit
+    )
+
     required_packet_phrases = [
         "Alpha Future Evaluation Packet V2",
         "BLOCKED_C3_PIT_COVERAGE",
@@ -124,6 +167,74 @@ def main() -> None:
     checks["packet_has_no_protected_payload"] = not any(
         marker in packet_text.lower() for marker in ("realized_return_value", "h5_values", "h10_values")
     )
+
+    checks["evaluation_population"] = evaluation.get("population") == "V4_PRIMARY_LIQUID_CAUSAL_V1"
+    checks["evaluation_target_formula"] = evaluation.get("target_formula") == "Close_(t+h) / Open_(t+1) - 1"
+    checks["evaluation_target_horizons"] = evaluation.get("target_horizons") == [5, 10]
+    checks["evaluation_target_missingness"] = evaluation.get("target_missingness") == "missing horizons remain missing; never zero-filled"
+    checks["evaluation_target_consensus"] = evaluation.get("target_consensus") == "equal-weight average of ascending average-tie ranks"
+    checks["evaluation_fold_structure"] = evaluation.get("fold_structure") == "chronological non-overlapping validation folds"
+    checks["evaluation_observability"] = evaluation.get("observability_rule") == "preserve predeclared observability rules; no metric may be added after outcomes are visible"
+    checks["evaluation_stopping"] = (
+        evaluation.get("unknown_gate_stops_run") is True
+        and evaluation.get("queue_unchanged_on_unknown") is True
+        and evaluation.get("no_target_substitution") is True
+    )
+    metric_contract = contract.get("metric_contract", {})
+    checks["metric_names_exact"] = metric_contract.get("metrics") == EXPECTED_METRICS
+    checks["metric_gates_exact"] = metric_contract.get("gates") == EXPECTED_GATES
+
+    control_bindings = contract.get("control_document_bindings", {})
+    control_results: dict[str, object] = {}
+    for name, binding in control_bindings.items():
+        path = resolve(repo, binding["path"])
+        exists = path.is_file()
+        text = path.read_text(encoding="utf-8") if exists else ""
+        actual = sha256_file(path) if exists else None
+        binding_ok = exists and actual == binding.get("sha256")
+        item: dict[str, object] = {
+            "path": str(path),
+            "exists": exists,
+            "declared_sha256": binding.get("sha256"),
+            "actual_sha256": actual,
+            "hash_match": binding_ok,
+        }
+        if name == "candidate_registry":
+            expected_status = binding.get("candidate_status", {})
+            registry_ids = set(re.findall(r"^\|\s*(C\d+)\s*\|", text, re.MULTILINE))
+            ids_ok = registry_ids == EXPECTED_CANDIDATES
+            status_ok = all(
+                re.search(
+                    rf"^\|\s*{candidate}\s*\|.*\|\s*`{re.escape(status)}`\s*\|",
+                    text,
+                    re.MULTILINE,
+                )
+                for candidate, status in expected_status.items()
+            )
+            checks["control:candidate_registry_hash"] = bool(binding_ok)
+            checks["control:candidate_registry_ids"] = ids_ok
+            checks["control:candidate_registry_status"] = bool(status_ok)
+            item.update(
+                {
+                    "candidate_ids": sorted(registry_ids),
+                    "candidate_ids_exact": ids_ok,
+                    "candidate_status_exact": bool(status_ok),
+                }
+            )
+        else:
+            clauses = binding.get("required_clauses", [])
+            clauses_ok = all(clause in text for clause in clauses)
+            checks[f"control:{name}:hash"] = bool(binding_ok)
+            checks[f"control:{name}:clauses"] = bool(clauses_ok)
+            item["required_clauses"] = clauses
+            item["clauses_present"] = clauses_ok
+        control_results[name] = item
+    checks["control_bindings_exact"] = set(control_bindings) == {
+        "candidate_registry",
+        "reentry_queue",
+        "phase_matrix",
+    }
+    details["control_documents"] = control_results
 
     source_bindings = contract.get("source_bindings", {})
     checks["source_binding_names_exact"] = set(source_bindings) == EXPECTED_SOURCE_NAMES
@@ -197,14 +308,55 @@ def main() -> None:
         "feature_key_digest": feature_digest,
     }
 
+    head, dirty = git_status(repo)
     manifest = json.loads(Path(source_bindings["stage_manifest"]["path"]).read_text(encoding="utf-8"))
     manifest_binding = contract.get("manifest_binding", {})
     checks["manifest_implementation"] = manifest.get("implementation") == manifest_binding.get("implementation")
     checks["manifest_stage"] = manifest.get("stage") == manifest_binding.get("stage")
     checks["manifest_code_hash"] = manifest.get("code_sha256") == manifest_binding.get("manifest_code_sha256")
     checks["manifest_feature_hash"] = manifest.get("files", {}).get("alpha_stage_a_v3_features.parquet") == manifest_binding.get("manifest_feature_sha256")
+    manifest_repo_head = manifest.get("repo_head") or manifest.get("git_head") or manifest.get("repository_head")
+    checks["manifest_producer_head"] = manifest_repo_head == producer_commit
 
-    head, dirty = git_status(repo)
+    ancestor_ok = False
+    if producer_commit and head:
+        ancestor_ok = subprocess.run(
+            ["git", "-C", str(repo), "merge-base", "--is-ancestor", producer_commit, head],
+            capture_output=True,
+        ).returncode == 0
+    checks["producer_ancestor_of_current_head"] = (
+        ancestor_ok if producer.get("require_producer_ancestor_of_current_head") else True
+    )
+
+    firewall_binding = contract.get("firewall_expectations", {})
+    firewall_path = Path(firewall_binding.get("path", ""))
+    checks["firewall_argument_bound"] = args.firewall.resolve() == firewall_path.resolve()
+    firewall_exists = firewall_path.is_file()
+    firewall_payload = json.loads(firewall_path.read_text(encoding="utf-8")) if firewall_exists else {}
+    firewall_records = firewall_payload.get("records", {}) if isinstance(firewall_payload, dict) else {}
+    expected_groups = set(firewall_binding.get("required_record_groups", []))
+    checks["firewall_status"] = firewall_exists and firewall_payload.get("status") == firewall_binding.get("status")
+    checks["firewall_record_groups"] = firewall_exists and expected_groups.issubset(set(firewall_records)) and all(
+        bool(firewall_records.get(group)) for group in expected_groups
+    )
+    firewall_paths = {
+        Path(path).resolve()
+        for group in firewall_records.values()
+        if isinstance(group, dict)
+        for path in group
+    }
+    expected_firewall_paths = {
+        resolve(repo, path).resolve() for path in firewall_binding.get("required_paths", [])
+    }
+    checks["firewall_required_paths"] = expected_firewall_paths.issubset(firewall_paths)
+    details["firewall"] = {
+        "path": str(firewall_path),
+        "exists": firewall_exists,
+        "status": firewall_payload.get("status"),
+        "record_groups": sorted(firewall_records),
+        "required_paths_present": checks["firewall_required_paths"],
+    }
+
     checks["worktree_clean"] = dirty == ""
     details["repo"] = {"head": head, "dirty": dirty}
 

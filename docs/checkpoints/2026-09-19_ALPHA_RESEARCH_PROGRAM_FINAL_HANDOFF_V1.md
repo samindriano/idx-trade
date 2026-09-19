@@ -2,15 +2,15 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified research snapshot HEAD before this documentation amendment: `d318de60d9588e31bab5a0c47be5bdaab6b0d999`
-Latest research milestone: continuation evidence on this branch (see `git log`)
-Latest status/documentation: continuation evidence on this branch (see `git log`)
+Latest verified current HEAD before this documentation amendment: `58f094b8b59b8933bee6cf2f9996f433a57391a4`
+Latest research milestone: `58f094b8` — handoff and local data-surface control audit
+Latest status/documentation: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
-Latest adversarial result: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
-Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
-Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+Latest adversarial result: `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`
+Latest CA/price-basis result: `2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`
+Latest H-LIQ novelty result: `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`
 Latest H-LIQ source decomposition result: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
 Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
@@ -35,6 +35,11 @@ Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
 Latest corrected robustness/combination replay: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
+Latest current-head packet attestation: `2026-09-20_ALPHA_REENTRY_PACKET_CURRENT_HEAD_ATTESTATION_RESULT_V1.md`
+Latest HSC ownership source audit: `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`
+Latest broker/margin source audit: `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`
+Latest handoff/control and local-surface review: `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`
+Latest packet contract/firewall hardening: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -327,7 +332,7 @@ executable before independent Data QA admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Latest verified snapshot HEAD before this documentation amendment: `d318de60d9588e31bab5a0c47be5bdaab6b0d999`
+- Latest verified current HEAD before this documentation amendment: `58f094b8b59b8933bee6cf2f9996f433a57391a4`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`

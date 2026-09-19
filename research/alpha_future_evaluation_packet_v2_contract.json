@@ -34,6 +34,46 @@
       "missingness": "All fixed prior-20 returns and a strictly positive finite sum of absolute prior daily returns are required; zero denominator, non-finite score, and shorter fallback are missing/excluded."
     }
   },
+  "packet_binding": {
+    "path": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+    "sha256": "44fb9b2202a120076bb5fb40610a30baaf9ff3515d3df9efdb1a58b32862c049"
+  },
+  "control_document_bindings": {
+    "candidate_registry": {
+      "path": "docs/checkpoints/2026-09-19_CANDIDATE_REGISTRY_V1.md",
+      "sha256": "df60cedc88c057a0ad546af0d3c3c9853eb52cfb33509ae84333d1e30f3e49c4",
+      "candidate_status": {
+        "C1": "FUTURE_RESEARCH",
+        "C2": "FUTURE_RESEARCH",
+        "C3": "BLOCKED",
+        "C4": "FUTURE_RESEARCH"
+      }
+    },
+    "reentry_queue": {
+      "path": "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md",
+      "sha256": "fc931c471e08dd4910802e67af824d96646c04d0e879d93ef4e40b9cd71023ca",
+      "required_clauses": [
+        "None is `READY_FOR_REENTRY`",
+        "no rescue, refit, or variant sweep",
+        "leave statuses unchanged"
+      ]
+    },
+    "phase_matrix": {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md",
+      "sha256": "4270ff5ad0eb5b383c8b8e6296bec5f4ad5331c5dc94de7afc821a30c7fd86fd",
+      "required_clauses": [
+        "V | Pre-admission re-entry queue | `COMPLETE SPECIFICATION / NONE READY`",
+        "W | Future evaluation packet | `COMPLETE SPECIFICATION / BLOCKED`",
+        "Z | Autonomous continuation | `ACTIVE`"
+      ]
+    }
+  },
+  "producer_binding": {
+    "producer_commit": "10939862bc134064a55cd492bc4926e0fa99f281",
+    "manifest_repo_head": "10939862bc134064a55cd492bc4926e0fa99f281",
+    "require_manifest_head_equals_producer": true,
+    "require_producer_ancestor_of_current_head": true
+  },
   "ranking_contract": {
     "eligible_mask_first": true,
     "candidate_rank_method": "average",
@@ -141,14 +181,64 @@
     "untouched protected-evaluation state and exact counter/lock semantics"
   ],
   "evaluation_contract": {
+    "population": "V4_PRIMARY_LIQUID_CAUSAL_V1",
     "target": "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1",
+    "target_formula": "Close_(t+h) / Open_(t+1) - 1",
+    "target_horizons": [5, 10],
+    "target_missingness": "missing horizons remain missing; never zero-filled",
+    "target_consensus": "equal-weight average of ascending average-tie ranks",
     "folds": 6,
     "fold_session_length": 100,
+    "fold_structure": "chronological non-overlapping validation folds",
     "purge_sessions": 10,
+    "observability_rule": "preserve predeclared observability rules; no metric may be added after outcomes are visible",
     "bootstrap_repetitions": 2000,
     "bootstrap_block_length": 10,
     "bootstrap_seed": 42,
     "one_shot_per_candidate": true,
-    "no_rescue_refit_variant_sweep": true
+    "no_rescue_refit_variant_sweep": true,
+    "unknown_gate_stops_run": true,
+    "queue_unchanged_on_unknown": true,
+    "no_target_substitution": true
+  },
+  "metric_contract": {
+    "metrics": [
+      "daily cross-sectional Spearman IC",
+      "six-fold median IC",
+      "six-fold q25 IC",
+      "ICIR",
+      "positive-session/fold fraction",
+      "Top-30 target percentile",
+      "Top-30 minus Bottom-30 spread",
+      "H5 and H10 separately",
+      "fixed block bootstrap lower bound"
+    ],
+    "gates": {
+      "median_fold_ic": {"operator": ">=", "threshold": 0.025},
+      "q25_fold_ic": {"operator": ">=", "threshold": 0.01},
+      "positive_folds": {"operator": ">=", "threshold": 5},
+      "top30_target_percentile": {"operator": ">=", "threshold": 0.52},
+      "top30_minus_bottom30_spread": {"operator": ">=", "threshold": 0.04},
+      "bootstrap_lower_bound": {"operator": ">", "threshold": 0.0},
+      "paired_mean_ic_delta": {"operator": ">=", "threshold": 0.005},
+      "paired_spread_delta": {"operator": ">=", "threshold": 0.01},
+      "paired_top30_delta": {"operator": ">=", "threshold": 0.005},
+      "paired_q25_delta": {"operator": ">=", "threshold": 0.0},
+      "positive_fold_deltas": {"operator": ">=", "threshold": 4},
+      "both_horizons_present": {"operator": "==", "threshold": true}
+    }
+  },
+  "firewall_expectations": {
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_future_evaluation_packet_v2_firewall_v2.json",
+    "status": "PASS",
+    "required_record_groups": ["code", "parquet", "json", "text"],
+    "required_paths": [
+      "research/verify_alpha_future_evaluation_packet_v2.py",
+      "research/alpha_future_evaluation_packet_v2_contract.json",
+      "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+      "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md",
+      "docs/checkpoints/2026-09-19_CANDIDATE_REGISTRY_V1.md",
+      "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md"
+    ]
   }
 }

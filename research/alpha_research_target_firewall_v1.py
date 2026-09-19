@@ -14,7 +14,7 @@ import json
 import re
 from pathlib import Path
 
-import pandas as pd
+import pyarrow.parquet as pq
 
 
 FORBIDDEN_PATH_PATTERNS = (
@@ -60,12 +60,30 @@ def code_checks(path: Path) -> dict[str, bool]:
 
 
 def schema_checks(path: Path) -> dict[str, bool]:
-    columns = list(pd.read_parquet(path, engine="pyarrow").columns)
+    columns = list(pq.ParquetFile(path).schema.names)
     return {
         "no_forbidden_output_columns": not any(
             FORBIDDEN_OUTPUT_TOKEN_PATTERN.search(str(column)) for column in columns
         ),
         "schema_non_empty": bool(columns),
+    }
+
+
+def text_checks(path: Path) -> dict[str, bool]:
+    text = path.read_text(encoding="utf-8")
+    forbidden_payload_tokens = (
+        "realized_return_value",
+        "h5_values",
+        "h10_values",
+        "protected_target_payload",
+    )
+    return {
+        "text_non_empty": bool(text.strip()),
+        "no_protected_payload_tokens": not any(token in text.lower() for token in forbidden_payload_tokens),
+        "no_forbidden_path_literal": not any(
+            re.search(pattern, text.replace("\\", "/").lower())
+            for pattern in FORBIDDEN_PATH_PATTERNS
+        ),
     }
 
 
@@ -87,12 +105,13 @@ def main() -> None:
     parser.add_argument("--code", action="append", type=Path, default=[])
     parser.add_argument("--parquet", action="append", type=Path, default=[])
     parser.add_argument("--json", action="append", type=Path, default=[])
+    parser.add_argument("--text", action="append", type=Path, default=[])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
     checks: dict[str, bool] = {}
-    records: dict[str, object] = {"code": {}, "parquet": {}, "json": {}}
-    all_inputs = [*args.code, *args.parquet, *args.json]
+    records: dict[str, object] = {"code": {}, "parquet": {}, "json": {}, "text": {}}
+    all_inputs = [*args.code, *args.parquet, *args.json, *args.text]
     checks["input_list_non_empty"] = bool(all_inputs)
     checks["no_forbidden_input_path"] = not any(path_is_forbidden(path) for path in all_inputs)
 
@@ -108,6 +127,10 @@ def main() -> None:
         item = json_checks(path)
         records["json"][str(path)] = {"sha256": sha256_file(path), "checks": item}
         checks.update({f"json:{path.name}:{key}": value for key, value in item.items()})
+    for path in args.text:
+        item = text_checks(path)
+        records["text"][str(path)] = {"sha256": sha256_file(path), "checks": item}
+        checks.update({f"text:{path.name}:{key}": value for key, value in item.items()})
 
     result = {
         "status": "PASS" if all(checks.values()) else "FAIL",
