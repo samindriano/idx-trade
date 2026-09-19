@@ -47,6 +47,7 @@ production or prospective claim.
 
 - Protocol freeze: committed before any target/label read; tightened after the independent data-admission audit.
 - Admission audit: no source currently passes for new-alpha historical outcome claims.
+- Admission remediation contract: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_REMEDIATION_V1.md`; specification only, not an admission or authorization to open outcomes.
 - Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_RESULT_V1.md`.
 - New feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\alpha_stage_a_features.parquet`.
 - Independent artifact audit: `PASS`; output `independent_audit.json` in the same staging directory.
