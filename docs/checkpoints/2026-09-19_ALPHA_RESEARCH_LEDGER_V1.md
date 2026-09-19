@@ -33,6 +33,10 @@ production or prospective claim.
 | Effort-vs-result Stage A | Causal construction passed, but range/effort was highly correlated with relative volume and Stage B was not admitted. | C2 must disclose overlap and cannot be tuned to rescue the family. |
 | Price-trend structural audit | Structural availability/overlap evidence only, no performance claim. | C1/C4 require outcome comparison and orthogonality gates; structural rank is not alpha proof. |
 | Historical source/tombstone lanes | Blocked/ambiguous sources are not canonical evidence. | No reopening of blocked TradingView/Investing/Open approximations. |
+| Margin / source-semantics lane | The source interpretation was rejected as actual margin usage/flow; this was not an alpha false-negative test. | Do not classify the family as alpha-rejected; require a defensible source contract before any hypothesis. |
+| Ownership / free-float / HSC | Source work became deep, but no final comprehensive alpha experiment was completed. | Untested family, not a survivor or failure; no generic source restart in this bounded lane. |
+| Suspension / resumption | Data-state engineering exists, but no broad standalone alpha conclusion was established. | Treat as state/context infrastructure, not as a rejected or admitted alpha. |
+| Foreign-flow mechanism discovery / frontier shortlist | Outcome-blind discovery retained mechanism questions and a P0/P1/P2 future shortlist; it did not establish predictive edge. | No new candidate is added to the frozen four; source admission and a new frozen contract are prerequisites. |
 
 ## Candidate ledger
 
@@ -46,6 +50,7 @@ production or prospective claim.
 ## Audit trail
 
 - Protocol freeze: committed before any target/label read; tightened after the independent data-admission audit.
+- Prior-work completeness audit: `2026-08-26_CLOSED_ALPHA_FAMILY_REEVALUATION.md` and `2026-08-26_ALPHA_FRONTIER_RESEARCH_V1_BOOTSTRAP.md` were reconciled into the family map; untested families remain explicitly distinct from failures.
 - Admission audit: no source currently passes for new-alpha historical outcome claims.
 - Admission remediation contract: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_REMEDIATION_V1.md`; specification only, not an admission or authorization to open outcomes.
 - Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_RESULT_V1.md`.
