@@ -216,3 +216,37 @@ non-redundant work remains authorized.
   CA linkage, and panel completeness are not certified. It expands H-FLOW
   capability only; no new candidate or feature was created. See
   `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+
+- HSC ownership event-ledger audit passes all 137 artifact hashes, normalized
+  parity, revision-link checks, replay checkpoints, and 55-ticker cutoff target
+  parity. It remains event-only and population/PIT admission blocked; no HSC
+  feature or candidate was created. See
+  `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+- Broker/margin snapshot audit passes all 73 artifact hashes and official/Zapi
+  raw parity for 220 margin and 965 stock rows, but remains snapshot-only:
+  106/326 eligible names are absent, all-six equality is 0/220, financing-flow
+  semantics are unproven, and publication/knowledge time is absent. No
+  feature or candidate was created. See
+  `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Active question update — 2026-09-20
+
+- `ANSWERED STRUCTURALLY`: HSC and broker/margin raw-source integrity and
+  bounded parity are independently verified.
+- `BLOCKED`: HSC daily population/PIT admission and broker/margin financing or
+  historical/PIT semantics remain unresolved; neither surface can enter a
+  feature or mask.
+- `NEXT HIGH-INFORMATION`: independent Phase-Q falsification of current
+  candidate conclusions and candidate-specific CA/issuer-basis review; do not
+  retry the exact HSC/broker source audits without new evidence.
+- The CA/issuer worker review formalized the missing future contract as
+  `CA_ISSUER_PRICE_BASIS_ADMISSION_V1`: complete event-to-window linkage,
+  issuer/ISIN continuity, effective plus knowledge time, explicit basis
+  semantics, and PASS for every finite candidate window. Current status remains
+  `SPECIFICATION_ONLY / NOT_ADMITTED`. See
+  `2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.
+- A second independent Phase-Q red-team replay found no new contradiction:
+  hidden PIT remains `UNKNOWN`, CA basis and executable capacity remain
+  readiness failures, C1/C4 remain non-additive (daily Spearman `0.462413`,
+  combination dependence about `0.850`), and H-LIQ remains unqualified.
+  Existing statuses and the no-retry boundary are unchanged.

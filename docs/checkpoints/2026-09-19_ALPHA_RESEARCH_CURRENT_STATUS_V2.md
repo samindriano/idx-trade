@@ -633,3 +633,10 @@ IDX Reporting (Regular and Cash) rather than a financing ledger, and
 publication/knowledge time is absent. It remains `SNAPSHOT_ONLY / BLOCKED`;
 no feature, mask, candidate, or protected state changed. See
 `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The independent CA/issuer review also formalized the missing future admission
+contract: complete event-to-window linkage, issuer/ISIN continuity, effective
+date plus knowledge time, explicit adjusted/unadjusted basis semantics, and a
+PASS gate for every finite candidate window. This is
+`SPECIFICATION_ONLY / NOT_ADMITTED`; the global basis blocker remains. See
+`2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.

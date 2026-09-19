@@ -594,3 +594,10 @@ stock rows, but the single-date source remains `SNAPSHOT_ONLY / BLOCKED`:
 0/220, financing-flow semantics are not proven, and publication/knowledge
 time is absent. No feature, candidate, packet, or model status changed. See
 `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The CA/issuer review produced a reusable admission specification rather than
+a repair: `CA_ISSUER_PRICE_BASIS_ADMISSION_V1` requires complete
+event-to-window linkage, issuer/ISIN continuity, effective and knowledge time,
+explicit basis semantics, and a PASS for every finite candidate window. It is
+not an admission artifact and does not change candidate or packet status. See
+`2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.

@@ -463,3 +463,10 @@ be financing flow or an exact All Stock filter, and publication/knowledge time
 is absent. No feature, candidate, universe mask, target, or incumbent state
 changed. See
 `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The CA/issuer review formalized `CA_ISSUER_PRICE_BASIS_ADMISSION_V1` as a
+future contract: event-to-window completeness, issuer/ISIN continuity,
+effective plus knowledge time, explicit price/share basis, and candidate-level
+PASS. It is specification-only and does not clear the current global basis
+blocker or change the C1/C2/C4 queue. See
+`2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.

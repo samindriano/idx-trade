@@ -690,3 +690,11 @@ margin summary, all-six equality is 0/220, and no financing-flow or
 publication-time contract is present. It remains `SNAPSHOT_ONLY / BLOCKED`;
 no feature, candidate, packet, or protected state changed. See
 `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The CA/issuer red-team follow-up converted the unresolved basis gap into a
+future admission specification rather than a repair attempt. The proposed
+contract requires population-complete event-to-window linkage, issuer/ISIN
+continuity, effective and knowledge time, explicit basis semantics, and PASS
+for every finite candidate window. It remains specification-only; no candidate
+or packet status changed. See
+`2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.

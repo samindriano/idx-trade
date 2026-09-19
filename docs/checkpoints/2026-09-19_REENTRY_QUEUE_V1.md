@@ -74,3 +74,15 @@ packet-bound Git files are unchanged Q-to-R and current declared source hashes
 match. This is packet-byte freshness only. Full external-source freshness is
 still `UNKNOWN`, so the queue remains exactly C1/C2/C4 conditional plus blocked
 C3 and no candidate is READY_FOR_REENTRY.
+
+The 2026-09-20 HSC ownership and broker/margin source audits add capability
+evidence only. HSC is structurally exact but event-only; broker/margin is a
+single-date category snapshot with incomplete eligible coverage and no proven
+financing semantics. Neither source changes the queue, candidate formulas,
+packet membership, or readiness status.
+
+The CA/issuer red-team also formalized the future
+`CA_ISSUER_PRICE_BASIS_ADMISSION_V1` contract. Until its population-complete
+event-to-window and issuer/ISIN gates pass, C1 remains basis-sensitive and
+C2/C4 remain globally UNKNOWN for basis admission; this does not alter the
+conditional queue or authorize any protected read.
