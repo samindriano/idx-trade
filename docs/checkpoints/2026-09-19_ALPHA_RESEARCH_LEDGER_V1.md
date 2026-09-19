@@ -47,6 +47,7 @@ production or prospective claim.
 - Admission audit: no source currently passes for new-alpha historical outcome claims.
 - Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_RESULT_V1.md`.
 - New feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\alpha_stage_a_features.parquet`.
+- Independent artifact audit: `PASS`; output `independent_audit.json` in the same staging directory.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.

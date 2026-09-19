@@ -21,6 +21,9 @@ claims. Therefore none of the numbers below is an IC, OOS, performance, or
 
 - Code: `research/alpha_stage_a_v1.py`
 - Code SHA-256: `3a5f018663a4a7848d19daec15a882523027ca4c1ad6cb719911c8c9a41dbc54`
+- Independent verifier: `research/verify_alpha_stage_a_v1.py`
+- Independent verifier SHA-256:
+  `cc5114322f8c3333652c7844245b610dafce67710e968ec222f439750fb87fe1`
 - External staging directory:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\`
 - Feature parquet SHA-256:
@@ -29,6 +32,8 @@ claims. Therefore none of the numbers below is an IC, OOS, performance, or
   `7f0dcaa8ad581881a82080ad812b2bc9049be37f2d8aa5cd12e89f106869cbb8`
 - Manifest SHA-256:
   `c89588ccd7ab5b9e4159221709f49fd2470961f43d6ab61c9331bf57eb958dc9`
+- Independent audit JSON SHA-256:
+  `b875fc7006c8cd730ff28b869cee0734769c30d5d9158aed7347972e1755fd8e`
 - Panel source SHA-256:
   `25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e`
 - Financial source SHA-256:
@@ -86,6 +91,14 @@ orthogonality to V4-X1 is `UNKNOWN`, not inferred from these pairwise values.
   threshold rescue is allowed.
 - No candidate received target access, IC/ICIR, fold results, economics,
   robustness pass, or `RESEARCH_SURVIVOR` status.
+
+## Independent audit
+
+`verify_alpha_stage_a_v1.py` returned `PASS`: exact schema, zero duplicate
+keys, non-null keys, no outcome-named columns, source/code hash matches,
+manifest/artifact hash matches, and all four finite-counts matched the audit
+JSON. This verifies artifact integrity only; it does not establish PIT/OOS or
+alpha performance.
 
 ## Next legal step
 
