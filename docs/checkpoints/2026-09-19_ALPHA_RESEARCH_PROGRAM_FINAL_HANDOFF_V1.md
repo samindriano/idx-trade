@@ -2,9 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `22d4b1c15fd455859d6b1deb5ec328f8c70dff8b`
-Latest research milestone: `22d4b1c1` — isolated research lane integrity attestation
-Latest status/documentation: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
+Latest verified current HEAD before this documentation amendment: `2ad6f4afdac8c28290d0f828762e7a0b83d96d1d`
+Latest research milestone: independent C1/C2/C4 constructor replay and frontier audit
+Latest status/documentation: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
@@ -43,6 +43,8 @@ Latest packet contract/firewall hardening: `2026-09-20_ALPHA_PACKET_CONTRACT_FIR
 Latest local data-surface closure review: `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`
 Latest completion audit: `2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`
 Latest lane-integrity attestation: `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`
+Latest independent constructor replay: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
+Latest eligibility contract audit: `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the

@@ -115,6 +115,10 @@ non-redundant work remains authorized.
    maps as `BLOCKED / NOT_ADMITTED`; do not repeat it or expand providers
    unless a new artifact supplies row-level PIT/vintage, identity/CA semantics,
    and deterministic duplicate-source selection.
+7. Treat the independent constructor replay as implementation evidence only;
+   the next non-redundant frontier is a genuinely new admission-quality source
+   or executable-capacity authority. Do not retry the same formulas,
+   combination weights, or blocked local surfaces.
 
 ## Continuation update — 2026-09-19
 
@@ -175,6 +179,16 @@ non-redundant work remains authorized.
   readiness: CA basis and executable capacity fail readiness, full
   constructor/PIT/population proof is unknown, and C1/C4 are not additive-
   independent. See `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`.
+- An independent constructor replay matches all 981,940 keys, current
+  implementation eligibility masks, C1/C2/C4 scores, and average-tie ranks
+  exactly. A separate audit found a material prose-versus-code eligibility
+  contradiction (`>=20` finite values versus `min_periods=60`); no alternative
+  mask is admitted and Phase Q remains partial. The replay does not establish
+  PIT, issuer/ISIN, CA basis, survivorship, capacity, or predictive validity.
+  See
+  `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.
+  The contradiction is recorded in
+  `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`.
 - Local surface census found no admissible new source. TradingView and
   Investing BBCA max histories are partial and basis-divergent; current-flow,
   listings, investor-type, technical, and Stockbit probes are snapshot/current

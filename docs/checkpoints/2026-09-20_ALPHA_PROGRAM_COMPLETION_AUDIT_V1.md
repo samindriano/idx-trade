@@ -85,3 +85,13 @@ Subsequent process-scope evidence is recorded separately in
 `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`; it passes the
 isolated branch/worktree/staging checks but does not convert the scientific
 `NO-GO` into admission or predictive evidence.
+
+The independent constructor replay subsequently passed all key, eligibility,
+score, and rank comparisons across 981,940 rows. This closes an
+implementation-replay uncertainty against the current code, but a separate
+audit found the prose `>=20` eligibility rule conflicts with the code's
+`min_periods=60`. No alternative mask is admitted. The scientific completion
+blockers therefore include this policy contradiction in addition to PIT/as-of,
+issuer/ISIN, CA basis, survivorship, executable capacity, and protected
+admission. See
+`2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.

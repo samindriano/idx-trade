@@ -60,7 +60,7 @@
     },
     "phase_matrix": {
       "path": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md",
-      "sha256": "4270ff5ad0eb5b383c8b8e6296bec5f4ad5331c5dc94de7afc821a30c7fd86fd",
+      "sha256": "4aaa140fd46da1bc94b22d8347e5f6e300091ce64ca28298eb016a4e7119f427",
       "required_clauses": [
         "V | Pre-admission re-entry queue | `COMPLETE SPECIFICATION / NONE READY`",
         "W | Future evaluation packet | `COMPLETE SPECIFICATION / BLOCKED`",

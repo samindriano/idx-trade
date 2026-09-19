@@ -663,3 +663,21 @@ The lane-integrity attestation then passed branch/worktree/staging scope and
 research-only delta checks. It strengthens isolation controls but does not
 change the scientific admission boundary or candidate statuses. See
 `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`.
+
+An independent constructor replay then rebuilt the C1/C2/C4 eligibility mask,
+scores, and average-tie ranks from the declared non-outcome inputs. All
+981,940 keys matched; eligibility, all three scores, and all three ranks had
+zero mismatches against the current implementation. A separate audit found a
+material contradiction between the prose `>=20` eligibility rule and the
+implementation's `min_periods=60`; no alternative mask is admitted. PIT,
+issuer/CA basis, survivorship, capacity, and predictive admission also remain
+uncleared. See
+`2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.
+
+A separate capacity/source frontier audit found no new admissible historical
+surface. Existing turnover tails, concentration, missing ADV/spread/queue/fill
+authority, and unknown publication/vintage semantics remain the highest-value
+blockers; no same-surface retry or new candidate is justified.
+The eligibility contradiction is separately recorded as
+`BLOCKED / POLICY DECISION REQUIRED` in
+`2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`.

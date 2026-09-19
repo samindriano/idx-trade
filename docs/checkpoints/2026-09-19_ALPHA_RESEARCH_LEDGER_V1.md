@@ -748,3 +748,18 @@ worktree identity match the isolated lane, the worktree is clean, and the
 staging root contains no protected-looking filenames. This is process-scope
 evidence only and does not prove runtime absence of protected access. See
 `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`.
+
+## Continuation register — independent constructor and frontier replay
+
+An independently implemented constructor replay rebuilt the declared session
+grid, eligibility mask, C1/C2/C4 scores, and average-tie ranks. All 981,940
+keys matched the staged feature artifact; eligibility, scores, and ranks each
+had zero mismatches against the current implementation. A separate replay
+found that the prose `>=20` eligibility rule conflicts with the implementation
+`min_periods=60`; no alternative mask was promoted. PIT, issuer/ISIN, CA basis,
+survivorship, executable capacity, and predictive admission remain unresolved.
+The separate capacity/source audit found no new admissible historical surface
+and recommends no same-surface retry. See
+`2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.
+The contract contradiction is a separate `BLOCKED / POLICY DECISION REQUIRED`
+checkpoint: `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`.
