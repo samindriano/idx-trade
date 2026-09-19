@@ -290,12 +290,16 @@ admission.
   `64d03527b7bb504dee34e854ed9123f03fb55c557a455462eef46a928c823444`.
 - Corrected combination V2 code/output SHA-256: `5c1db06448f656f7a11a1217a7e05887c398beeb7900592eed2f8432f1d971ff` /
   `87b195ea6cbd281d861932bd9bdf2935c9538bfb6b5031bee2dbf60675ee6c2f`.
+- Reusable artifact hash-contract verifier: `research/verify_alpha_research_artifact_contract_v1.py`, SHA-256
+  `c587bba69fbfdd77cf9ea4f5ce0dbda191ec5efd191bff55355f0b32cf9ca138`;
+  PASS report SHA-256 `2b8064b51f34b6de084f1facd070cc2288d0270e707c0b6798a3b2e2767615ad`.
 - Combination firewall SHA-256: `4d00cace99225d5286c5143698622a85a735564b5ee6955bab98007038d679f4`.
 - Other structural code/output hashes are recorded in their result docs and
   staging JSON manifests; all are isolated and target-free.
 - Tests: Python compilation `PASS`; C3 verifier `PASS`; corrected V2
-  verifiers `PASS`; outcome-blind target firewall `PASS`; git worktree was
-  clean at baseline.
+  verifiers `PASS`; outcome-blind target firewall `PASS`; artifact hash
+  contract PASS plus deliberate wrong-code/required-manifest FAIL paths;
+  git worktree was clean at baseline.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
   real capacity, sector/PIT history, and mechanism-level novelty; the latest
   independent red-team correction replay is complete but remains structural.

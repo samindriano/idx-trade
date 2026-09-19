@@ -149,6 +149,7 @@ production or prospective claim.
 - Independent Phase-Q correction replay: the prior robustness lookback metrics were invalidated by positional variant misalignment after a merge; key-aligned V2 overlaps are C1 h3/h10 `57.2333%/52.0389%`, C2 `65.3167%/60.1389%`, and C4 h10/h40 `44.7611%/45.4111%`. The prior combination liquidity denominator was also invalid: eligible-only V2 bottom-value Q25 exposure is `30.7722%–40.6722%` rather than `0.4333%–0.7056%`. Turnover/formulas are unchanged; no candidate status or packet membership changed. See `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 - The corrected V2 code and outputs passed an outcome-blind static firewall in addition to their independent metadata verifiers. Firewall output SHA-256 is `a3b8cc953160f4c05c578f97df5e03b0fff987bb1789f795592fd18a6b29351c`; all target/outcome/provider/incumbent access flags and forbidden-schema/network checks passed.
 - A bounded read-only scan of remaining `research/` rank/percentile paths found no additional active denominator or key-alignment defect. H-LIQ, structural-lab, capacity, sensitivity, H-VOL/H-EXC, and Stage-A V2 paths use eligible/finite subsets consistently; the old Stage-A V1 financial ranking pattern is lineage-only and was not used as current evidence. See `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+- Hash-contract follow-up: current artifact declarations use several compatible shapes (`source_hashes`, `inputs`, manifest `files`, or direct `*_sha256` fields). The new isolated `research/verify_alpha_research_artifact_contract_v1.py` normalizes these shapes and fails closed on missing/conflicting/mismatched declarations; Stage-A source/code PASS and deliberate wrong-code/required-manifest FAIL paths were verified. See `2026-09-19_ALPHA_ARTIFACT_HASH_CONTRACT_RESULT_V1.md`.
 - Phase-frontier adversarial audit: fixed-window turnover/friction tails strengthen C1 friction caution and C4 bottom-value/capacity caution; H-LIQ remains structurally distinct but composition-sensitive and no-C5. A newly surfaced `Dataset-Saham-IDX` inventory is blocked by missing row-level PIT/vintage authority and duplicate non-identical ticker copies. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
@@ -164,8 +165,6 @@ production or prospective claim.
 
 ### Active questions
 
-- Can future research-only outputs enforce guarded feature/manifest hash
-  binding automatically rather than relying on caller discipline?
 - Can existing local corporate-action/issuer evidence reduce the 188-row
   unresolved price-basis risk without reopening acquisition?
 - Can historical capacity and listing/identity risk be narrowed using only
@@ -185,6 +184,10 @@ production or prospective claim.
   duplicates, and guarded is the active distinct structural generation.
 - Downstream consumer audit found guarded hash binding in current staged
   outputs; legacy hashes remain confined to historical staging folders.
+- A reusable artifact hash-contract verifier now normalizes the active
+  declaration shapes and fails closed on missing, conflicting, or mismatched
+  code/input/manifest bindings. Its Stage-A PASS and deliberate FAIL paths are
+  recorded in `2026-09-19_ALPHA_ARTIFACT_HASH_CONTRACT_RESULT_V1.md`.
 
 ### Blocked questions
 
