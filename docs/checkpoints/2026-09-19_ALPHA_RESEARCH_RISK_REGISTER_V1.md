@@ -68,6 +68,22 @@ protected-state integrity. Any `UNKNOWN` remains blocking.
 
 ## Provenance
 
+## Continuation risk additions — 2026-09-19
+
+| Risk | Evidence | Status | Control |
+|---|---|---|---|
+| Reporting-age public availability | `70,931` age rows are internally coherent, but coverage begins in 2024 and knowledge time is not independently public-availability authority | `OPEN / UNKNOWN` | No pre-2024 fill; retain FILINGAGE-01 as source capability only |
+| Execution-state semantics | `1,104,064` official rows reconcile exactly, but `NO_TRADE` semantics, completeness, PIT timing, vintage, and identity remain unresolved | `OPEN / UNKNOWN` | Do not reinterpret as suspension, illiquidity, or executable capacity |
+| Suspension interval coverage | `471` duplicate expanded key groups; `120,498/121,666` unique no-trade keys outside available regular intervals | `OPEN / BLOCKED` | No silent deduplication or interval-based imputation |
+| Sector membership/PIT | Structured 2022/2023 snapshots only; PDF-only gaps, `GWSA/KOTA` cross-sheet duplicates, no daily membership/identity/vintage | `OPEN / UNKNOWN` | No daily expansion or sector feature admission |
+| CA residual population | `0/188` unresolved scale rows overlap retained HLC overlay; listing interval is narrow evidence only | `OPEN / UNKNOWN` | Require event-level issuer/ISIN/basis authority |
+| C1/C2/C4 verifier scope | v2 independently checks stored artifact/structural invariants but does not rebuild the feature constructor or eligibility masks from raw inputs | `OPEN / UNKNOWN` | Do not describe it as full source-recomputing certification; preserve scope limitation |
+| Re-entry packet freshness | Current V2 packet/contract remain frozen to an earlier manifest/commit; the contract manifest head differs from current lane tip `cc60808e` | `OPEN / UNKNOWN` | Treat V2 as specification-only; do not execute or silently rewrite hashes; re-verify freshness only after an explicit packet update |
+| H-LIQ temporal persistence | Six 100-session blocks show Q4 H-LIQ/C2 dependence `0.0762–0.3053` and bottom-value Q1 share `29.47%–51.30%` | `OPEN / UNKNOWN` | Keep H-LIQ no-C5; do not claim stable novelty or economic meaning |
+
+These additions are source and provenance risks only; they do not authorize
+protected evaluation or candidate-budget expansion.
+
 - Current branch: `codex/alpha-available-data-20260919`
 - Current checkpoint family: `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`,
   `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`, and

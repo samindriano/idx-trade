@@ -16,6 +16,10 @@ Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RES
 Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
 Latest CA residual coverage: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
 Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
+Latest literature mechanism card: `2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`
+Latest C1/C2/C4 verifier-scope adjudication: `2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`
+Latest H-LIQ temporal persistence red-team: `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`
+Latest re-entry packet freshness audit: `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
@@ -57,6 +61,9 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
 2. Causal/structural checks: prior-only shifts, future-row mutation isolation,
    key uniqueness, official-session masks, rank bounds, and source-hash checks
    passed. These are not proof of full historical PIT or CA authority.
+   The C1/C2/C4 v2 verifier is independently structural/artifact-level, not a
+   full independent feature-constructor or eligibility rebuild; its scope is
+   now recorded explicitly.
 3. Independent structural-lab replay recomputed the full candidate and pairwise
    maps and passed `PASS_INDEPENDENT_SOURCE_REPLAY`, `mismatch_count=0`.
 4. Phase-Q red-team reviews covered causal/PIT/identity/CA, economics/
@@ -217,7 +224,7 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
-- `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
+- `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md` (historical/stale; use contract closure)
 - `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`
 - `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
 - `2026-09-19_ALPHA_HVOL01_COMPRESSION_PREREGISTRATION_V1.md`
@@ -251,10 +258,10 @@ is no justification to open target data merely to force a winner.
 
 These are source-quality/structural findings only. No target, outcome,
 provider, cloud, incumbent, canonical, capture, scheduler, telemetry, or
-production state was accessed or changed. The next optional lane is a
-preregistered official IDX-IC sector archive capability audit; it remains
-metadata/structural only until publication timing, daily membership intervals,
-and identity continuity are demonstrated.
+production state was accessed or changed. The official IDX-IC sector archive
+capability audit is complete; it remains
+metadata/structural only because publication timing, daily membership
+intervals, and identity continuity were not demonstrated.
 
 SECTOR-01 is now complete: `22` structured 2022/2023 sheets contain `1,607`
 rows and `837` unique ticker codes, but the archive has PDF-only year gaps,
@@ -262,6 +269,25 @@ cross-sheet `GWSA`/`KOTA` duplicates, and no daily/PIT/identity/vintage
 authority. It remains `SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`; no
 feature or candidate was created. See
 `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`.
+
+Literature mapping found no justified new raw reversal/liquidity candidate;
+those mechanisms overlap C1/C2/H-LIQ-01. Industry-adjusted reversal is kept as
+a future specification only, because current sector history lacks daily PIT
+membership, publication timing, identity, and revision authority. See
+`2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`.
+
+H-LIQ temporal red-team coverage/mask checks pass, but six fixed 100-session
+blocks show Q4 H-LIQ/C2 dependence `0.0762–0.3053` and bottom-value Q1 share
+`29.47%–51.30%`. This fails an unqualified persistence claim; H-LIQ remains
+no-C5 and novelty/economic meaning remain unknown. See
+`2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
+
+Re-entry packet indexing is logically consistent for C1-C4 with C3
+fail-closed, but packet freshness is `UNKNOWN`: the frozen contract manifest
+head `10939862...` differs from lane tip `cc60808e...`. The packet remains
+specification-only and must not execute; stale V1 references are now repaired
+or labeled historical. See
+`2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 
 No protected outcome was opened, no provider/network scrape was performed, no
 canonical or active dataset was changed, and no telemetry/capture/cloud state

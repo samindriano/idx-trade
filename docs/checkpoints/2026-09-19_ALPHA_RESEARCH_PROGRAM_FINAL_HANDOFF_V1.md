@@ -19,6 +19,10 @@ Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RES
 Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
 Latest CA residual coverage: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
 Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
+Latest literature mechanism card: `2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`
+Latest C1/C2/C4 verifier-scope adjudication: `2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`
+Latest H-LIQ temporal persistence red-team: `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`
+Latest re-entry packet freshness audit: `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`
 Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`
 Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`
@@ -273,7 +277,7 @@ Phase coverage matrix: `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`.
 Capacity proxy detail: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
 Current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`.
 Adversarial detail: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`.
-Re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`.
+Historical/stale re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`; use the V2 contract closure instead.
 Risk register: `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`.
 
 ## Do not retry without new evidence
@@ -300,11 +304,11 @@ authority, identity mapping, revision/vintage, licensing, and admission proof.
 
 ## Protected evaluation packet status
 
-`2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md` is complete as a
+`2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md` is the current
 specification-only packet for exactly C1-C4: fixed target, population, six
 folds, purge/embargo, metrics, gates, friction assumptions, robustness, and
-one-shot stopping rule. It is not executable before independent Data QA
-admission.
+one-shot stopping rule. V1 is superseded and the current packet is not
+executable before independent Data QA admission.
 
 ## Exact next step when Data QA admission arrives
 
@@ -399,5 +403,27 @@ document-level periods, PDF-only year gaps, two cross-sheet duplicates
 (`GWSA`/`KOTA`), and no daily/PIT/identity/vintage authority. Status is
 `SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`; no feature or candidate was
 created. See `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`.
+
+A bounded literature scan did not justify another raw reversal or liquidity
+candidate: those mechanisms overlap the already audited C1/C2/H-LIQ families.
+It preserved one future specification—industry-adjusted reversal—because it is
+mechanistically distinct, but the current sector archive is not PIT-safe for
+daily implementation. See
+`2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`.
+
+The H-LIQ temporal persistence red-team passed coverage/mask integrity across
+six 100-session blocks, but Q4 H-LIQ/C2 dependence ranged `0.0762–0.3053` and
+selected bottom-value Q1 share ranged `29.47%–51.30%`. This fails an
+unqualified persistence claim; H-LIQ remains no-C5 and
+`NOVELTY_PENDING / ECONOMIC_CAUTION`. See
+`2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
+
+The re-entry packet freshness audit confirms C1/C2/C3/C4 indexing and C3
+fail-closed behavior, but the frozen contract manifest head
+`10939862...` differs from the current lane tip `cc60808e...`. Packet
+freshness is therefore `UNKNOWN`; the V2 packet remains specification-only and
+must not be executed. Stale V1 index references were repaired or labeled
+historical. See
+`2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 
 No predictive superiority claim is made.

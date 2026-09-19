@@ -27,17 +27,20 @@ New tool:
 
 `research/verify_alpha_c1234_adversarial_audit_v2.py`
 
-It independently reopens the same frozen outcome-blind inputs, recomputes:
+It independently reopens the same frozen outcome-blind inputs and checks:
 
 - implementation AST/static checks;
 - feature/panel keys, duplicates, official dates, chronological order;
-- candidate schema, finite support, score/rank masks, and rank bounds;
+- stored candidate schema, finite support, score/rank masks, and rank bounds;
 - security-master interval mapping;
 - listing-age metrics and identity summary;
 - all source hashes and audit-code hash;
 - exact artifact schema and interpretation boundary.
 
-Result: `PASS_INDEPENDENT_STRUCTURAL_REPLAY`.
+Result: `PASS_INDEPENDENT_STRUCTURAL_REPLAY` for the registered artifact/
+structural checks. It does not independently rebuild the feature constructor
+or eligibility masks from raw inputs; see
+`2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`.
 
 Important limitation: access flags inside the old artifact remain
 self-attested. The new verifier reports this explicitly and does not claim

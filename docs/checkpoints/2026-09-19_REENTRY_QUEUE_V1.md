@@ -42,3 +42,16 @@ evaluated with protected outcomes without a separately frozen packet decision.
 3. If any gate is absent, do not open outcomes and leave statuses unchanged.
 4. If all gates pass, run the fixed comparison once per candidate on common
    support; no rescue, refit, or variant sweep.
+
+## Latest source-admission notes
+
+FILINGAGE-01, EXECSTATE-01, SUSPSTATE-01, the CA residual audit, and SECTOR-01
+are retained as source-capability evidence only. None clears population-wide
+PIT/as-of, identity, corporate-action basis, revision/vintage, or protected
+target admission. The queue remains exactly C1/C2/C4 conditional plus blocked
+C3; no newly audited source is a candidate or packet member.
+
+Packet freshness is separately `UNKNOWN`: the V2 contract's declared manifest
+head predates the current lane tip. Keep the packet specification-only and do
+not execute or silently rewrite its hashes; see
+`2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.

@@ -258,7 +258,7 @@ This is a usable capability island, not a population-wide scientific panel.
 | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md` | bounded literature/mechanism cards and novelty-gate decisions; no new candidate ID |
 | `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md` | one fixed temporal-liquidity prototype; structurally distinct but not admitted as C5 |
 | `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md` | adversarial H-LIQ horizon, conditional-overlap, missingness, and listing-age audit |
-| `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md` | one-shot protected evaluation specification; not executable before independent admission |
+| `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md` | current one-shot protected evaluation specification; V1 superseded; not executable before independent admission |
 | `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md` | mechanism-defined C3 subset capability map; quality core broader, YoY remains binding |
 | `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md` | read-only security-master interval audit; eligible identity mapping passes, corporate-action basis remains unknown |
 | `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md` | equal-weight C1/C2/C4 combination readiness and low/base/stress structural economics |
@@ -323,8 +323,8 @@ No candidate is ready for scientific comparison today. Conditional queue:
 
 ## Protected evaluation packet status
 
-The packet is `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`; it is
-specification-only and not populated with outcomes. The frozen
+The packet is `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`; V1 is
+superseded. The current packet is specification-only and not populated with outcomes. The frozen
 contract defines the target, six chronological folds, purge, common-support
 rules, candidate budget, and re-entry gates. No target, forward label,
 incumbent score, or prospective outcome was opened in this lane.

@@ -14,7 +14,7 @@ Latest robustness battery: `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`
 Latest hypothesis cards: `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`
 Latest H-LIQ-01 prototype: `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`
 Latest H-LIQ-01 red-team: `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`
-Future evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
+Future evaluation packet (superseded specification): `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
 Latest C3 contract map: `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`
 Latest identity audit: `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md`
 Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
@@ -53,7 +53,11 @@ Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RES
 Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
 Latest CA residual coverage check: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
 Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
-Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
+Latest literature mechanism card: `2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`
+Latest C1/C2/C4 verifier-scope adjudication: `2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`
+Latest H-LIQ temporal persistence red-team: `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`
+Latest re-entry packet freshness audit: `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`
+Historical/stale re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
 Latest risk register: `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`
@@ -145,13 +149,15 @@ production or prospective claim.
 - Combination readiness: exactly four equal-weight C1/C2/C4 combinations were evaluated without weight optimization. C1+C4 has the lowest tested combination turnover at 34.85%; all results remain structural hypotheses and no new candidate ID was created. See `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`.
 - Unused-data scan: `activity_median_regular_value_60` is populated for 105/963 current-universe tickers, but has no ticker-date history or available-at/PIT timestamps and five populated ranks fall outside `capture_high`; retain as metadata-only/non-admissible. No provider or canonical data was opened.
 - Capacity stress: q10 regular-market-value proxy at the 1% rate is IDR 7.63m/6.40m/13.03m/5.02m for C1/C2/C3/C4; this sharpens implementation caution but does not establish ADV or executable capacity. See `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
-- C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. Legacy artifact result is `PASS_STRUCTURAL_ONLY`; the new source-recomputing replay is `PASS_INDEPENDENT_STRUCTURAL_REPLAY`. Neither certifies PIT, corporate-action price basis, survivorship, or predictive value; access flags remain self-attested. See `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+- C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. The v2 replay is an independent artifact/structural replay, not a full feature-constructor or eligibility rebuild; that scope limitation is now explicit. Neither certifies PIT, corporate-action price basis, survivorship, or predictive value; access flags remain self-attested. See `2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`.
 - CA/price-basis audit: the retained 1,657-row HLC overlay is already represented exactly in the current panel and replay leaves C1/C2/C4 scores, ranks, and Top-30 sets unchanged. This is bounded forensic evidence only; 188 non-stable scale rows and open-price residuals keep CA/PIT admission blocked. See `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`.
 - CA-basis stress extension: substituting the retained `idx_close` comparison values for the 188 unresolved rows changes C1 ranks on 10.617% of compared rows (minimum Top-30 overlap 36.667%), versus 2.894%/83.333% for C2 and 3.203%/86.667% for C4. The values are not admitted corrections; record this as C1 fragility and do not change the candidate status.
 - CA exposure attribution: a preregistered direct-vs-spillover replay exactly reproduced stored C1/C2/C4 baseline scores. C1 has 66 direct score-changed rows versus 82,291 spillover rows; C2 has 66 versus 457; C4 has 66 versus 319. Direct means the changed key is among the 188 unresolved rows; it is not causal proof. See `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`.
 - H-LIQ-01 novelty diagnostic: H-LIQ versus the C2 turnover-level component has mean daily Spearman 0.1648 and mean Top-30 overlap 39.40%; conditional dependence rises from -0.046 in bottom-value Q1 to 0.468 in top-value Q4. Retain the mechanism card, but do not create C5; status remains `NOVELTY_PENDING / ECONOMIC_CAUTION`.
 - H-LIQ-01 size-neutral diagnostic: one preregistered daily value-rank residual reduces selected bottom-value Q25 share from 39.672% to 14.983%, but raises mean Top-30 turnover from 10.306% to 20.785% and retains 72.006% overlap with baseline. The exposure is partly scale-related, not a free improvement; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`.
 - H-LIQ-01 source decomposition: removing the fixed C2 turnover-level component reduces mean daily Spearman from 0.1648 to 0.0158 against that component, but residual dependence with full C2 remains 0.0843. The residual changes Top-30 membership materially (72.0056% mean overlap; 27.9944% mean turnover; 83.3333% q95 turnover) and worsens bottom-value Q1 share from 39.6722% to 50.3889%. An independent source-recomputing verifier passed; this supports `STRUCTURAL_NONREDUNDANCY_VS_C2_LEVEL_ONLY` only. H-LIQ-01 remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`.
+- H-LIQ-01 temporal persistence red-team: six fixed 100-session blocks pass coverage/mask integrity, but Q4 H-LIQ/C2 dependence ranges `0.0762–0.3053` and selected bottom-value Q1 share ranges `29.47%–51.30%`. This fails an unqualified persistence claim and leaves mechanism novelty/economic meaning `UNKNOWN`; H-LIQ remains no-C5. See `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
+- Re-entry packet freshness audit: packet/contract/registry/queue remain logically C1-C4 aligned and C3 is fail-closed, but the contract's declared manifest head `10939862...` differs from current lane tip `cc60808e...`. Freshness is `UNKNOWN`; packet remains specification-only and must not be executed. Stale V1 references were repaired or labeled historical. See `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 - H-VOL-01 compression diagnostic: one fixed `-log(median_5(range_pct) / median_60(range_pct))` representation has 308,514 finite eligible rows, mean Top-30 turnover 29.2778%, low mean Top-30 overlap with C1/C2/C4/H-LIQ-01 of 9.5209%/8.0155%/15.5676%/13.5803%, and selected bottom-value Q1 share 42.7200%. Adjacent V4-B/O2/O2.1 range families, turnover, and value concentration keep novelty/economics unresolved; no C5 ID was created. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
 - H-VOL-01 CA sensitivity: substituting the 188 retained `idx_close` comparison rows changes 547 scores and 8,876 ranks, with mean/minimum Top-30 overlap `99.8307% / 86.6667%`; 14 changed Top-30 slots are direct and 108 are spillover. This narrows but does not clear price-basis risk; no C5 ID or status upgrade. See `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
 - H-VOL-01 horizon stability: fixed `5/20`, `5/60`, and `20/120` forms are materially distinct, with pairwise Top-30 overlap `58.9675% / 9.9182% / 29.3193%`; `5/20` mean turnover is `36.2583%`, baseline `5/60` is `29.2778%`, and `20/120` support falls to `271,045` rows. No horizon was selected and no C5/status upgrade occurred. See `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
@@ -187,7 +193,9 @@ production or prospective claim.
 ### Answered questions
 
 - The old C1/C2/C4 verifier was not independent; v2 source replay now passes
-  and reports artifact access flags as self-attested.
+  its registered artifact/structural checks, but does not prove a full
+  feature-constructor/eligibility rebuild; artifact access flags remain
+  self-attested.
 - `nlargest()` without a ticker tie-break is not a deterministic contract;
   explicit score-descending/ticker-ascending sorting is now fixed.
 - Default `pct_change()` handling was a real reindexed-grid risk; the lab now
@@ -347,6 +355,17 @@ authoritative source contract for daily membership, publication timing,
 identity continuity, and revisions. Protected targets/outcomes and all
 incumbent/canonical/capture/cloud/scheduler/telemetry state remain untouched.
 
+## Literature/mechanism continuation — 2026-09-19
+
+A bounded literature scan mapped reversal/liquidity and industry-adjusted
+reversal mechanisms to the current lane. Raw reversal, return-volume
+interaction, and volatility/liquidity conditioning substantially overlap C1,
+C2, H-LIQ-01, and completed structural state diagnostics; no new candidate is
+justified. Industry-adjusted reversal remains a distinct future specification,
+but the local sector archive lacks daily PIT membership, publication timing,
+identity continuity, and revisions. See
+`2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`.
+
 ## Continuation register — 2026-09-19 available-data frontier audits
 
 ### New source-capability results
@@ -388,8 +407,7 @@ incumbent/canonical/capture/cloud/scheduler/telemetry state remain untouched.
 
 ### Next high-information frontier
 
-If continuing, the next separate lane is a preregistered official IDX-IC
-sector archive capability audit (`SECTOR-01`). It must remain metadata/
-structural only until publication timing, daily membership intervals, and
-identity continuity are evidenced. No provider fallback or protected-data
-access is justified by the current results.
+SECTOR-01 is complete and remains metadata/structural only. The next useful
+work must be a genuinely new independent source-contract or red-team question;
+no provider fallback, daily sector imputation, or protected-data access is
+justified by the current results.

@@ -21,6 +21,53 @@ The follow-up tooling/selection replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 The latest independent red-team correction replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+
+## Latest continuation update — available-data frontier audits
+
+The isolated lane completed four additional source-capability audits without
+opening targets or touching incumbent/canonical/capture/cloud state:
+
+- FILINGAGE-01: `70,931` reporting-age rows are arithmetically coherent, but
+  coverage begins in 2024 and public-availability, revision/vintage, and
+  identity authority are unresolved. `SOURCE_PARTIAL_STRUCTURAL_SIGNAL /
+  NOT_ADMITTED`.
+- EXECSTATE-01: `1,104,064` official execution-state rows over `1,260`
+  sessions reconcile exactly to cache/session reports. `NO_TRADE` is not
+  admitted as suspension, illiquidity, or executable capacity.
+- SUSPSTATE-01: only `1,168` regular interval rows overlap no-trade;
+  `120,498/121,666` unique no-trade keys are outside the sparse intervals and
+  `471` duplicate interval-key groups prohibit silent deduplication.
+- CA residual: unresolved scale rows overlap the retained HLC overlay `0/188`;
+  issuer/ISIN and event semantics remain unknown.
+- SECTOR-01: `22` structured 2022/2023 sheets contain `1,607` current rows
+  plus `14` exit rows and `837` current ticker codes. PDF-only gaps,
+  `GWSA/KOTA` cross-sheet duplicates, and absent daily/PIT/identity/vintage
+  authority keep the surface `NOT_ADMITTED`.
+
+These results improve the capability map and negative-evidence record but do
+not create a candidate or change the protected C1-C4 packet. The next useful
+work requires a genuinely new independent source-contract surface; provider
+fallback, target access, and imputation remain disallowed.
+
+A bounded literature-to-mechanism review likewise found no justified new raw
+reversal/liquidity candidate: those mechanisms overlap the existing C1/C2/
+H-LIQ-01 work. Industry-adjusted reversal is retained as a future
+specification only, pending daily PIT sector membership and identity/revision
+authority. See `2026-09-19_ALPHA_LITERATURE_MECHANISM_CARD_REVERSAL_LIQUIDITY_V1.md`.
+
+The H-LIQ temporal persistence red-team passes coverage/mask integrity across
+six 100-session blocks, but Q4 H-LIQ/C2 dependence ranges `0.0762–0.3053` and
+selected bottom-value Q1 share ranges `29.47%–51.30%`. This fails an
+unqualified persistence claim and leaves H-LIQ `FUTURE_RESEARCH /
+NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 or packet change. See
+`2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
+
+The re-entry packet freshness audit confirms C1-C4 indexing and C3 fail-closed
+behavior, but the frozen contract manifest head `10939862...` differs from
+current lane tip `cc60808e...`. Freshness is `UNKNOWN`; the V2 packet remains
+specification-only and must not execute. Stale V1 references were repaired or
+labeled historical. See
+`2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 Stage-A generation lineage is recorded in
 `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 Downstream hash binding is recorded in
@@ -46,10 +93,13 @@ Therefore:
   scheduler, counters, production artifacts, and protected outcomes were not
   modified or opened.
 
-Important verifier nuance: the C1/C2/C4 adversarial v2 replay is an independent
-source replay and passes. Structural-lab now also has a separate independent
-source-recomputing v2 replay with `mismatch_count=0`; the old envelope-only
-verifier remains historical tooling and is not the authoritative replay result.
+Important verifier nuance: the C1/C2/C4 adversarial v2 replay passes its
+independent artifact/structural checks, but it does not independently rebuild
+the feature constructor or eligibility masks; its full-construction scope is
+`UNKNOWN`. Structural-lab has a separate independent source-recomputing v2
+replay with `mismatch_count=0`; the old envelope-only verifier remains
+historical tooling and is not the authoritative replay result. See
+`2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`.
 
 ## Absolute scientific boundary
 

@@ -19,3 +19,16 @@ Full scoped inventory: `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`.
 | H5/H10 target authority | `BLOCKED` | protected |
 | Same-window incumbent score | `UNKNOWN/BLOCKED` | no incremental comparison |
 | Prospective outcome evidence | `BLOCKED` | separate protected process |
+
+## Continuation source-capability additions — 2026-09-19
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Financial reporting age | `PARTIAL / NOT_ADMITTED` | `70,931` internally consistent age rows; coverage begins 2024; structural/source audit only, no public-availability or revision claim |
+| Official execution/no-trade state | `PARTIAL / NOT_ADMITTED` | `1,104,064` rows over `1,260` sessions; exact source/cache/session reconciliation; semantics, completeness, PIT timing, vintage, and identity unresolved |
+| Suspension/tradability intervals | `BLOCKED` | `76` intervals, `471` expanded duplicate key groups, only `1,168` regular overlaps; do not equate `NO_TRADE` with suspension or impute uncovered rows |
+| Official IDX-IC sector archive | `PARTIAL / NOT_ADMITTED` | `22` structured 2022/2023 sheets, `1,607` current rows + `14` exit rows; document-level periods only, PDF-only gaps, `GWSA/KOTA` cross-sheet duplicates, no daily/PIT/identity/vintage authority |
+| Unresolved CA price-scale residual | `BLOCKED` | `188` rows have `0/188` overlap with retained HLC overlay; one listing interval is only narrow evidence, not issuer/ISIN/event authority |
+
+These additions do not widen admission. No row is promoted into a candidate or
+protected evaluation packet without independent source-contract evidence.

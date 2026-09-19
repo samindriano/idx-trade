@@ -89,8 +89,10 @@ It does **not** establish:
 - Output SHA-256: `6bfcba7070be218d288a0cf894f8d7e54b170bf624966e38a758061ed7d6dae8`
 - Legacy verifier result: `PASS` for artifact-envelope checks only; it is not
   an independent structural replay.
-- Source-recomputing replay: `PASS_INDEPENDENT_STRUCTURAL_REPLAY`; see
-  `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+- Independent artifact/structural replay: `PASS_INDEPENDENT_STRUCTURAL_REPLAY`
+  for the registered stored-artifact invariants; it is not a full independent
+  feature-constructor or eligibility rebuild. See
+  `2026-09-19_ALPHA_C1234_REDTEAM_SCOPE_ADJUDICATION_RESULT_V1.md`.
 - Outcome/provider/target/incumbent access flags: all `false`
 - Candidate ID created: `false`
 
