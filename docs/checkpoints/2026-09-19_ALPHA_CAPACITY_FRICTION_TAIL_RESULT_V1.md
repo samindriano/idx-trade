@@ -75,14 +75,18 @@ PIT, corporate-action, and execution semantics.
 - Builder: `research/alpha_capacity_friction_tail_concentration_v1.py`
 - Builder SHA-256: `3da49aebb10b86e74856ffb97ecc685036997cd2d642a1d19d66431438d6335a`
 - Independent verifier: `research/verify_alpha_capacity_friction_tail_concentration_v1.py`
+- Independent verifier SHA-256: `66cd171038873a9bd2af1cf46a17f6daf6d5f4eb2b86595178dc6b9eb0d2c0fc`
 - Source artifact SHA-256:
-  `989911c9f5e896cc6f7b3d8aca2081e95e9de37bd31486662edb86ef393be799`
+  `0ea19c6de96e368b025ca70f2a7550628b04865d78a8d390d0217afa122b6ea7`
 - Inputs: panel `25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e`,
   features `aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4`,
   sessions `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`,
   anchors `33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e`.
 - Verification result: `PASS`; all candidate, quartile, concentration,
   turnover, friction, hash, and privacy-scope checks passed.
+- Target/privacy firewall SHA-256:
+  `63f8f4f3449607ecf64ad881a5d7e3dfec1d9b5de00ad8b838071c60df710cda`;
+  result `PASS`.
 - Staged JSON:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_capacity_friction_tail_concentration_v1.json`
 
