@@ -2,9 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this handoff addendum: `c26ce41f`
-Latest research milestone commit: `c26ce41f`
-Latest status/documentation commit: `c26ce41f`
+Verified research baseline HEAD before this handoff addendum: `5933c7c0`
+Latest research milestone commit: `5933c7c0`
+Latest status/documentation commit: `5933c7c0`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
