@@ -3,7 +3,7 @@
 Date: 2026-09-20 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Baseline: `58f094b8b59b8933bee6cf2f9996f433a57391a4`  
-Attestation implementation: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
+Attestation implementation: `76064de20abeedf1636f13c1e8f1ba0858e02505`
 
 ## Result
 

@@ -2,7 +2,7 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
+Latest verified current HEAD before this documentation amendment: `76064de20abeedf1636f13c1e8f1ba0858e02505`
 Latest research milestone: independent C1/C2/C4 constructor replay and frontier audit
 Latest status/documentation: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
@@ -337,7 +337,7 @@ executable before independent Data QA admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Latest verified current HEAD before this documentation amendment: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
+- Latest verified current HEAD before this documentation amendment: `76064de20abeedf1636f13c1e8f1ba0858e02505`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
@@ -622,7 +622,8 @@ status changed. See
 
 ### Latest continuation verification — 2026-09-20
 
-- Current clean lane HEAD: `94988583af7a538da96bb4d98b851f45f2039973`.
+- Last verified clean lane HEAD before this handoff amendment:
+  `76064de20abeedf1636f13c1e8f1ba0858e02505`.
 - Packet contract verifier: `PASS`, all `63/63` checks; result SHA-256
   `9c276a9e83ecb35d27a540ff1a1699d21141e93d3d644e87181378797f08b880`.
 - Current packet contract SHA-256:
