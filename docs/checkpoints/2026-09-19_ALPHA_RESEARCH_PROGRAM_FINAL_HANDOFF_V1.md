@@ -9,6 +9,7 @@ Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
+Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -27,6 +28,11 @@ The latest main-run adversarial audit of C1/C2/C4 also passed all target-free
 static, schema/key, calendar, identity-interval, mask, and numerical checks.
 This is structural evidence only and does not replace the still-missing
 independent Phase-Q red-team or Data QA admission.
+
+The latest CA/price-basis audit found that the known 1,657-row HLC overlay is
+already represented in the current panel and replay does not change C1/C2/C4,
+but 188 non-stable scale rows and open-price residuals remain unresolved. This
+narrows exposure without clearing the admission blocker.
 
 Current conclusion:
 

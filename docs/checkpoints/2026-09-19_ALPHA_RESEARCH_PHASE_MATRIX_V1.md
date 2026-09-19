@@ -46,8 +46,9 @@ non-redundant work remains authorized.
 1. Can H-LIQ-01 receive a defensible price-basis/turnover-unit and capacity
    contract without a new source? Current answer: unresolved.
 2. Can a separately staged identity/corporate-action artifact establish
-   issuer continuity and price-basis authority? Current answer: no admitted
-   artifact.
+   issuer continuity and price-basis authority? Current answer: the known
+   1,657-row HLC overlay is already embedded and replay-stable, but no complete
+   admitted artifact exists; 188 non-stable scale rows and open residuals remain.
 3. Should the equal-weight C1+C4 structural combination be carried as a
    future secondary hypothesis? Current answer: yes, structurally only; no
    protected packet entry yet.

@@ -189,5 +189,6 @@ Detailed durable documents:
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
 - `2026-09-19_REENTRY_QUEUE_V1.md`
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
+- `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 
 No predictive superiority claim is made.

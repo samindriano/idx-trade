@@ -10,6 +10,7 @@ Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
+Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 
 ## Executive answer
 
@@ -137,6 +138,11 @@ The latest main-run adversarial audit passed all target-free C1/C2/C4 static,
 schema/key, calendar, identity-interval, mask, and numerical checks. It does
 not certify PIT/corporate-action basis or predictive value, and it does not
 replace the remaining independent Phase-Q red-team.
+
+The CA/price-basis follow-up confirms the known 1,657-row HLC overlay is
+already embedded in the current panel and does not change C1/C2/C4 on replay;
+188 non-stable scale rows and open-price residuals remain unresolved, so the
+admission blocker stays in place.
 
 Internal candidate Spearman diagnostics (not incumbent comparison):
 
