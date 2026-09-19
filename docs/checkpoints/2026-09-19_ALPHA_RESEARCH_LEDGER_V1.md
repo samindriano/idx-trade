@@ -150,6 +150,7 @@ production or prospective claim.
 - The corrected V2 code and outputs passed an outcome-blind static firewall in addition to their independent metadata verifiers. Firewall output SHA-256 is `a3b8cc953160f4c05c578f97df5e03b0fff987bb1789f795592fd18a6b29351c`; all target/outcome/provider/incumbent access flags and forbidden-schema/network checks passed.
 - A bounded read-only scan of remaining `research/` rank/percentile paths found no additional active denominator or key-alignment defect. H-LIQ, structural-lab, capacity, sensitivity, H-VOL/H-EXC, and Stage-A V2 paths use eligible/finite subsets consistently; the old Stage-A V1 financial ranking pattern is lineage-only and was not used as current evidence. See `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 - Hash-contract follow-up: current artifact declarations use several compatible shapes (`source_hashes`, `inputs`, manifest `files`, or direct `*_sha256` fields). The new isolated `research/verify_alpha_research_artifact_contract_v1.py` normalizes these shapes and fails closed on missing/conflicting/mismatched declarations; Stage-A source/code PASS and deliberate wrong-code/required-manifest FAIL paths were verified. See `2026-09-19_ALPHA_ARTIFACT_HASH_CONTRACT_RESULT_V1.md`.
+- Superseded-metric provenance scan: old V1 lookback/liquidity values occur only in the correction/lineage disclosures with explicit superseded labeling; no active re-entry or current-status evidence path still presents them as current results.
 - Phase-frontier adversarial audit: fixed-window turnover/friction tails strengthen C1 friction caution and C4 bottom-value/capacity caution; H-LIQ remains structurally distinct but composition-sensitive and no-C5. A newly surfaced `Dataset-Saham-IDX` inventory is blocked by missing row-level PIT/vintage authority and duplicate non-identical ticker copies. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
@@ -165,10 +166,8 @@ production or prospective claim.
 
 ### Active questions
 
-- Can existing local corporate-action/issuer evidence reduce the 188-row
-  unresolved price-basis risk without reopening acquisition?
-- Can historical capacity and listing/identity risk be narrowed using only
-  already-admitted fields?
+- Can H-LIQ-01's mechanism-level novelty be distinguished from shared
+  turnover information without target optimization?
 
 ### Answered questions
 
@@ -188,6 +187,18 @@ production or prospective claim.
   declaration shapes and fails closed on missing, conflicting, or mismatched
   code/input/manifest bindings. Its Stage-A PASS and deliberate FAIL paths are
   recorded in `2026-09-19_ALPHA_ARTIFACT_HASH_CONTRACT_RESULT_V1.md`.
+- The retained local CA/issuer evidence does not reduce the unresolved
+  188-row price-basis admission gap: the 1,657-row HLC overlay is already
+  represented exactly, the separate official inventory is only a bounded
+  `stockSplit` listing-activity inventory (55 rows, 39 numeric ratios), and
+  the one-interval security-master join is not an issuer/ISIN transition
+  chain. No authoritative transition mapping is available locally, so no
+  correction or re-entry upgrade is justified.
+- Already-admitted fields narrow structural listing-age and coarse
+  regular-market-value proxy exposure, but cannot establish historical ADV,
+  spread, queue, fill probability, or executable capacity. Further capacity
+  work would repeat the completed proxy stress until a new admitted liquidity
+  surface exists.
 
 ### Blocked questions
 
@@ -211,13 +222,12 @@ production or prospective claim.
 
 ### Next high-information tasks
 
-1. Enforce feature/manifest hash binding on every future research-only output.
-2. Continue bounded CA/issuer-basis and capacity audits from admitted local
-   inputs only.
-3. Resolve the remaining H-LIQ novelty/capacity and CA/PIT source-admission
-   questions without reopening acquisition or protected outcomes. The 188-row
-   exposure question now has a bounded direct-vs-spillover result.
-4. Keep the source-recomputing verifier and deterministic/no-fill contracts in
+1. Use the new artifact hash-contract verifier on every future research-only
+   output; use `--require-manifest` when the experiment contract requires one.
+2. Resolve the remaining H-LIQ novelty and CA/PIT source-admission questions
+   without reopening acquisition or protected outcomes. The 188-row exposure
+   question now has a bounded direct-vs-spillover result.
+3. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.
 
 ## Continuation register — Phase-Q correction replay milestone
