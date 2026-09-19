@@ -42,6 +42,12 @@ TradingView and Investing overlap on 1,901 dates, with zero exact OHLCV
 all-field rows. These are incompatible source representations for admission
 until an authoritative basis and historical adjustment contract exists.
 
+A follow-up linkage audit found 61 BBCA trace rows from 2021-10-13 through
+2022-01-07 with exact panel-versus-IDX HLC equality, but zero BBCA rows in both
+the retained CA event census and strict transition semantics ledger. The trace
+therefore adds forensic alignment only; it does not certify the event or its
+effective date. See `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
 ## Decision
 
 Keep both external surfaces `PARTIAL / SOURCE_ADMISSION_BLOCKED`; keep IDX as a

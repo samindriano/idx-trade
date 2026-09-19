@@ -181,3 +181,7 @@ non-redundant work remains authorized.
 - BBCA price-basis reconciliation recorded a stable TradingView 5x/1x block
   against IDX and variable Investing scale. No source was rescaled or admitted.
   See `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.
+- BBCA CA-event linkage found 61 exact panel/IDX HLC trace rows but zero BBCA
+  rows in both retained CA ledgers. This narrows forensic context only and does
+  not establish an event or basis contract. See
+  `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.

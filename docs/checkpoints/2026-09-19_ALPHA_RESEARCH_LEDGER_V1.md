@@ -571,3 +571,12 @@ model status changed. See
 See `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`,
 `2026-09-20_ALPHA_DATA_SURFACE_CENSUS_V1.md`, and
 `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.
+
+## Continuation register — BBCA CA-event linkage audit
+
+The BBCA trace contains 61 rows from 2021-10-13 through 2022-01-07 with exact
+panel-versus-IDX HLC equality. However, the retained 26-row CA event census
+and 162-row strict transition semantics ledger contain zero BBCA rows. The
+trace is therefore forensic post-date context, not event-level authority; no
+event family, effective date, ratio, issuer, or ISIN transition was inferred.
+See `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.

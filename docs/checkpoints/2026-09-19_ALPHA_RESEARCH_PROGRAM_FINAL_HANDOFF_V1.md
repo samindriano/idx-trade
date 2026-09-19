@@ -514,3 +514,9 @@ Their local reconciliation records TradingView at 5x versus IDX through
 2021-10-12 and 1x thereafter, while Investing has 0/1,568 exact OHLCV matches
 and no constant scale. This is source divergence, not CA truth or admission.
 See `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.
+
+The follow-up BBCA CA-event linkage audit found 61 exact panel/IDX HLC trace
+rows but zero BBCA rows in the retained event and transition ledgers. It keeps
+the 2021-10-13 alignment as forensic context only; no corporate-action event or
+issuer/ISIN transition was certified. See
+`2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.

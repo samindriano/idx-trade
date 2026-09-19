@@ -542,3 +542,9 @@ against IDX through 2021-10-12 and 1x from 2021-10-13, while Investing has
 0/1,568 exact OHLCV field matches and no constant scale. This strengthens the
 global CA/price-basis block; neither source was rescaled or admitted. See
 `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.
+
+The BBCA CA-event linkage audit then found 61 exact panel/IDX HLC trace rows,
+but zero BBCA rows in both retained CA ledgers. The 2021-10-13 alignment is
+therefore forensic context, not event-level authority; the global CA/issuer
+block remains unchanged. See
+`2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.

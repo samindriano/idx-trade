@@ -384,3 +384,8 @@ The BBCA reconciliation found TradingView price basis `IDX/TV=5` through
 on 1,568 IDX-overlap dates and no constant scale. Neither source was admitted
 or rescaled. See
 `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.
+
+The follow-up CA linkage audit found 61 exact BBCA panel/IDX HLC trace rows,
+but zero BBCA rows in both retained CA ledgers. This is forensic alignment,
+not event-level authority; no source was rescaled or admitted. See
+`2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
