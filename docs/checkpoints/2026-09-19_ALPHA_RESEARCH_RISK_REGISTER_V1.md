@@ -97,6 +97,9 @@ protected-state integrity. Any `UNKNOWN` remains blocking.
 These additions are source and provenance risks only; they do not authorize
 protected evaluation or candidate-budget expansion.
 
+| Candidate CA-exposure completeness | Existing replay covers only a 188-key forensic residual and has no complete event-to-window issuer/ISIN/PIT linkage | `OPEN / BLOCKED` | Treat C1/C2/C4/H-LIQ results as bounded sensitivity only; require independently admitted population-wide transition authority |
+| Re-entry packet current-head freshness | Packet-bound Git files are unchanged from Q to R and current source hashes match, but external bytes were not attested at Q | `OPEN / UNKNOWN` | Record packet byte freshness separately; do not call the packet fully fresh or execute it |
+
 - Current branch: `codex/alpha-available-data-20260919`
 - Current checkpoint family: `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`,
   `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`, and

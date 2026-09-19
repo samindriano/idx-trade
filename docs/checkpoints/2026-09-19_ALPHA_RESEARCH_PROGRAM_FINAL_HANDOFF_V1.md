@@ -528,3 +528,12 @@ depth, or executable semantics are available. Bid/offer therefore remains a
 future specification only (`FUTURE_QUOTE_FLOW_INTERACTION_V1`), with no
 candidate or C5 evaluation. See
 `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.
+
+The independent CA/issuer exposure-completeness review confirms that all
+candidate price-basis evidence remains bounded forensic sensitivity, not
+population-complete safety. C1 is most fragile under the 188-row comparison;
+C2/C4/H-LIQ are not cleared, and no event-to-window issuer/ISIN/PIT linkage is
+available. The re-entry packet has current packet-byte freshness from
+`P=10939862` through `Q=e44f43ca` to `R=04bac413`, but full external-source
+freshness remains unknown. No candidate status changed and the packet remains
+NO-GO. See `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.

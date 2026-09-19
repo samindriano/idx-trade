@@ -273,6 +273,40 @@ candidate admission.
 - **Next action:** preserve the old exact additive failure and wait for a new
   authoritative source; no generic provider restart.
 
+## Card FUTURE_QUOTE_FLOW_INTERACTION_V1 — EOD quote-state / foreign-pressure interaction
+
+- **Mechanism:** the interaction between end-of-day quote state (bid/offer)
+  and foreign-pressure flow may distinguish executable liquidity stress from
+  a price/participation signal, if both surfaces are observed on a defensible
+  common basis.
+- **Information source:** bid/offer is a new raw-input surface in the audited
+  panel-depth source; foreign-flow shares/value are present but remain within
+  the existing H-FLOW/Foreign Flow family.
+- **Required data:** population-wide historical quote state with quote
+  timestamp/age, depth or executable semantics, price units, and complete
+  foreign-flow actor/aggregation/unit definitions.
+- **PIT requirements:** available-at/knowledge time, revision/vintage,
+  identity/ISIN continuity, corporate-action/share-basis authority, complete
+  universe coverage, and an explicit missingness policy.
+- **Expected structural behavior:** quote-state and foreign-pressure measures
+  should be evaluated as a conditional interaction, not as an additive rescue
+  of the closed Foreign Flow V2 formulation; quote-age and depth should matter
+  for any executable interpretation.
+- **Likely redundancy:** foreign-flow alone is high with H-FLOW-01; bid/offer
+  is not yet represented in the incumbent candidate families, but mechanism
+  novelty remains unknown until the missing quote contract is supplied.
+- **Implementation complexity:** high; source-contract and timestamp work is
+  required before any feature definition is scientifically meaningful.
+- **Principal failure modes:** stale or snapshot quotes, zero-quote semantics,
+  hidden look-ahead, mixed price/share basis, unobserved depth/queue, unit
+  ambiguity, and treating structural non-correlation as predictive novelty.
+- **Target-free evidence:** source contract, field semantics, coverage,
+  timestamp/revision behavior, identity/CA linkage, and structural exposure
+  only. No candidate or proxy target may be created from this card.
+- **Status:** `FUTURE_DATA / SOURCE_ADMISSION_BLOCKED / NOVELTY_UNKNOWN`.
+- **Next action:** obtain an independently admitted historical quote/flow
+  contract; do not scrape, rescale, backfill, or run C5 on the current source.
+
 ## Novelty gate outcome
 
 No new C5+ candidate is admitted by this card pack.
@@ -287,6 +321,7 @@ No new C5+ candidate is admitted by this card pack.
 | H-FUND-01 | C3 capability blocked |
 | H-FLOW-01 | Source blocked; exact additive predecessor remains closed |
 | H-EXC-02 | Bounded new contract is structurally stable but high-churn; future research only |
+| FUTURE_QUOTE_FLOW_INTERACTION_V1 | New bid/offer raw surface, but source contract and mechanism novelty remain blocked/unknown; future specification only |
 
 ## Boundary and preservation
 

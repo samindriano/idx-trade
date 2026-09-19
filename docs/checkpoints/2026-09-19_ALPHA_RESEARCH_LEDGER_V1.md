@@ -594,3 +594,23 @@ specification `FUTURE_QUOTE_FLOW_INTERACTION_V1`; foreign-flow alone is not a
 new mechanism card. No feature, candidate, or C5 evaluation was run.
 
 See `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.
+
+## Continuation register — CA exposure completeness and re-entry freshness
+
+The independent CA/issuer review confirms that candidate exposure is only
+bounded forensic sensitivity, not population-complete safety. The retained HLC
+overlay has 1,657 rows, the unresolved comparison has 188 keys across 19
+tickers, and the official action inventory is incomplete. Candidate stress is
+C1 `66/82,291` direct/spillover changed rows with `36.667%` minimum Top-30
+overlap; C2 `66/457` and `83.333%`; C4 `66/319` and `86.667%`; H-LIQ `66/317`
+and `90.000%`. No event-to-window issuer/ISIN/knowledge-time linkage exists,
+and H-LIQ has no equivalent event overlay. Status remains
+`GLOBAL_BASIS_BLOCKED`; no offline retry is justified.
+
+The current-head re-entry attestation binds producer `P=10939862`, packet
+attestation `Q=e44f43ca`, and current `R=04bac413`. Packet-bound Git files are
+unchanged Q-to-R and current declared source hashes match. This is
+`PACKET_BYTE_FRESHNESS`; external-source freshness is explicitly `UNKNOWN`,
+not a re-entry authorization. See
+`2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md` and the
+current-head attestation checkpoint.

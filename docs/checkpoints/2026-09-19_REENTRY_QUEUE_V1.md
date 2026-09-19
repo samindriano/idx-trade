@@ -68,3 +68,9 @@ verified, packet attestation is stale, and full freshness remains unknown. Keep
 the producer pin unchanged; future updates must bind producer commit `P` and
 attest packet commit `Q` separately. See
 `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+
+Current-head continuation: `P=10939862`, `Q=e44f43ca`, `R=04bac413` are bound;
+packet-bound Git files are unchanged Q-to-R and current declared source hashes
+match. This is packet-byte freshness only. Full external-source freshness is
+still `UNKNOWN`, so the queue remains exactly C1/C2/C4 conditional plus blocked
+C3 and no candidate is READY_FOR_REENTRY.

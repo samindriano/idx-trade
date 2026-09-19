@@ -556,3 +556,17 @@ depth, executable semantics, and monetary units remain unavailable. No new
 candidate was created. The only bounded future specification is
 `FUTURE_QUOTE_FLOW_INTERACTION_V1`, still source-admission blocked. See
 `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.
+
+An independent CA/issuer exposure-completeness review confirms that the
+existing attribution is bounded forensic sensitivity only: C1 is most fragile
+under the 188-row comparison, while C2/C4/H-LIQ are less sensitive under that
+stress. The 188 rows are not population-complete, no event-to-window
+issuer/ISIN/PIT linkage exists, and H-LIQ lacks an equivalent event overlay.
+All candidate safety remains `GLOBAL_BASIS_BLOCKED`. See
+`2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
+
+The re-entry packet current-head audit binds producer `P=10939862`, packet
+attestation `Q=e44f43ca`, and current head `R=04bac413`; packet-bound Git files
+are unchanged and current source hashes match the contract. This proves packet
+byte freshness only; full external-source freshness remains `UNKNOWN`, so the
+packet stays specification-only and NO-GO.

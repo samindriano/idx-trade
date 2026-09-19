@@ -193,3 +193,13 @@ non-redundant work remains authorized.
   is a future raw-input surface only; foreign-flow remains H-FLOW-family
   information. No C5 or candidate was created. See
   `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.
+
+- Independent CA/issuer exposure review finds bounded candidate sensitivity but
+  no population-complete event-to-window linkage. C1 remains the most fragile
+  under the 188-row forensic stress; C2/C4/H-LIQ are not cleared. No candidate
+  status changes and no offline replay is justified. See
+  `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
+- Current-head packet attestation binds `P=10939862`, `Q=e44f43ca`, and
+  `R=04bac413`; packet-bound Git files and declared current hashes pass, while
+  full external-source freshness remains `UNKNOWN`. The packet remains
+  specification-only and NO-GO.
