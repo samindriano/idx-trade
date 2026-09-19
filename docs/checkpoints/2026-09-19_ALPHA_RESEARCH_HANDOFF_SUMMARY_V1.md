@@ -15,7 +15,8 @@ Riset belum “berhenti total”. Bagian yang sudah sah dan selesai adalah:
 - frozen protocol dan bounded candidate portfolio;
 - causal/PIT-safe structural feature construction;
 - missingness, coverage, overlap internal, robustness, turnover, liquidity
-  proxy, concentration, dan friction diagnostics;
+  proxy, concentration, horizon sensitivity, normalization invariance,
+  synthetic missingness/universe stress, dan friction diagnostics;
 - independent hash/mask/schema/provenance audits.
 
 Bagian yang tidak boleh dilanjutkan tanpa perubahan authoritative di luar lane
@@ -176,6 +177,10 @@ the candidates have been proven to fail.
   checkpoint for future ChatGPT read-in)
 - `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`
+- `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`
+- `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`
+- `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`
+- `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
 - `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`
 - `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`

@@ -12,7 +12,8 @@ historical target/forward-return comparison dan klaim superiority. Di lane ini
 yang sudah selesai dan dapat dipertanggungjawabkan adalah archaeology alpha,
 source/admission inventory, frozen structural construction, audit PIT/mask,
 candidate coverage, internal overlap, temporal structural robustness, turnover,
-liquidity/concentration proxy, friction diagnostics, serta independent
+liquidity/concentration proxy, friction diagnostics, horizon/normalization/
+missingness/universe robustness diagnostics, serta independent
 hash/schema/provenance checks.
 
 Kesimpulan saat ini bukan “tidak ada alpha”, melainkan:
@@ -235,8 +236,13 @@ This is a usable capability island, not a population-wide scientific panel.
 | Stage A robustness audit | `PASS_STRUCTURAL_ONLY` |
 | Economics builder and independent verifier | `PASS`; fixed 600-session/Top-30 and first/last-half diagnostics |
 | `research/alpha_structural_lab_v1.py` + independent verifier | `PASS`; Top-K churn/persistence, liquidity, state, and orthogonality lab |
+| `research/alpha_structural_robustness_v1.py` | `PASS_STRUCTURAL_ONLY`; fixed-formula replay, horizon, monotone-normalization, missingness, universe, and rolling stability battery |
 | `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md` | committed-source archaeology across V2/V3/V4/O2/auxiliary families |
 | `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md` | scoped field/source inventory with protected-target exclusion |
+| `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md` | durable disposition for target-free robustness results |
+| `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md` | bounded literature/mechanism cards and novelty-gate decisions; no new candidate ID |
+| `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md` | one fixed temporal-liquidity prototype; structurally distinct but not admitted as C5 |
+| `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md` | one-shot protected evaluation specification; not executable before independent admission |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |
 | `research/c3_financial_capability_audit_v1.py` | C3 capability/governance funnel `PASS_STRUCTURAL_ONLY` |
 | External guarded staging | all derived parquet/JSON outputs isolated outside repository/canonical data |
@@ -288,7 +294,8 @@ No candidate is ready for scientific comparison today. Conditional queue:
 
 ## Protected evaluation packet status
 
-The packet is specification-only and not populated with outcomes. The frozen
+The packet is `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`; it is
+specification-only and not populated with outcomes. The frozen
 contract defines the target, six chronological folds, purge, common-support
 rules, candidate budget, and re-entry gates. No target, forward label,
 incumbent score, or prospective outcome was opened in this lane.

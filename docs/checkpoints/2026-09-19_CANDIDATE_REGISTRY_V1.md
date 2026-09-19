@@ -23,3 +23,21 @@ remains exactly C1–C4.
 
 Source: `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`. These labels are
 structural only and do not rank expected alpha.
+
+## Structural robustness battery
+
+`2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md` adds a target-free
+robustness gate. Monotone rank/z-score/robust-z transforms are exact Top-30
+duplicates and are not separate candidates. C1/C2/C4 retain 600 usable Top-30
+dates under deterministic 5% score masking with 94.88%–95.17% mean overlap;
+C3 remains support-fragile. Horizon variants materially change Top-30 sets and
+remain unregistered representation questions, not candidate IDs.
+
+The literature/mechanism card pack (`2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`)
+records one potential new temporal-liquidity direction, H-LIQ-01, as
+`NOVELTY_PENDING / ECONOMIC_CAUTION`; its fixed prototype is documented in
+`2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`, but it is not admitted as
+C5. Intraday reversal,
+financial change/disagreement, and flow-event directions remain
+source/capability blocked, while high-participation reversal remains a
+non-novel retry risk.

@@ -1,5 +1,7 @@
 # Re-entry Queue V1
 
+One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`.
+
 ## Conditional queue
 
 - C1, C2, C4: engineering-ready for a future frozen comparison, pending
@@ -15,4 +17,3 @@
 3. If any gate is absent, do not open outcomes and leave statuses unchanged.
 4. If all gates pass, run the fixed comparison once per candidate on common
    support; no rescue, refit, or variant sweep.
-

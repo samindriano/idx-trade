@@ -8,6 +8,10 @@ Latest program checkpoint: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
 Latest C3 capability audit: `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
 Latest structural lab: `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`
 Latest archaeology map: `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`
+Latest robustness battery: `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`
+Latest hypothesis cards: `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`
+Latest H-LIQ-01 prototype: `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`
+Future evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -83,6 +87,9 @@ production or prospective claim.
 - Structural economics audit: `PASS_STRUCTURAL_ONLY`; see `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md` and the independently verified staged JSON; no target or incumbent score was opened.
 - Structural economics first/last-half view: C1/C2/C4 retain broad Top-30 availability with similar turnover ranges; C3 is absent in the first half and remains blocked for sparse/late PIT coverage.
 - Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; independent verifier and target firewall pass.
+- Structural robustness battery: fixed-formula equivalence passed exactly; monotone rank/z-score variants were 100% Top-30 identical; C1/C2/C4 retained all 600 Top-30 dates under synthetic 5% score masking with 94.88%–95.17% mean overlap; C3 remained sparse and failed support stress. Lookback variants are materially distinct representations, not free normalization variants; see `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`.
+- Hypothesis cards: bounded literature/mechanism review produced one potential new temporal-liquidity direction and several explicitly blocked or non-novel directions; no C5+ candidate was admitted. See `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`.
+- H-LIQ-01 prototype: one fixed rolling variability-of-log-turnover representation passed target-free structural construction, showed low C1/C4 dependence and low churn, but retained a high bottom-market-value exposure; status is `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 ID. See `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
