@@ -4,13 +4,18 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest evidence content commit: `96a3f12b`
+Latest evidence content: continuation audit on this branch; prior baseline `96a3f12b`
 Latest H-LIQ source decomposition: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
 Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`
 Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`
 Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
+Latest FILINGAGE-01 source audit: `2026-09-19_ALPHA_FILINGAGE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
+Latest CA residual coverage: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
+Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
@@ -225,6 +230,38 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 
 ## Hard boundary
+
+### Latest continuation evidence
+
+- FILINGAGE-01: `70,931` reporting-age rows are internally coherent, but
+  coverage starts in 2024 and public availability, revision/vintage, and
+  identity authority are unresolved. `NOT_ADMITTED`.
+- EXECSTATE-01: `1,104,064` official execution-state rows over `1,260`
+  sessions reconcile exactly to the raw cache and session report. The
+  `NO_TRADE` label is not admitted as suspension, illiquidity, or executable
+  capacity; semantics, completeness, PIT timing, vintage, and identity remain
+  unknown.
+- SUSPSTATE-01: only `1,168` regular interval rows overlap no-trade, while
+  `120,498/121,666` unique no-trade keys are outside the sparse interval
+  source; `471` overlapping interval-key groups prohibit silent deduplication.
+  `SOURCE_BLOCKED`.
+- CA residual coverage: unresolved non-stable-scale rows overlap the retained
+  HLC overlay `0/188`; listing-interval matches are narrow only and do not
+  establish issuer/ISIN or event semantics.
+
+These are source-quality/structural findings only. No target, outcome,
+provider, cloud, incumbent, canonical, capture, scheduler, telemetry, or
+production state was accessed or changed. The next optional lane is a
+preregistered official IDX-IC sector archive capability audit; it remains
+metadata/structural only until publication timing, daily membership intervals,
+and identity continuity are demonstrated.
+
+SECTOR-01 is now complete: `22` structured 2022/2023 sheets contain `1,607`
+rows and `837` unique ticker codes, but the archive has PDF-only year gaps,
+cross-sheet `GWSA`/`KOTA` duplicates, and no daily/PIT/identity/vintage
+authority. It remains `SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`; no
+feature or candidate was created. See
+`2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`.
 
 No protected outcome was opened, no provider/network scrape was performed, no
 canonical or active dataset was changed, and no telemetry/capture/cloud state

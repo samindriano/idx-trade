@@ -48,6 +48,11 @@ Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOS
 Latest re-entry verifier: `research/verify_alpha_future_evaluation_packet_v2.py`
 Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
+Latest FILINGAGE-01 source audit: `2026-09-19_ALPHA_FILINGAGE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
+Latest CA residual coverage check: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
+Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
 Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
@@ -323,3 +328,68 @@ production or prospective claim.
 - Do not use the superseded V1 robustness lookback overlaps or V1 combination
   liquidity-exposure percentages.
 - Do not open protected outcomes or add providers to resolve these findings.
+
+## Continuation register — SECTOR-01 result
+
+The official IDX-IC archive audit found `22` structured sector sheets across
+the 2022/2023 workbooks, `1,607` constituent rows, and `837` unique ticker
+codes. The structured snapshots have document-level announcement/effective
+period text and no within-sheet duplicates. The 2023 workbook has two
+cross-sheet duplicates (`GWSA` and `KOTA`), while 2021/2024/2025/2026 are
+PDF-only or unparsed in the frozen inventory. No daily membership interval,
+row-level publication time, issuer/ISIN transition chain, or revision/vintage
+surface is available. Status is `SOURCE_PARTIAL_STRUCTURAL_SIGNAL /
+NOT_ADMITTED`; no feature or candidate was created. See
+`2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`.
+
+The next step is not sector expansion or imputation. It requires a new
+authoritative source contract for daily membership, publication timing,
+identity continuity, and revisions. Protected targets/outcomes and all
+incumbent/canonical/capture/cloud/scheduler/telemetry state remain untouched.
+
+## Continuation register — 2026-09-19 available-data frontier audits
+
+### New source-capability results
+
+- FILINGAGE-01: `70,931` reporting-age rows are internally arithmetically
+  consistent, but coverage begins in 2024 and public availability,
+  revision/vintage, and identity authority are not established. Status:
+  `SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`; no candidate.
+- EXECSTATE-01: the official execution/no-trade sidecar has `1,104,064`
+  rows over `1,260` sessions and `980` tickers, with exact raw-cache and
+  session-report reconciliation. It contains `982,398 ACTIVE` and
+  `121,666 NO_TRADE` rows; `4,647 NO_TRADE` rows have non-regular activity.
+  State semantics, completeness, row-level PIT, vintage, and identity remain
+  unknown. Status: `SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`.
+- SUSPSTATE-01: `76` suspension intervals expand to `2,880` market rows but
+  include `471` duplicate key groups. Only `1,168` regular interval rows
+  overlap no-trade; `120,498/121,666` unique no-trade keys are not covered by
+  the available regular intervals. Status: `SOURCE_BLOCKED` and
+  `UNKNOWN_NO_TRADE_NOT_EQ_SUSPENSION`.
+- CA residual coverage: the `188` unresolved non-stable-scale keys have
+  `0/188` overlap with the retained `1,657`-row HLC overlay, while all have one
+  active listing interval. Issuer/ISIN transition and event semantics remain
+  unknown; global price-basis admission stays blocked.
+
+### Guardrails carried forward
+
+- These audits are structural/source-quality evidence only. No target,
+  outcome, IC/ICIR/OOS, incumbent comparison, candidate ID, refit, promotion,
+  or deployment was performed.
+- Do not reinterpret `NO_TRADE` as suspension or executable illiquidity; do
+  not use sparse intervals to impute uncovered state rows.
+- Do not silently deduplicate overlapping suspension intervals, treat
+  reporting knowledge time as public publication time, or treat listing
+  intervals as issuer/ISIN transition authority.
+- All scripts, result JSONs, independent verifiers, hash contracts, and
+  target/privacy firewalls are staged under the isolated lane and external
+  staging root. Incumbent/main/canonical/capture/cloud/R2/scheduler/counter/
+  protected-data state remains untouched.
+
+### Next high-information frontier
+
+If continuing, the next separate lane is a preregistered official IDX-IC
+sector archive capability audit (`SECTOR-01`). It must remain metadata/
+structural only until publication timing, daily membership intervals, and
+identity continuity are evidenced. No provider fallback or protected-data
+access is justified by the current results.

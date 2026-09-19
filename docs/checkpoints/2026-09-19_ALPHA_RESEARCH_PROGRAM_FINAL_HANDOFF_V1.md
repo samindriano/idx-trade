@@ -2,9 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this handoff addendum: `96a3f12b`
-Latest research milestone commit: `96a3f12b`
-Latest status/documentation commit: `96a3f12b`
+Verified research baseline HEAD before this continuation addendum: `96a3f12b`
+Latest research milestone: continuation evidence on this branch (see `git log`)
+Latest status/documentation: continuation evidence on this branch (see `git log`)
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
@@ -14,6 +14,11 @@ Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-LIQ source decomposition result: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
 Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
+Latest FILINGAGE-01 source audit: `2026-09-19_ALPHA_FILINGAGE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest EXECSTATE-01 source audit: `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RESULT_V1.md`
+Latest SUSPSTATE-01 reconciliation: `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
+Latest CA residual coverage: `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
+Latest SECTOR-01 source audit: `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`
 Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`
 Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`
@@ -361,5 +366,38 @@ admission.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
   real capacity, sector/PIT history, and mechanism-level novelty; the latest
   independent red-team correction replay is complete but remains structural.
+
+### 2026-09-19 continuation addendum
+
+Four additional read-only, outcome-blind source audits are now durable in this
+lane. FILINGAGE-01 is a partial reporting-age capability (`70,931` coherent
+age rows, coverage from 2024 only) and remains not admitted. EXECSTATE-01 is a
+coherent official execution-state source (`1,104,064` rows; `1,260` sessions;
+`982,398 ACTIVE` and `121,666 NO_TRADE`) but its exchange semantics, PIT timing,
+completeness, vintage, and identity authority remain unknown. SUSPSTATE-01 is
+source-blocked because the interval expansion has `471` duplicate key groups
+and covers only `1,168` regular interval/no-trade rows while `120,498/121,666`
+unique no-trade keys are outside the available regular intervals. The CA
+residual check confirms `0/188` overlap with the retained HLC overlay; issuer/
+ISIN transition and event semantics remain unknown.
+
+Result documents:
+
+- `2026-09-19_ALPHA_FILINGAGE01_SOURCE_AUDIT_RESULT_V1.md`
+- `2026-09-19_ALPHA_EXECSTATE01_SOURCE_AUDIT_RESULT_V1.md`
+- `2026-09-19_ALPHA_SUSPSTATE01_RECONCILIATION_RESULT_V1.md`
+- `2026-09-19_ALPHA_CA_RESIDUAL_COVERAGE_RESULT_V1.md`
+
+The corresponding generators, independent verifiers, hash contracts, and
+target/privacy firewalls all completed their registered integrity checks. No
+target, outcome, provider, cloud, incumbent, canonical data, capture,
+scheduler, telemetry, or production state was accessed or changed.
+
+The follow-on SECTOR-01 audit is also complete: `22` structured 2022/2023
+sector sheets contain `1,607` rows and `837` unique ticker codes, but only
+document-level periods, PDF-only year gaps, two cross-sheet duplicates
+(`GWSA`/`KOTA`), and no daily/PIT/identity/vintage authority. Status is
+`SOURCE_PARTIAL_STRUCTURAL_SIGNAL / NOT_ADMITTED`; no feature or candidate was
+created. See `2026-09-19_ALPHA_SECTOR01_SOURCE_AUDIT_RESULT_V1.md`.
 
 No predictive superiority claim is made.
