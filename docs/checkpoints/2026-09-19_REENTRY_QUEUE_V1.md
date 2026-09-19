@@ -1,6 +1,11 @@
 # Re-entry Queue V1
 
-One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`.
+One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`.
+
+V2 contract closure is independently verified in
+`2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`. The packet
+remains `SPECIFICATION_ONLY / BLOCKED_BY_DATA_ADMISSION`; C3 is explicitly
+fail-closed and cannot execute under the current contract.
 
 ## Conditional queue
 

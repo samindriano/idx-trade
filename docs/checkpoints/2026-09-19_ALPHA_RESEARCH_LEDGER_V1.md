@@ -43,6 +43,11 @@ Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
 Latest Phase-Q red-team correction: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 Latest CA exposure attribution: `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`
 Latest corrected robustness/combination replay: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
+Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`
+Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`
+Latest re-entry verifier: `research/verify_alpha_future_evaluation_packet_v2.py`
+Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
+Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
 Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
@@ -61,6 +66,7 @@ production or prospective claim.
 | `bundle_rows.parquet` from `idx-financial-representation-v2-20260816-v1-run3` | `PARTIAL` | Capability/structural audit only; no scientific alpha claim | 277,244 rows; 729 tickers; 2021-06-02–2026-07-17; unique `(ticker,date)`; parquet SHA-256 `c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b`; Financial PIT remains parked/partial and no same-science admission is certified. |
 | `official_exchange_sessions_1260.csv` | `PARTIAL — FROZEN_ONLY` | Session ordering/mask construction only | 1,260 official dates; SHA-256 `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`; not an authorization for new-alpha outcome claims. |
 | `tradability_anchors_1260.csv` | `PARTIAL — FROZEN_ONLY` | Same-session active-state mask construction only | 1,104,064 anchors; SHA-256 `33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e`; not a population-admission certificate for new alpha. |
+| Official stock-summary cache `stock_summary_cache_1260` | `SOURCE_BLOCKED / PARTIAL` | Target-free source-capability diagnostic only | 1,104,064 rows; 1,260 parquet + sidecar pairs; inventory SHA-256 `b3502bc09064fb8183f787b1389141b263880c17fd96c8cc26347e8c49168c3f`; exact volume/value reconciliation on 981,940-row overlap, but non-regular ratio boundedness fails on 8,750 volume and 7 frequency rows; no PIT/available-at semantics admitted. |
 | `config/tradability_snapshot.sample.csv` | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | None for historical admission | 5 rows, all dated 2025-07-30; snapshot is not an event log. |
 | `config/idx_tradability_manifest.sample.csv` | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | Discovery/reference only | 4 announcement references, including one `MANUAL_REVIEW` case. |
 | `config/tradability_coverage_windows.csv` | `EMPTY / UNKNOWN` | None | Header-only; zero declared coverage windows. |
@@ -202,6 +208,21 @@ production or prospective claim.
   was found. The staged firewall artifact is
   `alpha_hliq01_target_firewall_v1.json` with SHA-256
   `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
+- Independent re-entry contract closure replaced the stale V2 attestation as
+  the current static evidence: V2 now binds all source/manifest/code hashes,
+  key digests, candidate missingness/tie rules, C3 fail-closed execution,
+  robustness/friction references, and one-shot admission gates. The verifier
+  and target firewall both passed; this closes specification gaps but leaves
+  `NO-GO_FOR_REENTRY / BLOCKED_BY_DATA_ADMISSION`. See
+  `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`.
+- H-FRAG-01 audited the unused official stock-summary frequency and non-regular
+  fields under a new target-free preregistration. Inventory, sidecars, keys,
+  official dates, source identity, non-negativity, and exact panel overlap all
+  passed; `nonregular_volume / volume` violated `[0,1]` on `8,750` eligible
+  rows and `nonregular_frequency / frequency` on `7`. The independent source
+  verifier and both outcome-blind firewalls passed, but the preregistered
+  decision is `SOURCE_BLOCKED / PARTIAL`, with no C5 or packet expansion. See
+  `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`.
 - The retained local CA/issuer evidence does not reduce the unresolved
   188-row price-basis admission gap: the 1,657-row HLC overlay is already
   represented exactly, the separate official inventory is only a bounded
@@ -238,10 +259,17 @@ production or prospective claim.
 - Do not repeat the exact H-LIQ-01 C2 turnover-level residualization question
   without a new mechanism, independently admissible source surface, or a
   changed falsifiable contract.
+- Do not treat `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md` as a
+  current attestation; it is tied to a stale audited commit. Use the V2
+  contract verifier and closure result instead.
 - Do not retry the exact raw H-EXC-01 excursion-asymmetry formula without a
   new preregistered representation and numerical contract.
 - Do not reopen target/OOS/IC/ICIR work, provider scraping, or canonical data
   mutation to resolve these structural questions.
+- Do not reinterpret the H-FRAG-01 non-regular fields as bounded shares,
+  clip/winsorize the ratios, or promote the cache without independent field
+  semantics, row-level available-at/knowledge-time, revision/vintage, and
+  identity coverage.
 
 ### Next high-information tasks
 
@@ -253,6 +281,10 @@ production or prospective claim.
    source surface justifies another H-LIQ experiment.
 3. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.
+4. Resolve the H-FRAG-01 official stock-summary source contract: field
+   semantics, regular/non-regular classification, row-level available-at /
+   knowledge-time, revision/vintage behavior, and identity coverage. Keep the
+   surface `SOURCE_BLOCKED / PARTIAL` until those gates pass.
 
 ## Continuation register — Phase-Q correction replay milestone
 

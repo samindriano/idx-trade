@@ -12,7 +12,12 @@ Latest adversarial result: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-LIQ source decomposition result: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
+Latest H-FRAG-01 source audit: `2026-09-19_ALPHA_HFRAG01_SOURCE_AUDIT_RESULT_V1.md`
+Latest H-FRAG-01 independent verifier: `research/verify_alpha_hfrag01_source_audit_v1.py`
 Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
+Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`
+Latest re-entry contract closure: `2026-09-19_ALPHA_REENTRY_PACKET_CONTRACT_CLOSURE_RESULT_V1.md`
+Latest re-entry verifier: `research/verify_alpha_future_evaluation_packet_v2.py`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
@@ -75,14 +80,29 @@ verifier, guarded feature schema, and both JSON outputs also passed the
 outcome-blind target firewall; firewall artifact SHA-256 is
 `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
 
+The stale re-entry attestation was replaced by a V2 machine-readable contract.
+It binds source/manifest/code hashes, key digests, candidate missingness and
+tie rules, robustness/friction evidence, and a fail-closed C3 gate. Independent
+contract verification and firewall both pass, but this is only specification
+closure: the verdict remains `NO-GO_FOR_REENTRY / BLOCKED_BY_DATA_ADMISSION`.
+
+The isolated H-FRAG-01 source audit found a coherent official stock-summary
+cache with `1,104,064` rows and exact `981,940/981,940` panel overlap for the
+reconciliation fields. The preregistered ratio validity gate nevertheless
+fails on `8,750` non-regular-volume rows and `7` non-regular-frequency rows
+outside `[0,1]`. Independent source verification and target/privacy firewalls
+pass, but the surface remains `SOURCE_BLOCKED / PARTIAL`; no C5 or packet
+expansion is authorized.
+
 Current conclusion:
 
 `NO CURRENT ALPHA SURVIVOR CAN BE PROVEN WITHOUT TARGET ADMISSION`
 
 The next useful work is limited to admission-quality identity/price-basis and
-capacity evidence, plus dedicated red-team review before any candidate is
-marked ready. Repeating C1-C4 structural calculations or broad provider
-searches would be redundant without new evidence.
+capacity evidence, plus independent H-FRAG field-semantics, available-at,
+revision/vintage, and identity review before any candidate is marked ready.
+Repeating C1-C4 structural calculations or broad provider searches would be
+redundant without new evidence.
 
 ## Current scientific boundary
 
@@ -235,6 +255,8 @@ does not certify corporate-action or price-basis correctness.
 - H-LIQ-01 structural and adversarial harness;
 - H-LIQ-01 source-decomposition generator, independent recomputation
   verifier, artifact hash contract, and outcome-blind firewall;
+- V2 future-evaluation packet contract, source/key/hash verifier, and
+  fail-closed C3 execution gate;
 - C3 capability and contract-map verifier;
 - identity-continuity audit;
 - equal-weight combination and friction-scenario harness;
@@ -318,11 +340,19 @@ admission.
   `352a422086d540318f0464aaec2b80b3eb427a87176caa0326559242dacfc35e`;
   firewall SHA-256
   `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
+- V2 packet SHA-256:
+  `44fb9b2202a120076bb5fb40610a30baaf9ff3515d3df9efdb1a58b32862c049`;
+  contract SHA-256
+  `3f46b1d810928f50c1c85fa76146dff881cdd38bc7f4e4315d2862de7c9dbfd8`;
+  verification SHA-256
+  `20fe7c5138275c4491c3c20785504e6cb0cf24a07ee80c4dfce733d960ea19bc`;
+  firewall SHA-256
+  `71ea4f84dee8effbd2b7b8484546c7ce2fdf7f06859449a034b654d6fd2d7fed`.
 - Other structural code/output hashes are recorded in their result docs and
   staging JSON manifests; all are isolated and target-free.
 - Tests: Python compilation `PASS`; C3 verifier `PASS`; independent H-LIQ
   source recomputation `PASS`; corrected V2
-  verifiers `PASS`; outcome-blind target firewall `PASS`; artifact hash
+  verifiers `PASS`; V2 re-entry contract verifier `PASS`; outcome-blind target firewall `PASS`; artifact hash
   contract PASS plus deliberate wrong-code/required-manifest FAIL paths;
   git worktree was clean at baseline.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
