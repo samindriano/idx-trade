@@ -107,9 +107,14 @@ Corrected V2 artifacts in the isolated external staging root:
   SHA-256 `87b195ea6cbd281d861932bd9bdf2935c9538bfb6b5031bee2dbf60675ee6c2f`
 - combination verifier: `research/verify_alpha_combination_economics_v2.py`
 
-Both V2 verifiers returned `PASS`. Compile and diff checks pass. All access
-flags are false; no target, outcome, provider, cloud, capture, scheduler,
-canonical, or production state was opened or modified.
+Both V2 verifiers and the outcome-blind static firewall returned `PASS`.
+Firewall code SHA-256 is
+`ef27e6ec657027b222a85f7515a3f432e7d2503b1cd0680692052ad4d02c0762`; the
+staged firewall output SHA-256 is
+`a3b8cc953160f4c05c578f97df5e03b0fff987bb1789f795592fd18a6b29351c`.
+Compile and diff checks pass. All access flags are false; no target, outcome,
+provider, cloud, capture, scheduler, canonical, or production state was opened
+or modified.
 
 ## Decision and next action
 
@@ -121,4 +126,3 @@ Do not use the superseded V1 robustness lookback overlaps or V1 combination
 liquidity-exposure percentages. Continue only with bounded CA/issuer/PIT and
 capacity audits from already admitted local evidence; do not reopen providers
 or protected outcomes.
-

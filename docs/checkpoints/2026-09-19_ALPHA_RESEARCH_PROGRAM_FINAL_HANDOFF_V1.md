@@ -293,8 +293,9 @@ admission.
 - Combination firewall SHA-256: `4d00cace99225d5286c5143698622a85a735564b5ee6955bab98007038d679f4`.
 - Other structural code/output hashes are recorded in their result docs and
   staging JSON manifests; all are isolated and target-free.
-- Tests: Python compilation `PASS`; C3 verifier `PASS`; combination verifier
-  `PASS`; target firewall `PASS`; git worktree was clean at baseline.
+- Tests: Python compilation `PASS`; C3 verifier `PASS`; corrected V2
+  verifiers `PASS`; outcome-blind target firewall `PASS`; git worktree was
+  clean at baseline.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
   real capacity, sector/PIT history, and mechanism-level novelty; the latest
   independent red-team correction replay is complete but remains structural.

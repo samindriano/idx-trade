@@ -370,5 +370,6 @@ exposure is `30.7722%–40.6722%` across combinations, not `0.4333%–0.7056%`.
 The V1 outputs remain preserved for lineage but are superseded for these two
 interpretations. Candidate formulas, turnover, equal weights, and friction
 scenarios were unchanged. No candidate status changed, no C5 was created, and
-the protected packet remains exactly C1–C4. Both V2 verifiers pass. See
+the protected packet remains exactly C1–C4. Both V2 verifiers and the
+outcome-blind static firewall pass. See
 `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
