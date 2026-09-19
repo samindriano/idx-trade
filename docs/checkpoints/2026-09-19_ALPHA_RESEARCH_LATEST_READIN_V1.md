@@ -200,6 +200,13 @@ but high churn and unresolved PIT/CA/capacity keep the disposition at
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 was added. Full
 evidence is in `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
 
+The dedicated H-EXC-02 CA sensitivity audit leaves support unchanged at
+`308,067` finite rows. It changes `155` scores and `3,977` ranks, while mean/
+minimum Top-30 overlap remains `99.9722% / 93.3333%` across 8 changed dates;
+changed slots are `1 / 19` direct/spillover. This narrows one forensic basis
+risk but does not clear global PIT/CA authority or the high-turnover caution.
+See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
+
 ## Re-entry gate
 
 Jika dan hanya jika Data QA memberikan admission artifact yang terpisah dan

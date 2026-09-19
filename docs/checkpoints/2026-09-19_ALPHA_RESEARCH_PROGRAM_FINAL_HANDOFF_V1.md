@@ -15,6 +15,7 @@ Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 Latest H-EXC-02 result: `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`
+Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -137,6 +138,12 @@ a rescue of H-EXC-01. Its absolute-distance balance is exactly bounded in
 `40.7750% / 86.6667%`. It remains
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 ID or packet
 change was made. See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+
+Its dedicated 188-row CA sensitivity leaves support unchanged and preserves
+`99.9722% / 93.3333%` mean/minimum Top-30 overlap, but changes `3,977` ranks
+through direct and spillover effects. This is forensic narrowing only; global
+PIT/CA authority, capacity, and candidate readiness remain unresolved. See
+`2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
 
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination

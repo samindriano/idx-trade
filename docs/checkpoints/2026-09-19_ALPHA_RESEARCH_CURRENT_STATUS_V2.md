@@ -330,3 +330,11 @@ the numerical-bound failure as a new contract, but not the high-churn,
 capacity, PIT, or CA risks. Disposition remains
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 was created.
 See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+
+The dedicated H-EXC-02 CA sensitivity audit replaced `close` in memory only
+for the retained 188 unresolved rows. Baseline and counterfactual support were
+both `308,067`; `155` score rows and `3,977` ranks changed, but Top-30 overlap
+was `99.9722%` mean and `93.3333%` minimum across 8 changed dates, with only
+`1 / 19` direct/spillover changed slots. This narrows the specific basis risk
+without clearing global PIT/CA authority or changing the disposition. See
+`2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.

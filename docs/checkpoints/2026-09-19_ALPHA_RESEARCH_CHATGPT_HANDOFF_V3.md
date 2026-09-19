@@ -5,6 +5,7 @@ Lane: `codex/alpha-available-data-20260919`
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
 Latest evidence content commit: `06f47a3e0e7c31c0a96746d31f665d948a20d85b`
+Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -106,6 +107,10 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `40.7750%` mean Top-30 turnover, and `86.6667%` maximum turnover. It is
     structurally distinct but high-churn; no C5 or protected-packet change.
     See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+17. The H-EXC-02 188-row CA sensitivity kept support identical and produced
+    `99.9722% / 93.3333%` mean/minimum Top-30 overlap, but changed `3,977`
+    ranks. This narrows a specific basis risk only; no C5 or status upgrade.
+    See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 

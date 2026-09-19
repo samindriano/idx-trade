@@ -72,6 +72,12 @@ It remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5
 ID and no protected-packet change. See
 `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
 
+The follow-up 188-row CA sensitivity leaves H-EXC-02 support unchanged and
+keeps mean/minimum Top-30 overlap at `99.9722% / 93.3333%`, but still changes
+`3,977` ranks through direct and spillover effects. This narrows one forensic
+risk only; it does not admit the price basis, capacity, or candidate.
+See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
+
 The latest independent frontier audit adds fixed-window turnover-tail and
 repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
 threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times
