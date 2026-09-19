@@ -311,3 +311,17 @@ not yet authorized.
 See `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`,
 `2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`, and
 `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
+
+Additional red-team results:
+
+- C3 denominator erratum: matched-source coverage is `25.8313%` for
+  quality-core and `12.4308%` for all-five; both remain structural-only and
+  C3 remains blocked.
+- Packet provenance: producer binding is verified, packet attestation is
+  stale, and full freshness remains unknown. Future packet updates must bind
+  producer commit `P` and attest packet commit `Q` separately.
+- Dataset-Saham-IDX remains blocked; no row-level vintage/PIT evidence changed
+  its admission status.
+
+See `2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md` and
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.

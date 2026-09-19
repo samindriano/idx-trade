@@ -134,3 +134,15 @@ non-redundant work remains authorized.
   pass. Packet freshness remains `UNKNOWN` because the contract manifest head
   predates the current lane head; no packet rebind or protected evaluation is
   authorized.
+
+- C3 red-team corrected the interpretation of capability denominators: report
+  both the full eligible-panel denominator and the matched financial-source
+  denominator. Quality-core remains a structural capability island without a
+  separately frozen candidate contract. See
+  `2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md`.
+- Packet provenance red-team split producer binding from packet attestation:
+  producer `10939862...` is verified, packet attestation is stale, and full
+  freshness remains unknown. See
+  `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+- Dataset-Saham-IDX red-team found no admission-changing evidence; it remains
+  blocked with no new artifact justified.

@@ -380,3 +380,39 @@ The main unresolved risk is not compute; it is scientific admission. A future
 session must revalidate the external source status and canonical coordination
 before any outcome access. Until then, the correct state is blocked historical
 evaluation with productive pre-admission research still available.
+
+## Continuation addendum — CA basis, capacity tails, and discovery closure
+
+The latest isolated milestone adds three durable results:
+
+- `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`: the HLC overlay
+  remains bounded forensic evidence (`1,657/981,940` rows), the `188` residual
+  keys are disjoint, and the security master lacks issuer/ISIN transition
+  authority. Global price-basis admission remains blocked.
+- `2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`: a reproducible,
+  independently verified six-surface artifact over 600 sessions and 18,000
+  Top-30 slots per surface. It adds turnover tails, friction burdens, HHI,
+  effective names, and separate value/raw-volume/dollar-turnover quartiles;
+  executable capacity remains unknown.
+- `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`: no new
+  PIT-defensible OHLCV/value mechanism was found; effort-vs-result,
+  breakout/rejection, and dispersion directions are covered, redundant, or
+  source-blocked. Candidate budget remains exactly C1-C4.
+
+The static packet verifier and outcome-blind target/privacy firewall continue
+to pass. Packet freshness remains `UNKNOWN` because the contract manifest head
+predates the current lane head; no protected evaluation or silent rebinding is
+authorized.
+
+The C3 denominator red-team adds an interpretation erratum: quality-core is
+`64,406/249,333 = 25.8313%` among matched eligible financial rows, while the
+full-panel population-relative rate is `64,406/310,761 = 20.7253%`. The
+all-five rates are `12.4308%` and `9.9736%` respectively. Quality-core has no
+frozen candidate contract and C3 remains blocked. See
+`2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md`.
+
+Packet provenance is now classified as producer binding verified, packet
+attestation stale, and full freshness unknown. The producer pin is valid and
+ancestral, but the packet/contract were introduced later; future updates must
+bind producer `P` and attest packet commit `Q` separately. See
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.

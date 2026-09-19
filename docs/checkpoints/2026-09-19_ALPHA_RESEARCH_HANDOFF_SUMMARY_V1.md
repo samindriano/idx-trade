@@ -258,3 +258,9 @@ Latest continuation evidence is also durable in:
 The first two strengthen the CA/capacity blockers without changing candidate
 status. The third closes a redundant OHLCV/value discovery branch; no new
 candidate ID or protected packet change was made.
+
+The current continuation also records the C3 denominator/contract erratum and
+the packet producer-binding reconciliation. C3 stays blocked; packet state is
+`PRODUCER_BINDING_VERIFIED / PACKET_ATTESTATION_STALE /
+FULL_FRESHNESS_UNKNOWN`. Dataset-Saham-IDX remains blocked with no admission-
+changing evidence.

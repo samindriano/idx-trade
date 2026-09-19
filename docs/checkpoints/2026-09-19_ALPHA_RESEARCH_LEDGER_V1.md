@@ -444,3 +444,29 @@ The continuation packet verifier and cross-artifact target/privacy firewall
 also pass. Packet hashes remain internally consistent, but the contract's
 manifest head is older than the current lane head; freshness remains unknown
 and no rebinding or protected execution is authorized.
+
+## Continuation register — C3 denominator and packet-binding red-team
+
+The independent C3 red-team found a documentation/interpretation defect in
+the existing contract map: the reported rates use the full eligible panel
+denominator (`310,761`), while only `249,333` financial rows actually match an
+eligible key. The corrected matched-source rates are `25.8313%` for
+quality-core (`64,406` rows) and `12.4308%` for all-five (`30,994` rows), versus
+the population-relative rates `20.7253%` and `9.9736%`. This does not change
+the structural result or unblock C3. Quality-core remains a capability island
+without a separately frozen formula/weights/novelty/contract decision. See
+`2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md`.
+
+The packet provenance red-team precisely classified the re-entry state:
+producer binding `10939862...` is real, ancestral, and byte-consistent for the
+Stage-A code/protocol, but the packet/contract were introduced later. The old
+freshness memo is stale; current interpretation is
+`PRODUCER_BINDING_VERIFIED / PACKET_ATTESTATION_STALE /
+FULL_FRESHNESS_UNKNOWN`. The safe procedure is to bind future packet updates
+to producer commit `P` and attest packet commit `Q` separately. See
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+
+The Dataset-Saham-IDX provenance red-team found no evidence that changes its
+admission classification: commit/update mismatch, absent row-level vintage,
+337 absent admitted sessions, and 11 non-identical duplicate ticker-folder
+groups remain. It stays `BLOCKED / NOT_ADMITTED`; no new artifact is needed.

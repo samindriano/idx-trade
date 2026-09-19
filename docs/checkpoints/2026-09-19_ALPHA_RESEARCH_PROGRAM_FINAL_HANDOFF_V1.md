@@ -447,3 +447,12 @@ The bounded mechanism-surface review found no new PIT-defensible candidate from
 the admitted OHLCV/value surface. The candidate budget remains exactly C1-C4;
 H-LIQ/H-VOL/H-EXC-02 remain future research only. See
 `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
+
+The C3 capability red-team added a denominator erratum: matched-source rates
+are `25.8313%` for quality-core and `12.4308%` for all-five, while the
+population-relative full-panel rates are `20.7253%` and `9.9736%`. Quality-core
+is not a frozen candidate; C3 remains blocked. Packet provenance is classified
+separately as producer binding verified, packet attestation stale, and full
+freshness unknown. See
+`2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md` and
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.

@@ -44,6 +44,26 @@ and cross-sectional-disagreement directions are covered, redundant, or
 source-blocked. H-LIQ/H-VOL/H-EXC-02 remain future research only. See
 `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
 
+## Latest continuation update — C3 and packet provenance red-team
+
+The C3 red-team found that the existing capability map should distinguish two
+denominators: full eligible panel (`310,761`) versus matched eligible
+financial-source rows (`249,333`). Correct matched-source rates are `25.8313%`
+for quality-core (`64,406` rows) and `12.4308%` for all-five (`30,994` rows).
+Quality-core remains a structural capability island without a frozen candidate
+contract, and C3 remains blocked. See
+`2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md`.
+
+Packet provenance is now more precise: producer binding `10939862...` is
+verified and byte-consistent for Stage-A code/protocol, but packet/contract
+were introduced later. Packet attestation is stale and full freshness remains
+unknown; future updates must bind producer commit `P` and attest packet commit
+`Q` separately. See
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+
+Dataset-Saham-IDX remains `BLOCKED / NOT_ADMITTED`; the independent provenance
+red-team found no row-level timing/vintage evidence that changes this.
+
 ## Latest continuation update — available-data frontier audits
 
 The isolated lane completed four additional source-capability audits without

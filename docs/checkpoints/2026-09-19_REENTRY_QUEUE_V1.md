@@ -62,3 +62,9 @@ capacity `UNKNOWN/BLOCKED`, and the bounded new-mechanism review found no
 additional candidate from the admitted OHLCV/value surface. The queue remains
 exactly C1/C2/C4 conditional plus blocked C3; H-LIQ/H-VOL/H-EXC-02 remain
 future research only.
+
+The packet provenance reconciliation refines the state: producer binding is
+verified, packet attestation is stale, and full freshness remains unknown. Keep
+the producer pin unchanged; future updates must bind producer commit `P` and
+attest packet commit `Q` separately. See
+`2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
