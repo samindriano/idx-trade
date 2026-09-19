@@ -57,3 +57,14 @@ OOS metric, or predictive proxy may be read or computed.
 
 No result can become `READY_FOR_REENTRY`, `RESEARCH_SURVIVOR`, or a production
 model from this experiment.
+
+## Integrity-completion addendum — 2026-09-19
+
+The first deterministic run produced the fixed formula/support/turnover/Top-30
+overlap fields but omitted two diagnostics already declared above: score
+distribution/numerical checks and daily rank dependence. Independent review
+also identified the useful bounded comparison to H-LIQ-01 and turnover-quartile
+composition. A rerun is therefore authorized solely to complete the declared
+artifact contract and add those target-free diagnostics; the formula, inputs,
+windows, direction, and candidate budget are unchanged. This is not a
+parameter retry, sign rescue, or outcome-driven selection.

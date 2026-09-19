@@ -22,7 +22,7 @@ CANDIDATES = [
     "C2_participation_confirmation_5_v1",
     "C4_path_efficiency_reversal_20_v1",
 ]
-PANEL_COLUMNS = ["ticker", "date", "high", "low", "close", "regular_market_value"]
+PANEL_COLUMNS = ["ticker", "date", "high", "low", "close", "volume", "regular_market_value"]
 EXPECTED_SESSIONS_SHA256 = "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
 EXPECTED_ANCHORS_SHA256 = "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
 EXTERNAL_STAGE_ROOT = Path(
@@ -76,6 +76,42 @@ def turnover_stats(sets: dict[pd.Timestamp, set[str]]) -> dict[str, object]:
     }
 
 
+def daily_rank_dependence(frame: pd.DataFrame, left: str, right: str) -> dict[str, object]:
+    values = []
+    valid = frame["eligible_decision_universe"].astype(bool) & frame[left].notna() & frame[right].notna()
+    for _, group in frame.loc[valid].groupby("date", sort=True):
+        if len(group) < 3 or group[left].nunique() < 2 or group[right].nunique() < 2:
+            continue
+        correlation = group[left].corr(group[right], method="spearman")
+        if correlation is not None and np.isfinite(correlation):
+            values.append(float(correlation))
+    return {
+        "dates": len(values),
+        "mean": finite(np.mean(values)) if values else None,
+        "median": finite(np.median(values)) if values else None,
+        "q10": finite(np.quantile(values, 0.10)) if values else None,
+        "q90": finite(np.quantile(values, 0.90)) if values else None,
+        "min": finite(np.min(values)) if values else None,
+        "max": finite(np.max(values)) if values else None,
+        "positive_fraction": finite(np.mean(np.asarray(values) > 0)) if values else None,
+    }
+
+
+def quartile_share(frame: pd.DataFrame, value_column: str, selected_rows: pd.DataFrame, output_column: str) -> dict[str, float | None]:
+    buckets = []
+    valid_frame = frame.loc[frame["eligible_decision_universe"].astype(bool)]
+    for date, group in valid_frame.groupby("date", sort=True):
+        valid = group[value_column].gt(0) & np.isfinite(group[value_column])
+        ranks = group.loc[valid, value_column].rank(method="first", pct=True)
+        for index, rank in ranks.items():
+            buckets.append((date, group.loc[index, "ticker"], int(min(4, max(1, np.ceil(rank * 4))))))
+    bucket_frame = pd.DataFrame(buckets, columns=["date", "ticker", output_column])
+    joined = selected_rows.merge(bucket_frame, on=["date", "ticker"], how="left", validate="one_to_one")
+    if joined.empty:
+        return {}
+    return {str(key): finite(value) for key, value in joined[output_column].value_counts(normalize=True).sort_index().to_dict().items()}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--panel", type=Path, required=True)
@@ -120,6 +156,12 @@ def main() -> None:
     full["range_long_60"] = rolling(full, "range_pct", 60, "median")
     ratio = full["range_short_5"] / full["range_long_60"]
     full[SCORE] = (-np.log(ratio.where(ratio.gt(0)))).where(np.isfinite(ratio))
+    turnover = (full["close"] * full["volume"]).where(
+        full["close"].gt(0) & full["volume"].gt(0) & np.isfinite(full["close"]) & np.isfinite(full["volume"])
+    ) if "volume" in full else pd.Series(np.nan, index=full.index)
+    full["dollar_turnover"] = turnover
+    full["log_dollar_turnover"] = np.log(turnover.where(turnover.gt(0)))
+    full["HLIQ01_variability_log_turnover_20_v1"] = rolling(full, "log_dollar_turnover", 20, "std")
 
     features = pd.read_parquet(
         args.features,
@@ -141,30 +183,37 @@ def main() -> None:
     if len(eligibility_check) != len(features) or not stored_mask.equals(recomputed_mask):
         raise ValueError("feature eligibility does not match the guarded universe")
 
-    selected = full[["ticker", "date", "eligible_decision_universe", SCORE, "regular_market_value"]].copy()
+    selected = full[["ticker", "date", "eligible_decision_universe", SCORE, "regular_market_value", "dollar_turnover", "HLIQ01_variability_log_turnover_20_v1"]].copy()
     selected["eligible_decision_universe"] = selected["eligible_decision_universe"].fillna(False).astype(bool)
     h_sets = top30_sets(selected, SCORE)
     turnovers = turnover_stats(h_sets)
     candidate_sets = {column: top30_sets(features, column) for column in CANDIDATES}
     comparisons = {column: overlap_stats(h_sets, sets) for column, sets in candidate_sets.items()}
+    combined = selected.merge(
+        features[["ticker", "date", *CANDIDATES]],
+        on=["ticker", "date"],
+        how="left",
+        validate="one_to_one",
+    )
+    rank_dependence = {
+        column: daily_rank_dependence(combined, SCORE, column) for column in CANDIDATES
+    }
+    hliq_sets = top30_sets(selected, "HLIQ01_variability_log_turnover_20_v1")
+    hliq_overlap = overlap_stats(h_sets, hliq_sets)
+    hliq_rank_dependence = daily_rank_dependence(
+        combined, SCORE, "HLIQ01_variability_log_turnover_20_v1"
+    )
 
-    value_q = []
-    for date, group in selected.loc[selected["eligible_decision_universe"]].groupby("date", sort=True):
-        valid_values = group["regular_market_value"].gt(0) & np.isfinite(group["regular_market_value"])
-        ranks = group.loc[valid_values, "regular_market_value"].rank(method="first", pct=True)
-        for ticker, rank in ranks.items():
-            value_q.append((date, group.loc[ticker, "ticker"], int(min(4, max(1, np.ceil(rank * 4))))))
-    value_buckets = pd.DataFrame(value_q, columns=["date", "ticker", "value_quartile"])
     selected_rows = pd.concat(
         [pd.DataFrame({"date": date, "ticker": sorted(tickers)}) for date, tickers in sorted(h_sets.items())],
         ignore_index=True,
     )
-    selected_rows = selected_rows.merge(value_buckets, on=["date", "ticker"], how="left", validate="one_to_one")
-    bucket_share = (
-        selected_rows["value_quartile"].value_counts(normalize=True).sort_index().to_dict()
-        if not selected_rows.empty
-        else {}
-    )
+    bucket_share = quartile_share(selected, "regular_market_value", selected_rows, "value_quartile")
+    turnover_bucket_share = quartile_share(selected, "dollar_turnover", selected_rows, "turnover_quartile")
+    score_values = selected.loc[selected["eligible_decision_universe"], SCORE].dropna()
+    score_distribution = score_values.describe(percentiles=[0.01, 0.05, 0.50, 0.95, 0.99]).to_dict()
+    score_distribution = {str(key): finite(value) for key, value in score_distribution.items()}
+    score_array = selected.loc[selected["eligible_decision_universe"], SCORE].to_numpy(dtype=float)
 
     result = {
         "status": "PASS_STRUCTURAL_ONLY",
@@ -197,9 +246,22 @@ def main() -> None:
             "finite_dates": int(selected.loc[selected["eligible_decision_universe"] & selected[SCORE].notna(), "date"].nunique()),
             "finite_tickers": int(selected.loc[selected["eligible_decision_universe"] & selected[SCORE].notna(), "ticker"].nunique()),
         },
+        "numerical_checks": {
+            "finite_score_count": int(np.isfinite(score_array).sum()),
+            "nonfinite_score_count": int((~np.isfinite(score_array)).sum()),
+            "finite_range_pct_count": int(full["range_pct"].notna().sum()),
+            "finite_ratio_count": int(np.isfinite(ratio).sum()),
+        },
+        "score_distribution": score_distribution,
         "turnover_top30": turnovers,
         "top30_overlap_vs_existing": comparisons,
-        "selected_value_quartile_share": {str(key): finite(value) for key, value in bucket_share.items()},
+        "daily_rank_dependence_vs_existing": rank_dependence,
+        "hliq01_comparison": {
+            "top30_overlap": hliq_overlap,
+            "daily_rank_dependence": hliq_rank_dependence,
+        },
+        "selected_value_quartile_share": bucket_share,
+        "selected_turnover_quartile_share": turnover_bucket_share,
         "interpretation": {
             "structural_only": True,
             "predictive_claim": False,
