@@ -154,3 +154,9 @@ non-redundant work remains authorized.
   dates and no publication/revision/free-float authority. H-FLOW-01 remains a
   future specification, not a candidate. See
   `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
+- Market-index/breadth archive audit found exact direct-vs-Zapi parity on three
+  sampled rich dates and exact market-total reconciliation on the 2024/2026
+  samples; the 2021 sample retains an explicit localized arithmetic exception.
+  Digital coverage is only three sampled monthly blocks, so no PIT-admissible
+  feature or candidate was created. See
+  `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.

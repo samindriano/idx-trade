@@ -340,3 +340,13 @@ checks and overlap the panel completely on their exact dates, but provide only
 free-float field. H-FLOW-01 remains a future source specification and no C5
 was created. See
 `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
+
+The local market-index/breadth archive was then audited in the isolated lane.
+Direct and Zapi copies match exactly across registered fields on three sampled
+rich dates; market-total reconciliation is exact for the 2024/2026 samples and
+has a recorded localized exception for 2021. The digital archive has only
+three sampled monthly blocks, so it does not establish a continuous PIT-safe
+daily feature source. Status is
+`PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`; no candidate or model
+evaluation was run. See
+`2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.

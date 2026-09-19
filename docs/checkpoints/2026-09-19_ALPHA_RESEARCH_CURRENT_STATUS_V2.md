@@ -487,3 +487,15 @@ scenarios were unchanged. No candidate status changed, no C5 was created, and
 the protected packet remains exactly C1–C4. Both V2 verifiers and the
 outcome-blind static firewall pass. See
 `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+
+## Latest continuation update — market-context / breadth source audit
+
+The local market-index/breadth archive was audited read-only in the isolated
+lane. Direct and Zapi copies match exactly on three sampled rich dates. Market
+totals reconcile exactly on 2024-06-21 and 2026-07-31; 2021-01-04 has an
+explicit localized composite-versus-component discrepancy. The digital archive
+contains only three sampled monthly blocks, so no continuous PIT-admissible
+feature or candidate was created. Status remains
+`PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`; C1–C4, the protected
+packet, and all main/canonical/capture/cloud/telemetry state are unchanged.
+See `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.

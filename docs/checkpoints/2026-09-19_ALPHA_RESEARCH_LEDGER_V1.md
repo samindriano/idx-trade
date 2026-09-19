@@ -493,3 +493,16 @@ The Dataset-Saham-IDX provenance red-team found no evidence that changes its
 admission classification: commit/update mismatch, absent row-level vintage,
 337 absent admitted sessions, and 11 non-identical duplicate ticker-folder
 groups remain. It stays `BLOCKED / NOT_ADMITTED`; no new artifact is needed.
+
+## Continuation register — market-context / breadth source quality audit
+
+The local market-index/breadth archive was audited read-only. Direct and Zapi
+copies matched exactly across all registered fields on three sampled rich
+dates, with no duplicate stock codes. Market-total arithmetic reconciled
+exactly for 2024-06-21 and 2026-07-31; 2021-01-04 retains a localized
+composite-versus-component discrepancy that was recorded, not repaired. The
+digital archive contains only three sampled monthly blocks, so continuous
+daily PIT coverage, publication/revision semantics, and identity/CA authority
+remain unestablished. Status is `PASS_STRUCTURAL_ONLY /
+SOURCE_ADMISSION_BLOCKED`; no feature, candidate, C5, packet, or model status
+changed. See `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.

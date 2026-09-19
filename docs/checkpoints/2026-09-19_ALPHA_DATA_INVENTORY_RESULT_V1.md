@@ -128,6 +128,15 @@ per-date observation history, no available-at timestamp, and no explicit
 revision/vintage contract. The five populated rows outside the `capture_high`
 flag also make the flag semantics an unresolved governance issue.
 
+The local market-index/breadth archive was audited separately. Direct and Zapi
+copies match exactly on three sampled rich dates, and market-total arithmetic
+is exact on the 2024-06-21 and 2026-07-31 samples; the 2021-01-04 sample has a
+localized composite-versus-component discrepancy. The archive contains only
+three sampled digital monthly blocks and does not establish continuous daily
+PIT coverage, so it remains source-capability evidence rather than an admitted
+feature source. See
+`2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+
 ## Missing capability versus inadmissible capability
 
 | Question | Current answer |

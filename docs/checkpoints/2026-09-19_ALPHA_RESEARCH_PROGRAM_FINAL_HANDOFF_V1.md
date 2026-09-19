@@ -471,3 +471,13 @@ publication/revision, issuer/ISIN, or effective-free-float authority. The
 five current profile probes expose no explicit free-float field. H-FLOW-01 is
 therefore a future specification only, not C5 or packet material. See
 `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
+
+The local market-index/breadth archive was subsequently audited read-only. Its
+direct and Zapi copies match exactly on three sampled rich dates, with exact
+market-total reconciliation on the 2024/2026 samples and an explicit localized
+arithmetic exception on the 2021 sample. Only three sampled digital monthly
+blocks are present; continuous PIT daily coverage and publication/revision
+semantics are not established. The result is
+`PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`, with no feature, candidate,
+C5, packet, or predictive-status change. See
+`2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
