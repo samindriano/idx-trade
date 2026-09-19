@@ -653,3 +653,8 @@ decision-changing evidence beyond the inventoried sources. Phase O remains
 new authoritative or non-redundant evidence. No candidate, packet, or model
 status changed. See
 `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`.
+
+The A-Z and mandatory-handoff completion audit confirms document coverage and
+machine-control PASS, but not scientific admission: Q is partial, S/Z are
+active, T is controlled/partial, and V/W remain blocked or none-ready. See
+`2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`.

@@ -728,3 +728,14 @@ The lane remains active only for genuinely new authoritative evidence or
 independent non-redundant research. No provider/network probe, target access,
 candidate retry, C5 creation, or protected-state mutation is authorized by
 this review.
+
+## Continuation register — A-Z and mandatory handoff completion audit
+
+The current durable handoff was checked against every explicit A-Z phase and
+all mandatory final-handoff sections in the objective. The crosswalk confirms
+that the pre-admission program is substantially documented, but Q remains
+partial, S/Z remain active, T remains controlled/partial, and V/W remain
+blocked or none-ready. The packet/firewall controls pass independently, while
+Data QA, PIT/identity/CA, executable-capacity, and protected-target admission
+remain unresolved. See
+`2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`.
