@@ -88,3 +88,11 @@ evaluation.
 | Listing/delisting raw-source integrity | `PASS_STRUCTURAL_ONLY` | 440 monthly raw files, 962 current rows, 163 delisting rows; all byte/hash/schema/row-count/source-reference/raw-payload parity gates pass |
 | Listing/delisting semantic admission | `PARTIAL / IDENTITY_BLOCKED` | Event-level only; six conflict tickers, one delisting-before-listing row, no daily PIT membership or issuer/ISIN/publication/revision/CA linkage |
 | Lifecycle price-row exposure | `BLOCKED` | Existing summary records 2,280 ambiguous price rows across five tickers; do not repair, mask, or infer continuity |
+
+## LBRE free-float source audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| LBRE artifact integrity | `PASS_STRUCTURAL_ONLY` | 58,671/58,671 manifest files match bytes and SHA-256; normalized schema/range/hash checks pass |
+| LBRE lineage/current selection | `PARTIAL / SOURCE_REMEDIATION_REQUIRED` | 25,262 canonical, 24,394 admitted, 23,373 current, 28,254 exact-input rows; 868 unresolved lineage rows |
+| LBRE PIT/population admission | `BLOCKED` | Monthly issuer reports, no daily population-wide panel, no complete issuer/ISIN/CA/revision/public-availability contract |

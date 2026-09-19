@@ -596,3 +596,12 @@ issuer/ISIN transition, publication-time, revision/vintage, or corporate-
 action linkage, and retains six conflict tickers. No lifecycle repair,
 universe mask, feature, candidate, or protected evaluation was created. See
 `2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.
+
+The LBRE monthly free-float corpus was independently audited next. All 58,671
+manifest files match byte/hash declarations; normalized counts are 25,262
+canonical, 24,394 admitted, 23,373 current, and 28,254 exact-input rows.
+Lineage remains the blocker: 868 rows are unresolved (532 multiple-original
+ambiguities, 332 missing-original evidence, 4 invalid correction chronology).
+The surface is monthly issuer-report capability, not a daily PIT population
+panel; no feature, universe mask, candidate, or packet state changed. See
+`2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

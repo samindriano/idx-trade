@@ -427,3 +427,12 @@ daily PIT membership, and issuer/ISIN, publication-time, revision/vintage,
 and corporate-action linkage are absent. No universe repair, feature,
 candidate, packet, target, or incumbent state changed. See
 `2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.
+
+The LBRE free-float corpus was independently audited afterward. All 58,671
+manifest artifacts match bytes and hashes, but 868 lineage rows remain
+unresolved: 532 multiple-original ambiguities, 332 missing-original cases,
+and 4 invalid correction chronologies. It is monthly issuer-report data, not
+a daily PIT population panel, so it remains
+`PARTIAL / SOURCE_REMEDIATION_REQUIRED`; no feature, candidate, universe mask,
+target, or incumbent state changed. See
+`2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

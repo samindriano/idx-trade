@@ -40,3 +40,17 @@ revision/vintage, and missingness contracts are independently established.
 Manifest existence and hashes were verified locally. No network, credentials,
 provider, cloud, canonical data, target, outcome, or production state was
 accessed or modified.
+
+## Independent follow-up — LBRE free-float corpus
+
+The LBRE corpus was re-audited without network access. All 58,671 manifest
+artifacts match their declared bytes and hashes; 25,262 canonical rows,
+24,394 admitted rows, 23,373 current rows, and 28,254 exact-input rows match
+the persisted replay summary. The independent lineage audit leaves 868 rows
+unresolved: 532 multiple-original ambiguities, 332 missing-original cases,
+and 4 invalid correction chronologies. The surface remains
+`PARTIAL / SOURCE_REMEDIATION_REQUIRED`; monthly issuer reports are not a
+daily population-wide PIT panel, and no issuer/ISIN, CA, revision-complete, or
+public-availability contract was established. No feature, candidate, or
+protected state changed. See
+`2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

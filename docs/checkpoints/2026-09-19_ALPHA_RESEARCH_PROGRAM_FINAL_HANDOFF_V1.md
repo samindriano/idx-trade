@@ -560,3 +560,12 @@ revision/vintage, or corporate-action chain exists. The surface is
 capability-only (`PARTIAL / IDENTITY_BLOCKED`); no feature, candidate,
 protected-packet, or model status changed. See
 `2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.
+
+The LBRE free-float surface was then audited independently. Manifest
+integrity is exact across 58,671 artifacts, while 868 lineage rows remain
+unresolved and the data is monthly issuer-report coverage without a complete
+daily PIT/population, issuer/ISIN, CA, revision, or public-availability
+contract. The surface remains capability-only
+(`PARTIAL / SOURCE_REMEDIATION_REQUIRED`); no feature, candidate, packet, or
+model status changed. See
+`2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

@@ -650,3 +650,14 @@ no daily PIT membership, issuer/ISIN continuity, publication-time,
 revision/vintage, or corporate-action linkage. No feature, candidate, packet,
 or protected artifact changed. See
 `2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.
+
+The LBRE monthly free-float corpus then received an independent manifest and
+lineage audit. All 58,671 declared artifacts match byte/hash declarations;
+25,262 canonical rows reduce to 24,394 admitted and 23,373 current rows, with
+28,254 exact-input rows. The source remains `PARTIAL /
+SOURCE_REMEDIATION_REQUIRED`: 868 lineage rows are unresolved (532 multiple
+originals, 332 missing originals, 4 invalid correction chronology), coverage
+is monthly rather than daily population-wide PIT, and issuer/ISIN, CA,
+revision-completeness, and public-availability authority are missing. No
+feature, candidate, packet, or protected state changed. See
+`2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
