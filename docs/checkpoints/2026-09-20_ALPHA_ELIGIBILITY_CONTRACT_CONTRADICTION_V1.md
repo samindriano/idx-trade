@@ -106,5 +106,5 @@ that the packet is executable.
 - Contract SHA-256: `a76cd5acdfe457668b6241c4d28d677e4c2b92a98f2a54b82401338a6d794d4d`
 - Latest pre-documentation-amendment packet verifier run: `PASS`, `65/65`
   checks, with output recorded at
-  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_future_evaluation_packet_v2_verifier_v3.json`.
+  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_future_evaluation_packet_v2_verifier_final.json`.
 - Current packet firewall result SHA-256: `a55df4853c14f2b27f2b0d1f591ba35af1eadfe0d8cbaae697859f1ff926e397`

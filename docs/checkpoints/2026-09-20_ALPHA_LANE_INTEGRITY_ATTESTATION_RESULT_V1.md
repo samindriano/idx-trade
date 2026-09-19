@@ -36,3 +36,13 @@ mutation.
 Implementation: `research/verify_alpha_research_lane_integrity_v1.py`. Future
 continuation milestones should rerun it with the last trusted lane baseline and
 write the result only inside the isolated staging root.
+
+## Latest rerun — 2026-09-20
+
+The same verifier was rerun after the packet-contract hardening commits. The
+reference HEAD for that rerun was `7c0605c052e24d5912a0cc28eb477f068076488b`;
+it returned `PASS` on all 10 checks. The staging root contained 157 files with
+filename digest
+`bf5c6f077f07039a3d4bdaebfa6b608b6dec56885167fcb0e2b3ef9b3f525aa6`, with no
+protected-looking filename and all scope flags false. This remains process-
+scope evidence only, not proof of runtime access absence.

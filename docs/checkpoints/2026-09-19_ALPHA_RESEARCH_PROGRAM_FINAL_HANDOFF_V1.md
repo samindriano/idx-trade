@@ -631,8 +631,8 @@ status changed. See
 - Packet firewall: `PASS`, 31/31 checks; result SHA-256
   `a55df4853c14f2b27f2b0d1f591ba35af1eadfe0d8cbaae697859f1ff926e397`.
 - Lane-integrity attestation: `PASS`; current staging filename digest
-  `8a7f27fdb66a1f266b3be209774116f98c33f1e6e71d93d6a7412814bf7e9b44`
-  over 155 staging files.
+  `bf5c6f077f07039a3d4bdaebfa6b608b6dec56885167fcb0e2b3ef9b3f525aa6`
+  over 157 staging files.
 - Independent C1/C2/C4 constructor replay: `PASS`, 981,940 keys and all
   scores/ranks match; eligibility prose/code contradiction remains blocked and
   is documented separately.
