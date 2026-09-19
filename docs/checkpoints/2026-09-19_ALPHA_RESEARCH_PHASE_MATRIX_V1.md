@@ -20,7 +20,7 @@ non-redundant work remains authorized.
 | D | C3 financial capability investigation | `COMPLETE CAPABILITY / BLOCKED SCIENCE` | Financial capability audit and contract map; quality-only island is broader, but YoY/provenance support remains sparse. |
 | E | Target-free orthogonality | `COMPLETE STRUCTURAL` | `2026-09-19_STRUCTURAL_ORTHOGONALITY_MAP_V1.md` and daily/rolling lab; incumbent/target incremental information remains blocked. |
 | F | Economic mechanism research | `COMPLETE BOUNDED` | Hypothesis cards and literature separation; no mechanism is predictive evidence without target admission. |
-| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ NOVELTY PARTIALLY RESOLVED` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. One fixed size-neutral representation reduces bottom-value exposure but doubles turnover; remains `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
+| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ + H-VOL PENDING` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. H-VOL-01 is structurally distinct on the bounded panel but adjacent to prior range/flat-range families and concentrated in bottom-value names; both remain `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
 | H | External literature/mechanism review | `COMPLETE BOUNDED` | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`; literature is inspiration, not IDX evidence. |
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics and H-LIQ h10/h20/h40; no free sweep or predictive selection. |
@@ -30,7 +30,7 @@ non-redundant work remains authorized.
 | N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, and semantic margin directions are closed; C1/C2/C4 are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only activity field; `Dataset-Saham-IDX` is newly surfaced but blocked by source/PIT/vintage/duplicate-copy uncertainty. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
-| Q | Independent adversarial review | `PARTIAL / 3 RED-TEAM REPORTS + 2 SOURCE REPLAYS + FRONTIER AUDIT` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`. |
+| Q | Independent adversarial review | `PARTIAL / RED-TEAM + SOURCE REPLAYS + FRONTIER + H-VOL REVIEW` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, H-VOL construction/novelty, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`. |
 | R | Candidate novelty gate | `COMPLETE MILESTONE` | H-LIQ-01 remains no-C5; monotone variants and combination hypotheses do not create IDs. |
 | S | Research budget/question management | `ACTIVE` | Active questions and do-not-retry register below; continue only where new evidence can change a structural decision. |
 | T | Safe parallelization | `PARTIAL / CONTROLLED` | Independent read-only gap and data-capability audits completed; workers had no write or protected-data authority. |
@@ -77,7 +77,7 @@ non-redundant work remains authorized.
 
 ## Next high-information tasks
 
-1. Keep the current status and C1/C2/C4 adversarial result synchronized in the
+1. Keep the current status and C1/C2/C4/H-LIQ/H-VOL results synchronized in the
    durable ledger and handoff.
 2. If new local evidence appears, audit corporate-action/issuer basis and
    historical available-at semantics before feature construction.
@@ -85,6 +85,9 @@ non-redundant work remains authorized.
    fields; do not turn it into a target or provider search.
 4. Before any future `READY_FOR_REENTRY` decision, commission dedicated
    read-only red-team review for C1/C2/C4 and re-run the target firewall.
-5. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
+5. Preserve H-VOL-01 as a future structural hypothesis only; do not create C5
+   without a new novelty decision, admitted price basis/PIT, and economic
+   capacity evidence.
+6. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
    only if it can establish row-level PIT/vintage, identity/CA semantics, and
    unambiguous source selection; otherwise preserve it as blocked.

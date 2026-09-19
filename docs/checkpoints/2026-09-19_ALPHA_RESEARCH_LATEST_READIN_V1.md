@@ -162,6 +162,9 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
 - **C3:** `BLOCKED` karena support financial/PIT sparse.
 - **C4:** `FUTURE_RESEARCH / ECONOMIC_CAUTION`; turnover rendah tidak cukup.
 - **H-LIQ-01:** novelty belum selesai dan belum menjadi C5.
+- **H-VOL-01:** volatility-compression diagnostic structurally distinct on the
+  bounded panel, but adjacent to prior range families and economically
+  concentrated; remains future research, not C5.
 - **Combinations:** structural future hypotheses saja; bukan model baru yang
   sudah terbukti incremental.
 
@@ -194,6 +197,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
+- `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
@@ -237,3 +241,15 @@ The dedicated source-admission audit is
 `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`; it remains
 `BLOCKED / NOT_ADMITTED` because PIT/vintage, identity, CA basis, and duplicate
 source selection are unresolved.
+
+## H-VOL-01 structural result
+
+The fixed compression state `-log(median_5(range_pct) /
+median_60(range_pct))` was completed without target/outcome access or a
+parameter sweep. Support is `308,514` finite eligible rows over `1,201` dates
+and `711` tickers; mean Top-30 turnover is `29.2778%`; selected bottom-value
+Q1 share is `42.7200%`. Mean Top-30 overlap with C1/C2/C4/H-LIQ-01 is
+`9.5209% / 8.0155% / 15.5676% / 13.5803%`, but this is structural evidence
+only. V4-B/O2/O2.1 adjacency, value concentration, and unresolved PIT/CA/
+capacity keep the disposition at `FUTURE_RESEARCH / NOVELTY_PENDING /
+ECONOMIC_CAUTION`; no C5 was added.

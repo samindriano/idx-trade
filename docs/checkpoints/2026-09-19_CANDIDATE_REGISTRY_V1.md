@@ -48,6 +48,15 @@ The H-LIQ-01 adversarial audit is in
 dependence, horizon sensitivity, listing-age concentration, and missing sector
 data remain unresolved.
 
+H-VOL-01 is also explicitly not a candidate ID. Its fixed volatility-compression
+diagnostic has broad structural support and low bounded overlap with C1/C2/C4
+and H-LIQ-01, but its `29.2778%` mean Top-30 turnover, `42.7200%` selected
+bottom-value Q1 share, and adjacency to V4-B/O2/O2.1 range families leave
+novelty and economics unresolved. Keep it at
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; do not expand the
+registry beyond C1-C4. See
+`2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
+
 The latest independent frontier audit adds fixed-window turnover-tail and
 repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
 threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times

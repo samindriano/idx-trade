@@ -4,7 +4,8 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest evidence content commit: `b9f0873318ddc4d43addd443fbab13d808c3d89c`
+Latest evidence content commit: `8545d8aa` (H-VOL result); this handoff is
+updated in the following synchronization commit.
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -28,6 +29,7 @@ target/outcome.
 | C3 financial quality/growth | `30,994` rows; `278` usable dates | `10.93%` | `BLOCKED`; financial/PIT support sparse |
 | C4 path-efficiency reversal 20 | `310,323 / 310,761` (`99.8591%`) | `23.70%` | `FUTURE_RESEARCH / ECONOMIC_CAUTION` |
 | H-LIQ-01 | `155,679` finite rows; diagnostic only | `10.306%` baseline | `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 |
+| H-VOL-01 | `308,514` finite rows; diagnostic only | `29.2778%` mean | `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 |
 
 Base friction figures are frozen structural proxies, not realized P&L. No
 candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
@@ -73,6 +75,14 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     selection. Its static sector/listing files are `METADATA_ONLY`. A dedicated
     admission audit confirmed 923/1,260 official-session dates intersect and
     left PIT, identity, CA basis, and foreign-flow timing unresolved.
+12. H-VOL-01 compression was tested as one fixed structural representation:
+    `-log(median_5((high-low)/close) / median_60((high-low)/close))`. It has
+    `308,514` finite eligible rows, low mean Top-30 overlap with C1/C2/C4/
+    H-LIQ-01 of `9.5209% / 8.0155% / 15.5676% / 13.5803%`, but `29.2778%`
+    mean turnover and `42.7200%` selected bottom-value Q1 concentration.
+    Prior range-family adjacency and unresolved PIT/CA/capacity prevent C5
+    admission; this is structural evidence only. Full result is in
+    `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 
@@ -122,6 +132,8 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 - `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V1.md`
 - `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
+- `2026-09-19_ALPHA_HVOL01_COMPRESSION_PREREGISTRATION_V1.md`
+- `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 
 ## Hard boundary
 

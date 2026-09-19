@@ -199,7 +199,8 @@ upgrade or C5 admission.
 ## Queue and exact next action
 
 No candidate is currently `READY_FOR_REENTRY`. C1/C2/C4 are conditionally
-engineering-ready; C3 remains blocked; H-LIQ-01 remains pending.
+engineering-ready; C3 remains blocked; H-LIQ-01 and H-VOL-01 remain pending
+future hypotheses, not candidate IDs.
 
 For future gate ordering only (not an alpha ranking), C2/C4 have lower
 bounded unresolved-basis sensitivity than C1. C1 should not be treated as
@@ -277,3 +278,15 @@ No candidate status changed. See
 The newly surfaced source's detailed admission result is
 `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md` and remains
 `BLOCKED / NOT_ADMITTED`.
+
+## Latest H-VOL-01 continuation
+
+One fixed daily volatility-compression representation was evaluated in the
+same outcome-blind lane: `-log(median_5((high-low)/close) /
+median_60((high-low)/close))`. It produced `308,514` finite eligible rows,
+`29.2778%` mean Top-30 turnover, and `42.7200%` selected bottom-value Q1
+share. Its low bounded overlap with existing candidates is not predictive
+orthogonality; adjacent historical range families and unresolved PIT/price
+basis/capacity keep it at `FUTURE_RESEARCH / NOVELTY_PENDING /
+ECONOMIC_CAUTION`. No C5 was created. See
+`2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
