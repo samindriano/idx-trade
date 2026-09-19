@@ -4,7 +4,7 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest evidence content commit: `51bca8cd` (H-FRAG-01 result is in the current uncommitted handoff addendum; commit pointer will be refreshed after closure.)
+Latest evidence content commit: `96a3f12b`
 Latest H-LIQ source decomposition: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
 Latest H-LIQ independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Current future-evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md`

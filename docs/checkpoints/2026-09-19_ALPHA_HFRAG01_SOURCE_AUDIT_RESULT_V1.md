@@ -1,7 +1,7 @@
 # H-FRAG-01 Official Stock-Summary Source Audit — Result V1
 
-Date: 2026-09-19 (Asia/Jakarta)  
-Lane: `codex/alpha-available-data-20260919`  
+Date: 2026-09-19 (Asia/Jakarta)
+Lane: `codex/alpha-available-data-20260919`
 Status: `SOURCE_BLOCKED / PARTIAL / NO C5`
 
 ## Decision

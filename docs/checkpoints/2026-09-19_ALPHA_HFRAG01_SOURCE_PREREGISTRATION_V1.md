@@ -1,7 +1,7 @@
 # H-FRAG-01 Official Stock-Summary Composition — Preregistration V1
 
-Date: 2026-09-19 (Asia/Jakarta)  
-Lane: `codex/alpha-available-data-20260919`  
+Date: 2026-09-19 (Asia/Jakarta)
+Lane: `codex/alpha-available-data-20260919`
 Status: `PARTIAL_SOURCE_DIAGNOSTIC / NOT_ADMITTED / NO_C5`
 
 ## Question
