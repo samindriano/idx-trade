@@ -9,6 +9,11 @@ This is the concise durable read-in for a future ChatGPT session. It
 supersedes the conversational summary, but detailed evidence remains in the
 linked checkpoint documents and staged JSON artifacts.
 
+The newest consolidated read-in, including the three completed Phase-Q
+read-only red-team reports, is
+`2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`. Read it together with this
+status file before continuing.
+
 ## Executive answer
 
 The program is **not blocked everywhere**. A large amount of legal,
@@ -93,6 +98,11 @@ The base burden uses the frozen structural assumption of 15 bps buy fee,
    implementation cautions, not executable-capacity claims.
 10. **Latest adversarial audit**: C1/C2/C4 implementation and frozen outputs
     passed outcome-blind structural checks (details below).
+11. **Phase-Q red-team synthesis**: three read-only reviews are now complete.
+    Causal/calendar/mask checks pass, but PIT/as-of, identity, survivorship,
+    price basis, real capacity, and full independent recomputation remain
+    unresolved. The reviews are documented in the latest read-in; no candidate
+    became `READY`.
 11. **H-LIQ-01 novelty diagnostic**: the temporal-variability score is not a
     monotone duplicate of C2, but dependence with the turnover-level component
     rises from -0.046 in Q1 to 0.468 in Q4. It remains a future hypothesis,
@@ -187,7 +197,7 @@ read-only red-team review. Do not repeat completed C1-C4 structural metrics.
 ## Repository, artifacts, tests, and provenance
 
 - Branch: `codex/alpha-available-data-20260919`
-- Latest status update commit: `734b46a8`
+- Latest status update commit before this checkpoint: `0a9bbbb9`
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Adversarial builder: `research/alpha_c1234_adversarial_audit_v1.py`
@@ -211,5 +221,6 @@ Detailed durable documents:
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+- `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
 
 No predictive superiority claim is made.

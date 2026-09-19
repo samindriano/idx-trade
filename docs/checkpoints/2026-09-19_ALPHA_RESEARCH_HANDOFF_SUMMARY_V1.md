@@ -4,11 +4,12 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Branch HEAD at V1 handoff: `03ac0c8d0f9a28c835cb740d7627dd9d1876251c`
 Latest lane milestone commit: `5d1f97c6` (`research: add capacity proxy stress audit`)
-Latest status/documentation commit: `734b46a8`
+Latest status/documentation commit before this checkpoint: `0a9bbbb9`
 Superseded by: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
 Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md`
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest consolidated read-in: `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
 Latest adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
@@ -137,8 +138,10 @@ provider, network, prospective, or protected outcome data.
 
 The latest main-run adversarial audit passed all target-free C1/C2/C4 static,
 schema/key, calendar, identity-interval, mask, and numerical checks. It does
-not certify PIT/corporate-action basis or predictive value, and it does not
-replace the remaining independent Phase-Q red-team.
+not certify PIT/corporate-action basis or predictive value. Three additional
+read-only Phase-Q red-team reviews are now complete; their synthesis remains
+`NO-GO` for readiness because PIT/as-of, issuer identity, survivorship, price
+basis, real capacity, tie policy, and full source recomputation are unresolved.
 
 The CA/price-basis follow-up confirms the known 1,657-row HLC overlay is
 already embedded in the current panel and does not change C1/C2/C4 on replay;
