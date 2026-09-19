@@ -74,6 +74,12 @@ non-redundant work remains authorized.
    implementation-valid? Current answer: V1 lookback alignment and percentile
    denominator were defective; corrected V2 artifacts are now authoritative
    for those structural claims.
+8. Which eligibility contract is authoritative for the future feature panel?
+   Current answer: `BLOCKED_POLICY_CONFLICT`. The protocol/packet prose says
+   at least 20 finite observations, while the implementation uses
+   `min_periods=60`; the resulting populations differ by 38,004 rows. No
+   population choice or feature regeneration is authorized until this is
+   resolved and hash-bound.
 
 ## Answered, rejected, and blocked questions
 
@@ -96,6 +102,12 @@ non-redundant work remains authorized.
   panel denominator inconsistent with the eligible selection contract;
   eligible-only V2 values supersede them and materially strengthen liquidity
   caution without establishing predictive or executable-capacity evidence.
+- The independent constructor replay then exposed a separate eligibility
+  contract contradiction: protocol/packet prose says minimum 20 finite
+  observations, while the current implementation requires 60. The
+  contradiction is now fail-closed in the future packet and its machine
+  verifier; this is a policy blocker, not evidence to choose either
+  population.
 
 ## Next high-information tasks
 
