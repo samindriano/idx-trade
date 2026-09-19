@@ -30,6 +30,8 @@ Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ-01 novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-LIQ-01 size-neutral diagnostic: `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
+Latest H-LIQ-01 source decomposition: `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`
+Latest H-LIQ-01 independent verifier: `research/verify_alpha_hliq01_source_decomposition_v1.py`
 Latest H-VOL-01 compression diagnostic: `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 Latest H-VOL-01 CA sensitivity: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL-01 horizon stability: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
@@ -138,6 +140,7 @@ production or prospective claim.
 - CA exposure attribution: a preregistered direct-vs-spillover replay exactly reproduced stored C1/C2/C4 baseline scores. C1 has 66 direct score-changed rows versus 82,291 spillover rows; C2 has 66 versus 457; C4 has 66 versus 319. Direct means the changed key is among the 188 unresolved rows; it is not causal proof. See `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`.
 - H-LIQ-01 novelty diagnostic: H-LIQ versus the C2 turnover-level component has mean daily Spearman 0.1648 and mean Top-30 overlap 39.40%; conditional dependence rises from -0.046 in bottom-value Q1 to 0.468 in top-value Q4. Retain the mechanism card, but do not create C5; status remains `NOVELTY_PENDING / ECONOMIC_CAUTION`.
 - H-LIQ-01 size-neutral diagnostic: one preregistered daily value-rank residual reduces selected bottom-value Q25 share from 39.672% to 14.983%, but raises mean Top-30 turnover from 10.306% to 20.785% and retains 72.006% overlap with baseline. The exposure is partly scale-related, not a free improvement; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`.
+- H-LIQ-01 source decomposition: removing the fixed C2 turnover-level component reduces mean daily Spearman from 0.1648 to 0.0158 against that component, but residual dependence with full C2 remains 0.0843. The residual changes Top-30 membership materially (72.0056% mean overlap; 27.9944% mean turnover; 83.3333% q95 turnover) and worsens bottom-value Q1 share from 39.6722% to 50.3889%. An independent source-recomputing verifier passed; this supports `STRUCTURAL_NONREDUNDANCY_VS_C2_LEVEL_ONLY` only. H-LIQ-01 remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`.
 - H-VOL-01 compression diagnostic: one fixed `-log(median_5(range_pct) / median_60(range_pct))` representation has 308,514 finite eligible rows, mean Top-30 turnover 29.2778%, low mean Top-30 overlap with C1/C2/C4/H-LIQ-01 of 9.5209%/8.0155%/15.5676%/13.5803%, and selected bottom-value Q1 share 42.7200%. Adjacent V4-B/O2/O2.1 range families, turnover, and value concentration keep novelty/economics unresolved; no C5 ID was created. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
 - H-VOL-01 CA sensitivity: substituting the 188 retained `idx_close` comparison rows changes 547 scores and 8,876 ranks, with mean/minimum Top-30 overlap `99.8307% / 86.6667%`; 14 changed Top-30 slots are direct and 108 are spillover. This narrows but does not clear price-basis risk; no C5 ID or status upgrade. See `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
 - H-VOL-01 horizon stability: fixed `5/20`, `5/60`, and `20/120` forms are materially distinct, with pairwise Top-30 overlap `58.9675% / 9.9182% / 29.3193%`; `5/20` mean turnover is `36.2583%`, baseline `5/60` is `29.2778%`, and `20/120` support falls to `271,045` rows. No horizon was selected and no C5/status upgrade occurred. See `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
@@ -166,8 +169,9 @@ production or prospective claim.
 
 ### Active questions
 
-- Can H-LIQ-01's mechanism-level novelty be distinguished from shared
-  turnover information without target optimization?
+- Can H-LIQ-01's remaining mechanism-level novelty be distinguished from
+  participation/liquidity exposure without target optimization or a new
+  admissible source surface?
 
 ### Answered questions
 
@@ -187,6 +191,11 @@ production or prospective claim.
   declaration shapes and fails closed on missing, conflicting, or mismatched
   code/input/manifest bindings. Its Stage-A PASS and deliberate FAIL paths are
   recorded in `2026-09-19_ALPHA_ARTIFACT_HASH_CONTRACT_RESULT_V1.md`.
+- The fixed H-LIQ-01 source-decomposition diagnostic was independently
+  recomputed from the frozen panel, features, sessions, and anchors; all key
+  dependence, Top-30, support, and bottom-value metrics matched. The result
+  is structural-only and does not change H-LIQ status. See
+  `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`.
 - The retained local CA/issuer evidence does not reduce the unresolved
   188-row price-basis admission gap: the 1,657-row HLC overlay is already
   represented exactly, the separate official inventory is only a bounded
@@ -199,6 +208,11 @@ production or prospective claim.
   spread, queue, fill probability, or executable capacity. Further capacity
   work would repeat the completed proxy stress until a new admitted liquidity
   surface exists.
+- H-LIQ-01's exact C2 turnover-level component has now been removed with a
+  fixed, independently recomputed residual diagnostic. Direct dependence on
+  that component is low after removal, but residual dependence with full C2
+  and materially worse bottom-value exposure prevent a mechanism-level novelty
+  or economic-readiness conclusion.
 
 ### Blocked questions
 
@@ -215,6 +229,9 @@ production or prospective claim.
 - Do not rerun the old envelope-only verifier as if it were independent.
 - Do not use sample tradability snapshots or metadata-only activity fields as
   historical PIT evidence.
+- Do not repeat the exact H-LIQ-01 C2 turnover-level residualization question
+  without a new mechanism, independently admissible source surface, or a
+  changed falsifiable contract.
 - Do not retry the exact raw H-EXC-01 excursion-asymmetry formula without a
   new preregistered representation and numerical contract.
 - Do not reopen target/OOS/IC/ICIR work, provider scraping, or canonical data
@@ -225,8 +242,9 @@ production or prospective claim.
 1. Use the new artifact hash-contract verifier on every future research-only
    output; use `--require-manifest` when the experiment contract requires one.
 2. Resolve the remaining H-LIQ novelty and CA/PIT source-admission questions
-   without reopening acquisition or protected outcomes. The 188-row exposure
-   question now has a bounded direct-vs-spillover result.
+   without reopening acquisition or protected outcomes. The C2-level-only
+   decomposition is complete; only a genuinely new mechanism or admissible
+   source surface justifies another H-LIQ experiment.
 3. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.
 
@@ -238,8 +256,10 @@ production or prospective claim.
   independently admitted source package without reopening providers?
 - Can real executable capacity be established beyond regular-market-value
   proxy stress?
-- Can H-LIQ-01's mechanism-level novelty be distinguished from its shared
-  turnover information without target optimization?
+- The remaining H-LIQ-01 novelty question is whether any component beyond the
+  removed C2 turnover level is economically distinct; the fixed decomposition
+  is complete, but a new admissible mechanism or source surface is still
+  required for a stronger conclusion.
 
 ### Answered by this replay
 
