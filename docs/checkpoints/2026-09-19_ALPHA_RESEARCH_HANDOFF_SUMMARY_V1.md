@@ -3,6 +3,7 @@
 Date: 2026-09-19 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Branch HEAD at V1 handoff: `03ac0c8d0f9a28c835cb740d7627dd9d1876251c`
+Latest lane milestone commit: `d9bfb868` (`research: close structural red-team and capability audits`)
 Superseded by: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 
