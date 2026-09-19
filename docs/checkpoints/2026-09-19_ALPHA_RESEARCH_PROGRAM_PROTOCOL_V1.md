@@ -171,6 +171,30 @@ with the already-tested effort/participation family; C3 is not the same as the
 previous exact financial-event candidate, but its result must still be kept
 separate from that failure.
 
+## Implementation clarification and correction boundary
+
+The prediction decision is made at EOD `t` for a transition beginning at
+`t+1`. Therefore a trailing market/price/volume window may include the
+observed EOD `t` row; this is not a future observation. C1's beta estimation
+is the exception: its 60-observation regression uses rows through `t-1`, so
+the current return cannot influence beta. All windows use official-session
+ordering and invalid/zero turnover is missing, not a value.
+
+The authoritative structural mask for this lane is the existing frozen
+artifact pair `official_exchange_sessions_1260.csv` and
+`tradability_anchors_1260.csv`. It must be joined before market aggregation
+or candidate ranking. The liquidity rule is the frozen trailing-60-session
+median regular-market-value rule with at least 20 finite observations and a
+minimum IDR 1 billion; there is no top-N fallback. Candidate ranks are
+computed only within the masked same-session universe.
+
+The first Stage A implementation (`alpha_stage_a_v1.py`) failed this
+implementation contract on beta denominator and mask/rank order. Its output
+is retained as an explicitly invalid engineering attempt and is not evidence.
+The corrected implementation has a new code identity and new staging path;
+the four hypotheses and candidate budget are unchanged. This is a conformance
+repair before any target access, not a result-driven hypothesis change.
+
 ## Multiple-testing, stopping, and status
 
 The candidate budget is four fixed formulas plus one incumbent control. Stage A

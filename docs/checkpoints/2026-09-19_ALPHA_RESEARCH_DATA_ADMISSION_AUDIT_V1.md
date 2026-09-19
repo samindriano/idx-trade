@@ -30,7 +30,7 @@ incumbent and its frozen baseline artifacts remain untouched.
   `D:\Documents\Project\idx-financial-representation-v2-20260816-v1-run3\bundle_rows.parquet`
   has 277,244 rows, 729 tickers, dates 2021-06-02–2026-07-17, unique keys,
   and parquet SHA-256
-  `c6004832e651b380161ec216efb2020dddb86419d89c4521f77aeb09335876b`.
+  `c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b`.
   It is structurally useful but remains `PARTIAL`/parked for new alpha claims;
   complete rows do not by themselves establish population completeness or
   source admission.
