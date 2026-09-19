@@ -418,3 +418,12 @@ exact net arithmetic. It remains source-blocked because publication time is
 unknown and T+1 is not a public-availability certificate; no feature or
 candidate was admitted. See
 `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+
+The listing/delisting archive was audited next. Its 440 monthly raw files,
+962 current rows, and 163 delisting rows pass independent hash, schema,
+row-count, source-reference, and raw-payload parity checks. It remains
+`PARTIAL / IDENTITY_BLOCKED`: six ticker conflicts remain, the source is not
+daily PIT membership, and issuer/ISIN, publication-time, revision/vintage,
+and corporate-action linkage are absent. No universe repair, feature,
+candidate, packet, target, or incumbent state changed. See
+`2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.

@@ -17,6 +17,7 @@
 | Listed-share transition semantics | partial structural field | authoritative issuer/ISIN continuity, CA event/effective timing, share-basis definition, and coverage |
 | Historical official foreign-flow archive | 1,288-session partial archive | public-availability/PIT certificate, identity/CA/revision contract, and population completeness |
 | Listing/delisting lifecycle history | partial lifecycle evidence | daily membership, issuer/ISIN continuity, effective timing, and PIT/publication semantics |
+| Listing/delisting lifecycle admission audit | 440-month raw archive and normalized parity are structurally exact, but six ticker conflicts and event-only semantics remain | daily PIT membership, issuer/ISIN continuity, effective/publication timing, revision lineage, and CA linkage; no universe expansion or repair |
 | Monthly/statutory free-float history | partial snapshots and monthly corpus | continuous daily panel, public availability, issuer/ISIN/CA linkage, and revision lineage |
 | Ownership event ledger | event-only partial | complete population, event semantics, issuer continuity, and historical revision coverage |
 | Broker/margin category state | one-date snapshot only | historical series, financing-flow semantics, PIT/publication time, and complete coverage |

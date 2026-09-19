@@ -80,3 +80,11 @@ evaluation.
 | Historical official foreign-flow archive | `PASS_STRUCTURAL_ONLY / SOURCE_BLOCKED` | 1,129,024 rows, 1,288 exact official sessions, 983 tickers, all artifact hashes and net arithmetic exact; capability review only |
 | Foreign-flow public availability | `UNKNOWN / BLOCKED` | Every session has `publication_time_known=false`; observed retrieval time and declared T+1 rule do not certify public availability |
 | Foreign-flow identity/CA/revision | `UNKNOWN / BLOCKED` | Normalized ticker/date identity only; no issuer/ISIN transition, corporate-action, or revision/vintage fields |
+
+## Listing/delisting lifecycle source audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Listing/delisting raw-source integrity | `PASS_STRUCTURAL_ONLY` | 440 monthly raw files, 962 current rows, 163 delisting rows; all byte/hash/schema/row-count/source-reference/raw-payload parity gates pass |
+| Listing/delisting semantic admission | `PARTIAL / IDENTITY_BLOCKED` | Event-level only; six conflict tickers, one delisting-before-listing row, no daily PIT membership or issuer/ISIN/publication/revision/CA linkage |
+| Lifecycle price-row exposure | `BLOCKED` | Existing summary records 2,280 ambiguous price rows across five tickers; do not repair, mask, or infer continuity |

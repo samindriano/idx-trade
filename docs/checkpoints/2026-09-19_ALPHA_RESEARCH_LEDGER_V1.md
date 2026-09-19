@@ -639,3 +639,14 @@ identity lacks issuer/ISIN, revision/vintage, and CA linkage. The surface
 remains `PARTIAL / SOURCE_ADMISSION_BLOCKED` and belongs to H-FLOW capability,
 not a new candidate. See
 `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+
+The listing/delisting lifecycle archive was independently audited next. The
+440-month raw archive, 962 current rows, and 163 delisting rows are internally
+consistent and raw-to-normalized parity is exact. Six ticker conflicts remain
+(`BUKK`, `INRU`, `ITMA`, `KIAS`, `SKBM`, `UNTX`), including one
+delisting-before-listing row; the price-lifecycle summary records 2,280
+ambiguous price rows. The source remains `PARTIAL / IDENTITY_BLOCKED`: it has
+no daily PIT membership, issuer/ISIN continuity, publication-time,
+revision/vintage, or corporate-action linkage. No feature, candidate, packet,
+or protected artifact changed. See
+`2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.

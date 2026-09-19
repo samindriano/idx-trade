@@ -586,3 +586,13 @@ publication time remains unknown; the declared T+1 usability rule is not a
 public-availability certificate. It is future capability only and does not
 create a new candidate. See
 `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+
+The listing/delisting lifecycle surface was then audited independently. All
+440 monthly raw JSON files and all 163 normalized delisting rows pass byte,
+hash, schema, row-count, source-reference, and raw-payload parity checks;
+current listings contain 962 unique tickers. Admission remains blocked:
+the source is event-level rather than daily PIT membership, has no
+issuer/ISIN transition, publication-time, revision/vintage, or corporate-
+action linkage, and retains six conflict tickers. No lifecycle repair,
+universe mask, feature, candidate, or protected evaluation was created. See
+`2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.

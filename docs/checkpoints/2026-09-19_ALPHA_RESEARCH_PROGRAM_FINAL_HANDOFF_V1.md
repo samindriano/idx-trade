@@ -551,3 +551,12 @@ unknown and T+1 is only declarative; no issuer/ISIN, CA, revision, or panel
 completeness authority was established. It strengthens future H-FLOW
 capability without creating a candidate. See
 `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+
+The listing/delisting lifecycle surface was independently checked after the
+foreign-flow audit. Raw/normalized integrity is exact across 440 monthly
+files, 962 current rows, and 163 delisting rows, but six lifecycle conflicts
+remain and no daily PIT membership, issuer/ISIN, publication-time,
+revision/vintage, or corporate-action chain exists. The surface is
+capability-only (`PARTIAL / IDENTITY_BLOCKED`); no feature, candidate,
+protected-packet, or model status changed. See
+`2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md`.
