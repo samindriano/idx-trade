@@ -190,6 +190,7 @@ Capacity proxy detail: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
 Current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`.
 Adversarial detail: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`.
 Re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`.
+Risk register: `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`.
 
 ## Do not retry without new evidence
 

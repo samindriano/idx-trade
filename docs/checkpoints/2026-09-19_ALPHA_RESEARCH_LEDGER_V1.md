@@ -38,6 +38,7 @@ Latest CA exposure attribution: `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT
 Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
+Latest risk register: `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
