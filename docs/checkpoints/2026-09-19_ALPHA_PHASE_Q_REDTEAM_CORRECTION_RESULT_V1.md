@@ -69,6 +69,32 @@ must be replaced by the V2 values. This materially strengthens implementation
 caution; it does not prove a loss, profitability, capacity failure, or
 predictive redundancy.
 
+## Secondary sibling-tool denominator/alignment scan
+
+A bounded read-only source scan checked every remaining `rank()` call under
+`research/` that could affect the current structural evidence. The scan
+covered the H-LIQ structural/robustness/size-neutral tools, structural-lab
+builder and verifier, capacity stress, corporate-action sensitivity,
+H-VOL/H-EXC diagnostics, and the corrected Stage-A V2 path.
+
+No additional active defect matching either Phase-Q finding was identified:
+
+- current liquidity percentiles are ranked only after filtering to
+  `eligible_decision_universe=true` (and, where present,
+  `source_panel_row_present=true`);
+- current sensitivity ranks are computed on the finite comparison subset;
+- current Stage-A V2 financial component ranks are computed on the complete
+  PIT-valid subset before the final score is emitted;
+- current structural-lab and verifier paths use the same eligible-only
+  denominator contract.
+
+The legacy `alpha_stage_a_v1.py` implementation still contains the old
+component-ranking pattern, but it is retained for historical lineage only;
+it is not the active corrected Stage-A path or current evidence. No output was
+regenerated from it, no candidate disposition changed, and no provider,
+canonical, target, outcome, capture, cloud, telemetry, or production state
+was accessed.
+
 ## H-LIQ-01 independent novelty result
 
 The independent replay finds H-LIQ-01 structurally distinct from C1/C2/C4,
