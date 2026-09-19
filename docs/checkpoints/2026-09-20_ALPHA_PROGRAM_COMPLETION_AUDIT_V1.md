@@ -3,7 +3,7 @@
 Date: 2026-09-20 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Audited checkout before this documentation amendment:
-`8f98e09d2fa587219b233d581023b0ea73de7e5e`
+`e446c1e82b62c116c389abb84266435290836d1c`
 
 ## Verdict
 
@@ -73,7 +73,8 @@ reports zero `READY_FOR_REENTRY` candidates and preserves the `NO-GO` state.
 
 ## Completion blockers and next authorized action
 
-The remaining blockers are independent Data QA admission, population-wide
+The remaining blockers are the unresolved eligibility policy contract,
+independent Data QA admission, population-wide
 PIT/available-at authority, issuer/ISIN continuity, corporate-action basis,
 revision/vintage completeness, historical executable capacity, and protected
 target/common-support authority. The next useful action is only a genuinely
@@ -95,3 +96,16 @@ blockers therefore include this policy contradiction in addition to PIT/as-of,
 issuer/ISIN, CA basis, survivorship, executable capacity, and protected
 admission. See
 `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.
+
+## Latest machine evidence — 2026-09-20
+
+- Packet firewall: `PASS`, 31/31 checks.
+- Packet verifier: `PASS`, 65/65 checks, clean worktree; the current packet
+  contract carries `BLOCKED_POLICY_CONFLICT` fail-closed eligibility state.
+- Packet SHA-256: `7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894`.
+- Contract SHA-256: `a76cd5acdfe457668b6241c4d28d677e4c2b92a98f2a54b82401338a6d794d4d`.
+- Isolated lane verifier: `PASS`, 10/10 checks; current staging count 159,
+  filename digest
+  `06c1dd3e07d4d1768990dc9ecd818cd2c86924248df933ba9af18a27c3008813`.
+- No protected target, outcome, provider, cloud, capture, telemetry, or
+  canonical state was modified by this lane.
