@@ -82,6 +82,12 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     Prior range-family adjacency and unresolved PIT/CA/capacity prevent C5
     admission; this is structural evidence only. Full result is in
     `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
+13. H-VOL-01 CA sensitivity was separately audited against the retained 188
+    unresolved rows. The substitution changed `547` scores and `8,876` ranks;
+    mean/minimum Top-30 overlap was `99.8307% / 86.6667%`. This narrows but
+    does not clear price-basis risk, and H-VOL remains outside the protected
+    packet with no C5 ID. See
+    `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 
@@ -133,6 +139,8 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
 - `2026-09-19_ALPHA_HVOL01_COMPRESSION_PREREGISTRATION_V1.md`
 - `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
+- `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_PREREGISTRATION_V1.md`
+- `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 
 ## Hard boundary
 

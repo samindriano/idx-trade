@@ -3,14 +3,15 @@
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
 Verified research baseline HEAD before this handoff addendum: `fba55461566826407386b654d68c3581dc32e0bc`
-Latest research milestone commit: `5d1f97c6`
-Latest status/documentation commit: `734b46a8`
+Latest research milestone commit: `c6f41576`
+Latest status/documentation commit: `71ae44e1`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -116,6 +117,13 @@ and `2026-09-19_ALPHA_FAILURE_TAXONOMY_V1.md`.
 No new candidate ID was created. H-LIQ-01 remains
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; it is not C5.
 
+H-VOL-01 is a second future hypothesis, not a candidate ID. Its fixed
+compression state has broad structural support and low bounded overlap, but
+the 188-row CA stress changed 547 scores and 8,876 ranks, with minimum Top-30
+overlap of 86.6667%. Keep it at
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; it is not in the
+protected four-ID packet.
+
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination
 turnover at 34.85% and balanced component overlap, but no weights were
@@ -130,7 +138,8 @@ optimized and none is in the protected four-ID packet.
   incomplete PIT/identity/CA/revision authority, and metadata-only activity
   snapshot reuse.
 - Ready for re-entry: none today. C1/C2/C4 are conditionally engineering-ready
-  only; they require the admission artifact and common-support target.
+  only; they require the admission artifact and common-support target. H-LIQ-
+  01 and H-VOL-01 remain future research and are not ready.
 
 ## Structural orthogonality and economics
 
