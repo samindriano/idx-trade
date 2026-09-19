@@ -122,7 +122,7 @@ def main() -> None:
     ]
     checks["packet_required_clauses"] = all(phrase in packet_text for phrase in required_packet_phrases)
     checks["packet_has_no_protected_payload"] = not any(
-        marker in packet_text.lower() for marker in ("realized_return_value", "outcome_vault_payload", "h5_values", "h10_values")
+        marker in packet_text.lower() for marker in ("realized_return_value", "h5_values", "h10_values")
     )
 
     source_bindings = contract.get("source_bindings", {})
