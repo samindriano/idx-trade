@@ -712,3 +712,19 @@ future-data maps. The source remains `BLOCKED / NOT_ADMITTED` (1,014 CSVs,
 no row-level PIT/vintage or authoritative CA contract). The corrections are
 documentation-only; no candidate, packet, source, or protected state changed.
 See `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.
+
+## Continuation register — local data surface review, 2026-09-20
+
+An independent read-only review rechecked the remaining local data/capability
+surface against the current Phase O/S/Z stop rules. Dataset-Saham-IDX,
+Zapi/local probes, TradingView/Investing history, foreign flow,
+listing/delisting, free-float, HSC, broker/margin, market-context, and
+panel-depth evidence were already classified as partial, snapshot/event-only,
+basis-divergent, or source-admission blocked. No unrecorded local evidence was
+found that could change a candidate, packet, or admission decision. See
+`2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`.
+
+The lane remains active only for genuinely new authoritative evidence or
+independent non-redundant research. No provider/network probe, target access,
+candidate retry, C5 creation, or protected-state mutation is authorized by
+this review.

@@ -646,3 +646,10 @@ the current attestation pointer to `R2=fbaa824c`, removed the stale Phase-Q/CA
 frontier, and added `Dataset-Saham-IDX` explicitly to the capability maps as
 `BLOCKED / NOT_ADMITTED`. No candidate, packet, or admission status changed.
 See `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.
+
+An independent follow-up local-surface review found no additional
+decision-changing evidence beyond the inventoried sources. Phase O remains
+`COMPLETE INVENTORY / BLOCKED ACCESS`; Phase S/Z continue only for genuinely
+new authoritative or non-redundant evidence. No candidate, packet, or model
+status changed. See
+`2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`.

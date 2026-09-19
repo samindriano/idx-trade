@@ -40,6 +40,7 @@ Latest HSC ownership source audit: `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_
 Latest broker/margin source audit: `2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`
 Latest handoff/control and local-surface review: `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`
 Latest packet contract/firewall hardening: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
+Latest local data-surface closure review: `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
