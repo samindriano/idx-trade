@@ -743,7 +743,7 @@ remain unresolved. See
 ## Continuation register — isolated lane integrity attestation
 
 The reusable lane-integrity verifier passed against baseline `58f094b8` and
-HEAD `22d4b1c1`: continuation deltas are research/docs-only, branch and
+HEAD `f40fd48a`: continuation deltas are research/docs-only, branch and
 worktree identity match the isolated lane, the worktree is clean, and the
 staging root contains no protected-looking filenames. This is process-scope
 evidence only and does not prove runtime absence of protected access. See

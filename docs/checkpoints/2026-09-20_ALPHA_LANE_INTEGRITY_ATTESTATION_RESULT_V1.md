@@ -3,7 +3,7 @@
 Date: 2026-09-20 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Baseline: `58f094b8b59b8933bee6cf2f9996f433a57391a4`  
-Attestation implementation: `22d4b1c15fd455859d6b1deb5ec328f8c70dff8b`
+Attestation implementation: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
 
 ## Result
 
@@ -17,11 +17,11 @@ The verifier confirms:
   `docs/checkpoints/` or `research/`;
 - clean worktree;
 - expected isolated staging root;
-- 150 staging files present with no protected-looking filename;
+- 153 staging files present with no protected-looking filename;
 - outcome/provider/target/cloud/canonical-mutation flags are false.
 
 The staging filename digest for this run is
-`f1d540a724fb56fea1e9dd7523c50f053ea3ff5a9b9d6b5d0cac4a24d219bd36`.
+`5c7e71ceb44098e66bbda1a38e9f13a24ddfd2c8f1216141255f2fc6939d05da`.
 
 ## Scope limitation
 

@@ -2,7 +2,7 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `2ad6f4afdac8c28290d0f828762e7a0b83d96d1d`
+Latest verified current HEAD before this documentation amendment: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
 Latest research milestone: independent C1/C2/C4 constructor replay and frontier audit
 Latest status/documentation: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
@@ -337,7 +337,7 @@ executable before independent Data QA admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Latest verified current HEAD before this documentation amendment: `58f094b8b59b8933bee6cf2f9996f433a57391a4`
+- Latest verified current HEAD before this documentation amendment: `f40fd48a2e4ee7c8084659b4da9b5c082dc8f22b`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
