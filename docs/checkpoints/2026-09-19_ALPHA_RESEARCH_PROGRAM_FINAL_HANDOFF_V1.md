@@ -6,6 +6,9 @@ Verified research baseline HEAD before this handoff addendum: `fba55461566826407
 Latest research milestone commit: `5d1f97c6`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
+Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
+
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
 decision state, boundaries, and exact next action in one place.
@@ -18,6 +21,11 @@ orthogonality, structural robustness, H-LIQ-01 novelty review, identity
 continuity, and equal-weight combination/economics readiness. No target or
 protected outcome was opened. No candidate has predictive evidence or survivor
 status.
+
+The latest main-run adversarial audit of C1/C2/C4 also passed all target-free
+static, schema/key, calendar, identity-interval, mask, and numerical checks.
+This is structural evidence only and does not replace the still-missing
+independent Phase-Q red-team or Data QA admission.
 
 Current conclusion:
 
@@ -144,6 +152,8 @@ does not certify corporate-action or price-basis correctness.
 
 Phase coverage matrix: `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`.
 Capacity proxy detail: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
+Current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`.
+Adversarial detail: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`.
 
 ## Do not retry without new evidence
 

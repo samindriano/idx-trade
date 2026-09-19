@@ -20,6 +20,8 @@ Latest identity audit: `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md`
 Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
 Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
+Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -103,6 +105,7 @@ production or prospective claim.
 - Combination readiness: exactly four equal-weight C1/C2/C4 combinations were evaluated without weight optimization. C1+C4 has the lowest tested combination turnover at 34.85%; all results remain structural hypotheses and no new candidate ID was created. See `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`.
 - Unused-data scan: `activity_median_regular_value_60` is populated for 105/963 current-universe tickers, but has no ticker-date history or available-at/PIT timestamps and five populated ranks fall outside `capture_high`; retain as metadata-only/non-admissible. No provider or canonical data was opened.
 - Capacity stress: q10 regular-market-value proxy at the 1% rate is IDR 7.63m/6.40m/13.03m/5.02m for C1/C2/C3/C4; this sharpens implementation caution but does not establish ADV or executable capacity. See `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
+- C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. Result is `PASS_STRUCTURAL_ONLY`; it does not certify PIT, corporate-action price basis, survivorship, or predictive value. The audit is a main-run adversarial audit with an independent verifier, not the missing independent worker red-team; see `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.

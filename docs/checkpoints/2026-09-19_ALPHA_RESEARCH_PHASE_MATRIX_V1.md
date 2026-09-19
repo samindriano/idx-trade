@@ -30,7 +30,7 @@ non-redundant work remains authorized.
 | N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, and semantic margin directions are closed; C1/C2/C4 are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only `activity_median_regular_value_60`; no new source is PIT-admissible. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
-| Q | Independent adversarial review | `PARTIAL` | H-LIQ-01 has independent red-team review; dedicated per-candidate C1/C2/C4 red-team remains a future queue item before any `READY_FOR_REENTRY` label. |
+| Q | Independent adversarial review | `PARTIAL / MAIN-RUN STRUCTURAL PASS` | `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md` passes outcome-blind C1/C2/C4 checks; it is not the missing independent worker red-team, so dedicated per-candidate review remains required before any `READY_FOR_REENTRY` label. |
 | R | Candidate novelty gate | `COMPLETE MILESTONE` | H-LIQ-01 remains no-C5; monotone variants and combination hypotheses do not create IDs. |
 | S | Research budget/question management | `ACTIVE` | Active questions and do-not-retry register below; continue only where new evidence can change a structural decision. |
 | T | Safe parallelization | `PARTIAL / CONTROLLED` | Independent read-only gap and data-capability audits completed; workers had no write or protected-data authority. |
@@ -68,8 +68,8 @@ non-redundant work remains authorized.
 
 ## Next high-information tasks
 
-1. Keep the combination result and metadata-only source finding synchronized
-   in the durable ledger and handoff.
+1. Keep the current status and C1/C2/C4 adversarial result synchronized in the
+   durable ledger and handoff.
 2. If new local evidence appears, audit corporate-action/issuer basis and
    historical available-at semantics before feature construction.
 3. Perform only bounded capacity/friction refinement from already admitted

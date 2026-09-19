@@ -7,6 +7,8 @@ Latest lane milestone commit: `5d1f97c6` (`research: add capacity proxy stress a
 Superseded by: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
 Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md`
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
+Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 
 ## Executive answer
 
@@ -129,6 +131,11 @@ Latest pre-admission additions:
 
 These are structural/capability results only; none opens target, incumbent,
 provider, network, prospective, or protected outcome data.
+
+The latest main-run adversarial audit passed all target-free C1/C2/C4 static,
+schema/key, calendar, identity-interval, mask, and numerical checks. It does
+not certify PIT/corporate-action basis or predictive value, and it does not
+replace the remaining independent Phase-Q red-team.
 
 Internal candidate Spearman diagnostics (not incumbent comparison):
 
