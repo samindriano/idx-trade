@@ -2,7 +2,7 @@
 
 Lane: `codex/alpha-available-data-20260919`
 Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
-Status: `OPEN — STAGE A NOT STARTED`
+Status: `STAGE A COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -36,16 +36,17 @@ production or prospective claim.
 
 | ID | Candidate | Stage A | Historical comparison | Robustness/economics | Verdict | Reason |
 |---|---|---|---|---|---|---|
-| C1 | `residual_reversal_5_v1` | `PENDING` | `BLOCKED — source admission` | `PENDING` | `BLOCKED` | Fixed formula; panel is frozen-only for new alpha claims. |
-| C2 | `participation_confirmation_5_v1` | `PENDING` | `BLOCKED — source admission` | `PENDING` | `BLOCKED` | Fixed formula; panel is frozen-only for new alpha claims. |
-| C3 | `financial_quality_growth_v1` | `PENDING` | `BLOCKED — source admission` | `PENDING` | `BLOCKED` | Financial PIT source is partial/parked; no same-science admission. |
-| C4 | `path_efficiency_reversal_20_v1` | `PENDING` | `BLOCKED — source admission` | `PENDING` | `BLOCKED` | Fixed formula; panel is frozen-only for new alpha claims. |
+| C1 | `residual_reversal_5_v1` | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 889,625/981,940 finite rows (90.5987%); no target opened; source remains frozen-only. |
+| C2 | `participation_confirmation_5_v1` | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 926,482/981,940 finite rows (94.3522%); no target opened; source remains frozen-only. |
+| C3 | `BLOCKED — coverage/source` | `BLOCKED — source admission` | `BLOCKED` | `BLOCKED` | `BLOCKED` | 34,412/981,940 finite rows (3.5045%); Financial PIT is partial/parked and no partial fallback is allowed. |
+| C4 | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 926,225/981,940 finite rows (94.3260%); no target opened; source remains frozen-only. |
 
 ## Audit trail
 
 - Protocol freeze: committed before any target/label read; tightened after the independent data-admission audit.
 - Admission audit: no source currently passes for new-alpha historical outcome claims.
-- New feature artifacts: none.
+- Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_RESULT_V1.md`.
+- New feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\alpha_stage_a_features.parquet`.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
