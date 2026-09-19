@@ -23,6 +23,7 @@ Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity me
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest Stage-A lineage result: `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
+Latest Stage-A consumer audit: `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
 Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ-01 novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
@@ -130,8 +131,8 @@ production or prospective claim.
 
 ### Active questions
 
-- Can duplicate/superseded Stage-A generations be assigned one explicit
-  immutable lineage without treating a derived artifact as new source data?
+- Can future research-only outputs enforce guarded feature/manifest hash
+  binding automatically rather than relying on caller discipline?
 - Can existing local corporate-action/issuer evidence reduce the 188-row
   unresolved price-basis risk without reopening acquisition?
 - Can historical capacity and listing/identity risk be narrowed using only
@@ -147,6 +148,10 @@ production or prospective claim.
   uses `fill_method=None` and the output was regenerated.
 - The discovered tradability files are samples/empty metadata, not an
   admissible historical event log.
+- Stage-A generation lineage is now pinned: v3/final are byte-identical
+  duplicates, and guarded is the active distinct structural generation.
+- Downstream consumer audit found guarded hash binding in current staged
+  outputs; legacy hashes remain confined to historical staging folders.
 
 ### Blocked questions
 
@@ -168,7 +173,7 @@ production or prospective claim.
 
 ### Next high-information tasks
 
-1. Record explicit Stage-A generation lineage and duplicate/superseded status.
+1. Enforce feature/manifest hash binding on every future research-only output.
 2. Continue bounded CA/issuer-basis and capacity audits from admitted local
    inputs only.
 3. Keep the source-recomputing verifier and deterministic/no-fill contracts in

@@ -3,7 +3,7 @@
 Date: 2026-09-19 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
-HEAD at this checkpoint: `0a9bbbb9efab2ee7178e7e59ae92bdc04d16d137`
+HEAD at this checkpoint: `b331b4dee030d945a0b8cded76057357c8f567aa`
 
 ## Jawaban singkat
 
@@ -23,6 +23,8 @@ missing-value handling; detail dengan hash ada di
 
 Lineage generasi Stage-A yang duplicate/superseded juga sudah direkonsiliasi
 di `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
+Downstream consumer binding sudah diaudit di
+`2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`.
 
 ## Batas lane dan isolasi
 
@@ -85,9 +87,9 @@ sensitivity berikut:
 | C4 | 3,203% | 86,667% |
 
 Ini bukan koreksi data dan bukan hasil predictive; ini peringatan bahwa C1
-belum basis-safe. Selain itu, verifier adversarial saat ini masih terlalu
-bergantung pada boolean di JSON dan belum sepenuhnya menghitung ulang semua
-assertion dari sumber.
+belum basis-safe. Verifier v1 memang terlalu bergantung pada boolean JSON,
+tetapi verifier v2 sudah melakukan source replay penuh untuk structural
+assertions dan lulus; access flags tetap self-attested.
 
 ### 2. Ekonomi, konsentrasi, likuiditas, fragility
 
@@ -154,7 +156,8 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
 
 Masih boleh dilakukan di lane ini, tetap read-only atau staged-derived:
 
-1. Menambah lineage eksplisit untuk generasi Stage-A yang duplicate/superseded.
+1. Enforce feature/manifest hash binding pada setiap future research-only
+   output baru.
 2. Melanjutkan bounded corporate-action/issuer-basis, capacity, dan PIT source
    admission audit dari data yang memang sudah ada.
 3. Menjaga ledger, phase matrix, dan re-entry queue tetap sinkron.
@@ -179,6 +182,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
+- `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
 - `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
