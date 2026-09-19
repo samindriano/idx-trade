@@ -1,10 +1,10 @@
 # IDX-Trade Alpha Research — ChatGPT Handoff V2
 
-Date: 2026-09-19 (Asia/Jakarta)  
-Lane: `codex/alpha-available-data-20260919`  
-Branch: `codex/alpha-available-data-20260919`  
-Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
-HEAD: `126614b6e8d075d9df463ffa741c9170fb5f87e3`  
+Date: 2026-09-19 (Asia/Jakarta)
+Lane: `codex/alpha-available-data-20260919`
+Branch: `codex/alpha-available-data-20260919`
+Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
+Evidence baseline commit: `126614b6e8d075d9df463ffa741c9170fb5f87e3`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Ringkasan satu kalimat
@@ -146,4 +146,3 @@ progress, no predictive winner yet**.
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
-
