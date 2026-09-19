@@ -66,8 +66,9 @@ Staged output:
 
 | Artifact | SHA-256 |
 |---|---|
-| Diagnostic code | `56c8c33b89bfd957f7114c5bae3febae9d8f50e2829d0fd6856988ccaba712a2` |
-| Output JSON | `b425045745d4c1d372785f18276f5b1f2eb0fdb281734859a4a30af18b255d96` |
+| Diagnostic code | `49d4557060cccecc59a85574a62bd949b6b007950ff66e5dddecfc44658ac185` |
+| Output JSON | `e323634b1b1d86f9cb2b2f2ad5f3c3db91b44d1a907cd266029ad0d00bea9704` |
+| Guarded Stage-A manifest | `27f62ac509284a6497bfacf41fd1e34cc9e352ba49f0ca2006ff8160cacf3d96` |
 | Guarded features | `aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4` |
 | Frozen panel | `25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e` |
 | Official sessions | `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a` |
@@ -76,7 +77,9 @@ Staged output:
 The diagnostic code reports `PASS_STRUCTURAL_ONLY`. Its JSON access flags are
 self-attested metadata, not process-level proof. No target, outcome, incumbent
 score, provider, network, cloud, capture, scheduler, or production artifact was
-accessed.
+accessed. The output is bound to repository head `8b4dbbce`, the guarded
+Stage-A manifest hash above, the diagnostic code hash, and all four source
+hashes.
 
 ## Limitations and next action
 
