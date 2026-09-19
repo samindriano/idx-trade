@@ -46,6 +46,9 @@ SCORE_COLUMNS = [
     "C3_financial_quality_growth_v1",
     "C4_path_efficiency_reversal_20_v1",
 ]
+EXPECTED_SESSIONS_SHA256 = "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+EXPECTED_ANCHORS_SHA256 = "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
+FORBIDDEN_INPUT_MARKERS = ("target", "forward", "label", "outcome", "vault", "counter")
 
 
 def sha256_file(path: Path) -> str:
@@ -78,6 +81,14 @@ def git_head(path: Path) -> str:
     return result.stdout.strip()
 
 
+def key_digest(frame: pd.DataFrame) -> str:
+    keys = frame[["ticker", "date"]].copy()
+    keys["ticker"] = keys["ticker"].astype("string")
+    keys["date"] = pd.to_datetime(keys["date"], errors="raise").dt.strftime("%Y-%m-%d")
+    payload = keys.sort_values(["ticker", "date"], kind="mergesort").to_csv(index=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def rolling(frame: pd.DataFrame, column: str, window: int, operation: str) -> pd.Series:
     grouped = frame.groupby("ticker", sort=False)[column].rolling(
         window=window, min_periods=window
@@ -92,14 +103,18 @@ def build_decision_universe(
 ) -> tuple[pd.DataFrame, dict[str, object]]:
     sessions = pd.read_csv(sessions_path, usecols=["date"])
     sessions["date"] = pd.to_datetime(sessions["date"], errors="raise").dt.normalize()
-    sessions = sessions.drop_duplicates().sort_values("date").reset_index(drop=True)
     if sessions["date"].duplicated().any():
         raise ValueError("official session dates are not unique")
+    if sha256_file(sessions_path) != EXPECTED_SESSIONS_SHA256:
+        raise ValueError("official session artifact hash is not the frozen canonical hash")
+    sessions = sessions.sort_values("date").reset_index(drop=True)
     panel_dates = set(panel["date"].dropna().unique())
     session_dates = set(sessions["date"].unique())
     if not panel_dates.issubset(session_dates):
         raise ValueError("panel contains dates outside the official session calendar")
 
+    if sha256_file(anchors_path) != EXPECTED_ANCHORS_SHA256:
+        raise ValueError("tradability anchor artifact hash is not the frozen canonical hash")
     anchors = pd.read_csv(anchors_path)
     required = {"ticker", "market", "as_of_date", "state"}
     missing = required.difference(anchors.columns)
@@ -194,9 +209,16 @@ def build_market_scores(panel_path: Path, universe: pd.DataFrame) -> pd.DataFram
         & np.isfinite(panel["ret_1"]),
         ["date", "ret_1"],
     ]
-    market_ret = eligible_returns.groupby("date", sort=True)["ret_1"].mean().rename("market_ret")
-    market_index = (1.0 + market_ret).cumprod().rename("market_index")
-    market_ret_5 = market_index.pct_change(periods=5, fill_method=None).rename("market_ret_5")
+    official_dates = pd.Index(sorted(universe["date"].unique()), name="date")
+    market_ret = eligible_returns.groupby("date", sort=True)["ret_1"].mean().reindex(official_dates)
+    market_ret.name = "market_ret"
+    market_ret_5 = (
+        (1.0 + market_ret)
+        .rolling(window=5, min_periods=5)
+        .apply(np.prod, raw=True)
+        .sub(1.0)
+        .rename("market_ret_5")
+    )
     market_frame = pd.concat([market_ret, market_ret_5], axis=1)
     panel = panel.join(market_frame, on="date")
 
@@ -304,7 +326,15 @@ def build_financial_score(financial_path: Path, universe: pd.DataFrame) -> pd.Da
     ]
 
 
-def audit(features: pd.DataFrame, source_paths: dict[str, Path], universe_stats: dict[str, object], code_path: Path, repo: Path) -> dict[str, object]:
+def audit(
+    features: pd.DataFrame,
+    source_paths: dict[str, Path],
+    universe_stats: dict[str, object],
+    code_path: Path,
+    repo: Path,
+    source_panel_row_count: int,
+    source_panel_key_digest: str,
+) -> dict[str, object]:
     outcome_named_columns = [
         column for column in features.columns if any(token in column.lower() for token in OUTCOME_TOKENS)
     ]
@@ -339,6 +369,9 @@ def audit(features: pd.DataFrame, source_paths: dict[str, Path], universe_stats:
             "source_paths": {name: str(path) for name, path in source_paths.items()},
             "schema": schema,
             "row_count": int(len(features)),
+            "source_panel_row_count": int(source_panel_row_count),
+            "source_panel_key_digest": source_panel_key_digest,
+            "feature_key_digest": key_digest(features),
             "unique_tickers": int(features["ticker"].nunique()),
             "date_min": str(features["date"].min().date()),
             "date_max": str(features["date"].max().date()),
@@ -371,6 +404,11 @@ def main() -> None:
     panel_for_keys["ticker"] = panel_for_keys["ticker"].astype("string")
     if panel_for_keys.duplicated(["ticker", "date"]).any():
         raise ValueError("panel has duplicate ticker/date keys")
+    source_panel_row_count = int(len(panel_for_keys))
+    source_panel_key_digest = key_digest(panel_for_keys)
+    for input_path in [args.panel, args.financial, args.sessions, args.anchors]:
+        if any(marker in str(input_path).lower() for marker in FORBIDDEN_INPUT_MARKERS):
+            raise ValueError(f"refusing input path with protected-data marker: {input_path}")
     universe, universe_stats = build_decision_universe(panel_for_keys.merge(
         pd.read_parquet(args.panel, columns=["ticker", "date", "regular_market_value"]),
         on=["ticker", "date"], validate="one_to_one"), args.sessions, args.anchors)
@@ -390,6 +428,8 @@ def main() -> None:
             "source_panel_row_present",
         ]
     ].sort_values(["date", "ticker"], kind="mergesort").reset_index(drop=True)
+    if len(features) != source_panel_row_count or key_digest(features) != source_panel_key_digest:
+        raise ValueError("derived feature keys are not closed over the source panel keys")
     for column in SCORE_COLUMNS:
         features[f"rank_{column}"] = features.groupby("date", sort=False)[column].rank(
             method="average", pct=True
@@ -401,7 +441,15 @@ def main() -> None:
         "official_sessions": args.sessions,
         "tradability_anchors": args.anchors,
     }
-    audit_result = audit(features, source_paths, universe_stats, Path(__file__), repo)
+    audit_result = audit(
+        features,
+        source_paths,
+        universe_stats,
+        Path(__file__),
+        repo,
+        source_panel_row_count,
+        source_panel_key_digest,
+    )
     audit_result["feature_code_sha256"] = sha256_file(Path(__file__))
     features_path = out_dir / "alpha_stage_a_v3_features.parquet"
     audit_path = out_dir / "alpha_stage_a_v3_audit.json"

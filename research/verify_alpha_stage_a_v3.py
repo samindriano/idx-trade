@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,8 @@ EXPECTED = [
     "source_panel_row_present",
     *RANKS,
 ]
+EXPECTED_SESSIONS_SHA256 = "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+EXPECTED_ANCHORS_SHA256 = "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
 
 
 def sha256_file(path: Path) -> str:
@@ -35,6 +38,14 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def key_digest(frame: pd.DataFrame) -> str:
+    keys = frame[["ticker", "date"]].copy()
+    keys["ticker"] = keys["ticker"].astype("string")
+    keys["date"] = pd.to_datetime(keys["date"], errors="raise").dt.strftime("%Y-%m-%d")
+    payload = keys.sort_values(["ticker", "date"], kind="mergesort").to_csv(index=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def main() -> None:
@@ -55,6 +66,9 @@ def main() -> None:
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     robustness = json.loads(robustness_path.read_text(encoding="utf-8"))
+    source_keys = pd.read_parquet(args.panel, columns=["ticker", "date"])
+    source_keys["date"] = pd.to_datetime(source_keys["date"], errors="raise").dt.normalize()
+    code_text = args.code.read_text(encoding="utf-8")
 
     checks: dict[str, bool] = {}
     checks["schema_exact"] = list(features.columns) == EXPECTED
@@ -84,17 +98,28 @@ def main() -> None:
         for rank in RANKS
     )
     checks["row_count_matches_audit"] = len(features) == int(audit["row_count"])
+    checks["source_row_count_matches_audit"] = len(source_keys) == int(audit["source_panel_row_count"])
+    checks["source_key_digest_matches"] = (
+        key_digest(source_keys) == audit["source_panel_key_digest"] == audit["feature_key_digest"] == key_digest(features)
+    )
+    checks["source_key_duplicates_zero"] = int(source_keys.duplicated(["ticker", "date"]).sum()) == 0
     checks["eligible_count_matches_audit"] = int(features["eligible_decision_universe"].sum()) == int(audit["eligible_rows"])
     checks["code_hash_matches_audit"] = sha256_file(args.code) == audit["code_sha256"]
     checks["panel_hash_matches_audit"] = sha256_file(args.panel) == audit["source_hashes"]["panel"]
     checks["financial_hash_matches_audit"] = sha256_file(args.financial) == audit["source_hashes"]["financial"]
     checks["sessions_hash_matches_audit"] = sha256_file(args.sessions) == audit["source_hashes"]["official_sessions"]
     checks["anchors_hash_matches_audit"] = sha256_file(args.anchors) == audit["source_hashes"]["tradability_anchors"]
+    checks["canonical_session_hash"] = audit["source_hashes"]["official_sessions"] == EXPECTED_SESSIONS_SHA256
+    checks["canonical_anchor_hash"] = audit["source_hashes"]["tradability_anchors"] == EXPECTED_ANCHORS_SHA256
     checks["audit_hash_matches_manifest"] = sha256_file(audit_path) == manifest["files"][audit_path.name]
     checks["features_hash_matches_manifest"] = sha256_file(feature_path) == manifest["files"][feature_path.name]
     checks["robustness_features_match"] = sha256_file(feature_path) == robustness["features_sha256"]
     checks["robustness_is_frozen_600"] = robustness["frozen_session_count"] == 600
     checks["outcome_accessed_false"] = audit["outcome_accessed"] is False and robustness["outcome_accessed"] is False
+    checks["no_network_imports"] = not bool(
+        re.search(r"(?:^|\n)\s*(?:import|from)\s+(?:requests|urllib|httpx|socket)\b", code_text)
+    )
+    checks["no_provider_http_calls"] = not bool(re.search(r"(?:requests\.|urllib\.|httpx\.|socket\.)", code_text))
 
     finite_counts = {}
     for score in SCORES:
