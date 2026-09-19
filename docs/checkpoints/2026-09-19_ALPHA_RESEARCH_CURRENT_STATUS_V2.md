@@ -93,6 +93,10 @@ The base burden uses the frozen structural assumption of 15 bps buy fee,
    implementation cautions, not executable-capacity claims.
 10. **Latest adversarial audit**: C1/C2/C4 implementation and frozen outputs
     passed outcome-blind structural checks (details below).
+11. **H-LIQ-01 novelty diagnostic**: the temporal-variability score is not a
+    monotone duplicate of C2, but dependence with the turnover-level component
+    rises from -0.046 in Q1 to 0.468 in Q4. It remains a future hypothesis,
+    not C5.
 
 ## Latest adversarial result
 
@@ -153,6 +157,10 @@ Highest-value unresolved questions are corporate-action/price-basis authority,
 population-wide PIT financial vintages, historical liquidity/capacity, sector
 history, and the remaining independent red-team coverage for C1/C2/C4.
 
+H-LIQ-01's novelty question is partially answered: retain the mechanism card,
+but do not admit a candidate ID because shared participation information and
+economic/PIT risks remain material.
+
 ## Queue and exact next action
 
 No candidate is currently `READY_FOR_REENTRY`. C1/C2/C4 are conditionally
@@ -202,5 +210,6 @@ Detailed durable documents:
 - `2026-09-19_REENTRY_QUEUE_V1.md`
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
+- `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 
 No predictive superiority claim is made.

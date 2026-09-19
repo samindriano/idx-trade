@@ -10,6 +10,7 @@ Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
+Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -38,6 +39,11 @@ Using the unresolved rows only as a forensic sensitivity test, C1 showed the
 largest basis fragility (10.617% rank changes; 36.667% minimum Top-30 overlap),
 while C2/C4 were materially more stable. This is not a corrected dataset or a
 predictive result; C1 remains blocked on basis resolution.
+
+The H-LIQ novelty diagnostic supports a distinct temporal-variability
+mechanism relative to C2 overall, but dependence rises in the top-value bucket
+(0.468 versus the turnover-level component). H-LIQ remains a future hypothesis
+and no C5 ID is admitted.
 
 Current conclusion:
 

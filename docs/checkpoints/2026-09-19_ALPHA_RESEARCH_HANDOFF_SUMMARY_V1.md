@@ -11,6 +11,7 @@ Goal status: historical outcome stage `BLOCKED`; pre-admission research continue
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
+Latest H-LIQ novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 
 ## Executive answer
 
@@ -145,6 +146,11 @@ already embedded in the current panel and does not change C1/C2/C4 on replay;
 admission blocker stays in place. A forensic substitution of the 188 rows
 shows materially higher basis sensitivity for C1 than C2/C4; this is a risk
 signal, not a correction or predictive result.
+
+The H-LIQ novelty diagnostic finds a distinct temporal-variability structure
+versus C2 overall, with higher shared participation dependence in the top
+market-value bucket. It remains `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 ID
+was created.
 
 Internal candidate Spearman diagnostics (not incumbent comparison):
 
