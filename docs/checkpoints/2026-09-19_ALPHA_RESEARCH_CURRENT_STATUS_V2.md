@@ -167,7 +167,7 @@ read-only red-team review. Do not repeat completed C1-C4 structural metrics.
 ## Repository, artifacts, tests, and provenance
 
 - Branch: `codex/alpha-available-data-20260919`
-- Documentation commit containing this status snapshot: `2323741b`
+- Documentation commit containing this status snapshot: `594a59ad`
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Adversarial builder: `research/alpha_c1234_adversarial_audit_v1.py`
