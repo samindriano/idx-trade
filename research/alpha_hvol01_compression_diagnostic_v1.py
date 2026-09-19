@@ -129,9 +129,16 @@ def main() -> None:
     features["date"] = pd.to_datetime(features["date"], errors="raise").dt.normalize()
     if features.duplicated(["ticker", "date"]).any():
         raise ValueError("feature artifact has duplicate ticker/date keys")
-    if not features["eligible_decision_universe"].fillna(False).astype(bool).equals(
-        full["eligible_decision_universe"].fillna(False).astype(bool)
-    ):
+    eligibility_check = features[["ticker", "date", "eligible_decision_universe"]].merge(
+        universe[["ticker", "date", "eligible_decision_universe"]],
+        on=["ticker", "date"],
+        how="left",
+        suffixes=("_stored", "_recomputed"),
+        validate="one_to_one",
+    )
+    stored_mask = eligibility_check["eligible_decision_universe_stored"].fillna(False).astype(bool)
+    recomputed_mask = eligibility_check["eligible_decision_universe_recomputed"].fillna(False).astype(bool)
+    if len(eligibility_check) != len(features) or not stored_mask.equals(recomputed_mask):
         raise ValueError("feature eligibility does not match the guarded universe")
 
     selected = full[["ticker", "date", "eligible_decision_universe", SCORE, "regular_market_value"]].copy()
