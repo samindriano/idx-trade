@@ -21,8 +21,12 @@ being listed below does not make it admissible.
 | Clean OHLCV panel `model_safe_signal_research_panel_1260_final_clean.parquet` | 981,940 rows; 945 tickers; 2021-04-29–2026-07-31; unique ticker/date | `PARTIAL / FROZEN_ONLY` | structural features and implementation diagnostics |
 | Frozen official sessions | 1,260 dates | `PARTIAL / FROZEN_ONLY` | calendar ordering and masks |
 | Tradability anchors | 1,104,064 anchors; 1,260 dates | `PARTIAL / FROZEN_ONLY` | same-session eligibility mask |
+| `config/tradability_snapshot.sample.csv` | 5 rows, all dated 2025-07-30 | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | no historical event-log use |
+| `config/idx_tradability_manifest.sample.csv` | 4 announcement references; one `MANUAL_REVIEW` | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | discovery/reference only |
+| `config/tradability_coverage_windows.csv` | header-only; zero declared windows | `EMPTY / UNKNOWN` | no coverage claim |
 | Financial PIT `bundle_rows.parquet` | 277,244 rows; 729 tickers; 2021-06-02–2026-07-17; unique keys | `PARTIAL / PARKED` | C3 capability/provenance audit only |
 | Corrected Stage A feature artifacts | C1–C4 values/ranks and eligibility; guarded versions in external staging | `DERIVED / ISOLATED` | target-free diagnostics only |
+| External Stage-A generations | multiple 981,940-row derived feature generations; some byte-identical with different manifests | `DERIVED / STRUCTURAL-ONLY / HISTORICAL-STAGING` | lineage/duplicate/superseded status must be explicit; not new raw data |
 | `config/stockbit_stream_universe_v1.csv` activity metadata | 963 tickers; `activity_median_regular_value_60` populated for 105; `capture_high=1` for 100; five populated ranks are 101–105 with `capture_high=0` | `PARTIAL / METADATA_ONLY / NON-ADMISSIBLE` | inventory/future-source clue only; no ticker-date history or available-at/PIT timestamps |
 | Historical Ranking V2/V3/V4 caches | retained historical development artifacts and manifests | `HISTORICAL / CLOSED OR FROZEN` | archaeology only; no new refit/rescore |
 | O2/O2.1/path-risk/reliability artifacts | retained auxiliary historical runs | `HISTORICAL / DIAGNOSTIC` | failure/mechanism archaeology only |
@@ -67,6 +71,13 @@ The output contains no target, forward-return, realized-consensus, PnL, NAV,
 Sharpe, or incumbent-score fields. The target firewall independently checks
 this schema and the producing code.
 
+The current guarded Stage-A generation is the documented structural artifact,
+but older `stage-a`, `stage-a-v2`, and `stage-a-v3` generations remain in the
+external staging area. Some feature files are byte-identical while their
+manifest heads and audit metadata differ. They are retained for provenance and
+must not be treated as independent data sources or silently substituted for the
+guarded generation.
+
 ## Financial bundle fields
 
 The financial bundle contains five candidate values:
@@ -101,6 +112,11 @@ Most historical directories are evidence for archaeology or source-admission
 failure, not reusable scientific inputs. Reusing them requires rechecking the
 specific source hash, PIT contract, and current lane authorization. Retry
 directories do not constitute independent evidence by themselves.
+
+Tradability sample files are not a historical event log: the snapshot has only
+five rows on one date, the manifest is a four-reference sample, and the
+coverage-window file is empty. The reconciliation implementation explicitly
+requires event-log/discovery evidence before completeness can be claimed.
 
 The activity metadata is intentionally not promoted into the structural panel:
 it is a current-universe 60-session median snapshot as of 2026-07-31, has no
