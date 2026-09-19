@@ -78,6 +78,11 @@ keeps mean/minimum Top-30 overlap at `99.9722% / 93.3333%`, but still changes
 risk only; it does not admit the price basis, capacity, or candidate.
 See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
 
+The fixed horizon audit evaluated `5/20/60`: mean Top-30 turnover fell to
+`40.7750% / 20.4944% / 11.7570%`, but pairwise Top-30 overlap was only
+`34.7905% / 24.3750% / 42.3333%`. No horizon was selected and no candidate
+ID was created. See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+
 The latest independent frontier audit adds fixed-window turnover-tail and
 repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
 threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times

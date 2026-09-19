@@ -338,3 +338,10 @@ was `99.9722%` mean and `93.3333%` minimum across 8 changed dates, with only
 `1 / 19` direct/spillover changed slots. This narrows the specific basis risk
 without clearing global PIT/CA authority or changing the disposition. See
 `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
+
+The preregistered H-EXC-02 horizon audit then evaluated fixed median windows
+`5/20/60`. Mean Top-30 turnover fell from `40.7750%` to `20.4944%` to
+`11.7570%`, but pairwise Top-30 overlap was only `34.7905% / 24.3750% /
+42.3333%`; no horizon was selected. The lower-turnover forms are distinct
+future representations, not an economic repair or predictive result. See
+`2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.

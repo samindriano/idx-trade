@@ -16,6 +16,7 @@ Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1
 Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 Latest H-EXC-02 result: `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
+Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -144,6 +145,12 @@ Its dedicated 188-row CA sensitivity leaves support unchanged and preserves
 through direct and spillover effects. This is forensic narrowing only; global
 PIT/CA authority, capacity, and candidate readiness remain unresolved. See
 `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
+
+The fixed H-EXC-02 horizon audit evaluated `5/20/60`: mean turnover fell to
+`40.7750% / 20.4944% / 11.7570%`, but pairwise Top-30 overlap was only
+`34.7905% / 24.3750% / 42.3333%`. No horizon was selected; longer windows
+remain distinct future representations and do not repair the family or prove
+predictive value. See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
 
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination

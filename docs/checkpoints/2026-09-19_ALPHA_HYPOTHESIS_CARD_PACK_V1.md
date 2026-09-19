@@ -163,6 +163,9 @@ candidate admission.
 - **Failure/caution:** boundedness fixes the H-EXC-01 numerical tail, but high
   turnover, Q4 selected value/dollar-turnover shares of `33.5609% / 33.5665%`,
   and unresolved PIT/CA/capacity keep economics and novelty open.
+- **Horizon result:** fixed windows `5/20/60` have mean Top-30 turnover
+  `40.7750% / 20.4944% / 11.7570%`, but pairwise Top-30 overlap is only
+  `34.7905% / 24.3750% / 42.3333%`; no horizon was selected.
 - **Status:** `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5.
 - **Evidence:** `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
 

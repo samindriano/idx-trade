@@ -207,6 +207,13 @@ changed slots are `1 / 19` direct/spillover. This narrows one forensic basis
 risk but does not clear global PIT/CA authority or the high-turnover caution.
 See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
 
+The H-EXC-02 horizon audit evaluated only preregistered windows `5/20/60`.
+Mean Top-30 turnover fell `40.7750% / 20.4944% / 11.7570%`, but pairwise
+Top-30 overlap was `34.7905% / 24.3750% / 42.3333%`. No horizon was selected:
+longer windows are distinct future representations, not a repaired or
+predictively validated version of the 5-session form. See
+`2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+
 ## Re-entry gate
 
 Jika dan hanya jika Data QA memberikan admission artifact yang terpisah dan

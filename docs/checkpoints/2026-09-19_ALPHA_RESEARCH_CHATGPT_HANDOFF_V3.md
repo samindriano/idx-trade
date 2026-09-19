@@ -6,6 +6,7 @@ Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 Branch: `codex/alpha-available-data-20260919`  
 Latest evidence content commit: `06f47a3e0e7c31c0a96746d31f665d948a20d85b`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
+Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -111,6 +112,11 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `99.9722% / 93.3333%` mean/minimum Top-30 overlap, but changed `3,977`
     ranks. This narrows a specific basis risk only; no C5 or status upgrade.
     See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
+18. The fixed H-EXC-02 horizon audit evaluated `5/20/60`: mean turnover fell
+    to `40.7750% / 20.4944% / 11.7570%`, but pairwise Top-30 overlap was only
+    `34.7905% / 24.3750% / 42.3333%`. No horizon was selected; the longer
+    forms remain future representations, not a repair or predictive result.
+    See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 
