@@ -85,10 +85,9 @@ NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 or packet change. See
 `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
 
 The re-entry packet freshness audit confirms C1-C4 indexing and C3 fail-closed
-behavior, but the frozen contract manifest head `10939862...` differs from
-current lane tip `cc60808e...`. Freshness is `UNKNOWN`; the V2 packet remains
-specification-only and must not execute. Stale V1 references were repaired or
-labeled historical. See
+behavior, but the frozen contract manifest head differs from the current lane
+head. Freshness is `UNKNOWN`; the V2 packet remains specification-only and
+must not execute. Stale V1 references were repaired or labeled historical. See
 `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 Stage-A generation lineage is recorded in
 `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
