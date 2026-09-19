@@ -90,7 +90,10 @@ Corrected full-row Spearman relationships were C1/C2 `-0.23035511`, C1/C3
 `-0.02365537`, C1/C4 `0.41126169`, C2/C3 `-0.04554962`, C2/C4
 `-0.11908659`, and C3/C4 `-0.03261201`. These are internal feature
 diagnostics only; incumbent overlap remains `UNKNOWN` because incumbent score
-artifacts are not opened under the admission gate.
+artifacts are not opened under the admission gate. A focused read-only
+inventory of the known `forward_monitoring/model_runs` area found incumbent
+score artifacts only for post-cutoff forward dates; those artifacts were not
+used as a historical same-window comparator.
 
 The frozen robustness audit uses the last 600 official sessions split into six
 100-session folds. C1 coverage ranges from 99.45% to 99.98%, C2 is 100% in all

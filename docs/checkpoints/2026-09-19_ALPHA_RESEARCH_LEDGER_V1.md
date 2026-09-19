@@ -54,6 +54,7 @@ production or prospective claim.
 - Corrected Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`.
 - Corrected feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_stage_a_v3_features.parquet`.
 - Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
+- Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
 - New outcome access: none.
 - New provider/network access: none.
