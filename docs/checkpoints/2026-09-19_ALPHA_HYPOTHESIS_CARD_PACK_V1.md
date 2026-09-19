@@ -90,6 +90,33 @@ rises to `0.196` in the top market-value quartile, h10/h40 overlap h20 by
 `5.51%` of eligible rows. These findings keep the card open but prevent
 candidate admission.
 
+## Card H-VOL-01 — Daily volatility compression state
+
+- **Mechanism:** recent intraday range compression relative to a slower range
+  state may identify a changing uncertainty/price-discovery regime.
+- **Fixed representation:** `-log(median_5((high-low)/close) /
+  median_60((high-low)/close))`, on the official-session grid. One fixed form;
+  no sign, horizon, or threshold sweep.
+- **Required data:** daily high, low, close, official sessions, and the frozen
+  active/liquid mask.
+- **PIT requirements:** same EOD-t contract, price-basis/CA authority,
+  identity continuity, and no silent source gaps.
+- **Observed structural signature:** `308,514` finite eligible rows over
+  `1,201` dates and `711` tickers; mean Top-30 turnover `29.2778%`; selected
+  bottom-value Q1 share `42.7200%`.
+- **Structural distinctness:** mean Top-30 overlap with C1/C2/C4/H-LIQ-01 is
+  `9.5209% / 8.0155% / 15.5676% / 13.5803%`; mean daily Spearman with those
+  series is `0.1047 / -0.0410 / 0.1856 / -0.0780`. Low overlap is not proof of
+  predictive orthogonality.
+- **Likely redundancy:** adjacent to V4-B range acceptance/rejection and
+  O2/O2.1 flat-range geometry; exact novelty remains unresolved.
+- **Principal failure modes:** bottom-value concentration, turnover, mixed
+  price basis, suspension/zero-range handling, and confusing structural
+  distinctness with predictive value.
+- **Status:** `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5.
+- **Evidence:** `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md` and the
+  staged `alpha_hvol01_compression_diagnostic_v1.json`.
+
 ## Card H-MICRO-01 — High-participation reversal event
 
 - **Mechanism:** a large price concession accompanied by unusually high
