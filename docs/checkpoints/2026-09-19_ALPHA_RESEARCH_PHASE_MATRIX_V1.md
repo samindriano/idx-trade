@@ -25,12 +25,12 @@ non-redundant work remains authorized.
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics and H-LIQ h10/h20/h40; no free sweep or predictive selection. |
 | K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
-| L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics, combination low/base/stress friction, and 0.25%/0.5%/1%/2% value-capacity stress exist; real spread, queue, ADV, and capacity history are not admitted. |
+| L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus independent turnover-tail/repeat-name/value-bucket stress; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
 | M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
 | N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, and semantic margin directions are closed; C1/C2/C4 are not structurally rejected. |
-| O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only `activity_median_regular_value_60`; no new source is PIT-admissible. |
+| O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only activity field; `Dataset-Saham-IDX` is newly surfaced but blocked by source/PIT/vintage/duplicate-copy uncertainty. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
-| Q | Independent adversarial review | `PARTIAL / 3 RED-TEAM REPORTS + 2 SOURCE REPLAYS` | Causal/PIT, economics/fragility, and combination/H-LIQ reviews are complete. Independent source replays now pass for C1/C2/C4 and the structural-lab metric maps. PIT/as-of, issuer identity, survivorship, price basis, real capacity, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md` and `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`. |
+| Q | Independent adversarial review | `PARTIAL / 3 RED-TEAM REPORTS + 2 SOURCE REPLAYS + FRONTIER AUDIT` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`. |
 | R | Candidate novelty gate | `COMPLETE MILESTONE` | H-LIQ-01 remains no-C5; monotone variants and combination hypotheses do not create IDs. |
 | S | Research budget/question management | `ACTIVE` | Active questions and do-not-retry register below; continue only where new evidence can change a structural decision. |
 | T | Safe parallelization | `PARTIAL / CONTROLLED` | Independent read-only gap and data-capability audits completed; workers had no write or protected-data authority. |
@@ -59,7 +59,10 @@ non-redundant work remains authorized.
    protected packet entry yet.
 4. Can any newly discovered metadata become historical PIT data? Current
    answer for `activity_median_regular_value_60`: no, because it is snapshot
-   metadata without ticker-date available-at semantics.
+   metadata without ticker-date available-at semantics. The newly surfaced
+   `Dataset-Saham-IDX` has useful OHLCV/foreign/bid-offer fields but remains
+   blocked: it has no row-level knowledge-time contract and 11 non-identical
+   duplicate ticker copies across folders.
 
 ## Answered, rejected, and blocked questions
 
@@ -82,3 +85,6 @@ non-redundant work remains authorized.
    fields; do not turn it into a target or provider search.
 4. Before any future `READY_FOR_REENTRY` decision, commission dedicated
    read-only red-team review for C1/C2/C4 and re-run the target firewall.
+5. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
+   only if it can establish row-level PIT/vintage, identity/CA semantics, and
+   unambiguous source selection; otherwise preserve it as blocked.

@@ -4,7 +4,7 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest commit: `5ff846e43eceeb63631682a923d01970cdc15b66`  
+Latest commit: to be set after this frontier checkpoint
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -58,6 +58,20 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
    overlay and replay stability. `188` unresolved non-stable scale rows and
    open-price residuals keep CA/PIT admission blocked.
 
+9. Independent capacity-tail review found C1 median/q95/max Top-30 turnover
+   `40.00%/56.67%/66.67%`, C2 `33.33%/50.00%/63.33%`, and C4
+   `23.33%/36.67%/46.67%`; sessions above 50 bps were `220/599`, `60/599`,
+   and `1/599`. C4's low mean turnover is offset by bottom-value Q1 exposure
+   `34.46%`; this is implementation caution, not capacity proof.
+10. H-LIQ-01 remains distinct from C1/C4 but shares a persistent participation
+    component with C2. Its bottom-value Q1 share is `39.67%`, and its early-to-
+    late Q1 share moves `51.3%` to `29.5%`; retain no-C5 status.
+11. A bounded local-data inventory found `Dataset-Saham-IDX` (external commit
+    `bc0ac771`, `1,014` CSVs, `1,146,324` rows, 2019-07-29–2025-02-21). It is
+    `BLOCKED`: no row-level knowledge-time/vintage field, 56 duplicate ticker
+    groups including 11 non-identical copies, and unclear CA/identity/source
+    selection. Its static sector/listing files are `METADATA_ONLY`.
+
 ## Latest CA exposure attribution
 
 The latest read-only counterfactual replay exactly reproduced stored baseline
@@ -103,6 +117,8 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
+- `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
+- `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V1.md`
 
 ## Hard boundary
 

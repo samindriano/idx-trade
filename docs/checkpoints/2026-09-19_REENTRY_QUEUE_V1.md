@@ -10,6 +10,11 @@ One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1
   comparison rows, C1 is materially more sensitive than C2/C4. This is not an
   alpha ranking, but C1 requires explicit price-basis resolution before it can
   be treated as equally ready for re-entry.
+- CA exposure attribution update: the bounded replay exactly reproduced stored
+  C1/C2/C4 scores. Direct changed rows (keys inside the 188-row artifact) versus
+  spillover changed rows were C1 `66 / 82,291`, C2 `66 / 457`, and C4 `66 / 319`.
+  This narrows the risk mechanism but is not causal proof or a price-basis
+  admission; see `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`.
 - C3: remains blocked until financial population coverage, knowledge time,
   period boundaries, revision/vintage, and missingness policy are certified.
 

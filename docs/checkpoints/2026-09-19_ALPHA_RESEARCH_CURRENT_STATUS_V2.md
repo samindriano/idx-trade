@@ -264,3 +264,13 @@ the changed `(ticker,date)` key is present in the unresolved artifact, not that
 causality has been proven. No candidate disposition changed and no correction
 was promoted. See `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md` and
 the compact handoff `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`.
+
+## Latest frontier audit
+
+Independent read-only audits added three decision-relevant findings. Capacity
+tails strengthen C1 friction caution and C4 bottom-value/capacity caution;
+H-LIQ-01 remains no-C5 because it is distinct but composition-sensitive; and
+`Dataset-Saham-IDX` is a newly surfaced but blocked data source with no
+row-level PIT/vintage contract and 11 non-identical duplicate ticker copies.
+No candidate status changed. See
+`2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.

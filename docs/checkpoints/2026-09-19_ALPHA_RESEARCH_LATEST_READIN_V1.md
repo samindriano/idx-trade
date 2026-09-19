@@ -223,3 +223,13 @@ C2/C4 retain visible direct-row sensitivity. Full result:
 
 The current compact handoff is
 `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`.
+
+## Frontier audit update
+
+The latest bounded independent audits do not unlock target evaluation. C1/C2/C4
+turnover tails, repeat-name concentration, value buckets, and listing-age
+composition are now documented; H-LIQ-01 remains
+`NOVELTY_PENDING / ECONOMIC_CAUTION`; and `Dataset-Saham-IDX` is classified
+`BLOCKED` pending row-level PIT/vintage, identity/CA, and source-selection
+admission. Full evidence is in
+`2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.

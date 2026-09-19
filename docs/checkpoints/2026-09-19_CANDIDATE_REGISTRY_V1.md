@@ -48,6 +48,13 @@ The H-LIQ-01 adversarial audit is in
 dependence, horizon sensitivity, listing-age concentration, and missing sector
 data remain unresolved.
 
+The latest independent frontier audit adds fixed-window turnover-tail and
+repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
+threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times
+contribute `89.33% / 88.83% / 90.68%` of C1/C2/C4 slots. These are structural
+implementation cautions, not predictive results, and do not change candidate
+IDs or statuses.
+
 C3 contract mapping (`2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`)
 shows that a quality-only capability island is broader, but any YoY-containing
 contract has the same sparse support as all-five. This is a capability finding,
