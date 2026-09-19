@@ -7,9 +7,10 @@ Status: `FROZEN_BEFORE_NEW_OUTCOME_ACCESS`
 
 ## Purpose and boundary
 
-This is an isolated historical-research lane for testing a small, predeclared
-portfolio of genuinely distinct alpha mechanisms against the frozen V4-X1
-incumbent. It does not modify or write to the incumbent, V4-X1, Decision V2,
+This is an isolated research lane for outcome-blind capability and structural
+testing of a small, predeclared portfolio of genuinely distinct alpha
+mechanisms against the frozen V4-X1 incumbent. It does not modify or write to
+the incumbent, V4-X1, Decision V2,
 canonical data, capture/runtime, cloud/R2, scheduler, counters, or protected
 prospective data.
 
@@ -20,8 +21,10 @@ stored. No provider probe is part of this protocol.
 
 This protocol is frozen before opening any historical target/forward-label
 artifact for the new candidates. Stage A is outcome-blind. Historical target
-access, if needed, is limited to the fixed non-prospective six-fold protocol
-below and cannot be represented as prospective validation.
+access, if ever authorized by a separate data-admission decision, is limited
+to the fixed non-prospective six-fold protocol below and cannot be represented
+as prospective validation. The current admission audit has not granted that
+access.
 
 ## Frozen incumbent and target
 
@@ -42,8 +45,8 @@ universe or top-N substitute is allowed.
 
 ## Historical evaluation design
 
-The only outcome-opening design admitted in this lane is the existing frozen
-historical development/OOS design:
+If a future data-admission audit passes, the only outcome-opening design
+admitted in this lane is the existing frozen historical development/OOS design:
 
 - six chronological, non-overlapping 100-session folds;
 - the last 600 consensus-eligible sessions;
@@ -57,6 +60,10 @@ historical development/OOS design:
 This is not a fresh prospective holdout. The current clean panel has only ten
 post-cutoff sessions and cannot mature a new H5/H10 consensus holdout. A
 H5-only substitution, a shifted cutoff, or a different target is prohibited.
+As of the 2026-09-19 admission audit, no source is admitted for new-alpha
+historical outcome claims: the OHLCV panel is frozen-only and the Financial PIT
+bundle is partial. Therefore this lane currently stops at Stage A and must not
+open the target ledger.
 
 ## Metrics and fixed gates
 
@@ -146,7 +153,9 @@ ranks of `-leverage_liabilities_to_assets`, `liquidity_cash_to_assets`,
 financial row is admitted only at its selected knowledge time and same
 decision date. The fixed hypothesis is that a simple PIT quality/growth
 composite adds slower-moving information not represented by price-path shape.
-No partial-bundle fallback is allowed.
+No partial-bundle fallback is allowed. The source is currently `PARTIAL`, so
+this candidate is capability-only and cannot produce a scientific alpha claim
+unless a later admission audit changes that status before any target access.
 
 ### C4 — path efficiency
 
@@ -166,14 +175,17 @@ separate from that failure.
 
 The candidate budget is four fixed formulas plus one incumbent control. Stage A
 may use only outcome-blind structural diagnostics. After Stage A, at most one
-historical evaluation per admitted candidate is allowed; no retry, rescue,
-variant, or search-until-win loop is allowed.
+historical evaluation per candidate is allowed only if the source-admission
+gate is separately recorded as `ADMISSIBLE`; no retry, rescue, variant, or
+search-until-win loop is allowed. The current gate is not passed.
 
 The ledger must contain every candidate and every failure, including blocked
 sources and candidates rejected for coverage, PIT, overlap, or economics.
 The phase stops at the first fully gated historical `RESEARCH_SURVIVOR`, or
 after all four candidates are evaluated/blocked. It also stops immediately on
-an integrity or provenance gate failure.
+an integrity or provenance gate failure. If no source is admitted for new
+alpha outcome claims, the phase ends after Stage A with `BLOCKED`/`FUTURE_RESEARCH`;
+structural results must not be promoted into alpha evidence.
 
 `RESEARCH_SURVIVOR` is historical evidence only. Promotion remains
 `BLOCKED / WAITING_FOR_PROSPECTIVE_EVIDENCE` until a later untouched canonical
