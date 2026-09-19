@@ -299,7 +299,7 @@ incumbent score, or prospective outcome was opened in this lane.
 
 - Repository: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- HEAD at checkpoint creation: `7e6cfd56dc3214c5aaa64516aa0b877894cc21c8`
+- HEAD after checkpoint commit: `ad967925e97ae537ee535b8bddc8f3da3ff2fe6d`
 - Main/canonical branch: not modified.
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
