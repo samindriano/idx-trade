@@ -63,6 +63,8 @@ setelah admission artifact yang authoritative dan direview terpisah tersedia.
 
 ## Data admissibility matrix
 
+Full scoped inventory: `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`.
+
 | Data property | Current evidence | Status |
 |---|---|---|
 | Unique ticker/date identity | OHLCV and financial bundle audits | `PASS` for inspected artifacts |
@@ -78,6 +80,10 @@ setelah admission artifact yang authoritative dan direview terpisah tersedia.
 
 ## Previous alpha families and lessons
 
+Complete archaeology is recorded in
+`2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`; the table below is its compact
+current interpretation.
+
 | Family | Current interpretation |
 |---|---|
 | Foreign Flow V2 Core | Exact additive H10 challenger failed its exact gate; this does not close every foreign-flow mechanism. |
@@ -89,6 +95,13 @@ setelah admission artifact yang authoritative dan direview terpisah tersedia.
 | Ownership/free-float/HSC | Deep source work, but no final comprehensive alpha experiment; untested, not failed. |
 | Suspension/resumption | State engineering exists; no broad standalone alpha conclusion. |
 | Foreign-flow mechanism discovery | Outcome-blind shortlist only; no candidate promotion or frozen-budget expansion. |
+
+Important lineage correction: V3-B Structure-Lite initially passed/promoted on
+the early F1–F4 review, but a later clean PIT-safe adjudication identified KOCI
+pre-listing contamination and a failed late paired gate. The latest trusted
+interpretation is `PIT_FAIL/OOS_FAIL` for that historical representation and
+clean V2 as the survivor. This is why the program does not inherit old V3-B
+headline metrics as current alpha evidence.
 
 ## Failure taxonomy
 
@@ -222,6 +235,8 @@ This is a usable capability island, not a population-wide scientific panel.
 | Stage A robustness audit | `PASS_STRUCTURAL_ONLY` |
 | Economics builder and independent verifier | `PASS`; fixed 600-session/Top-30 and first/last-half diagnostics |
 | `research/alpha_structural_lab_v1.py` + independent verifier | `PASS`; Top-K churn/persistence, liquidity, state, and orthogonality lab |
+| `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md` | committed-source archaeology across V2/V3/V4/O2/auxiliary families |
+| `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md` | scoped field/source inventory with protected-target exclusion |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |
 | `research/c3_financial_capability_audit_v1.py` | C3 capability/governance funnel `PASS_STRUCTURAL_ONLY` |
 | External guarded staging | all derived parquet/JSON outputs isolated outside repository/canonical data |

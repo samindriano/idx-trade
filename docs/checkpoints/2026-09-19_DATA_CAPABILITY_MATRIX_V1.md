@@ -2,6 +2,8 @@
 
 Canonical detail: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`.
 
+Full scoped inventory: `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`.
+
 | Capability | Current status | Permitted use |
 |---|---|---|
 | Clean OHLCV identity/unique keys | `PASS` for inspected frozen artifact | structural diagnostics |
@@ -16,4 +18,3 @@ Canonical detail: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`.
 | H5/H10 target authority | `BLOCKED` | protected |
 | Same-window incumbent score | `UNKNOWN/BLOCKED` | no incremental comparison |
 | Prospective outcome evidence | `BLOCKED` | separate protected process |
-
