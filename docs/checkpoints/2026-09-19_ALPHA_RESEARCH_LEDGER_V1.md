@@ -608,7 +608,7 @@ and H-LIQ has no equivalent event overlay. Status remains
 `GLOBAL_BASIS_BLOCKED`; no offline retry is justified.
 
 The current-head re-entry attestation binds producer `P=10939862`, packet
-attestation `Q=e44f43ca`, and current `R=04bac413`. Packet-bound Git files are
+attestation `Q=e44f43ca`, and attestation-run `R0=37390dae`. Packet-bound Git files are
 unchanged Q-to-R and current declared source hashes match. This is
 `PACKET_BYTE_FRESHNESS`; external-source freshness is explicitly `UNKNOWN`,
 not a re-entry authorization. See

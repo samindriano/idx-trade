@@ -200,6 +200,6 @@ non-redundant work remains authorized.
   status changes and no offline replay is justified. See
   `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
 - Current-head packet attestation binds `P=10939862`, `Q=e44f43ca`, and
-  `R=04bac413`; packet-bound Git files and declared current hashes pass, while
+  `R0=37390dae`; packet-bound Git files and declared current hashes pass, while
   full external-source freshness remains `UNKNOWN`. The packet remains
   specification-only and NO-GO.

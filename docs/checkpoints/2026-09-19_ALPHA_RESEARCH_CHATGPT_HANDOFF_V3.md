@@ -401,7 +401,7 @@ C5 or predictive evaluation was run. See
 
 Independent review adds two constraints: CA/issuer exposure is only bounded
 forensic sensitivity, not population-complete safety, and the current re-entry
-packet is byte-fresh across `P=10939862`, `Q=e44f43ca`, `R=04bac413` but not
+packet is byte-fresh across `P=10939862`, `Q=e44f43ca`, attestation-run `R0=37390dae` but not
 fully source-fresh. C1 remains most sensitive under the 188-row stress; no
 candidate is upgraded and protected evaluation remains NO-GO. See
 `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.

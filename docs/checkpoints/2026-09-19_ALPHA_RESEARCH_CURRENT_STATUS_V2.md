@@ -566,7 +566,7 @@ All candidate safety remains `GLOBAL_BASIS_BLOCKED`. See
 `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
 
 The re-entry packet current-head audit binds producer `P=10939862`, packet
-attestation `Q=e44f43ca`, and current head `R=04bac413`; packet-bound Git files
+attestation `Q=e44f43ca`, and attestation-run head `R0=37390dae`; packet-bound Git files
 are unchanged and current source hashes match the contract. This proves packet
 byte freshness only; full external-source freshness remains `UNKNOWN`, so the
 packet stays specification-only and NO-GO.
