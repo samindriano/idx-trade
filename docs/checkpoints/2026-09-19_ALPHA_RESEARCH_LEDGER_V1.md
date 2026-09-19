@@ -42,10 +42,10 @@ production or prospective claim.
 
 | ID | Candidate | Stage A | Historical comparison | Robustness/economics | Verdict | Reason |
 |---|---|---|---|---|---|---|
-| C1 | `residual_reversal_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 295,243/310,761 eligible rows (95.0065%); corrected mask/session implementation; no target opened. |
-| C2 | `participation_confirmation_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 310,761/310,761 eligible rows (100.0000%); corrected mask/session implementation; no target opened. |
-| C3 | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED` | `BLOCKED` | `BLOCKED` | 30,994/310,761 eligible rows (9.9736%); late PIT coverage and partial Financial admission; no fallback. |
-| C4 | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 310,323/310,761 eligible rows (99.8591%); corrected mask/session implementation; no target opened. |
+| C1 | `residual_reversal_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 295,243/310,761 eligible rows (95.0065%); mean Top-30 turnover 42.15%, base burden 25.29 bps/NAV; no target opened. |
+| C2 | `participation_confirmation_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 310,761/310,761 eligible rows (100.0000%); mean Top-30 turnover 32.91%, base burden 19.75 bps/NAV; no target opened. |
+| C3 | `financial_quality_growth_v1` | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED — sparse/partial PIT` | `BLOCKED` | 30,994/310,761 eligible rows (9.9736%); 278 usable Top-30 dates and 25.77% top-10 ticker slot share; no fallback. |
+| C4 | `path_efficiency_reversal_20_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 310,323/310,761 eligible rows (99.8591%); mean Top-30 turnover 23.70%, base burden 14.22 bps/NAV; no target opened. |
 
 ## Objective deliverable audit
 
@@ -57,7 +57,8 @@ production or prospective claim.
 | Experiment ledger including failures | Candidate table, invalid v1 implementation, corrected implementation, and structural audit lineage | `COMPLETE — no target stage` |
 | Incumbent-vs-candidate comparison | Same-window target comparison and incumbent overlap are not authorized/provable; no post-cutoff score artifact was substituted | `BLOCKED — admission/common support` |
 | Surviving candidate artifact | No candidate has target/OOS/economic evidence | `NONE` |
-| Independent audit | Final guarded verifier and robustness artifacts pass structural checks | `PASS — structural only` |
+| Independent audit | Final guarded verifier, robustness artifact, and economics verifier pass structural checks | `PASS — structural only` |
+| Friction/economics diagnostics | `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md`; fixed Top-30/600-session capability audit | `COMPLETE — structural only` |
 | Exact remaining blocker to promotion | Authoritative population-wide historical-as-of source/target admission is absent; prospective evidence remains separate | `BLOCKED / WAITING` |
 
 ## Audit trail
@@ -73,6 +74,7 @@ production or prospective claim.
 - Corrected Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`.
 - Corrected feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_stage_a_v3_features.parquet`.
 - Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
+- Structural economics audit: `PASS_STRUCTURAL_ONLY`; see `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md` and the independently verified staged JSON; no target or incumbent score was opened.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
 - New outcome access: none.
