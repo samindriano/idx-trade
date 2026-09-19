@@ -2,9 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this handoff addendum: `5c9c3bfb`
-Latest research milestone commit: `5c9c3bfb`
-Latest status/documentation commit: `5c9c3bfb`
+Verified research baseline HEAD before this handoff addendum: `8ad60569`
+Latest research milestone commit: `8ad60569`
+Latest status/documentation commit: `8ad60569`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
@@ -279,7 +279,7 @@ admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Verified baseline HEAD: `5c9c3bfb`
+- Verified baseline HEAD: `8ad60569`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
