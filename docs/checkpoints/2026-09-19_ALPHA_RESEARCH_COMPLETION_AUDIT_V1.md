@@ -155,3 +155,20 @@ since advanced through additional non-target work:
 Current continuation HEAD: `f4132c20`. The lane remains isolated, the
 worktree is clean after the continuation commit, and the protected-target
 boundary is unchanged.
+
+## Continuation amendment — independent metadata/surface review — 2026-09-20
+
+At snapshot HEAD `d318de60d9588e31bab5a0c47be5bdaab6b0d999`, two independent
+read-only reviews found documentation issues and no scientific admission
+change. The handoff's current-head and attestation pointers were stale; they
+now identify the latest recorded clean rerun `R2=fbaa824c` while retaining the
+historical `R0`/`R1` chain. The phase-matrix next-frontier text was corrected
+to remove completed Phase-Q/CA work. The reviews also found that
+`Dataset-Saham-IDX` was not an explicit row in the capability maps; it is now
+listed as `BLOCKED / NOT_ADMITTED` with its 1,014-file/1,146,324-row evidence
+and unresolved PIT, identity, duplicate-source, and CA gates.
+
+No code, source data, candidate formula, packet bytes, target, outcome,
+canonical, capture, cloud, telemetry, or production state was modified. The
+complete independent-review evidence is recorded in
+`2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.

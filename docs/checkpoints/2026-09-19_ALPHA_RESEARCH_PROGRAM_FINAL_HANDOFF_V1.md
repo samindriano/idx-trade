@@ -2,7 +2,7 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this continuation addendum: `96a3f12b`
+Latest verified research snapshot HEAD before this documentation amendment: `d318de60d9588e31bab5a0c47be5bdaab6b0d999`
 Latest research milestone: continuation evidence on this branch (see `git log`)
 Latest status/documentation: continuation evidence on this branch (see `git log`)
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
@@ -133,6 +133,7 @@ scheduler, production jobs, or production artifacts.
 | Dataset/source | Capability | Disposition |
 |---|---|---|
 | Clean OHLCV panel | 981,940 rows, 945 tickers, 1,260 dates; OHLCV/value/provenance fields | `PARTIAL / FROZEN_ONLY`; structural use only |
+| Dataset-Saham-IDX historical raw corpus | 1,014 CSVs / 1,146,324 rows; four unmapped tickers and 11 non-identical duplicate ticker groups | `BLOCKED / NOT_ADMITTED`; no row-level PIT/publication/revision-vintage or authoritative CA contract |
 | Official sessions | 1,260 official dates | `PARTIAL / FROZEN_ONLY`; calendar/mask only |
 | Tradability anchors | 1,104,064 anchors | `PARTIAL / FROZEN_ONLY`; same-session mask only |
 | Financial PIT bundle | 277,244 rows; partial knowledge/provenance coverage | `PARTIAL / PARKED`; C3 capability only |
@@ -326,7 +327,7 @@ executable before independent Data QA admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Verified baseline HEAD for the current research milestone: `96a3f12b`
+- Latest verified snapshot HEAD before this documentation amendment: `d318de60d9588e31bab5a0c47be5bdaab6b0d999`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
@@ -533,9 +534,10 @@ The independent CA/issuer exposure-completeness review confirms that all
 candidate price-basis evidence remains bounded forensic sensitivity, not
 population-complete safety. C1 is most fragile under the 188-row comparison;
 C2/C4/H-LIQ are not cleared, and no event-to-window issuer/ISIN/PIT linkage is
-available. The re-entry packet has current packet-byte freshness from
-`P=10939862` through `Q=e44f43ca` to attestation-run `R0=37390dae`, but full external-source
-freshness remains unknown. No candidate status changed and the packet remains
+available. The re-entry packet has current packet-byte freshness through the
+latest recorded clean rerun `R2=fbaa824c` (the earlier `R0` and `R1` runs are
+retained in attestation history), but full external-source freshness remains
+unknown. No candidate status changed and the packet remains
 NO-GO. See `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
 
 The extended local census then classified six additional raw surfaces—official
@@ -601,3 +603,9 @@ event-to-window linkage, issuer/ISIN continuity, effective and knowledge time,
 explicit basis semantics, and a PASS for every finite candidate window. It is
 not an admission artifact and does not change candidate or packet status. See
 `2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.
+
+An independent control and local-surface red-team then corrected stale
+attestation/frontier metadata and made `Dataset-Saham-IDX` explicit in the
+capability maps as `BLOCKED / NOT_ADMITTED`. No candidate, packet, or admission
+status changed. See
+`2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.

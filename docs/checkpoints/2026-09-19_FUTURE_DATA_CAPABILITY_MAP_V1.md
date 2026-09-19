@@ -3,6 +3,7 @@
 | Needed capability | Current state | Admission evidence required |
 |---|---|---|
 | Population-wide historical OHLCV identity | partial/frozen | completeness and reconciliation certificate |
+| Dataset-Saham-IDX historical raw corpus | blocked/not admitted | row-level PIT/publication and revision/vintage contract, identity/CA authority, four unmapped ticker resolution, and deterministic handling of 11 non-identical duplicate ticker groups |
 | Historical-as-of financial vintages | partial/parked | knowledge time, revision/vintage, attachment lineage |
 | Corporate-action transition history | not admitted | event-level authority and coverage |
 | H5/H10 realized targets | protected | separate target admission decision |

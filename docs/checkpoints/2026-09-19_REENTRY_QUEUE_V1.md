@@ -69,11 +69,12 @@ the producer pin unchanged; future updates must bind producer commit `P` and
 attest packet commit `Q` separately. See
 `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
 
-Current-head continuation: `P=10939862`, `Q=e44f43ca`, attestation-run `R0=37390dae` are bound;
-packet-bound Git files are unchanged Q-to-R and current declared source hashes
-match. This is packet-byte freshness only. Full external-source freshness is
-still `UNKNOWN`, so the queue remains exactly C1/C2/C4 conditional plus blocked
-C3 and no candidate is READY_FOR_REENTRY.
+Current-head continuation: producer `P=10939862`, packet `Q=e44f43ca`, and the
+latest clean attestation rerun `R2=fbaa824c` are bound; the earlier `R0` and
+`R1` runs are retained in the attestation history. Packet-bound Git files and
+current declared source hashes match. This is packet-byte freshness only. Full
+external-source freshness is still `UNKNOWN`, so the queue remains exactly
+C1/C2/C4 conditional plus blocked C3 and no candidate is READY_FOR_REENTRY.
 
 The 2026-09-20 HSC ownership and broker/margin source audits add capability
 evidence only. HSC is structurally exact but event-only; broker/margin is a
@@ -86,3 +87,7 @@ The CA/issuer red-team also formalized the future
 event-to-window and issuer/ISIN gates pass, C1 remains basis-sensitive and
 C2/C4 remain globally UNKNOWN for basis admission; this does not alter the
 conditional queue or authorize any protected read.
+
+The independent local-surface review also made `Dataset-Saham-IDX` explicit in
+the capability maps as `BLOCKED / NOT_ADMITTED`; it does not change queue
+membership or authorize a retry.

@@ -640,3 +640,9 @@ date plus knowledge time, explicit adjusted/unadjusted basis semantics, and a
 PASS gate for every finite candidate window. This is
 `SPECIFICATION_ONLY / NOT_ADMITTED`; the global basis blocker remains. See
 `2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.
+
+Independent control-document and local-surface red-team review then corrected
+the current attestation pointer to `R2=fbaa824c`, removed the stale Phase-Q/CA
+frontier, and added `Dataset-Saham-IDX` explicitly to the capability maps as
+`BLOCKED / NOT_ADMITTED`. No candidate, packet, or admission status changed.
+See `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.

@@ -111,9 +111,10 @@ non-redundant work remains authorized.
    stress is now quantified, but do not create C5
    without a new novelty decision, admitted price basis/PIT, and economic
    capacity evidence.
-6. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
-   only if it can establish row-level PIT/vintage, identity/CA semantics, and
-   unambiguous source selection; otherwise preserve it as blocked.
+6. Keep the completed `Dataset-Saham-IDX` audit explicit in both capability
+   maps as `BLOCKED / NOT_ADMITTED`; do not repeat it or expand providers
+   unless a new artifact supplies row-level PIT/vintage, identity/CA semantics,
+   and deterministic duplicate-source selection.
 
 ## Continuation update — 2026-09-19
 
@@ -250,3 +251,18 @@ non-redundant work remains authorized.
   readiness failures, C1/C4 remain non-additive (daily Spearman `0.462413`,
   combination dependence about `0.850`), and H-LIQ remains unqualified.
   Existing statuses and the no-retry boundary are unchanged.
+
+## Continuation update — independent control and surface review — 2026-09-20
+
+- Independent handoff review found and corrected stale current-head/attestation
+  pointers (`R2=fbaa824c` is now the latest control pointer) and a stale
+  next-frontier sentence that named already-completed Phase-Q/CA work.
+- Independent local-surface review found that `Dataset-Saham-IDX` was present
+  in census prose but missing as an explicit row in the data capability and
+  future-data maps. It is now explicit as `BLOCKED / NOT_ADMITTED`; the source
+  has 1,014 CSVs / 1,146,324 rows, four unmapped tickers, and 11 non-identical
+  duplicate groups, with no row-level PIT/vintage or authoritative CA contract.
+- These are documentation and classification corrections only. Candidate
+  registry, re-entry queue membership, packet bytes, target firewall, and
+  protected scientific boundary are unchanged. See
+  `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.

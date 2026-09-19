@@ -41,6 +41,12 @@ protected evaluation packet without independent source-contract evidence.
 | Investing BBCA max history | `PARTIAL / SOURCE_BLOCKED` | 2,065 rows, 2018-08-08–2026-09-18; 0 exact OHLCV matches on 1,568 IDX-overlap dates and variable scale. No historical basis/PIT contract. |
 | Local BBCA cross-source price basis | `UNKNOWN / BLOCKED` | TradingView is 5x versus IDX through 2021-10-12 and 1x thereafter; Investing does not reduce to one scale. Do not rescale or admit. |
 
+## Independent local-surface census correction — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Dataset-Saham-IDX historical raw corpus | `BLOCKED / NOT_ADMITTED` | 1,014 CSVs / 1,146,324 rows; no row-level PIT/publication/revision-vintage contract, four unmapped tickers, 11 non-identical duplicate ticker groups, and no authoritative CA table. Inventory evidence only; no feature construction. |
+
 The local census also classifies current foreign-flow and stock-summary rows as
 snapshot-only, active listings and investor-type HTML as metadata-only, and
 Stockbit chart/stream surfaces as current or redacted metadata. No newly

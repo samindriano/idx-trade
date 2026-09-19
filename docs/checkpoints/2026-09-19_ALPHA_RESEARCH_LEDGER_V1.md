@@ -607,11 +607,12 @@ and `90.000%`. No event-to-window issuer/ISIN/knowledge-time linkage exists,
 and H-LIQ has no equivalent event overlay. Status remains
 `GLOBAL_BASIS_BLOCKED`; no offline retry is justified.
 
-The current-head re-entry attestation binds producer `P=10939862`, packet
-attestation `Q=e44f43ca`, and attestation-run `R0=37390dae`. Packet-bound Git files are
-unchanged Q-to-R and current declared source hashes match. This is
-`PACKET_BYTE_FRESHNESS`; external-source freshness is explicitly `UNKNOWN`,
-not a re-entry authorization. See
+The original current-head re-entry attestation bound producer `P=10939862`,
+packet attestation `Q=e44f43ca`, and run `R0=37390dae`. The same attestation
+was later rerun cleanly at `R1=adc2c016` and `R2=fbaa824c`; `R2` is the latest
+control pointer. Packet-bound Git files remain unchanged and current declared
+source hashes match. This is `PACKET_BYTE_FRESHNESS`; external-source freshness
+is explicitly `UNKNOWN`, not a re-entry authorization. See
 `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md` and the
 current-head attestation checkpoint.
 
@@ -698,3 +699,16 @@ continuity, effective and knowledge time, explicit basis semantics, and PASS
 for every finite candidate window. It remains specification-only; no candidate
 or packet status changed. See
 `2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md`.
+
+## Continuation register — independent control-document and surface review
+
+An independent read-only review found two metadata issues: current handoff
+HEAD/attestation pointers lagged the latest clean rerun, and the phase-matrix
+next-frontier text still named already-completed Phase-Q/CA work. A second
+independent local-surface review found that `Dataset-Saham-IDX` was described
+in census prose but missing as an explicit row in the data capability and
+future-data maps. The source remains `BLOCKED / NOT_ADMITTED` (1,014 CSVs,
+1,146,324 rows, four unmapped tickers, 11 non-identical duplicate groups, and
+no row-level PIT/vintage or authoritative CA contract). The corrections are
+documentation-only; no candidate, packet, source, or protected state changed.
+See `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.
