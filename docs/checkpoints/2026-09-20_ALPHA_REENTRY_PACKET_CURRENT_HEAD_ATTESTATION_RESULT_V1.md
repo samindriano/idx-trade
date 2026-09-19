@@ -51,3 +51,7 @@ After this checkpoint was committed, the same attestation was rerun on
   `d2ea0746b540c811d05d720ad0cb638b08712e878f6b3b16c287f80cf6d0727d`
 - The intervening commit was documentation-only and did not modify any
   packet-bound file; the packet-bound diff from `Q` remains empty.
+
+The attestation was rerun once more at `R2=fbaa824c` after the local-surface
+census commit. It returned the same status; output SHA-256:
+`35eeaa227cada41cf5eb6c2790683b842e3e804612b71df7c56aafe88ee346eb`.
