@@ -20,7 +20,12 @@ For each `(ticker, feature_session)`:
 The overlay is the within-session percentile rank of `transition_score`.
 Unavailable inputs are neutral rank `0.5`, never imputed or forward-filled.
 The initial blend to evaluate, if eligible unseen evidence becomes available,
-is `0.90 * incumbent_rank + 0.10 * transition_rank`.
+is `0.90 * incumbent_alpha_consensus + 0.10 * transition_rank`, with both
+terms higher-is-better on `[0, 1]`.
+
+The phrase `incumbent_rank` in the initial draft was corrected before any
+outcome access. `rank_consensus` is a positional rank where `1` is best and
+must not be blended with the higher-is-better transition percentile.
 
 ## Evidence boundary
 

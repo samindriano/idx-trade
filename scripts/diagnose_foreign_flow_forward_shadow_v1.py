@@ -27,6 +27,9 @@ from idx_trade.foreign_flow_representation_v2_runner import (  # noqa: E402
     build_causal_market_context,
     read_verified_flow_archive,
 )
+from idx_trade.alpha_challenger_foreign_flow_transition_v1 import (  # noqa: E402
+    fixed_quality_blend,
+)
 
 
 DATA_ROOT = Path(r"D:\Documents\Project\idx-trade-data-gate-20260808v")
@@ -232,15 +235,21 @@ def main() -> None:
         how="inner",
         validate="one_to_one",
     )
-    structural_corr = joined[["rank_consensus", "transition_rank"]].corr(
+    structural_corr = joined[["alpha_consensus", "transition_rank"]].corr(
         method="spearman"
     ).iloc[0, 1]
     top_n = min(30, len(joined))
     incumbent_top = set(
-        joined.nlargest(top_n, "rank_consensus")["ticker"].astype(str)
+        joined.nlargest(top_n, "alpha_consensus")["ticker"].astype(str)
     )
-    fixed_blend = 0.90 * joined["rank_consensus"] + 0.10 * joined["transition_rank"]
-    candidate_top = set(joined.assign(_fixed_blend=fixed_blend).nlargest(top_n, "_fixed_blend")["ticker"].astype(str))
+    fixed_blend = fixed_quality_blend(
+        joined["alpha_consensus"], joined["transition_rank"]
+    )
+    candidate_top = set(
+        joined.assign(_fixed_blend=fixed_blend)
+        .nlargest(top_n, "_fixed_blend")["ticker"]
+        .astype(str)
+    )
     top30_overlap = len(incumbent_top & candidate_top) / float(top_n) if top_n else float("nan")
     print("diagnostic_status=OUTCOME_BLIND_SHADOW_ONLY")
     print(f"source_session={SOURCE_SESSION.date().isoformat()}")
@@ -270,6 +279,7 @@ def main() -> None:
         f"common_transition_available={int(joined['transition_available'].sum())}"
     )
     print(f"prospective_rank_spearman={float(structural_corr):.8f}")
+    print("blend_direction=higher_is_better_alpha_and_transition")
     print(f"fixed_blend_top30_overlap={float(top30_overlap):.8f}")
     print(f"fixed_blend_top30_churn={1.0 - float(top30_overlap):.8f}")
 

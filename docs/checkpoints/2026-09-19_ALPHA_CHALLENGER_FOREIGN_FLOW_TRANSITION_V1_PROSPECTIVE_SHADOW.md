@@ -2,7 +2,12 @@
 
 Date: 2026-09-19 Asia/Jakarta  
 Lane: `codex/alpha-challenger-pit-safe-20260919`  
-Status: `SHADOW_MATERIALIZED — NOT ADMITTED`
+Status: `SHADOW_MATERIALIZED — CORRECTED DIRECTION — NOT ADMITTED`
+
+The first structural blend readout in this checkpoint is superseded by
+`2026-09-19_ALPHA_CHALLENGER_FOREIGN_FLOW_TRANSITION_V1_CORRECTION.md`.
+It mixed positional and percentile rank directions. The corrected readout
+below uses the frozen `alpha_consensus` higher-is-better score.
 
 ## What was materialized
 
@@ -35,19 +40,25 @@ This demonstrates that the fixed transition overlay can be computed on a
 post-freeze prospective source snapshot without reading outcomes. It is not a
 performance result and cannot establish OOS improvement by itself.
 
-Against the already-committed incumbent score artifact for the same feature
-session, the structural cross-check found:
+The initial one-session structural cross-check reported:
 
 - incumbent score rows: `296`;
 - common rows: `296`;
 - transition available on common rows: `284/296` (`95.945946%`);
 - prospective transition-rank Spearman versus incumbent rank: `0.11970779`;
-- fixed `90/10` blend top-30 overlap: `100%`;
-- fixed `90/10` blend top-30 churn: `0%`.
+- fixed `90/10` blend top-30 overlap: `100%` (**SUPERSEDED**);
+- fixed `90/10` blend top-30 churn: `0%` (**SUPERSEDED**).
 
-These are one-session orthogonality and turnover diagnostics only. They are not
-IC, return, or OOS evidence; the exact top-30 overlap must not be interpreted as
-an alpha win.
+The corrected direction audit covered all 15 available clean V4-X1
+prospective score artifacts from 2026-08-21 through 2026-09-17. The transition
+overlay was available on only 5/15 sessions. On those five sessions, corrected
+availability ranged from `95.9459%` to `96.9072%`, mean transition-vs-incumbent
+Spearman was `-0.01552985`, mean top-30 overlap was `84.6667%`, mean top-30
+churn was `15.3333%`, and maximum top-30 churn was `20%`.
+
+These remain structural diagnostics only. They are not IC, return, or OOS
+evidence, and the corrected five-session sample is not sufficient to establish
+robust prospective value.
 
 ## Input identity
 

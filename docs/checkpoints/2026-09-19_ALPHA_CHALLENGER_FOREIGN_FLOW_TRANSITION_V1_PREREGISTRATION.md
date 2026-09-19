@@ -33,8 +33,14 @@ winsorization, or sign search is allowed.
 The only predeclared incremental test is:
 
 ```text
-candidate_rank = 0.90 * incumbent_rank + 0.10 * transition_rank
+candidate_score = 0.90 * incumbent_alpha_consensus + 0.10 * transition_rank
 ```
+
+Both terms are higher-is-better normalized scores on `[0, 1]`. The incumbent
+input is the frozen score artifact's `alpha_consensus`, not its positional
+`rank_consensus` field (`1` is best there). This direction clarification was
+recorded before any outcome access; it does not change the weight or introduce
+a result-selected variant.
 
 ## Structural audit only
 

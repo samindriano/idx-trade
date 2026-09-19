@@ -3,6 +3,7 @@ import pytest
 
 from idx_trade.alpha_challenger_foreign_flow_transition_v1 import (
     build_foreign_flow_transition_overlay,
+    fixed_quality_blend,
 )
 
 
@@ -58,3 +59,12 @@ def test_requires_both_persistence_inputs():
 
     with pytest.raises(KeyError, match="foreign_weighted_persistence_20"):
         build_foreign_flow_transition_overlay(frame)
+
+
+def test_fixed_blend_uses_higher_is_better_alpha_not_position_rank():
+    result = fixed_quality_blend(
+        pd.Series([1.0, 0.0]),
+        pd.Series([0.0, 1.0]),
+    )
+
+    assert result.tolist() == pytest.approx([0.9, 0.1])
