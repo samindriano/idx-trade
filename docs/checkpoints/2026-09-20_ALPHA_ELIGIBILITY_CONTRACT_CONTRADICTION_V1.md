@@ -87,3 +87,11 @@ scientific population. The fail-closed disposition therefore remains
   - replay status: `PASS_INDEPENDENT_FORMULA_AND_RANK_REPLAY`
   - limitation: it reproduces the current implementation; it does not choose
     between the contradictory eligibility contracts.
+
+## Reusable guard
+
+`research/verify_alpha_eligibility_contract_consistency_v1.py` now checks the
+protocol, packet, and implementation text without opening any dataset. Against
+the current bytes it returns `BLOCKED_POLICY_CONFLICT` (exit code 2), while its
+own outcome-blind firewall returns `PASS`. The staged guard result is
+`alpha_eligibility_contract_consistency_v1.json`.
