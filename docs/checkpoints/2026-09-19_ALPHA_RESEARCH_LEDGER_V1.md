@@ -763,3 +763,7 @@ and recommends no same-surface retry. See
 `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`.
 The contract contradiction is a separate `BLOCKED / POLICY DECISION REQUIRED`
 checkpoint: `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`.
+Git provenance review found no explicit superseding amendment between the
+protocol, Stage-A implementation, and packet V2; chronology alone cannot
+choose the population. Keep this as an active policy question and do not
+regenerate the feature artifact until resolved.

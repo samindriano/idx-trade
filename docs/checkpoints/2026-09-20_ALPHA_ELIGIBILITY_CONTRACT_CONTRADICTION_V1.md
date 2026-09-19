@@ -53,7 +53,27 @@ not that the implementation is the intended scientific contract.
 - A legitimate resolution must state whether the count and median each use
   `min_periods=60`, or whether count/median use a declared minimum of 20, plus
   the exact missingness and population rules. Only then may an authorized
-  outcome-blind replay and artifact re-hash occur.
+outcome-blind replay and artifact re-hash occur.
+
+## Git provenance audit
+
+The repository history does not establish a superseding authority for either
+interpretation:
+
+- Protocol V1 was frozen in `a02a1547` at 11:16:39 and states “at least 20
+  finite observations” for the trailing-60 median rule.
+- The masked Stage-A implementation was introduced in `1ebced27` at 11:41:01
+  with the generic rolling helper `min_periods=window`; the later causal and
+  calendar hardening commits `71ec4494` and `10939862` retained that behavior.
+- Packet V2 was closed in `9e4e54fa` at 20:34:54 and repeats both the prose
+  “at least 20 finite observations” and “rolling operations use
+  `min_periods=window`”.
+
+No later commit explicitly says that the code supersedes the protocol, that the
+prose was amended to require 60 finite values, or that a 20-observation median
+is authorized. Chronological precedence alone is not enough to select a
+scientific population. The fail-closed disposition therefore remains
+`BLOCKED / POLICY DECISION REQUIRED`.
 
 ## Evidence and hashes
 
@@ -67,4 +87,3 @@ not that the implementation is the intended scientific contract.
   - replay status: `PASS_INDEPENDENT_FORMULA_AND_RANK_REPLAY`
   - limitation: it reproduces the current implementation; it does not choose
     between the contradictory eligibility contracts.
-

@@ -682,3 +682,7 @@ blockers; no same-surface retry or new candidate is justified.
 The eligibility contradiction is separately recorded as
 `BLOCKED / POLICY DECISION REQUIRED` in
 `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`.
+Git provenance provides no explicit superseding amendment: the frozen protocol,
+later implementation, and later packet preserve conflicting language. The
+population therefore remains unresolved rather than being selected by
+chronology.
