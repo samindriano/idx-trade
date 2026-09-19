@@ -686,3 +686,6 @@ Git provenance provides no explicit superseding amendment: the frozen protocol,
 later implementation, and later packet preserve conflicting language. The
 population therefore remains unresolved rather than being selected by
 chronology.
+The future packet now carries this conflict as an explicit machine-verified
+fail-closed gate; packet `PASS` means the block is encoded correctly, not that
+protected evaluation is executable.

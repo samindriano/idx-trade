@@ -767,3 +767,6 @@ Git provenance review found no explicit superseding amendment between the
 protocol, Stage-A implementation, and packet V2; chronology alone cannot
 choose the population. Keep this as an active policy question and do not
 regenerate the feature artifact until resolved.
+The packet contract and verifier now bind this conflict explicitly and the
+refreshed firewall/verifier pass with the gate present. This is control
+hardening, not a population decision or admission evidence.

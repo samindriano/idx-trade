@@ -95,3 +95,14 @@ protocol, packet, and implementation text without opening any dataset. Against
 the current bytes it returns `BLOCKED_POLICY_CONFLICT` (exit code 2), while its
 own outcome-blind firewall returns `PASS`. The staged guard result is
 `alpha_eligibility_contract_consistency_v1.json`.
+
+The future evaluation packet now carries the same fail-closed state explicitly:
+`ELIGIBILITY_CONTRACT_STATUS: BLOCKED_POLICY_CONFLICT`. Its machine contract
+binds the guard status, row-count discrepancy, and guard hash. The packet
+verifier and refreshed packet firewall both pass, including the new contract
+and guard checks; passing here means the block is represented faithfully, not
+that the packet is executable.
+
+- Contract SHA-256: `1385ce0806b59232df22cd6b850ef305905dc704da54ed2e53864eb22d081a26`
+- Packet verifier result SHA-256: `53b9caaaa6f4a669339161d61b28bda8c125a37556ec33cfd4e693b5066f2fee`
+- Packet firewall result SHA-256: `3357f823c95984425b4aea2af3b8468275281d7cf24cd70dfca5f0431f915d82`
