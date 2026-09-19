@@ -218,9 +218,23 @@ def main() -> int:
 
     digital = [audit_digital(path, nested_indices=False) for path in sorted((args.root / "digital").glob("market_*.json"))]
     indices = [audit_digital(path, nested_indices=True) for path in sorted((args.root / "digital").glob("indices_*.json"))]
+    source_paths: dict[str, Path] = {"panel": args.panel}
+    for date in dates:
+        compact = date.replace("-", "")
+        source_paths[f"rich_{compact}_zapi_index"] = args.root / "zapi" / f"IndexSummary_{compact}.json"
+        source_paths[f"rich_{compact}_zapi_stock"] = args.root / "zapi" / f"StockSummary_{compact}.json"
+        source_paths[f"rich_{compact}_direct_index"] = args.root / "crosscheck" / f"index_{date}_direct.json"
+        source_paths[f"rich_{compact}_direct_stock"] = args.root / "crosscheck" / f"stock_{date}_direct.json"
+    for path in sorted((args.root / "digital").glob("market_*.json")):
+        source_paths[f"digital_{path.stem}"] = path
+    for path in sorted((args.root / "digital").glob("indices_*.json")):
+        source_paths[f"digital_{path.stem}"] = path
+    source_hashes = {name: sha256_file(path) for name, path in source_paths.items()}
     result = {
         "audit": "ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_V1",
         "status": "PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED",
+        "code_sha256": sha256_file(Path(__file__)),
+        "source_hashes": source_hashes,
         "scope": {
             "outcome_accessed": False,
             "target_accessed": False,

@@ -24,7 +24,9 @@ Verifier: `research/verify_alpha_market_context_source_audit_v1.py`
 
 The builder and verifier both compile successfully. The independent verifier
 returned `PASS` for the staged audit JSON. The target/privacy firewall returned
-`PASS` for the scripts and staged outputs.
+`PASS` for the scripts and staged outputs. A follow-up v5 adds an explicit
+builder hash and hashes for the panel plus all 18 rich/digital source files;
+the generic artifact hash-contract verifier returned `PASS` for all 19 inputs.
 
 Staged audit:
 `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_v4.json`
@@ -35,6 +37,17 @@ Staged verification:
 Staged firewall result:
 `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_firewall.json`
 
+Hash-bound follow-up artifacts:
+
+- audit v5:
+  `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_v5.json`
+- structural verification v5:
+  `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_v5_verification.json`
+- hash-contract verification v5:
+  `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_v5_hash_contract.json`
+- v5 firewall:
+  `D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_market_context_source_audit_v1_v5_firewall.json`
+
 Recorded SHA-256 values:
 
 | Artifact | SHA-256 |
@@ -42,7 +55,11 @@ Recorded SHA-256 values:
 | audit JSON v4 | `1a21fbe44a936383a55e3ba5fe10754db200010b6e80909961d8a923734eff82` |
 | verifier JSON v4 | `17c6962aca961ae9dabdb77c2d19635bda81c85bb27105c4c437c5d284507332` |
 | firewall JSON | `ea8e46c0292587bc2fb0f9d882dcf553db5f7020a411a6328be64f220daa4512` |
-| builder | `51fbf7dbb749ee1f9a2e7356ca20827f3b994d339cfea05ff12ab0e3c472b19e` |
+| audit JSON v5 | `49c15bf1f98195992f0892d3bada98d92b304eb5566f00bc4c3dad2651c2339b` |
+| v5 structural verification | `3aee48c8bf5358d26c1bc299430351013c6c08fb5c139ad6250c02df2ab988df` |
+| v5 hash-contract verification | `0af2d8a8c13ca9f5265dc3a66aca81714b2f12e009f4f02e31da0b88c39a3ed2` |
+| v5 firewall | `a53e6760a3e1f637019301b31d5962168828e91d43593cbb4c4a352634435242` |
+| builder v5 | `bd5836292588e3052276a09ca6b6d469393a258b6aa452b46c038edb4d024426` |
 | verifier | `7f46e1d1e6fca907fde9deb43758f1e18e96ec6fa3530071c6eaa74f0ca239df` |
 
 ## Rich daily archive checks

@@ -160,3 +160,13 @@ non-redundant work remains authorized.
   Digital coverage is only three sampled monthly blocks, so no PIT-admissible
   feature or candidate was created. See
   `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+- Independent H-LIQ novelty review finds the same-surface C2-level
+  residualization insufficient as mechanism evidence: full-C2 dependence and
+  time-block instability remain, and low-value exposure worsens. Same-surface
+  retry is `NO-GO`; H-LIQ remains no-C5 and novelty/economic status pending.
+  See `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`.
+- Panel-depth source capability audit passes structural/hash/parity checks but
+  remains source-admission blocked: 12 symbols, 18,835 rows, exact official
+  parity on 23/23 available pairs, and no row-level PIT, identity, revision,
+  or corporate-action authority. See
+  `2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.

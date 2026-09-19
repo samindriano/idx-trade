@@ -499,3 +499,27 @@ feature or candidate was created. Status remains
 `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`; C1–C4, the protected
 packet, and all main/canonical/capture/cloud/telemetry state are unchanged.
 See `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Latest continuation update — H-LIQ-01 novelty no-retry adjudication
+
+An independent worker red-team reviewed the unresolved H-LIQ question. The
+same-date OLS residualization of H-LIQ rank on C2 turnover-level rank is not
+independent evidence of a new mechanism; the residual retains `0.0843185`
+dependence with full C2 and worsens bottom-value exposure from `39.6722%` to
+`50.3889%`. Six-block dependence also varies materially. The result is
+`UNKNOWN` for mechanism-level novelty, `FAIL/UNKNOWN` for unqualified
+persistence/economic worth, and `NO-GO` for another same-surface retry. H-LIQ
+remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 or packet
+change. See `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`.
+
+## Latest continuation update — panel-depth source capability audit
+
+The highest-information local non-redundant panel-depth surface was audited
+read-only. The manifest contains 12 symbols and 18,835 rows, with exact raw
+hash/byte matches, exact arithmetic invariants, and exact official parity for
+23/23 available symbol/date pairs. The normalized BBCA rowset is an exact
+duplicate of the historical-depth BBCA surface. No row-level PIT, revision,
+identity/ISIN, issuer-transition, or corporate-action fields are present, so
+the result is `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`; no feature,
+candidate, or model evaluation was run. See
+`2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.

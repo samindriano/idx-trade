@@ -481,3 +481,19 @@ semantics are not established. The result is
 `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`, with no feature, candidate,
 C5, packet, or predictive-status change. See
 `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+
+An independent H-LIQ-01 novelty red-team then found no basis for repeating the
+same C2-level residualization or temporal-persistence experiment. The residual
+retains `0.0843185` dependence with full C2, worsens bottom-value exposure to
+`50.3889%`, and its block dependence is unstable. H-LIQ remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 or packet change.
+See `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`.
+
+The local panel-depth archive was then audited in the isolated lane. Its 12
+symbols and 18,835 rows pass raw-hash, schema, arithmetic, date, and official
+parity checks (23/23 available pairs); BBCA is a duplicate of the existing
+historical-depth surface. Missing row-level PIT/available-at, revision,
+identity/ISIN, issuer-transition, and corporate-action semantics keep the
+source at `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature,
+candidate, packet, or predictive evaluation was performed. See
+`2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.

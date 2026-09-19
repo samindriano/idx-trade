@@ -506,3 +506,29 @@ daily PIT coverage, publication/revision semantics, and identity/CA authority
 remain unestablished. Status is `PASS_STRUCTURAL_ONLY /
 SOURCE_ADMISSION_BLOCKED`; no feature, candidate, C5, packet, or model status
 changed. See `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Continuation register — H-LIQ-01 novelty no-retry adjudication
+
+An independent worker red-team found no decision-changing evidence that would
+justify another same-surface H-LIQ experiment. The C2-level residual is a
+same-date OLS residualization, so its low dependence on the removed component
+is not independent mechanism evidence. It retains `0.0843185` dependence with
+full C2, worsens bottom-value exposure from `39.6722%` to `50.3889%`, and the
+six-block dependence is materially variable. Verdict: mechanism novelty
+`UNKNOWN`, unqualified persistence/economic worth `FAIL/UNKNOWN`, and
+same-surface retry `NO-GO`. H-LIQ remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 or packet change.
+See `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`.
+
+## Continuation register — panel-depth source capability audit
+
+The local panel-depth archive was audited without network access or data
+mutation. It contains 12 symbols and 18,835 normalized rows; all 12 raw
+responses match declared hashes/bytes, required fields and numeric invariants
+are exact, and official IDX parity is exact for 23/23 available comparisons.
+BBCA is an exact duplicate of the historical-depth normalized rowset. Because
+the rows lack available-at/revision/vintage, row-level identity/ISIN,
+issuer-transition, and corporate-action semantics, the source remains
+`PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature, C5, packet, or
+model status changed. See
+`2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.

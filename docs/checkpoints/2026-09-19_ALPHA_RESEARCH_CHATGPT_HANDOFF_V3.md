@@ -350,3 +350,20 @@ daily feature source. Status is
 `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`; no candidate or model
 evaluation was run. See
 `2026-09-20_ALPHA_MARKET_CONTEXT_SOURCE_AUDIT_RESULT_V1.md`.
+
+An independent H-LIQ-01 red-team adjudication found the same-surface
+C2-level residualization insufficient as mechanism evidence. Full-C2
+dependence remains `0.0843185`, low-value exposure worsens to `50.3889%`, and
+six-block dependence is unstable. Same-surface retry is `NO-GO`; H-LIQ remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION` and no C5 was created.
+See `2026-09-20_ALPHA_HLIQ01_NOVELTY_NO_RETRY_ADJUDICATION_V1.md`.
+
+The next local source surface, `panel-depth`, was audited read-only. It has 12
+symbols and 18,835 rows, exact raw/hash and arithmetic checks, and exact
+official IDX parity on 23/23 available comparisons. BBCA is an exact duplicate
+of an existing historical-depth surface. The rows do not provide PIT/available
+time, revision/vintage, row-level identity/ISIN, issuer-transition, or
+corporate-action authority, so admission remains
+`PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature or model
+evaluation was run; incumbent/canonical/capture/cloud state is unchanged. See
+`2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.
