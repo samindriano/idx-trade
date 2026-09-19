@@ -82,23 +82,21 @@ Reasons not to admit C5 yet:
 - bottom-liquidity exposure is high;
 - no target, OOS, IC/ICIR, incumbent comparison, or prospective evidence is
   available;
-- independent red-team review and a frozen future evaluation contract are not
-  complete.
+- the independent red-team follow-up is now complete, but its unresolved
+  horizon, conditional-redundancy, listing-age, sector, and price-basis risks
+  still block candidate admission; the frozen future evaluation contract also
+  remains specification-only until Data QA admission.
 
 Disposition: `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`.
 
 ## Exact next action
 
-Before any candidate-ID decision, perform one independent review of:
-
-1. turnover-unit and price-basis semantics;
-2. listing/delisting and missingness concentration;
-3. C2 conditional redundancy after controlling only for structural rank and
-   liquidity buckets;
-4. capacity/friction scenarios using the already permitted structural fields.
-
-No parameter sweep, target access, or provider/source expansion is authorized by
-this result.
+The independent review is now recorded in
+`2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`. Before any candidate-ID
+decision, the remaining questions are turnover-unit and price-basis semantics,
+capacity/friction realism, and whether the conditional C2 dependence warrants a
+separate mechanism contract. No parameter sweep, target access, or
+provider/source expansion is authorized by this result.
 
 ## Reproducibility and firewall
 
@@ -111,6 +109,11 @@ this result.
 - Firewall artifact SHA-256: `937bf9b3557bcbda57db01b10d3ed13c605bd9f7f998156833abbf3287295ba0`
 - Firewall result: `PASS`
 - Python compilation: `PASS`
+
+Adversarial follow-up: `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`.
+It confirms synthetic 5% masking robustness but leaves horizon sensitivity,
+conditional C2 dependence, listing-age concentration, and sector availability
+as explicit reasons to retain `NOVELTY_PENDING / ECONOMIC_CAUTION`.
 
 No protected target, forward return, incumbent score, provider, network,
 canonical, cloud, capture, scheduler, counter, or production artifact was

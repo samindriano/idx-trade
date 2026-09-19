@@ -187,7 +187,8 @@ def set_metrics(sets: dict[pd.Timestamp, set[str]], baseline: dict[pd.Timestamp,
 
 def score_summary(frame: pd.DataFrame, score_column: str, dates: pd.Series) -> dict[str, object]:
     eligible = frame["eligible_decision_universe"] & frame["source_panel_row_present"]
-    values = pd.to_numeric(frame.loc[eligible & frame["date"].isin(dates), score_column], errors="coerce").dropna()
+    values = pd.to_numeric(frame.loc[eligible & frame["date"].isin(dates), score_column], errors="coerce")
+    values = values[np.isfinite(values)]
     sets = top_sets(frame, score_column, dates)
     return {
         "finite_rows": int(len(values)),

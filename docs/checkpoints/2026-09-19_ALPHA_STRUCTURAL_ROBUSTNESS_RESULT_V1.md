@@ -158,12 +158,12 @@ created.
 ## Reproducibility and firewall
 
 - Builder: `research/alpha_structural_robustness_v1.py`
-- Builder SHA-256: `53757ad96a681d14dd5265dbe25836a7da3b3e80084b496cbda0f28d26c64242`
+- Builder SHA-256: `f87bb9ff9681148b48ea77d145a562d7bcfb4935cc1b9297b77e4358d0d460b1`
 - Output: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_structural_robustness_v1.json`
-- Output SHA-256: `273bec6f29b46bf7ec23a9da63c7be1bef7984ee124f63733de6fb7e86aae307`
+- Output SHA-256: `5fdf09c2bf7b3897e14c5ff6f5d263eb58603512e399eac334db08d38b865505`
 - Firewall artifact:
-  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_structural_robustness_firewall_v1.json`
-- Firewall artifact SHA-256: `b28e5576668b8588f95cfa84a2a4e8d722ecce5d52f00d3f3b37ef9bb5c75a4d`
+  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_structural_robustness_firewall_v2.json`
+- Firewall artifact SHA-256: `03d9f76c5f7a666b8d41ec8ec08a0d94e9f5f8a6f0a77d85475d3dfdb234f2c2`
 - Firewall result: `PASS`
 - Python compilation: `PASS`
 - Baseline formula equivalence: `PASS` with zero finite-pair difference.
@@ -179,6 +179,8 @@ modified.
 - Keep C1/C2/C4 fixed contracts unchanged, but record horizon choice as a
   genuine future-evaluation decision rather than a free parameter sweep.
 - Keep C3 blocked pending financial PIT/source-capability remediation.
-- Next non-redundant work: complete the target-free economic/mechanism cards
-  and re-entry packet, then perform an independent red-team review of C1/C2/C4
-  PIT, identity, corporate-action, and liquidity assumptions.
+- The target-free economic/mechanism cards, re-entry packet, and independent
+  red-team review are now recorded in the linked checkpoint documents. The
+  remaining blockers are authoritative population/PIT admission and separate
+  corporate-action/issuer-basis evidence; no target comparison follows from
+  this structural battery.

@@ -68,9 +68,11 @@ be evaluated alongside trading friction.
   C1/C2/C4, turnover, liquidity quartiles, state persistence, and parameter
   sensitivity across a predeclared small set of windows.
 - **Status:** `FUTURE_RESEARCH / NOVELTY_UNRESOLVED`; no candidate ID yet.
-- **Next action:** prototype result is recorded in
-  `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`; independent review is
-  still required before any candidate-ID decision.
+- **Next action:** prototype and independent robustness review are recorded in
+  `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md` and
+  `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`; resolve the remaining
+  price-basis, capacity, and novelty questions before any candidate-ID
+  decision.
 
 ### H-LIQ-01 prototype result
 
@@ -80,6 +82,13 @@ bottom market-value quartile. Daily rank dependence was -0.045 with C1, +0.100
 with C2, -0.126 with C3, and -0.105 with C4; Top-30 overlap with C1/C2/C3/C4
 was 8.97%/31.34%/4.75%/12.48% on available dates. The result is
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, not C5.
+
+The adversarial follow-up is recorded in
+`2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`: conditional C2 dependence
+rises to `0.196` in the top market-value quartile, h10/h40 overlap h20 by
+`61.13%`/`62.02%`, and selected ≤365-day listing share is `11.22%` versus
+`5.51%` of eligible rows. These findings keep the card open but prevent
+candidate admission.
 
 ## Card H-MICRO-01 — High-participation reversal event
 

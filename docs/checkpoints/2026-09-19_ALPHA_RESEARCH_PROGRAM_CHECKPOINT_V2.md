@@ -16,6 +16,12 @@ liquidity/concentration proxy, friction diagnostics, horizon/normalization/
 missingness/universe robustness diagnostics, serta independent
 hash/schema/provenance checks.
 
+Milestone terbaru juga sudah menutup tiga audit pendukung yang sebelumnya masih
+terbuka: adversarial robustness H-LIQ-01, contract map untuk capability C3, dan
+identity-continuity audit berbasis reconciled security master. Ketiganya lulus
+secara struktural, tetapi tidak mengubah boundary admission atau status
+kandidat.
+
 Kesimpulan saat ini bukan “tidak ada alpha”, melainkan:
 
 `NO CURRENT ALPHA SURVIVOR CAN BE PROVEN WITHOUT TARGET ADMISSION`
@@ -242,7 +248,10 @@ This is a usable capability island, not a population-wide scientific panel.
 | `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md` | durable disposition for target-free robustness results |
 | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md` | bounded literature/mechanism cards and novelty-gate decisions; no new candidate ID |
 | `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md` | one fixed temporal-liquidity prototype; structurally distinct but not admitted as C5 |
+| `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md` | adversarial H-LIQ horizon, conditional-overlap, missingness, and listing-age audit |
 | `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md` | one-shot protected evaluation specification; not executable before independent admission |
+| `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md` | mechanism-defined C3 subset capability map; quality core broader, YoY remains binding |
+| `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md` | read-only security-master interval audit; eligible identity mapping passes, corporate-action basis remains unknown |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |
 | `research/c3_financial_capability_audit_v1.py` | C3 capability/governance funnel `PASS_STRUCTURAL_ONLY` |
 | External guarded staging | all derived parquet/JSON outputs isolated outside repository/canonical data |
@@ -255,20 +264,22 @@ The firewall code SHA-256 is
 
 ## Future research items
 
-Only pre-admission work remains authorized:
+The major target-free structural battery, H-LIQ-01 red-team, C3 contract map,
+and identity-continuity audit are complete for this milestone. Remaining
+authorized work is limited to:
 
-1. Extend the structural lab for Top-10/20/30/50 turnover, rank persistence,
-   liquidity buckets, missingness clustering, and parameter-free stability.
-2. Complete the target-free orthogonality map with daily rolling dependence and
-   Top-K overlap, still excluding incumbent scores.
-3. Preserve all findings in the ledger, failure taxonomy, candidate registry,
-   re-entry queue, data capability matrix, structural orthogonality map, future
-   data capability map, and risk register.
-4. Prepare the future evaluation packet schema and deterministic re-entry
-   checklist without opening protected outcomes.
-5. Perform bounded literature/mechanism review only when it adds a genuinely
-   new, source-admissible pre-admission question; do not expand the candidate
-   budget by default.
+1. Resolve or separately attest corporate-action price basis, issuer/ISIN
+   history, and population-wide identity continuity; the current security
+   master audit is not that attestation.
+2. If useful, perform a bounded capacity/friction review for H-LIQ-01 using
+   already admitted structural fields; do not turn it into a candidate or
+   run outcome comparisons.
+3. Keep the future evaluation packet, ledger, failure taxonomy, candidate
+   registry, re-entry queue, data capability matrix, structural orthogonality
+   map, future data capability map, and risk register synchronized.
+4. Wait for an authoritative Data QA admission artifact before any H5/H10,
+   incumbent, IC/ICIR, OOS, or prospective comparison. No provider expansion,
+   scraping, or candidate-budget expansion is authorized by this checkpoint.
 
 ## Ready-for-reentry candidates
 

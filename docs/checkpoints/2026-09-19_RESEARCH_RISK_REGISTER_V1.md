@@ -11,5 +11,8 @@
 | Horizon/representation fragility | P1 | fixed horizons retained; alternative horizons documented as distinct future representations, no free sweep |
 | Sparse-score missingness | P1 | synthetic stress confirms C1/C2/C4 broad support but C3 remains unusable under small support loss |
 | H-LIQ-01 small-cap/liquidity concentration | P1 | prototype retained only as `NOVELTY_PENDING / ECONOMIC_CAUTION`; requires independent capacity/friction review before any candidate-ID decision |
+| H-LIQ-01 conditional redundancy/listing age | P1 | red-team audit records C2 dependence by value bucket and selected-vs-eligible listing-age shares; no C5 admission |
+| C3 YoY/provenance bottleneck | P1 | contract map separates quality-core capability from YoY-limited support; no imputation, forward fill, or subset candidate admission |
+| Identity continuity | P1 | security-master interval audit passes all eligible keys; issuer/ISIN history and corporate-action basis remain separate unknowns |
 | Accidental protected-data access | P0 | target firewall; explicit no-network/no-target boundary |
 | Cross-lane mutation | P0 | isolated worktree/branch and external staging |

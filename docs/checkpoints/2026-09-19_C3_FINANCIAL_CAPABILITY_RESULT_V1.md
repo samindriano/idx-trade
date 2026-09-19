@@ -100,6 +100,12 @@ revision/vintage handling, and both required target horizons. The re-entry must
 use the fixed C3 formula and common support; no sparse-period rescue, fallback
 provider, or outcome-driven refit is allowed.
 
+The mechanism-defined subset map is recorded in
+`2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`. It confirms that a
+quality-core capability island is broader, while any contract requiring either
+YoY field falls back to the same 34,412-row bottleneck as all-five. This does
+not change the fixed C3 contract or its `BLOCKED` status.
+
 ## Reproducibility
 
 - Builder: `research/c3_financial_capability_audit_v1.py`

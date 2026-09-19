@@ -41,3 +41,14 @@ C5. Intraday reversal,
 financial change/disagreement, and flow-event directions remain
 source/capability blocked, while high-participation reversal remains a
 non-novel retry risk.
+
+The H-LIQ-01 adversarial audit is in
+`2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`; its status remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION` because conditional C2
+dependence, horizon sensitivity, listing-age concentration, and missing sector
+data remain unresolved.
+
+C3 contract mapping (`2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`)
+shows that a quality-only capability island is broader, but any YoY-containing
+contract has the same sparse support as all-five. This is a capability finding,
+not a C3A/C3B/C3C admission; the registry remains exactly C1–C4.

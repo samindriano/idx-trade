@@ -105,6 +105,24 @@ tickers.
 | C3 | `financial_quality_growth_v1` | 30,994 finite rows / 9.9736% coverage | 278 usable Top-30 dates; top-10 ticker share 25.77% | `BLOCKED` |
 | C4 | `path_efficiency_reversal_20_v1` | 310,323 finite rows / 99.8591% coverage | Top-30 turnover 23.70%; base burden 14.22 bps/NAV | `FUTURE_RESEARCH` |
 
+Latest pre-admission additions:
+
+- H-LIQ-01 remains `FUTURE_RESEARCH / NOVELTY_PENDING /
+  ECONOMIC_CAUTION`. Its adversarial follow-up retained all 600 structural
+  dates under deterministic 5% masking, but found horizon sensitivity,
+  conditional C2 dependence in the top-value bucket, selected-vs-eligible
+  listing-age concentration, and no admitted sector field. It is not C5.
+- The C3 contract map shows quality-only capability is broader (64,406 frozen
+  rows / 505 dates with at least 30 names), while every YoY-containing
+  contract remains at 30,994 rows / 278 usable Top-30 dates. This is a
+  capability diagnosis, not a C3 subset admission.
+- The identity-continuity audit maps every frozen eligible key to exactly one
+  active security-master interval. It does not certify issuer/ISIN history,
+  corporate-action transitions, or price-basis consistency.
+
+These are structural/capability results only; none opens target, incumbent,
+provider, network, prospective, or protected outcome data.
+
 Internal candidate Spearman diagnostics (not incumbent comparison):
 
 - C1/C2: `-0.23035511`
@@ -180,7 +198,10 @@ the candidates have been proven to fail.
 - `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`
+- `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`
 - `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
+- `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`
+- `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md`
 - `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`
 - `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
