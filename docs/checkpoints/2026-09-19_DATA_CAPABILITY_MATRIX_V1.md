@@ -9,6 +9,7 @@ Full scoped inventory: `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`.
 | Clean OHLCV identity/unique keys | `PASS` for inspected frozen artifact | structural diagnostics |
 | Official session ordering | `PASS` frozen 1,260 dates | mask/calendar construction |
 | Tradability anchors | `PASS` frozen artifact | same-session structural mask |
+| Current-universe activity median metadata | `PARTIAL / METADATA_ONLY` (105/963 populated; no ticker-date PIT history) | inventory clue only; not an alpha input |
 | Financial core-three finite support | partial: 70,520 rows | capability diagnostics |
 | Financial all-five PIT/provenance support | partial: 34,412 rows; 30,994 after mask | C3 capability audit only |
 | Population completeness | `UNKNOWN/BLOCKED` | no new-alpha claim |

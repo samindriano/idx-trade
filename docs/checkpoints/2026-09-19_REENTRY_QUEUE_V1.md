@@ -9,6 +9,12 @@ One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1
 - C3: remains blocked until financial population coverage, knowledge time,
   period boundaries, revision/vintage, and missingness policy are certified.
 
+Structural combination hypotheses are tracked separately from the four-ID
+protected packet. The equal-weight C1+C4 combination is the cleanest
+structural readiness hypothesis by turnover/overlap, while C1+C2, C2+C4, and
+C1+C2+C4 remain future research. None is `READY_FOR_REENTRY`, and none may be
+evaluated with protected outcomes without a separately frozen packet decision.
+
 ## Required re-entry gates
 
 1. Read fresh canonical `TEAM_STATUS.md`.

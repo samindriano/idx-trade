@@ -52,3 +52,13 @@ C3 contract mapping (`2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`)
 shows that a quality-only capability island is broader, but any YoY-containing
 contract has the same sparse support as all-five. This is a capability finding,
 not a C3A/C3B/C3C admission; the registry remains exactly C1–C4.
+
+## Structural combination hypotheses
+
+`2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md` evaluates exactly four
+equal-weight combinations of existing rank columns. C1+C4 has the lowest
+combination turnover (`34.85%`) and the most balanced component overlap in the
+bounded structural test. The other combinations remain useful complementarity
+questions, especially because their C2 overlap is low. These are not candidate
+IDs, are not predictive evidence, and are not added to the four-candidate
+protected evaluation packet.

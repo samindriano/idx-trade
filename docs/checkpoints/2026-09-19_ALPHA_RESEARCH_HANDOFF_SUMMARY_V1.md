@@ -5,6 +5,7 @@ Lane: `codex/alpha-available-data-20260919`
 Branch HEAD at V1 handoff: `03ac0c8d0f9a28c835cb740d7627dd9d1876251c`
 Latest lane milestone commit: `d9bfb868` (`research: close structural red-team and capability audits`)
 Superseded by: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
+Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md`
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 
 ## Executive answer
@@ -120,6 +121,11 @@ Latest pre-admission additions:
 - The identity-continuity audit maps every frozen eligible key to exactly one
   active security-master interval. It does not certify issuer/ISIN history,
   corporate-action transitions, or price-basis consistency.
+- Phase M/L combination readiness is now documented separately: four
+  equal-weight C1/C2/C4 combinations were measured under low/base/stress
+  friction scenarios. C1+C4 had the lowest tested combination turnover
+  (`34.85%`), but no combination is in the protected four-ID packet and no
+  weight was optimized.
 
 These are structural/capability results only; none opens target, incumbent,
 provider, network, prospective, or protected outcome data.
@@ -203,6 +209,7 @@ the candidates have been proven to fail.
 - `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
 - `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`
 - `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md`
+- `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`
 - `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`

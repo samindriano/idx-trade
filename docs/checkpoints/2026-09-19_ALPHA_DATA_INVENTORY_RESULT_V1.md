@@ -23,6 +23,7 @@ being listed below does not make it admissible.
 | Tradability anchors | 1,104,064 anchors; 1,260 dates | `PARTIAL / FROZEN_ONLY` | same-session eligibility mask |
 | Financial PIT `bundle_rows.parquet` | 277,244 rows; 729 tickers; 2021-06-02–2026-07-17; unique keys | `PARTIAL / PARKED` | C3 capability/provenance audit only |
 | Corrected Stage A feature artifacts | C1–C4 values/ranks and eligibility; guarded versions in external staging | `DERIVED / ISOLATED` | target-free diagnostics only |
+| `config/stockbit_stream_universe_v1.csv` activity metadata | 963 tickers; `activity_median_regular_value_60` populated for 105; `capture_high=1` for 100; five populated ranks are 101–105 with `capture_high=0` | `PARTIAL / METADATA_ONLY / NON-ADMISSIBLE` | inventory/future-source clue only; no ticker-date history or available-at/PIT timestamps |
 | Historical Ranking V2/V3/V4 caches | retained historical development artifacts and manifests | `HISTORICAL / CLOSED OR FROZEN` | archaeology only; no new refit/rescore |
 | O2/O2.1/path-risk/reliability artifacts | retained auxiliary historical runs | `HISTORICAL / DIAGNOSTIC` | failure/mechanism archaeology only |
 | Zapi/IDX/TradingView/Investing/Stockbit probes | directory-level and staged probe evidence | `PARTIAL / BLOCKED / UNKNOWN` | source capability review; no panel substitution |
@@ -101,6 +102,12 @@ failure, not reusable scientific inputs. Reusing them requires rechecking the
 specific source hash, PIT contract, and current lane authorization. Retry
 directories do not constitute independent evidence by themselves.
 
+The activity metadata is intentionally not promoted into the structural panel:
+it is a current-universe 60-session median snapshot as of 2026-07-31, has no
+per-date observation history, no available-at timestamp, and no explicit
+revision/vintage contract. The five populated rows outside the `capture_high`
+flag also make the flag semantics an unresolved governance issue.
+
 ## Missing capability versus inadmissible capability
 
 | Question | Current answer |
@@ -132,4 +139,3 @@ mapping, revision policy, cost/licensing review, and admission artifact.
   production artifact was accessed.
 - Source hashes and field-level observations are recorded in the master
   checkpoint and data-capability matrix.
-

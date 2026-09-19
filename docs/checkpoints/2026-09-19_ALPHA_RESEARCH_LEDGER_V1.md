@@ -5,6 +5,8 @@ Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
 Status: `STAGE A CORRECTED COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
 
 Latest program checkpoint: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
+Latest current final handoff: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md`
+Latest A-Z phase matrix: `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`
 Latest C3 capability audit: `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
 Latest structural lab: `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`
 Latest archaeology map: `2026-09-19_ALPHA_ARCHAEOLOGY_RESULT_V1.md`
@@ -15,6 +17,8 @@ Latest H-LIQ-01 red-team: `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`
 Future evaluation packet: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md`
 Latest C3 contract map: `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`
 Latest identity audit: `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md`
+Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
+Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -95,6 +99,8 @@ production or prospective claim.
 - H-LIQ-01 prototype: one fixed rolling variability-of-log-turnover representation passed target-free structural construction, showed low C1/C4 dependence and low churn, but retained a high bottom-market-value exposure; status is `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 ID. See `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`.
 - C3 contract map: quality-core capability reaches 64,406 frozen eligible rows / 505 dates with at least 30 names, while quality+either-YoY and all-five all collapse to 30,994 rows / 278 usable Top-30 dates; no C3 subset is admitted as a new candidate. See `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md`.
 - H-LIQ-01 red-team: synthetic missingness remains structurally tolerable, but conditional C2 dependence in the top-value bucket, horizon sensitivity, listing-age concentration, and absent sector data keep `NOVELTY_PENDING / ECONOMIC_CAUTION`; see `2026-09-19_ALPHA_HLIQ01_ROBUSTNESS_RESULT_V1.md`.
+- Combination readiness: exactly four equal-weight C1/C2/C4 combinations were evaluated without weight optimization. C1+C4 has the lowest tested combination turnover at 34.85%; all results remain structural hypotheses and no new candidate ID was created. See `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`.
+- Unused-data scan: `activity_median_regular_value_60` is populated for 105/963 current-universe tickers, but has no ticker-date history or available-at/PIT timestamps and five populated ranks fall outside `capture_high`; retain as metadata-only/non-admissible. No provider or canonical data was opened.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.

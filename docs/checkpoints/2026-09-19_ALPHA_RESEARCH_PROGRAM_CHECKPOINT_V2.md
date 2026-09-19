@@ -5,6 +5,9 @@ Lane: `codex/alpha-available-data-20260919`
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Scope: isolated, outcome-blind, no canonical/incumbent mutation
 
+Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md`.
+Explicit A-Z coverage: `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`.
+
 ## Executive summary
 
 Riset masih bisa dilanjutkan. Yang belum boleh dibuka adalah protected
@@ -21,6 +24,11 @@ terbuka: adversarial robustness H-LIQ-01, contract map untuk capability C3, dan
 identity-continuity audit berbasis reconciled security master. Ketiganya lulus
 secara struktural, tetapi tidak mengubah boundary admission atau status
 kandidat.
+
+Sebagai tambahan Phase M/L, empat kombinasi equal-weight C1/C2/C4 telah diuji
+secara outcome-blind dengan friction scenario low/base/stress. Ini hanya
+menetapkan future combination hypotheses; tidak ada weight optimization atau
+kandidat baru.
 
 Kesimpulan saat ini bukan “tidak ada alpha”, melainkan:
 
@@ -63,6 +71,7 @@ setelah admission artifact yang authoritative dan direview terpisah tersedia.
 | Official exchange sessions | 1,260 dates; SHA-256 `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a` | `FROZEN_ONLY`; session/calendar mask |
 | Tradability anchors | 1,104,064 anchors; 1,260 dates; SHA-256 `33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e` | `FROZEN_ONLY`; same-session structural mask |
 | Official IDX current/monthly snapshots | local/staged snapshot evidence | `PARTIAL`; capability/schema assessment only |
+| `activity_median_regular_value_60` universe metadata | 105/963 populated current-universe snapshot rows; no date history or available-at timestamp | `METADATA_ONLY / NON-ADMISSIBLE`; inventory clue only |
 | Zapi IDX/TradingView/Investing/Stockbit probes | staged probe/history evidence | `PARTIAL`, `BLOCKED`, or `UNKNOWN`; not substituted into panel |
 | Foreign-flow archive / expected representation path | expected path not admitted/found | `BLOCKED/UNKNOWN`; no scientific claim |
 | Historical target ledger / challenger scores | controlled/protected | closed until admission/protocol condition; not opened |
@@ -252,6 +261,10 @@ This is a usable capability island, not a population-wide scientific panel.
 | `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1.md` | one-shot protected evaluation specification; not executable before independent admission |
 | `2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md` | mechanism-defined C3 subset capability map; quality core broader, YoY remains binding |
 | `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md` | read-only security-master interval audit; eligible identity mapping passes, corporate-action basis remains unknown |
+| `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md` | equal-weight C1/C2/C4 combination readiness and low/base/stress structural economics |
+| `research/alpha_combination_economics_v1.py` + independent verifier | fixed equal-weight combination and friction-scenario harness; `PASS_STRUCTURAL_ONLY` |
+| `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md` | explicit A-Z phase coverage, active questions, and next high-information tasks |
+| `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md` | current self-contained read-in with boundary, candidates, artifacts, tests, and exact re-entry step |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |
 | `research/c3_financial_capability_audit_v1.py` | C3 capability/governance funnel `PASS_STRUCTURAL_ONLY` |
 | External guarded staging | all derived parquet/JSON outputs isolated outside repository/canonical data |
@@ -274,10 +287,13 @@ authorized work is limited to:
 2. If useful, perform a bounded capacity/friction review for H-LIQ-01 using
    already admitted structural fields; do not turn it into a candidate or
    run outcome comparisons.
-3. Keep the future evaluation packet, ledger, failure taxonomy, candidate
+3. Keep the equal-weight combination hypotheses separate from the four-ID
+   protected packet; no weight optimization or combination target run is
+   authorized without a new frozen packet decision.
+4. Keep the future evaluation packet, ledger, failure taxonomy, candidate
    registry, re-entry queue, data capability matrix, structural orthogonality
    map, future data capability map, and risk register synchronized.
-4. Wait for an authoritative Data QA admission artifact before any H5/H10,
+5. Wait for an authoritative Data QA admission artifact before any H5/H10,
    incumbent, IC/ICIR, OOS, or prospective comparison. No provider expansion,
    scraping, or candidate-budget expansion is authorized by this checkpoint.
 
