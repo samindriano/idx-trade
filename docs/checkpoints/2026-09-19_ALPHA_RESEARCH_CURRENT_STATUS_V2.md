@@ -274,3 +274,6 @@ H-LIQ-01 remains no-C5 because it is distinct but composition-sensitive; and
 row-level PIT/vintage contract and 11 non-identical duplicate ticker copies.
 No candidate status changed. See
 `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
+The newly surfaced source's detailed admission result is
+`2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md` and remains
+`BLOCKED / NOT_ADMITTED`.

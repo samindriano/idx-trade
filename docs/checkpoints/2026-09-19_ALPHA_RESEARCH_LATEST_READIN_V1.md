@@ -233,3 +233,7 @@ composition are now documented; H-LIQ-01 remains
 `BLOCKED` pending row-level PIT/vintage, identity/CA, and source-selection
 admission. Full evidence is in
 `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
+The dedicated source-admission audit is
+`2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`; it remains
+`BLOCKED / NOT_ADMITTED` because PIT/vintage, identity, CA basis, and duplicate
+source selection are unresolved.

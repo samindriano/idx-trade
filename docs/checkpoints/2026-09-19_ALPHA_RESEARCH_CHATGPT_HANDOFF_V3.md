@@ -70,7 +70,9 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `bc0ac771`, `1,014` CSVs, `1,146,324` rows, 2019-07-29–2025-02-21). It is
     `BLOCKED`: no row-level knowledge-time/vintage field, 56 duplicate ticker
     groups including 11 non-identical copies, and unclear CA/identity/source
-    selection. Its static sector/listing files are `METADATA_ONLY`.
+    selection. Its static sector/listing files are `METADATA_ONLY`. A dedicated
+    admission audit confirmed 923/1,260 official-session dates intersect and
+    left PIT, identity, CA basis, and foreign-flow timing unresolved.
 
 ## Latest CA exposure attribution
 
@@ -119,6 +121,7 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 - `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V1.md`
+- `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
 
 ## Hard boundary
 

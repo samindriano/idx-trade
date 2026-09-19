@@ -122,7 +122,9 @@ Run one separate read-only source-admission audit of this external repository:
 coverage against official sessions, identity continuity, row-level timing and
 vintage, CA/scale semantics, and foreign/sector definitions. Do not construct
 features or open protected outcomes unless that audit first passes an explicit
-admission decision.
+admission decision. The first bounded admission audit has now been completed and
+is `BLOCKED / NOT_ADMITTED`; detail is in
+`2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`.
 
 ## Boundary and provenance
 
