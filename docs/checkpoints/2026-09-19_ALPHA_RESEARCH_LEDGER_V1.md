@@ -1,7 +1,7 @@
 # Alpha Research Program — Ledger V1
 
-Lane: `codex/alpha-available-data-20260919`  
-Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`  
+Lane: `codex/alpha-available-data-20260919`
+Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
 Status: `OPEN — STAGE A NOT STARTED`
 
 This ledger is append-only within the isolated research lane. Every admitted,
@@ -47,4 +47,3 @@ production or prospective claim.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
-

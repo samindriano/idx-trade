@@ -1,8 +1,8 @@
 # Alpha Research Program — Frozen Protocol V1
 
-Date: 2026-09-19 (Asia/Jakarta)  
-Lane: `codex/alpha-available-data-20260919`  
-Base: `37a82293c2ff0c91a5fc3c8068536d91bf06f10f`  
+Date: 2026-09-19 (Asia/Jakarta)
+Lane: `codex/alpha-available-data-20260919`
+Base: `37a82293c2ff0c91a5fc3c8068536d91bf06f10f`
 Status: `FROZEN_BEFORE_NEW_OUTCOME_ACCESS`
 
 ## Purpose and boundary
@@ -186,4 +186,3 @@ Do not open protected prospective outcomes, forward labels, counters, or
 Outcome Vault artifacts. Do not alter canonical or production files. Do not
 reopen historically blocked Investing/TradingView/Open approximations as
 evidence. Do not use PARTIAL/BLOCKED/UNKNOWN sources for scientific claims.
-
