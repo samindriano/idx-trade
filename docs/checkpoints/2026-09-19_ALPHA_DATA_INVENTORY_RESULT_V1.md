@@ -31,7 +31,7 @@ being listed below does not make it admissible.
 | Historical Ranking V2/V3/V4 caches | retained historical development artifacts and manifests | `HISTORICAL / CLOSED OR FROZEN` | archaeology only; no new refit/rescore |
 | O2/O2.1/path-risk/reliability artifacts | retained auxiliary historical runs | `HISTORICAL / DIAGNOSTIC` | failure/mechanism archaeology only |
 | Zapi/IDX/TradingView/Investing/Stockbit probes | directory-level and staged probe evidence | `PARTIAL / BLOCKED / UNKNOWN` | source capability review; no panel substitution; local Zapi details in `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md` |
-| Sector/listing/ownership/corporate-action roots | source leads, snapshots, audits, or partial archives | `PARTIAL / BLOCKED` | provenance and admission research only |
+| Sector/listing/ownership/corporate-action roots | source leads, snapshots, audits, or partial archives | `PARTIAL / BLOCKED` | provenance and admission research only; KSEI ownership detail in `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md` |
 | Protected prospective target/counter/forward roots | deliberately not opened | `BLOCKED / PROTECTED` | none |
 
 ## Frozen-panel fields
@@ -137,7 +137,7 @@ flag also make the flag semantics an unresolved governance issue.
 | Does PIT financial data exist? | Partially; C3 capability island only |
 | Does historical sector history exist? | Leads/snapshots exist; no complete PIT-admissible history |
 | Does historical foreign flow exist? | Partial/blocked representations; no current admitted population-wide source |
-| Does historical ownership/free-float exist? | Source work exists; no complete admitted time series |
+| Does historical ownership/free-float exist? | Eight KSEI snapshots have narrow exact-date overlap; no complete daily/PIT-admitted time series |
 | Does corporate-action metadata exist? | Partial/event-level and forward foundations; historical transition authority remains bounded |
 | Does spread/order-book/broker-side flow exist? | Not in the inspected clean alpha panel; future source opportunity |
 | Does protected target/forward evidence exist? | Protected/blocked for this lane; not opened |

@@ -463,3 +463,11 @@ fails its official parity review and the dividend probes lack usable selected
 rows, ticker identity, and historical timing/revision semantics. Zapi remains
 `BLOCKED / NOT_ADMITTED` and creates no new alpha surface. See
 `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
+
+The persisted KSEI ownership archive was then quality-audited. Eight annual or
+monthly snapshots are structurally clean and overlap 100% of panel tickers on
+their exact dates, but cover only `8/1,260` panel dates and do not establish
+publication/revision, issuer/ISIN, or effective-free-float authority. The
+five current profile probes expose no explicit free-float field. H-FLOW-01 is
+therefore a future specification only, not C5 or packet material. See
+`2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.

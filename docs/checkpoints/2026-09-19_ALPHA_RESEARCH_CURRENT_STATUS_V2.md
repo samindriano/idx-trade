@@ -33,6 +33,18 @@ established. Zapi remains `BLOCKED / NOT_ADMITTED` and does not create a new
 alpha surface or alter the C1-C4 packet. See
 `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
 
+## Latest continuation update — ownership/KSEI source quality audit
+
+The persisted KSEI archive was audited read-only and independently verified.
+Eight annual/monthly snapshots contain 803–1,007 equity rows each, have no
+duplicate equity codes or arithmetic failures, and overlap 100% of panel
+tickers on their exact dates. They cover only `8/1,260` panel dates, however;
+retrieval time is not row-level publication time, and no revision, issuer/ISIN,
+or effective-free-float contract is established. The five company-profile
+probes add no explicit free-float field. H-FLOW-01 remains
+`FUTURE_SPECIFICATION / SOURCE_PARTIAL / NOT_ADMITTED`; no feature or C5 was
+created. See `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
+
 ## Latest continuation update — CA basis, capacity tails, and mechanism closure
 
 An independent CA/issuer-basis red-team confirms that the HLC overlay is

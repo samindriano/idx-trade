@@ -332,3 +332,11 @@ They fail the parity/semantic admission checks and provide no historical
 available-at, revision, issuer/ISIN, or CA authority. Zapi remains
 `BLOCKED / NOT_ADMITTED`; no feature or candidate was created. See
 `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
+
+The existing KSEI ownership/free-float archive was also audited without
+network access. Eight aggregate equity snapshots pass schema/arithmetic
+checks and overlap the panel completely on their exact dates, but provide only
+`8/1,260` dates, no row-level publication/revision contract, and no explicit
+free-float field. H-FLOW-01 remains a future source specification and no C5
+was created. See
+`2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.

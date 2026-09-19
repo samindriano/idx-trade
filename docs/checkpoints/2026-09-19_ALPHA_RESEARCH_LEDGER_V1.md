@@ -434,6 +434,18 @@ revision contract is present. Status remains `BLOCKED / NOT_ADMITTED`; no
 feature, candidate, panel substitution, or provider retry was performed. See
 `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
 
+## Continuation register — ownership/KSEI source quality audit
+
+The persisted KSEI archive contains eight structurally clean aggregate
+equity snapshots (annual 2021–2025 and May–July 2026). Each has 100% overlap
+with the panel tickers on its exact date, but the source covers only `8/1,260`
+panel dates and lacks row-level publication, revision, issuer/ISIN, and
+effective-free-float authority. Five current company-profile probes likewise
+expose no explicit free-float field. The source is retained as a future
+H-FLOW-01/ownership specification only; no forward fill, feature, C5, or
+packet change is allowed. See
+`2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
+
 The new capacity/friction-tail artifact covers the six structurally relevant
 surfaces C1/C2/C4/H-LIQ-01/H-VOL-01/H-EXC-02 over `600` sessions and `18,000`
 slots each. It adds q95/q99/max turnover burdens, top-name concentration,

@@ -149,3 +149,8 @@ non-redundant work remains authorized.
 - Local Zapi probe admission audit found only a BBCA snapshot and empty
   dividend probes; no historical PIT/identity/CA feature surface was admitted.
   See `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
+- Ownership/KSEI quality audit found eight structurally clean aggregate
+  snapshots with 100% overlap on their exact panel dates, but only `8/1,260`
+  dates and no publication/revision/free-float authority. H-FLOW-01 remains a
+  future specification, not a candidate. See
+  `2026-09-19_ALPHA_OWNERSHIP_KSEI_SOURCE_AUDIT_RESULT_V1.md`.
