@@ -2,8 +2,8 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `58f094b8b59b8933bee6cf2f9996f433a57391a4`
-Latest research milestone: `58f094b8` — handoff and local data-surface control audit
+Latest verified current HEAD before this documentation amendment: `7d43151c8d7fa45220810cb94269bcc20b85849b`
+Latest research milestone: `7d43151c` — packet contract and firewall hardening
 Latest status/documentation: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 

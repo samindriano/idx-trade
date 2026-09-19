@@ -42,9 +42,11 @@ text and Parquet schema records for the control surface.
 - Firewall result: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_future_evaluation_packet_v2_firewall_v2.json`
 - Verifier result: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_future_evaluation_packet_v2_verifier_v2.json`
 
-The final clean-worktree verifier run must remain `PASS` before this control
-surface is treated as current. A `PASS` here is a tooling/control result only;
-it is not a Data QA admission and does not change the re-entry queue.
+The clean-worktree verifier run at implementation commit
+`7d43151c8d7fa45220810cb94269bcc20b85849b` returned `PASS` for every check,
+including current-head ancestry, control-document hashes, firewall coverage,
+and worktree cleanliness. A `PASS` here is a tooling/control result only; it
+is not a Data QA admission and does not change the re-entry queue.
 
 ## Remaining blockers
 
