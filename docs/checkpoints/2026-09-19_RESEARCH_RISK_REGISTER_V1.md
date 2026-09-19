@@ -15,5 +15,6 @@
 | C3 YoY/provenance bottleneck | P1 | contract map separates quality-core capability from YoY-limited support; no imputation, forward fill, or subset candidate admission |
 | Identity continuity | P1 | security-master interval audit passes all eligible keys; issuer/ISIN history and corporate-action basis remain separate unknowns |
 | Combination over-interpretation | P1 | equal-weight C1/C2/C4 combinations are structural hypotheses only; no weight optimization or protected evaluation without a new packet decision |
+| Capacity proxy uncertainty | P1 | 0.25%/0.5%/1%/2% value-rate stress is recorded, but ADV/spread/queue history is not admitted and cannot be treated as executable capacity |
 | Accidental protected-data access | P0 | target firewall; explicit no-network/no-target boundary |
 | Cross-lane mutation | P0 | isolated worktree/branch and external staging |

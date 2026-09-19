@@ -263,6 +263,8 @@ This is a usable capability island, not a population-wide scientific panel.
 | `2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md` | read-only security-master interval audit; eligible identity mapping passes, corporate-action basis remains unknown |
 | `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md` | equal-weight C1/C2/C4 combination readiness and low/base/stress structural economics |
 | `research/alpha_combination_economics_v1.py` + independent verifier | fixed equal-weight combination and friction-scenario harness; `PASS_STRUCTURAL_ONLY` |
+| `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md` | 0.25%/0.5%/1%/2% regular-market-value capacity proxy stress; real capacity remains blocked |
+| `research/alpha_capacity_stress_v1.py` + independent verifier | fixed value-capacity sensitivity harness; `PASS_STRUCTURAL_ONLY` |
 | `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md` | explicit A-Z phase coverage, active questions, and next high-information tasks |
 | `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF_V1.md` | current self-contained read-in with boundary, candidates, artifacts, tests, and exact re-entry step |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |

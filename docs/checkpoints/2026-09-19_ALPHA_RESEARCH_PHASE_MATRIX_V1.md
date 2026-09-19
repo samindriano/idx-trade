@@ -25,7 +25,7 @@ non-redundant work remains authorized.
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics and H-LIQ h10/h20/h40; no free sweep or predictive selection. |
 | K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
-| L | Implementation economics | `PARTIAL / ACTIVE` | Fixed Top-K economics and combination low/base/stress friction exist; real spread, queue, ADV, and capacity history are not admitted. |
+| L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics, combination low/base/stress friction, and 0.25%/0.5%/1%/2% value-capacity stress exist; real spread, queue, ADV, and capacity history are not admitted. |
 | M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
 | N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, and semantic margin directions are closed; C1/C2/C4 are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only `activity_median_regular_value_60`; no new source is PIT-admissible. |

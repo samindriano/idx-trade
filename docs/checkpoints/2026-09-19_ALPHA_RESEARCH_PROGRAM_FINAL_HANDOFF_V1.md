@@ -116,7 +116,9 @@ only, not incremental alpha.
 Base economics uses 15 bps buy fee, 25 bps sell fee, and 10 bps slippage per
 side. Combination scenarios additionally test 40 bps low and 110 bps stress
 matched turnover. Real spread, queue position, ADV, and capacity history are
-not admitted, so all burdens are structural sensitivities.
+not admitted, so all burdens are structural sensitivities. A separate value
+capacity stress at 0.25%/0.5%/1%/2% gives 1% q10 proxies of IDR 7.63m/6.40m/
+13.03m/5.02m for C1/C2/C3/C4; this does not change candidate status.
 
 ## PIT/provenance risks
 
@@ -136,6 +138,7 @@ does not certify corporate-action or price-basis correctness.
 - C3 capability and contract-map verifier;
 - identity-continuity audit;
 - equal-weight combination and friction-scenario harness;
+- regular-market-value capacity stress harness;
 - future evaluation packet, phase matrix, candidate registry, ledger, risk
   register, re-entry queue, data capability matrix, and future-data map.
 
