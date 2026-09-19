@@ -88,6 +88,7 @@ These lanes may continue independently but must not silently change frozen V4-X1
 | Reliability / uncertainty | `WAITING` | Forward sidecar evidence is retained; it is not an alpha or Decision input by default. | Wait for a separately scoped review. |
 | Historical/open/price-basis remediation | `PARKED` | Historical evidence only. | Do not revive rejected approximate executable sources. |
 | Personal KSEI | `PARKED` | Private observation/reconciliation design only. | Resume only with a separately approved authenticated task. |
+| Isolated pre-admission alpha research | `ACTIVE` | Branch `codex/alpha-available-data-20260919` is conducting target-free source/PIT, provenance, robustness, and mechanism audits; current market-context audit is structural-only and source-admission-blocked. | Continue only in the isolated lane; do not touch V4-X1, Decision V2, canonical data, protected outcomes, capture/runtime, cloud, or production. |
 
 ## Technical anchors
 
