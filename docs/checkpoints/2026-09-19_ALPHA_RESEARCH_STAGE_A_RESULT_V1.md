@@ -38,6 +38,11 @@ claims. Therefore none of the numbers below is an IC, OOS, performance, or
   `25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e`
 - Financial source SHA-256:
   `c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b`
+- Temporal robustness code: `research/alpha_stage_a_robustness_v1.py`
+- Temporal robustness code SHA-256:
+  `82aecd52a6cfc6175a6836d3f7314d54e077f26d1c7685695b8a5bf1f1898410`
+- Temporal robustness JSON SHA-256:
+  `beb9db9469f6fb6295f7fd67ce2c9a05c01fd4ea2479982354292610537990b5`
 
 ## Structural checks
 
@@ -80,6 +85,27 @@ These are feature-to-feature diagnostics only. Incumbent overlap/correlation
 was not opened from monitoring/prospective score artifacts because the current
 source-admission gate does not authorize a new-alpha comparison. Therefore
 orthogonality to V4-X1 is `UNKNOWN`, not inferred from these pairwise values.
+
+## Temporal structural robustness
+
+The fixed six-slice audit found materially different early-vs-late availability
+but stable candidate relationships among the market-only features:
+
+- C1 coverage was 65.54% in slice 1 and 99.50% in slice 6; median finite
+  names/date rose from 635 to 849.
+- C2 coverage was 69.77% in slice 1 and 99.71% in slice 6; median finite
+  names/date rose from 668 to 850.
+- C4 coverage was 85.08% in slice 1 and 99.69% in slice 6; median finite
+  names/date rose from 644.5 to 850.
+- C1/C4 Spearman stayed between 0.4242 and 0.4790 across slices; C1/C2
+  stayed between -0.2708 and -0.4041; C2/C4 stayed between -0.1349 and
+  -0.2360.
+- C3 was absent in the first four slices, reached only 2.85% coverage in
+  slice 5, and 16.46% in slice 6. Its slice-5 top-10-ticker concentration
+  was 16.07%, versus roughly 1.2%–1.6% for the market-only candidates.
+
+This is a missingness/breadth warning, not evidence of predictive stability.
+The robustness artifact explicitly records `outcome_accessed=false`.
 
 ## Candidate disposition
 

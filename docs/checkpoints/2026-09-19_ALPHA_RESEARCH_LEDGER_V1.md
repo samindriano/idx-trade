@@ -48,6 +48,7 @@ production or prospective claim.
 - Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_RESULT_V1.md`.
 - New feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\alpha_stage_a_features.parquet`.
 - Independent artifact audit: `PASS`; output `independent_audit.json` in the same staging directory.
+- Temporal structural robustness audit: `PASS_STRUCTURAL_ONLY`; output `alpha_stage_a_robustness.json` in the same staging directory.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
