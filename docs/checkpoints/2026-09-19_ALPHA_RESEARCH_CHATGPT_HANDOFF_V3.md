@@ -389,3 +389,12 @@ The follow-up CA linkage audit found 61 exact BBCA panel/IDX HLC trace rows,
 but zero BBCA rows in both retained CA ledgers. This is forensic alignment,
 not event-level authority; no source was rescaled or admitted. See
 `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
+The panel-depth field-contract audit covers all 19 fields across 18,835 rows.
+Structural arithmetic and bid/offer ordering pass, but field-level PIT,
+revision/vintage, identity/ISIN, CA/share basis, price/value units, quote
+timing/depth, and executable semantics are missing. Bid/offer is a future raw
+surface only; foreign-flow remains in the existing H-FLOW family. The bounded
+specification is `FUTURE_QUOTE_FLOW_INTERACTION_V1`, not a candidate, and no
+C5 or predictive evaluation was run. See
+`2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.

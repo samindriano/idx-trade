@@ -520,3 +520,11 @@ rows but zero BBCA rows in the retained event and transition ledgers. It keeps
 the 2021-10-13 alignment as forensic context only; no corporate-action event or
 issuer/ISIN transition was certified. See
 `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
+The panel-depth field-contract audit then covered all 19 fields across 18,835
+rows. Foreign-flow arithmetic and basic bid/offer ordering pass structurally,
+but no PIT/revision/identity/CA contract, price or monetary units, quote timing,
+depth, or executable semantics are available. Bid/offer therefore remains a
+future specification only (`FUTURE_QUOTE_FLOW_INTERACTION_V1`), with no
+candidate or C5 evaluation. See
+`2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.

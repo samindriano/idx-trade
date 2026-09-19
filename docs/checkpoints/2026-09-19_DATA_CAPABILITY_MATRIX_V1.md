@@ -45,3 +45,16 @@ The local census also classifies current foreign-flow and stock-summary rows as
 snapshot-only, active listings and investor-type HTML as metadata-only, and
 Stockbit chart/stream surfaces as current or redacted metadata. No newly
 audited surface is admissible.
+
+## Panel-depth field-contract additions — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Historical panel-depth field semantics | `PASS_STRUCTURAL_ONLY / SOURCE_BLOCKED` | 19 fields, 18,835 rows, 12 symbols; structural arithmetic and quote ordering pass, but no field-level PIT, revision, identity, CA, or population-wide contract |
+| Historical bid/offer quote state | `PARTIAL / SOURCE_BLOCKED` | Bid and offer are populated, with 18,604 both-positive rows; quote timestamp/age/depth/executable semantics and price units are absent. Future specification only |
+| Historical foreign-flow shares | `PARTIAL / SOURCE_BLOCKED` | Buy/sell/net share arithmetic is exact on all rows; actor scope, aggregation, publication time, and revision/vintage are unresolved |
+| Historical foreign-flow values | `UNKNOWN / SOURCE_BLOCKED` | Buy/sell/net value arithmetic is exact, but currency/monetary unit and PIT semantics are absent |
+| Listed-share transition field | `PARTIAL / SOURCE_BLOCKED` | 23 adjacent transitions across 6 of 12 symbols; no event, effective date, issuer/ISIN, or CA/share-basis authority |
+| Frequency field | `UNKNOWN / SOURCE_BLOCKED` | 13,371 distinct values and one zero; field definition and aggregation semantics are absent |
+
+No row is promoted into a candidate or protected evaluation packet.

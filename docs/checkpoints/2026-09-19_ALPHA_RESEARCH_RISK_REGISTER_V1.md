@@ -89,6 +89,10 @@ protected-state integrity. Any `UNKNOWN` remains blocking.
 | BBCA deep-history basis divergence | TradingView/IDX price basis is exactly 5x through 2021-10-12 and 1x thereafter; Investing has `0/1,568` exact OHLCV matches and variable scale | `OPEN / BLOCKED` | Do not rescale, merge, or admit either surface without authoritative basis/PIT/issuer/CA evidence |
 | C1/C2/C4 readiness red-team | Independent challenge leaves full constructor/PIT/population proof unknown; CA basis and executable capacity fail readiness; C1/C4 are not additive-independent | `OPEN / BLOCKED` | Keep C1-C4 conditional and combinations outside packet; require new authority before re-entry |
 | BBCA event-level CA linkage | 61-row BBCA trace is exact against IDX, but retained 26-row event census and 162-row transition ledger contain `0` BBCA rows | `OPEN / BLOCKED` | Treat the trace as forensic context only; do not infer event/effective date/ratio/issuer/ISIN or rescale history |
+| Panel-depth field semantics | 19 fields are structurally populated, but price/value units, frequency meaning, aggregation, publication timing, and field-level provenance are incomplete | `OPEN / BLOCKED` | Keep the field contract structural-only; no feature or candidate admission |
+| Quote-state timing and executability | Bid/offer is populated and ordered on both-positive rows, but timestamp/age/depth/queue/fill semantics are absent | `OPEN / BLOCKED` | Treat bid/offer as a future raw-input surface only; do not claim executable capacity or run C5 |
+| Foreign-flow interpretation | Share and value net arithmetic is exact, but actor scope, currency/unit, aggregation, PIT, and revision/vintage are unknown | `OPEN / BLOCKED` | Keep foreign-flow in the existing H-FLOW family; no new mechanism card or predictive use |
+| Listed-share transitions | 23 adjacent transitions appear across 6 symbols without event-level linkage | `OPEN / BLOCKED` | Do not map transitions to corporate actions, effective dates, issuer/ISIN, or price-basis repair |
 
 These additions are source and provenance risks only; they do not authorize
 protected evaluation or candidate-budget expansion.

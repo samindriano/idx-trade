@@ -548,3 +548,11 @@ but zero BBCA rows in both retained CA ledgers. The 2021-10-13 alignment is
 therefore forensic context, not event-level authority; the global CA/issuer
 block remains unchanged. See
 `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
+The panel-depth field-contract audit covered all 19 fields across 18,835 rows.
+Foreign-flow arithmetic is exact and bid/offer is a new raw-input surface, but
+field-level PIT, revision/vintage, identity/ISIN, CA/share basis, quote timing,
+depth, executable semantics, and monetary units remain unavailable. No new
+candidate was created. The only bounded future specification is
+`FUTURE_QUOTE_FLOW_INTERACTION_V1`, still source-admission blocked. See
+`2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.

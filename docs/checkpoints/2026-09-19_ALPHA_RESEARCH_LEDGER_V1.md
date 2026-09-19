@@ -580,3 +580,17 @@ and 162-row strict transition semantics ledger contain zero BBCA rows. The
 trace is therefore forensic post-date context, not event-level authority; no
 event family, effective date, ratio, issuer, or ISIN transition was inferred.
 See `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
+## Continuation register — panel-depth field contract
+
+The 19-field contract covers 18,835 rows over 12 symbols. Structural checks
+pass: foreign share/value net arithmetic is exact on every row, bid/offer is
+ordered whenever both values are positive, and 23 adjacent listed-share
+transitions are recorded. The source remains admission blocked because it has
+no row-level PIT/available-at, revision/vintage, identity/issuer/ISIN, or CA
+authority; price and monetary units are unresolved, and quote timing/depth/
+executable semantics are absent. Bid/offer supports only the future
+specification `FUTURE_QUOTE_FLOW_INTERACTION_V1`; foreign-flow alone is not a
+new mechanism card. No feature, candidate, or C5 evaluation was run.
+
+See `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.

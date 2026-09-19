@@ -12,3 +12,6 @@
 | Foreign-flow/ownership history | partial/blocked | authoritative source contract |
 | Non-redundant deep BBCA history | TradingView/Investing partial, basis-divergent | adjustment/basis semantics, issuer/ISIN continuity, PIT publication/revision, and authoritative corporate-action linkage |
 | Historical market-wide/foreign-flow snapshots | current/sparse partial | continuous ticker-date history, available-at/vintage, identity, and source completeness |
+| Historical EOD quote-state history | bid/offer partial, source blocked | population-wide quote timestamps/age, depth and executable semantics, units, PIT/revision/vintage, identity/CA basis, and missingness policy |
+| Foreign-flow publication and units | shares arithmetic partial; value unknown | actor scope, aggregation level, currency/monetary unit, publication/knowledge time, and revision/vintage |
+| Listed-share transition semantics | partial structural field | authoritative issuer/ISIN continuity, CA event/effective timing, share-basis definition, and coverage |

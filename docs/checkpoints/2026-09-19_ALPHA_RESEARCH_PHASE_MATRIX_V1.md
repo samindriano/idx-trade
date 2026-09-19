@@ -185,3 +185,11 @@ non-redundant work remains authorized.
   rows in both retained CA ledgers. This narrows forensic context only and does
   not establish an event or basis contract. See
   `2026-09-20_ALPHA_BBCA_CA_EVENT_LINKAGE_RESULT_V1.md`.
+
+- Panel-depth field-contract audit passes structural coverage and arithmetic
+  checks over all 19 fields and 18,835 rows, but remains source-admission
+  blocked: no row-level PIT/revision/identity/CA authority, unresolved price
+  and monetary units, and no quote timing/depth/executable semantics. Bid/offer
+  is a future raw-input surface only; foreign-flow remains H-FLOW-family
+  information. No C5 or candidate was created. See
+  `2026-09-20_ALPHA_PANEL_DEPTH_FIELD_CONTRACT_RESULT_V1.md`.
