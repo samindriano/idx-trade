@@ -112,3 +112,11 @@ evaluation.
 | HSC artifact and normalized-ledger integrity | `PASS_STRUCTURAL_ONLY` | 137/137 manifest artifacts match bytes and SHA-256; 59 event IDs and CSV/JSON parity pass |
 | HSC event replay and target parity | `PASS_STRUCTURAL_ONLY` | 56 originals, two corrections, one removal; replay passes; effective cutoff target is 55 tickers and July target is 51 |
 | HSC PIT/population admission | `BLOCKED` | Event ledger only; no daily population completeness, issuer/ISIN continuity, CA linkage, complete revision/vintage, or public-availability contract |
+
+## Broker / margin snapshot source audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Broker/margin artifact and raw parity integrity | `PASS_STRUCTURAL_ONLY` | 73/73 manifest files match; 220 margin and 965 stock rows have exact Zapi/official raw parity |
+| Eligible-list coverage and category semantics | `SNAPSHOT_ONLY / BLOCKED` | 326 eligible, 106 absent from margin (100 with positive All Stock activity), 0/220 all-six equality; not proven financing flow or exact All Stock filter |
+| Broker/margin PIT/history admission | `BLOCKED` | Single date only, no publication/knowledge timestamp, no daily history, and no feature/mask admission |

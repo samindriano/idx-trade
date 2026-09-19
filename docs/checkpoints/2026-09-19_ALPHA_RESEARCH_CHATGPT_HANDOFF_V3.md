@@ -454,3 +454,12 @@ a daily PIT/population panel: completeness, issuer/ISIN continuity, CA
 linkage, revision/vintage coverage, and public availability are unresolved.
 No feature, candidate, universe mask, target, or incumbent state changed. See
 `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The broker/margin snapshot was audited afterward. All 73 manifest files and
+official/Zapi raw parity gates pass for 326 eligible, 220 margin, and 965
+stock rows. Semantics remain blocked: 106 eligible rows are absent from
+Margin Summary, all-six metric equality is 0/220, the source is not proven to
+be financing flow or an exact All Stock filter, and publication/knowledge time
+is absent. No feature, candidate, universe mask, target, or incumbent state
+changed. See
+`2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.

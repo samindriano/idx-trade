@@ -681,3 +681,12 @@ because completeness, issuer/ISIN continuity, corporate-action linkage,
 revision completeness, and public availability are unresolved. No feature,
 candidate, packet, or protected state changed. See
 `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The broker/margin snapshot then received an independent structural audit. All
+73 manifest files match, official/Zapi parity is exact for the raw payloads,
+and the snapshot contains 326 eligible, 220 margin, and 965 stock tickers.
+The semantic gates remain blocked: 106 eligible names are absent from the
+margin summary, all-six equality is 0/220, and no financing-flow or
+publication-time contract is present. It remains `SNAPSHOT_ONLY / BLOCKED`;
+no feature, candidate, packet, or protected state changed. See
+`2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.

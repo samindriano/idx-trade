@@ -586,3 +586,11 @@ daily population-wide PIT panel and lacks complete issuer/ISIN, CA, revision,
 and public-availability authority. No feature, candidate, packet, or model
 status changed. See
 `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The broker/margin snapshot was then audited independently. Manifest integrity
+and official/Zapi raw parity pass across 73 files, 220 margin rows, and 965
+stock rows, but the single-date source remains `SNAPSHOT_ONLY / BLOCKED`:
+106/326 eligible names are absent from Margin Summary, all-six equality is
+0/220, financing-flow semantics are not proven, and publication/knowledge
+time is absent. No feature, candidate, packet, or model status changed. See
+`2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.

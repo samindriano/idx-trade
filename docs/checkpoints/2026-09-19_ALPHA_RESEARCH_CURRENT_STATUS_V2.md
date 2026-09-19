@@ -624,3 +624,12 @@ and lacks complete issuer continuity, corporate-action, revision, and public-
 availability contracts. No feature, universe mask, candidate, or protected
 state changed. See
 `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The broker/margin snapshot was audited after HSC. All 73 manifest files and
+the official/Zapi raw parity surfaces hash-match: 326 eligible tickers, 220
+margin rows, and 965 stock rows. However, 106 eligible names are absent from
+the margin summary, all-six metric equality is 0/220, the source is labeled
+IDX Reporting (Regular and Cash) rather than a financing ledger, and
+publication/knowledge time is absent. It remains `SNAPSHOT_ONLY / BLOCKED`;
+no feature, mask, candidate, or protected state changed. See
+`2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.

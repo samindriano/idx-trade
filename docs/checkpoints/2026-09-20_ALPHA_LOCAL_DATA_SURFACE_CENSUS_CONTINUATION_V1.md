@@ -80,3 +80,16 @@ PIT panel, and completeness, issuer/ISIN continuity, CA linkage,
 revision/vintage coverage, and public availability are unresolved. No
 feature, candidate, or protected state changed. See
 `2026-09-20_ALPHA_HSC_OWNERSHIP_EVENT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Independent follow-up — broker / margin snapshot
+
+The broker/margin snapshot was audited without network access. All 73 manifest
+files match their declared bytes and hashes; official/Zapi raw parity is exact
+for 220 margin rows and 965 stock rows. The eligible list has 326 tickers,
+with 106 absent from Margin Summary and 100 of those showing positive All
+Stock activity; all-six metric equality is 0/220. The source remains
+`SNAPSHOT_ONLY / BLOCKED`: it is a single-date category view, not proven
+financing flow or an exact All Stock filter, and it has no publication/knowledge
+timestamp or historical series. No feature, candidate, or protected state
+changed. See
+`2026-09-20_ALPHA_BROKER_MARGIN_SNAPSHOT_SOURCE_AUDIT_RESULT_V1.md`.
