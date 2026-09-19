@@ -52,8 +52,8 @@ production or prospective claim.
 - Independent artifact audit: `PASS`; output `independent_audit.json` in the same staging directory.
 - Temporal structural robustness audit: `PASS_STRUCTURAL_ONLY`; output `alpha_stage_a_robustness.json` in the same staging directory.
 - Corrected Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`.
-- Corrected feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-v3\20260919T-corrected-v3\alpha_stage_a_v3_features.parquet`.
-- Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the corrected staging directory.
+- Corrected feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_stage_a_v3_features.parquet`.
+- Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
 - New outcome access: none.
 - New provider/network access: none.

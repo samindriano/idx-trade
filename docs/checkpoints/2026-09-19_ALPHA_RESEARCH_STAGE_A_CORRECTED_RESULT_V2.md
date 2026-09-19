@@ -43,7 +43,7 @@ excludes the current row.
 - Corrected code path: `research/alpha_stage_a_v2.py`
 - Corrected implementation identity: `alpha_stage_a_v3_corrected`
 - Corrected code SHA-256:
-  `4e7fdf28ecf3080f19ed647b7a604cd14c6045a65c39fbdecb3bd39f25413bd3`
+  `62a16137d039c0304e00fbf91de65ed5c70d50952faccf2aff1b0a587f49e59a`
 - Frozen-window robustness code:
   `research/alpha_stage_a_robustness_v2.py`
 - Robustness code SHA-256:
@@ -52,23 +52,26 @@ excludes the current row.
   `research/verify_alpha_stage_a_v3.py`
 - Independent verifier SHA-256:
   `075cb462bbafa502c211f777e05fcdbcca842785c855d75b92305a60ade47d2e`
-- Staging directory:
-  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-v3\20260919T-corrected-v3\`
+- Final guarded staging directory:
+  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Feature parquet SHA-256:
-  `1fe49a16588f48d3baf8b26dd72281e4b3d19632168d32b8f6c383b93cdabc63`
+  `aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4`
 - Audit JSON SHA-256:
-  `84e1f07206667c9570283c471768c4fa63289a9356ef341da881049873ee0cf0`
+  `f9bfaf368d7157b9b35ff282ffcf18ff06579b9978b5a029609dacc7ecdaa38b`
 - Manifest JSON SHA-256:
-  `f374d6e6e0cfa401f9f8fd669b0c93a7b852d9c82ae558e23bd17ee3e8a97edc`
+  `27f62ac509284a6497bfacf41fd1e34cc9e352ba49f0ca2006ff8160cacf3d96`
 - Frozen-window robustness JSON SHA-256:
-  `9e0d43a66c682c600e215b1075c5e159794a24441d0c9f3198221a83013a3b31`
+  `93b1c5379da09dd82e3550c6552190a15a018ae5f87aa36d68259dc5d28cd011`
 - Independent audit JSON SHA-256:
-  `14f4adec409a15c68158c7b5d79738ca4b452d2e8b11221861ce3afb07d64c18`
+  `c6629caf46ff1945ddc5bd9e6a2fe4e174c179a18c854411e8b8ed656368cbc6`
 
 The independent audit returned `PASS`: exact schema, zero duplicate keys,
 all source rows present, no scores/ranks outside the eligible mask, ranks in
 `[0,1]`, all source/code/artifact hashes match, exactly 600 frozen sessions
 are audited, and both audit paths report `outcome_accessed=false`.
+The final guard pass additionally proves canonical session/anchor hashes,
+source-key closure, and absence of network/provider imports or HTTP calls in
+the construction code.
 
 ## Corrected structural results
 
