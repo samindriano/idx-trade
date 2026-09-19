@@ -290,3 +290,9 @@ orthogonality; adjacent historical range families and unresolved PIT/price
 basis/capacity keep it at `FUTURE_RESEARCH / NOVELTY_PENDING /
 ECONOMIC_CAUTION`. No C5 was created. See
 `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
+
+The H-VOL-specific CA sensitivity audit then substituted the same retained
+`idx_close` values used in the existing 188-row forensic lane. It changed 547
+scores and 8,876 ranks, while preserving `99.8307%` mean Top-30 overlap and
+`86.6667%` minimum overlap. This is bounded forensic evidence only: price-basis
+authority remains unresolved and H-VOL stays no-C5.

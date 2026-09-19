@@ -113,9 +113,14 @@ candidate admission.
 - **Principal failure modes:** bottom-value concentration, turnover, mixed
   price basis, suspension/zero-range handling, and confusing structural
   distinctness with predictive value.
+- **CA stress:** substituting the 188 retained `idx_close` comparison rows
+  changed `547` scores and `8,876` ranks; mean/minimum Top-30 overlap remained
+  `99.8307% / 86.6667%`. This narrows but does not clear basis risk.
 - **Status:** `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5.
-- **Evidence:** `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md` and the
-  staged `alpha_hvol01_compression_diagnostic_v1.json`.
+- **Evidence:** `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`,
+  `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`, and the staged
+  `alpha_hvol01_compression_diagnostic_v1.json`/
+  `alpha_hvol01_ca_sensitivity_v1.json`.
 
 ## Card H-MICRO-01 — High-participation reversal event
 

@@ -63,6 +63,10 @@ non-redundant work remains authorized.
    `Dataset-Saham-IDX` has useful OHLCV/foreign/bid-offer fields but remains
    blocked: it has no row-level knowledge-time contract and 11 non-identical
    duplicate ticker copies across folders.
+5. Is H-VOL-01 structurally stable under the known unresolved price-basis
+   stress? Current answer: Top-30 overlap remains high (`99.8307%` mean,
+   `86.6667%` minimum), but direct and spillover score/rank changes remain
+   material; this does not clear CA/PIT or create C5.
 
 ## Answered, rejected, and blocked questions
 
@@ -85,7 +89,8 @@ non-redundant work remains authorized.
    fields; do not turn it into a target or provider search.
 4. Before any future `READY_FOR_REENTRY` decision, commission dedicated
    read-only red-team review for C1/C2/C4 and re-run the target firewall.
-5. Preserve H-VOL-01 as a future structural hypothesis only; do not create C5
+5. Preserve H-VOL-01 as a future structural hypothesis only; its bounded CA
+   stress is now quantified, but do not create C5
    without a new novelty decision, admitted price basis/PIT, and economic
    capacity evidence.
 6. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
