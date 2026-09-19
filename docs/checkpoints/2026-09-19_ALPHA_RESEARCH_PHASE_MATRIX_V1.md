@@ -20,14 +20,14 @@ non-redundant work remains authorized.
 | D | C3 financial capability investigation | `COMPLETE CAPABILITY / BLOCKED SCIENCE` | Financial capability audit and contract map; quality-only island is broader, but YoY/provenance support remains sparse. |
 | E | Target-free orthogonality | `COMPLETE STRUCTURAL` | `2026-09-19_STRUCTURAL_ORTHOGONALITY_MAP_V1.md` and daily/rolling lab; incumbent/target incremental information remains blocked. |
 | F | Economic mechanism research | `COMPLETE BOUNDED` | Hypothesis cards and literature separation; no mechanism is predictive evidence without target admission. |
-| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ + H-VOL PENDING` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. H-VOL-01 is structurally distinct on the bounded panel but adjacent to prior range/flat-range families, concentrated in bottom-value names, and horizon-sensitive; both remain `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
+| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ + H-VOL + H-EXC-02 PENDING` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. H-VOL-01 is structurally distinct on the bounded panel but adjacent to prior range/flat-range families, concentrated in bottom-value names, and horizon-sensitive. H-EXC-02 is numerically bounded and structurally distinct but high-churn. All remain `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
 | H | External literature/mechanism review | `COMPLETE BOUNDED` | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`; literature is inspiration, not IDX evidence. |
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics, H-LIQ h10/h20/h40, and fixed H-VOL `5/20`/`5/60`/`20/120` comparison; no free sweep or predictive selection. H-VOL horizon dependence remains a future-risk finding. |
 | K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
 | L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus independent turnover-tail/repeat-name/value-bucket stress; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
 | M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
-| N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, semantic margin directions, and the raw H-EXC-01 representation are closed at the representation level; C1/C2/C4 and the broader excursion mechanism are not structurally rejected. |
+| N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, semantic margin directions, and the raw H-EXC-01 representation are closed at the representation level. H-EXC-02 passes numerical boundedness but is not economically or predictively admitted; C1/C2/C4 and the broader excursion mechanism are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only activity field; `Dataset-Saham-IDX` is newly surfaced but blocked by source/PIT/vintage/duplicate-copy uncertainty. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
 | Q | Independent adversarial review | `PARTIAL / RED-TEAM + SOURCE REPLAYS + FRONTIER + H-VOL REVIEW` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, H-VOL construction/novelty, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`. |
@@ -83,11 +83,12 @@ non-redundant work remains authorized.
   prospective proof: blocked by authoritative Data QA/admission.
 - The exact raw H-EXC-01 form is structurally rejected for numerical
   unboundedness and churn; this does not close all previous-close excursion
-  mechanisms.
+  mechanisms. H-EXC-02's new bounded contract is stable in domain but remains
+  high-churn and future research only.
 
 ## Next high-information tasks
 
-1. Keep the current status and C1/C2/C4/H-LIQ/H-VOL results synchronized in the
+1. Keep the current status and C1/C2/C4/H-LIQ/H-VOL/H-EXC-02 results synchronized in the
    durable ledger and handoff.
 2. If new local evidence appears, audit corporate-action/issuer basis and
    historical available-at semantics before feature construction.

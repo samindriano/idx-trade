@@ -167,6 +167,9 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
   concentrated; remains future research, not C5.
 - **H-EXC-01:** previous-close excursion-asymmetry exact form rejected karena
   score tail tidak bounded dan turnover tinggi; broader mechanism belum ditutup.
+- **H-EXC-02:** bounded absolute-distance excursion balance is numerically
+  stable and structurally distinct, but mean turnover is `40.7750%` with
+  `86.6667%` maximum; tetap future research, bukan C5 atau predictive result.
 - **Combinations:** structural future hypotheses saja; bukan model baru yang
   sudah terbukti incremental.
 
@@ -183,6 +186,19 @@ Masih boleh dilakukan di lane ini, tetap read-only atau staged-derived:
 Yang **belum boleh** dilakukan: membuka target/outcome/incumbent, menjalankan
 OOS/IC/ICIR, scraping/provider probe baru untuk mengejar hasil, mengubah
 canonical/protected dataset, reset/archive telemetry, atau mempromosikan model.
+
+## H-EXC-02 bounded excursion result
+
+The new contract uses the exact fixed form
+`median_5((abs(high-prev_close)-abs(low-prev_close)) /
+(abs(high-prev_close)+abs(low-prev_close)))`. It has `308,067` finite eligible
+rows, exact score domain `[-1,1]`, mean Top-30 turnover `40.7750%`, and
+q95/max turnover `56.6667% / 86.6667%`. Mean Top-30 overlap with C1/C2/C4/
+H-LIQ/H-VOL is `1.3380% / 25.8562% / 4.9431% / 14.7849% / 11.4543%`.
+The result is target-free structural evidence only: numerical stability passes,
+but high churn and unresolved PIT/CA/capacity keep the disposition at
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 was added. Full
+evidence is in `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
 
 ## Re-entry gate
 

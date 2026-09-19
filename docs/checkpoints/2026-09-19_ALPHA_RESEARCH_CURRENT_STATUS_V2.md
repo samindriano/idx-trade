@@ -318,3 +318,15 @@ current Open or volume. It had `305,814` finite rows but unbounded score tails
 `STRUCTURALLY_REJECTED_AS_WRITTEN`. The broader excursion/rejection mechanism
 is not closed, but no clipping or denominator rescue was authorized. See
 `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
+
+H-EXC-02 then tested a new preregistered bounded absolute-distance balance:
+`median_5((abs(high-prev_close)-abs(low-prev_close)) /
+(abs(high-prev_close)+abs(low-prev_close)))`. It produced `308,067` finite
+eligible rows over `1,201` dates and `711` tickers, with exact score domain
+`[-1,1]`, but mean/q95/max Top-30 turnover of
+`40.7750% / 56.6667% / 86.6667%`. Mean Top-30 overlap with C1/C2/C4/H-LIQ/
+H-VOL was `1.3380% / 25.8562% / 4.9431% / 14.7849% / 11.4543%`. This fixes
+the numerical-bound failure as a new contract, but not the high-churn,
+capacity, PIT, or CA risks. Disposition remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 was created.
+See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.

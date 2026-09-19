@@ -147,6 +147,25 @@ candidate admission.
   preregistered bounded contract. No C5.
 - **Evidence:** `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
 
+## Card H-EXC-02 — Bounded previous-close excursion balance
+
+- **Mechanism:** the relative balance of absolute high-side and low-side
+  excursions around the previous close may encode repeated one-sided pressure
+  without requiring current Open or volume.
+- **Fixed representation tested:**
+  `median_5((abs(high-prev_close)-abs(low-prev_close)) /
+  (abs(high-prev_close)+abs(low-prev_close)))`.
+- **Observed result:** `308,067` finite eligible rows; score domain exactly
+  `[-1, 1]`; mean Top-30 turnover `40.7750%`; q95/max turnover
+  `56.6667% / 86.6667%`.
+- **Structural distinctness:** mean Top-30 overlap with C1/C2/C4/H-LIQ/H-VOL
+  is `1.3380% / 25.8562% / 4.9431% / 14.7849% / 11.4543%`.
+- **Failure/caution:** boundedness fixes the H-EXC-01 numerical tail, but high
+  turnover, Q4 selected value/dollar-turnover shares of `33.5609% / 33.5665%`,
+  and unresolved PIT/CA/capacity keep economics and novelty open.
+- **Status:** `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5.
+- **Evidence:** `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+
 ## Card H-MICRO-01 — High-participation reversal event
 
 - **Mechanism:** a large price concession accompanied by unusually high
@@ -259,6 +278,7 @@ No new C5+ candidate is admitted by this card pack.
 | H-MICRO-02 | Source blocked |
 | H-FUND-01 | C3 capability blocked |
 | H-FLOW-01 | Source blocked; exact additive predecessor remains closed |
+| H-EXC-02 | Bounded new contract is structurally stable but high-churn; future research only |
 
 ## Boundary and preservation
 

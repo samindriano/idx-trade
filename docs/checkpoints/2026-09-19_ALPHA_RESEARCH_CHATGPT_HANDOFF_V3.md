@@ -29,6 +29,7 @@ target/outcome.
 | C4 path-efficiency reversal 20 | `310,323 / 310,761` (`99.8591%`) | `23.70%` | `FUTURE_RESEARCH / ECONOMIC_CAUTION` |
 | H-LIQ-01 | `155,679` finite rows; diagnostic only | `10.306%` baseline | `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 |
 | H-VOL-01 | `308,514` finite rows; diagnostic only | `29.2778%` mean | `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 |
+| H-EXC-02 | `308,067` finite rows; diagnostic only | `40.7750%` mean | `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 |
 
 Base friction figures are frozen structural proxies, not realized P&L. No
 candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
@@ -100,6 +101,11 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `STRUCTURALLY_REJECTED_AS_WRITTEN`; no post-result clipping or denominator
     rescue was performed, and the broader mechanism remains an untested future
     question. See `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
+16. H-EXC-02 tested a new preregistered bounded absolute-distance excursion
+    balance. It has exact score domain `[-1,1]`, `308,067` finite eligible rows,
+    `40.7750%` mean Top-30 turnover, and `86.6667%` maximum turnover. It is
+    structurally distinct but high-churn; no C5 or protected-packet change.
+    See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 

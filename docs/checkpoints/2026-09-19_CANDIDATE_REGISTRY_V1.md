@@ -65,6 +65,13 @@ is not closed, but no clipping, denominator floor, or rescue variant is
 authorized without a new hypothesis contract. See
 `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
 
+H-EXC-02 is a new bounded contract, not a rescue or rewrite of H-EXC-01. Its
+absolute-distance balance has exact score domain `[-1,1]` and `308,067` finite
+eligible rows, but mean Top-30 turnover is `40.7750%` and maximum is `86.6667%`.
+It remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5
+ID and no protected-packet change. See
+`2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+
 The latest independent frontier audit adds fixed-window turnover-tail and
 repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
 threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times

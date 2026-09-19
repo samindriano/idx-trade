@@ -14,6 +14,7 @@ Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
+Latest H-EXC-02 result: `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -130,6 +131,13 @@ The fixed horizon audit (`5/20`, `5/60`, `20/120`) shows material horizon
 dependence in turnover, support, and Top-30 membership. The baseline reproduces
 exactly, but no horizon is selected and H-VOL remains outside the packet.
 
+H-EXC-02 is a separate new contract for the broader excursion mechanism, not
+a rescue of H-EXC-01. Its absolute-distance balance is exactly bounded in
+`[-1,1]` with `308,067` finite eligible rows, but mean/max Top-30 turnover is
+`40.7750% / 86.6667%`. It remains
+`FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5 ID or packet
+change was made. See `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`.
+
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination
 turnover at 34.85% and balanced component overlap, but no weights were
@@ -140,8 +148,9 @@ optimized and none is in the protected four-ID packet.
 - Rejected/closed: invalid early Stage-A implementation, exact breakout
   formulation, exact additive foreign-flow formulation, semantically invalid
   margin interpretation, and the raw H-EXC-01 excursion representation for
-  numerical unboundedness/churn. The broader excursion mechanism remains
-  untested.
+  numerical unboundedness/churn. H-EXC-02 is bounded but high-churn and
+  remains future research only; the broader excursion mechanism is not
+  predictively tested.
 - Blocked: C3 scientific evaluation, all target/incumbent comparisons,
   incomplete PIT/identity/CA/revision authority, and metadata-only activity
   snapshot reuse.
