@@ -436,3 +436,12 @@ a daily PIT population panel, so it remains
 `PARTIAL / SOURCE_REMEDIATION_REQUIRED`; no feature, candidate, universe mask,
 target, or incumbent state changed. See
 `2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The statutory free-float snapshot was independently checked afterward. The
+2,145 new files and seven reused parent bindings hash-match; 2025-12-31 has
+923 exact-share rows out of 956, while 2026-03-31 is percentage-only with no
+exact-share rows. Its embedded LBRE lineage has 93 excluded and 18
+parse-unresolved rows. It remains
+`PARTIAL / SOURCE_REMEDIATION_REQUIRED`, with no feature, candidate, universe
+mask, target, or incumbent state changed. See
+`2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

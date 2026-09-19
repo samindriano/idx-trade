@@ -96,3 +96,11 @@ evaluation.
 | LBRE artifact integrity | `PASS_STRUCTURAL_ONLY` | 58,671/58,671 manifest files match bytes and SHA-256; normalized schema/range/hash checks pass |
 | LBRE lineage/current selection | `PARTIAL / SOURCE_REMEDIATION_REQUIRED` | 25,262 canonical, 24,394 admitted, 23,373 current, 28,254 exact-input rows; 868 unresolved lineage rows |
 | LBRE PIT/population admission | `BLOCKED` | Monthly issuer reports, no daily population-wide panel, no complete issuer/ISIN/CA/revision/public-availability contract |
+
+## Statutory free-float snapshot audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Market-wide 2025-12-31 free-float anchor | `PARTIAL / SOURCE_REMEDIATION_REQUIRED` | 956 reported rows, 923 exact-share rows, 33 missing explicit shares; anchor only |
+| Market-wide 2026-03-31 free-float anchor | `PERCENTAGE_ONLY / BLOCKED` | 956 reported rows, zero exact-share rows; no share-basis transition inference |
+| Statutory snapshot lineage/PIT | `BLOCKED` | 2,145 new artifacts plus seven reused sources hash-match, but no continuous daily panel or complete issuer/ISIN/CA/revision/PIT contract |

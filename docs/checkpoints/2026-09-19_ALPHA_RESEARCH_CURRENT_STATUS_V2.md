@@ -605,3 +605,12 @@ ambiguities, 332 missing-original evidence, 4 invalid correction chronology).
 The surface is monthly issuer-report capability, not a daily PIT population
 panel; no feature, universe mask, candidate, or packet state changed. See
 `2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The statutory free-float snapshot was audited next. Its 2,145 new manifest
+artifacts and seven reused parent-source bindings all hash-match. The
+2025-12-31 anchor has 923 exact-share rows out of 956 reported; 2026-03-31 is
+956 percentage-only rows with zero exact-share rows. The embedded LBRE side
+has 1,015 exact target-position rows, 957 admitted lineage rows, 93 excluded,
+and 18 parse-unresolved. It remains `PARTIAL / SOURCE_REMEDIATION_REQUIRED`;
+no feature, universe mask, candidate, or protected state changed. See
+`2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

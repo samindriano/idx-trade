@@ -661,3 +661,13 @@ is monthly rather than daily population-wide PIT, and issuer/ISIN, CA,
 revision-completeness, and public-availability authority are missing. No
 feature, candidate, packet, or protected state changed. See
 `2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The statutory free-float snapshot was independently audited next. All 2,145
+new manifest files and seven reused parent-source bindings match hashes. The
+2025-12-31 market anchor has 923 exact-share rows out of 956; the 2026-03-31
+anchor is percentage-only with zero exact-share rows. Its embedded LBRE side
+has 1,015 exact target-position rows, 957 admitted lineage rows, 93 excluded,
+and 18 parse-unresolved. The surface remains `PARTIAL /
+SOURCE_REMEDIATION_REQUIRED`; no feature, candidate, packet, or protected
+state changed. See
+`2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

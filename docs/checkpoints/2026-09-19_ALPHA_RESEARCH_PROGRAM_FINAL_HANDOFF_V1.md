@@ -569,3 +569,11 @@ contract. The surface remains capability-only
 (`PARTIAL / SOURCE_REMEDIATION_REQUIRED`); no feature, candidate, packet, or
 model status changed. See
 `2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+The statutory free-float snapshot was then audited independently. Manifest
+integrity passes for 2,145 new files and seven reused parent bindings, but
+the 2025 anchor has 33 missing explicit-share rows and the 2026 anchor is
+percentage-only. Embedded LBRE lineage remains incomplete. The surface is
+capability-only (`PARTIAL / SOURCE_REMEDIATION_REQUIRED`); no feature,
+candidate, packet, or model status changed. See
+`2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.

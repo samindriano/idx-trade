@@ -54,3 +54,16 @@ daily population-wide PIT panel, and no issuer/ISIN, CA, revision-complete, or
 public-availability contract was established. No feature, candidate, or
 protected state changed. See
 `2026-09-20_ALPHA_LBRE_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Independent follow-up — statutory free-float snapshot
+
+The statutory snapshot was audited without network access. All 2,145 new
+manifest artifacts and seven reused parent-source bindings match their
+declared hashes. The 2025-12-31 market anchor has 923 exact-share rows out of
+956 reported; the 2026-03-31 anchor is percentage-only with zero exact-share
+rows. The embedded LBRE side has 1,015 exact target-position rows, 957
+admitted lineage rows, 93 excluded rows, and 18 parse-unresolved rows. The
+surface remains `PARTIAL / SOURCE_REMEDIATION_REQUIRED`; it is not a
+continuous daily PIT panel and no feature, candidate, or protected state
+changed. See
+`2026-09-20_ALPHA_STATUTORY_FREE_FLOAT_SOURCE_AUDIT_RESULT_V1.md`.
