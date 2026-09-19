@@ -92,9 +92,9 @@ sensitivity berikut:
 Ini bukan koreksi data dan bukan hasil predictive; ini peringatan bahwa C1
 belum basis-safe. Verifier v1 memang terlalu bergantung pada boolean JSON.
 Verifier v2 C1/C2/C4 sudah melakukan independent source replay untuk
-structural assertions dan lulus; verifier structural-lab yang ada masih
-envelope-only dan belum boleh disebut independent source replay. Access flags
-tetap self-attested.
+structural assertions dan lulus. Structural-lab kini juga sudah memiliki
+independent source replay v2 dengan `mismatch_count=0`; access flags tetap
+self-attested.
 
 ### 2. Ekonomi, konsentrasi, likuiditas, fragility
 
@@ -137,8 +137,11 @@ dipakai lagi.
 
 - Verifier lama hanya envelope-level; JSON check maps tidak direcompute.
 - Verifier v2 C1/C2/C4 melakukan independent source replay dan lulus
-  `PASS_INDEPENDENT_STRUCTURAL_REPLAY`; structural-lab independent replay masih
-  merupakan follow-up yang belum selesai.
+  `PASS_INDEPENDENT_STRUCTURAL_REPLAY`.
+- Structural-lab source replay v2 melakukan recompute terhadap seluruh candidate
+  metric map dan pairwise map, lulus `PASS_INDEPENDENT_SOURCE_REPLAY`, dengan
+  `mismatch_count=0`. Detail ada di
+  `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`.
 - Structural robustness dan structural lab diregenerate setelah deterministic
   tie-break dan `pct_change(fill_method=None)` patch; kedua verifier lulus.
 - Default-fill counterfactual sebelumnya mengubah C1 pada 52/600 Top-30 dates,
@@ -187,6 +190,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+- `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
 - `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`

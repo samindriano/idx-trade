@@ -22,6 +22,7 @@ Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest compact ChatGPT handoff: `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md`
+Latest structural-lab replay: `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest Stage-A lineage result: `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 Latest Stage-A consumer audit: `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
@@ -106,7 +107,7 @@ production or prospective claim.
 - Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
 - Structural economics audit: `PASS_STRUCTURAL_ONLY`; see `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md` and the independently verified staged JSON; no target or incumbent score was opened.
 - Structural economics first/last-half view: C1/C2/C4 retain broad Top-30 availability with similar turnover ranges; C3 is absent in the first half and remains blocked for sparse/late PIT coverage.
-- Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; regenerated v2 artifact and verifier pass after explicit no-fill handling.
+- Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; regenerated v2 artifact passed the independent source-recomputing replay with `mismatch_count=0`. See `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`.
 - Structural robustness battery: fixed-formula equivalence passed exactly; monotone rank/z-score variants were 100% Top-30 identical; C1/C2/C4 retained all 600 Top-30 dates under synthetic 5% score masking with 94.88%–95.17% mean overlap; C3 remained sparse and failed support stress. Lookback variants are materially distinct representations, not free normalization variants; see `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`.
 - Hypothesis cards: bounded literature/mechanism review produced one potential new temporal-liquidity direction and several explicitly blocked or non-novel directions; no C5+ candidate was admitted. See `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`.
 - H-LIQ-01 prototype: one fixed rolling variability-of-log-turnover representation passed target-free structural construction, showed low C1/C4 dependence and low churn, but retained a high bottom-market-value exposure; status is `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 ID. See `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`.
@@ -126,6 +127,7 @@ production or prospective claim.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
 - Phase-Q tooling follow-up: deterministic ticker tie-break and explicit no-fill handling were patched; regenerated staged artifacts and source hashes are recorded in `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+- Structural-lab verifier follow-up: the old envelope-only check was superseded for current evidence by `research/verify_alpha_structural_lab_v2.py`; the staged report is `alpha_structural_lab_independent_replay_v2.json` with `PASS_INDEPENDENT_SOURCE_REPLAY` and zero mismatches.
 - Stage-A lineage follow-up: v3/final feature bytes are identical with different manifest heads; guarded is the active distinct generation. Full hashes and dispositions are recorded in `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 
 ## Continuation register — Phase-Q replay milestone
@@ -177,5 +179,7 @@ production or prospective claim.
 1. Enforce feature/manifest hash binding on every future research-only output.
 2. Continue bounded CA/issuer-basis and capacity audits from admitted local
    inputs only.
-3. Keep the source-recomputing verifier and deterministic/no-fill contracts in
+3. Resolve the remaining H-LIQ novelty/capacity and 188-row CA exposure
+   questions without reopening acquisition or protected outcomes.
+4. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.

@@ -103,10 +103,10 @@ Real historical capacity remains `UNKNOWN/BLOCKED`.
   to historical staging artifacts and are not silently treated as current.
 - The new C1/C2/C4 adversarial verifier independently replays source data and
   passes `PASS_INDEPENDENT_STRUCTURAL_REPLAY`.
-- The existing structural-lab verifier is **not independent**: it checks the
-  artifact envelope, ranges, flags, and hashes, but does not recompute lab
-  metrics from source data. Its `PASS` must not be reported as independent
-  source replay. An independent structural-lab replay remains a safe follow-up.
+- The old structural-lab verifier was envelope-only. It has now been
+  superseded for current evidence by `research/verify_alpha_structural_lab_v2.py`,
+  which independently recomputes the full candidate and pairwise metric maps
+  and passes `PASS_INDEPENDENT_SOURCE_REPLAY` with zero mismatches.
 - Access flags in JSON artifacts are self-attested metadata, not process-level
   proof of protected-data non-access.
 
@@ -114,10 +114,10 @@ Real historical capacity remains `UNKNOWN/BLOCKED`.
 
 1. Add/enforce feature, manifest, code, source, and repository-head hash binding
    on every future research-only output.
-2. Build an independent source-recomputing structural-lab verifier, without
-   opening targets or changing the existing artifacts.
-3. Continue bounded CA/issuer-basis, PIT source-admission, and capacity audits
+2. Continue bounded CA/issuer-basis, PIT source-admission, and capacity audits
    only from data already in scope.
+3. Resolve the remaining H-LIQ novelty/capacity and 188-row CA exposure
+   questions without protected outcomes.
 4. Keep the ledger, phase matrix, re-entry queue, and evidence pointers in sync.
 
 ## What remains prohibited
@@ -141,6 +141,7 @@ progress, no predictive winner yet**.
 - `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+- `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`

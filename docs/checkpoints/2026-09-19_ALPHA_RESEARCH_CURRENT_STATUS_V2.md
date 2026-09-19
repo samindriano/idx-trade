@@ -45,9 +45,9 @@ Therefore:
   modified or opened.
 
 Important verifier nuance: the C1/C2/C4 adversarial v2 replay is an independent
-source replay and passes. The existing structural-lab verifier is envelope-only
-and does not independently recompute lab metrics; do not treat its `PASS` as
-source-replay proof.
+source replay and passes. Structural-lab now also has a separate independent
+source-recomputing v2 replay with `mismatch_count=0`; the old envelope-only
+verifier remains historical tooling and is not the authoritative replay result.
 
 ## Absolute scientific boundary
 
