@@ -171,6 +171,8 @@ def main() -> None:
     parser.add_argument("--panel", type=Path, required=True)
     parser.add_argument("--sessions", type=Path, required=True)
     parser.add_argument("--anchors", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--repo-head", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -245,7 +247,9 @@ def main() -> None:
                 "official_sessions": sha256_file(args.sessions),
                 "tradability_anchors": sha256_file(args.anchors),
             },
+            "manifest_sha256": sha256_file(args.manifest),
             "code_sha256": sha256_file(Path(__file__)),
+            "repo_head": args.repo_head,
             "access": {
                 "target": False,
                 "outcome": False,
