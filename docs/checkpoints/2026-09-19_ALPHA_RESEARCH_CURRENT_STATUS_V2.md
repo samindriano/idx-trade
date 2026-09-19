@@ -15,7 +15,7 @@ read-only red-team reports, is
 status file before continuing.
 
 The compact cross-session handoff is
-`2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md`.
+`2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`.
 
 The follow-up tooling/selection replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.

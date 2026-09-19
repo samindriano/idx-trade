@@ -4,7 +4,7 @@ Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
 Branch: `codex/alpha-available-data-20260919`  
-Latest evidence content commit: `c6f4157669e5e51aaf4135dac32df173be59aa31`
+Latest evidence content commit: `06f47a3e0e7c31c0a96746d31f665d948a20d85b`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
