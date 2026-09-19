@@ -658,3 +658,8 @@ The A-Z and mandatory-handoff completion audit confirms document coverage and
 machine-control PASS, but not scientific admission: Q is partial, S/Z are
 active, T is controlled/partial, and V/W remain blocked or none-ready. See
 `2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`.
+
+The lane-integrity attestation then passed branch/worktree/staging scope and
+research-only delta checks. It strengthens isolation controls but does not
+change the scientific admission boundary or candidate statuses. See
+`2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`.

@@ -80,3 +80,8 @@ target/common-support authority. The next useful action is only a genuinely
 new authoritative or non-redundant research input. Same-surface retries,
 provider probes, target access, and candidate-budget expansion remain
 disallowed.
+
+Subsequent process-scope evidence is recorded separately in
+`2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`; it passes the
+isolated branch/worktree/staging checks but does not convert the scientific
+`NO-GO` into admission or predictive evidence.

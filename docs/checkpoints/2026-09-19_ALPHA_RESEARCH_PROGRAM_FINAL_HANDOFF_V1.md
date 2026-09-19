@@ -2,8 +2,8 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `8f98e09d2fa587219b233d581023b0ea73de7e5e`
-Latest research milestone: `8f98e09d` — local data-surface closure review
+Latest verified current HEAD before this documentation amendment: `22d4b1c15fd455859d6b1deb5ec328f8c70dff8b`
+Latest research milestone: `22d4b1c1` — isolated research lane integrity attestation
 Latest status/documentation: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
@@ -42,6 +42,7 @@ Latest handoff/control and local-surface review: `2026-09-20_ALPHA_CONTROL_AND_S
 Latest packet contract/firewall hardening: `2026-09-20_ALPHA_PACKET_CONTRACT_FIREWALL_HARDENING_RESULT_V1.md`
 Latest local data-surface closure review: `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_REVIEW_NO_NEW_EVIDENCE_V1.md`
 Latest completion audit: `2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`
+Latest lane-integrity attestation: `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the

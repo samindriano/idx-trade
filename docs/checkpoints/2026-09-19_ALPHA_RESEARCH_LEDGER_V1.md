@@ -739,3 +739,12 @@ blocked or none-ready. The packet/firewall controls pass independently, while
 Data QA, PIT/identity/CA, executable-capacity, and protected-target admission
 remain unresolved. See
 `2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`.
+
+## Continuation register — isolated lane integrity attestation
+
+The reusable lane-integrity verifier passed against baseline `58f094b8` and
+HEAD `22d4b1c1`: continuation deltas are research/docs-only, branch and
+worktree identity match the isolated lane, the worktree is clean, and the
+staging root contains no protected-looking filenames. This is process-scope
+evidence only and does not prove runtime absence of protected access. See
+`2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`.
