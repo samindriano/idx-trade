@@ -325,3 +325,10 @@ Additional red-team results:
 
 See `2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md` and
 `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+
+The persisted local Zapi artifacts were also reviewed without network access:
+one BBCA company-profile snapshot and empty March/August dividend probes.
+They fail the parity/semantic admission checks and provide no historical
+available-at, revision, issuer/ISIN, or CA authority. Zapi remains
+`BLOCKED / NOT_ADMITTED`; no feature or candidate was created. See
+`2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.

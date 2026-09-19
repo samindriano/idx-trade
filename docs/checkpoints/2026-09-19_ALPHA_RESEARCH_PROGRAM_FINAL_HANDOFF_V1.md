@@ -456,3 +456,10 @@ separately as producer binding verified, packet attestation stale, and full
 freshness unknown. See
 `2026-09-19_C3_CAPABILITY_DENOMINATOR_REDTEAM_ERRATUM_V1.md` and
 `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
+
+The local Zapi probe archive was audited read-only. It contains one BBCA
+company-profile snapshot and empty March/August dividend payloads; the profile
+fails its official parity review and the dividend probes lack usable selected
+rows, ticker identity, and historical timing/revision semantics. Zapi remains
+`BLOCKED / NOT_ADMITTED` and creates no new alpha surface. See
+`2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
