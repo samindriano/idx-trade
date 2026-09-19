@@ -6,6 +6,7 @@ Status: `STAGE A CORRECTED COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
 
 Latest program checkpoint: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
 Latest C3 capability audit: `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
+Latest structural lab: `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -80,6 +81,7 @@ production or prospective claim.
 - Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
 - Structural economics audit: `PASS_STRUCTURAL_ONLY`; see `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md` and the independently verified staged JSON; no target or incumbent score was opened.
 - Structural economics first/last-half view: C1/C2/C4 retain broad Top-30 availability with similar turnover ranges; C3 is absent in the first half and remains blocked for sparse/late PIT coverage.
+- Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; independent verifier and target firewall pass.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
 - New outcome access: none.

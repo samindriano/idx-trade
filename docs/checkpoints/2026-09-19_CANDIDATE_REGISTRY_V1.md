@@ -10,3 +10,16 @@
 No candidate is a `RESEARCH_SURVIVOR`. No new candidate was added; the budget
 remains exactly C1–C4.
 
+## Structural lab refinement
+
+- C1: `FUTURE_RESEARCH / MODERATE`; broad coverage, high churn, heavy raw-score
+  tails, and a mild low-liquidity tilt.
+- C2: `FUTURE_RESEARCH / MODERATE`; full coverage and lower churn than C1, but
+  very heavy raw-score tails; liquidity is near-neutral.
+- C3: `BLOCKED / FRAGILE`; sparse/late PIT support and concentration dominate
+  its otherwise strong persistence.
+- C4: `FUTURE_RESEARCH / MODERATE`; lowest broad-candidate churn, but strongest
+  low-liquidity tilt and substantial structural overlap with C1.
+
+Source: `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`. These labels are
+structural only and do not rank expected alpha.

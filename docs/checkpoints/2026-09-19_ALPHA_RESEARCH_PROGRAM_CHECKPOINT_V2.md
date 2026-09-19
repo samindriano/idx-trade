@@ -163,6 +163,14 @@ conditional incremental information, and target-ranked overlap remain
 opened. C1/C4 deserve extra duplicate-mechanism review; C3 is structurally
 distinct in this diagnostic but is currently too sparse for admission.
 
+The extended structural lab adds Top-10/20/30/50 mechanics, persistence, rank
+churn, liquidity exposure, six 100-session blocks, market-state conditioning,
+and daily/rolling pairwise overlap. At Top-30, C1/C4 have daily Spearman
+`0.4624` and same-day overlap `34.89%`; C1/C2 are `-0.2454` and `12.21%`; C2/C4
+are `-0.1494` and `11.00%`. C4 has `34.5%` of Top-30 slots in the bottom
+liquidity quartile, while C3 has `16.5%` but remains sparse/late. These are
+structural dependence and implementation diagnostics only.
+
 ## Turnover, liquidity, and concentration findings
 
 - C1/C2/C4 have Top-30 availability across all 600 frozen sessions and broadly
@@ -213,13 +221,14 @@ This is a usable capability island, not a population-wide scientific panel.
 | Corrected Stage A builder and verifier | exact schema/mask/session/hash checks `PASS` |
 | Stage A robustness audit | `PASS_STRUCTURAL_ONLY` |
 | Economics builder and independent verifier | `PASS`; fixed 600-session/Top-30 and first/last-half diagnostics |
+| `research/alpha_structural_lab_v1.py` + independent verifier | `PASS`; Top-K churn/persistence, liquidity, state, and orthogonality lab |
 | `research/alpha_research_target_firewall_v1.py` | static code/schema/metadata firewall `PASS`; no forbidden target/provider access detected |
 | `research/c3_financial_capability_audit_v1.py` | C3 capability/governance funnel `PASS_STRUCTURAL_ONLY` |
 | External guarded staging | all derived parquet/JSON outputs isolated outside repository/canonical data |
 
 Target firewall artifact:
 `alpha_research_target_firewall_audit.json`, SHA-256
-`bfe5a2396ef0441a448c2ea08b4e5a2ca35e1dbf162e6bfc757116dd735f4a14`.
+`211d78f5a1ece63a4b1a5ac7d76ac54e70b550961253aa74dccf700240b59d91`.
 The firewall code SHA-256 is
 `ef27e6ec657027b222a85f7515a3f432e7d2503b1cd0680692052ad4d02c0762`.
 
