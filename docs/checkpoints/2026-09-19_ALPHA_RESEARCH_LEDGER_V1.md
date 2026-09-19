@@ -411,3 +411,36 @@ SECTOR-01 is complete and remains metadata/structural only. The next useful
 work must be a genuinely new independent source-contract or red-team question;
 no provider fallback, daily sector imputation, or protected-data access is
 justified by the current results.
+
+## Continuation register — CA/issuer red-team, capacity tails, and mechanism closure
+
+The independent CA/issuer-basis red-team upheld the fail-closed disposition.
+The retained HLC overlay is internally consistent but covers only `1,657` of
+`981,940` panel rows, the `188` residual keys are disjoint from it, and the
+security master has no issuer/ISIN transition chain or event-level corporate-
+action semantics. Counterfactual sensitivity is material for C1 (`31,346`
+rank changes; minimum Top-30 overlap `36.667%`) and remains nonzero/unknown
+for C2, C4, H-LIQ, H-VOL, and H-EXC-02. No repair or admission is justified.
+See `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`.
+
+The new capacity/friction-tail artifact covers the six structurally relevant
+surfaces C1/C2/C4/H-LIQ-01/H-VOL-01/H-EXC-02 over `600` sessions and `18,000`
+slots each. It adds q95/q99/max turnover burdens, top-name concentration,
+HHI/effective names, and separate market-value/raw-volume/dollar-turnover
+quartile shares. H-LIQ Q1 market-value share is `39.6722%`, H-VOL is
+`40.6889%`, and H-EXC-02 has mean/q99/max turnover `41.5971% / 66.7333% /
+86.6667%` in this fixed window. The artifact passes independent structural
+verification but leaves executable capacity blocked. See
+`2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`.
+
+A bounded mechanism-surface review found no defensible new candidate from the
+currently admitted OHLCV/value surface. Effort-vs-result, breakout/rejection,
+cross-sectional disagreement, and rank-combination directions are already
+covered, redundant, or source-blocked. H-LIQ/H-VOL/H-EXC-02 remain future
+research only; the protected candidate budget remains exactly C1-C4. See
+`2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
+
+The continuation packet verifier and cross-artifact target/privacy firewall
+also pass. Packet hashes remain internally consistent, but the contract's
+manifest head is older than the current lane head; freshness remains unknown
+and no rebinding or protected execution is authorized.

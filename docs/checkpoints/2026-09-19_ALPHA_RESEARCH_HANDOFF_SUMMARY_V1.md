@@ -248,3 +248,13 @@ the candidates have been proven to fail.
 - `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`
 - `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
+
+Latest continuation evidence is also durable in:
+
+- `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`
+- `2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`
+- `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`
+
+The first two strengthen the CA/capacity blockers without changing candidate
+status. The third closes a redundant OHLCV/value discovery branch; no new
+candidate ID or protected packet change was made.

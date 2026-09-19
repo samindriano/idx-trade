@@ -55,3 +55,10 @@ Packet freshness is separately `UNKNOWN`: the V2 contract's declared manifest
 head predates the current lane tip. Keep the packet specification-only and do
 not execute or silently rewrite its hashes; see
 `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
+
+Continuation status: the CA/issuer red-team remains `GLOBAL_BASIS_BLOCKED`,
+the new capacity/friction-tail artifact remains structural-only with real
+capacity `UNKNOWN/BLOCKED`, and the bounded new-mechanism review found no
+additional candidate from the admitted OHLCV/value surface. The queue remains
+exactly C1/C2/C4 conditional plus blocked C3; H-LIQ/H-VOL/H-EXC-02 remain
+future research only.

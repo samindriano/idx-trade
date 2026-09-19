@@ -284,7 +284,7 @@ no-C5 and novelty/economic meaning remain unknown. See
 
 Re-entry packet indexing is logically consistent for C1-C4 with C3
 fail-closed, but packet freshness is `UNKNOWN`: the frozen contract manifest
-head `10939862...` differs from lane tip `cc60808e...`. The packet remains
+head differs from the current lane head. The packet remains
 specification-only and must not execute; stale V1 references are now repaired
 or labeled historical. See
 `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
@@ -293,3 +293,21 @@ No protected outcome was opened, no provider/network scrape was performed, no
 canonical or active dataset was changed, and no telemetry/capture/cloud state
 was touched. The lane remains structurally productive but predictive proof is
 not yet authorized.
+
+## Latest continuation — CA basis, capacity tails, and no-new-mechanism decision
+
+- CA/issuer red-team: HLC overlay coverage is narrow (`1,657/981,940` rows),
+  residual keys are disjoint, and issuer/ISIN transition authority is absent;
+  no repair or admission is justified.
+- Capacity/friction-tail artifact: six surfaces, `600` sessions, `18,000`
+  slots each; q95/q99/max turnover, fixed friction burdens, HHI/effective
+  names, and separate value/raw-volume/dollar-turnover quartiles are now
+  durable and independently verified. Real executable capacity remains
+  blocked.
+- Mechanism-surface adjudication: no new PIT-defensible OHLCV/value candidate
+  was found. Effort-vs-result, breakout/rejection, and dispersion directions
+  are covered, redundant, or source-blocked; protected budget remains C1-C4.
+
+See `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`,
+`2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`, and
+`2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.

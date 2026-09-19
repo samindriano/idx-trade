@@ -22,6 +22,28 @@ The follow-up tooling/selection replay is recorded in
 The latest independent red-team correction replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 
+## Latest continuation update — CA basis, capacity tails, and mechanism closure
+
+An independent CA/issuer-basis red-team confirms that the HLC overlay is
+bounded forensic evidence, not a global price-basis certificate: it covers
+`1,657/981,940` panel rows, the `188` residual keys are disjoint, and the
+security master lacks issuer/ISIN transition authority. C1 is materially
+sensitive under the registered basis stress; C2/C4/H-LIQ/H-VOL/H-EXC-02 remain
+unresolved. See `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`.
+
+A new outcome-blind capacity/friction-tail artifact over the fixed 600-session
+window and six surfaces adds q95/q99/max turnover burden, HHI/effective names,
+and separate market-value/raw-volume/dollar-turnover quartile exposure. It
+passes independent verification and strengthens economic caution, but real
+capacity remains blocked. See
+`2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`.
+
+The bounded new-mechanism review found no defensible new candidate from the
+currently admitted OHLCV/value surface. Effort-vs-result, breakout/rejection,
+and cross-sectional-disagreement directions are covered, redundant, or
+source-blocked. H-LIQ/H-VOL/H-EXC-02 remain future research only. See
+`2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
+
 ## Latest continuation update — available-data frontier audits
 
 The isolated lane completed four additional source-capability audits without

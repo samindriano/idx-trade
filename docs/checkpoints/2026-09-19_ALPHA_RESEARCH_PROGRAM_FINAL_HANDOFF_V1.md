@@ -419,11 +419,31 @@ unqualified persistence claim; H-LIQ remains no-C5 and
 `2026-09-19_ALPHA_HLIQ01_TEMPORAL_PERSISTENCE_REDTEAM_RESULT_V1.md`.
 
 The re-entry packet freshness audit confirms C1/C2/C3/C4 indexing and C3
-fail-closed behavior, but the frozen contract manifest head
-`10939862...` differs from the current lane tip `cc60808e...`. Packet
-freshness is therefore `UNKNOWN`; the V2 packet remains specification-only and
-must not be executed. Stale V1 index references were repaired or labeled
-historical. See
+fail-closed behavior, but the frozen contract manifest head differs from the
+current lane head. Packet freshness is therefore `UNKNOWN`; the V2 packet
+remains specification-only and must not be executed. Stale V1 index references
+were repaired or labeled historical. See
 `2026-09-19_ALPHA_REENTRY_PACKET_FRESHNESS_AUDIT_RESULT_V1.md`.
 
 No predictive superiority claim is made.
+
+### Latest continuation — 2026-09-19 CA, capacity, and mechanism closure
+
+The independent CA/issuer-basis red-team keeps global price-basis admission
+blocked: the 1,657-row overlay covers only a narrow panel slice, the 188
+residual keys are disjoint, and the security master has no issuer/ISIN
+transition chain. C1 is materially sensitive under the registered basis
+stress; the other surfaces remain unresolved. See
+`2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`.
+
+The new tail/concentration artifact covers C1/C2/C4/H-LIQ-01/H-VOL-01/
+H-EXC-02 over the fixed 600-session window. It quantifies q95/q99/max turnover
+burdens, HHI/effective names, and market-value/raw-volume/dollar-turnover
+quartiles. It passes independent structural verification but does not admit
+capacity, ADV, spread, queue, or fill semantics. See
+`2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`.
+
+The bounded mechanism-surface review found no new PIT-defensible candidate from
+the admitted OHLCV/value surface. The candidate budget remains exactly C1-C4;
+H-LIQ/H-VOL/H-EXC-02 remain future research only. See
+`2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.

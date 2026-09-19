@@ -114,3 +114,23 @@ non-redundant work remains authorized.
 6. Perform the bounded read-only source-admission audit of `Dataset-Saham-IDX`
    only if it can establish row-level PIT/vintage, identity/CA semantics, and
    unambiguous source selection; otherwise preserve it as blocked.
+
+## Continuation update — 2026-09-19
+
+- Phase Q now includes an independent CA/issuer-basis red-team. It passes only
+  narrow overlay/disjointness checks; global issuer/ISIN and price-basis
+  authority remain blocked. See
+  `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`.
+- Phase L received a new six-surface capacity/friction-tail artifact with
+  turnover tails, concentration, and separate value/raw-volume/dollar-turnover
+  quartiles. Structural verification passes; executable capacity remains
+  `UNKNOWN/BLOCKED`. See
+  `2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md`.
+- Phase G/E bounded mechanism review found no new PIT-defensible candidate from
+  the admitted OHLCV/value surface. Effort-vs-result, breakout/rejection, and
+  dispersion directions are covered, redundant, or source-blocked. See
+  `2026-09-19_ALPHA_NEW_MECHANISM_SURFACE_ADJUDICATION_V1.md`.
+- The continuation packet verifier and cross-artifact target/privacy firewall
+  pass. Packet freshness remains `UNKNOWN` because the contract manifest head
+  predates the current lane head; no packet rebind or protected evaluation is
+  authorized.
