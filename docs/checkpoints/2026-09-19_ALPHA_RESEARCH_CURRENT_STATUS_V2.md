@@ -187,7 +187,7 @@ read-only red-team review. Do not repeat completed C1-C4 structural metrics.
 ## Repository, artifacts, tests, and provenance
 
 - Branch: `codex/alpha-available-data-20260919`
-- Latest status update commit: `23311996`
+- Latest status update commit: `734b46a8`
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Adversarial builder: `research/alpha_c1234_adversarial_audit_v1.py`
