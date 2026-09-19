@@ -144,6 +144,38 @@ def main() -> None:
         and packet_actual_sha256 == packet_binding.get("sha256")
     )
 
+    eligibility_contract = contract.get("eligibility_contract", {})
+    expected_eligibility = {
+        "status": "BLOCKED_POLICY_CONFLICT",
+        "resolution_required": True,
+        "current_implementation_population_rows": 310761,
+        "literal_minimum_20_population_rows": 348765,
+        "difference_rows": 38004,
+        "no_population_choice": True,
+    }
+    checks["eligibility_contract_fail_closed"] = all(
+        eligibility_contract.get(key) == value for key, value in expected_eligibility.items()
+    )
+    guard_binding = eligibility_contract.get("consistency_guard", {})
+    guard_path = Path(guard_binding.get("path", "__missing_eligibility_guard__"))
+    guard_exists = guard_path.is_file()
+    guard_payload: dict[str, object] = {}
+    if guard_exists:
+        guard_payload = json.loads(guard_path.read_text(encoding="utf-8"))
+    checks["eligibility_guard_binding"] = (
+        guard_binding.get("status") == "BLOCKED_POLICY_CONFLICT"
+        and guard_exists
+        and sha256_file(guard_path) == guard_binding.get("sha256")
+        and guard_payload.get("status") == "BLOCKED_POLICY_CONFLICT"
+        and guard_payload.get("checks", {}).get("contract_conflict_detected") is True
+    )
+    details["eligibility_contract"] = {
+        "contract": eligibility_contract,
+        "guard_exists": guard_exists,
+        "guard_path": str(guard_path),
+        "guard_status": guard_payload.get("status"),
+    }
+
     producer = contract.get("producer_binding", {})
     manifest_binding = contract.get("manifest_binding", {})
     producer_commit = producer.get("producer_commit")
@@ -162,6 +194,7 @@ def main() -> None:
         "No shorter fallback",
         "research/alpha_future_evaluation_packet_v2_contract.json",
         "NO-GO FOR RE-ENTRY / BLOCKED_BY_DATA_ADMISSION",
+        "ELIGIBILITY_CONTRACT_STATUS: BLOCKED_POLICY_CONFLICT",
     ]
     checks["packet_required_clauses"] = all(phrase in packet_text for phrase in required_packet_phrases)
     checks["packet_has_no_protected_payload"] = not any(

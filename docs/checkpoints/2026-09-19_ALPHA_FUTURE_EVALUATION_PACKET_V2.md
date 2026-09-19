@@ -83,6 +83,12 @@ share the exact eligible support.
   `LISTED`, `ACTIVE`, and the frozen trailing-60 official-session
   regular-market-value rule: at least 20 finite observations and median at
   least IDR 1 billion.
+- `ELIGIBILITY_CONTRACT_STATUS: BLOCKED_POLICY_CONFLICT`. The prose minimum-20
+  rule conflicts with the implementation's `min_periods=window` behavior.
+  The current implementation population is 310,761 rows, while the literal
+  minimum-20 interpretation is 348,765 rows; the 38,004-row difference is not
+  a permitted population choice. This packet is not executable until an
+  authoritative contract resolution is recorded and re-hashed.
 - Security/issuer/ISIN continuity, corporate-action transition basis,
   revision/vintage, and population completeness must be independently
   admitted; the current mask alone is not authority for those properties.

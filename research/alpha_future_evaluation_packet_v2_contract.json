@@ -36,7 +36,20 @@
   },
   "packet_binding": {
     "path": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
-    "sha256": "44fb9b2202a120076bb5fb40610a30baaf9ff3515d3df9efdb1a58b32862c049"
+    "sha256": "7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894"
+  },
+  "eligibility_contract": {
+    "status": "BLOCKED_POLICY_CONFLICT",
+    "resolution_required": true,
+    "current_implementation_population_rows": 310761,
+    "literal_minimum_20_population_rows": 348765,
+    "difference_rows": 38004,
+    "no_population_choice": true,
+    "consistency_guard": {
+      "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_eligibility_contract_consistency_v1.json",
+      "sha256": "576ade8488744ee57e90eace98754cae717b5e512b80b9d3e6dfe1af1e2ecd52813",
+      "status": "BLOCKED_POLICY_CONFLICT"
+    }
   },
   "control_document_bindings": {
     "candidate_registry": {
