@@ -2,9 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Verified research baseline HEAD before this handoff addendum: `153a9716`
-Latest research milestone commit: `153a9716`
-Latest status/documentation commit: `153a9716`
+Verified research baseline HEAD before this handoff addendum: `d98ac615`
+Latest research milestone commit: `d98ac615`
+Latest status/documentation commit: `d98ac615`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
@@ -70,7 +70,10 @@ remains `0.0843185`; bottom-value Q1 exposure worsens from `39.6722%` to
 `50.3889%`. This establishes only
 `STRUCTURAL_NONREDUNDANCY_VS_C2_LEVEL_ONLY`, not mechanism-level novelty or
 economic readiness. H-LIQ remains `FUTURE_RESEARCH / NOVELTY_PENDING /
-ECONOMIC_CAUTION` and no C5 ID is created.
+ECONOMIC_CAUTION` and no C5 ID is created. The generator, independent
+verifier, guarded feature schema, and both JSON outputs also passed the
+outcome-blind target firewall; firewall artifact SHA-256 is
+`64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
 
 Current conclusion:
 
@@ -230,6 +233,8 @@ does not certify corporate-action or price-basis correctness.
 - economics and Top-K structural lab;
 - temporal/normalization/missingness/universe robustness harness;
 - H-LIQ-01 structural and adversarial harness;
+- H-LIQ-01 source-decomposition generator, independent recomputation
+  verifier, artifact hash contract, and outcome-blind firewall;
 - C3 capability and contract-map verifier;
 - identity-continuity audit;
 - equal-weight combination and friction-scenario harness;
