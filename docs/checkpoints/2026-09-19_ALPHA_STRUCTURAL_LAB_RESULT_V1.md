@@ -5,6 +5,11 @@ Lane: `codex/alpha-available-data-20260919`
 Stage: `C_F_G_K_L_M_OUTCOME_BLIND_STRUCTURAL_LAB`  
 Result: `PASS_STRUCTURAL_ONLY / NOT ALPHA EVIDENCE`
 
+Post-Phase-Q note: this V1 artifact is retained for lineage. The diagnostic
+return calculation was subsequently made explicit with
+`pct_change(fill_method=None)`; the regenerated V2 artifact and hash are
+recorded in `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+
 ## Question and non-redundancy rationale
 
 The earlier economics audit answered fixed Top-30 turnover, concentration, and

@@ -14,6 +14,9 @@ read-only red-team reports, is
 `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`. Read it together with this
 status file before continuing.
 
+The follow-up tooling/selection replay is recorded in
+`2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+
 ## Executive answer
 
 The program is **not blocked everywhere**. A large amount of legal,
@@ -139,8 +142,12 @@ issuer/ISIN continuity beyond the frozen interval mapping, or historical PIT
 authority. It accessed no targets, outcomes, providers, or incumbent score
 artifacts and created no candidate ID.
 
-The independent verifier also passed:
-`status=PASS`, all structural checks true, candidate set exactly `{C1,C2,C4}`.
+The legacy verifier passed only an envelope check and is not sufficient as an
+independent replay. The new source-recomputing verifier passed:
+`status=PASS_INDEPENDENT_STRUCTURAL_REPLAY`; all recomputed structural maps,
+source hashes, identity summary, and listing-age metrics matched the artifact.
+Its access-absence flags remain explicitly self-attested, not process-level
+proof.
 
 The follow-up CA/price-basis audit found that the known 1,657-row HLC overlay
 is already embedded in the current panel and replay leaves all C1/C2/C4
@@ -169,7 +176,8 @@ history, and the remaining independent red-team coverage for C1/C2/C4.
 
 H-LIQ-01's novelty question is partially answered: retain the mechanism card,
 but do not admit a candidate ID because shared participation information and
-economic/PIT risks remain material.
+economic/PIT risks remain material. Deterministic selection and explicit
+no-fill handling were fixed and replayed in the Phase-Q follow-up.
 
 ## Queue and exact next action
 
@@ -221,6 +229,7 @@ Detailed durable documents:
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+- `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
 
 No predictive superiority claim is made.

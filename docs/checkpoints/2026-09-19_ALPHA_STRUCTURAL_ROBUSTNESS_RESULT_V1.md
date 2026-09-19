@@ -5,6 +5,11 @@ Lane: `codex/alpha-available-data-20260919`
 Stage: `F_K_I_J_OUTCOME_BLIND_ROBUSTNESS`  
 Result: `PASS_STRUCTURAL_ONLY / NOT ALPHA EVIDENCE`
 
+Post-Phase-Q note: this V1 artifact is retained for lineage. The selection
+helper was subsequently made deterministic with an explicit ticker tie-break;
+the regenerated V2 artifact and hash are recorded in
+`2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+
 ## Question and non-redundancy rationale
 
 The earlier structural lab covered fixed Top-K mechanics, six time blocks,

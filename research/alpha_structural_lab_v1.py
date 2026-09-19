@@ -444,7 +444,7 @@ def main() -> None:
 
     panel = panel.sort_values(["ticker", "date"], kind="mergesort").copy()
     panel["close"] = pd.to_numeric(panel["close"], errors="coerce")
-    panel["daily_return"] = panel.groupby("ticker", sort=False)["close"].pct_change()
+    panel["daily_return"] = panel.groupby("ticker", sort=False)["close"].pct_change(fill_method=None)
     panel = panel[panel["date"].isin(frozen_dates)].copy()
     features = features[features["date"].isin(frozen_dates)].copy()
     merged = features.merge(panel, on=["ticker", "date"], how="left", validate="one_to_one", indicator=True)

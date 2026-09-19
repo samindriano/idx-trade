@@ -160,7 +160,12 @@ def top_sets(frame: pd.DataFrame, score_column: str, dates: pd.Series, k: int = 
     result: dict[pd.Timestamp, set[str]] = {}
     for date, group in usable.groupby("date", sort=True):
         if len(group) >= k:
-            result[pd.Timestamp(date)] = set(group.nlargest(k, score_column)["ticker"].astype(str))
+            selected = group.sort_values(
+                [score_column, "ticker"],
+                ascending=[False, True],
+                kind="mergesort",
+            ).head(k)
+            result[pd.Timestamp(date)] = set(selected["ticker"].astype(str))
     return result
 
 

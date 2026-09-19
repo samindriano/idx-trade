@@ -17,6 +17,10 @@ bukti struktural. Tiga red-team read-only terbaru selesai dan semuanya
 berujung `NO-GO` untuk menaikkan status kandidat menjadi `READY` atau membuat
 klaim model baru lebih baik.
 
+Follow-up Phase Q kemudian memperbaiki verifier, deterministic selection, dan
+missing-value handling; detail dengan hash ada di
+`2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+
 ## Batas lane dan isolasi
 
 - Semua pekerjaan berada di branch/worktree riset terpisah.
@@ -113,11 +117,21 @@ dipakai lagi.
   Dependence terhadap komponen turnover C2 meningkat dari sekitar `-0,046`
   di Q1 menjadi `0,468` di Q4; ini structural dependence, bukan bukti
   economic meaning.
-- Combination builder sudah memakai tie-break ticker eksplisit, tetapi
-  structural robustness helper masih memakai `nlargest()` tanpa tie-break
-  ticker yang eksplisit.
-- Metadata hash pada dokumen kombinasi sebelumnya stale; ini perlu disinkronkan
-  dengan artifact aktual sebelum dipakai sebagai provenance final.
+- Combination builder dan structural robustness helper kini memakai tie-break
+  ticker eksplisit. Replay canonical tidak mengubah set, tetapi row-permutation
+  test menunjukkan tie risk nyata pada 52 tanggal C3.
+- Metadata hash pada dokumen kombinasi sudah disinkronkan dengan artifact aktual;
+  provenance tetap struktural dan tidak menjadi bukti predictive.
+
+### Phase-Q tooling replay
+
+- Verifier lama hanya envelope-level; JSON check maps tidak direcompute.
+- Verifier v2 melakukan independent source replay dan lulus
+  `PASS_INDEPENDENT_STRUCTURAL_REPLAY`.
+- Structural robustness dan structural lab diregenerate setelah deterministic
+  tie-break dan `pct_change(fill_method=None)` patch; kedua verifier lulus.
+- Default-fill counterfactual sebelumnya mengubah C1 pada 52/600 Top-30 dates,
+  sehingga patch dipertahankan walaupun dampak C2/C4 kecil.
 
 ## Keputusan status
 
@@ -137,14 +151,10 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
 
 Masih boleh dilakukan di lane ini, tetap read-only atau staged-derived:
 
-1. Memperkuat verifier agar menghitung ulang hash/schema/key/metrics dari
-   sumber, bukan mempercayai boolean JSON.
-2. Mengunci deterministic tie-break H-LIQ/robustness dan menyegarkan artifact
-   serta provenance hash.
-3. Menguji dampak `pct_change(fill_method=None)` pada diagnostic market-state.
-4. Melanjutkan bounded corporate-action/issuer-basis, capacity, dan PIT source
+1. Menambah lineage eksplisit untuk generasi Stage-A yang duplicate/superseded.
+2. Melanjutkan bounded corporate-action/issuer-basis, capacity, dan PIT source
    admission audit dari data yang memang sudah ada.
-5. Menjaga ledger, phase matrix, dan re-entry queue tetap sinkron.
+3. Menjaga ledger, phase matrix, dan re-entry queue tetap sinkron.
 
 Yang **belum boleh** dilakukan: membuka target/outcome/incumbent, menjalankan
 OOS/IC/ICIR, scraping/provider probe baru untuk mengejar hasil, mengubah
@@ -164,6 +174,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+- `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`

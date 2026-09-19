@@ -21,6 +21,7 @@ Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESU
 Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ-01 novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
@@ -38,6 +39,10 @@ production or prospective claim.
 | `bundle_rows.parquet` from `idx-financial-representation-v2-20260816-v1-run3` | `PARTIAL` | Capability/structural audit only; no scientific alpha claim | 277,244 rows; 729 tickers; 2021-06-02–2026-07-17; unique `(ticker,date)`; parquet SHA-256 `c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b`; Financial PIT remains parked/partial and no same-science admission is certified. |
 | `official_exchange_sessions_1260.csv` | `PARTIAL — FROZEN_ONLY` | Session ordering/mask construction only | 1,260 official dates; SHA-256 `661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a`; not an authorization for new-alpha outcome claims. |
 | `tradability_anchors_1260.csv` | `PARTIAL — FROZEN_ONLY` | Same-session active-state mask construction only | 1,104,064 anchors; SHA-256 `33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e`; not a population-admission certificate for new alpha. |
+| `config/tradability_snapshot.sample.csv` | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | None for historical admission | 5 rows, all dated 2025-07-30; snapshot is not an event log. |
+| `config/idx_tradability_manifest.sample.csv` | `PARTIAL / CHECKPOINT-SAMPLE / NON-ADMISSIBLE` | Discovery/reference only | 4 announcement references, including one `MANUAL_REVIEW` case. |
+| `config/tradability_coverage_windows.csv` | `EMPTY / UNKNOWN` | None | Header-only; zero declared coverage windows. |
+| External Stage-A generations | `DERIVED / STRUCTURAL-ONLY / HISTORICAL-STAGING` | Structural diagnostics only | Multiple 981,940-row generations exist; duplicate/superseded lineage and manifest-head differences must be explicit. |
 | Frozen historical target ledger / challenger scores | `CONTROLLED — CLOSED UNTIL PROTOCOL FREEZE` | Fixed six-fold historical development/OOS only after this protocol is committed | Forward target data is not opened for discovery/tuning before this contract; not a fresh prospective holdout. |
 | Protected prospective outcome vault/counter | `BLOCKED` | None | Explicitly out of scope; no access, reset, archive, or mutation. |
 | Zapi IDX/TradingView/Investing/Stockbit probes | `PARTIAL` or `UNKNOWN` by source contract | Capability assessment only | Staged probe evidence is not automatically PIT/admission evidence; Investing identity/scale is ambiguous, Stockbit historical pagination is unestablished, and no new probe is authorized here. |
@@ -78,7 +83,7 @@ production or prospective claim.
 | Experiment ledger including failures | Candidate table, invalid v1 implementation, corrected implementation, and structural audit lineage | `COMPLETE — no target stage` |
 | Incumbent-vs-candidate comparison | Same-window target comparison and incumbent overlap are not authorized/provable; no post-cutoff score artifact was substituted | `BLOCKED — admission/common support` |
 | Surviving candidate artifact | No candidate has target/OOS/economic evidence | `NONE` |
-| Independent audit | Final guarded verifier, robustness artifact, and economics verifier pass structural checks | `PASS — structural only` |
+| Independent audit | Phase-Q v2 source replay, regenerated robustness/lab artifacts, and economics verifier | `PASS — structural only; access flags self-attested` |
 | Friction/economics diagnostics | `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md`; fixed Top-30/600-session capability audit | `COMPLETE — structural only` |
 | Exact remaining blocker to promotion | Authoritative population-wide historical-as-of source/target admission is absent; prospective evidence remains separate | `BLOCKED / WAITING` |
 
@@ -98,7 +103,7 @@ production or prospective claim.
 - Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the final guarded staging directory.
 - Structural economics audit: `PASS_STRUCTURAL_ONLY`; see `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md` and the independently verified staged JSON; no target or incumbent score was opened.
 - Structural economics first/last-half view: C1/C2/C4 retain broad Top-30 availability with similar turnover ranges; C3 is absent in the first half and remains blocked for sparse/late PIT coverage.
-- Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; independent verifier and target firewall pass.
+- Structural lab: Top-10/20/30/50 turnover, persistence, rank churn, liquidity exposure, six-block stability, market-state conditioning, rank/liquidity dependence, and daily/rolling candidate overlap are documented in `2026-09-19_ALPHA_STRUCTURAL_LAB_RESULT_V1.md`; regenerated v2 artifact and verifier pass after explicit no-fill handling.
 - Structural robustness battery: fixed-formula equivalence passed exactly; monotone rank/z-score variants were 100% Top-30 identical; C1/C2/C4 retained all 600 Top-30 dates under synthetic 5% score masking with 94.88%–95.17% mean overlap; C3 remained sparse and failed support stress. Lookback variants are materially distinct representations, not free normalization variants; see `2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md`.
 - Hypothesis cards: bounded literature/mechanism review produced one potential new temporal-liquidity direction and several explicitly blocked or non-novel directions; no C5+ candidate was admitted. See `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`.
 - H-LIQ-01 prototype: one fixed rolling variability-of-log-turnover representation passed target-free structural construction, showed low C1/C4 dependence and low churn, but retained a high bottom-market-value exposure; status is `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`, with no C5 ID. See `2026-09-19_ALPHA_HLIQ01_STRUCTURAL_RESULT_V1.md`.
@@ -107,7 +112,7 @@ production or prospective claim.
 - Combination readiness: exactly four equal-weight C1/C2/C4 combinations were evaluated without weight optimization. C1+C4 has the lowest tested combination turnover at 34.85%; all results remain structural hypotheses and no new candidate ID was created. See `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`.
 - Unused-data scan: `activity_median_regular_value_60` is populated for 105/963 current-universe tickers, but has no ticker-date history or available-at/PIT timestamps and five populated ranks fall outside `capture_high`; retain as metadata-only/non-admissible. No provider or canonical data was opened.
 - Capacity stress: q10 regular-market-value proxy at the 1% rate is IDR 7.63m/6.40m/13.03m/5.02m for C1/C2/C3/C4; this sharpens implementation caution but does not establish ADV or executable capacity. See `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`.
-- C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. Result is `PASS_STRUCTURAL_ONLY`; it does not certify PIT, corporate-action price basis, survivorship, or predictive value. The audit is a main-run adversarial audit with an independent verifier, not the missing independent worker red-team; see `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`.
+- C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. Legacy artifact result is `PASS_STRUCTURAL_ONLY`; the new source-recomputing replay is `PASS_INDEPENDENT_STRUCTURAL_REPLAY`. Neither certifies PIT, corporate-action price basis, survivorship, or predictive value; access flags remain self-attested. See `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 - CA/price-basis audit: the retained 1,657-row HLC overlay is already represented exactly in the current panel and replay leaves C1/C2/C4 scores, ranks, and Top-30 sets unchanged. This is bounded forensic evidence only; 188 non-stable scale rows and open-price residuals keep CA/PIT admission blocked. See `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`.
 - CA-basis stress extension: substituting the retained `idx_close` comparison values for the 188 unresolved rows changes C1 ranks on 10.617% of compared rows (minimum Top-30 overlap 36.667%), versus 2.894%/83.333% for C2 and 3.203%/86.667% for C4. The values are not admitted corrections; record this as C1 fragility and do not change the candidate status.
 - H-LIQ-01 novelty diagnostic: H-LIQ versus the C2 turnover-level component has mean daily Spearman 0.1648 and mean Top-30 overlap 39.40%; conditional dependence rises from -0.046 in bottom-value Q1 to 0.468 in top-value Q4. Retain the mechanism card, but do not create C5; status remains `NOVELTY_PENDING / ECONOMIC_CAUTION`.
@@ -117,3 +122,52 @@ production or prospective claim.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
+- Phase-Q tooling follow-up: deterministic ticker tie-break and explicit no-fill handling were patched; regenerated staged artifacts and source hashes are recorded in `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+
+## Continuation register — Phase-Q replay milestone
+
+### Active questions
+
+- Can duplicate/superseded Stage-A generations be assigned one explicit
+  immutable lineage without treating a derived artifact as new source data?
+- Can existing local corporate-action/issuer evidence reduce the 188-row
+  unresolved price-basis risk without reopening acquisition?
+- Can historical capacity and listing/identity risk be narrowed using only
+  already-admitted fields?
+
+### Answered questions
+
+- The old C1/C2/C4 verifier was not independent; v2 source replay now passes
+  and reports artifact access flags as self-attested.
+- `nlargest()` without a ticker tie-break is not a deterministic contract;
+  explicit score-descending/ticker-ascending sorting is now fixed.
+- Default `pct_change()` handling was a real reindexed-grid risk; the lab now
+  uses `fill_method=None` and the output was regenerated.
+- The discovered tradability files are samples/empty metadata, not an
+  admissible historical event log.
+
+### Blocked questions
+
+- Historical PIT/as-of, population completeness, issuer/ISIN continuity,
+  global corporate-action basis, real ADV/spread/queue capacity, and protected
+  target admission remain blocked or unknown.
+
+### Structurally rejected directions
+
+- None newly rejected by this replay. No candidate ID was added or removed.
+
+### Do-not-retry-without-new-evidence
+
+- Do not rerun the old envelope-only verifier as if it were independent.
+- Do not use sample tradability snapshots or metadata-only activity fields as
+  historical PIT evidence.
+- Do not reopen target/OOS/IC/ICIR work, provider scraping, or canonical data
+  mutation to resolve these structural questions.
+
+### Next high-information tasks
+
+1. Record explicit Stage-A generation lineage and duplicate/superseded status.
+2. Continue bounded CA/issuer-basis and capacity audits from admitted local
+   inputs only.
+3. Keep the source-recomputing verifier and deterministic/no-fill contracts in
+   the re-entry tooling; do not promote candidates before Data QA admission.

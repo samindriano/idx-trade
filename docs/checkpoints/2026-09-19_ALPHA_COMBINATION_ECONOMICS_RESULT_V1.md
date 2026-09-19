@@ -74,17 +74,17 @@ they do not certify historical liquidity, spread, queue position, or capacity.
 
 ## Reproducibility and firewall
 
-- Research commit: `35ce5968`
+- Research commit: `0a9bbbb9` (artifact replay/current-lane pin)
 - Builder: `research/alpha_combination_economics_v1.py`
-- Builder SHA-256: `59bdd5711ad2dd58f8b8760e7932d55791422dd8c14ab2c463c312d038149d28`
+- Builder SHA-256: `a326d8d40933562f2de3a3137adc2a0280529d3db610ed2c6ce5224b73568591`
 - Independent verifier: `research/verify_alpha_combination_economics_v1.py`
 - Independent verifier SHA-256: `3e8b7ad0a2cc3d760bd56f0838c1a2e76878bc9e97ba86c257159e33aa0889bc`
 - Output:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_combination_economics_v1.json`
-- Output SHA-256: `7037f6ce7eab98f551a8f31238455b1ed7663aff753ec5d7e56dde81089ee92f`
+- Output SHA-256: `82c76798f5135f345e41f9d536497f68908b3744107d951b583d6a3297de985d`
 - Firewall artifact:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_combination_economics_firewall_v1.json`
-- Firewall artifact SHA-256: `c1be669c3f8a276909e4955e3c2d43941f1d8d7f30e5ab49dfbd15e8c256eac7`
+- Firewall artifact SHA-256: `4d00cace99225d5286c5143698622a85a735564b5ee6955bab98007038d679f4`
 - Verifier, firewall, and Python compilation: `PASS`
 
 No target, forward return, incumbent score, provider, network, cloud, capture,

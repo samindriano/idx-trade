@@ -40,10 +40,11 @@ Mean daily Spearman by same-day market-value quartile:
 | Q3 | 0.3655 | 0.0998 |
 | Q4 top value | 0.4678 | 0.1958 |
 
-The mechanism is most distinct among lower-value names and shares more
-participation information among higher-value names. This resolves the narrow
-novelty question only partially: H-LIQ is not a monotone duplicate of C2, but
-its shared participation component is economically meaningful in Q4.
+The mechanism is most distinct among lower-value names and shows structurally
+higher participation dependence among higher-value names. This resolves the
+narrow novelty question only partially: H-LIQ is not a monotone duplicate of
+C2, but the Q4 relationship is a structural dependence signal; its economic
+meaning, capacity, and PIT safety remain unknown.
 
 ## Decision
 

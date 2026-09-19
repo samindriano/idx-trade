@@ -10,6 +10,7 @@ Current self-contained read-in: `2026-09-19_ALPHA_RESEARCH_PROGRAM_FINAL_HANDOFF
 Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest consolidated read-in: `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
+Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
@@ -137,11 +138,12 @@ These are structural/capability results only; none opens target, incumbent,
 provider, network, prospective, or protected outcome data.
 
 The latest main-run adversarial audit passed all target-free C1/C2/C4 static,
-schema/key, calendar, identity-interval, mask, and numerical checks. It does
-not certify PIT/corporate-action basis or predictive value. Three additional
-read-only Phase-Q red-team reviews are now complete; their synthesis remains
-`NO-GO` for readiness because PIT/as-of, issuer identity, survivorship, price
-basis, real capacity, tie policy, and full source recomputation are unresolved.
+schema/key, calendar, identity-interval, mask, and numerical checks. A new
+source-recomputing replay also passed; the old verifier is now treated as
+envelope-only. Three additional read-only Phase-Q red-team reviews and the
+tooling replay are complete, but readiness remains `NO-GO` because PIT/as-of,
+issuer identity, survivorship, price basis, real capacity, and process-level
+access attestation are unresolved.
 
 The CA/price-basis follow-up confirms the known 1,657-row HLC overlay is
 already embedded in the current panel and does not change C1/C2/C4 on replay;

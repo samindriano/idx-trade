@@ -87,13 +87,16 @@ It does **not** establish:
 - Output: `alpha_c1234_adversarial_audit_v1.json` in
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Output SHA-256: `6bfcba7070be218d288a0cf894f8d7e54b170bf624966e38a758061ed7d6dae8`
-- Verifier result: `PASS`
+- Legacy verifier result: `PASS` for artifact-envelope checks only; it is not
+  an independent structural replay.
+- Source-recomputing replay: `PASS_INDEPENDENT_STRUCTURAL_REPLAY`; see
+  `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 - Outcome/provider/target/incumbent access flags: all `false`
 - Candidate ID created: `false`
 
 ## Decision
 
 Retain C1/C2/C4 as `FUTURE_RESEARCH`. Do not promote them to
-`READY_FOR_REENTRY` on this audit alone. Complete dedicated independent
-red-team coverage and resolve price-basis/PIT admission before any protected
-evaluation.
+`READY_FOR_REENTRY` on this audit alone. Resolve price-basis/PIT admission and
+the remaining identity/survivorship/capacity uncertainties before any
+protected evaluation.
