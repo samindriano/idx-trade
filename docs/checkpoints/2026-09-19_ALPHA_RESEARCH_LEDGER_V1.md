@@ -2,7 +2,7 @@
 
 Lane: `codex/alpha-available-data-20260919`
 Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
-Status: `STAGE A COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
+Status: `STAGE A CORRECTED COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -38,10 +38,10 @@ production or prospective claim.
 
 | ID | Candidate | Stage A | Historical comparison | Robustness/economics | Verdict | Reason |
 |---|---|---|---|---|---|---|
-| C1 | `residual_reversal_5_v1` | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 889,625/981,940 finite rows (90.5987%); no target opened; source remains frozen-only. |
-| C2 | `participation_confirmation_5_v1` | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 926,482/981,940 finite rows (94.3522%); no target opened; source remains frozen-only. |
-| C3 | `BLOCKED — coverage/source` | `BLOCKED — source admission` | `BLOCKED` | `BLOCKED` | `BLOCKED` | 34,412/981,940 finite rows (3.5045%); Financial PIT is partial/parked and no partial fallback is allowed. |
-| C4 | `PASS — capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 926,225/981,940 finite rows (94.3260%); no target opened; source remains frozen-only. |
+| C1 | `residual_reversal_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 295,243/310,761 eligible rows (95.0065%); corrected mask/session implementation; no target opened. |
+| C2 | `participation_confirmation_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 310,761/310,761 eligible rows (100.0000%); corrected mask/session implementation; no target opened. |
+| C3 | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED` | `BLOCKED` | `BLOCKED` | 30,994/310,761 eligible rows (9.9736%); late PIT coverage and partial Financial admission; no fallback. |
+| C4 | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 310,323/310,761 eligible rows (99.8591%); corrected mask/session implementation; no target opened. |
 
 ## Audit trail
 
@@ -51,6 +51,10 @@ production or prospective claim.
 - New feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a\20260919T\alpha_stage_a_features.parquet`.
 - Independent artifact audit: `PASS`; output `independent_audit.json` in the same staging directory.
 - Temporal structural robustness audit: `PASS_STRUCTURAL_ONLY`; output `alpha_stage_a_robustness.json` in the same staging directory.
+- Corrected Stage A output: external staging only; see `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`.
+- Corrected feature artifacts: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-v3\20260919T-corrected-v3\alpha_stage_a_v3_features.parquet`.
+- Corrected independent audit: `PASS`; `alpha_stage_a_v3_independent_audit.json` in the corrected staging directory.
+- Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.
 - New outcome access: none.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.

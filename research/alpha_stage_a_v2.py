@@ -95,6 +95,10 @@ def build_decision_universe(
     sessions = sessions.drop_duplicates().sort_values("date").reset_index(drop=True)
     if sessions["date"].duplicated().any():
         raise ValueError("official session dates are not unique")
+    panel_dates = set(panel["date"].dropna().unique())
+    session_dates = set(sessions["date"].unique())
+    if not panel_dates.issubset(session_dates):
+        raise ValueError("panel contains dates outside the official session calendar")
 
     anchors = pd.read_csv(anchors_path)
     required = {"ticker", "market", "as_of_date", "state"}
@@ -149,15 +153,19 @@ def build_decision_universe(
 
 
 def build_market_scores(panel_path: Path, universe: pd.DataFrame) -> pd.DataFrame:
-    panel = pd.read_parquet(panel_path, columns=PANEL_COLUMNS)
-    panel["date"] = pd.to_datetime(panel["date"], errors="raise").dt.normalize()
-    panel["ticker"] = panel["ticker"].astype("string")
-    if panel.duplicated(["ticker", "date"]).any():
+    raw = pd.read_parquet(panel_path, columns=PANEL_COLUMNS)
+    raw["date"] = pd.to_datetime(raw["date"], errors="raise").dt.normalize()
+    raw["ticker"] = raw["ticker"].astype("string")
+    if raw.duplicated(["ticker", "date"]).any():
         raise ValueError("panel has duplicate ticker/date keys")
     for column in ["close", "volume", "regular_market_value"]:
-        panel[column] = pd.to_numeric(panel[column], errors="coerce")
+        raw[column] = pd.to_numeric(raw[column], errors="coerce")
+    raw["source_panel_row_present"] = True
+    # Reindex to every official session so rolling windows count sessions, not
+    # merely rows surviving an IPO/no-trade/source-coverage filter.
+    panel = universe.merge(raw, on=["ticker", "date"], how="left", validate="one_to_one")
     panel = panel.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
-    panel = panel.merge(universe, on=["ticker", "date"], how="left", validate="one_to_one")
+    panel["source_panel_row_present"] = panel["source_panel_row_present"].fillna(False).astype(bool)
     panel["eligible_decision_universe"] = panel["eligible_decision_universe"].fillna(False).astype(bool)
     panel["close_valid"] = panel["close"].gt(0) & np.isfinite(panel["close"])
     panel["volume_valid"] = panel["volume"].gt(0) & np.isfinite(panel["volume"])
@@ -181,7 +189,10 @@ def build_market_scores(panel_path: Path, universe: pd.DataFrame) -> pd.DataFram
     panel["turnover_median_60"] = rolling(panel, "turnover", 60, "median")
 
     eligible_returns = panel.loc[
-        panel["eligible_decision_universe"] & np.isfinite(panel["ret_1"]), ["date", "ret_1"]
+        panel["source_panel_row_present"]
+        & panel["eligible_decision_universe"]
+        & np.isfinite(panel["ret_1"]),
+        ["date", "ret_1"],
     ]
     market_ret = eligible_returns.groupby("date", sort=True)["ret_1"].mean().rename("market_ret")
     market_index = (1.0 + market_ret).cumprod().rename("market_index")
@@ -220,7 +231,18 @@ def build_market_scores(panel_path: Path, universe: pd.DataFrame) -> pd.DataFram
         "C4_path_efficiency_reversal_20_v1",
     ]:
         panel.loc[~panel["eligible_decision_universe"], column] = np.nan
-    return panel
+    return panel.loc[
+        panel["source_panel_row_present"],
+        [
+            "ticker",
+            "date",
+            "eligible_decision_universe",
+            "C1_residual_reversal_5_v1",
+            "C2_participation_confirmation_5_v1",
+            "C4_path_efficiency_reversal_20_v1",
+            "source_panel_row_present",
+        ],
+    ].copy()
 
 
 def build_financial_score(financial_path: Path, universe: pd.DataFrame) -> pd.DataFrame:
@@ -249,6 +271,12 @@ def build_financial_score(financial_path: Path, universe: pd.DataFrame) -> pd.Da
         & financial["bundle_reporting_attachment_sha256"].notna()
         & financial["bundle_reporting_attachment_sha256"].astype("string").str.len().ge(16)
     )
+    financial = financial.merge(
+        universe[["ticker", "date", "eligible_decision_universe"]],
+        on=["ticker", "date"],
+        how="left",
+        validate="one_to_one",
+    )
     valid = (
         financial["all_five_available"].fillna(False).astype(bool)
         & ~financial["same_bundle_violation"].fillna(True).astype(bool)
@@ -258,6 +286,7 @@ def build_financial_score(financial_path: Path, universe: pd.DataFrame) -> pd.Da
         & provenance_ok
         & financial[values].notna().all(axis=1)
         & np.isfinite(financial[values]).all(axis=1)
+        & financial["eligible_decision_universe"].fillna(False).astype(bool)
     )
     financial["financial_pit_valid"] = valid
     financial["financial_leverage_positive"] = -financial[values[0]]
@@ -270,13 +299,6 @@ def build_financial_score(financial_path: Path, universe: pd.DataFrame) -> pd.Da
     rank_columns = [f"rank_{column}" for column in components]
     financial["C3_financial_quality_growth_v1"] = financial[rank_columns].mean(axis=1)
     financial.loc[~valid, "C3_financial_quality_growth_v1"] = np.nan
-    financial = financial.merge(
-        universe[["ticker", "date", "eligible_decision_universe"]],
-        on=["ticker", "date"],
-        how="left",
-        validate="one_to_one",
-    )
-    financial.loc[~financial["eligible_decision_universe"].fillna(False), "C3_financial_quality_growth_v1"] = np.nan
     return financial[
         ["ticker", "date", "C3_financial_quality_growth_v1", "financial_pit_valid"]
     ]
@@ -307,7 +329,7 @@ def audit(features: pd.DataFrame, source_paths: dict[str, Path], universe_stats:
     return json_safe(
         {
             "protocol": "2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1",
-            "implementation": "alpha_stage_a_v2",
+            "implementation": "alpha_stage_a_v3_corrected",
             "stage": "A_OUTCOME_BLIND",
             "outcome_accessed": False,
             "run_timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -381,9 +403,9 @@ def main() -> None:
     }
     audit_result = audit(features, source_paths, universe_stats, Path(__file__), repo)
     audit_result["feature_code_sha256"] = sha256_file(Path(__file__))
-    features_path = out_dir / "alpha_stage_a_v2_features.parquet"
-    audit_path = out_dir / "alpha_stage_a_v2_audit.json"
-    manifest_path = out_dir / "alpha_stage_a_v2_manifest.json"
+    features_path = out_dir / "alpha_stage_a_v3_features.parquet"
+    audit_path = out_dir / "alpha_stage_a_v3_audit.json"
+    manifest_path = out_dir / "alpha_stage_a_v3_manifest.json"
     features.to_parquet(features_path, index=False)
     audit_path.write_text(json.dumps(audit_result, indent=2, sort_keys=True, allow_nan=False), encoding="utf-8")
     manifest = json_safe(
