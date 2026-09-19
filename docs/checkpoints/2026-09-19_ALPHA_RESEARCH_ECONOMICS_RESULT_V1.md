@@ -41,6 +41,24 @@ realized net alpha or a broker-fill estimate.
 capacity guarantee and does not account for spread, queue position, or order
 size.
 
+## Fixed first/last-half robustness
+
+The same fixed Top-30 construction was also summarized separately on the
+protocol's first and last 300 sessions. This is a structural stability view,
+not a parameter perturbation or a second acceptance route.
+
+| Candidate | First-300 turnover / base burden | Last-300 turnover / base burden | First-300 top-10 share | Last-300 top-10 share |
+|---|---:|---:|---:|---:|
+| C1 residual reversal | 40.56% / 24.33 bps | 43.72% / 26.23 bps | 7.72% | 6.67% |
+| C2 participation confirmation | 32.47% / 19.48 bps | 33.32% / 19.99 bps | 9.18% | 6.87% |
+| C3 financial quality/growth | no Top-30 date | 10.93% / 6.56 bps | not available | 25.77% |
+| C4 path efficiency reversal | 22.27% / 13.36 bps | 25.16% / 15.10 bps | 9.60% | 8.00% |
+
+C1/C2/C4 retain broad Top-30 availability and similar structural turnover
+across halves. C3 has only one finite row in the first half and 278 usable
+Top-30 dates in the last half, which is a coverage/timing failure rather than
+evidence of a slower-moving alpha.
+
 ## Interpretation and status
 
 - C2 has lower structural turnover and lower modeled cost burden than C1, but
@@ -61,16 +79,15 @@ size.
 
 - Builder: `research/alpha_stage_a_economics_v1.py`
 - Builder SHA-256:
-  `df32189c2a78073db632fccad1e2744aada360802f6025d56568671d552a6d85`
+  `2c0cbde2dedcf3d6e4afa2cfdc03a4cb90dfb2450afc317ce04a4bd51de0debb`
 - Independent verifier: `research/verify_alpha_stage_a_economics_v1.py`
 - Independent verifier SHA-256:
-  `bb0ce9ea2d1ddff62d8e5cb8d57f6372895e25529aa159d2fdf7129ea5e22bac`
+  `399e290c8e783e55ef44f047a758ab64beeccd6a5432f4c4cb1e6dd036983ed6`
 - Staging directory:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 - Economics JSON SHA-256:
-  `b99f2e8c03610e0505445b4118e5716dc5c177618ba3c100661cc553cb1430b5`
+  `089e0d1804fa02c41a5cba75265f4d543de34b1a22ea8a0fe474c3f8fceb5738`
 - Independent audit JSON SHA-256:
-  `cc6f613bd06618c6386a896b04ae7e8e086a773b5b2e58eaaaa54063293c58a6`
+  `18b88ed83c555849a0944bee294cce8c0010274ec8a7078b8de442bb2b1f118c`
 - Independent audit result: `PASS`
 - Outcome/provider/target/incumbent access flags: all `false`
-

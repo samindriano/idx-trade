@@ -169,6 +169,22 @@ def main() -> None:
         candidate: summarize_candidate(candidate, features, frozen_sessions)
         for candidate in CANDIDATES
     }
+    slice_metrics: dict[str, dict[str, object]] = {}
+    for slice_name, slice_sessions in {
+        "first_300": frozen_sessions.head(300).copy().reset_index(drop=True),
+        "last_300": frozen_sessions.tail(300).copy().reset_index(drop=True),
+    }.items():
+        slice_dates = set(slice_sessions["date"])
+        slice_frame = features[features["date"].isin(slice_dates)].copy()
+        slice_metrics[slice_name] = {
+            "session_count": int(len(slice_sessions)),
+            "window_start": slice_sessions["date"].min().strftime("%Y-%m-%d"),
+            "window_end": slice_sessions["date"].max().strftime("%Y-%m-%d"),
+            "candidate_metrics": {
+                candidate: summarize_candidate(candidate, slice_frame, slice_sessions)
+                for candidate in CANDIDATES
+            },
+        }
     result = {
         "status": "PASS_STRUCTURAL_ONLY",
         "protocol": "2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1",
@@ -197,6 +213,7 @@ def main() -> None:
         },
         "code_sha256": sha256_file(Path(__file__)),
         "candidate_metrics": candidates,
+        "candidate_metrics_by_slice": slice_metrics,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")

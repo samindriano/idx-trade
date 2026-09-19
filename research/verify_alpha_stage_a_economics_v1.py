@@ -28,6 +28,39 @@ def close(a: float, b: float) -> bool:
     return abs(float(a) - float(b)) <= 1e-9
 
 
+def add_metric_checks(
+    checks: dict[str, bool],
+    prefix: str,
+    metrics: dict[str, object],
+    friction: dict[str, float],
+) -> None:
+    turnover = [
+        metrics.get("one_way_turnover_mean"),
+        metrics.get("one_way_turnover_median"),
+        metrics.get("one_way_turnover_q95"),
+        metrics.get("one_way_turnover_max"),
+    ]
+    checks[f"{prefix}_turnover_bounded"] = all(value is None or 0.0 <= float(value) <= 1.0 for value in turnover)
+    checks[f"{prefix}_coverage_bounded"] = all(
+        value is None or 0.0 <= float(value) <= 1.0
+        for value in (
+            metrics.get("top30_market_value_coverage"),
+            metrics.get("top30_positive_market_value_coverage"),
+            metrics.get("top10_ticker_slot_share"),
+            metrics.get("largest_single_ticker_slot_share"),
+        )
+    )
+    mean_turnover = metrics.get("one_way_turnover_mean")
+    checks[f"{prefix}_base_cost_reconciles"] = (
+        mean_turnover is None
+        or close(metrics["base_friction_bps_mean_of_nav"], mean_turnover * friction["base_matched_turnover_bps"])
+    )
+    checks[f"{prefix}_sensitivity_cost_reconciles"] = (
+        mean_turnover is None
+        or close(metrics["sensitivity_friction_bps_mean_of_nav"], mean_turnover * friction["sensitivity_matched_turnover_bps"])
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, required=True)
@@ -66,31 +99,15 @@ def main() -> None:
     )
 
     for candidate, metrics in artifact["candidate_metrics"].items():
-        turnover = [
-            metrics.get("one_way_turnover_mean"),
-            metrics.get("one_way_turnover_median"),
-            metrics.get("one_way_turnover_q95"),
-            metrics.get("one_way_turnover_max"),
-        ]
-        checks[f"{candidate}_turnover_bounded"] = all(value is None or 0.0 <= float(value) <= 1.0 for value in turnover)
-        checks[f"{candidate}_coverage_bounded"] = all(
-            value is None or 0.0 <= float(value) <= 1.0
-            for value in (
-                metrics.get("top30_market_value_coverage"),
-                metrics.get("top30_positive_market_value_coverage"),
-                metrics.get("top10_ticker_slot_share"),
-                metrics.get("largest_single_ticker_slot_share"),
-            )
-        )
-        mean_turnover = metrics.get("one_way_turnover_mean")
-        checks[f"{candidate}_base_cost_reconciles"] = (
-            mean_turnover is None
-            or close(metrics["base_friction_bps_mean_of_nav"], mean_turnover * friction["base_matched_turnover_bps"])
-        )
-        checks[f"{candidate}_sensitivity_cost_reconciles"] = (
-            mean_turnover is None
-            or close(metrics["sensitivity_friction_bps_mean_of_nav"], mean_turnover * friction["sensitivity_matched_turnover_bps"])
-        )
+        add_metric_checks(checks, candidate, metrics, friction)
+
+    slices = artifact.get("candidate_metrics_by_slice", {})
+    checks["slice_set_exact"] = set(slices) == {"first_300", "last_300"}
+    for slice_name, slice_entry in slices.items():
+        checks[f"{slice_name}_session_count"] = slice_entry.get("session_count") == 300
+        checks[f"{slice_name}_candidate_set_exact"] = set(slice_entry.get("candidate_metrics", {})) == CANDIDATES
+        for candidate, metrics in slice_entry.get("candidate_metrics", {}).items():
+            add_metric_checks(checks, f"{slice_name}_{candidate}", metrics, friction)
 
     result = {
         "status": "PASS" if all(checks.values()) else "FAIL",
