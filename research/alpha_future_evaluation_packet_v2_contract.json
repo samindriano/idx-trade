@@ -1,0 +1,154 @@
+{
+  "contract_id": "ALPHA_FUTURE_EVALUATION_PACKET_V2",
+  "status": "SPECIFICATION_ONLY / BLOCKED_BY_DATA_ADMISSION",
+  "outcome_accessed": false,
+  "provider_accessed": false,
+  "target_accessed": false,
+  "cloud_accessed": false,
+  "protected_candidate_budget": [
+    "C1",
+    "C2",
+    "C3",
+    "C4"
+  ],
+  "candidate_contract": {
+    "C1": {
+      "id": "residual_reversal_5_v1",
+      "execution_gate": "ADMISSION_REQUIRED",
+      "missingness": "All fixed beta-60-through-t-1, volatility-20, and residual-5 observations must be finite; no shorter fallback or imputation; non-finite score is excluded from same-date candidate support."
+    },
+    "C2": {
+      "id": "participation_confirmation_5_v1",
+      "execution_gate": "ADMISSION_REQUIRED",
+      "missingness": "All fixed prior-5 return and 5-session mean / prior-60 median turnover observations must be finite; zero or invalid close*volume is missing; no imputation or shorter fallback; non-finite score is excluded from same-date candidate support."
+    },
+    "C3": {
+      "id": "financial_quality_growth_v1",
+      "execution_gate": "BLOCKED_C3_PIT_COVERAGE",
+      "execute": false,
+      "missingness": "All five selected values, same-bundle provenance, reporting version, attachment hash, knowledge-time ordering, period boundary, and eligible-universe membership must be valid; partial bundles and fallback values are forbidden."
+    },
+    "C4": {
+      "id": "path_efficiency_reversal_20_v1",
+      "execution_gate": "ADMISSION_REQUIRED",
+      "missingness": "All fixed prior-20 returns and a strictly positive finite sum of absolute prior daily returns are required; zero denominator, non-finite score, and shorter fallback are missing/excluded."
+    }
+  },
+  "ranking_contract": {
+    "eligible_mask_first": true,
+    "candidate_rank_method": "average",
+    "candidate_rank_percentile": true,
+    "score_direction": "candidate formula direction is frozen; no sign flip",
+    "top_k": 30,
+    "top_k_tie_break": "score descending, ticker ascending, stable mergesort",
+    "no_candidate_specific_population": true
+  },
+  "source_bindings": {
+    "panel": {
+      "path": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\v4_x_clean_data_consolidation_v1_final_20260820_v2\\model_safe_signal_research_panel_1260_final_clean.parquet",
+      "sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e"
+    },
+    "financial": {
+      "path": "D:\\Documents\\Project\\idx-financial-representation-v2-20260816-v1-run3\\bundle_rows.parquet",
+      "sha256": "c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b"
+    },
+    "official_sessions": {
+      "path": "D:\\Documents\\Project\\idx-v4-x1-clean-historical-input-stage-r2-20260820\\official_exchange_sessions_1260.csv",
+      "sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+    },
+    "tradability_anchors": {
+      "path": "D:\\Documents\\Project\\idx-v4-x1-clean-historical-input-stage-r2-20260820\\tradability_anchors_1260.csv",
+      "sha256": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
+    },
+    "guarded_features": {
+      "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_stage_a_v3_features.parquet",
+      "sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4"
+    },
+    "stage_manifest": {
+      "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_stage_a_v3_manifest.json",
+      "sha256": "27f62ac509284a6497bfacf41fd1e34cc9e352ba49f0ca2006ff8160cacf3d96"
+    }
+  },
+  "implementation_bindings": {
+    "stage_code": {
+      "path": "research/alpha_stage_a_v2.py",
+      "sha256": "62a16137d039c0304e00fbf91de65ed5c70d50952faccf2aff1b0a587f49e59a"
+    },
+    "protocol": {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md",
+      "sha256": "39abbd6ea79c80bf0619bbdd00220461fbd25c899da58ed787fd7c4e332ebfee"
+    }
+  },
+  "key_contract": {
+    "panel_key_digest": "a883c33301605209f3802054a38e1231b1a89d3820e79f3a55bebc7657237fa3",
+    "feature_key_digest": "a883c33301605209f3802054a38e1231b1a89d3820e79f3a55bebc7657237fa3",
+    "panel_rows": 981940,
+    "feature_rows": 981940,
+    "key_sets_equal": true
+  },
+  "manifest_binding": {
+    "implementation": "alpha_stage_a_v3_corrected",
+    "stage": "A_OUTCOME_BLIND",
+    "manifest_code_sha256": "62a16137d039c0304e00fbf91de65ed5c70d50952faccf2aff1b0a587f49e59a",
+    "manifest_feature_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "manifest_repo_head": "10939862bc134064a55cd492bc4926e0fa99f281"
+  },
+  "robustness_evidence": [
+    {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_STRUCTURAL_ROBUSTNESS_RESULT_V1.md",
+      "sha256": "65b9a936959709fb4c7c7cd52e60609a63529b8ffb24dff0f103e79a26a1dcf0"
+    },
+    {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md",
+      "sha256": "673dbe27c649187923403b98ee903a83d7aeb29cfb6dde57dda763ec2ef2e1e4"
+    },
+    {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md",
+      "sha256": "6b0ce3a461dd0a87dad08b9bb32a131414ee58e88d90e3868db4d48a41df4083"
+    },
+    {
+      "path": "docs/checkpoints/2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md",
+      "sha256": "d2fa337dd5abdb497fe2b9d1027c2ac3825f4a3f8abf4646e45fe96cd5418b9b"
+    },
+    {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md",
+      "sha256": "ff12a670cd27e8024102948aee0dd9d9f84b8f241aecbb16e72c89ca660689c3"
+    },
+    {
+      "path": "docs/checkpoints/2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md",
+      "sha256": "60a8782a919cc635665d6a9b34087a5dc440ed5581eee6a14594295092af9736"
+    }
+  ],
+  "friction_contract": {
+    "buy_fee_bps": 15,
+    "sell_fee_bps": 25,
+    "slippage_bps_per_side": 10,
+    "sensitivity_slippage_bps_per_side": [0, 25],
+    "entry_nav_cap": 0.15,
+    "capacity_reference": "1% causal regular-market-value proxy only; not ADV, spread, queue, fill probability, or broker capacity",
+    "stamp_duty": "must be resolved from the frozen execution rule before admission; unresolved means BLOCKED",
+    "turnover_cost_rule": "report turnover separately and apply frozen fee/slippage assumptions; no post-access cost tuning"
+  },
+  "admission_preconditions": [
+    "population completeness",
+    "historical PIT/as-of authority",
+    "common-share and issuer/ISIN continuity",
+    "official calendar continuity",
+    "corporate-action transition basis",
+    "revision/vintage completeness",
+    "H5 and H10 target authority",
+    "immutable incumbent/common-support identity",
+    "untouched protected-evaluation state and exact counter/lock semantics"
+  ],
+  "evaluation_contract": {
+    "target": "CANONICAL_V4_X1_REALIZED_CONSENSUS_OPEN_T1_CLOSE_H5_H10_V1",
+    "folds": 6,
+    "fold_session_length": 100,
+    "purge_sessions": 10,
+    "bootstrap_repetitions": 2000,
+    "bootstrap_block_length": 10,
+    "bootstrap_seed": 42,
+    "one_shot_per_candidate": true,
+    "no_rescue_refit_variant_sweep": true
+  }
+}
