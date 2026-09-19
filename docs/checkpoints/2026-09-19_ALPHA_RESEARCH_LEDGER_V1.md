@@ -29,6 +29,7 @@ Latest Stage-A consumer audit: `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
 Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ-01 novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+Latest H-LIQ-01 size-neutral diagnostic: `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
 
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
@@ -120,6 +121,7 @@ production or prospective claim.
 - CA/price-basis audit: the retained 1,657-row HLC overlay is already represented exactly in the current panel and replay leaves C1/C2/C4 scores, ranks, and Top-30 sets unchanged. This is bounded forensic evidence only; 188 non-stable scale rows and open-price residuals keep CA/PIT admission blocked. See `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`.
 - CA-basis stress extension: substituting the retained `idx_close` comparison values for the 188 unresolved rows changes C1 ranks on 10.617% of compared rows (minimum Top-30 overlap 36.667%), versus 2.894%/83.333% for C2 and 3.203%/86.667% for C4. The values are not admitted corrections; record this as C1 fragility and do not change the candidate status.
 - H-LIQ-01 novelty diagnostic: H-LIQ versus the C2 turnover-level component has mean daily Spearman 0.1648 and mean Top-30 overlap 39.40%; conditional dependence rises from -0.046 in bottom-value Q1 to 0.468 in top-value Q4. Retain the mechanism card, but do not create C5; status remains `NOVELTY_PENDING / ECONOMIC_CAUTION`.
+- H-LIQ-01 size-neutral diagnostic: one preregistered daily value-rank residual reduces selected bottom-value Q25 share from 39.672% to 14.983%, but raises mean Top-30 turnover from 10.306% to 20.785% and retains 72.006% overlap with baseline. The exposure is partly scale-related, not a free improvement; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
 - Earlier Stage A implementations: `FAIL — engineering conformance`, retained for lineage and excluded from evidence.

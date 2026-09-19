@@ -20,7 +20,7 @@ non-redundant work remains authorized.
 | D | C3 financial capability investigation | `COMPLETE CAPABILITY / BLOCKED SCIENCE` | Financial capability audit and contract map; quality-only island is broader, but YoY/provenance support remains sparse. |
 | E | Target-free orthogonality | `COMPLETE STRUCTURAL` | `2026-09-19_STRUCTURAL_ORTHOGONALITY_MAP_V1.md` and daily/rolling lab; incumbent/target incremental information remains blocked. |
 | F | Economic mechanism research | `COMPLETE BOUNDED` | Hypothesis cards and literature separation; no mechanism is predictive evidence without target admission. |
-| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ NOVELTY PARTIALLY RESOLVED` | H-LIQ-01 is structurally distinct from C2 but shares turnover information in Q4; remains `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
+| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ NOVELTY PARTIALLY RESOLVED` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. One fixed size-neutral representation reduces bottom-value exposure but doubles turnover; remains `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
 | H | External literature/mechanism review | `COMPLETE BOUNDED` | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`; literature is inspiration, not IDX evidence. |
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics and H-LIQ h10/h20/h40; no free sweep or predictive selection. |
@@ -44,8 +44,9 @@ non-redundant work remains authorized.
 ## Active questions
 
 1. Can H-LIQ-01 receive a defensible price-basis/turnover-unit and capacity
-   contract without a new source? Current answer: novelty is partially
-   resolved, but basis/capacity remain unresolved.
+   contract without a new source? Current answer: size-neutralization reduces
+   low-value exposure but raises turnover, while basis/capacity remain
+   unresolved.
 2. Can a separately staged identity/corporate-action artifact establish
    issuer continuity and price-basis authority? Current answer: the known
    1,657-row HLC overlay is already embedded and replay-stable, but no complete

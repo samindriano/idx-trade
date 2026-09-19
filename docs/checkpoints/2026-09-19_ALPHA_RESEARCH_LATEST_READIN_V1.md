@@ -127,6 +127,10 @@ dipakai lagi.
   Dependence terhadap komponen turnover C2 meningkat dari sekitar `-0,046`
   di Q1 menjadi `0,468` di Q4; ini structural dependence, bukan bukti
   economic meaning.
+- Satu size-neutral representation preregistered menurunkan selected bottom-value
+  Q25 share dari `39,672%` menjadi `14,983%`, tetapi menaikkan mean Top-30
+  turnover dari `10,306%` menjadi `20,785%`; ini tidak membuat C5 atau mengubah
+  disposition. Detail ada di `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`.
 - Combination builder dan structural robustness helper kini memakai tie-break
   ticker eksplisit. Replay canonical tidak mengubah set, tetapi row-permutation
   test menunjukkan tie risk nyata pada 52 tanggal C3.
@@ -189,6 +193,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
+- `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`

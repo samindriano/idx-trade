@@ -191,6 +191,11 @@ but do not admit a candidate ID because shared participation information and
 economic/PIT risks remain material. Deterministic selection and explicit
 no-fill handling were fixed and replayed in the Phase-Q follow-up.
 
+The preregistered size-neutral diagnostic shows that bottom-value exposure is
+partly scale-related (39.672% to 14.983%), but mean Top-30 turnover rises from
+10.306% to 20.785%. This is a useful representation result, not a candidate
+upgrade or C5 admission.
+
 ## Queue and exact next action
 
 No candidate is currently `READY_FOR_REENTRY`. C1/C2/C4 are conditionally
