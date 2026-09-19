@@ -5,6 +5,12 @@ Lane: `codex/alpha-available-data-20260919`
 Stage: `F_K_I_J_OUTCOME_BLIND_ROBUSTNESS`  
 Result: `PASS_STRUCTURAL_ONLY / NOT ALPHA EVIDENCE`
 
+Historical-lineage notice: an independent red-team found a positional
+lookback-variant alignment defect in this V1 implementation. The V1 artifact
+is preserved, but its non-baseline lookback overlap metrics are superseded by
+the key-aligned V2 replay in
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+
 Post-Phase-Q note: this V1 artifact is retained for lineage. The selection
 helper was subsequently made deterministic with an explicit ticker tie-break;
 the regenerated V2 artifact and hash are recorded in

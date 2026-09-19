@@ -24,13 +24,13 @@ non-redundant work remains authorized.
 | H | External literature/mechanism review | `COMPLETE BOUNDED` | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`; literature is inspiration, not IDX evidence. |
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
 | J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics, H-LIQ h10/h20/h40, fixed H-VOL `5/20`/`5/60`/`20/120`, and H-EXC-02 `5/20/60` comparison; no free sweep or predictive selection. H-VOL and H-EXC-02 horizon dependence remain future-risk findings. |
-| K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
-| L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus independent turnover-tail/repeat-name/value-bucket stress; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
-| M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
+| K | Robustness lab | `COMPLETE STRUCTURAL / CORRECTION REPLAYED` | Missingness, ticker-removal, temporal, normalization, and key-aligned horizon diagnostics pass structurally; the old positional lookback metrics are superseded; no admitted sector field. |
+| L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus corrected eligible-only value/volume exposure; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
+| M | Combination readiness | `COMPLETE STRUCTURAL / LIQUIDITY CAUTION` | Four equal-weight C1/C2/C4 combinations remain measured without weight optimization; V2 corrects the liquidity percentile denominator and materially raises bottom-value exposure; no new candidate IDs. |
 | N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, semantic margin directions, and the raw H-EXC-01 representation are closed at the representation level. H-EXC-02 passes numerical boundedness but is not economically or predictively admitted; C1/C2/C4 and the broader excursion mechanism are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only activity field; historical Open is now quantified as partial but source/PIT/execution-blocked; `Dataset-Saham-IDX` is newly surfaced but blocked by source/PIT/vintage/duplicate-copy uncertainty. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
-| Q | Independent adversarial review | `PARTIAL / RED-TEAM + SOURCE REPLAYS + FRONTIER + H-VOL/H-EXC-02 REVIEW` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, H-VOL construction/novelty/CA, H-EXC-02 construction/CA, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`. |
+| Q | Independent adversarial review | `PARTIAL / CORRECTED RED-TEAM REPLAY` | Independent review found and corrected robustness variant alignment and combination liquidity-denominator defects; C1/C2/C4 remain no-go for readiness. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`. |
 | R | Candidate novelty gate | `COMPLETE MILESTONE` | H-LIQ-01 remains no-C5; monotone variants and combination hypotheses do not create IDs. |
 | S | Research budget/question management | `ACTIVE` | Active questions and do-not-retry register below; continue only where new evidence can change a structural decision. |
 | T | Safe parallelization | `PARTIAL / CONTROLLED` | Independent read-only gap and data-capability audits completed; workers had no write or protected-data authority. |
@@ -70,6 +70,10 @@ non-redundant work remains authorized.
 6. Is H-VOL-01 stable across economically distinct horizons? Current answer:
    no single family-level conclusion is safe yet; `5/20`, `5/60`, and
    `20/120` materially differ in support, turnover, and Top-30 membership.
+7. Are the prior robustness lookback and combination liquidity metrics
+   implementation-valid? Current answer: V1 lookback alignment and percentile
+   denominator were defective; corrected V2 artifacts are now authoritative
+   for those structural claims.
 
 ## Answered, rejected, and blocked questions
 
@@ -85,6 +89,13 @@ non-redundant work remains authorized.
   unboundedness and churn; this does not close all previous-close excursion
   mechanisms. H-EXC-02's new bounded contract is stable in domain but remains
   high-churn and future research only.
+- The prior robustness lookback overlaps were invalidated by positional
+  variant misalignment after a reset-index merge; corrected key-aligned V2
+  values supersede them without changing formulas or candidate status.
+- The prior combination bottom-value/volume exposure percentages used a full
+  panel denominator inconsistent with the eligible selection contract;
+  eligible-only V2 values supersede them and materially strengthen liquidity
+  caution without establishing predictive or executable-capacity evidence.
 
 ## Next high-information tasks
 

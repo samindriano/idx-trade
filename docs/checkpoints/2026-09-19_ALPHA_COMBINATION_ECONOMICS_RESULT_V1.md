@@ -5,6 +5,13 @@ Lane: `codex/alpha-available-data-20260919`
 Stage: `M_COMBINATION_READINESS_L_IMPLEMENTATION_ECONOMICS`
 Result: `PASS_STRUCTURAL_ONLY / NO NEW CANDIDATE ID`
 
+Historical-lineage notice: an independent red-team found that V1 liquidity
+percentiles used the full panel rather than the eligible decision universe.
+The V1 artifact is preserved, but its value/volume exposure percentages are
+superseded by the eligible-only V2 replay in
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`. Selection,
+turnover, formulas, and friction scenarios remain unchanged.
+
 ## Question and boundary
 
 Can structurally distinct fixed candidates be combined without optimizing

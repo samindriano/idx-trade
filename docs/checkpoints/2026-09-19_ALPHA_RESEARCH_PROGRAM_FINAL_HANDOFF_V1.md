@@ -8,7 +8,7 @@ Latest status/documentation commit: `5933c7c0`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 Latest concise status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
-Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
+Latest adversarial result: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
@@ -18,6 +18,7 @@ Latest H-EXC-02 result: `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
+Latest corrected robustness/combination replay: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -36,6 +37,14 @@ The latest main-run adversarial audit of C1/C2/C4 also passed all target-free
 static, schema/key, calendar, identity-interval, mask, and numerical checks.
 This is structural evidence only and does not replace the still-missing
 independent Phase-Q red-team or Data QA admission.
+
+The independent Phase-Q red-team subsequently found two historical report
+defects. The old robustness lookback replay used positional variant alignment
+after a reset-index merge, and the old combination report used a full-panel
+liquidity percentile denominator. Corrected V2 replays are now authoritative
+for those structural claims; V1 artifacts remain preserved for lineage. The
+corrected values strengthen liquidity caution but do not change candidate or
+packet status.
 
 The latest CA/price-basis audit found that the known 1,657-row HLC overlay is
 already represented in the current panel and replay does not change C1/C2/C4,
@@ -235,6 +244,8 @@ Risk register: `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`.
   new preregistered numerical contract.
 - Do not optimize combination weights, refit, rescue, sign-flip, or expand the
   candidate budget before a new frozen protocol decision.
+- Do not use the superseded V1 robustness lookback overlaps or V1 combination
+  liquidity-exposure percentages; use the key-aligned/eligible-only V2 replay.
 
 ## Future data opportunities
 
@@ -275,12 +286,17 @@ admission.
 - Combination builder SHA-256: `a326d8d40933562f2de3a3137adc2a0280529d3db610ed2c6ce5224b73568591`.
 - Combination verifier SHA-256: `3e8b7ad0a2cc3d760bd56f0838c1a2e76878bc9e97ba86c257159e33aa0889bc`.
 - Combination output SHA-256: `82c76798f5135f345e41f9d536497f68908b3744107d951b583d6a3297de985d`.
+- Corrected robustness V2 code/output SHA-256: `d5b07ff38cb61723bc4a3470e2716857cf5a5dbb5227baaf5f3f98e4f7bb63ee` /
+  `64d03527b7bb504dee34e854ed9123f03fb55c557a455462eef46a928c823444`.
+- Corrected combination V2 code/output SHA-256: `5c1db06448f656f7a11a1217a7e05887c398beeb7900592eed2f8432f1d971ff` /
+  `87b195ea6cbd281d861932bd9bdf2935c9538bfb6b5031bee2dbf60675ee6c2f`.
 - Combination firewall SHA-256: `4d00cace99225d5286c5143698622a85a735564b5ee6955bab98007038d679f4`.
 - Other structural code/output hashes are recorded in their result docs and
   staging JSON manifests; all are isolated and target-free.
 - Tests: Python compilation `PASS`; C3 verifier `PASS`; combination verifier
   `PASS`; target firewall `PASS`; git worktree was clean at baseline.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
-  real capacity, sector/PIT history, and dedicated C1/C2/C4 red-team review.
+  real capacity, sector/PIT history, and mechanism-level novelty; the latest
+  independent red-team correction replay is complete but remains structural.
 
 No predictive superiority claim is made.

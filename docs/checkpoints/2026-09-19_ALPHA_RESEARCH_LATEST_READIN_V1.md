@@ -24,6 +24,10 @@ Follow-up Phase Q kemudian memperbaiki verifier, deterministic selection, dan
 missing-value handling; detail dengan hash ada di
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 
+Independent Phase-Q red-team correction replay terbaru ada di
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`; replay ini
+supersedes dua interpretasi struktural V1 yang terbukti cacat implementasi.
+
 Lineage generasi Stage-A yang duplicate/superseded juga sudah direkonsiliasi
 di `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 Downstream consumer binding sudah diaudit di
@@ -231,6 +235,24 @@ contract. H-MICRO-02 remains `PARTIAL_CAPABILITY /
 BLOCKED_SOURCE_ADMISSION`; no C5. See
 `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
+## Phase-Q correction replay — important read-in
+
+Independent red-team review found that the old robustness lookback output used
+positional variant alignment after a reset-index merge. Corrected key-aligned
+V2 mean Top-30 overlaps are C1 h3/h10 `57.2333%/52.0389%`, C2
+`65.3167%/60.1389%`, and C4 h10/h40 `44.7611%/45.4111%`; the old values near
+11–12% are preserved for lineage but must not be used.
+
+The old combination output also computed value/volume percentiles over the full
+panel instead of the eligible decision universe. Corrected eligible-only V2
+bottom-value Q25 exposure is `30.7722%–40.6722%` across the four equal-weight
+combinations, with unchanged selection/turnover formulas. This materially
+strengthens liquidity caution; it does not establish predictive performance or
+real capacity. No candidate status or protected packet membership changed.
+
+Both V2 verifiers pass. Full evidence and hashes are in
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+
 ## Re-entry gate
 
 Jika dan hanya jika Data QA memberikan admission artifact yang terpisah dan
@@ -250,6 +272,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_RISK_REGISTER_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+- `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 - `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`

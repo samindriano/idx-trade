@@ -19,6 +19,8 @@ The compact cross-session handoff is
 
 The follow-up tooling/selection replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+The latest independent red-team correction replay is recorded in
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 Stage-A generation lineage is recorded in
 `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 Downstream hash binding is recorded in
@@ -353,3 +355,20 @@ between IDX/Yahoo with `20,995` source transitions, and available-at, PIT,
 corporate-action, identity, and execution semantics remain unadmitted.
 H-MICRO-02 is `PARTIAL_CAPABILITY / BLOCKED_SOURCE_ADMISSION`, not a candidate.
 See `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
+
+## Latest continuation update — corrected Phase-Q red-team replay
+
+An independent read-only red-team found two implementation defects in prior
+target-free reports. The old robustness lookback replay aligned variant scores
+positionally after a reset-index merge; the corrected key-aligned V2 replay
+changes mean Top-30 overlap from invalid V1 values near 11–12% to C1 h3/h10
+`57.2333%/52.0389%`, C2 `65.3167%/60.1389%`, and C4 h10/h40
+`44.7611%/45.4111%`. The old combination report ranked liquidity percentiles
+over the full panel instead of eligible rows; the corrected V2 bottom-value Q25
+exposure is `30.7722%–40.6722%` across combinations, not `0.4333%–0.7056%`.
+
+The V1 outputs remain preserved for lineage but are superseded for these two
+interpretations. Candidate formulas, turnover, equal weights, and friction
+scenarios were unchanged. No candidate status changed, no C5 was created, and
+the protected packet remains exactly C1–C4. Both V2 verifiers pass. See
+`2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.

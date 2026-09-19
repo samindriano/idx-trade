@@ -38,7 +38,9 @@ Latest H-EXC-02 bounded excursion diagnostic: `2026-09-19_ALPHA_HEXC02_BOUNDED_E
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
+Latest Phase-Q red-team correction: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 Latest CA exposure attribution: `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`
+Latest corrected robustness/combination replay: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
 Latest Dataset-Saham-IDX admission audit: `2026-09-19_ALPHA_DATASET_SAHAM_IDX_ADMISSION_AUDIT_V1.md`
@@ -144,6 +146,7 @@ production or prospective claim.
 - H-EXC-02 CA sensitivity: substituting the retained 188 `idx_close` comparison rows leaves support identical (`308,067`), with `155` score changes and `3,977` rank changes; mean/minimum Top-30 overlap is `99.9722% / 93.3333%`, across 8 changed dates, and changed slots are `1 / 19` direct/spillover. This narrows but does not clear basis risk; no C5 or status upgrade. See `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`.
 - H-EXC-02 horizon stability: fixed `5/20/60` median windows reduce mean Top-30 turnover from `40.7750%` to `20.4944%` to `11.7570%`, but pairwise Top-30 overlap is only `34.7905% / 24.3750% / 42.3333%`; no horizon was selected and no C5/status upgrade occurred. See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
 - Open capability audit: positive finite Open exists on `201,415/310,761` eligible rows (`64.8135%`), all `1,201` eligible dates have at least 30 Open rows, and no eligible flag mismatch was found. Provenance is split between IDX/Yahoo with `20,995` source transitions; available-at, PIT, CA, identity, and execution semantics remain unknown. H-MICRO-02 is now `PARTIAL_CAPABILITY / BLOCKED_SOURCE_ADMISSION`, not C5. See `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
+- Independent Phase-Q correction replay: the prior robustness lookback metrics were invalidated by positional variant misalignment after a merge; key-aligned V2 overlaps are C1 h3/h10 `57.2333%/52.0389%`, C2 `65.3167%/60.1389%`, and C4 h10/h40 `44.7611%/45.4111%`. The prior combination liquidity denominator was also invalid: eligible-only V2 bottom-value Q25 exposure is `30.7722%–40.6722%` rather than `0.4333%–0.7056%`. Turnover/formulas are unchanged; no candidate status or packet membership changed. See `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 - Phase-frontier adversarial audit: fixed-window turnover/friction tails strengthen C1 friction caution and C4 bottom-value/capacity caution; H-LIQ remains structurally distinct but composition-sensitive and no-C5. A newly surfaced `Dataset-Saham-IDX` inventory is blocked by missing row-level PIT/vintage authority and duplicate non-identical ticker copies. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
@@ -211,3 +214,39 @@ production or prospective claim.
    exposure question now has a bounded direct-vs-spillover result.
 4. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.
+
+## Continuation register — Phase-Q correction replay milestone
+
+### Active questions
+
+- Can the remaining corporate-action/issuer/PIT gaps be resolved from an
+  independently admitted source package without reopening providers?
+- Can real executable capacity be established beyond regular-market-value
+  proxy stress?
+- Can H-LIQ-01's mechanism-level novelty be distinguished from its shared
+  turnover information without target optimization?
+
+### Answered by this replay
+
+- The old robustness lookback overlaps were not reliable evidence because V1
+  used positional variant alignment after a reset-index merge. The corrected
+  key-aligned V2 replay is the authoritative structural result for those
+  diagnostics; V1 remains preserved for lineage only.
+- The old combination bottom-value/volume exposure percentages used a full
+  panel denominator inconsistent with the eligible selection contract. The
+  eligible-only V2 values supersede those exposure claims; turnover, formulas,
+  and friction calculations are unchanged.
+
+### Blocked or unchanged
+
+- PIT/as-of, population completeness, issuer/ISIN continuity, global
+  corporate-action basis, real capacity, target admission, and predictive
+  comparison remain blocked or unknown.
+- C1/C2/C4 remain future research, C3 remains blocked, H-LIQ-01 remains
+  no-C5, and the protected packet remains exactly C1-C4.
+
+### Do-not-retry implications
+
+- Do not use the superseded V1 robustness lookback overlaps or V1 combination
+  liquidity-exposure percentages.
+- Do not open protected outcomes or add providers to resolve these findings.

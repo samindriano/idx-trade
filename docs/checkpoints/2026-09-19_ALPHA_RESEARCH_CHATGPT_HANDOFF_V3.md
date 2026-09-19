@@ -8,6 +8,7 @@ Latest evidence content commit: `5933c7c0`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
 Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
+Latest Phase-Q correction replay: `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -124,6 +125,16 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     available-at/PIT/execution authority keep H-MICRO-02 blocked. See
     `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
+20. Independent Phase-Q red-team found two historical implementation defects:
+    robustness lookback variants were positionally misaligned after a merge,
+    and combination liquidity percentiles used the full-panel denominator.
+    Corrected V2 mean overlaps are C1 h3/h10 `57.2333%/52.0389%`, C2
+    `65.3167%/60.1389%`, and C4 h10/h40 `44.7611%/45.4111%`; corrected
+    combination bottom-value Q25 exposure is `30.7722%–40.6722%`. V1 is
+    preserved for lineage but superseded for these claims. No status or packet
+    membership changed. See
+    `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
+
 ## Latest CA exposure attribution
 
 The latest read-only counterfactual replay exactly reproduced stored baseline
@@ -162,6 +173,7 @@ is no justification to open target data merely to force a winner.
 ## Primary documents
 
 - `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`
+- `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`
