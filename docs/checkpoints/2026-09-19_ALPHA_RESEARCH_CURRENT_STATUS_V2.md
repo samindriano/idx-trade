@@ -128,6 +128,14 @@ artifacts and created no candidate ID.
 The independent verifier also passed:
 `status=PASS`, all structural checks true, candidate set exactly `{C1,C2,C4}`.
 
+The follow-up CA/price-basis audit found that the known 1,657-row HLC overlay
+is already embedded in the current panel and replay leaves all C1/C2/C4
+Top-30 sets unchanged. A separate forensic substitution of 188 unresolved
+`idx_close` comparison rows changed C1 ranks on 10.617% of compared rows with
+a 36.667% minimum Top-30 overlap, versus 2.894% / 83.333% for C2 and 3.203%
+/ 86.667% for C4. These are sensitivity warnings, not corrections or
+predictive evidence; C1 now has the highest unresolved price-basis fragility.
+
 ## Data admissibility and unresolved risks
 
 | Surface | Disposition | Consequence |
@@ -149,6 +157,10 @@ history, and the remaining independent red-team coverage for C1/C2/C4.
 
 No candidate is currently `READY_FOR_REENTRY`. C1/C2/C4 are conditionally
 engineering-ready; C3 remains blocked; H-LIQ-01 remains pending.
+
+For future gate ordering only (not an alpha ranking), C2/C4 have lower
+bounded unresolved-basis sensitivity than C1. C1 should not be treated as
+price-basis-ready until the 188 rows and open residuals are resolved.
 
 When Data QA admission arrives, the next action is:
 

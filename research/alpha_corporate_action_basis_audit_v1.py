@@ -25,6 +25,8 @@ CANDIDATES = [
     "C2_participation_confirmation_5_v1",
     "C4_path_efficiency_reversal_20_v1",
 ]
+HLIQ_DIAGNOSTIC = "HLIQ01_variability_log_turnover_20_v1"
+SENSITIVITY_COLUMNS = [*CANDIDATES, HLIQ_DIAGNOSTIC]
 PANEL_COLUMNS = ["ticker", "date", "close", "volume", "regular_market_value"]
 EXPECTED_SESSIONS_SHA256 = "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
 EXPECTED_ANCHORS_SHA256 = "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
@@ -74,6 +76,8 @@ def score_panel(panel: pd.DataFrame, universe: pd.DataFrame) -> pd.DataFrame:
     full["vol_20"] = rolling(full, "ret_1", 20, "std")
     full["turnover_mean_5"] = rolling(full, "turnover", 5, "mean")
     full["turnover_median_60"] = rolling(full, "turnover", 60, "median")
+    full["log_dollar_turnover"] = np.log(full["turnover"].where(full["turnover"].gt(0)))
+    full[HLIQ_DIAGNOSTIC] = rolling(full, "log_dollar_turnover", 20, "std")
 
     eligible_returns = full.loc[
         full["eligible_decision_universe"] & np.isfinite(full["ret_1"]),
@@ -110,14 +114,14 @@ def score_panel(panel: pd.DataFrame, universe: pd.DataFrame) -> pd.DataFrame:
     abnormal_turnover = full["turnover_mean_5"] / full["turnover_median_60"].replace(0.0, np.nan)
     full[CANDIDATES[1]] = full["ret_5"] * np.log(abnormal_turnover)
     full[CANDIDATES[2]] = -full["ret_20"] / full["abs_ret_sum_20"].replace(0.0, np.nan)
-    for column in CANDIDATES:
+    for column in SENSITIVITY_COLUMNS:
         full.loc[~full["eligible_decision_universe"], column] = np.nan
-    return full.loc[full["ticker"].notna(), ["ticker", "date", "eligible_decision_universe", *CANDIDATES]]
+    return full.loc[full["ticker"].notna(), ["ticker", "date", "eligible_decision_universe", *SENSITIVITY_COLUMNS]]
 
 
-def rank_frame(scores: pd.DataFrame) -> pd.DataFrame:
-    result = scores[["ticker", "date", "eligible_decision_universe", *CANDIDATES]].copy()
-    for column in CANDIDATES:
+def rank_frame(scores: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    result = scores[["ticker", "date", "eligible_decision_universe", *columns]].copy()
+    for column in columns:
         result[f"rank_{column}"] = result.groupby("date", sort=False)[column].rank(
             method="average", pct=True
         )
@@ -135,7 +139,7 @@ def top30_sets(frame: pd.DataFrame, column: str) -> dict[pd.Timestamp, set[str]]
 
 
 def compare_candidate_values(
-    baseline: pd.DataFrame, counterfactual: pd.DataFrame
+    baseline: pd.DataFrame, counterfactual: pd.DataFrame, columns: list[str]
 ) -> dict[str, object]:
     merged = baseline.merge(
         counterfactual,
@@ -143,8 +147,8 @@ def compare_candidate_values(
         suffixes=("_base", "_cf"),
         validate="one_to_one",
     )
-    baseline_ranked = rank_frame(baseline)
-    counterfactual_ranked = rank_frame(counterfactual)
+    baseline_ranked = rank_frame(baseline, columns)
+    counterfactual_ranked = rank_frame(counterfactual, columns)
     ranked = baseline_ranked.merge(
         counterfactual_ranked,
         on=["ticker", "date", "eligible_decision_universe"],
@@ -152,7 +156,7 @@ def compare_candidate_values(
         validate="one_to_one",
     )
     result: dict[str, object] = {}
-    for column in CANDIDATES:
+    for column in columns:
         base = pd.to_numeric(merged[f"{column}_base"], errors="coerce")
         cf = pd.to_numeric(merged[f"{column}_cf"], errors="coerce")
         valid = merged["eligible_decision_universe"] & np.isfinite(base) & np.isfinite(cf)
@@ -228,7 +232,7 @@ def main() -> None:
     overlay["ticker"] = overlay["ticker"].astype("string")
     overlay["date"] = pd.to_datetime(overlay["date"], errors="raise").dt.normalize()
     overlay["remediated_close"] = pd.to_numeric(overlay["remediated_close"], errors="coerce")
-    unresolved = pd.read_csv(args.unresolved_scale, usecols=["ticker", "date", "panel_idx_scale_factor", "panel_idx_row_scale_consistent"])
+    unresolved = pd.read_csv(args.unresolved_scale, usecols=["ticker", "date", "idx_close", "panel_idx_scale_factor", "panel_idx_row_scale_consistent"])
     unresolved["ticker"] = unresolved["ticker"].astype("string")
     unresolved["date"] = pd.to_datetime(unresolved["date"], errors="raise").dt.normalize()
 
@@ -264,7 +268,23 @@ def main() -> None:
     counterfactual_panel["close"] = counterfactual_panel["remediated_close"].fillna(counterfactual_panel["close"])
     counterfactual_panel = counterfactual_panel[PANEL_COLUMNS]
     counterfactual = score_panel(counterfactual_panel, universe)
-    sensitivity = compare_candidate_values(reproduced, counterfactual)
+    sensitivity = compare_candidate_values(reproduced, counterfactual, CANDIDATES)
+    unresolved_counterfactual_panel = panel.merge(
+        unresolved[["ticker", "date", "idx_close"]],
+        on=["ticker", "date"], how="left", validate="one_to_one"
+    )
+    unresolved_counterfactual_panel["idx_close"] = pd.to_numeric(
+        unresolved_counterfactual_panel["idx_close"], errors="coerce"
+    )
+    unresolved_counterfactual_panel["close"] = unresolved_counterfactual_panel["idx_close"].fillna(
+        unresolved_counterfactual_panel["close"]
+    )
+    unresolved_counterfactual = score_panel(
+        unresolved_counterfactual_panel[PANEL_COLUMNS], universe
+    )
+    unresolved_sensitivity = compare_candidate_values(
+        reproduced, unresolved_counterfactual, SENSITIVITY_COLUMNS
+    )
 
     official_sessions = pd.read_csv(args.sessions, usecols=["date"])
     official_sessions["date"] = pd.to_datetime(official_sessions["date"], errors="raise").dt.normalize()
@@ -294,6 +314,7 @@ def main() -> None:
         "overlay_rows_are_unique": not overlay.duplicated(["ticker", "date"]).any(),
         "overlay_close_finite_positive": bool(overlay["remediated_close"].gt(0).all()),
         "panel_close_matches_overlay_remediated": panel_overlay_comparison["panel_close_mismatch_rows"] == 0,
+        "unresolved_idx_close_finite_positive": bool(unresolved["idx_close"].gt(0).all()),
         "no_target_or_outcome_access": True,
         "no_refit_or_panel_mutation": True,
     }
@@ -342,6 +363,7 @@ def main() -> None:
             "eligible_tickers_in_forward_60_sessions_from_overlay": int(len({ticker for ticker, _ in forward_60_eligible_keys})),
             "stored_score_reproduction": reproduction,
             "counterfactual_close_overlay_sensitivity": sensitivity,
+            "unresolved_scale_counterfactual_sensitivity": unresolved_sensitivity,
         },
         "interpretation": {
             "classification": "PARTIAL / FORENSIC EVIDENCE ONLY",

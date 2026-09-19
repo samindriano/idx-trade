@@ -34,6 +34,11 @@ already represented in the current panel and replay does not change C1/C2/C4,
 but 188 non-stable scale rows and open-price residuals remain unresolved. This
 narrows exposure without clearing the admission blocker.
 
+Using the unresolved rows only as a forensic sensitivity test, C1 showed the
+largest basis fragility (10.617% rank changes; 36.667% minimum Top-30 overlap),
+while C2/C4 were materially more stable. This is not a corrected dataset or a
+predictive result; C1 remains blocked on basis resolution.
+
 Current conclusion:
 
 `NO CURRENT ALPHA SURVIVOR CAN BE PROVEN WITHOUT TARGET ADMISSION`

@@ -12,6 +12,7 @@ CANDIDATES = {
     "C2_participation_confirmation_5_v1",
     "C4_path_efficiency_reversal_20_v1",
 }
+SENSITIVITY_COLUMNS = CANDIDATES | {"HLIQ01_variability_log_turnover_20_v1"}
 
 
 def main() -> None:
@@ -30,6 +31,7 @@ def main() -> None:
         "no_panel_mutation": result.get("panel_mutated") is False,
         "clean_refit_not_authorized": result.get("clean_refit_authorized") is False,
         "candidate_set_exact": set(result.get("candidate_exposure", {}).get("counterfactual_close_overlay_sensitivity", {})) == CANDIDATES,
+        "unresolved_sensitivity_set_exact": set(result.get("candidate_exposure", {}).get("unresolved_scale_counterfactual_sensitivity", {})) == SENSITIVITY_COLUMNS,
         "overlay_panel_exactly_matches_remediated_close": (
             result.get("hlc_overlay_inventory", {})
             .get("panel_overlay_comparison", {})

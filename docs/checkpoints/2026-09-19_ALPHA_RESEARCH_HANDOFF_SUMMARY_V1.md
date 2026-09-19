@@ -142,7 +142,9 @@ replace the remaining independent Phase-Q red-team.
 The CA/price-basis follow-up confirms the known 1,657-row HLC overlay is
 already embedded in the current panel and does not change C1/C2/C4 on replay;
 188 non-stable scale rows and open-price residuals remain unresolved, so the
-admission blocker stays in place.
+admission blocker stays in place. A forensic substitution of the 188 rows
+shows materially higher basis sensitivity for C1 than C2/C4; this is a risk
+signal, not a correction or predictive result.
 
 Internal candidate Spearman diagnostics (not incumbent comparison):
 

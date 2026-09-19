@@ -84,6 +84,24 @@ artifact:
   rank changes, and no Top-30 changes for C1/C2/C4. Top-30 overlap is 100% on
   all 1,141 C1 dates and all 1,201 C2/C4 dates.
 
+As a separate stress test, the retained `idx_close` comparison values for the
+188 unresolved non-stable rows were substituted in memory. These values are
+not certified corrections and must not be treated as truth. The sensitivity
+was materially asymmetric:
+
+| Series | Rows with score change | Rank-change rate | Mean Top-30 overlap | Minimum Top-30 overlap |
+|---|---:|---:|---:|---:|
+| C1 | 82,357 | 10.617% | 98.262% | 36.667% |
+| C2 | 523 | 2.894% | 99.814% | 83.333% |
+| C4 | 385 | 3.203% | 99.911% | 86.667% |
+| H-LIQ-01 diagnostic | 383 | 3.318% | 99.736% | 90.000% |
+
+This is a price-basis fragility warning for C1, not an outcome result. It
+raises the priority of resolving the 188 rows before relying on C1, while C2,
+C4, and the H-LIQ diagnostic appear more stable under this bounded stress.
+The asymmetry cannot clear admission because the comparison values themselves
+remain forensic and the event population is incomplete.
+
 The correct interpretation is narrow: the current panel already contains the
 bounded HLC overlay, so replaying that same overlay is a no-op. It is not
 evidence that unresolved rows, other event families, or open-price basis are
@@ -104,12 +122,12 @@ safe. The candidate statuses therefore remain unchanged.
 ## Artifacts and hashes
 
 - Builder: `research/alpha_corporate_action_basis_audit_v1.py`
-- Builder SHA-256: `b405f69f4ed723d19560de93cae16b10367dbb695846ea75db8ce1f9b9de8f41`
+- Builder SHA-256: `cec41fa24248eaa0e4fb3f3a5de465a6ba801e1ee0544a2dcd83cee8511ac2dc`
 - Verifier: `research/verify_alpha_corporate_action_basis_audit_v1.py`
-- Verifier SHA-256: `fb525311cad8783758db5b67b1a583eff5c7183aeae8a38acdce9711d93a18e4`
+- Verifier SHA-256: `ac37fbd24214ad67c13b5955aa7def52a7dbc73e4e0d635cad61618f376d71cf`
 - Output: `alpha_corporate_action_basis_audit_v1.json` in
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
-- Output SHA-256: `30d4083a8b3311cfd490f6b03ebad72cffa7e404cb8565f0fc979c6d3e516955`
+- Output SHA-256: `3bc3efc9d991f211ae1e5be7d9751da89c14c993f88e8aed23489802a10b8b15`
 - Audit status: `PASS_STRUCTURAL_ONLY`
 - Independent verifier: `PASS`
 - Target/provider/outcome access: none
