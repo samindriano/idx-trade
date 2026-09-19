@@ -33,6 +33,7 @@ Latest H-LIQ-01 size-neutral diagnostic: `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_R
 Latest H-VOL-01 compression diagnostic: `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 Latest H-VOL-01 CA sensitivity: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL-01 horizon stability: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
+Latest H-EXC-01 excursion diagnostic: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 Latest CA exposure attribution: `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`
 Latest re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`
 Latest phase-frontier audit: `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`
@@ -133,6 +134,7 @@ production or prospective claim.
 - H-VOL-01 compression diagnostic: one fixed `-log(median_5(range_pct) / median_60(range_pct))` representation has 308,514 finite eligible rows, mean Top-30 turnover 29.2778%, low mean Top-30 overlap with C1/C2/C4/H-LIQ-01 of 9.5209%/8.0155%/15.5676%/13.5803%, and selected bottom-value Q1 share 42.7200%. Adjacent V4-B/O2/O2.1 range families, turnover, and value concentration keep novelty/economics unresolved; no C5 ID was created. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
 - H-VOL-01 CA sensitivity: substituting the 188 retained `idx_close` comparison rows changes 547 scores and 8,876 ranks, with mean/minimum Top-30 overlap `99.8307% / 86.6667%`; 14 changed Top-30 slots are direct and 108 are spillover. This narrows but does not clear price-basis risk; no C5 ID or status upgrade. See `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
 - H-VOL-01 horizon stability: fixed `5/20`, `5/60`, and `20/120` forms are materially distinct, with pairwise Top-30 overlap `58.9675% / 9.9182% / 29.3193%`; `5/20` mean turnover is `36.2583%`, baseline `5/60` is `29.2778%`, and `20/120` support falls to `271,045` rows. No horizon was selected and no C5/status upgrade occurred. See `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
+- H-EXC-01 excursion-asymmetry diagnostic: the fixed previous-close high/low imbalance form has `305,814` finite eligible rows but unbounded score tails (`-16.2 / 5.0`) and `40.9694%` mean Top-30 turnover with `93.3333%` maximum. Close the exact representation as `STRUCTURALLY_REJECTED_AS_WRITTEN`; do not rescue it with post-result clipping or denominator floors. The broader excursion mechanism remains an untested future question. See `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
 - Phase-frontier adversarial audit: fixed-window turnover/friction tails strengthen C1 friction caution and C4 bottom-value/capacity caution; H-LIQ remains structurally distinct but composition-sensitive and no-C5. A newly surfaced `Dataset-Saham-IDX` inventory is blocked by missing row-level PIT/vintage authority and duplicate non-identical ticker copies. See `2026-09-19_ALPHA_PHASE_FRONTIER_AUDIT_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
 - Orthogonality re-entry audit (read-only): the focused known `forward_monitoring/model_runs` inventory contains incumbent score artifacts only for post-cutoff forward dates; none was used as a same-window historical comparator. Incumbent overlap therefore remains `UNKNOWN` under the admission boundary.
@@ -185,6 +187,8 @@ production or prospective claim.
 - Do not rerun the old envelope-only verifier as if it were independent.
 - Do not use sample tradability snapshots or metadata-only activity fields as
   historical PIT evidence.
+- Do not retry the exact raw H-EXC-01 excursion-asymmetry formula without a
+  new preregistered representation and numerical contract.
 - Do not reopen target/OOS/IC/ICIR work, provider scraping, or canonical data
   mutation to resolve these structural questions.
 

@@ -311,3 +311,10 @@ The baseline `5/60` reproduced exactly; `5/20` raised mean Top-30 turnover to
 selected and H-VOL remains `FUTURE_RESEARCH / NOVELTY_PENDING /
 ECONOMIC_CAUTION`, outside the protected packet. See
 `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
+
+H-EXC-01 then tested previous-close high/low excursion asymmetry without
+current Open or volume. It had `305,814` finite rows but unbounded score tails
+(`-16.2 / 5.0`) and `40.9694%` mean Top-30 turnover, so the exact raw form is
+`STRUCTURALLY_REJECTED_AS_WRITTEN`. The broader excursion/rejection mechanism
+is not closed, but no clipping or denominator rescue was authorized. See
+`2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.

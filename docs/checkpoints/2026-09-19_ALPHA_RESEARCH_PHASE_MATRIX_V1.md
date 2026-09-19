@@ -27,7 +27,7 @@ non-redundant work remains authorized.
 | K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
 | L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus independent turnover-tail/repeat-name/value-bucket stress; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
 | M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
-| N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, and semantic margin directions are closed; C1/C2/C4 are not structurally rejected. |
+| N | Structural rejection | `COMPLETE BOUNDED` | Invalid implementation, exact breakout, exact additive foreign-flow, semantic margin directions, and the raw H-EXC-01 representation are closed at the representation level; C1/C2/C4 and the broader excursion mechanism are not structurally rejected. |
 | O | Future data opportunities | `COMPLETE INVENTORY / BLOCKED ACCESS` | Future data map plus metadata-only activity field; `Dataset-Saham-IDX` is newly surfaced but blocked by source/PIT/vintage/duplicate-copy uncertainty. |
 | P | Reusable research tooling | `COMPLETE MILESTONE` | Target firewall, Stage A/economics/robustness labs, C3 verifier/map, identity audit, H-LIQ audit, and combination harness. |
 | Q | Independent adversarial review | `PARTIAL / RED-TEAM + SOURCE REPLAYS + FRONTIER + H-VOL REVIEW` | Causal/PIT, economics/fragility, combination/H-LIQ, capacity tails, H-LIQ composition, H-VOL construction/novelty, and local-data surface reviews are complete. PIT/as-of, issuer identity, survivorship, price basis, real capacity, sector history, and process-level access attestation remain unresolved; no `READY_FOR_REENTRY`. See `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`. |
@@ -81,6 +81,9 @@ non-redundant work remains authorized.
   C2 conditional dependence and economics remain unresolved.
 - Protected target comparison, incumbent incremental information, and
   prospective proof: blocked by authoritative Data QA/admission.
+- The exact raw H-EXC-01 form is structurally rejected for numerical
+  unboundedness and churn; this does not close all previous-close excursion
+  mechanisms.
 
 ## Next high-information tasks
 

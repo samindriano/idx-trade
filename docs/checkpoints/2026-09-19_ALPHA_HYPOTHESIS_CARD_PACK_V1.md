@@ -126,6 +126,27 @@ candidate admission.
   `alpha_hvol01_compression_diagnostic_v1.json`/
   `alpha_hvol01_ca_sensitivity_v1.json`.
 
+## Card H-EXC-01 — Previous-close excursion asymmetry
+
+- **Mechanism:** repeated dominance of the high-side or low-side intraday
+  excursion around the previous completed close may encode rejection or
+  one-sided pressure without requiring current Open or volume.
+- **Fixed representation tested:**
+  `median_5(((high-prev_close)-(prev_close-low)) /
+  ((high-prev_close)+(prev_close-low)))`.
+- **Observed result:** `305,814` finite eligible rows; mean Top-30 turnover
+  `40.9694%`; q95/max turnover `56.6667% / 93.3333%`; score min/max
+  `-16.2 / 5.0`.
+- **Structural distinctness:** low mean Top-30 overlap with C1/C2/C4/H-LIQ/
+  H-VOL of `1.2708% / 25.1624% / 4.7960% / 14.2770% / 11.8568%`, but low
+  overlap is not predictive orthogonality.
+- **Failure:** exact raw form is unbounded when previous close is outside the
+  current range or the denominator is small; high churn reinforces the failure.
+- **Status:** exact representation `STRUCTURALLY_REJECTED_AS_WRITTEN`; the
+  broader excursion/rejection mechanism remains unclosed and requires a new
+  preregistered bounded contract. No C5.
+- **Evidence:** `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
+
 ## Card H-MICRO-01 — High-participation reversal event
 
 - **Mechanism:** a large price concession accompanied by unusually high

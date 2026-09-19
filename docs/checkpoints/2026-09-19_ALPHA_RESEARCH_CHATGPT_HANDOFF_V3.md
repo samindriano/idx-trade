@@ -94,6 +94,12 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `271,045` rows. Pairwise Top-30 overlap was `58.9675% / 9.9182% /
     29.3193%`; no horizon was selected and no C5 was created. See
     `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
+15. H-EXC-01 tested previous-close high/low excursion asymmetry without Open
+    or volume. It had `305,814` finite rows, but unbounded score tails
+    (`-16.2 / 5.0`) and `40.9694%` mean Top-30 turnover. The exact raw form is
+    `STRUCTURALLY_REJECTED_AS_WRITTEN`; no post-result clipping or denominator
+    rescue was performed, and the broader mechanism remains an untested future
+    question. See `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 
@@ -149,6 +155,8 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 - `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_PREREGISTRATION_V1.md`
 - `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
+- `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_PREREGISTRATION_V1.md`
+- `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 
 ## Hard boundary
 

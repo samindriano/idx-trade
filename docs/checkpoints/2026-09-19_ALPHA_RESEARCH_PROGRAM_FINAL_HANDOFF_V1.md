@@ -13,6 +13,7 @@ Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
+Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -137,8 +138,10 @@ optimized and none is in the protected four-ID packet.
 ## Structurally rejected, blocked, and ready-for-reentry directions
 
 - Rejected/closed: invalid early Stage-A implementation, exact breakout
-  formulation, exact additive foreign-flow formulation, and semantically
-  invalid margin interpretation.
+  formulation, exact additive foreign-flow formulation, semantically invalid
+  margin interpretation, and the raw H-EXC-01 excursion representation for
+  numerical unboundedness/churn. The broader excursion mechanism remains
+  untested.
 - Blocked: C3 scientific evaluation, all target/incumbent comparisons,
   incomplete PIT/identity/CA/revision authority, and metadata-only activity
   snapshot reuse.
@@ -195,7 +198,8 @@ Re-entry packet audit: `2026-09-19_ALPHA_REENTRY_PACKET_AUDIT_RESULT_V2.md`.
 - Do not scrape or add Zapi/IDX/TradingView/Investing/Stockbit providers just
   to fill current structural gaps.
 - Do not retry failed exact formulations, monotone duplicates, sparse C3
-  variants, or metadata-only activity snapshot reuse.
+  variants, metadata-only activity snapshot reuse, or raw H-EXC-01 without a
+  new preregistered numerical contract.
 - Do not optimize combination weights, refit, rescue, sign-flip, or expand the
   candidate budget before a new frozen protocol decision.
 
