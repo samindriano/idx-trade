@@ -537,3 +537,9 @@ available. The re-entry packet has current packet-byte freshness from
 `P=10939862` through `Q=e44f43ca` to attestation-run `R0=37390dae`, but full external-source
 freshness remains unknown. No candidate status changed and the packet remains
 NO-GO. See `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
+
+The extended local census then classified six additional raw surfaces—official
+foreign flow, listing/delisting lifecycle, monthly and statutory free-float,
+HSC ownership events, and broker/margin category state. All remain partial or
+blocked and none changes the candidate registry or protected packet. See
+`2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.

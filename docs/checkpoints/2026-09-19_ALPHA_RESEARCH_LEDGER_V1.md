@@ -614,3 +614,18 @@ unchanged Q-to-R and current declared source hashes match. This is
 not a re-entry authorization. See
 `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md` and the
 current-head attestation checkpoint.
+
+## Continuation register — six newly classified local surfaces
+
+The extended local census identified six raw surfaces not represented in the
+previous durable census: a 1,288-session official foreign-flow archive;
+listing/delisting lifecycle history; monthly LBRE free-float reports;
+statutory free-float anchors; an HSC ownership event ledger; and a one-date
+broker/margin category snapshot. Their statuses are respectively
+`PARTIAL/SOURCE_BLOCKED`, `PARTIAL/IDENTITY_BLOCKED`,
+`PARTIAL/REMEDIATION_REQUIRED`, `PARTIAL/REMEDIATION_REQUIRED`,
+`PARTIAL/EVENT_ONLY`, and `SNAPSHOT_ONLY/BLOCKED`. None has a sufficient
+population-wide PIT, identity/CA, revision, or public-availability contract.
+No source was admitted and no feature or candidate was created.
+
+See `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.

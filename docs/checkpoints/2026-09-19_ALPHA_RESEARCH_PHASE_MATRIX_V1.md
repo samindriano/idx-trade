@@ -203,3 +203,9 @@ non-redundant work remains authorized.
   `R0=37390dae`; packet-bound Git files and declared current hashes pass, while
   full external-source freshness remains `UNKNOWN`. The packet remains
   specification-only and NO-GO.
+
+- Extended local-data census found six previously unlisted raw surfaces, but
+  all remain partial, event-only, snapshot-only, or remediation-blocked. This
+  expands the future capability map only; no feature or candidate admission is
+  justified. See
+  `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.

@@ -570,3 +570,11 @@ attestation `Q=e44f43ca`, and attestation-run head `R0=37390dae`; packet-bound G
 are unchanged and current source hashes match the contract. This proves packet
 byte freshness only; full external-source freshness remains `UNKNOWN`, so the
 packet stays specification-only and NO-GO.
+
+The extended local census found six raw surfaces absent from the previous
+durable inventory: historical official foreign flow, listing/delisting
+lifecycle, monthly LBRE free-float, statutory free-float anchors, HSC ownership
+events, and a broker/margin category snapshot. All remain partial, event-only,
+snapshot-only, or source-remediation blocked; none is admissible for feature
+construction. See
+`2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.

@@ -405,3 +405,9 @@ packet is byte-fresh across `P=10939862`, `Q=e44f43ca`, attestation-run `R0=3739
 fully source-fresh. C1 remains most sensitive under the 188-row stress; no
 candidate is upgraded and protected evaluation remains NO-GO. See
 `2026-09-20_ALPHA_CA_CANDIDATE_EXPOSURE_COMPLETENESS_RESULT_V1.md`.
+
+The local inventory was extended by six raw surfaces: historical foreign flow,
+listing/delisting lifecycle, monthly/statutory free-float, HSC ownership
+events, and broker/margin category state. They are all capability-only and
+remain partial or blocked; no feature or candidate was admitted. See
+`2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.

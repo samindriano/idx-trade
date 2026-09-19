@@ -58,3 +58,17 @@ audited surface is admissible.
 | Frequency field | `UNKNOWN / SOURCE_BLOCKED` | 13,371 distinct values and one zero; field definition and aggregation semantics are absent |
 
 No row is promoted into a candidate or protected evaluation packet.
+
+## Local surface census continuation — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Historical official foreign-flow archive | `PARTIAL / SOURCE_BLOCKED` | 1,288 sessions, 1,129,024 rows, 983 tickers; publication time, T→T+1 authority, identity/CA/revision and completeness unresolved |
+| Listing/delisting lifecycle history | `PARTIAL / IDENTITY_BLOCKED` | 962 current rows and 163 delisting records / 159 tickers; six conflict tickers and 2,280 ambiguous issues; no daily PIT membership |
+| Monthly LBRE free-float corpus | `PARTIAL / REMEDIATION_REQUIRED` | 25,262 canonical rows with 24,394 admitted and 868 unresolved; monthly issuer reports, not daily population-wide PIT history |
+| Statutory free-float anchors | `PARTIAL / REMEDIATION_REQUIRED` | 2025-12-31 has 923 exact-share rows; 2026-03-31 is percentage-only; no continuous PIT/issuer/CA chain |
+| HSC ownership event ledger | `PARTIAL / EVENT_ONLY` | 59 events, 55 active at cutoff; event-level only, not a daily ownership panel; completeness and revision unresolved |
+| Broker/margin category snapshot | `SNAPSHOT_ONLY / BLOCKED` | One date, 220 margin rows and 965 stock rows; category semantics are not financing flow and no PIT/publication time exists |
+
+None of these six surfaces is admitted for feature construction or candidate
+evaluation.

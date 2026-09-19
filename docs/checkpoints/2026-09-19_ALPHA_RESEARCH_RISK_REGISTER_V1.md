@@ -99,6 +99,7 @@ protected evaluation or candidate-budget expansion.
 
 | Candidate CA-exposure completeness | Existing replay covers only a 188-key forensic residual and has no complete event-to-window issuer/ISIN/PIT linkage | `OPEN / BLOCKED` | Treat C1/C2/C4/H-LIQ results as bounded sensitivity only; require independently admitted population-wide transition authority |
 | Re-entry packet current-head freshness | Packet-bound Git files are unchanged from Q to R and current source hashes match, but external bytes were not attested at Q | `OPEN / UNKNOWN` | Record packet byte freshness separately; do not call the packet fully fresh or execute it |
+| Newly classified local source surfaces | Six local raw surfaces were absent from the prior durable census; all are partial, event-only, snapshot-only, or source-remediation blocked | `OPEN / BLOCKED` | Keep capability-only; do not promote foreign-flow, free-float, lifecycle, ownership, or broker/margin data without independent admission |
 
 - Current branch: `codex/alpha-available-data-20260919`
 - Current checkpoint family: `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`,

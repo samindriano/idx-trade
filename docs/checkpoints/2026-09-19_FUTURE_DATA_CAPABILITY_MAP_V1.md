@@ -15,3 +15,8 @@
 | Historical EOD quote-state history | bid/offer partial, source blocked | population-wide quote timestamps/age, depth and executable semantics, units, PIT/revision/vintage, identity/CA basis, and missingness policy |
 | Foreign-flow publication and units | shares arithmetic partial; value unknown | actor scope, aggregation level, currency/monetary unit, publication/knowledge time, and revision/vintage |
 | Listed-share transition semantics | partial structural field | authoritative issuer/ISIN continuity, CA event/effective timing, share-basis definition, and coverage |
+| Historical official foreign-flow archive | 1,288-session partial archive | public-availability/PIT certificate, identity/CA/revision contract, and population completeness |
+| Listing/delisting lifecycle history | partial lifecycle evidence | daily membership, issuer/ISIN continuity, effective timing, and PIT/publication semantics |
+| Monthly/statutory free-float history | partial snapshots and monthly corpus | continuous daily panel, public availability, issuer/ISIN/CA linkage, and revision lineage |
+| Ownership event ledger | event-only partial | complete population, event semantics, issuer continuity, and historical revision coverage |
+| Broker/margin category state | one-date snapshot only | historical series, financing-flow semantics, PIT/publication time, and complete coverage |
