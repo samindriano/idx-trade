@@ -146,3 +146,6 @@ non-redundant work remains authorized.
   `2026-09-19_ALPHA_REENTRY_PACKET_PRODUCER_BINDING_RECONCILIATION_RESULT_V1.md`.
 - Dataset-Saham-IDX red-team found no admission-changing evidence; it remains
   blocked with no new artifact justified.
+- Local Zapi probe admission audit found only a BBCA snapshot and empty
+  dividend probes; no historical PIT/identity/CA feature surface was admitted.
+  See `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.

@@ -22,6 +22,17 @@ The follow-up tooling/selection replay is recorded in
 The latest independent red-team correction replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REDTEAM_CORRECTION_RESULT_V1.md`.
 
+## Latest continuation update — local Zapi probe admission audit
+
+The already persisted local Zapi artifacts were inspected read-only. They
+contain one BBCA company-profile snapshot and empty March/August dividend
+payloads; the profile fails its official parity review, and the dividend
+reviews fail row-selection/identity/semantic gates. No historical
+available-at, revision/vintage, issuer/ISIN, or corporate-action authority is
+established. Zapi remains `BLOCKED / NOT_ADMITTED` and does not create a new
+alpha surface or alter the C1-C4 packet. See
+`2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
+
 ## Latest continuation update — CA basis, capacity tails, and mechanism closure
 
 An independent CA/issuer-basis red-team confirms that the HLC overlay is

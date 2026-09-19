@@ -423,6 +423,17 @@ rank changes; minimum Top-30 overlap `36.667%`) and remains nonzero/unknown
 for C2, C4, H-LIQ, H-VOL, and H-EXC-02. No repair or admission is justified.
 See `2026-09-19_ALPHA_CA_ISSUER_BASIS_REDTEAM_RESULT_V1.md`.
 
+## Continuation register — local Zapi probe admission audit
+
+The persisted local Zapi archive contains one BBCA company-profile snapshot
+and two empty monthly dividend payloads, plus an earlier schema-only probe.
+The company-profile review fails its preregistered official parity event; the
+dividend reviews fail because selected rows are absent, ticker identity is not
+usable in the global-feed replay, and no historical row-level timing or
+revision contract is present. Status remains `BLOCKED / NOT_ADMITTED`; no
+feature, candidate, panel substitution, or provider retry was performed. See
+`2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md`.
+
 The new capacity/friction-tail artifact covers the six structurally relevant
 surfaces C1/C2/C4/H-LIQ-01/H-VOL-01/H-EXC-02 over `600` sessions and `18,000`
 slots each. It adds q95/q99/max turnover burdens, top-name concentration,

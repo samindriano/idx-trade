@@ -30,7 +30,7 @@ being listed below does not make it admissible.
 | `config/stockbit_stream_universe_v1.csv` activity metadata | 963 tickers; `activity_median_regular_value_60` populated for 105; `capture_high=1` for 100; five populated ranks are 101–105 with `capture_high=0` | `PARTIAL / METADATA_ONLY / NON-ADMISSIBLE` | inventory/future-source clue only; no ticker-date history or available-at/PIT timestamps |
 | Historical Ranking V2/V3/V4 caches | retained historical development artifacts and manifests | `HISTORICAL / CLOSED OR FROZEN` | archaeology only; no new refit/rescore |
 | O2/O2.1/path-risk/reliability artifacts | retained auxiliary historical runs | `HISTORICAL / DIAGNOSTIC` | failure/mechanism archaeology only |
-| Zapi/IDX/TradingView/Investing/Stockbit probes | directory-level and staged probe evidence | `PARTIAL / BLOCKED / UNKNOWN` | source capability review; no panel substitution |
+| Zapi/IDX/TradingView/Investing/Stockbit probes | directory-level and staged probe evidence | `PARTIAL / BLOCKED / UNKNOWN` | source capability review; no panel substitution; local Zapi details in `2026-09-19_ALPHA_ZAPI_LOCAL_PROBE_ADMISSION_AUDIT_V1.md` |
 | Sector/listing/ownership/corporate-action roots | source leads, snapshots, audits, or partial archives | `PARTIAL / BLOCKED` | provenance and admission research only |
 | Protected prospective target/counter/forward roots | deliberately not opened | `BLOCKED / PROTECTED` | none |
 
