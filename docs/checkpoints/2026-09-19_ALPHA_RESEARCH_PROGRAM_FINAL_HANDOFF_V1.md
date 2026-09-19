@@ -317,7 +317,7 @@ admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Verified baseline HEAD: `a1733c0f`
+- Verified baseline HEAD for the current research milestone: `96a3f12b`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
@@ -353,6 +353,9 @@ admission.
 - Tests: Python compilation `PASS`; C3 verifier `PASS`; independent H-LIQ
   source recomputation `PASS`; corrected V2
   verifiers `PASS`; V2 re-entry contract verifier `PASS`; outcome-blind target firewall `PASS`; artifact hash
+- H-FRAG-01 source audit and independent source inventory verifier `PASS` at
+  their respective integrity/firewall layers; scientific disposition remains
+  `SOURCE_BLOCKED / PARTIAL` because the preregistered boundedness gate failed.
   contract PASS plus deliberate wrong-code/required-manifest FAIL paths;
   git worktree was clean at baseline.
 - Unresolved risks: authoritative admission, corporate-action/price basis,
