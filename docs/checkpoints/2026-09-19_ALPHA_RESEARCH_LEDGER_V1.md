@@ -22,6 +22,7 @@ Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
 Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+Latest Stage-A lineage result: `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 Latest C1/C2/C4 adversarial audit: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis audit: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ-01 novelty diagnostic: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
@@ -123,6 +124,7 @@ production or prospective claim.
 - New provider/network access: none.
 - Protected/canonical/production mutations: none.
 - Phase-Q tooling follow-up: deterministic ticker tie-break and explicit no-fill handling were patched; regenerated staged artifacts and source hashes are recorded in `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+- Stage-A lineage follow-up: v3/final feature bytes are identical with different manifest heads; guarded is the active distinct generation. Full hashes and dispositions are recorded in `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 
 ## Continuation register — Phase-Q replay milestone
 

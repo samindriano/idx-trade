@@ -21,6 +21,9 @@ Follow-up Phase Q kemudian memperbaiki verifier, deterministic selection, dan
 missing-value handling; detail dengan hash ada di
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 
+Lineage generasi Stage-A yang duplicate/superseded juga sudah direkonsiliasi
+di `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
+
 ## Batas lane dan isolasi
 
 - Semua pekerjaan berada di branch/worktree riset terpisah.
@@ -175,6 +178,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+- `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 - `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`

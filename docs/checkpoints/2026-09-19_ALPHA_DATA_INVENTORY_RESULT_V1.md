@@ -149,6 +149,9 @@ mapping, revision policy, cost/licensing review, and admission artifact.
 
 ## Boundary and reproducibility
 
+Stage-A generation hashes and duplicate/superseded dispositions are pinned in
+`2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
+
 - No canonical dataset was modified or backfilled.
 - No provider/network acquisition was performed.
 - No protected target, forward return, incumbent prediction, counter, or

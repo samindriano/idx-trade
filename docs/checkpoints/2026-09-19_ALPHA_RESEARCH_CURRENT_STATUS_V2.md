@@ -16,6 +16,8 @@ status file before continuing.
 
 The follow-up tooling/selection replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
+Stage-A generation lineage is recorded in
+`2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`.
 
 ## Executive answer
 
@@ -230,6 +232,7 @@ Detailed durable documents:
 - `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
+- `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
 
 No predictive superiority claim is made.
