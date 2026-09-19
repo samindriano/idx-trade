@@ -295,7 +295,7 @@ admission.
 
 - Repository/worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
-- Verified baseline HEAD: `8ad60569`
+- Verified baseline HEAD: `a1733c0f`
 - Canonical `origin/main` was not modified.
 - Derived staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
@@ -310,9 +310,18 @@ admission.
   `c587bba69fbfdd77cf9ea4f5ce0dbda191ec5efd191bff55355f0b32cf9ca138`;
   PASS report SHA-256 `2b8064b51f34b6de084f1facd070cc2288d0270e707c0b6798a3b2e2767615ad`.
 - Combination firewall SHA-256: `4d00cace99225d5286c5143698622a85a735564b5ee6955bab98007038d679f4`.
+- H-LIQ source-decomposition generator SHA-256:
+  `be3880729cd5defc5509c7b7dd8bae06548b475e9305b73e0e9c112506576531`;
+  independent verifier SHA-256
+  `409a2b66e9bd99080007301d94dd2ab3b08dccf25b06a1fb46bf65ea528fdd66`;
+  generated artifact SHA-256
+  `352a422086d540318f0464aaec2b80b3eb427a87176caa0326559242dacfc35e`;
+  firewall SHA-256
+  `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
 - Other structural code/output hashes are recorded in their result docs and
   staging JSON manifests; all are isolated and target-free.
-- Tests: Python compilation `PASS`; C3 verifier `PASS`; corrected V2
+- Tests: Python compilation `PASS`; C3 verifier `PASS`; independent H-LIQ
+  source recomputation `PASS`; corrected V2
   verifiers `PASS`; outcome-blind target firewall `PASS`; artifact hash
   contract PASS plus deliberate wrong-code/required-manifest FAIL paths;
   git worktree was clean at baseline.
