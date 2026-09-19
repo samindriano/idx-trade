@@ -88,7 +88,7 @@ These branches are retained because they contain reusable work, but **none may s
 
 | Domain | Status | Retained anchors | Boundary |
 |---|---|---|---|
-| Financial PIT / representation | `PARKED` | `research/idx-financial-pit-alpha-v1`; `research/idx-financial-representation-v2` | Resume only as separately scoped challenger work. |
+| Financial PIT / representation | `CLOSED — exact event challenger NO-GO` | `codex/alpha-challenger-pit-safe-20260919` | CORE3 reporting-event/change overlay was PIT-clean and orthogonal but failed historical improvement: fixed blend mean delta `-0.00000064`, q25 `0.0`, `18/30` non-negative blocks. Top-30 churn `0.2278%`; no rescue variants. Incumbent/runtime/prospective data untouched. |
 | Foreign flow | `PARKED` | `research/idx-foreign-flow-alpha-v2-core`; `research/idx-foreign-flow-representation-v2`; `integration/foreign-flow-representation-v2-forward-v1`; capture/acquisition history | Treat forward representation as a derived sidecar over canonical Stock Summary raw unless a future acquisition contract explicitly changes that. No silent admission into incumbent alpha. |
 | Price/trend state | `PARKED` | `research/idx-price-trend-confirmation-state-v1`; `integration/price-trend-state-forward-sidecar-v1`; `integration/price-trend-runtime-bridge-adapter-v1` | Derived sidecar/challenger only. |
 | Effort-vs-result alpha challenger | `CLOSED — exact challenger NO-GO` | `codex/alpha-challenger-pit-safe-20260919` | Historical fixed event overlay/blend failed its preregistered gate: blend mean IC delta `-0.00138179`, q25 delta `-0.00479846`, `5/30` non-negative blocks. No rescue variants. Incumbent/runtime/forward data untouched. |
