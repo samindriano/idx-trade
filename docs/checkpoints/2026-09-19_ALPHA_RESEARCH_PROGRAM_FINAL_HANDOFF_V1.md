@@ -2,7 +2,7 @@
 
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
-Latest verified current HEAD before this documentation amendment: `76064de20abeedf1636f13c1e8f1ba0858e02505`
+Latest verified current HEAD before this documentation amendment: `3d047bc6cb14ddbd5a4f366ecfccb8441b77d7b5`
 Latest research milestone: independent C1/C2/C4 constructor replay and frontier audit
 Latest status/documentation: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
@@ -45,6 +45,7 @@ Latest completion audit: `2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md`
 Latest lane-integrity attestation: `2026-09-20_ALPHA_LANE_INTEGRITY_ATTESTATION_RESULT_V1.md`
 Latest independent constructor replay: `2026-09-20_ALPHA_CONTINUATION_FRONTIER_AND_CONSTRUCTOR_REPLAY_V1.md`
 Latest eligibility contract audit: `2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md`
+Latest eligibility policy resolution packet: `2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the

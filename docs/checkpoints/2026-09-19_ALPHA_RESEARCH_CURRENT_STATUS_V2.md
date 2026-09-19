@@ -689,3 +689,10 @@ chronology.
 The future packet now carries this conflict as an explicit machine-verified
 fail-closed gate; packet `PASS` means the block is encoded correctly, not that
 protected evaluation is executable.
+
+The two permitted policy resolutions are now enumerated in
+`2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md`: either amend
+the prose to the code-aligned `min_periods=60` contract, or explicitly amend
+the isolated implementation to a declared minimum-20 contract. No agent may
+choose between them by chronology, population size, or convenience. The
+completion audit remains `NO-GO / PRE-ADMISSION PROGRAM STILL ACTIVE`.

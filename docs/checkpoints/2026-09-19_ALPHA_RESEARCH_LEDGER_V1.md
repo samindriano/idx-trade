@@ -770,3 +770,16 @@ regenerate the feature artifact until resolved.
 The packet contract and verifier now bind this conflict explicitly and the
 refreshed firewall/verifier pass with the gate present. This is control
 hardening, not a population decision or admission evidence.
+
+## Continuation register — eligibility policy resolution packet
+
+The eligibility contradiction is now accompanied by a decision-ready packet
+that separates the two admissible resolutions: code-aligned `min_periods=60`
+or prose-aligned minimum-20 with explicit count/median semantics. It records
+the exact 310,761 versus 348,765 population impact, the 38,004-row difference,
+the provenance chronology, and the required re-hash/regeneration gates. This
+reduces procedural ambiguity without selecting a population, changing staged
+features, or opening protected outcomes. Until an authoritative decision
+record exists, status remains `BLOCKED_POLICY_CONFLICT` and no same-surface
+retry is authorized. See
+`2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md`.
