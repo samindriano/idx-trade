@@ -7,6 +7,7 @@ Branch: `codex/alpha-available-data-20260919`
 Latest evidence content commit: `c26ce41f`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
+Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
 External staging root: `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\`
 
 ## Jawaban singkat
@@ -117,6 +118,11 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     `34.7905% / 24.3750% / 42.3333%`. No horizon was selected; the longer
     forms remain future representations, not a repair or predictive result.
     See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+19. Historical Open capability is partial: `201,415/310,761` eligible rows
+    are positive finite and all `1,201` eligible dates have at least 30 rows.
+    Mixed IDX/Yahoo provenance, `20,995` source transitions, and missing
+    available-at/PIT/execution authority keep H-MICRO-02 blocked. See
+    `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 

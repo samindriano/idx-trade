@@ -217,7 +217,12 @@ candidate admission.
   basis, incomplete intraday history, and source revision.
 - **Target-free evidence:** source completeness/PIT audit and structural field
   coverage only; no proxy target reconstruction.
-- **Status:** `BLOCKED_SOURCE_ADMISSION`.
+- **Capability result:** positive finite Open exists on `201,415/310,761`
+  eligible rows (`64.8135%`), with at least 30 Open rows on all `1,201`
+  eligible dates; provenance is split between IDX and Yahoo and `20,995`
+  source transitions remain.
+- **Status:** `PARTIAL_CAPABILITY / BLOCKED_SOURCE_ADMISSION`.
+- **Evidence:** `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 - **Next action:** wait for an independently admitted source contract; do not
   scrape or backfill the canonical panel.
 
@@ -278,7 +283,7 @@ No new C5+ candidate is admitted by this card pack.
 | Horizon variants | Distinct representations, but remain diagnostics until a future contract chooses one |
 | H-LIQ-01 | Potentially new temporal liquidity mechanism; requires bounded structural prototype |
 | H-MICRO-01 | Not novel enough yet; do not retry C2/effort-vs-result under a new name |
-| H-MICRO-02 | Source blocked |
+| H-MICRO-02 | Partial Open capability, but source/PIT/execution admission blocked |
 | H-FUND-01 | C3 capability blocked |
 | H-FLOW-01 | Source blocked; exact additive predecessor remains closed |
 | H-EXC-02 | Bounded new contract is structurally stable but high-churn; future research only |

@@ -345,3 +345,11 @@ The preregistered H-EXC-02 horizon audit then evaluated fixed median windows
 42.3333%`; no horizon was selected. The lower-turnover forms are distinct
 future representations, not an economic repair or predictive result. See
 `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+
+An Open capability audit refined the H-MICRO-02 data boundary: positive finite
+Open is present on `201,415/310,761` eligible rows (`64.8135%`) and all
+`1,201` eligible dates have at least 30 Open rows. However, provenance is split
+between IDX/Yahoo with `20,995` source transitions, and available-at, PIT,
+corporate-action, identity, and execution semantics remain unadmitted.
+H-MICRO-02 is `PARTIAL_CAPABILITY / BLOCKED_SOURCE_ADMISSION`, not a candidate.
+See `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.

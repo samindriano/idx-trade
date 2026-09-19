@@ -1,6 +1,6 @@
 # Historical Open Capability Audit — Preregistration V1
 
-Date: 2026-09-20 (Asia/Jakarta)  
+Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`  
 Stage: `B_H_MICRO02_OPEN_SOURCE_CAPABILITY_AUDIT`
 
@@ -36,4 +36,3 @@ capability status and define what remains missing. It cannot establish
 historical available-at timing, source authority, executable fill semantics,
 PIT corporate-action correctness, survivorship safety, or predictive value.
 H-MICRO-02 cannot become C5 from this audit.
-

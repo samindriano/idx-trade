@@ -17,6 +17,7 @@ Latest H-EXC result: `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 Latest H-EXC-02 result: `2026-09-19_ALPHA_HEXC02_BOUNDED_EXCURSION_RESULT_V1.md`
 Latest H-EXC-02 CA sensitivity: `2026-09-19_ALPHA_HEXC02_CA_SENSITIVITY_RESULT_V1.md`
 Latest H-EXC-02 horizon stability: `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`
+Latest Open capability audit: `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -151,6 +152,14 @@ The fixed H-EXC-02 horizon audit evaluated `5/20/60`: mean turnover fell to
 `34.7905% / 24.3750% / 42.3333%`. No horizon was selected; longer windows
 remain distinct future representations and do not repair the family or prove
 predictive value. See `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+
+The historical Open capability audit found `201,415/310,761` eligible rows
+(`64.8135%`) with positive finite Open and at least 30 Open rows on every
+eligible date. Provenance is split between IDX and Yahoo with `20,995` source
+transitions; available-at, PIT, CA-basis, identity, and execution semantics
+remain unadmitted. H-MICRO-02 is now classified
+`PARTIAL_CAPABILITY / BLOCKED_SOURCE_ADMISSION`, not C5. See
+`2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination

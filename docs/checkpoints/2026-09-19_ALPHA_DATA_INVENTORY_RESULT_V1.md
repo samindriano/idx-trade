@@ -50,9 +50,13 @@ Current use/disposition:
 - `price_provenance`, `corporate_action_integrity_verified`, and
   `signal_contract` are governance/audit fields, not independent alpha
   candidates in this lane.
-- `open`, `open_available`, and `open_evidence_status` remain source-sensitive;
-  they are not used to silently repair or widen the C1–C4 panel. Historical
-  executable-Open recovery remains blocked under the source-admission contract.
+- `open`, `open_available`, and `open_evidence_status` are now quantified as
+  `PARTIAL / SOURCE_SENSITIVE`: positive finite Open exists on `201,415/310,761`
+  eligible rows (`64.8135%`) and all `1,201` eligible dates have at least 30
+  Open rows, but IDX/Yahoo provenance, `20,995` source transitions, and
+  available-at/PIT/execution semantics remain unresolved. They are not used to
+  silently repair or widen the C1–C4 panel. See
+  `2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 - No sector/industry history, spread, order-book, queue-position, or broker-side
   flow fields are present in the clean panel schema.
 

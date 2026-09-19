@@ -170,6 +170,10 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
 - **H-EXC-02:** bounded absolute-distance excursion balance is numerically
   stable and structurally distinct, but mean turnover is `40.7750%` with
   `86.6667%` maximum; tetap future research, bukan C5 atau predictive result.
+- **H-MICRO-02:** Open capability is partial, not admitted: `201,415/310,761`
+  eligible rows have positive finite Open and all `1,201` eligible dates have
+  at least 30 rows, but mixed IDX/Yahoo provenance and `20,995` source
+  transitions leave PIT/execution semantics blocked.
 - **Combinations:** structural future hypotheses saja; bukan model baru yang
   sudah terbukti incremental.
 
@@ -213,6 +217,19 @@ Top-30 overlap was `34.7905% / 24.3750% / 42.3333%`. No horizon was selected:
 longer windows are distinct future representations, not a repaired or
 predictively validated version of the 5-session form. See
 `2026-09-19_ALPHA_HEXC02_HORIZON_RESULT_V1.md`.
+
+## H-MICRO-02 Open capability result
+
+The frozen panel contains `535,095` positive finite Open rows overall and
+`201,415` among the `310,761` corrected eligible rows (`64.8135%`). Every
+eligible date has at least 30 Open rows. The eligible Open rows split between
+`IDX_PUBLIC_STOCK_SUMMARY` (`119,536`) and `YAHOO_RAW` (`81,879`), with
+`20,995` price-provenance transitions across ticker histories. There are no
+eligible flag mismatches, but the source is still optional/source-sensitive
+and has no admitted knowledge-time, PIT CA-basis, identity, or execution
+contract. H-MICRO-02 remains `PARTIAL_CAPABILITY /
+BLOCKED_SOURCE_ADMISSION`; no C5. See
+`2026-09-19_ALPHA_OPEN_CAPABILITY_RESULT_V1.md`.
 
 ## Re-entry gate
 
