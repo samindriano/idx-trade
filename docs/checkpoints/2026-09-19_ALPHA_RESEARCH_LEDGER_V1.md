@@ -47,6 +47,19 @@ production or prospective claim.
 | C3 | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED` | `BLOCKED` | `BLOCKED` | 30,994/310,761 eligible rows (9.9736%); late PIT coverage and partial Financial admission; no fallback. |
 | C4 | `PASS — corrected capability only` | `BLOCKED — source admission` | `PENDING` | `FUTURE_RESEARCH` | 310,323/310,761 eligible rows (99.8591%); corrected mask/session implementation; no target opened. |
 
+## Objective deliverable audit
+
+| Required deliverable | Current evidence | Status |
+|---|---|---|
+| Prior alpha map and failure lessons | Family map above plus the closed-family/frontier reconciliation entries | `COMPLETE — bounded map` |
+| Admissible-data inventory | `2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_AUDIT_V1.md` and remediation contract | `COMPLETE — no new-alpha source admitted` |
+| New hypotheses investigated | Frozen protocol C1–C4 with rationale, fixed formulas, and no variants | `COMPLETE — Stage A only` |
+| Experiment ledger including failures | Candidate table, invalid v1 implementation, corrected implementation, and structural audit lineage | `COMPLETE — no target stage` |
+| Incumbent-vs-candidate comparison | Same-window target comparison and incumbent overlap are not authorized/provable; no post-cutoff score artifact was substituted | `BLOCKED — admission/common support` |
+| Surviving candidate artifact | No candidate has target/OOS/economic evidence | `NONE` |
+| Independent audit | Final guarded verifier and robustness artifacts pass structural checks | `PASS — structural only` |
+| Exact remaining blocker to promotion | Authoritative population-wide historical-as-of source/target admission is absent; prospective evidence remains separate | `BLOCKED / WAITING` |
+
 ## Audit trail
 
 - Protocol freeze: committed before any target/label read; tightened after the independent data-admission audit.
