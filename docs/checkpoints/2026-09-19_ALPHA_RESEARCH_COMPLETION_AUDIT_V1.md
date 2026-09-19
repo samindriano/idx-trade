@@ -134,3 +134,24 @@ change requires new admissible authority or a future protected evaluation
 performed under the already frozen gates. Until then, the correct disposition
 is to preserve the current negative/blocked results and avoid redundant
 experiments, provider fallback, target access, or production mutation.
+
+## Continuation amendment — 2026-09-20
+
+The historical audit above remains bound to its recorded HEAD. The lane has
+since advanced through additional non-target work:
+
+- HSC ownership ledger: 137/137 artifact hashes, normalized parity, replay,
+  and 55-ticker cutoff parity pass; admission remains event-only/PIT-blocked.
+- Broker/margin snapshot: 73/73 artifact hashes and official/Zapi raw parity
+  pass for 220 margin and 965 stock rows; admission remains single-date and
+  snapshot-only blocked, with 106/326 eligible names absent and 0/220 all-six
+  metric equality.
+- CA/issuer-basis review: an independent replay found no new contradiction;
+  PIT remains UNKNOWN, CA basis and executable capacity remain readiness
+  failures, and C1/C4 remain non-additive. A reusable
+  `CA_ISSUER_PRICE_BASIS_ADMISSION_V1` future specification was added without
+  changing candidate or packet status.
+
+Current continuation HEAD: `f4132c20`. The lane remains isolated, the
+worktree is clean after the continuation commit, and the protected-target
+boundary is unchanged.
