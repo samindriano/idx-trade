@@ -116,6 +116,10 @@ candidate admission.
 - **CA stress:** substituting the 188 retained `idx_close` comparison rows
   changed `547` scores and `8,876` ranks; mean/minimum Top-30 overlap remained
   `99.8307% / 86.6667%`. This narrows but does not clear basis risk.
+- **Horizon stress:** fixed `5/20`, `5/60`, and `20/120` forms are materially
+  different (`58.9675%`, `9.9182%`, and `29.3193%` pairwise Top-30 overlap);
+  `5/20` raises mean turnover to `36.2583%`, while `20/120` falls to
+  `271,045` finite rows. Horizon choice remains unresolved.
 - **Status:** `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5.
 - **Evidence:** `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`,
   `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`, and the staged

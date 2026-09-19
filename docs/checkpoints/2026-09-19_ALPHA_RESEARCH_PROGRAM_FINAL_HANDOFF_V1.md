@@ -12,6 +12,7 @@ Latest adversarial result: `2026-09-19_ALPHA_C1234_ADVERSARIAL_RESULT_V1.md`
 Latest CA/price-basis result: `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`
 Latest H-LIQ novelty result: `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 Latest H-VOL result: `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
+Latest H-VOL horizon audit: `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 
 This is the current read-in document for a future ChatGPT session. Detailed
 evidence remains in the linked checkpoint documents; this handoff records the
@@ -123,6 +124,10 @@ the 188-row CA stress changed 547 scores and 8,876 ranks, with minimum Top-30
 overlap of 86.6667%. Keep it at
 `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`; it is not in the
 protected four-ID packet.
+
+The fixed horizon audit (`5/20`, `5/60`, `20/120`) shows material horizon
+dependence in turnover, support, and Top-30 membership. The baseline reproduces
+exactly, but no horizon is selected and H-VOL remains outside the packet.
 
 Four equal-weight structural combination hypotheses were measured separately:
 C1+C2, C1+C4, C2+C4, and C1+C2+C4. C1+C4 had the lowest tested combination

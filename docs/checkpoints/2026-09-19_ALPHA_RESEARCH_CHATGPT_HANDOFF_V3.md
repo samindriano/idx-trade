@@ -88,6 +88,12 @@ candidate has a predictive, OOS, IC/ICIR, or incumbent-superiority claim.
     does not clear price-basis risk, and H-VOL remains outside the protected
     packet with no C5 ID. See
     `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`.
+14. A fixed horizon-stability audit compared H-VOL `5/20`, `5/60`, and
+    `20/120`. The baseline reproduced exactly; `5/20` mean turnover was
+    `36.2583%`, `5/60` was `29.2778%`, and `20/120` support fell to
+    `271,045` rows. Pairwise Top-30 overlap was `58.9675% / 9.9182% /
+    29.3193%`; no horizon was selected and no C5 was created. See
+    `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.
 
 ## Latest CA exposure attribution
 
@@ -141,6 +147,8 @@ is no justification to open target data merely to force a winner.
 - `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
 - `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_PREREGISTRATION_V1.md`
 - `2026-09-19_ALPHA_HVOL01_CA_SENSITIVITY_RESULT_V1.md`
+- `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_PREREGISTRATION_V1.md`
+- `2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`
 
 ## Hard boundary
 

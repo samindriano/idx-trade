@@ -20,7 +20,8 @@ One-shot evaluation specification: `2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V1
 - H-VOL-01: remains `FUTURE_RESEARCH / NOVELTY_PENDING / ECONOMIC_CAUTION`,
   outside the protected four-ID packet. Its bounded CA stress preserves
   `99.8307%` mean and `86.6667%` minimum Top-30 overlap, but changes 547 scores
-  and 8,876 ranks; no C5 or re-entry status is authorized.
+  and 8,876 ranks. Its fixed `5/20`, `5/60`, and `20/120` forms are materially
+  horizon-sensitive; no C5 or re-entry status is authorized.
 
 Structural combination hypotheses are tracked separately from the four-ID
 protected packet. The equal-weight C1+C4 combination is the cleanest

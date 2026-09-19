@@ -302,3 +302,12 @@ contains exactly C1-C4, with H-LIQ-01 and H-VOL-01 explicitly excluded. Hashes
 for the packet, protocol, implementation, guarded features, and manifest match
 the recorded specification. The packet remains
 `SPECIFICATION_ONLY / BLOCKED_BY_DATA_ADMISSION`.
+
+The fixed H-VOL horizon audit also evaluated `5/20`, `5/60`, and `20/120`.
+The baseline `5/60` reproduced exactly; `5/20` raised mean Top-30 turnover to
+`36.2583%`, while `20/120` reduced mean turnover to `12.5789%` but left only
+`271,045` finite eligible rows. Pairwise Top-30 overlap was only
+`58.9675% / 9.9182% / 29.3193%` across the three pairs. No horizon was
+selected and H-VOL remains `FUTURE_RESEARCH / NOVELTY_PENDING /
+ECONOMIC_CAUTION`, outside the protected packet. See
+`2026-09-19_ALPHA_HVOL01_HORIZON_STABILITY_RESULT_V1.md`.

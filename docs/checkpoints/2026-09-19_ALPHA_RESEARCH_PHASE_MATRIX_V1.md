@@ -20,10 +20,10 @@ non-redundant work remains authorized.
 | D | C3 financial capability investigation | `COMPLETE CAPABILITY / BLOCKED SCIENCE` | Financial capability audit and contract map; quality-only island is broader, but YoY/provenance support remains sparse. |
 | E | Target-free orthogonality | `COMPLETE STRUCTURAL` | `2026-09-19_STRUCTURAL_ORTHOGONALITY_MAP_V1.md` and daily/rolling lab; incumbent/target incremental information remains blocked. |
 | F | Economic mechanism research | `COMPLETE BOUNDED` | Hypothesis cards and literature separation; no mechanism is predictive evidence without target admission. |
-| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ + H-VOL PENDING` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. H-VOL-01 is structurally distinct on the bounded panel but adjacent to prior range/flat-range families and concentrated in bottom-value names; both remain `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
+| G | New hypothesis discovery | `COMPLETE BOUNDED / H-LIQ + H-VOL PENDING` | H-LIQ-01 remains structurally distinct from C2 but shares turnover information in Q4. H-VOL-01 is structurally distinct on the bounded panel but adjacent to prior range/flat-range families, concentrated in bottom-value names, and horizon-sensitive; both remain `NOVELTY_PENDING / ECONOMIC_CAUTION`; no C5. Other directions are source-blocked or non-novel. |
 | H | External literature/mechanism review | `COMPLETE BOUNDED` | `2026-09-19_ALPHA_HYPOTHESIS_CARD_PACK_V1.md`; literature is inspiration, not IDX evidence. |
 | I | Representation search | `COMPLETE BOUNDED` | Rank/z/robust-z equivalence closed as duplicate; lookbacks are recorded as distinct future representations, without outcome tuning. |
-| J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics and H-LIQ h10/h20/h40; no free sweep or predictive selection. |
+| J | Multi-horizon structural study | `COMPLETE BOUNDED` | C1/C2/C4 horizon diagnostics, H-LIQ h10/h20/h40, and fixed H-VOL `5/20`/`5/60`/`20/120` comparison; no free sweep or predictive selection. H-VOL horizon dependence remains a future-risk finding. |
 | K | Robustness lab | `COMPLETE STRUCTURAL / PARTIAL SECTOR` | Missingness, ticker-removal, temporal, normalization, horizon, and H-LIQ adversarial tests pass structurally; no admitted sector field. |
 | L | Implementation economics | `PARTIAL / PROXY COMPLETE` | Fixed Top-K economics plus independent turnover-tail/repeat-name/value-bucket stress; real spread, queue, ADV, sector history, and executable capacity are not admitted. |
 | M | Combination readiness | `COMPLETE STRUCTURAL` | Four equal-weight C1/C2/C4 combinations measured; no weight optimization and no new candidate IDs. |
@@ -67,6 +67,9 @@ non-redundant work remains authorized.
    stress? Current answer: Top-30 overlap remains high (`99.8307%` mean,
    `86.6667%` minimum), but direct and spillover score/rank changes remain
    material; this does not clear CA/PIT or create C5.
+6. Is H-VOL-01 stable across economically distinct horizons? Current answer:
+   no single family-level conclusion is safe yet; `5/20`, `5/60`, and
+   `20/120` materially differ in support, turnover, and Top-30 membership.
 
 ## Answered, rejected, and blocked questions
 
