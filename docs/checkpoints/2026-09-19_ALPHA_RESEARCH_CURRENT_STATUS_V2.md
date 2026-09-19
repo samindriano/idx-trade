@@ -252,3 +252,15 @@ Detailed durable documents:
 - `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`
 
 No predictive superiority claim is made.
+
+## Latest continuation update — CA exposure attribution
+
+The research lane remains active for bounded, outcome-blind work. A new
+read-only counterfactual replay exactly reproduced the stored C1/C2/C4
+baseline scores and attributed changed rows against the 188-row unresolved
+price-basis artifact. C1 had `66` direct score changes and `82,291` spillover
+score changes; C2 had `66` and `457`; C4 had `66` and `319`. “Direct” means
+the changed `(ticker,date)` key is present in the unresolved artifact, not that
+causality has been proven. No candidate disposition changed and no correction
+was promoted. See `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md` and
+the compact handoff `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`.

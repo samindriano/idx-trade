@@ -49,8 +49,11 @@ non-redundant work remains authorized.
    unresolved.
 2. Can a separately staged identity/corporate-action artifact establish
    issuer continuity and price-basis authority? Current answer: the known
-   1,657-row HLC overlay is already embedded and replay-stable, but no complete
-   admitted artifact exists; 188 non-stable scale rows and open residuals remain.
+   1,657-row HLC overlay is already embedded and replay-stable. A bounded
+   counterfactual attribution shows C1 sensitivity is mostly cross-sectional
+   spillover while C2/C4 retain direct-row sensitivity, but no complete
+   admitted artifact exists; 188 non-stable scale rows and open residuals
+   remain.
 3. Should the equal-weight C1+C4 structural combination be carried as a
    future secondary hypothesis? Current answer: yes, structurally only; no
    protected packet entry yet.

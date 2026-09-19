@@ -204,3 +204,22 @@ status di atas tetap berlaku.
 - `2026-09-19_REENTRY_QUEUE_V1.md`
 
 No predictive superiority claim is made.
+
+## Latest 2026-09-19 continuation result
+
+The 188-row CA exposure question was narrowed without opening outcomes. A
+preregistered in-memory counterfactual exactly reproduced stored C1/C2/C4
+baseline scores. Changed rows classified directly inside the unresolved
+artifact versus outside it were:
+
+- C1: `66` direct score changes versus `82,291` spillover score changes;
+- C2: `66` direct versus `457` spillover;
+- C4: `66` direct versus `319` spillover.
+
+The classification is not causal proof and does not admit a price-basis
+correction. C1's aggregate sensitivity is mostly cross-sectional spillover;
+C2/C4 retain visible direct-row sensitivity. Full result:
+`2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`.
+
+The current compact handoff is
+`2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`.

@@ -21,7 +21,7 @@ Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESU
 Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
-Latest compact ChatGPT handoff: `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md`
+ Latest compact ChatGPT handoff: `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V3.md`
 Latest structural-lab replay: `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest Stage-A lineage result: `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
@@ -120,6 +120,7 @@ production or prospective claim.
 - C1/C2/C4 adversarial audit: the corrected implementation and frozen outputs passed static causal-code, schema/key, official-calendar, identity-interval, score/rank-mask, and numerical checks. Legacy artifact result is `PASS_STRUCTURAL_ONLY`; the new source-recomputing replay is `PASS_INDEPENDENT_STRUCTURAL_REPLAY`. Neither certifies PIT, corporate-action price basis, survivorship, or predictive value; access flags remain self-attested. See `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 - CA/price-basis audit: the retained 1,657-row HLC overlay is already represented exactly in the current panel and replay leaves C1/C2/C4 scores, ranks, and Top-30 sets unchanged. This is bounded forensic evidence only; 188 non-stable scale rows and open-price residuals keep CA/PIT admission blocked. See `2026-09-19_ALPHA_CA_PRICE_BASIS_RESULT_V1.md`.
 - CA-basis stress extension: substituting the retained `idx_close` comparison values for the 188 unresolved rows changes C1 ranks on 10.617% of compared rows (minimum Top-30 overlap 36.667%), versus 2.894%/83.333% for C2 and 3.203%/86.667% for C4. The values are not admitted corrections; record this as C1 fragility and do not change the candidate status.
+- CA exposure attribution: a preregistered direct-vs-spillover replay exactly reproduced stored C1/C2/C4 baseline scores. C1 has 66 direct score-changed rows versus 82,291 spillover rows; C2 has 66 versus 457; C4 has 66 versus 319. Direct means the changed key is among the 188 unresolved rows; it is not causal proof. See `2026-09-19_ALPHA_CA_EXPOSURE_ATTRIBUTION_RESULT_V1.md`.
 - H-LIQ-01 novelty diagnostic: H-LIQ versus the C2 turnover-level component has mean daily Spearman 0.1648 and mean Top-30 overlap 39.40%; conditional dependence rises from -0.046 in bottom-value Q1 to 0.468 in top-value Q4. Retain the mechanism card, but do not create C5; status remains `NOVELTY_PENDING / ECONOMIC_CAUTION`.
 - H-LIQ-01 size-neutral diagnostic: one preregistered daily value-rank residual reduces selected bottom-value Q25 share from 39.672% to 14.983%, but raises mean Top-30 turnover from 10.306% to 20.785% and retains 72.006% overlap with baseline. The exposure is partly scale-related, not a free improvement; no C5 ID or disposition upgrade. See `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`.
 - Archaeology: V2/V3-A–E/V4-A–C/O2/auxiliary and source-family conclusions were reconstructed from retained checkpoints/tombstones; V3-B's later PIT-safe contamination adjudication supersedes its early F1–F4 promotion headline.
@@ -181,7 +182,8 @@ production or prospective claim.
 1. Enforce feature/manifest hash binding on every future research-only output.
 2. Continue bounded CA/issuer-basis and capacity audits from admitted local
    inputs only.
-3. Resolve the remaining H-LIQ novelty/capacity and 188-row CA exposure
-   questions without reopening acquisition or protected outcomes.
+3. Resolve the remaining H-LIQ novelty/capacity and CA/PIT source-admission
+   questions without reopening acquisition or protected outcomes. The 188-row
+   exposure question now has a bounded direct-vs-spillover result.
 4. Keep the source-recomputing verifier and deterministic/no-fill contracts in
    the re-entry tooling; do not promote candidates before Data QA admission.
