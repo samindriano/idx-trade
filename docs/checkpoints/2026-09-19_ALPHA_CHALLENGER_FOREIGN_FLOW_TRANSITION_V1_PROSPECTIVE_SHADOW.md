@@ -35,6 +35,20 @@ This demonstrates that the fixed transition overlay can be computed on a
 post-freeze prospective source snapshot without reading outcomes. It is not a
 performance result and cannot establish OOS improvement by itself.
 
+Against the already-committed incumbent score artifact for the same feature
+session, the structural cross-check found:
+
+- incumbent score rows: `296`;
+- common rows: `296`;
+- transition available on common rows: `284/296` (`95.945946%`);
+- prospective transition-rank Spearman versus incumbent rank: `0.11970779`;
+- fixed `90/10` blend top-30 overlap: `100%`;
+- fixed `90/10` blend top-30 churn: `0%`.
+
+These are one-session orthogonality and turnover diagnostics only. They are not
+IC, return, or OOS evidence; the exact top-30 overlap must not be interpreted as
+an alpha win.
+
 ## Input identity
 
 The source session manifest declares `DATA_READY`, `outcome_blind=true`, and
@@ -47,12 +61,24 @@ The source session manifest declares `DATA_READY`, `outcome_blind=true`, and
 
 ## Why it is not admitted
 
-The session manifest has artifact hashes and capture time, but no immutable
-capture `run_id`/attempt binding or append-only PIT source-observation ledger
-binding the successful attempt to the raw bytes. The security-master file also
-has a hash but no independently attested as-of version bound to this session.
-Those gaps are sufficient to keep this result shadow-only under the PIT
-contract. `DATA_READY` and file existence are not promoted into admission.
+The current evidence does provide a partial run binding:
+
+- EOD run `20260917T113016Z-3ced2a5b` reports `NO_MISSING_SESSION`,
+  `outcome_access=LOCKED`, and captures sessions `2026-09-16` and `2026-09-17`;
+- V4 pipeline run `20260917T113016Z-04128c51` embeds that EOD `run_id` and the
+  exact snapshot/OHLCV hashes, with `protected_outcome_accessed=false`;
+- EOD run SHA-256:
+  `e453c39efa42076a8a34bd05a72051d2fa04b4e7832a858967f5d4d40332ec7f`;
+- V4 pipeline run SHA-256:
+  `31a4b8bd37e1d27519a003eccc51bc1ee3fc12170f049f4e3429f7f9e4b295cc`.
+
+The binding is still incomplete for Foreign Flow admission: the EOD run record
+does not carry the raw Stock Summary SHA or an explicit capture-attempt number,
+and the attempt directory is not linked from the run record. The
+security-master file has a hash but no independently attested as-of validity
+bound to this source observation. Those gaps are sufficient to keep this result
+shadow-only under the PIT contract. `DATA_READY`, file existence, and a partial
+run chain are not promoted into admission.
 
 The next legitimate step is to obtain a future canonical session with the
 completion/attempt/hash attestation and security-master as-of contract fixed;

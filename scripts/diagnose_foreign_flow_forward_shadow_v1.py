@@ -51,6 +51,13 @@ MASTER_PATH = (
 HISTORICAL_LAST_SOURCE = pd.Timestamp("2026-08-13")
 SOURCE_SESSION = pd.Timestamp("2026-09-16")
 FEATURE_SESSION = pd.Timestamp("2026-09-17")
+INCUMBENT_SCORE_PATH = (
+    MONITOR_ROOT
+    / "model_runs"
+    / "2026-09-17"
+    / "v4_x1_clean_geometry3_prospective_v1"
+    / "score_artifact.parquet"
+)
 
 
 def _read_forward_inputs() -> tuple[list[pd.DataFrame], list[pd.DataFrame]]:
@@ -206,6 +213,35 @@ def main() -> None:
             for token in ("outcome", "target", "label", "realized", "tp_first", "sl_first")
         )
     ]
+    incumbent = pd.read_parquet(
+        INCUMBENT_SCORE_PATH,
+        columns=["ticker", "date", "rank_consensus", "alpha_consensus"],
+    )
+    incumbent["date"] = pd.to_datetime(incumbent["date"]).dt.normalize()
+    joined = incumbent.merge(
+        target[
+            [
+                "ticker",
+                "feature_session",
+                "transition_rank",
+                "transition_available",
+            ]
+        ],
+        left_on=["ticker", "date"],
+        right_on=["ticker", "feature_session"],
+        how="inner",
+        validate="one_to_one",
+    )
+    structural_corr = joined[["rank_consensus", "transition_rank"]].corr(
+        method="spearman"
+    ).iloc[0, 1]
+    top_n = min(30, len(joined))
+    incumbent_top = set(
+        joined.nlargest(top_n, "rank_consensus")["ticker"].astype(str)
+    )
+    fixed_blend = 0.90 * joined["rank_consensus"] + 0.10 * joined["transition_rank"]
+    candidate_top = set(joined.assign(_fixed_blend=fixed_blend).nlargest(top_n, "_fixed_blend")["ticker"].astype(str))
+    top30_overlap = len(incumbent_top & candidate_top) / float(top_n) if top_n else float("nan")
     print("diagnostic_status=OUTCOME_BLIND_SHADOW_ONLY")
     print(f"source_session={SOURCE_SESSION.date().isoformat()}")
     print(f"feature_session={FEATURE_SESSION.date().isoformat()}")
@@ -229,6 +265,13 @@ def main() -> None:
     )
     print(f"duplicate_target_keys={int(target.duplicated(['ticker', 'feature_session']).sum())}")
     print(f"outcome_columns_present={outcome_columns}")
+    print(
+        f"incumbent_score_rows={len(incumbent)} common_score_rows={len(joined)} "
+        f"common_transition_available={int(joined['transition_available'].sum())}"
+    )
+    print(f"prospective_rank_spearman={float(structural_corr):.8f}")
+    print(f"fixed_blend_top30_overlap={float(top30_overlap):.8f}")
+    print(f"fixed_blend_top30_churn={1.0 - float(top30_overlap):.8f}")
 
 
 if __name__ == "__main__":
