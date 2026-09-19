@@ -3,7 +3,10 @@
 Date: 2026-09-19 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
 Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`  
-HEAD at this checkpoint: `b331b4dee030d945a0b8cded76057357c8f567aa`
+HEAD at this checkpoint: `126614b6e8d075d9df463ffa741c9170fb5f87e3`
+
+For a compact cross-session handoff, read
+`2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md` first.
 
 ## Jawaban singkat
 
@@ -87,9 +90,11 @@ sensitivity berikut:
 | C4 | 3,203% | 86,667% |
 
 Ini bukan koreksi data dan bukan hasil predictive; ini peringatan bahwa C1
-belum basis-safe. Verifier v1 memang terlalu bergantung pada boolean JSON,
-tetapi verifier v2 sudah melakukan source replay penuh untuk structural
-assertions dan lulus; access flags tetap self-attested.
+belum basis-safe. Verifier v1 memang terlalu bergantung pada boolean JSON.
+Verifier v2 C1/C2/C4 sudah melakukan independent source replay untuk
+structural assertions dan lulus; verifier structural-lab yang ada masih
+envelope-only dan belum boleh disebut independent source replay. Access flags
+tetap self-attested.
 
 ### 2. Ekonomi, konsentrasi, likuiditas, fragility
 
@@ -131,8 +136,9 @@ dipakai lagi.
 ### Phase-Q tooling replay
 
 - Verifier lama hanya envelope-level; JSON check maps tidak direcompute.
-- Verifier v2 melakukan independent source replay dan lulus
-  `PASS_INDEPENDENT_STRUCTURAL_REPLAY`.
+- Verifier v2 C1/C2/C4 melakukan independent source replay dan lulus
+  `PASS_INDEPENDENT_STRUCTURAL_REPLAY`; structural-lab independent replay masih
+  merupakan follow-up yang belum selesai.
 - Structural robustness dan structural lab diregenerate setelah deterministic
   tie-break dan `pct_change(fill_method=None)` patch; kedua verifier lulus.
 - Default-fill counterfactual sebelumnya mengubah C1 pada 52/600 Top-30 dates,

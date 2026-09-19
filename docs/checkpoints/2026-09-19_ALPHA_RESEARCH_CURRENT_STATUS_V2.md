@@ -14,6 +14,9 @@ read-only red-team reports, is
 `2026-09-19_ALPHA_RESEARCH_LATEST_READIN_V1.md`. Read it together with this
 status file before continuing.
 
+The compact cross-session handoff is
+`2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md`.
+
 The follow-up tooling/selection replay is recorded in
 `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`.
 Stage-A generation lineage is recorded in
@@ -40,6 +43,11 @@ Therefore:
 - The lane remains isolated; incumbent, canonical data, capture/cloud,
   scheduler, counters, production artifacts, and protected outcomes were not
   modified or opened.
+
+Important verifier nuance: the C1/C2/C4 adversarial v2 replay is an independent
+source replay and passes. The existing structural-lab verifier is envelope-only
+and does not independently recompute lab metrics; do not treat its `PASS` as
+source-replay proof.
 
 ## Absolute scientific boundary
 

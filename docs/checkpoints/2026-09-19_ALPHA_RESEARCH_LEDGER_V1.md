@@ -21,6 +21,7 @@ Latest combination/economics audit: `2026-09-19_ALPHA_COMBINATION_ECONOMICS_RESU
 Latest capacity stress audit: `2026-09-19_ALPHA_CAPACITY_STRESS_RESULT_V1.md`
 Latest unused-data finding: `config/stockbit_stream_universe_v1.csv` activity metadata; metadata-only, non-admissible.
 Latest current status read-in: `2026-09-19_ALPHA_RESEARCH_CURRENT_STATUS_V2.md`
+Latest compact ChatGPT handoff: `2026-09-19_ALPHA_RESEARCH_CHATGPT_HANDOFF_V2.md`
 Latest Phase-Q replay/tooling result: `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 Latest Stage-A lineage result: `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
 Latest Stage-A consumer audit: `2026-09-19_ALPHA_STAGE_A_CONSUMER_AUDIT_V1.md`
