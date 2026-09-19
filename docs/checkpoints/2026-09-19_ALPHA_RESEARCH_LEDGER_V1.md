@@ -64,6 +64,7 @@ production or prospective claim.
 ## Audit trail
 
 - Protocol freeze: committed before any target/label read; tightened after the independent data-admission audit.
+- Handoff summary: `2026-09-19_ALPHA_RESEARCH_HANDOFF_SUMMARY_V1.md` is the self-contained read-in for future ChatGPT sessions.
 - Prior-work completeness audit: `2026-08-26_CLOSED_ALPHA_FAMILY_REEVALUATION.md` and `2026-08-26_ALPHA_FRONTIER_RESEARCH_V1_BOOTSTRAP.md` were reconciled into the family map; untested families remain explicitly distinct from failures.
 - Admission audit: no source currently passes for new-alpha historical outcome claims.
 - Admission remediation contract: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_REMEDIATION_V1.md`; specification only, not an admission or authorization to open outcomes.
