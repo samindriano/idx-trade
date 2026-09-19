@@ -623,13 +623,16 @@ status changed. See
 ### Latest continuation verification — 2026-09-20
 
 - Last verified clean lane HEAD before this handoff amendment:
-  `76064de20abeedf1636f13c1e8f1ba0858e02505`.
-- Packet contract verifier: `PASS`, all `63/63` checks; result SHA-256
-  `9c276a9e83ecb35d27a540ff1a1699d21141e93d3d644e87181378797f08b880`.
+  `02a7429d640f2446aa241075db3560f9be1cae1a`.
+- Packet contract verifier: `PASS`, all `65/65` checks; packet SHA-256
+  `7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894`.
 - Current packet contract SHA-256:
-  `e80ee07ad5a8b4947ca160ab9db00e31a184a32206bc08db8e3148211cade46d`.
+  `a76cd5acdfe457668b6241c4d28d677e4c2b92a98f2a54b82401338a6d794d4d`.
+- Packet firewall: `PASS`, 31/31 checks; result SHA-256
+  `a55df4853c14f2b27f2b0d1f591ba35af1eadfe0d8cbaae697859f1ff926e397`.
 - Lane-integrity attestation: `PASS`; current staging filename digest
-  `5c7e71ceb44098e66bbda1a38e9f13a24ddfd2c8f1216141255f2fc6939d05da`.
+  `8a7f27fdb66a1f266b3be209774116f98c33f1e6e71d93d6a7412814bf7e9b44`
+  over 155 staging files.
 - Independent C1/C2/C4 constructor replay: `PASS`, 981,940 keys and all
   scores/ranks match; eligibility prose/code contradiction remains blocked and
   is documented separately.
