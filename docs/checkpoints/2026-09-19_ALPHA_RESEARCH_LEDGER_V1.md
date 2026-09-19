@@ -196,6 +196,12 @@ production or prospective claim.
   dependence, Top-30, support, and bottom-value metrics matched. The result
   is structural-only and does not change H-LIQ status. See
   `2026-09-19_ALPHA_HLIQ01_SOURCE_DECOMPOSITION_RESULT_V1.md`.
+- The new H-LIQ generator/verifier, guarded feature schema, and both result
+  JSONs also passed the outcome-blind target firewall; no network/provider
+  import, protected-path literal, forbidden output column, or true access flag
+  was found. The staged firewall artifact is
+  `alpha_hliq01_target_firewall_v1.json` with SHA-256
+  `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
 - The retained local CA/issuer evidence does not reduce the unresolved
   188-row price-basis admission gap: the 1,657-row HLC overlay is already
   represented exactly, the separate official inventory is only a bounded

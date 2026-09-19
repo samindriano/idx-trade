@@ -64,6 +64,10 @@ the four frozen inputs. The verifier result was `PASS`:
 - Top-30 mean/minimum overlap matched;
 - baseline/residual bottom-value shares matched;
 - outcome/provider/cloud/incumbent-predictive access flags were all false.
+- The outcome-blind target firewall also passed for both new scripts, the
+  guarded feature schema, and both JSON outputs. Firewall artifact:
+  `alpha_hliq01_target_firewall_v1.json`, SHA-256
+  `64911263e31b24e200f789491f187719c033aecf76749bb58e38d53f0ade30f7`.
 
 Artifact and verifier outputs:
 
