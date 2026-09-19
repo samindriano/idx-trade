@@ -40,3 +40,14 @@ and no protected evaluation is authorized.
 
 No target, forward return, outcome, incumbent prediction, provider, network,
 cloud, canonical dataset, or production state was accessed or modified.
+
+### Latest clean rerun
+
+After this checkpoint was committed, the same attestation was rerun on
+`R1=adc2c016` with a clean worktree. It again returned
+`PASS_PACKET_BYTE_FRESHNESS / FULL_SOURCE_FRESHNESS_UNKNOWN`.
+
+- Latest attestation output SHA-256:
+  `d2ea0746b540c811d05d720ad0cb638b08712e878f6b3b16c287f80cf6d0727d`
+- The intervening commit was documentation-only and did not modify any
+  packet-bound file; the packet-bound diff from `Q` remains empty.
