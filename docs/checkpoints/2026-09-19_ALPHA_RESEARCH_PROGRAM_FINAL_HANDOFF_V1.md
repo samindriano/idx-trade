@@ -619,3 +619,16 @@ attestation/frontier metadata and made `Dataset-Saham-IDX` explicit in the
 capability maps as `BLOCKED / NOT_ADMITTED`. No candidate, packet, or admission
 status changed. See
 `2026-09-20_ALPHA_CONTROL_AND_SURFACE_REDTEAM_RESULT_V1.md`.
+
+### Latest continuation verification — 2026-09-20
+
+- Current clean lane HEAD: `94988583af7a538da96bb4d98b851f45f2039973`.
+- Packet contract verifier: `PASS`, all `63/63` checks; result SHA-256
+  `9c276a9e83ecb35d27a540ff1a1699d21141e93d3d644e87181378797f08b880`.
+- Current packet contract SHA-256:
+  `e80ee07ad5a8b4947ca160ab9db00e31a184a32206bc08db8e3148211cade46d`.
+- Lane-integrity attestation: `PASS`; current staging filename digest
+  `5c7e71ceb44098e66bbda1a38e9f13a24ddfd2c8f1216141255f2fc6939d05da`.
+- Independent C1/C2/C4 constructor replay: `PASS`, 981,940 keys and all
+  scores/ranks match; eligibility prose/code contradiction remains blocked and
+  is documented separately.
