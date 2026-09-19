@@ -3,6 +3,7 @@
 Date: 2026-09-19 (Asia/Jakarta)
 Lane: `codex/alpha-available-data-20260919`
 Verified research baseline HEAD before this handoff addendum: `fba55461566826407386b654d68c3581dc32e0bc`
+Handoff milestone commit: `35ce5968`
 Status: `PRE-ADMISSION RESEARCH ACTIVE / HISTORICAL TARGET STAGE BLOCKED`
 
 This is the current read-in document for a future ChatGPT session. Detailed
