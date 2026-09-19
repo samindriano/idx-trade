@@ -57,6 +57,14 @@ novelty and economics unresolved. Keep it at
 registry beyond C1-C4. See
 `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`.
 
+H-EXC-01 is preserved as a negative representation result, not a candidate ID.
+The fixed previous-close excursion-asymmetry form had unbounded score tails
+(`-16.2 / 5.0`) and `40.9694%` mean Top-30 turnover, so the exact form is
+`STRUCTURALLY_REJECTED_AS_WRITTEN`. The broader excursion/rejection mechanism
+is not closed, but no clipping, denominator floor, or rescue variant is
+authorized without a new hypothesis contract. See
+`2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`.
+
 The latest independent frontier audit adds fixed-window turnover-tail and
 repeat-name evidence: C1 has `220/599` sessions above the 50 bps stress
 threshold, C2 `60/599`, and C4 `1/599`; names selected at least 20 times

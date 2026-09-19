@@ -165,6 +165,8 @@ atau “lebih baik dari model alpha lama”. Status yang aman:
 - **H-VOL-01:** volatility-compression diagnostic structurally distinct on the
   bounded panel, but adjacent to prior range families and economically
   concentrated; remains future research, not C5.
+- **H-EXC-01:** previous-close excursion-asymmetry exact form rejected karena
+  score tail tidak bounded dan turnover tinggi; broader mechanism belum ditutup.
 - **Combinations:** structural future hypotheses saja; bukan model baru yang
   sudah terbukti incremental.
 
@@ -198,6 +200,7 @@ status di atas tetap berlaku.
 - `2026-09-19_ALPHA_HLIQ01_NOVELTY_RESULT_V1.md`
 - `2026-09-19_ALPHA_HLIQ01_SIZE_NEUTRAL_RESULT_V1.md`
 - `2026-09-19_ALPHA_HVOL01_COMPRESSION_RESULT_V1.md`
+- `2026-09-19_ALPHA_HEXC01_EXCURSION_ASYMMETRY_RESULT_V1.md`
 - `2026-09-19_ALPHA_PHASE_Q_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STRUCTURAL_LAB_REPLAY_RESULT_V1.md`
 - `2026-09-19_ALPHA_STAGE_A_LINEAGE_RESULT_V1.md`
