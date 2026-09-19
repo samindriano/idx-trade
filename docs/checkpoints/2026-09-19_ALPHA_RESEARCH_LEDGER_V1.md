@@ -629,3 +629,13 @@ population-wide PIT, identity/CA, revision, or public-availability contract.
 No source was admitted and no feature or candidate was created.
 
 See `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.
+
+The historical official foreign-flow archive was then audited independently:
+all 3,868 artifacts hash-match, 1,288 sessions match the official calendar,
+1,129,024 normalized rows have no duplicate keys, and net arithmetic is exact
+on every row. Every session still has `publication_time_known=false`; the
+declared T+1 rule is not a public-availability certificate, and normalized
+identity lacks issuer/ISIN, revision/vintage, and CA linkage. The surface
+remains `PARTIAL / SOURCE_ADMISSION_BLOCKED` and belongs to H-FLOW capability,
+not a new candidate. See
+`2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.

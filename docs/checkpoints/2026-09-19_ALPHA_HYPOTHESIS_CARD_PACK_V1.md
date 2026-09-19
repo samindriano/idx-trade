@@ -270,8 +270,14 @@ candidate admission.
   event threshold mining, and reusing consumed historical folds.
 - **Target-free evidence:** source capability audit and event distribution only.
 - **Status:** `BLOCKED_SOURCE_ADMISSION` / `FUTURE_DATA`.
-- **Next action:** preserve the old exact additive failure and wait for a new
-  authoritative source; no generic provider restart.
+- **Capability update:** the local official foreign-flow archive now passes
+  structural/hash/calendar integrity across 1,129,024 rows and 1,288 sessions,
+  but every session has unknown publication time and the declared T+1 rule is
+  not a public-availability certificate. See
+  `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
+- **Next action:** preserve the old exact additive failure and wait for an
+  independently admitted PIT/identity/CA source contract; no generic provider
+  restart.
 
 ## Card FUTURE_QUOTE_FLOW_INTERACTION_V1 — EOD quote-state / foreign-pressure interaction
 

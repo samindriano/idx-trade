@@ -209,3 +209,10 @@ non-redundant work remains authorized.
   expands the future capability map only; no feature or candidate admission is
   justified. See
   `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.
+
+- Historical official foreign-flow audit passes archive/hash/calendar/schema
+  integrity over 1,129,024 rows and 1,288 sessions, but remains source-
+  admission blocked because publication time, issuer/ISIN, revision/vintage,
+  CA linkage, and panel completeness are not certified. It expands H-FLOW
+  capability only; no new candidate or feature was created. See
+  `2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.

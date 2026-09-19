@@ -20,3 +20,4 @@
 | Monthly/statutory free-float history | partial snapshots and monthly corpus | continuous daily panel, public availability, issuer/ISIN/CA linkage, and revision lineage |
 | Ownership event ledger | event-only partial | complete population, event semantics, issuer continuity, and historical revision coverage |
 | Broker/margin category state | one-date snapshot only | historical series, financing-flow semantics, PIT/publication time, and complete coverage |
+| Historical foreign-flow source admission | structurally complete archive, source blocked | independently certified public availability, identity/ISIN/CA continuity, revision/vintage, panel completeness, and missingness policy |

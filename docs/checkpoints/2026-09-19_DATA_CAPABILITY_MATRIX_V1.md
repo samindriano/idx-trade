@@ -72,3 +72,11 @@ No row is promoted into a candidate or protected evaluation packet.
 
 None of these six surfaces is admitted for feature construction or candidate
 evaluation.
+
+## Historical foreign-flow source audit — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| Historical official foreign-flow archive | `PASS_STRUCTURAL_ONLY / SOURCE_BLOCKED` | 1,129,024 rows, 1,288 exact official sessions, 983 tickers, all artifact hashes and net arithmetic exact; capability review only |
+| Foreign-flow public availability | `UNKNOWN / BLOCKED` | Every session has `publication_time_known=false`; observed retrieval time and declared T+1 rule do not certify public availability |
+| Foreign-flow identity/CA/revision | `UNKNOWN / BLOCKED` | Normalized ticker/date identity only; no issuer/ISIN transition, corporate-action, or revision/vintage fields |

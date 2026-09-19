@@ -411,3 +411,10 @@ listing/delisting lifecycle, monthly/statutory free-float, HSC ownership
 events, and broker/margin category state. They are all capability-only and
 remain partial or blocked; no feature or candidate was admitted. See
 `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.
+
+The official foreign-flow archive now has an independent structural audit:
+1,129,024 rows and 1,288 sessions are hash/calendar/schema consistent, with
+exact net arithmetic. It remains source-blocked because publication time is
+unknown and T+1 is not a public-availability certificate; no feature or
+candidate was admitted. See
+`2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.

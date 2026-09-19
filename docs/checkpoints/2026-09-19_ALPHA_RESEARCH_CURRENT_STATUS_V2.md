@@ -578,3 +578,11 @@ events, and a broker/margin category snapshot. All remain partial, event-only,
 snapshot-only, or source-remediation blocked; none is admissible for feature
 construction. See
 `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.
+
+The largest newly found surface, the historical official foreign-flow archive,
+was independently audited: 1,129,024 rows, 1,288 sessions, exact calendar
+coverage, all artifact hashes matching, and exact net arithmetic. Its
+publication time remains unknown; the declared T+1 usability rule is not a
+public-availability certificate. It is future capability only and does not
+create a new candidate. See
+`2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.

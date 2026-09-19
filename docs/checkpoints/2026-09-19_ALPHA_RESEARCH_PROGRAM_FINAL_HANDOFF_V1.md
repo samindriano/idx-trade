@@ -543,3 +543,11 @@ foreign flow, listing/delisting lifecycle, monthly and statutory free-float,
 HSC ownership events, and broker/margin category state. All remain partial or
 blocked and none changes the candidate registry or protected packet. See
 `2026-09-20_ALPHA_LOCAL_DATA_SURFACE_CENSUS_CONTINUATION_V1.md`.
+
+The historical official foreign-flow archive was independently audited and
+passes structural/hash/calendar integrity across 1,129,024 rows and 1,288
+sessions. It remains blocked for PIT admission because publication time is
+unknown and T+1 is only declarative; no issuer/ISIN, CA, revision, or panel
+completeness authority was established. It strengthens future H-FLOW
+capability without creating a candidate. See
+`2026-09-20_ALPHA_FOREIGN_FLOW_HISTORICAL_SOURCE_AUDIT_RESULT_V1.md`.
