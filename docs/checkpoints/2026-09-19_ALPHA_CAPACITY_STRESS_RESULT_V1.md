@@ -55,6 +55,7 @@ is sparse and late.
 
 ## Reproducibility and firewall
 
+- Research commit: `5d1f97c6`
 - Builder: `research/alpha_capacity_stress_v1.py`
 - Builder SHA-256: `3da7292c5504f7325f09a9f693cda359ff1b095c2249a7dce7578c306904fb81`
 - Independent verifier: `research/verify_alpha_capacity_stress_v1.py`

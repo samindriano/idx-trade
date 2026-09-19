@@ -74,6 +74,7 @@ they do not certify historical liquidity, spread, queue position, or capacity.
 
 ## Reproducibility and firewall
 
+- Research commit: `35ce5968`
 - Builder: `research/alpha_combination_economics_v1.py`
 - Builder SHA-256: `59bdd5711ad2dd58f8b8760e7932d55791422dd8c14ab2c463c312d038149d28`
 - Independent verifier: `research/verify_alpha_combination_economics_v1.py`
