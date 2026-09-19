@@ -532,3 +532,42 @@ issuer-transition, and corporate-action semantics, the source remains
 `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature, C5, packet, or
 model status changed. See
 `2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.
+
+## Continuation register — Phase-Q C1/C2/C4 red-team, data census, and BBCA basis audit
+
+### Active questions
+
+- Can any independently admissible source establish global PIT/available-at,
+  issuer/ISIN, corporate-action basis, or executable-capacity authority? The
+  latest TradingView/Investing surfaces do not.
+- Is there a genuinely new mechanism or source surface that can be admitted
+  without repeating the closed C1/C2/C4/H-LIQ experiments? Current census says
+  no admissible surface; the only non-redundant deep history remains
+  basis-divergent BBCA data.
+
+### Answered or narrowed
+
+- Independent Phase-Q red-team: C1/C2/C4 key/mask/rank replay passes narrowly,
+  but full constructor/PIT/population proof is unknown; CA price basis and
+  executable capacity fail readiness; C1/C4 are not additive-independent.
+- Local census: four manifests, 26 normalized JSONs, and 25 hashed raw files
+  were classified. No surface is admissible; panel-depth is partial and BBCA
+  history is duplicated there.
+- TradingView BBCA max versus IDX has exact price-basis blocks of 5x through
+  2021-10-12 and 1x thereafter, with an IDX listed-share 5x change on
+  2021-10-13. This is a structural coincidence, not CA certification.
+- Investing BBCA max has zero exact OHLCV field matches on 1,568 IDX-overlap
+  dates and a variable scale; it cannot be treated as a simple rescaling.
+
+### Do-not-retry implications
+
+- Do not treat the TradingView 5x/1x blocks as proof of a corporate-action
+  event or silently back-adjust either source.
+- Do not merge TradingView/Investing into C1/C2/C4 or use them to repair the
+  frozen panel without an authoritative basis/PIT/identity contract.
+- Do not repeat the completed Phase-Q C1/C2/C4 replay, H-LIQ C2 residualization,
+  or panel-depth duplicate audit without new evidence.
+
+See `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`,
+`2026-09-20_ALPHA_DATA_SURFACE_CENSUS_V1.md`, and
+`2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.

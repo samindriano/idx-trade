@@ -10,3 +10,5 @@
 | Historical liquidity/tradability | structural proxy only | PIT-authoritative history |
 | Activity/value snapshot history | one current-universe 60-session median snapshot; 105/963 populated, no available-at timestamps | ticker-date history, source/vintage hashes, and PIT publication semantics |
 | Foreign-flow/ownership history | partial/blocked | authoritative source contract |
+| Non-redundant deep BBCA history | TradingView/Investing partial, basis-divergent | adjustment/basis semantics, issuer/ISIN continuity, PIT publication/revision, and authoritative corporate-action linkage |
+| Historical market-wide/foreign-flow snapshots | current/sparse partial | continuous ticker-date history, available-at/vintage, identity, and source completeness |

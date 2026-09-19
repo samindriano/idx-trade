@@ -367,3 +367,20 @@ corporate-action authority, so admission remains
 `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature or model
 evaluation was run; incumbent/canonical/capture/cloud state is unchanged. See
 `2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.
+
+An independent Phase-Q red-team keeps C1/C2/C4 and combinations at `NO-GO` for
+readiness: C1 is basis-sensitive, all three lack executable-capacity evidence,
+full constructor/PIT/population proof is unknown, and C1/C4 are not additive-
+independent. No outcome or incumbent evidence was opened. See
+`2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`.
+
+The local census found no admissible new surface. TradingView BBCA max and
+Investing BBCA max are partial, basis-divergent deep histories; other newly
+checked surfaces are duplicates, snapshots, current/intraday, or metadata-only.
+See `2026-09-20_ALPHA_DATA_SURFACE_CENSUS_V1.md`.
+
+The BBCA reconciliation found TradingView price basis `IDX/TV=5` through
+2021-10-12 and `=1` from 2021-10-13, while Investing has no exact OHLCV match
+on 1,568 IDX-overlap dates and no constant scale. Neither source was admitted
+or rescaled. See
+`2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.

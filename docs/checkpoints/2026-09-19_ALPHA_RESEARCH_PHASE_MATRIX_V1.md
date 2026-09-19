@@ -170,3 +170,14 @@ non-redundant work remains authorized.
   parity on 23/23 available pairs, and no row-level PIT, identity, revision,
   or corporate-action authority. See
   `2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.
+- Independent Phase-Q red-team keeps C1/C2/C4 and combinations at `NO-GO` for
+  readiness: CA basis and executable capacity fail readiness, full
+  constructor/PIT/population proof is unknown, and C1/C4 are not additive-
+  independent. See `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`.
+- Local surface census found no admissible new source. TradingView and
+  Investing BBCA max histories are partial and basis-divergent; current-flow,
+  listings, investor-type, technical, and Stockbit probes are snapshot/current
+  or metadata-only. See `2026-09-20_ALPHA_DATA_SURFACE_CENSUS_V1.md`.
+- BBCA price-basis reconciliation recorded a stable TradingView 5x/1x block
+  against IDX and variable Investing scale. No source was rescaled or admitted.
+  See `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.

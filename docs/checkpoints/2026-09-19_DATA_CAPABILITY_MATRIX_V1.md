@@ -32,3 +32,16 @@ Full scoped inventory: `2026-09-19_ALPHA_DATA_INVENTORY_RESULT_V1.md`.
 
 These additions do not widen admission. No row is promoted into a candidate or
 protected evaluation packet without independent source-contract evidence.
+
+## Continuation source-capability additions — 2026-09-20
+
+| Capability | Current status | Evidence / permitted use |
+|---|---|---|
+| TradingView BBCA max history | `PARTIAL / SOURCE_BLOCKED` | 6,356 rows, 2000-05-31–2026-09-18; adjustment metadata present, but date/basis blocks differ from IDX and no PIT/revision/CA-event contract exists. Structural reconciliation only. |
+| Investing BBCA max history | `PARTIAL / SOURCE_BLOCKED` | 2,065 rows, 2018-08-08–2026-09-18; 0 exact OHLCV matches on 1,568 IDX-overlap dates and variable scale. No historical basis/PIT contract. |
+| Local BBCA cross-source price basis | `UNKNOWN / BLOCKED` | TradingView is 5x versus IDX through 2021-10-12 and 1x thereafter; Investing does not reduce to one scale. Do not rescale or admit. |
+
+The local census also classifies current foreign-flow and stock-summary rows as
+snapshot-only, active listings and investor-type HTML as metadata-only, and
+Stockbit chart/stream surfaces as current or redacted metadata. No newly
+audited surface is admissible.

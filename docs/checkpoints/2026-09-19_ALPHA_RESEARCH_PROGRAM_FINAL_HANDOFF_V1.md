@@ -497,3 +497,20 @@ identity/ISIN, issuer-transition, and corporate-action semantics keep the
 source at `PASS_STRUCTURAL_ONLY / SOURCE_ADMISSION_BLOCKED`. No feature,
 candidate, packet, or predictive evaluation was performed. See
 `2026-09-20_ALPHA_PANEL_DEPTH_SOURCE_AUDIT_RESULT_V1.md`.
+
+An independent Phase-Q red-team then challenged C1/C2/C4 and combinations.
+Replay integrity passes only narrowly; CA price basis and executable capacity
+fail readiness, full constructor/PIT/population proof remains unknown, and
+C1/C4 are not additive-independent. No candidate or combination was promoted.
+See `2026-09-20_ALPHA_C1234_REDTEAM_ADJUDICATION_V1.md`.
+
+The local-data census found no admissible new source. TradingView BBCA max and
+Investing BBCA max are the only non-redundant deep-history surfaces and remain
+partial/basis-blocked; current snapshots, listings, HTML, technicals, and
+Stockbit probes are not historical PIT sources. See
+`2026-09-20_ALPHA_DATA_SURFACE_CENSUS_V1.md`.
+
+Their local reconciliation records TradingView at 5x versus IDX through
+2021-10-12 and 1x thereafter, while Investing has 0/1,568 exact OHLCV matches
+and no constant scale. This is source divergence, not CA truth or admission.
+See `2026-09-20_ALPHA_BBCA_PRICE_BASIS_RECONCILIATION_RESULT_V1.md`.

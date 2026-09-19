@@ -86,6 +86,8 @@ protected-state integrity. Any `UNKNOWN` remains blocking.
 | C3 capability denominator | Existing contract map mixes full eligible-panel denominator `310,761` with matched eligible financial-source denominator `249,333`; quality-core remains capability-only | `OPEN / DOCUMENTATION` | Report both denominators explicitly; do not treat quality-core as a frozen candidate or coverage rescue |
 | Packet producer/attestation split | Producer pin `10939862...` is valid and byte-consistent, but packet/contract arrived later and prior freshness memo is stale | `OPEN / UNKNOWN` | Preserve producer pin; bind future packet updates to producer `P` and attest packet commit `Q` separately |
 | Dataset-Saham-IDX provenance | Independent red-team confirms `337` missing admitted sessions, `11` non-identical duplicate folder groups, and no row-level vintage/PIT field | `OPEN / BLOCKED` | Keep source not admitted; no feature construction or fallback-source promotion |
+| BBCA deep-history basis divergence | TradingView/IDX price basis is exactly 5x through 2021-10-12 and 1x thereafter; Investing has `0/1,568` exact OHLCV matches and variable scale | `OPEN / BLOCKED` | Do not rescale, merge, or admit either surface without authoritative basis/PIT/issuer/CA evidence |
+| C1/C2/C4 readiness red-team | Independent challenge leaves full constructor/PIT/population proof unknown; CA basis and executable capacity fail readiness; C1/C4 are not additive-independent | `OPEN / BLOCKED` | Keep C1-C4 conditional and combinations outside packet; require new authority before re-entry |
 
 These additions are source and provenance risks only; they do not authorize
 protected evaluation or candidate-budget expansion.
