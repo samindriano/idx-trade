@@ -2,8 +2,9 @@
 
 Date: 2026-09-19 (Asia/Jakarta)  
 Lane: `codex/alpha-available-data-20260919`  
-Branch HEAD: `03ac0c8d0f9a28c835cb740d7627dd9d1876251c`  
-Goal status: `BLOCKED` by external data-admission state
+Branch HEAD at V1 handoff: `03ac0c8d0f9a28c835cb740d7627dd9d1876251c`
+Superseded by: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
+Goal status: historical outcome stage `BLOCKED`; pre-admission research continues
 
 ## Executive answer
 
@@ -171,10 +172,12 @@ the candidates have been proven to fail.
 
 ## Canonical lane documents
 
+- `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md` (latest complete
+  checkpoint for future ChatGPT read-in)
+- `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_AUDIT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_DATA_ADMISSION_REMEDIATION_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_STAGE_A_CORRECTED_RESULT_V2.md`
 - `2026-09-19_ALPHA_RESEARCH_ECONOMICS_RESULT_V1.md`
 - `2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md`
-

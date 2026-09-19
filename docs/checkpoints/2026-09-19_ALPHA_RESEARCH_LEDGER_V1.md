@@ -4,6 +4,9 @@ Lane: `codex/alpha-available-data-20260919`
 Protocol: `docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md`
 Status: `STAGE A CORRECTED COMPLETE — HISTORICAL OUTCOME ACCESS BLOCKED`
 
+Latest program checkpoint: `2026-09-19_ALPHA_RESEARCH_PROGRAM_CHECKPOINT_V2.md`
+Latest C3 capability audit: `2026-09-19_C3_FINANCIAL_CAPABILITY_RESULT_V1.md`
+
 This ledger is append-only within the isolated research lane. Every admitted,
 rejected, failed, or blocked candidate must remain visible. No result is a
 production or prospective claim.
@@ -44,7 +47,7 @@ production or prospective claim.
 |---|---|---|---|---|---|---|
 | C1 | `residual_reversal_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 295,243/310,761 eligible rows (95.0065%); mean Top-30 turnover 42.15%, base burden 25.29 bps/NAV; no target opened. |
 | C2 | `participation_confirmation_5_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 310,761/310,761 eligible rows (100.0000%); mean Top-30 turnover 32.91%, base burden 19.75 bps/NAV; no target opened. |
-| C3 | `financial_quality_growth_v1` | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED — sparse/partial PIT` | `BLOCKED` | 30,994/310,761 eligible rows (9.9736%); 278 usable Top-30 dates and 25.77% top-10 ticker slot share; no fallback. |
+| C3 | `financial_quality_growth_v1` | `BLOCKED — partial source/coverage` | `BLOCKED — source admission` | `BLOCKED — sparse/partial PIT` | `BLOCKED` | 34,412 all-five finite rows before mask; 30,994/310,761 eligible rows (9.9736%), 291 dates/265 tickers after frozen validity, 278 usable Top-30 dates and 25.77% top-10 ticker slot share; no fallback. |
 | C4 | `path_efficiency_reversal_20_v1` | `PASS — corrected capability only` | `BLOCKED — source admission` | `PASS — structural economics only` | `FUTURE_RESEARCH` | 310,323/310,761 eligible rows (99.8591%); mean Top-30 turnover 23.70%, base burden 14.22 bps/NAV; no target opened. |
 
 ## Objective deliverable audit
