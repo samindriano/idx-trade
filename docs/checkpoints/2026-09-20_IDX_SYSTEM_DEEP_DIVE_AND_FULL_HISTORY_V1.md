@@ -637,6 +637,10 @@ historical alpha archive:
   idempotency, actual-share CA entitlement, and explicit target-reversal
   relinquishment. It is a design consistency result only; SELL/replacement and
   runtime adoption remain open.
+- `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLACEMENT_REPLAY_V1.md` extends that
+  result with a 2/2 SELL/replacement harness: partial SELL, blocked paired BUY,
+  JSON reload, retry, and explicit dual cancellation preserve quantities and
+  event lineage. Runtime artifact adoption and migration remain unproven.
 
 The durable rolling controls for this marathon are now:
 
