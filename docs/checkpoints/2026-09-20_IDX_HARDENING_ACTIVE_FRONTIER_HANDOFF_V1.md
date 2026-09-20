@@ -81,6 +81,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - `RECONCILIATION_RESULT-V1` verification now validates canonical dates,
   hash-shaped provenance fields, normalized ticker sets, coverage inclusion,
   and mismatch-row shape before accepting a hash-valid PASS payload;
+- reconciliation verification now requires the exact payload envelope, so a
+  hash-valid extension cannot bypass the result contract;
 - `EXPOSURE_CAUSE-V1` now distinguishes unavailable position state from a
   bound zero position, so entry and full-exit deltas are explicit `0 -> fill`
   and `held -> 0` transitions;
@@ -119,6 +121,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   requires explicit authorization, and orphaned/reconciliation-required state
   remains blocked; provenance and the decision are persisted separately without
   mutating runtime state;
+- migration provenance verification now requires exact canonical keys, ISO date
+  and UTC timestamp forms, typed fields, and builder replay; migration
+  activation policy/decision verification applies the same exact-envelope and
+  canonical replay gate, including typed rejection of hash-valid extensions;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
@@ -132,8 +138,12 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
-- current HEAD full repository regression via `python -m pytest -q` passed at
-  100% with only three pre-existing pandas `FutureWarning` records. Earlier
+- continuation commits are `dffd70c9` (reconciliation and migration replay)
+  and `4430b6a6` (migration activation replay); the lane remains clean and no
+  commit was pushed or merged;
+- current HEAD (`4430b6a6`) full repository regression via `python -m pytest -q`
+  passed at 100% with only three pre-existing pandas `FutureWarning` records.
+  Earlier
   runs hit the known unrelated Windows `PermissionError [WinError 5]`
   atomic-replace fixture flake in `official_open_evidence_v1.py`; targeted
   rechecks passed and the current clean run covers the latest replay changes;
