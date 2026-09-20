@@ -87,6 +87,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - replay validates cause-obligation binding payloads, execution-session scope,
   cause/join row identity, and recomputed obligation join content before
   accepting a child artifact;
+- persisted orchestration replay rejects a hash-valid obligation payload with
+  a noncanonical nested field;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - runtime-lineage verification now rejects hash-valid but noncanonical binding

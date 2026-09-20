@@ -3,7 +3,7 @@
 | ID | Finding | Contract state | Implementation state | Required evidence before closure |
 |---|---|---|---|---|
 | REM-OBL-001 | Positive partial BUY loses residual | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / RESTART_OPEN` | Runtime BUY/SELL state, replay, restart, Decision seat semantics |
-| REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / PAIR_RETRY_RESTART_TESTED / REPLAY_OPEN` | Paired retry/reversal and cancellation lineage |
+| REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / PAIR_RETRY_RESTART_TESTED / PERSISTED_CANONICAL_REPLAY_GATED / REPLAY_OPEN` | Paired retry/reversal and cancellation lineage |
 | REM-STATE-001 | Snapshot omits obligation state | `V2_SCHEMA_IMPLEMENTED` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / RECOVERY_OPEN` | Versioned snapshot/hash, canonical payload replay, restart replay, and legacy loader |
 | REM-MIG-001 | Legacy migration decision lacks durable provenance | `PROVENANCE_V1_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / POLICY_GATE_IMPLEMENTED_EXTERNAL_ADOPTION_OPEN` | Immutable source/hash/classification artifact, explicit policy-gated activation decision, and verified-snapshot consumer; external policy adoption |
 | REM-CA-001 | Projected CA state differs from execution parent | `LINEAGE_CONTRACT_IMPLEMENTED_LOCAL` | `TIMING_MATRIX_IMPLEMENTED_LOCAL / REPLAY_GATES_IMPLEMENTED` | Three timing cases, additive CA extension, and restart/idempotency |

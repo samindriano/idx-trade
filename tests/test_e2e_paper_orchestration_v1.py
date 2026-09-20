@@ -816,6 +816,10 @@ def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
     (
         ("cause_id", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH"),
         ("join_content", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH"),
+        (
+            "obligation_payload",
+            "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH",
+        ),
     ),
 )
 def test_preopen_replay_rejects_rehashed_cause_binding_tamper(
@@ -852,10 +856,14 @@ def test_preopen_replay_rejects_rehashed_cause_binding_tamper(
     assert binding["joins"]
     if tamper_kind == "cause_id":
         evidence["causes"][0]["cause_id"] = "0" * 64
-    else:
+    elif tamper_kind == "join_content":
         binding["joins"][0]["remaining_shares"] = (
             int(binding["joins"][0]["remaining_shares"]) + 1
         )
+    else:
+        evidence["state_after"]["obligations"][0][
+            "unexpected_extension"
+        ] = "accepted-by-hash-only"
     binding_body = dict(binding)
     binding_body.pop("payload_sha256", None)
     binding["payload_sha256"] = _canonical_hash(binding_body)

@@ -33,6 +33,7 @@ scheduler, production, or alpha state.
 | Cause-obligation join content | Rehashed join remainder/obligation tamper is rejected during replay | PASS |
 | Obligation payload canonical shape | Hash-valid extra obligation fields are rejected | PASS |
 | Partial SELL/replacement restart retry | V2 snapshot reload preserves SELL remainder; BUY fills only after SELL completion | PASS |
+| Persisted obligation canonical replay | Rehashed nested obligation-field tamper is rejected | PASS |
 | Runtime-lineage canonical shape | Hash-valid binding-status drift is rejected | PASS |
 | Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |
 
