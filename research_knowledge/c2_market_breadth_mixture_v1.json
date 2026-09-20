@@ -1,0 +1,55 @@
+{
+  "schema_version": "IDX_TRADE_C2_MARKET_BREADTH_MIXTURE_V1",
+  "experiment_id": "C2-MARKET-BREADTH-MIXTURE-051",
+  "status": "PASS_STRUCTURAL_C2_MARKET_BREADTH_MIXTURE",
+  "scope": "Outcome-blind daily eligible-market breadth versus fixed C2 Top-30 sign-quadrant mixture; no candidate split or outcome access.",
+  "code": {
+    "path": "research/alpha_c2_market_breadth_mixture_v1.py",
+    "sha256": "818a878049739b55e6305b62021055da79f6b2feccfb70fd23ced9249f57d451"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-c2-market-breadth-mixture/alpha_c2_market_breadth_mixture_v1.json",
+    "sha256": "c1667a224b0300f6eeb8daf4db2b51c93854e0b67f16cc3e4f0ef209cca07de5"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e"
+  },
+  "calendar": {
+    "official_session_count": 1260,
+    "official_min": "2021-04-29",
+    "official_max": "2026-07-31",
+    "selection_dates": 1201
+  },
+  "overall": {
+    "selected_pp_mean": 0.6868442964196503,
+    "selected_nn_mean": 0.3131557035803497,
+    "selected_cross_mean": 0.0,
+    "selected_pp_vs_ret_pos_share_spearman": 0.7180603565846365,
+    "selected_pp_vs_activity_pos_share_spearman": 0.4208138369338826,
+    "selected_pp_vs_pp_eligible_share_spearman": 0.844645641722693,
+    "selected_pp_vs_nn_eligible_share_spearman": -0.7615338210426852,
+    "selected_nn_vs_ret_pos_share_spearman": -0.7180603565846365
+  },
+  "by_year_mean": {
+    "2021": {"selected_pp": 0.76820987654321, "selected_nn": 0.23179012345679015, "ret_pos_share": 0.4933, "activity_pos_share": 0.5476, "pp_eligible_share": 0.32, "nn_eligible_share": 0.2791},
+    "2022": {"selected_pp": 0.646883468834688, "selected_nn": 0.35311653116531166, "ret_pos_share": 0.4719, "activity_pos_share": 0.4963, "pp_eligible_share": 0.2702, "nn_eligible_share": 0.3021},
+    "2023": {"selected_pp": 0.650627615062762, "selected_nn": 0.349372384937238, "ret_pos_share": 0.4939, "activity_pos_share": 0.5224, "pp_eligible_share": 0.2899, "nn_eligible_share": 0.2736},
+    "2024": {"selected_pp": 0.677074542897328, "selected_nn": 0.322925457102672, "ret_pos_share": 0.5065, "activity_pos_share": 0.5447, "pp_eligible_share": 0.31, "nn_eligible_share": 0.2588},
+    "2025": {"selected_pp": 0.787994350282486, "selected_nn": 0.212005649717514, "ret_pos_share": 0.5187, "activity_pos_share": 0.5679, "pp_eligible_share": 0.329, "nn_eligible_share": 0.2424},
+    "2026": {"selected_pp": 0.599012345679012, "selected_nn": 0.400987654320988, "ret_pos_share": 0.4786, "activity_pos_share": 0.4545, "pp_eligible_share": 0.2407, "nn_eligible_share": 0.3076}
+  },
+  "interpretation": [
+    "C2's positive-return/high-activity versus negative-return/low-activity mixture is strongly tied to same-day market breadth: selected pp share has Spearman 0.718 with return-positive breadth and 0.421 with activity-positive breadth.",
+    "The 2025-to-2026 selected-mixture shift is consistent with a market-state composition change: return-positive breadth falls from 0.5187 to 0.4786, activity-positive breadth from 0.5679 to 0.4545, and pp eligible share from 0.3290 to 0.2407.",
+    "This is a structural explanation of score composition, not evidence of regime returns, predictive stability, causality, or a reason to split C2."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}
