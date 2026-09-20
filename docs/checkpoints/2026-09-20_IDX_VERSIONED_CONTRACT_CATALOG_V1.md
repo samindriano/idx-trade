@@ -41,7 +41,8 @@ membership may be used to infer a missing planned quantity.
    `FILLED` or explicitly `RELINQUISHED`/`CANCELED` under an existing policy.
 5. `close_obligation_explicitly` is the state-level owner for an explicit
    close event; it binds the event to the pre-transition state hash and
-   rebuilds compatibility projections from the obligation ledger.
+   rebuilds compatibility projections from the obligation ledger. Identical
+   event replay is idempotent; altered event bytes remain rejected.
 6. Legacy snapshots without plan/fill evidence remain `UNKNOWN_ORPHANED_PARTIAL`
    when a positive partial cannot be proven complete.
 

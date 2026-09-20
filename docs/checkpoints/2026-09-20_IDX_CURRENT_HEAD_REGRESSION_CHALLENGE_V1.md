@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `bbc1924c1e6ed4d1b77945c3cdede420a35cd792`
+Verification revision: `ee4837da`
 
 ## Boundary
 
@@ -23,7 +23,9 @@ explicit cancellation/relinquishment replay, execution evidence, CA timing,
 identity/transition binding, runtime lineage, migration provenance/activation,
 dividend runtime/orchestration, and E2E controller/orchestration boundaries.
 The state-level explicit-close API is parent-hash bound and its compatibility
-projections are rebuilt from the canonical obligation ledger.
+projections are rebuilt from the canonical obligation ledger. Identical close
+events replay idempotently against the post-transition state; altered event
+bytes or a mismatched pre-transition parent remain rejected.
 
 The full repository command was also attempted twice after this test addition.
 Both runs reached the end of the suite but encountered the known Windows
