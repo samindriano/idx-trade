@@ -9,7 +9,7 @@ Depth labels are evidence states, not promotion claims. `EXTERNAL_EVIDENCE_BLOCK
 | Surface | Depth | Current evidence / finding | Open local question or blocker | Next useful frontier |
 |---|---|---|---|---|
 | Alpha / representation interface | STRUCTURALLY_AUDITED | Pure evaluator/gate ticker identity split; outcome evidence remains closed. | Test representation-to-Decision churn without protected targets. | Adversarial alpha-to-Decision interface replay. |
-| Decision state machine | ADVERSARIALLY_TESTED | Rank persistence, exit confirmation, vacancy, and soft replacement scenarios exercised. | Quantity-aware paper state is not represented in Decision membership. | Connect Decision state to residual execution obligations. |
+| Decision state machine | CROSS_COMPONENT_TESTED | Rank persistence, exit confirmation, vacancy, soft replacement, and Decision V2 ten-seat shadow scenarios exercised; a 2,400/5,000 seat still reports `FULL`. | Quantity-aware paper state is not represented in Decision membership. | Connect Decision state to residual execution obligations. |
 | Portfolio construction / sizing | CROSS_COMPONENT_TESTED | EOD-close sizing can plan 5,000 shares while Open execution fills 2,500; capacity, fee, stamp-boundary, and paired-replacement variants all underfill positively. | Positive partial fills are not a sizing-state contract. | Quantity-aware target/residual model. |
 | Turnover / holding-state behavior | STRUCTURALLY_AUDITED | Turnover and holding-duration metrics exist; pending/open denominator contracts tested. | Partial positive buys can distort holding and turnover interpretation. | Recompute metrics from residual-aware fills. |
 | Execution / pending / replacement | CROSS_COMPONENT_TESTED | Partial sells persist; alias replacement peer can block a fully completed sell; positive partial buys disappear across four trigger classes, including resolved paired replacement. | Residual buy and canonical relationship identity. | Unified order-obligation ledger. |
@@ -27,7 +27,7 @@ Depth labels are evidence states, not promotion claims. `EXTERNAL_EVIDENCE_BLOCK
 | Failure recovery / interrupted state | ADVERSARIALLY_TESTED | Interrupted atomic states, missed Open, and recovery paths exercised. | Recovery does not reconstruct missing positive buy residual. | Fault injection around partial allocation commit. |
 | Evaluation contracts | CROSS_COMPONENT_TESTED | 120 prospective evaluator/gate/readiness tests pass; pure/gate identity mismatch found. | Protected outcomes remain closed. | Outcome-blind evaluator/runtime contract audit. |
 | Research methodology / scientific controls | STRUCTURALLY_AUDITED | PIT, target firewall, OOS and evidence boundaries documented. | No protected predictive validation authorized. | Audit structural metrics versus economic interpretation. |
-| Cross-component interfaces | CROSS_COMPONENT_TESTED | CA→sizing→execution hash mismatch; sizing→execution positive partial loss across four trigger classes; identity→replacement mismatch. | Need a single obligation/state graph. | Multi-session residual-aware system harness. |
+| Cross-component interfaces | CROSS_COMPONENT_TESTED | CA→sizing→execution hash mismatch; sizing→execution positive partial loss across four trigger classes; Decision V2 ten-seat shadow also suppresses residual retry; identity→replacement mismatch. | Need a single obligation/state graph. | Multi-session residual-aware system harness. |
 
 ## Current matrix interpretation
 

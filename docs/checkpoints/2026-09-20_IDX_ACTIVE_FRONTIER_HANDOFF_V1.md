@@ -23,13 +23,15 @@ The system tracks target membership but not target quantity obligations. A posit
   and resolved paired replacement all produced positive underfill with empty
   pending state and no next-session retry.
 - Durable checkpoint: `2026-09-20_IDX_PARTIAL_BUY_TRIGGER_MATRIX_V1.md`.
+- Decision V2 ten-seat probe: one 2,400/5,000 partial seat plus nine full seats
+  still produced `FULL`, zero unfilled slots, and no retry on the next plan.
 
 ## Immediate next questions
 
 1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
 2. Which artifact should own planned/filled/remaining quantities so restart and replay cannot erase the obligation?
-3. How should a residual buy interact with Decision V2 shadow state and the 10-seat capacity rule?
-4. Does CA payment/settlement state interact with a residual order obligation across sessions?
+3. Does CA payment/settlement state interact with a residual order obligation across sessions?
+4. Can the existing failure-recovery/atomic snapshot path preserve a residual obligation once one is explicitly modeled?
 
 ## Constraints
 

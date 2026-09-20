@@ -592,8 +592,9 @@ historical alpha archive:
   cash boundary, stamp-threshold boundary, and paired replacement—each
   produced a positive planned-versus-filled gap with empty pending state and
   no next-session retry. This confirms a general sizing-to-execution obligation
-  loss rather than a single price-gap incident; no runtime source fix was
-  applied.
+  loss rather than a single price-gap incident. A separate ten-seat Decision V2
+  run filled one seat only partially but still reported `FULL` with zero
+  unfilled slots and no retry. No runtime source fix was applied.
 
 The durable rolling controls for this marathon are now:
 

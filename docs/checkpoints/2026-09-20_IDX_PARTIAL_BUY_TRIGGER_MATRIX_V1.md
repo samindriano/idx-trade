@@ -46,6 +46,20 @@ planned quantity is not delivered. Gross turnover also reflects only the
 actual fill; it does not retain a residual obligation that a later metric or
 session can discover.
 
+## Decision V2 shadow and ten-seat capacity interaction
+
+A separate Decision V2 synthetic run used ten target tickers with equal planned
+5,000-share entries. `T01` had a 1% reference-day capacity that allowed only
+2,400 shares; the other nine names filled 5,000 shares each. The resulting
+paper state therefore had ten actual seats and no pending buy.
+
+On the next session, a Decision V2 plan built from those actual positions
+reported `capacity_state=FULL`, `unfilled_slots=0`, zero effective buy intents,
+and zero sizing entries. The shadow layer correctly matched its own ticker
+membership invariant, but it had no representation of the missing 2,600
+`T01` shares. This extends the failure into the Decision V2 shadow and seat-cap
+boundary: a full seat count is not equivalent to a fulfilled target quantity.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:
