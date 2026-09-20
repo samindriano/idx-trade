@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import replace
 
 import pytest
@@ -133,3 +134,32 @@ def test_ca_timing_matrix_allows_only_additive_preopen_event_extension() -> None
         sizing_state=raw,
     )
     assert verify_ca_timing_matrix_extension(parent, current) == current
+
+
+@pytest.mark.parametrize("tamper_kind", ("extra_field", "timing_semantics"))
+def test_hash_valid_noncanonical_ca_timing_payload_fails_closed(
+    tamper_kind: str,
+) -> None:
+    import idx_trade.v4_x1_ca_timing_matrix_v1 as timing
+
+    raw = _state(1_000.0)
+    matrix = build_ca_timing_matrix_v1(
+        (_event("2026-09-04"),),
+        decision_session_date="2026-09-02",
+        execution_session_date="2026-09-03",
+        raw_state=raw,
+        sizing_state=replace(raw, base_state=replace(raw.base_state, cash_idr=1_000.0)),
+    )
+    tampered = copy.deepcopy(matrix)
+    if tamper_kind == "extra_field":
+        tampered["unexpected_extension"] = "accepted-by-hash-only"
+    else:
+        tampered["rows"][0]["execution_boundary_action"] = (
+            "SETTLE_AT_EXECUTION_BOUNDARY"
+        )
+    body = dict(tampered)
+    body.pop("payload_sha256")
+    tampered["payload_sha256"] = timing._canonical_hash(body)
+
+    with pytest.raises(DecisionV1Error, match="CA_TIMING_MATRIX_"):
+        verify_ca_timing_matrix_payload(tampered)

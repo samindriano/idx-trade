@@ -73,6 +73,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
   payment-on-decision, payment-on-execution, and later payment boundaries;
   prepared matrices accept only hash-bound additive CA extensions;
+- CA timing payload verification now enforces canonical envelope/row shape,
+  ordered event identity, ISO dates, hash fields, and timing/action semantics;
 - persisted execution replay now rechecks nested evidence, reconciliation,
   timing, and runtime-lineage parents and rejects a recomputed outer hash over
   tampered nested evidence;

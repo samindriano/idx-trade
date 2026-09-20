@@ -14,6 +14,30 @@ from .v4_x1_execution_v1_contract import paper_state_hash
 
 
 CA_TIMING_MATRIX_SCHEMA = "idx_trade_ca_timing_matrix_v1"
+_MATRIX_KEYS = frozenset(
+    {
+        "schema_version",
+        "decision_session_date",
+        "execution_session_date",
+        "raw_state_hash",
+        "raw_base_state_hash",
+        "sizing_state_hash",
+        "sizing_base_state_hash",
+        "rows",
+        "restart_policy",
+    }
+)
+_ROW_KEYS = frozenset(
+    {
+        "event_id",
+        "ticker",
+        "payment_date",
+        "timing_class",
+        "execution_boundary_action",
+        "raw_settled",
+        "sizing_settled",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -157,14 +181,79 @@ def build_ca_timing_matrix_v1(
 def verify_ca_timing_matrix_payload(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise DecisionV1Error("CA_TIMING_MATRIX_PAYLOAD_REQUIRED")
-    payload = dict(value)
-    declared = str(payload.pop("payload_sha256") or "").lower()
-    if len(declared) != 64 or _canonical_hash(payload) != declared:
+    raw_declared = value.get("payload_sha256")
+    if (
+        not isinstance(raw_declared, str)
+        or raw_declared != raw_declared.lower()
+        or len(raw_declared) != 64
+        or any(char not in "0123456789abcdef" for char in raw_declared)
+    ):
         raise DecisionV1Error("CA_TIMING_MATRIX_PAYLOAD_HASH_MISMATCH")
-    if payload.get("schema_version") != CA_TIMING_MATRIX_SCHEMA:
+    payload = dict(value)
+    declared = payload.pop("payload_sha256")
+    if _canonical_hash(payload) != declared:
+        raise DecisionV1Error("CA_TIMING_MATRIX_PAYLOAD_HASH_MISMATCH")
+    if set(payload) != _MATRIX_KEYS:
+        raise DecisionV1Error("CA_TIMING_MATRIX_PAYLOAD_NOT_CANONICAL")
+    if payload["schema_version"] != CA_TIMING_MATRIX_SCHEMA:
         raise DecisionV1Error("CA_TIMING_MATRIX_SCHEMA_MISMATCH")
-    if not isinstance(payload.get("rows"), list):
+    decision_text = payload["decision_session_date"]
+    execution_text = payload["execution_session_date"]
+    if not isinstance(decision_text, str) or not isinstance(execution_text, str):
+        raise DecisionV1Error("CA_TIMING_MATRIX_DATE_INVALID")
+    decision = _day(decision_text, "CA_TIMING_MATRIX_DATE_INVALID")
+    execution = _day(execution_text, "CA_TIMING_MATRIX_DATE_INVALID")
+    if decision.isoformat() != decision_text or execution.isoformat() != execution_text:
+        raise DecisionV1Error("CA_TIMING_MATRIX_DATE_INVALID")
+    if execution <= decision:
+        raise DecisionV1Error("CA_TIMING_MATRIX_EXECUTION_NOT_AFTER_DECISION")
+    for key in (
+        "raw_state_hash",
+        "raw_base_state_hash",
+        "sizing_state_hash",
+        "sizing_base_state_hash",
+    ):
+        candidate = payload[key]
+        if (
+            not isinstance(candidate, str)
+            or candidate != candidate.lower()
+            or len(candidate) != 64
+            or any(char not in "0123456789abcdef" for char in candidate)
+        ):
+            raise DecisionV1Error("CA_TIMING_MATRIX_HASH_INVALID")
+    if payload["restart_policy"] != "REPLAY_SAME_MATRIX_BYTES_OR_FAIL":
+        raise DecisionV1Error("CA_TIMING_MATRIX_RESTART_POLICY_INVALID")
+    rows = payload["rows"]
+    if not isinstance(rows, list):
         raise DecisionV1Error("CA_TIMING_MATRIX_ROWS_INVALID")
+    previous_event_id: str | None = None
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != _ROW_KEYS:
+            raise DecisionV1Error("CA_TIMING_MATRIX_ROW_NOT_CANONICAL")
+        event_id = row["event_id"]
+        ticker = row["ticker"]
+        payment_text = row["payment_date"]
+        if (
+            not isinstance(event_id, str)
+            or not event_id
+            or (previous_event_id is not None and event_id <= previous_event_id)
+            or not isinstance(ticker, str)
+            or not ticker
+            or not isinstance(payment_text, str)
+        ):
+            raise DecisionV1Error("CA_TIMING_MATRIX_ROW_NOT_CANONICAL")
+        payment = _day(payment_text, "CA_TIMING_MATRIX_PAYMENT_DATE_INVALID")
+        if payment.isoformat() != payment_text:
+            raise DecisionV1Error("CA_TIMING_MATRIX_PAYMENT_DATE_INVALID")
+        expected_timing, expected_action = _timing(payment, decision, execution)
+        if (
+            row["timing_class"] != expected_timing
+            or row["execution_boundary_action"] != expected_action
+            or type(row["raw_settled"]) is not bool
+            or type(row["sizing_settled"]) is not bool
+        ):
+            raise DecisionV1Error("CA_TIMING_MATRIX_ROW_SEMANTICS_MISMATCH")
+        previous_event_id = event_id
     payload["payload_sha256"] = declared
     return payload
 
