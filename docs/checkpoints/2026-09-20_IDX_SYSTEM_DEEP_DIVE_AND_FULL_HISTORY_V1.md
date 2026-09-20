@@ -695,6 +695,12 @@ historical alpha archive:
   and no mark/weight in PaperState or its hash. This is a risk-policy and
   economic-interpretation gap, not a claim that the current fixed-seat policy
   was unintentionally changed.
+- `2026-09-20_IDX_PROSPECTIVE_FORMULA_INDEPENDENCE_AUDIT_V1.md` resolves the
+  remaining verifier-independence question at the source level: the protected
+  gate and development evaluator share all five metric function objects. The
+  gate has strong provenance/code-pin controls, but no independent formula
+  oracle is bound, so agreement is not formula correctness. No protected result
+  or evaluator/gate code was changed.
 
 The durable rolling controls for this marathon are now:
 

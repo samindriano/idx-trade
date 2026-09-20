@@ -86,6 +86,9 @@ The system tracks target membership but not target quantity obligations. A posit
 - Post-entry risk checkpoint: `2026-09-20_IDX_POST_ENTRY_WEIGHT_DRIFT_AUDIT_V1.md`.
   A synthetic 3x winner reaches 25% mark-to-market weight against a 15% entry
   cap; no active continuing risk overlay or mark lineage exists in PaperState.
+- Formula-independence checkpoint: `2026-09-20_IDX_PROSPECTIVE_FORMULA_INDEPENDENCE_AUDIT_V1.md`.
+  The protected gate and development evaluator share all five metric function
+  objects; provenance/pin checks are independent, formula recomputation is not.
 
 ## Immediate next questions
 
@@ -113,6 +116,8 @@ The system tracks target membership but not target quantity obligations. A posit
     them to quantity obligations without fabricating legacy history?
 11. Is continuing post-entry weight/concentration control intentionally out of
     scope, or does paper admissibility require a separately authorized overlay?
+12. Which independently reviewed formula oracle or verifier contract should be
+    bound to the prospective evaluation gate without opening protected outcomes?
 
 ## Constraints
 
