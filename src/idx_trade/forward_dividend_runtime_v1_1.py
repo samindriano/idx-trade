@@ -25,6 +25,7 @@ from .v4_x1_execution_v1_contract import (
     close_obligation_explicitly as close_paper_obligation_explicitly,
     normalize_state,
     paper_state_hash,
+    rank_consensus_value,
     whole_lot_shares,
 )
 from .v4_x1_quantity_obligation_v1 import (
@@ -200,10 +201,9 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
             PendingPaperIntent(
                 side=str(row["side"]),
                 ticker=str(row["ticker"]),
-                rank_consensus=(
-                    None
-                    if row.get("rank_consensus") is None
-                    else int(row["rank_consensus"])
+                rank_consensus=rank_consensus_value(
+                    row.get("rank_consensus"),
+                    "DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
                 ),
                 reason=str(row["reason"]),
                 replacement_peer=(
@@ -219,10 +219,9 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
             PendingPaperIntent(
                 side=str(row["side"]),
                 ticker=str(row["ticker"]),
-                rank_consensus=(
-                    None
-                    if row.get("rank_consensus") is None
-                    else int(row["rank_consensus"])
+                rank_consensus=rank_consensus_value(
+                    row.get("rank_consensus"),
+                    "DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
                 ),
                 reason=str(row["reason"]),
                 replacement_peer=(

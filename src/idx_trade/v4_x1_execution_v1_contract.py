@@ -141,6 +141,17 @@ def whole_lot_shares(value: object, code: str) -> int:
     return shares
 
 
+def rank_consensus_value(value: object, code: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise DecisionV1Error(code)
+    rank = int(value)
+    if rank <= 0:
+        raise DecisionV1Error(code)
+    return rank
+
+
 def normalize_pending(rows: tuple[PendingPaperIntent, ...], side: str) -> dict[str, PendingPaperIntent]:
     out: dict[str, PendingPaperIntent] = {}
     for row in rows:
@@ -150,8 +161,14 @@ def normalize_pending(rows: tuple[PendingPaperIntent, ...], side: str) -> dict[s
         if symbol in out:
             raise DecisionV1Error("EXECUTION_V1_DUPLICATE_PENDING_INTENT")
         out[symbol] = PendingPaperIntent(
-            side=side, ticker=symbol, rank_consensus=row.rank_consensus,
-            reason=row.reason, replacement_peer=row.replacement_peer,
+            side=side,
+            ticker=symbol,
+            rank_consensus=rank_consensus_value(
+                row.rank_consensus,
+                "EXECUTION_V1_PENDING_RANK_INVALID",
+            ),
+            reason=row.reason,
+            replacement_peer=row.replacement_peer,
         )
     return out
 

@@ -395,6 +395,23 @@ def test_runtime_payload_rejects_non_integer_position_shares(shares: object) -> 
         runtime._paper_state_from_payload(payload)
 
 
+@pytest.mark.parametrize("rank", [1.9, True, 0])
+def test_runtime_payload_rejects_invalid_pending_rank(rank: object) -> None:
+    payload = runtime._paper_state_payload(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", 1, "RETRY"),),
+        ).base_state
+    )
+    payload["pending_buys"][0]["rank_consensus"] = rank
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
+    ):
+        runtime._paper_state_from_payload(payload)
+
+
 def test_hash_valid_noncanonical_snapshot_payload_fails_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

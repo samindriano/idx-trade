@@ -350,6 +350,19 @@ def test_normalize_state_rejects_non_integer_position_shares(shares: object) -> 
         )
 
 
+@pytest.mark.parametrize("rank", [1.9, True, 0])
+def test_normalize_state_rejects_invalid_pending_rank(rank: object) -> None:
+    with pytest.raises(DecisionV1Error, match="PENDING_RANK_INVALID"):
+        normalize_state(
+            PaperPortfolioState(
+                as_of_session_date="2026-09-21",
+                cash_idr=1_000_000.0,
+                positions=(),
+                pending_buys=(PendingPaperIntent("BUY", "BBCA", rank, "RETRY"),),
+            )
+        )
+
+
 def test_legacy_hash_shape_is_unchanged_and_obligation_hash_is_additive():
     legacy = PaperPortfolioState(
         as_of_session_date="2026-09-20",
