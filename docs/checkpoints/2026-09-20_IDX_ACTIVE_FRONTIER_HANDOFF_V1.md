@@ -5,7 +5,7 @@ Lane: isolated `codex/alpha-available-data-20260919`
 
 ## Active frontier
 
-**Residual obligation lifecycle → CA settlement → pending expiry/reversal → restart**
+**Quantity-obligation contract → historical replay compatibility → isolated remediation harness**
 
 ## Current hypothesis
 
@@ -52,14 +52,15 @@ The system tracks target membership but not target quantity obligations. A posit
   pending rows. No typed cancellation event or obligation lineage was emitted,
   leaving expiry/escalation and audit policy unresolved.
 - Durable checkpoint: `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md`.
+- Evidence-driven design checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_STATE_CONTRACT_V1.md`.
 
 ## Immediate next questions
 
-1. Which obligation ledger should own planned/filled/remaining quantity, age, attempts, and reason history?
-2. Should CA settlement trigger a replan, or only change cash while pending obligations remain unchanged?
-3. What explicit cancellation, expiry, escalation, and manual-review events are required when Decision reverses or capacity stays zero?
+1. Which historical replay/state contracts must the proposed obligation ledger preserve or deliberately supersede?
+2. Can an isolated remediation harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
+3. Which migration rule converts existing ticker-level pending rows and positive partial positions without fabricating remaining quantity?
 4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
-5. Which historical replay/state contracts must a unified quantity-obligation design preserve or deliberately supersede?
+5. What evidence would justify moving the proposal from design-only to a separately authorized implementation lane?
 
 ## Constraints
 

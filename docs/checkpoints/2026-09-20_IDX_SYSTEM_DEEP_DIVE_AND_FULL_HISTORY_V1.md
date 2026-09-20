@@ -621,6 +621,11 @@ historical alpha archive:
   emitting no typed cancellation lineage. The remaining gap is an obligation
   lifecycle contract (remaining quantity, age, attempts, expiry/escalation, and
   explicit cancellation), not dividend arithmetic.
+- `2026-09-20_IDX_QUANTITY_OBLIGATION_STATE_CONTRACT_V1.md` records the first
+  evidence-driven architecture proposal for that gap: a stable logical
+  obligation ID with planned/filled/remaining/relinquished quantities, typed
+  retry/block/cancel/expiry events, explicit CA settlement policy, and hash/
+  restart binding. It is design-only and deliberately not a runtime patch.
 
 The durable rolling controls for this marathon are now:
 
