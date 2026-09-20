@@ -560,3 +560,52 @@ checkpoint files; this file records why the next question changed.
   requests but were rejected/forbidden. They remain source leads with no
   negative interpretation. The detailed matrix, hashes, and no-admission verdict
   are in `free_historical_authority_recovery_v1.json` and its checkpoint.
+## 2026-09-20 — population-wide identity/lifecycle crosswalk
+
+- Constructed a 1,176-code normalized observed research-population union across the
+  retained panel, anchors, official IDX trading/profile/issued/listing/
+  delisting/report/foreign-flow/sector surfaces, financial bundle, KSEI, and
+  public cross-checks. Exact memberships and pairwise differences are in the
+  population crosswalk artifact.
+- Attempted all 984 KSEI current share-table codes once and retained every
+  response. 371 pages satisfy the internal code/ISIN/issuer/type detail
+  contract; two HTTP-200 pages are empty/mismatched and 611 are HTTP-500.
+  Failures remain unresolved, not negative identity evidence.
+- Confirmed the population counterexample at scale: official trading has 44
+  codes absent from the 945-code panel, and the 980-code anchor has 35 codes
+  absent from the panel. CNTX/CNTB are explicit examples. The old exact replay
+  remains observed-panel reconciliation, not a completeness proof.
+- Preserved 1,112 interval/event-bearing codes and the six retained lifecycle
+  conflict codes: BUKK, INRU, ITMA, KIAS, SKBM, UNTX. No PIT effective date or
+  legal issuer continuity is proven for the observed union.
+- Materialized a provenance-bearing typed identity graph, per-code residuals,
+  master dossier, and next-frontier handoff. No canonical, protected,
+  production, cloud, capture, telemetry, provider, or scheduler state changed.
+- Completed the final retained-source counterexample census. Two current
+  profile-name groups map one normalized name to multiple codes (`APAI`/`APIA`
+  and `PIGN`/`PIKI`), while one valid KSEI issuer string maps `GOTO` and
+  `GOTOM` to distinct ISIN/security records. The graph keeps these nodes
+  separate; this is no-collapse evidence, not legal continuity or ticker-reuse
+  proof.
+- Integrated the retained official corporate-action document probe for BPII,
+  PBID, and RMKE: three codes and eight document-evidence records. Plan,
+  approval, advertisement, correction, and underlying-event semantics remain
+  distinct; no effective first session or price basis is stated. The event
+  sample remains evidence-only.
+- Rebuilt the crosswalk after those additions with status
+  `PASS_OBSERVED_POPULATION_CROSSWALK_NO_COMPLETENESS_ADMISSION`; focused tests
+  pass 7/7. The remaining high-information questions require a new versioned
+  population/identity/PIT source, historical ticker/ISIN/issuer continuity,
+  or exchange-effective CA/price-basis contract rather than another same-family
+  snapshot retry.
+- Audited the six lifecycle-conflict codes against the retained exact-code
+  announcement results, current/delisting intervals, issued-history types,
+  profiles, and KSEI detail status. BUKK/INRU have KSEI HTTP failures;
+  ITMA/KIAS/SKBM have valid KSEI details; UNTX is delisting-only; the only
+  announcement hits are two SKBM subsidiary-name notices. The conflict classes
+  remain unresolved and focused tests now pass 8/8.
+- Crosswalked the full 115-code official-delisting-only residual against all
+  retained announcement-search pages. There were zero exact code hits. The
+  durable interpretation is bounded no-hit-not-negative because query
+  completeness, population linkage, effective session, and revision lineage
+  are absent; focused tests now pass 9/9.

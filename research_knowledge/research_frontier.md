@@ -185,3 +185,38 @@ the current predictive block as the end of the knowledge program.
   It is a versioned PIT membership/identity source, report/classification
   vintage contract, exchange-effective CA linkage, capacity archive, or an
   explicit owner policy. Until one exists, no candidate admission is reopened.
+## Population identity/lifecycle authority — active 2026-09-20
+
+The current durable frontier is an observed-source union, not a historical
+population authority. The isolated crosswalk contains 1,176 normalized codes;
+official
+trading contributes 44 codes absent from the panel, and anchors contribute 35.
+KSEI current registered shares cover 984 table codes, but only 371 retained
+detail pages satisfy the internal identity parser, with 2 HTTP-200 invalid and
+611 HTTP-500 outcomes. The KSEI surface is bounded current identity evidence,
+not a historical PIT denominator.
+
+The next highest-information work is residual-class research: historical-only
+codes outside the profile/security master, ticker reuse/relisting and
+share-series collisions, the six explicit lifecycle conflict codes, and
+issuer/legal continuity. Use a distinct official announcement, issuer, OJK,
+archive, or KSEI-history surface for named residuals. Do not retry same-family
+snapshots for a completeness claim. See
+`identity_lifecycle_active_frontier_v1.md` for the handoff and reopen rules.
+
+The final retained-source pass now contains explicit identity counterexamples:
+two profile-name multi-code groups and one KSEI issuer-string multi-security
+group. It also records three corporate-action sample codes with eight document
+records, without inferring effective transitions. Further progress requires
+versioned external identity/PIT/issuer/ISIN/series evidence or exchange-effective
+CA basis evidence.
+
+The six-code conflict audit is also exhausted for the retained local surfaces:
+the classes are heterogeneous, only two bounded SKBM subsidiary-name notices
+match exactly, and no interval winner is admissible. Reopening requires a named
+security/ISIN-linked historical event source, not another same-family snapshot.
+
+The 115-code historical-only delisting residual was exact-matched against the
+retained announcement-search files with zero hits. That direction is exhausted
+for the current bounded files; it reopens only with a query-complete,
+population-linked event archive or named issuer/OJK/KSEI history.

@@ -348,3 +348,48 @@ before starting any old experiment again.
   `research_knowledge/free_historical_authority_recovery_v1.json`; it must be
   read with the source-capability matrix and the no-retry registry. Historical
   research admission remains blocked.
+## Population-wide identity/lifecycle phase — 2026-09-20
+
+The strongest current claim is an observed 1,176-code research union, not a
+complete historical IDX population. The panel's 945 codes are a strict subset
+of the 983-code official trading surface by 44 codes and of the 980-code
+historical anchor by 35 codes. CNTX and CNTB remain concrete whole-security
+omission counterexamples. Exact replay agreement therefore cannot establish
+survivorship safety.
+
+The KSEI population attempt added bounded current identity evidence: 984
+current share-table codes were attempted once; 371 detail pages resolved code,
+ISIN, issuer, security name, and type; 2 HTTP-200 pages were empty/mismatched;
+611 were HTTP-500. A failure is unresolved, not a negative lookup. Current
+profiles, security-master rows, and KSEI pages provide bounded labels/edges,
+not legal issuer continuity or historical PIT membership.
+
+The identity graph and residual packet preserve ticker/security/issuer/ISIN/
+lifecycle distinctions and the six official lifecycle conflict codes. Every
+observed code remains PIT-effective-date unknown; legal issuer continuity and
+historical population completeness are unproven. The next high-value frontier
+is named residual-class research for historical-only codes, ticker reuse,
+relisting, series collisions, and issuer continuity using distinct source
+classes. No predictive admission is reopened.
+
+The final retained-source counterexample search found two current profile-name
+groups with multiple codes (`APAI`/`APIA`, `PIGN`/`PIKI`) and one KSEI issuer
+string shared by distinct `GOTO` and `GOTOM` ISIN/security records. This
+confirms that issuer/name strings cannot be used as security keys; it does not
+prove legal continuity or historical ticker reuse. The official CA sample adds
+three codes and eight document-evidence records, but no effective first session
+or price basis. Those boundaries are now durable no-retry rules.
+
+The six retained lifecycle conflicts were then audited by named code. Their
+evidence is heterogeneous rather than one repairable class: BUKK/INRU retain
+profiles and issued history but have KSEI HTTP failures; ITMA/KIAS/SKBM have
+valid KSEI detail; UNTX is delisting-only; and the bounded announcement search
+returns only two SKBM subsidiary-name notices. This narrows the residuals but
+does not resolve relisting, ticker reuse, legal continuity, or effective-session
+semantics. Further resolution requires distinct versioned identity/event
+authority.
+
+The 115-code official-delisting-only residual has zero exact hits in the
+retained announcement-search files. This is not event absence: the search is
+bounded and lacks population linkage, complete pagination, effective-session,
+and revision semantics. The residual remains explicitly unresolved.

@@ -64,7 +64,12 @@
     "free_historical_authority_recovery_v1.json",
     "official_idx_profile_detail_surface_v1.json",
     "official_corporate_action_announcement_probe_v1.json",
+    "identity_lifecycle_population_crosswalk_v1.json",
+    "security_identity_lifecycle_graph_v1.json",
+    "identity_lifecycle_residuals_v1.json",
     "data_authority_packet_v1.md",
+    "identity_lifecycle_master_dossier_v1.md",
+    "identity_lifecycle_active_frontier_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
     "open_questions.md",
@@ -72,11 +77,11 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 62,
-    "findings_index_entries": 57,
-    "no_retry_registry_entries": 23,
-    "source_capability_entries": 27,
-    "human_synthesis_documents": 6
+    "experiment_registry_entries": 66,
+    "findings_index_entries": 63,
+    "no_retry_registry_entries": 28,
+    "source_capability_entries": 28,
+    "human_synthesis_documents": 8
   },
   "counting_rule": "JSONL line counts are authoritative; entries are append-only and reference evidence-of-record paths.",
   "authoritative_readins": [
@@ -110,6 +115,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_RAW_ACQUISITION_SURFACES_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_AUTHORITY_CROSSWALK_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_FREE_HISTORICAL_AUTHORITY_RECOVERY_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_FREE_HISTORICAL_AUTHORITY_RECOVERY_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_IDX_POPULATION_IDENTITY_LIFECYCLE_AUTHORITY_RESULT_V1.md"
   ]
 }
