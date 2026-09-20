@@ -83,6 +83,9 @@ The system tracks target membership but not target quantity obligations. A posit
   The pinned runtime checkout is clean but contains no retained execution,
   snapshot, or fill-vector fixture; the migration harness remains synthetic
   until an authorized archive/artifact owner supplies provenance-bound data.
+- Post-entry risk checkpoint: `2026-09-20_IDX_POST_ENTRY_WEIGHT_DRIFT_AUDIT_V1.md`.
+  A synthetic 3x winner reaches 25% mark-to-market weight against a 15% entry
+  cap; no active continuing risk overlay or mark lineage exists in PaperState.
 
 ## Immediate next questions
 
@@ -108,6 +111,8 @@ The system tracks target membership but not target quantity obligations. A posit
    and restart?
 10. Which versioned state owner should preserve exposure/cash causes and join
     them to quantity obligations without fabricating legacy history?
+11. Is continuing post-entry weight/concentration control intentionally out of
+    scope, or does paper admissibility require a separately authorized overlay?
 
 ## Constraints
 

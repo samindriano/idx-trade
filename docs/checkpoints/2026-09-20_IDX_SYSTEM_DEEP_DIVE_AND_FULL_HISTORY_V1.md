@@ -689,6 +689,12 @@ historical alpha archive:
   artifact for real obligation migration. The synthetic 6/6 migration audit
   therefore remains a design/compatibility result only; no legacy residual is
   inferred and no external/protected artifact was opened.
+- `2026-09-20_IDX_POST_ENTRY_WEIGHT_DRIFT_AUDIT_V1.md` falsifies the stronger
+  interpretation of the 15% entry cap: a synthetic 3x price winner reaches
+  25% mark-to-market weight, while the runtime has no active post-entry overlay
+  and no mark/weight in PaperState or its hash. This is a risk-policy and
+  economic-interpretation gap, not a claim that the current fixed-seat policy
+  was unintentionally changed.
 
 The durable rolling controls for this marathon are now:
 
