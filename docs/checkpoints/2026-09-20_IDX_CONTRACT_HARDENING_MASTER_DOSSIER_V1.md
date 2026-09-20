@@ -139,6 +139,8 @@ The isolated lane currently contains:
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller recovery-fence parity covers all eight synthetic
   side-effect boundaries without provider or outcome access;
+- post-implementation independent challenge is recorded PASS for nested replay,
+  lineage, CA, cause, identity, snapshot, migration, and controller gates;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
@@ -146,7 +148,7 @@ execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
 independent artifact challenge,
 reconciliation provenance, authoritative identity-source wiring,
-child-process runtime binding, independent crash/interruption challenge, and authorized
+child-process runtime binding, authorized
 automatic migration activation remain open; this is not a production promotion or phase
 closure.
 

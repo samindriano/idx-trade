@@ -81,14 +81,15 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
   or outcome access;
+- post-implementation independent challenge record is PASS for nested replay,
+  lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller
+  gates; see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V1.md`;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
 
 ## Remaining evidence before Phase 4
 
-- independent challenge of execution/reconciliation evidence and the new
-  migration provenance artifact;
 - authorized automatic migration activation/persistence policy (the explicit
   verified-snapshot consumer is implemented);
 - authoritative identity-source wiring through every child script;
