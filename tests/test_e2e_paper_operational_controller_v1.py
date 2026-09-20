@@ -5,6 +5,7 @@ from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -151,6 +152,50 @@ def test_child_failure_is_redacted_to_hash_only(tmp_path: Path, monkeypatch: pyt
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
     assert "safe stdout" not in json.dumps(payload)
     assert payload["stdout_sha256"] == _sha256_text("safe stdout")
+
+
+def test_real_child_timeout_preserves_boundary_and_requires_recovery(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status = {
+        "controller_status": "RUNNING",
+        "started_at_jakarta": "2026-08-24T18:00:00+07:00",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    controller._persist_running_boundary(
+        config,
+        status,
+        phase="PREOPEN",
+        side_effect="CHILD_EXECUTION",
+    )
+    with pytest.raises(E2EOperationalGuardError, match="CHILD_PROCESS_FAILED:interrupt"):
+        controller._run_child(
+            config,
+            "interrupt",
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            timeout_seconds=1,
+        )
+
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 1, tzinfo=JAKARTA),
+    )
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+    assert recovered["interrupted_phase"] == "PREOPEN"
+    assert recovered["interrupted_side_effect"] == "CHILD_EXECUTION"
+    assert recovered["provider_calls"] is False
+    assert recovered["outcome_access"] is False
 
 
 def _sha256_text(value: str) -> str:

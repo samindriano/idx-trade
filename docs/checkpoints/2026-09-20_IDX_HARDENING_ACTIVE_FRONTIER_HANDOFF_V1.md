@@ -80,6 +80,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - all four V1/V2 phase child entrypoints now require the external hash-pinned
   runtime config, require its branch/commit identity to match the parent
   controller, and pass the non-null config SHA into orchestration;
+- an independent synthetic subprocess timeout now proves the durable
+  `CHILD_EXECUTION` boundary remains `RUNNING` and the next controller pass
+  returns `RECOVERY_REQUIRED` without replaying provider/outcome work;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
@@ -88,15 +91,16 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller
   gates; see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V1.md`;
 - exact base/runtime lineage remains recorded;
-- full repository regression: `pytest -q` PASS; only three pre-existing pandas
-  `FutureWarning` records, no test failures.
+- full repository regression via `python -m pytest -q`: PASS; only three
+  pre-existing pandas `FutureWarning` records, no test failures;
+  direct `pytest -q` invocation has a pre-existing root-namespace collection
+  issue for tests importing `scripts.*`.
 
 ## Remaining evidence before Phase 4
 
 - authorized automatic migration activation/persistence policy (the explicit
   verified-snapshot consumer is implemented);
 - authoritative identity-source wiring through every child script;
-- independent child-process crash/interruption challenge (the phase child
-  binding gate is implemented, but no live provider/scheduler run is authorized
-  in this lane);
+- live provider/scheduler crash/interruption validation is not authorized in
+  this lane; the synthetic subprocess challenge is PASS;
 - independent final challenge.
