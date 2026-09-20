@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+
 import pytest
 
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
@@ -39,6 +42,28 @@ def test_runtime_lineage_v2_rejects_tampered_artifact_hash() -> None:
     tampered_artifacts["score"] = {"path": "score.json", "sha256": "e" * 64}
     tampered["artifacts"] = tampered_artifacts
     with pytest.raises(DecisionV1Error, match="HASH_MISMATCH"):
+        verify_runtime_lineage_v2(tampered)
+
+
+def test_runtime_lineage_v2_rejects_hash_valid_binding_status_drift() -> None:
+    payload = _lineage()
+    tampered = dict(payload)
+    tampered["binding_status"] = "LOCAL_UNBOUND"
+    body = dict(tampered)
+    body.pop("lineage_sha256")
+    tampered["lineage_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
         verify_runtime_lineage_v2(tampered)
 
 

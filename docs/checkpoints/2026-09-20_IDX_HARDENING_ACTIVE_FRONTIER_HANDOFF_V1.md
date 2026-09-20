@@ -82,6 +82,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   accepting a child artifact;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
+- runtime-lineage verification now rejects hash-valid but noncanonical binding
+  status/field combinations by replaying the builder normalization;
 - operational `BOUND` lineage is persisted and rechecked across synthetic
   prepare/execute/replay, with config mismatch rejected;
 - hash-pinned controller selection now rejects prepared artifacts whose

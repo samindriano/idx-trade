@@ -113,6 +113,21 @@ def verify_runtime_lineage_v2(value: Mapping[str, Any]) -> dict[str, Any]:
     declared = str(payload.pop("lineage_sha256") or "").lower()
     if not _SHA_RE.fullmatch(declared) or _canonical_hash(payload) != declared:
         raise DecisionV1Error("RUNTIME_LINEAGE_V2_HASH_MISMATCH")
+    try:
+        normalized = build_runtime_lineage_v2(
+            role=payload.get("role"),
+            implementation_branch=payload.get("implementation_branch"),
+            implementation_commit=payload.get("implementation_commit"),
+            config_sha256=payload.get("config_sha256"),
+            entrypoint_sha256=payload.get("entrypoint_sha256"),
+            artifacts=payload.get("artifacts"),
+            contracts=payload.get("contracts"),
+        )
+    except (DecisionV1Error, TypeError) as exc:
+        raise DecisionV1Error("RUNTIME_LINEAGE_V2_PAYLOAD_INVALID") from exc
+    normalized.pop("lineage_sha256", None)
+    if normalized != payload:
+        raise DecisionV1Error("RUNTIME_LINEAGE_V2_PAYLOAD_NOT_CANONICAL")
     _optional_commit(payload.get("implementation_commit"), "RUNTIME_LINEAGE_V2_COMMIT_INVALID")
     _optional_sha(payload.get("config_sha256"), "RUNTIME_LINEAGE_V2_CONFIG_SHA_INVALID")
     _optional_sha(payload.get("entrypoint_sha256"), "RUNTIME_LINEAGE_V2_ENTRYPOINT_SHA_INVALID")
