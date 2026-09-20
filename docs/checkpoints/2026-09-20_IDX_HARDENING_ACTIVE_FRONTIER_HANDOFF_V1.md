@@ -122,11 +122,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
-- the earlier full repository regression via `python -m pytest -q` passed at
-  the prior checkpoint with only three pre-existing pandas `FutureWarning`
-  records; two later full-suite reruns encountered unrelated Windows
-  `PermissionError [WinError 5]` atomic-replace fixture flakes in capture and
-  official-open tests, and each targeted recheck passed;
+- current HEAD full repository regression via `python -m pytest -q` passed at
+  100% with only three pre-existing pandas `FutureWarning` records; two
+  earlier reruns encountered unrelated Windows `PermissionError [WinError 5]`
+  atomic-replace fixture flakes in capture and official-open tests, and each
+  targeted recheck passed;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
 
