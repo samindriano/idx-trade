@@ -209,8 +209,10 @@ regression result, not an independent reviewer attestation or production
 promotion. The V2 independent-challenge record remains historical evidence.
 External authorization/adoption, authoritative identity-source provisioning,
 live provider/scheduler interruption validation, automatic migration activation,
-and the remaining Decision-seat/cancellation semantics are still open. This
-is not a production promotion or phase closure.
+and the remaining Decision-seat policy semantics plus broader replay closure
+are still open. Explicit cancellation/relinquishment is implemented only as a
+caller-supplied, parent-bound transition; it is never inferred from target
+membership. This is not a production promotion or phase closure.
 
 ## Boundaries
 

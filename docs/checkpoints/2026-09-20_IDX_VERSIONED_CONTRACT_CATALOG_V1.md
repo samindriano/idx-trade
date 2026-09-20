@@ -50,7 +50,7 @@ membership may be used to infer a missing planned quantity.
 
 | Contract | Owner | Current state |
 |---|---|---|
-| `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, additive hash, canonical payload replay, quarantine, ancestor recovery, and orchestration binding tested; live closure open |
+| `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, additive hash, canonical payload replay, parent-bound explicit-close runtime wrapper, quarantine, ancestor recovery, and orchestration binding tested; live closure open |
 | `MIGRATION_PROVENANCE-V1` / `MIGRATION_ACTIVATION-V1` | Legacy-state migration provenance and activation decision | Source/hash/classification/disposition/reason/time binding plus immutable policy-gated activation decision and verified-snapshot consumer implemented locally; external policy adoption remains open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, `CA_TIMING_MATRIX-V1`, persisted replay gates, and restart/idempotency coverage implemented locally |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; canonical row/semantic verification and additive-only extension are enforced |

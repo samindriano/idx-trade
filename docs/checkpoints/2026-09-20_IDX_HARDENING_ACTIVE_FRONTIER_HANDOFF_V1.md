@@ -183,3 +183,6 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - external/policy-gated activation and any live protected-runtime validation;
   synthetic independent challenge V2 is recorded in
   `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`.
+- Decision-seat policy semantics and broader top-level replay closure remain
+  open; explicit cancellation/relinquishment is implemented only through the
+  parent-bound caller-supplied transition and remains fail-closed by default.
