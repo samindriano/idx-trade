@@ -669,6 +669,14 @@ historical alpha archive:
   sharing `(ticker, listed_from)` remain order-sensitive under `keep="last"`,
   leaving a valid-looking but history-dependent master. No canonical or runtime
   data was changed.
+- `2026-09-20_IDX_RECONCILIATION_FLAG_PROVENANCE_AUDIT_V1.md` audits the exact
+  runtime flag that earlier CA/reversal notes had left as a policy question.
+  At pinned HEAD `402fca4b...`, the flag is a default/serialized input gate:
+  execution emits `false`, prepare/Decision reject only pre-existing `true`,
+  and no audited runtime source assigns `true` from a mismatch detector. Thus
+  `reconciliation_required=false` is not broker/paper reconciliation proof;
+  a versioned evidence source and mismatch taxonomy remain open. No runtime or
+  data fix was applied.
 
 The durable rolling controls for this marathon are now:
 

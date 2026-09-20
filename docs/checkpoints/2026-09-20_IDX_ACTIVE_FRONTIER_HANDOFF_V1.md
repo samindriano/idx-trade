@@ -71,6 +71,10 @@ The system tracks target membership but not target quantity obligations. A posit
 - Security-master revision checkpoint: `2026-09-20_IDX_SECURITY_MASTER_REVISION_COLLISION_AUDIT_V1.md`.
   Historical archaeology confirms active-vs-delisted preference is intentional;
   the unresolved defect is same-class revision order sensitivity.
+- Reconciliation provenance checkpoint: `2026-09-20_IDX_RECONCILIATION_FLAG_PROVENANCE_AUDIT_V1.md`.
+  The pinned runtime carries `reconciliation_required` through state/hash and
+  uses it as a prior gate, but does not produce it from a mismatch detector;
+  `false` is not reconciliation evidence.
 
 ## Immediate next questions
 
@@ -90,6 +94,9 @@ The system tracks target membership but not target quantity obligations. A posit
    runtime config and runner identity without rewriting historical artifacts?
 8. Which source/revision policy should adjudicate same-key security-master
    conflicts before universe eligibility is derived?
+9. What explicit evidence source and mismatch taxonomy should produce
+   `reconciliation_required=true`, and how should that evidence survive replay
+   and restart?
 
 ## Constraints
 
