@@ -31,9 +31,12 @@ independent; passing structural or tooling checks does not clear them.
 - Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
 - Baseline: `58f094b8`
-- Current HEAD at this handoff: `21984d4ba5a747dea9db244e036712aca81dfcef`
-- Current branch delta from baseline: 32 commits.
-- Current branch commit interval: 2026-09-20 03:28:29 to 09:08:49 Asia/Jakarta.
+- Source research state audited before this summary: `855bb153cd7a5a4a7b862cd6986a81556eb0020e`.
+- Source branch delta at that snapshot: 31 commits.
+- Source branch commit interval at that snapshot: 2026-09-20 03:28:29 to
+  09:02:02 Asia/Jakarta.
+- The summary itself is recorded in later documentation-only commits; those
+  commits do not alter the scientific evidence summarized here.
 - The earlier marathon handoff records a wider research/documentation calendar
   span of roughly 23 hours. That is elapsed calendar span, not a claim of 23
   continuous hours of active compute or human attention.
