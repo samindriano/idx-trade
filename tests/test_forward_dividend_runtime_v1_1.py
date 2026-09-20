@@ -328,6 +328,33 @@ def test_snapshot_payload_tamper_fails_closed(
         runtime.load_runtime_snapshot(snapshot.path)
 
 
+def test_hash_valid_noncanonical_snapshot_payload_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    payload = json.loads(snapshot.path.read_text(encoding="utf-8"))
+    payload["unexpected_extension"] = "accepted-by-hash-only"
+    body = dict(payload)
+    body.pop("snapshot_payload_sha256")
+    payload["snapshot_payload_sha256"] = runtime._canonical_hash(body)
+    snapshot.path.write_text(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="SNAPSHOT_PAYLOAD_NOT_CANONICAL",
+    ):
+        runtime.load_runtime_snapshot(snapshot.path)
+
+
 def test_parent_bytes_tamper_invalidates_child_chain(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

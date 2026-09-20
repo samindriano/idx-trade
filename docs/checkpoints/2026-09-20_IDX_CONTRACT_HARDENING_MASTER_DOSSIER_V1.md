@@ -155,6 +155,8 @@ The isolated lane currently contains:
   prepared parent when no certified Open exists, with regression coverage;
 - latest-snapshot recovery rejects noncanonical snapshot filenames with a
   typed fail-closed error;
+- snapshot loading replays the canonical builder and rejects hash-valid but
+  noncanonical payload envelopes;
 - post-implementation independent challenge is recorded PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and controller gates;
 - independent challenge V2 also covers real synthetic child interruption,

@@ -1024,6 +1024,7 @@ def _load_runtime_snapshot(
 
     previous_path: Path | None = None
     previous_sha: str | None = None
+    parent_snapshot: VerifiedDividendRuntimeSnapshot | None = None
     previous = payload.get("previous_snapshot")
     if previous is not None:
         if not isinstance(previous, dict):
@@ -1034,25 +1035,37 @@ def _load_runtime_snapshot(
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_MISSING")
         if _sha256_file(previous_path) != previous_sha:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_SHA_MISMATCH")
-        parent = _load_runtime_snapshot(previous_path, seen=seen)
-        if parent.file_sha256 != previous_sha:
+        parent_snapshot = _load_runtime_snapshot(previous_path, seen=seen)
+        if parent_snapshot.file_sha256 != previous_sha:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_SHA_MISMATCH")
-        if previous.get("runtime_state_sha256") != parent.runtime_state_sha256:
+        if (
+            previous.get("runtime_state_sha256")
+            != parent_snapshot.runtime_state_sha256
+        ):
             raise DecisionV1Error(
                 "DIVIDEND_V1_1_RUNTIME_PARENT_STATE_HASH_MISMATCH"
             )
-        if previous.get("session_date") != parent.state.base_state.as_of_session_date:
+        if (
+            previous.get("session_date")
+            != parent_snapshot.state.base_state.as_of_session_date
+        ):
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_MISMATCH")
-        if date.fromisoformat(parent.state.base_state.as_of_session_date) >= date.fromisoformat(session):
+        if date.fromisoformat(
+            parent_snapshot.state.base_state.as_of_session_date
+        ) >= date.fromisoformat(session):
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_NOT_PRIOR")
         _verify_registry_append_only(
-            parent.certified_dividend_registry,
+            parent_snapshot.certified_dividend_registry,
             registry,
         )
         _verify_ledger_progression(
-            parent.state.dividend_ledger,
+            parent_snapshot.state.dividend_ledger,
             ledger,
         )
+
+    canonical_payload = _snapshot_payload(state, registry, parent_snapshot)
+    if canonical_payload != payload:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_PAYLOAD_NOT_CANONICAL")
 
     return VerifiedDividendRuntimeSnapshot(
         path=resolved,

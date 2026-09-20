@@ -19,6 +19,7 @@ scheduler, production, or alpha state.
 | Nested execution replay | Rehashed nested evidence/CA/cause/lineage parents are rejected | PASS |
 | Snapshot recovery | Tampered latest is quarantined; valid fork is rejected | PASS |
 | Snapshot filename validation | Noncanonical snapshot artifacts fail closed during recovery | PASS |
+| Snapshot payload canonical shape | Hash-valid noncanonical snapshot envelope is rejected | PASS |
 | Controller boundaries | All eight V1/V2 boundaries recover to `RECOVERY_REQUIRED` | PASS |
 | Dual-calendar missed execution | No-certified-Open path uses the exact schedule-bound prepared parent | PASS |
 | Real child interruption | Timed-out subprocess leaves `CHILD_EXECUTION` durable and recovery-fenced | PASS |
@@ -39,8 +40,13 @@ scheduler, production, or alpha state.
 python -m pytest -q
 ```
 
-Result: PASS at 100%, with only the three pre-existing pandas
-`FutureWarning` records. Focused new evidence is in:
+The earlier full-suite run at the preceding checkpoint was PASS at 100%, with
+only the three pre-existing pandas `FutureWarning` records. The subsequent
+canonical-payload hardening is covered by focused runtime/orchestration and
+cross-component suites. Two later full-suite reruns hit unrelated Windows
+`PermissionError [WinError 5]` atomic-replace fixture flakes; targeted rechecks
+of both failing tests passed, so no new full-suite PASS is claimed here.
+Focused new evidence is in:
 
 - `tests/test_e2e_paper_operational_controller_v1.py`;
 - `tests/test_e2e_paper_phase_binding_v1.py`;

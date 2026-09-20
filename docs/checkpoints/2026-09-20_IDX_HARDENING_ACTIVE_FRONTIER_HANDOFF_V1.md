@@ -109,12 +109,17 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   reuses the exact schedule-bound prepared parent;
 - latest-snapshot recovery rejects noncanonical snapshot filenames with a
   typed fail-closed error instead of leaking an untyped sorting failure;
+- snapshot loading replays the canonical snapshot builder and rejects a
+  hash-valid but noncanonical payload envelope;
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
-- full repository regression via `python -m pytest -q`: PASS; only three
-  pre-existing pandas `FutureWarning` records, no test failures;
+- the earlier full repository regression via `python -m pytest -q` passed at
+  the prior checkpoint with only three pre-existing pandas `FutureWarning`
+  records; two later full-suite reruns encountered unrelated Windows
+  `PermissionError [WinError 5]` atomic-replace fixture flakes in capture and
+  official-open tests, and each targeted recheck passed;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
 
