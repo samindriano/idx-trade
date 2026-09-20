@@ -318,3 +318,33 @@
 Do not turn structural success into predictive claims. Do not choose the
 eligibility population by convenience. Use the registries and reopen conditions
 before starting any old experiment again.
+## 2026-09-20 — free historical authority recovery
+
+- CNTX is now a concrete population-enumerator counterexample. It has zero
+  rows in the observed research panel but 1,258 anchor rows, including 458
+  `ACTIVE` rows from 2021-04-29 through 2024-08-01, and 1,581 official trading
+  rows. The panel/anchor replay is therefore observed-panel-complete only. The
+  981,940-key zero-mismatch result must not be described as population
+  completeness or survivorship safety.
+- KSEI and the issuer's report independently distinguish CNTX Series A
+  preference security `ID2000081902` from CNTB Series B common security. This
+  narrows the identity problem: a ticker-only population can conflate security
+  class and issuer. The direct retained CNTX page failed closed, so the
+  populated KSEI identity is retained as bounded official search evidence, not
+  silently replaced by the failed HTML response.
+- KSEI historical filters and issuer IR pages add real bounded history: the
+  retained January 2019/2021 ISIN queries have 110/52 notices and issuer pages
+  for 2013–2022 are reachable. A pinned derived GitHub mirror matches the local
+  CNTX numeric fields on 1,243 overlapping dates with zero mismatches. These
+  improve source discovery and sample security/event interpretation, not PIT
+  admission.
+- The remaining blockers are now sharper rather than merely larger: no
+  population-wide daily PIT security master, issuer/ISIN transition chain,
+  report/classification knowledge time, revision/vintage policy,
+  population-wide exchange-effective CA basis, or executable capacity source
+  was recovered. OJK/IDX delisted direct retrieval was access-limited and is
+  recorded as such, not treated as negative evidence.
+- The durable machine packet is
+  `research_knowledge/free_historical_authority_recovery_v1.json`; it must be
+  read with the source-capability matrix and the no-retry registry. Historical
+  research admission remains blocked.

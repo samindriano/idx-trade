@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.0",
+  "as_of": "2026-09-20",
+  "status": "SUPPORTED_BOUNDED_SURFACE_RECOVERY_NO_ADMISSION",
+  "scope": "Free/public historical authority recovery; outcome-blind capability, identity, timing, and corporate-action evidence only",
+  "protected_boundary": "CLOSED",
+  "branch": "codex/alpha-available-data-20260919",
+  "inputs": {
+    "anchor_path": "D:/Documents/Project/idx-v4-x1-clean-historical-input-stage-r2-20260820/tradability_anchors_1260.csv",
+    "anchor_sha256": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e",
+    "panel_census_path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-panel-anchor-state/panel_anchor_state_census_v1.json",
+    "panel_census_sha256": "85e21304bed8398873f7d04a3c4d7c5bd9e0a969e5cee6028c5ec1d8b98c0eaa"
+  },
+  "bounded_results": {
+    "cntx_panel_and_anchor": {
+      "panel_rows": 0,
+      "anchor_rows": 1258,
+      "anchor_active_rows": 458,
+      "anchor_no_trade_rows": 800,
+      "active_window": ["2021-04-29", "2024-08-01"],
+      "all_anchor_window": ["2021-04-29", "2026-07-29"],
+      "claim": "Panel replay is observed-panel-complete for its own keys only; it is not a historical population enumerator. CNTX is a confirmed counterexample to panel-absence-as-population-absence. The 981,940-key zero-mismatch result does not prove population completeness or survivorship safety."
+    },
+    "cntx_identity": {
+      "ksei_search_record": {
+        "url": "https://web.ksei.co.id/services/registered-securities/shares/lc/CNTX?setLocale=en-US",
+        "security_name": "Century Textile Industry Tbk Seri A",
+        "isin": "ID2000081902",
+        "type": "Saham Preference",
+        "listing_date": "1989-06-16",
+        "status": "Active",
+        "current_amount": 70000000,
+        "effective_date_isin": "2002-04-09"
+      },
+      "cntb_contrast_url": "https://web.ksei.co.id/services/registered-securities/shares/lc/CNTB?setLocale=en-US",
+      "issuer_report_claim": "The issuer's 2022 financial statements describe Series A and Series B separately, including 70,000,000 Series A and 130,000,000 Series B after the 2016 nominal-value split.",
+      "claim": "Ticker-only population logic can conflate two securities of one issuer. CNTX is not evidence that a missing common-equity ticker was silently dropped; it is a separate preference security with its own identity and corporate-action history."
+    },
+    "ksei_public_surface": {
+      "current_share_list_unique_codes": 984,
+      "current_share_list_contains_emtk": true,
+      "current_share_list_contains_cntx": false,
+      "current_share_list_contains_cntb": false,
+      "historical_isin_filter_year_options": [2003, 2026],
+      "january_2021_new_isin_notices": 52,
+      "january_2019_new_isin_notices": 110,
+      "direct_cntx_fetch": "FAIL_CLOSED_UNDEFINED_UNKNOWN",
+      "claim": "KSEI supplies a useful bounded security/ISIN/CA surface and public historical filters. It does not supply proven daily exchange eligibility, population completeness, row-level knowledge time, revision lineage, or a complete historical security master in this lane."
+    },
+    "cntx_corporate_action": {
+      "ksei_record_url": "https://web.ksei.co.id/services/registered-securities/shares/lc/CNTX?setLocale=en-US",
+      "observed_events": ["mandatory conversion 2016-08-16/2016-08-18", "cash dividends", "proxy voting", "voluntary conversion", "redemption 2026-07-30/2026-07-31"],
+      "additional_ksei_record_url": "https://web.ksei.co.id/ksei_news/read/13060/Reminder-Corporate-Action-Recording-Date-BBTN01D2NCD-IDSD18081692C-ISIF12XXMF-CNTX-CNTB-TUFI01BCN2-TUFI01ACN2-MBSS",
+      "claim": "For this bounded CNTX/CNTB sample, KSEI records security-specific event taxonomy and record/distribution dates. A sampled event record is not a population-wide price-basis or eligibility authority; event dates remain separate from a general transition contract unless the document explicitly states the trading schedule."
+    },
+    "public_mirror_crosscheck": {
+      "repository": "https://github.com/Pholenk/IDX-Dataset",
+      "commit": "9bb3b26bd28ab46bc2f3e74a7c03805ce053301b",
+      "mirror_cntx_rows": 1537,
+      "mirror_window": ["2020-01-02", "2026-05-29"],
+      "local_common_date_rows": 1243,
+      "numeric_field_mismatches": 0,
+      "mirror_has_delisting_date": false,
+      "claim": "The derived mirror is reproducible for overlapping CNTX numeric fields but adds no independent PIT, lifecycle, issuer/ISIN, revision, or admission authority. Exact row agreement is not population agreement."
+    },
+    "issuer_ir": {
+      "url": "https://www.toray.co.id/en/centex/annual/2021.html",
+      "year_pages_reached": [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022],
+      "financial_statement_period": "year ended 2022-03-31",
+      "claim": "Issuer reports provide bounded share-structure, listing, and historical event evidence. They do not prove when each fact became available to a researcher or establish daily historical universe membership."
+    }
+  },
+  "blocker_matrix": [
+    {
+      "blocker": "A_FINANCIAL_PIT_REVISION",
+      "current_state": "RAW_REPORT_AND_ISSUER_ARCHIVES_EXPANDED_BUT_VINTAGE_MISSING",
+      "sources_tried": ["official IDX report/XBRL index and archives", "issuer IR annual-report pages/PDF"],
+      "new_evidence": "Issuer annual pages 2013-2022 are reachable and a signed-period financial statement PDF was retained; the official index still has mutable File_Modified timing dispersion.",
+      "authority_upgrade": "Bounded report-content and issuer-archive discovery only.",
+      "residual": "No row-level publication/knowledge time, revision lineage, deterministic as-of retrieval, or reviewed concept/unit/restatement policy.",
+      "next_source_class": "Versioned filing-vintage archive or explicit owner policy binding report availability and revisions.",
+      "final_verdict": "BLOCKED"
+    },
+    {
+      "blocker": "B_UNIVERSE_IDENTITY",
+      "current_state": "PANEL_REPLAY_OBSERVED_ONLY; CNTX POPULATION GAP CONFIRMED",
+      "sources_tried": ["frozen panel/anchor census", "official IDX current directory/trading history", "KSEI registered securities", "issuer financial statements", "derived GitHub mirror"],
+      "new_evidence": "CNTX has zero panel rows but 458 ACTIVE anchor rows, official trading rows, and a security-specific Series A preference identity distinct from CNTB Series B.",
+      "authority_upgrade": "Panel-absence-as-population-absence is disproven; sample security identity is bounded.",
+      "residual": "No population-complete daily PIT master, issuer/ISIN transition chain, ticker reuse policy, delisted/relisted membership, or survivorship proof.",
+      "next_source_class": "Historical exchange membership/security-master vintages with issuer/ISIN continuity and effective/knowledge time.",
+      "final_verdict": "BLOCKED"
+    },
+    {
+      "blocker": "C_PIT_SECTOR_INDUSTRY",
+      "current_state": "OFFICIAL_RATIO_LABELS_PRESENT_BUT_EFFECTIVE_TIME_MISSING",
+      "sources_tried": ["official IDX ratio snapshots", "KSEI current activity-sector fields", "issuer IR profile/report"],
+      "new_evidence": "KSEI provides current activity-sector labels for sampled registered securities; no source supplies a versioned historical sector effective/knowledge timeline.",
+      "authority_upgrade": "Current sampled identity-sector cross-check only.",
+      "residual": "Historical PIT sector/industry membership and revision semantics remain unavailable; industryCode is empty in the retained ratio surface.",
+      "next_source_class": "Versioned IDX classification snapshots or dated exchange classification notices with population linkage.",
+      "final_verdict": "BLOCKED"
+    },
+    {
+      "blocker": "D_CA_PRICE_BASIS",
+      "current_state": "SAMPLE_EVENT_SEMANTICS_STRONGER; POPULATION_LINKAGE_MISSING",
+      "sources_tried": ["official IDX issued-history/announcement documents", "KSEI security pages and CA notices", "issuer financial statements"],
+      "new_evidence": "KSEI records CNTX/CNTB-specific mandatory conversion and the issuer report records series/listing/split history; a KSEI 2016 notice explicitly names both securities and the CA class.",
+      "authority_upgrade": "Bounded security/event taxonomy and one sample transition schedule.",
+      "residual": "No population-wide exchange-effective basis, issuer/ISIN linkage, revision, or event-to-window price contract.",
+      "next_source_class": "Security-specific exchange-effective transition documents linked to a complete event index and historical prices.",
+      "final_verdict": "BLOCKED"
+    },
+    {
+      "blocker": "E_EXECUTION_CAPACITY",
+      "current_state": "NO_FREE_HISTORICAL_CAPACITY_AUTHORITY_RECOVERED",
+      "sources_tried": ["official IDX EOD/trading history", "GitHub-derived daily mirror"],
+      "new_evidence": "CNTX daily rows and raw volume are available, but neither source supplies historical spread, queue, fill, or executable capacity semantics.",
+      "authority_upgrade": "Raw field discoverability only.",
+      "residual": "PIT capacity and execution model remain absent.",
+      "next_source_class": "Exchange/broker historical order-book or transaction-level archive with publication and capacity semantics.",
+      "final_verdict": "BLOCKED"
+    }
+  ],
+  "reopen_conditions": [
+    "Population-wide daily PIT membership with issuer/ISIN continuity and ticker-reuse handling.",
+    "Versioned report/classification/CA sources with publication or knowledge time and deterministic as-of retrieval.",
+    "Exchange-effective price-basis transitions linked to security identity and event revisions.",
+    "Historical execution/capacity data or an explicit policy-authorized proxy contract.",
+    "Explicit project-owner policy where the source evidence cannot determine eligibility semantics."
+  ],
+  "source_artifact_hashes": {
+    "ksei_shares_list.html": "513342d89ec48c609259d46e25910161428d3e084bad03276e3061f597feda19",
+    "ksei_cntx.html": "7114e7b7ad601657d71deab4db284d1d0bdd4e59c3e6e2bfe8be132aea6f4bf5",
+    "ksei_emtk.html": "4324dd5b663aa5b25833f894e03392e5ea7d4e5a113bf3b1778a54207b413bc7",
+    "ksei_isin_2021_01.html": "e1e1ec7ee5ba921c146bd4e2fc674a71bc20244d8bc535a76d2a3f36c8c41c3b",
+    "ksei_isin_2019_01.html": "8ecf1a9c23d1ce4435073a4f8193bbfcbde3efcf522d9e8f38f9edae20fa8ddb",
+    "issuer_financial_statements_2021_pdf": "96187cb8b9ad698cc1ad0de6f589164ed3319a3a36d28db1697bc541da74fe79",
+    "pholenk_cntx_csv": "6055f90a19135f1c68a96cfdc2312b1e3fb608da829608352bb511fe948392a5",
+    "official_cntx_trading_raw": "d33eedf4ac8f43de2ba2fa6a35c7b28af172200d7fbd96b68110a37801f77181"
+  },
+  "network_used_by_audit": false,
+  "canonical_mutation": false,
+  "provider_called_by_audit": false,
+  "historical_research_admission": "BLOCKED"
+}

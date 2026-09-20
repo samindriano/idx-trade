@@ -166,3 +166,22 @@ the current predictive block as the end of the knowledge program.
   session or price basis. The sample therefore narrows event taxonomy but does
   not reopen CA admission. Do not infer price adjustments, basis transitions,
   or historical repair from announcement/event dates.
+## 2026-09-20 — free historical authority recovery
+
+- A distinct-source search across KSEI archives/security pages, issuer IR
+  reports, official IDX trading records, and a pinned derived GitHub mirror
+  produced bounded identity, event, report-archive, and reproducibility
+  evidence. The OJK issuer list and IDX delisted download paths were inspected
+  but direct access was rejected/forbidden; that is access-limited evidence,
+  not a disappearance claim.
+- CNTX materially changes the interpretation of panel completeness: zero panel
+  rows coexist with 458 ACTIVE anchor rows and official trading rows. Treat
+  observed-panel replay completeness and historical population completeness as
+  separate properties in every future summary.
+- KSEI/issuer evidence exposes a security-class boundary (CNTX Series A
+  preference versus CNTB Series B common) and a bounded CA history. It does
+  not supply the missing population-wide PIT/security-master contract.
+- The next valuable source is no longer another same-family ticker snapshot.
+  It is a versioned PIT membership/identity source, report/classification
+  vintage contract, exchange-effective CA linkage, capacity archive, or an
+  explicit owner policy. Until one exists, no candidate admission is reopened.

@@ -536,3 +536,27 @@ checkpoint files; this file records why the next question changed.
   11,727 duplicate code/year/period groups, with two for revenue. Structural
   completeness therefore cannot be promoted into unique financial semantics or
   V2 substitution.
+## 2026-09-20 — free historical authority recovery
+
+- Reopened the data-authority frontier after the prior policy-authority gap and
+  selected CNTX as the highest-information test case. The retained panel/anchor
+  census confirms zero panel rows versus 1,258 anchor rows, including 458
+  `ACTIVE`; the official per-security route confirms 1,581 trading rows.
+- The durable conclusion is now explicit: observed-panel replay completeness is
+  not historical population completeness. The 981,940-key zero-mismatch replay
+  is not survivorship evidence.
+- Queried and retained KSEI current/security and historical ISIN surfaces. A
+  populated KSEI search record identifies CNTX Series A preference
+  `ID2000081902`; CNTB is a separate Series B common security. The direct CNTX
+  HTML fetch itself returned `UNDEFINED/UNKNOWN` and remains fail-closed.
+- Reached Centex/Toray issuer annual-report pages for 2013–2022 and retained a
+  2022-period financial-statement PDF. Its historical share-structure text
+  independently describes Series A/B and the 2016 nominal-value split.
+- Pinned the Pholenk `IDX-Dataset` commit and compared its CNTX CSV to the local
+  public CNTX file: 1,243 overlapping dates and zero mismatches across ten
+  numeric fields. This is a derived-mirror reproducibility result, not a new
+  authority.
+- OJK issuer-list and IDX delisted download attempts were ordinary public
+  requests but were rejected/forbidden. They remain source leads with no
+  negative interpretation. The detailed matrix, hashes, and no-admission verdict
+  are in `free_historical_authority_recovery_v1.json` and its checkpoint.
