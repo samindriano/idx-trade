@@ -170,7 +170,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   hash-bound Decision-seat policy gate, evidence, CA, identity, transition,
   lineage, migration, dividend-runtime, and E2E controller/orchestration
   suites; see `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at
-  verification head `938c8bc9` (source implementation `cda6a9e4`);
+  verification head `d2388f37` (source implementation `cda6a9e4`);
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
