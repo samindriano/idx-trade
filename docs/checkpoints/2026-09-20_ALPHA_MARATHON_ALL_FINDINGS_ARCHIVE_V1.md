@@ -861,3 +861,27 @@ protected data.
 
 The global interpretation is unchanged: NO-GO for protected predictive
 evaluation and no admission change. The new audit is a structural shadow only.
+
+## K. Post-archive continuation — runtime contract forensics
+
+The later read-only audit is recorded in
+`docs/checkpoints/2026-09-20_ALPHA_RUNTIME_CONTRACT_FORENSICS_RESULT_V1.md`.
+It refined, rather than amplified, two worker concerns:
+
+- The Decision V2 function itself accepts any strictly increasing previous
+  date, but the active pinned controller derives the immediate predecessor
+  from the official session calendar and requires that exact score artifact.
+  This is a low-level API hardening gap, not a confirmed production adjacency
+  failure.
+- The frozen 600-session panel contains no zero, nonfinite, or negative
+  `regular_market_value`: 503,797 joined rows, 155,679 eligible rows, and all
+  Top-30 C1-C4 rows are positive finite. The execution verifier's missing-to-
+  zero normalization and allocator zero-capacity behavior therefore remain a
+  latent contract risk, not an observed historical incidence.
+
+The same audit found that the pinned runtime's adapter-config verifier is
+defined and test-covered, but no production call site was found outside the
+definition/tests, and the E2E execution payload does not serialize the
+adapter-config hash. This is retained as configuration-lineage hardening
+work, with no current runtime mismatch proven and no code change authorized in
+this lane.
