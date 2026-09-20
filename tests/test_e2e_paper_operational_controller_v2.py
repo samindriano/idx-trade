@@ -99,9 +99,26 @@ def test_dual_calendar_missed_execution_uses_bound_prepared_parent(
     prepared_path.parent.mkdir(parents=True)
     prepared_payload = {
         "schema_version": "idx_trade_e2e_paper_prepared_execution_v1",
+        "status": "PREPARED_EXECUTION",
+        "decision_session_date": "2026-08-24",
         "execution_session_date": "2026-08-24",
+        "bootstrap": True,
         "required_tickers": ["BBCA"],
+        "state": {},
+        "current_score": {},
+        "previous_score": None,
+        "previous_execution": None,
+        "decision_plan": {},
+        "decision_plan_sha256": "",
+        "execution_plan": {},
+        "execution_plan_sha256": "",
         "eod_inputs": {"calendar": {"path": str(tmp_path / "calendar.csv")}},
+        "ca_reconciliation": {},
+        "ca_timing_matrix": {},
+        "decision_identity_binding": None,
+        "runtime_lineage": {},
+        "outcome_access": False,
+        "payload_sha256": "",
     }
     prepared_path.write_text(json.dumps(prepared_payload), encoding="utf-8")
 

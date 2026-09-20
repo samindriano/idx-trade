@@ -91,12 +91,27 @@ def _prepared(runtime: Path, eod):
         "status": "PREPARED_EXECUTION",
         "decision_session_date": "2026-08-24",
         "execution_session_date": "2026-08-26",
+        "bootstrap": True,
+        "required_tickers": ["AAA"],
+        "state": {},
+        "current_score": {},
+        "previous_score": None,
+        "previous_execution": None,
+        "decision_plan": {},
+        "decision_plan_sha256": "",
+        "execution_plan": {},
+        "execution_plan_sha256": "",
         "eod_inputs": {
             "calendar": {
                 "path": str(eod.official_calendar_path.resolve()),
                 "sha256": eod.official_calendar_sha256,
             }
         },
+        "ca_reconciliation": {},
+        "ca_timing_matrix": {},
+        "decision_identity_binding": None,
+        "runtime_lineage": {},
+        "outcome_access": False,
     }
     payload["payload_sha256"] = _canonical_hash(payload)
     path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")

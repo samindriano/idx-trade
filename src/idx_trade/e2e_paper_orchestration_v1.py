@@ -95,6 +95,202 @@ EXECUTION_TXN_SCHEMA = "idx_trade_e2e_paper_execution_transaction_v1"
 META_SCHEMA = "idx_trade_e2e_paper_meta_v1"
 INITIAL_NAV_IDR = 50_000_000.0
 
+_TOP_LEVEL_CANONICAL_KEYS: dict[str, tuple[frozenset[str], ...]] = {
+    T0_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "session_date",
+                "initial_nav_idr",
+                "historical_dividend_credit",
+                "zero_holdings",
+                "zero_pending_buys",
+                "zero_pending_sells",
+                "zero_receivables",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "state_sha256",
+                "payload_sha256",
+            }
+        ),
+    ),
+    PREPARED_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "bootstrap",
+                "required_tickers",
+                "state",
+                "current_score",
+                "previous_score",
+                "previous_execution",
+                "decision_plan",
+                "decision_plan_sha256",
+                "execution_plan",
+                "execution_plan_sha256",
+                "eod_inputs",
+                "ca_reconciliation",
+                "ca_timing_matrix",
+                "decision_identity_binding",
+                "runtime_lineage",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    EXECUTION_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "prepared_path",
+                "prepared_sha256",
+                "open_manifest_path",
+                "open_manifest_sha256",
+                "open_normalized_path",
+                "open_normalized_sha256",
+                "open_raw_source_path",
+                "open_raw_source_sha256",
+                "open_input_values_sha256",
+                "authority",
+                "upstream_path",
+                "field_semantics",
+                "fallback_policy",
+                "transport_policy",
+                "transport",
+                "ca_reconciliation",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "runtime_state_sha256",
+                "registry_sha256",
+                "execution_evidence",
+                "reconciliation_result",
+                "ca_timing_matrix",
+                "decision_identity_binding",
+                "runtime_lineage",
+                "fills",
+                "gross_turnover_idr",
+                "stamp_duty_idr",
+                "pending_transition_count",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    EXECUTION_TXN_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "execution_session_date",
+                "prepared_path",
+                "prepared_sha256",
+                "snapshot_path",
+                "snapshot_file_sha256",
+                "snapshot_payload",
+                "execution_body",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    META_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "last_score_manifest_path",
+                "last_score_manifest_sha256",
+                "last_score_session_date",
+                "last_execution_session_date",
+                "last_execution_path",
+                "last_execution_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "payload_sha256",
+            }
+        ),
+        frozenset(
+            {
+                "schema_version",
+                "last_score_manifest_path",
+                "last_score_manifest_sha256",
+                "last_score_session_date",
+                "last_execution_session_date",
+                "last_execution_path",
+                "last_execution_sha256",
+                "last_execution_status",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "payload_sha256",
+            }
+        ),
+    ),
+    "idx_trade_e2e_paper_missed_execution_v1": (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "reason",
+                "prepared_path",
+                "prepared_sha256",
+                "prior_runtime_snapshot_path",
+                "prior_runtime_snapshot_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "prior_state_sha256",
+                "result_state_sha256",
+                "open_manifest_present",
+                "prepared_order_expired",
+                "fills",
+                "gross_turnover_idr",
+                "costs_idr",
+                "no_retroactive_execution",
+                "ca_reconciliation",
+                "issued_at_jakarta",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "reason",
+                "prepared_path",
+                "prepared_sha256",
+                "schedule_binding_path",
+                "schedule_binding_sha256",
+                "execution_schedule_attestation_path",
+                "execution_schedule_attestation_sha256",
+                "prior_runtime_snapshot_path",
+                "prior_runtime_snapshot_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "prior_state_sha256",
+                "result_state_sha256",
+                "open_manifest_present",
+                "prepared_order_expired",
+                "fills",
+                "gross_turnover_idr",
+                "costs_idr",
+                "no_retroactive_execution",
+                "ca_reconciliation",
+                "issued_at_jakarta",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+}
+
 
 class E2EPaperOrchestrationError(RuntimeError):
     pass
@@ -196,6 +392,9 @@ def _read_verified_json(path: Path, schema: str) -> dict[str, Any]:
         raise E2EPaperOrchestrationError(f"E2E_JSON_INVALID:{path}") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != schema:
         raise E2EPaperOrchestrationError(f"E2E_SCHEMA_INVALID:{path}")
+    allowed = _TOP_LEVEL_CANONICAL_KEYS.get(schema)
+    if allowed is not None and frozenset(payload) not in allowed:
+        raise E2EPaperOrchestrationError(f"E2E_PAYLOAD_NOT_CANONICAL:{path}")
     return payload
 
 

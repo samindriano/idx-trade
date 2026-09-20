@@ -443,6 +443,20 @@ def test_t0_is_idempotent_and_rejects_divergent_inputs(tmp_path: Path) -> None:
         bootstrap_t0(root, session_date="2026-08-24", initial_nav_idr=1.0)
 
 
+def test_hash_valid_t0_extension_fails_closed_as_noncanonical(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    t0_path = bootstrap_t0(root, session_date="2026-08-24")
+    payload = json.loads(t0_path.read_text(encoding="utf-8"))
+    payload["unexpected_extension"] = True
+    body = dict(payload)
+    body.pop("payload_sha256")
+    payload["payload_sha256"] = _canonical_hash(body)
+    t0_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(E2EPaperOrchestrationError, match="PAYLOAD_NOT_CANONICAL"):
+        bootstrap_t0(root, session_date="2026-08-24")
+
+
 def test_t0_fails_before_mutation_when_runtime_snapshot_preexists(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     snapshot_dir = root / "forward_execution_v1_1" / "state_snapshots"
