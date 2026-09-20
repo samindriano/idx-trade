@@ -1,6 +1,6 @@
 # IDX-Trade Hardening Active Frontier Handoff V1
 
-Date: 2026-09-21  
+Date: 2026-09-21
 Lane: `codex/idx-contract-hardening-20260920`  
 Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 

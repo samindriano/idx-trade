@@ -1,6 +1,6 @@
 # IDX-Trade Contract Hardening and Runtime Remediation Marathon V1
 
-Date: 2026-09-21 (Asia/Jakarta)  
+Date: 2026-09-21 (Asia/Jakarta)
 Lane: isolated implementation `codex/idx-contract-hardening-20260920`  
 Status: `PHASE-1 FOUNDATION + PHASE-2 EXECUTION IN PROGRESS / NO PRODUCTION OR PROTECTED-OUTCOME ACCESS`
 
