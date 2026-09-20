@@ -124,6 +124,8 @@ The isolated lane currently contains:
 - `TRANSITION_BINDING-V1` hash-binds Decision identity resolutions and joins
   positive-quantity causes to same-session obligations, preserving explicit
   `RETRY_OBLIGATION` semantics;
+- orchestration replay requires and revalidates persisted Decision identity
+  evidence, rejecting missing or source-hash-tampered rows;
 - `RUNTIME_LINEAGE-V2` and controller `RECOVERY_REQUIRED` crash fence;
 - operational `BOUND` lineage is persisted/rechecked across synthetic
   prepare/execute/replay and config mismatch is rejected;
@@ -143,7 +145,7 @@ Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
 independent artifact challenge,
-reconciliation provenance, authoritative identity-source/child cause replay,
+reconciliation provenance, authoritative identity-source wiring,
 child-process runtime binding, independent crash/interruption challenge, and authorized
 automatic migration activation remain open; this is not a production promotion or phase
 closure.

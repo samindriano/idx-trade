@@ -61,6 +61,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   identity evidence and joins positive-quantity causes to the exact
   same-session obligation, exposing `RETRY_OBLIGATION` without changing
   Decision math;
+- orchestration replay requires persisted Decision identity evidence and
+  rejects missing or source-hash-tampered identity rows;
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
   payment-on-decision, payment-on-execution, and later payment boundaries;
   prepared matrices accept only hash-bound additive CA extensions;
@@ -89,7 +91,6 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   migration provenance artifact;
 - authorized automatic migration activation/persistence policy (the explicit
   verified-snapshot consumer is implemented);
-- operational use of identity evidence and cause joins through every child
-  script, including persisted replay/tamper coverage;
+- authoritative identity-source wiring through every child script;
 - child-process runtime binding and independent crash/interruption challenge;
 - independent final challenge.

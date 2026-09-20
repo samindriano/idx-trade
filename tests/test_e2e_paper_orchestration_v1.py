@@ -45,6 +45,7 @@ from idx_trade.v4_x1_execution_v1_verify import (
     _EOD_INPUT_TOKEN,
     _OPEN_INPUT_TOKEN,
 )
+from idx_trade.v4_x1_identity_contract_v1 import SecurityIdentityV1
 from idx_trade.forward_dividend_execution_v1_1 import _DIVIDEND_RECONCILIATION_TOKEN
 from idx_trade.official_open_evidence_v1 import (
     AUTHORITY as OFFICIAL_OPEN_AUTHORITY,
@@ -280,6 +281,81 @@ def test_bound_runtime_lineage_survives_execution_and_rejects_config_mismatch(
             open_inputs=_open(tmp_path, "2026-08-25", tickers),
             ca_reconciliation=ca,
             **{**bound, "runtime_config_sha256": "d" * 64},
+        )
+
+
+def test_identity_evidence_is_required_and_revalidated_on_orchestration_replay(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    identities = tuple(
+        SecurityIdentityV1(
+            canonical_security_id=f"ISSUER-{ticker}",
+            ticker=ticker,
+            instrument_class="COMMON_SHARE",
+            effective_from="2020-01-01",
+            effective_to=None,
+            identity_revision="R1",
+            source_ref=f"synthetic://identity/{ticker}",
+            source_evidence_sha256="a" * 64,
+        )
+        for ticker in tickers
+    )
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+        security_identities=identities,
+    )
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["decision_identity_binding"]["binding_type"] == (
+        "DECISION_IDENTITY"
+    )
+    execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+        security_identities=identities,
+    )
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_DECISION_IDENTITY_EVIDENCE_REQUIRED_FOR_REPLAY",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+    tampered = list(identities)
+    tampered[0] = replace(tampered[0], source_evidence_sha256="b" * 64)
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_DECISION_IDENTITY_BINDING_INVALID",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+            security_identities=tuple(tampered),
         )
 
 
