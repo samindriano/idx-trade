@@ -65,6 +65,9 @@ The system tracks target membership but not target quantity obligations. A posit
   The pinned runtime emits two selected `ABCD` rows from `ABCD` and `ABCD.JK`
   input aliases; the later Decision adapter rejects the duplicate, but the
   universe origin has no uniqueness guard.
+- Runtime-config revalidation checkpoint: `2026-09-20_IDX_RUNTIME_CONFIG_ARTIFACT_IDENTITY_REVALIDATION_V1.md`.
+  At current runtime HEAD `402fca4b...`, config/runner hashes remain present in
+  the loader but absent from prepared/execution orchestration artifact identity.
 
 ## Immediate next questions
 
@@ -80,6 +83,8 @@ The system tracks target membership but not target quantity obligations. A posit
    separately authorized implementation lane?
 6. Which other row-oriented consumers can receive the duplicate universe
    output before the Decision duplicate-ticker guard?
+7. What separately authorized versioned stage/artifact contract can bind
+   runtime config and runner identity without rewriting historical artifacts?
 
 ## Constraints
 

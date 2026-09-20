@@ -657,6 +657,12 @@ historical alpha archive:
   input aliases into two selected `ABCD` rows with ranks 1/2. The later
   Decision adapter rejects the duplicate, but the universe origin does not
   enforce canonical-key uniqueness; no runtime fix was applied.
+- `2026-09-20_IDX_RUNTIME_CONFIG_ARTIFACT_IDENTITY_REVALIDATION_V1.md`
+  revalidates the config-lineage gap at current runtime HEAD `402fca4b...`:
+  loader fields `config_sha256`/`runner_sha256` are present, while prepared and
+  completed orchestration artifact identity still omits them. This confirms a
+  current artifact reproducibility blocker without executing or mutating the
+  runtime.
 
 The durable rolling controls for this marathon are now:
 
