@@ -549,6 +549,12 @@ historical alpha archive:
   state remains ticker-only. This is `FAIL —
   UNIVERSE_IDENTITY_AND_WARMUP_BOUNDARY_NOT_PROVEN`; no policy or source fix
   was applied.
+- `2026-09-20_IDX_EVALUATION_IDENTITY_CONTRACT_AUDIT_V1.md`:
+  the synthetic-only prospective suite passed 120/120, but the pure metric
+  evaluator accepts `ALIS` and `ALIS.JK` as distinct issuers while the final
+  score-artifact gate normalizes `.JK` and rejects the collision. This is
+  `FAIL — EVALUATION_IDENTITY_CONTRACT_SPLIT`; no source or data fix was
+  applied.
 
 The updated system-level belief is therefore:
 
