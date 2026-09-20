@@ -646,6 +646,12 @@ historical alpha archive:
   present, but the durable snapshot has no obligation ID, remaining quantity,
   attempt history, or cancellation lineage. The proposed remediation can be
   additive/versioned, but current hashes do not prove quantity completeness.
+- `2026-09-20_IDX_OBLIGATION_ARTIFACT_MIGRATION_AUDIT_V1.md` records a 6/6
+  fail-closed migration audit: complete fills, explicit zero-lot pending, and
+  positive partials with preserved fill vectors are distinguishable, while a
+  snapshot-only positive position remains `UNKNOWN_ORPHANED_PARTIAL` and a
+  quantity inversion requires reconciliation. This is an isolated harness
+  result; no runtime migration or historical rewrite was performed.
 
 The durable rolling controls for this marathon are now:
 

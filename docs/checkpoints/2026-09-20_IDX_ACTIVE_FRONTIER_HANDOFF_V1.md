@@ -57,14 +57,23 @@ The system tracks target membership but not target quantity obligations. A posit
 - Spec harness checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLAY_HARNESS_V1.md`.
 - SELL/replacement harness checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLACEMENT_REPLAY_V1.md`.
 - Artifact boundary checkpoint: `2026-09-20_IDX_OBLIGATION_ARTIFACT_SERIALIZATION_BOUNDARY_V1.md`.
+- Migration audit checkpoint: `2026-09-20_IDX_OBLIGATION_ARTIFACT_MIGRATION_AUDIT_V1.md`.
+  The isolated 6/6 harness recovers only complete fills, explicit zero-lot
+  pending, and positive partials backed by preserved fill vectors; a
+  snapshot-only positive position remains `UNKNOWN_ORPHANED_PARTIAL`.
 
 ## Immediate next questions
 
-1. Can an isolated versioned replay harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
-2. Which versioned event-level fields can be added to actual snapshots/fills without changing the old oracle?
-3. Which migration fixture classes can be handled as complete, zero-lot pending, or `UNKNOWN_ORPHANED_PARTIAL` without fabricating quantity?
-4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
-5. What evidence would justify moving the proposal from design-only to a separately authorized implementation lane?
+1. Which real retained legacy fixtures contain enough fill-vector evidence to be
+   migrated as complete, zero-lot pending, or recoverable partial?
+2. Can an authorized versioned replay harness prove one obligation identity
+   across partial fill, retry, CA payment, reversal, and restart?
+3. Which versioned event-level fields can be added to actual snapshots/fills
+   without changing the old oracle?
+4. Which recovery invariant should reconcile the obligation ledger after
+   restart or interrupted execution?
+5. What evidence would justify moving the proposal from design-only to a
+   separately authorized implementation lane?
 
 ## Constraints
 
