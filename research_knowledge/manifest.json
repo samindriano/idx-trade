@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "knowledge_base_id": "idx_trade_alpha_durable_research_2026_09_20",
+  "generated_date": "2026-09-20",
+  "status": "ACTIVE",
+  "scope": "outcome_blind_pre_admission_research",
+  "eligibility_authority_status": "POLICY_AUTHORITY_MISSING",
+  "lane": {
+    "branch": "codex/alpha-available-data-20260919",
+    "worktree": "C:/Users/Sam/.codex/worktrees/idx-alpha-available-data-20260919",
+    "baseline": "58f094b8",
+    "head_at_creation": "a718756c359ea214755b9b7f93480f73323eb9f9",
+    "protected_outcome_state": "CLOSED",
+    "canonical_mutation": false,
+    "production_cloud_capture_telemetry_mutation": false
+  },
+  "evidence_policy": {
+    "structural_is_not_predictive": true,
+    "capability_is_not_admission": true,
+    "packet_pass_is_not_executable": true,
+    "lane_pass_is_process_scope_only": true,
+    "unknown_blocks": true,
+    "protected_payloads_persisted": false
+  },
+  "files": [
+    "experiment_registry.jsonl",
+    "findings_index.jsonl",
+    "no_retry_registry.jsonl",
+    "source_capability_matrix.json",
+    "research_journal.md",
+    "knowledge_synthesis.md",
+    "open_questions.md",
+    "research_frontier.md",
+    "reproducibility.md"
+  ],
+  "counts": {
+    "experiment_registry_entries": 28,
+    "findings_index_entries": 19,
+    "no_retry_registry_entries": 12,
+    "source_capability_entries": 17,
+    "human_synthesis_documents": 5
+  },
+  "counting_rule": "JSONL line counts are authoritative; entries are append-only and reference evidence-of-record paths.",
+  "authoritative_readins": [
+    "docs/checkpoints/2026-09-20_ALPHA_MARATHON_AUDIT_HANDOFF_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_LONG_RUN_HANDOFF_TO_CHATGPT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md",
+    "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md",
+    "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md"
+  ]
+}
