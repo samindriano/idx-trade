@@ -156,6 +156,9 @@ The isolated lane currently contains:
 - prepared orchestration replay loads the exact declared parent snapshot,
   reconstructs the embedded Decision plan from that parent, and rejects a
   rehashed nested plan while preserving valid idempotent reruns;
+- prepared orchestration replay also reconstructs and exact-compares the
+  nested execution plan, rejecting a rehashed forged plan before idempotent
+  return;
 - persisted execution evidence replay canonically parses and reevaluates
   intrinsic fills, state, turnover, pending, and reconciliation invariants;
 - CA timing verification rejects hash-valid noncanonical rows and inconsistent
@@ -202,7 +205,7 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`e5040346` passes `239/239` across the latest
+`f9d323bd` passes `242/242` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
 state-level explicit cancellation/relinquishment replay, evidence, CA,
 identity, transition, lineage, migration, dividend-runtime, and E2E
@@ -215,7 +218,7 @@ live provider/scheduler interruption validation, automatic migration activation,
 and the remaining Decision-seat policy semantics are still open. Explicit
 cancellation/relinquishment is implemented only as a caller-supplied,
 parent-bound transition; it is never inferred from target membership. The
-prepared Decision-plan replay gap is covered by `e5040346`; this is not a
+prepared Decision/execution-plan replay gap is covered by `f9d323bd`; this is not a
 production promotion or phase closure.
 
 ## Boundaries

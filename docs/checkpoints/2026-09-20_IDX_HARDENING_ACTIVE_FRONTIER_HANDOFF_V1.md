@@ -103,6 +103,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - prepared orchestration replay now loads the exact declared parent snapshot,
   reconstructs the embedded Decision plan from that parent, and rejects a
   rehashed nested plan without breaking valid idempotent reruns;
+- prepared orchestration replay also reconstructs and exact-compares the
+  nested execution plan, rejecting a rehashed forged plan before idempotent
+  return;
 - persisted execution evidence is canonically parsed and intrinsically
   reevaluated during replay, so rehashed aggregate/state/fill tamper is rejected;
 - transition-binding verification now enforces canonical identity-resolution
@@ -151,13 +154,13 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `239/239` for the
+- a fresh current-head regression challenge is also PASS at `242/242` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
   controller/orchestration suites; see
   `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at source commit
-  `e5040346`;
+  `f9d323bd`;
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
@@ -165,8 +168,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   boolean position shares before whole-lot validation; the follow-up challenge
   is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `e5040346` (prepared Decision-plan replay
-  binding), `9dacf7e6` (strict position-share validation),
+- continuation commits include `f9d323bd` (prepared Decision/execution-plan
+  replay binding), `e5040346` (prepared Decision-plan replay binding),
+  `9dacf7e6` (strict position-share validation),
   `31e05ee1` (boolean rank validation),
   `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart

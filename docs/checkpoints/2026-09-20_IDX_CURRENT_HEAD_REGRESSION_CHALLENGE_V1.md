@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `e5040346`
+Verification revision: `f9d323bd`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`239/239 PASS`.
+`242/242 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -39,7 +39,8 @@ position shares before whole-lot validation, preventing lossy `100.9 -> 100`
 coercion. Prepared replay now loads and verifies the exact parent snapshot named
 by the prepared artifact, reconstructs the embedded Decision plan from that
 parent, and rejects a rehashed nested plan while preserving valid idempotent
-reruns.
+reruns. The same exact-parent replay gate now covers the nested execution plan;
+rehashing a forged execution-plan payload is rejected before idempotent return.
 
 Earlier in this lane, the full repository command was also attempted twice
 after the preceding contract additions.
@@ -48,7 +49,7 @@ Both runs reached the end of the suite but encountered the known Windows
 `tests/test_official_open_evidence_v1.py` and once in
 `tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
 run in isolation. No contract-hardening test failed; the expanded bounded
-239-test result above is the current clean evidence for this lane.
+242-test result above is the current clean evidence for this lane.
 
 ## Verification command
 
