@@ -119,7 +119,35 @@ The interpretation is important: a lower mean turnover or lower proxy burden
 does not prove better economics when the denominator is not executable capacity
 and the cost is not empirically calibrated.
 
-## 5. Interactions that matter system-wide
+## 5. Direct aggregate-order synthetic observation
+
+The pinned execution code was exercised in an isolated scratch extraction with:
+
+- NAV/cash: Rp50,000,000;
+- ten simultaneous BUY intents;
+- raw close/Open: Rp1,000 per name;
+- regular-market-value: Rp100,000,000 per name;
+- per-name capacity rule: 1% of reference value.
+
+Observed result:
+
+```text
+filled_names       = 10
+aggregate_gross    = Rp9,008,999.999999998
+max_name_capacity  = Rp1,000,000
+capacity_sum       = Rp10,000,000
+pending_buys       = 0
+cash_after         = Rp40,977,486.499999985
+```
+
+Each name stayed within its individual capacity guard and the execution passed,
+but there was no aggregate session liquidity budget, queue model, or correlated
+order-load limit. The result is therefore a direct confirmation of a hidden
+contract assumption: capacity is enforced per name, not for the portfolio's
+combined opening order set. It is not, by itself, proof that Rp9m is unsafe;
+the missing aggregate policy is the defect/UNKNOWN.
+
+## 6. Interactions that matter system-wide
 
 1. **Decision churn × fixed friction:** high replacement rates repeatedly pay the
    same nominal cost and can make small structural edge claims uneconomic.
@@ -136,7 +164,7 @@ and the cost is not empirically calibrated.
 6. **Per-name capacity × aggregate session load:** ten individually permitted
    orders can still exceed a realistic opening-liquidity budget.
 
-## 6. Verdict
+## 7. Verdict
 
 `COST_ARITHMETIC_PASS_BOUNDED / EXECUTABLE_ECONOMICS_UNKNOWN`
 
@@ -144,7 +172,7 @@ The current model is a deterministic paper-cost scenario with local cash/lot/
 capacity guards. It is not evidence of realized fills, executable capacity, or
 net profitability.
 
-## 7. Highest-value next tests
+## 8. Highest-value next tests
 
 Without opening protected outcomes, the next useful synthetic tests are:
 
@@ -158,4 +186,3 @@ Without opening protected outcomes, the next useful synthetic tests are:
   cash.
 
 No provider call, model sweep, retry, or production mutation was performed.
-
