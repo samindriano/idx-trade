@@ -54,6 +54,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - identity alias/revision intervals and unresolved lookup are fail-closed;
 - execution evidence emits structured exposure/cash cause records with
   remainder and next-action semantics;
+- `TRANSITION_BINDING-V1` resolves Decision tickers against caller-supplied
+  identity evidence and joins positive-quantity causes to the exact
+  same-session obligation, exposing `RETRY_OBLIGATION` without changing
+  Decision math;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - exact base/runtime lineage remains recorded;
@@ -67,7 +71,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - quantity-bearing execution evidence and evaluator replay;
 - execution artifact restart binding and tamper/replay matrix;
 - reconciliation-result artifact replay and mismatch matrix;
-- identity/cause downstream binding into obligations and next Decision;
+- operational use of identity evidence and cause joins through every child
+  script, including persisted replay/tamper coverage;
 - operational BOUND lineage through child scripts and controller crash/recovery
   replay at each side-effect boundary;
 - independent final challenge.

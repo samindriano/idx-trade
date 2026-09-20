@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import hashlib
 import json
 import math
@@ -12,6 +12,10 @@ from .v4_x1_decision_v1_contract import DecisionV1Error
 from .v4_x1_execution_cause_v1 import (
     ExecutionCauseV1,
     derive_execution_causes,
+)
+from .v4_x1_transition_binding_v1 import (
+    build_cause_obligation_binding_v1,
+    verify_transition_binding_payload,
 )
 from .v4_x1_execution_v1_contract import (
     ExecutionOrderPlan,
@@ -82,6 +86,7 @@ class ExecutionEvidenceV2:
     reconciliation_required: bool
     rule_id: str
     causes: tuple[ExecutionCauseV1, ...] = ()
+    cause_obligation_binding: dict[str, Any] | None = None
 
     def payload(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -99,6 +104,7 @@ class ExecutionEvidenceV2:
             "reconciliation_required": self.reconciliation_required,
             "rule_id": self.rule_id,
             "causes": [row.payload() for row in self.causes],
+            "cause_obligation_binding": self.cause_obligation_binding,
         }
         body["payload_sha256"] = _canonical_hash(body)
         return body
@@ -248,6 +254,26 @@ def evaluate_execution_evidence_v2(
         checks.append("reconciliation_flag")
     else:
         errors.append("EXECUTION_EVIDENCE_V2_RECONCILIATION_FLAG_MISMATCH")
+    if evidence.cause_obligation_binding is None:
+        if evidence.causes:
+            errors.append("EXECUTION_EVIDENCE_V2_CAUSE_OBLIGATION_BINDING_MISSING")
+    else:
+        try:
+            binding = verify_transition_binding_payload(
+                evidence.cause_obligation_binding
+            )
+            if binding.get("binding_type") != "CAUSE_OBLIGATION":
+                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_TYPE_MISMATCH")
+            if binding.get("execution_session_date") != evidence.execution_session_date:
+                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_SESSION_MISMATCH")
+            cause_ids = [row.cause_id for row in evidence.causes]
+            join_ids = [row.get("cause_id") for row in binding.get("joins", ())]
+            if cause_ids != join_ids:
+                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_ROWS_MISMATCH")
+            else:
+                checks.append("cause_obligation_binding")
+        except DecisionV1Error as exc:
+            errors.append(str(exc))
 
     return ExecutionEvidenceEvaluation(
         schema_version=EXECUTION_EVIDENCE_SCHEMA,
@@ -282,6 +308,13 @@ def build_execution_evidence_v2(
         reconciliation_required=bool(result.reconciliation_required),
         rule_id=result.rule_id,
         causes=derive_execution_causes(result, state_before=state_before),
+    )
+    evidence = replace(
+        evidence,
+        cause_obligation_binding=build_cause_obligation_binding_v1(
+            result,
+            evidence.causes,
+        ),
     )
     evaluation = evaluate_execution_evidence_v2(
         evidence,

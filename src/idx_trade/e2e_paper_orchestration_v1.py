@@ -49,6 +49,7 @@ from .v4_x1_runtime_lineage_v2 import (
     build_runtime_lineage_v2,
     verify_runtime_lineage_v2,
 )
+from .v4_x1_transition_binding_v1 import verify_decision_identity_binding_v1
 from .v4_x1_decision_v1_contract import DecisionV1Error, VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
 from .v4_x1_decision_v2_minimal import plan_v4_x1_decision_v2_minimal
@@ -69,6 +70,7 @@ from .v4_x1_sizing_v1_decision_v2_adapter import (
     VerifiedDecisionV2SizingPlan,
     verify_decision_v2_plan_for_sizing,
 )
+from .v4_x1_identity_contract_v1 import SecurityIdentityV1
 from .decision_v2_minimal import DecisionV2Plan, DecisionV2ShadowState
 
 
@@ -947,6 +949,7 @@ def prepare_post_eod(
     implementation_commit: str | None = None,
     runtime_config_sha256: str | None = None,
     entrypoint_sha256: str | None = None,
+    security_identities: Sequence[SecurityIdentityV1] | None = None,
 ) -> PreparedExecutionResult:
     """Build one immutable PREPARED_EXECUTION artifact without accessing Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -1007,7 +1010,11 @@ def prepare_post_eod(
         )
     )
     verified_sizing = verify_decision_v2_plan_for_sizing(
-        plan, current_score, previous_score, decision_shadow
+        plan,
+        current_score,
+        previous_score,
+        decision_shadow,
+        security_identities=security_identities,
     )
     order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
         verified_sizing,
@@ -1059,6 +1066,11 @@ def prepare_post_eod(
             "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
             "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
             "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+            "decision_identity_binding_sha256": (
+                None
+                if verified_sizing.identity_binding is None
+                else verified_sizing.identity_binding["payload_sha256"]
+            ),
         },
     )
     payload = {
@@ -1086,6 +1098,7 @@ def prepare_post_eod(
             "calendar": _path_sha(eod_inputs.official_calendar_path, "E2E_CALENDAR_MISSING"),
         },
         "ca_reconciliation": ca_payload,
+        "decision_identity_binding": verified_sizing.identity_binding,
         "runtime_lineage": prepared_lineage,
         "outcome_access": False,
     }
@@ -1212,6 +1225,7 @@ def execute_preopen(
     implementation_commit: str | None = None,
     runtime_config_sha256: str | None = None,
     entrypoint_sha256: str | None = None,
+    security_identities: Sequence[SecurityIdentityV1] | None = None,
 ) -> CompletedExecutionResult:
     """Verify one prepared parent and execute exactly once at official Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -1230,6 +1244,25 @@ def execute_preopen(
         implementation_commit=implementation_commit,
         runtime_config_sha256=runtime_config_sha256,
     )
+    persisted_identity_binding = payload.get("decision_identity_binding")
+    if persisted_identity_binding is not None:
+        if security_identities is None:
+            raise E2EPaperOrchestrationError(
+                "E2E_DECISION_IDENTITY_EVIDENCE_REQUIRED_FOR_REPLAY"
+            )
+        try:
+            verify_decision_identity_binding_v1(
+                persisted_identity_binding,
+                security_identities,
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_DECISION_IDENTITY_BINDING_INVALID"
+            ) from exc
+    elif security_identities is not None:
+        raise E2EPaperOrchestrationError(
+            "E2E_UNEXPECTED_DECISION_IDENTITY_EVIDENCE"
+        )
     decision_date = _date(payload.get("decision_session_date"))
     execution_date = _date(payload.get("execution_session_date"))
     if current_score.session_date != decision_date or eod_inputs.session_date != decision_date or open_inputs.session_date != execution_date:
@@ -1441,7 +1474,15 @@ def execute_preopen(
         sizing_events,
         session_date=decision_date,
     )
-    verified_sizing = verify_decision_v2_plan_for_sizing(plan, current_score, previous_score, shadow)
+    verified_sizing = verify_decision_v2_plan_for_sizing(
+        plan,
+        current_score,
+        previous_score,
+        shadow,
+        security_identities=security_identities,
+    )
+    if verified_sizing.identity_binding != payload.get("decision_identity_binding"):
+        raise E2EPaperOrchestrationError("E2E_DECISION_IDENTITY_BINDING_MISMATCH")
     order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
         verified_sizing,
         state,
@@ -1577,6 +1618,11 @@ def execute_preopen(
             "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
             "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
             "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+            "decision_identity_binding_sha256": (
+                None
+                if verified_sizing.identity_binding is None
+                else verified_sizing.identity_binding["payload_sha256"]
+            ),
         },
     )
     execution_body = {
@@ -1610,6 +1656,7 @@ def execute_preopen(
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
         "execution_evidence": execution_evidence_payload,
         "reconciliation_result": reconciliation_result_payload,
+        "decision_identity_binding": verified_sizing.identity_binding,
         "runtime_lineage": execution_lineage,
         "fills": [asdict(x) for x in result.base_result.fills],
         "gross_turnover_idr": result.base_result.gross_turnover_idr,

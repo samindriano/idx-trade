@@ -21,6 +21,7 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPosition,
     paper_state_hash,
 )
+from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 from idx_trade.v4_x1_sizing_v1 import SizingPlan, _SIZING_PLAN_TOKEN
 
 
@@ -55,10 +56,27 @@ def _plan(state: PaperPortfolioState) -> ExecutionOrderPlan:
 
 def test_execution_evidence_v2_replays_quantity_and_parent_state() -> None:
     before = PaperPortfolioState("2026-09-01", 1_000_000.0, ())
+    obligation = plan_obligation(
+        obligation_id="2026-09-02:BUY:BBCA:test",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=100,
+        session_date="2026-09-01",
+        parent_state_sha256=paper_state_hash(before),
+    )
+    obligation = apply_fill(
+        obligation,
+        event_id="2026-09-02:BUY:BBCA:test:FILL",
+        session_date="2026-09-02",
+        filled_shares=100,
+        reason="SIMULATED_FILLED",
+        parent_state_sha256=paper_state_hash(before),
+    )
     after = PaperPortfolioState(
         "2026-09-02",
         998_998.5,
         (PaperPosition("BBCA", 100),),
+        obligations=(obligation,),
     )
     plan = _plan(before)
     result = ExecutionResult(
