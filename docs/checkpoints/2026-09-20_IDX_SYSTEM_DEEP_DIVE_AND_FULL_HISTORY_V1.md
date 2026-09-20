@@ -684,6 +684,11 @@ historical alpha archive:
   tickers. Distinct no-challenger and capacity-limited histories can therefore
   share a state hash. This is a causal observability/economic-interpretation
   gap, not proof of arithmetic corruption, and no runtime/data fix was applied.
+- `2026-09-20_IDX_LEGACY_OBLIGATION_FIXTURE_INVENTORY_V1.md` inventories the
+  exact pinned runtime checkout and finds no retained execution/snapshot/fill
+  artifact for real obligation migration. The synthetic 6/6 migration audit
+  therefore remains a design/compatibility result only; no legacy residual is
+  inferred and no external/protected artifact was opened.
 
 The durable rolling controls for this marathon are now:
 

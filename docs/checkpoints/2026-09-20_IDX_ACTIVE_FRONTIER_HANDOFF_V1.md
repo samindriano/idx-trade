@@ -79,11 +79,16 @@ The system tracks target membership but not target quantity obligations. A posit
   Decision artifacts preserve `capacity_state`/`unfilled_slots`, but the
   restartable state and shadow reconstruction do not; no-challenger and
   capacity-limited histories can therefore converge to the same state hash.
+- Legacy fixture inventory checkpoint: `2026-09-20_IDX_LEGACY_OBLIGATION_FIXTURE_INVENTORY_V1.md`.
+  The pinned runtime checkout is clean but contains no retained execution,
+  snapshot, or fill-vector fixture; the migration harness remains synthetic
+  until an authorized archive/artifact owner supplies provenance-bound data.
 
 ## Immediate next questions
 
-1. Which real retained legacy fixtures contain enough fill-vector evidence to be
-   migrated as complete, zero-lot pending, or recoverable partial?
+1. Which authorized external/archive source can provide real retained legacy
+   fixtures with enough fill-vector evidence to be migrated as complete,
+   zero-lot pending, or recoverable partial?
 2. Can an authorized versioned replay harness prove one obligation identity
    across partial fill, retry, CA payment, reversal, and restart?
 3. Which versioned event-level fields can be added to actual snapshots/fills
