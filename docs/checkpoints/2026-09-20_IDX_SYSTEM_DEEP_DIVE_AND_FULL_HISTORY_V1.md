@@ -562,6 +562,12 @@ historical alpha archive:
   writers also replace existing destinations and are not immutable evidence
   writers. Verdict: `FAIL — DUPLICATE-DATE STORAGE INPUT NOT FAIL-CLOSED`;
   no source or data fix was applied.
+- `2026-09-20_IDX_PRICE_CA_REPRESENTATION_AUDIT_V1.md`:
+  the data-gate slice passed 7/7, but malformed optional split/dividend values
+  are coerced to `NaN` and then filled as zero, making invalid CA input look
+  like a no-event; duplicate dates are also silently reduced to the last row.
+  Verdict: `FAIL — INVALID OPTIONAL CA VALUES ARE NOT PRESERVED AS UNKNOWN`;
+  no source or data fix was applied.
 
 The updated system-level belief is therefore:
 
