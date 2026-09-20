@@ -43,7 +43,11 @@ from idx_trade.v4_x1_sizing_v1_decision_v2_adapter import (
     _VERIFIED_DECISION_V2_SIZING_PLAN_TOKEN,
     verify_decision_v2_plan_for_sizing,
 )
-from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
+from idx_trade.v4_x1_quantity_obligation_v1 import (
+    apply_fill,
+    cancel_remaining,
+    plan_obligation,
+)
 
 
 def _score(session_date, rows):
@@ -382,6 +386,84 @@ def test_active_obligation_reversal_fails_closed_without_explicit_cancellation(
                 {"AAA": 1000.0, "BBB": 1000.0},
             ),
         )
+
+
+@pytest.mark.parametrize("status", ["CANCELED", "RELINQUISHED"])
+def test_explicit_obligation_close_allows_decision_reversal(tmp_path, status):
+    planned = plan_obligation(
+        obligation_id=f"BUY-EXPLICIT-CLOSE-{status}",
+        ticker="AAA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-21",
+    )
+    partial = apply_fill(
+        planned,
+        event_id=f"FILL-EXPLICIT-CLOSE-{status}",
+        session_date="2026-08-24",
+        filled_shares=2_400,
+        reason="PARTIAL",
+    )
+    closed = cancel_remaining(
+        partial,
+        event_id=f"CLOSE-EXPLICIT-{status}",
+        session_date="2026-08-24",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status=status,
+    )
+    assert closed.status == status
+    assert closed.remaining_shares == 0
+    assert closed.filled_shares + closed.relinquished_shares == 5_000
+
+    state = PaperPortfolioState(
+        "2026-08-24",
+        50_000_000,
+        (PaperPosition("AAA", 2_400),),
+        obligations=(closed,),
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / f"runtime-{status}",
+        fd.DividendAwarePaperState(base_state=state),
+    )
+    state = runtime.load_latest_runtime_snapshot(
+        tmp_path / f"runtime-{status}"
+    ).state.base_state
+    plan = _plan(
+        current_shadow=("AAA",),
+        target=("BBB",),
+        buys=(DecisionV2Intent("BUY_INTENT", "BBB", 1, "EXPLICIT_REVERSAL"),),
+        sells=(DecisionV2Intent("SELL_INTENT", "AAA", 21, "EXPLICIT_REVERSAL"),),
+        date="2026-08-24",
+    )
+
+    order = prepare_execution_v1_from_decision_v2(
+        _synthetic_verified(plan),
+        state,
+        eod_inputs=_eod(
+            "2026-08-24",
+            "2026-08-25",
+            {"AAA": 1_000.0, "BBB": 1_000.0},
+            {"AAA": 1_000_000_000.0, "BBB": 1_000_000_000.0},
+        ),
+    )
+    assert [row.ticker for row in order.effective_buy_intents] == ["BBB"]
+    assert [row.ticker for row in order.sells] == ["AAA"]
+
+    result = execute_open_v1(
+        order,
+        state,
+        open_inputs=_open("2026-08-25", {"AAA": 1_000.0, "BBB": 1_000.0}),
+        ca_attestation=_ca("2026-08-24", "2026-08-25", ["AAA", "BBB"]),
+    )
+    assert [(row.ticker, row.shares) for row in result.state_after.positions] == [
+        ("BBB", 5_200)
+    ]
+    assert not result.state_after.pending_buys
+    assert not result.state_after.pending_sells
+    assert all(row.remaining_shares == 0 for row in result.state_after.obligations)
+    assert {
+        row.status for row in result.state_after.obligations
+    } >= {status, "FILLED"}
 
 
 def test_decision_v2_shadow_must_match_paper_plus_pending_lineage():
