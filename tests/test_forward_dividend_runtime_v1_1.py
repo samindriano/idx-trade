@@ -28,6 +28,9 @@ from idx_trade.v4_x1_execution_v1_contract import (
     OBLIGATION_V1_STATE,
     UNKNOWN_ORPHANED_PARTIAL,
     classify_state_for_migration,
+    close_obligation_explicitly,
+    paper_state_hash,
+    pending_intents_from_obligations,
 )
 from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 
@@ -180,6 +183,61 @@ def test_legacy_state_payload_omits_new_contract_and_new_state_round_trips(
     assert "obligations" in json.loads(snapshot.path.read_text(encoding="utf-8"))[
         "state"
     ]["base_paper_state"]
+
+
+def test_explicit_close_round_trips_through_v2_runtime_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-24",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        session_date="2026-08-24",
+        filled_shares=2_400,
+        reason="CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    before = _state(
+        "2026-08-24",
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        obligations=(partial,),
+    )
+    before_hash = paper_state_hash(before.base_state)
+    closed_base = close_obligation_explicitly(
+        before.base_state,
+        obligation_id=partial.obligation_id,
+        event_id="CLOSE-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        session_date="2026-08-24",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status="CANCELED",
+        parent_state_sha256=before_hash,
+    )
+    closed = fd.DividendAwarePaperState(
+        base_state=closed_base,
+        dividend_ledger=before.dividend_ledger,
+    )
+
+    snapshot = runtime.write_runtime_snapshot(tmp_path / "runtime", closed, registry)
+    loaded = runtime.load_runtime_snapshot(snapshot.path)
+    row = loaded.state.base_state.obligations[0]
+    assert row.status == "CANCELED"
+    assert row.remaining_shares == 0
+    assert row.event_history[-1].parent_state_sha256 == before_hash
+    assert loaded.state.base_state.pending_buys == ()
+    assert loaded.state.base_state.pending_sells == ()
+    assert runtime.write_runtime_snapshot(
+        tmp_path / "runtime", closed, registry
+    ).file_sha256 == snapshot.file_sha256
 
 
 def test_v1_legacy_snapshot_can_parent_v2_obligation_snapshot(
