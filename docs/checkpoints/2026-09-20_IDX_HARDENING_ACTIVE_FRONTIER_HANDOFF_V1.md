@@ -56,6 +56,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   ledger, position, and pending projection;
 - valid forked histories remain blocked;
 - Decision V2 residual BUY retry works with an existing partial position;
+- Decision V2 reversal against an active quantity obligation now fails closed
+  until an explicit cancellation/relinquishment transition exists; legacy
+  pending-only reversal behavior remains unchanged;
 - CA sizing lineage keeps the immutable raw state as `ExecutionOrderPlan.state_hash`
   and records projected total-return sizing separately;
 - projected CA state is restricted to cash/ledger changes and a trade-state
@@ -150,10 +153,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
   retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane
   remains clean and no commit was pushed or merged. The follow-up adversarial
-  replay assertion is `600866ae`;
-- current source HEAD (`ba38396a`) full repository regression via
+  replay assertion is `600866ae`, and active-obligation reversal fail-closed
+  coverage is `3e8a7e5a`;
+- current HEAD (`3e8a7e5a`) full repository regression via
   `python -m pytest -q` passed at 100% with only three pre-existing pandas
-  `FutureWarning` records; current HEAD adds only the passing replay test.
+  `FutureWarning` records.
   Earlier
   runs hit the known unrelated Windows `PermissionError [WinError 5]`
   atomic-replace fixture flake in `official_open_evidence_v1.py`; targeted

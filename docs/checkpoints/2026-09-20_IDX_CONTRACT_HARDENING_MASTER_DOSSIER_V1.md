@@ -105,6 +105,9 @@ The isolated lane currently contains:
   fork histories still rejected;
 - Decision V2 residual retry for a partial BUY whose actual position already
   exists, without changing Decision science.
+- Decision V2 reversal against an active quantity obligation fails closed until
+  an explicit cancellation/relinquishment transition is supplied; pending-only
+  reversal compatibility remains intact.
 - explicit CA sizing lineage separating raw execution state from projected
   total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
@@ -188,11 +191,12 @@ The isolated lane currently contains:
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, schedule binding, and E2E paper
-orchestration/controller. Current HEAD `ba38396a` also passes the full
+orchestration/controller. Current HEAD `3e8a7e5a` also passes the full
 repository regression with only the three pre-existing pandas warnings. The
 follow-up top-level execution replay tamper assertion also passes at
 `600866ae`; it rehashes an unknown top-level extension and confirms existing
-execution replay rejects it before any idempotent completion path.
+execution replay rejects it before any idempotent completion path. The active
+obligation reversal guard is covered by the same current full-suite run.
 The V2 independent-challenge record predates the latest local envelope
 hardening;
 its synthetic gates remain evidence, not a fresh final challenge at this HEAD.
