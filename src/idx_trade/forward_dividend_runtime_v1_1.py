@@ -25,6 +25,7 @@ from .v4_x1_execution_v1_contract import (
     close_obligation_explicitly as close_paper_obligation_explicitly,
     normalize_state,
     paper_state_hash,
+    whole_lot_shares,
 )
 from .v4_x1_quantity_obligation_v1 import (
     obligation_from_payload,
@@ -185,7 +186,13 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
 
     try:
         positions = tuple(
-            PaperPosition(str(row["ticker"]), int(row["shares"]))
+            PaperPosition(
+                str(row["ticker"]),
+                whole_lot_shares(
+                    row["shares"],
+                    "DIVIDEND_V1_1_RUNTIME_POSITION_ROW_INVALID",
+                ),
+            )
             for row in raw_positions
             if isinstance(row, dict)
         )

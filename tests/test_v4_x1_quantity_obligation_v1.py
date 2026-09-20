@@ -338,6 +338,18 @@ def test_partial_buy_projects_pending_remainder_even_when_position_exists():
         )
 
 
+@pytest.mark.parametrize("shares", [100.9, True])
+def test_normalize_state_rejects_non_integer_position_shares(shares: object) -> None:
+    with pytest.raises(DecisionV1Error, match="POSITION_NOT_WHOLE_LOT"):
+        normalize_state(
+            PaperPortfolioState(
+                as_of_session_date="2026-09-21",
+                cash_idr=1_000_000.0,
+                positions=(PaperPosition("BBCA", shares),),
+            )
+        )
+
+
 def test_legacy_hash_shape_is_unchanged_and_obligation_hash_is_additive():
     legacy = PaperPortfolioState(
         as_of_session_date="2026-09-20",

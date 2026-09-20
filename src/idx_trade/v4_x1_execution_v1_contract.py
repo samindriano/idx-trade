@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import hashlib
 import json
 import math
+from numbers import Integral
 from typing import Literal
 
 from .v4_x1_decision_v1_contract import DecisionV1Error, TradeIntent
@@ -131,6 +132,15 @@ def finite_nonnegative(value: object, code: str) -> float:
     return x
 
 
+def whole_lot_shares(value: object, code: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise DecisionV1Error(code)
+    shares = int(value)
+    if shares <= 0 or shares % LOT_SIZE_SHARES:
+        raise DecisionV1Error(code)
+    return shares
+
+
 def normalize_pending(rows: tuple[PendingPaperIntent, ...], side: str) -> dict[str, PendingPaperIntent]:
     out: dict[str, PendingPaperIntent] = {}
     for row in rows:
@@ -180,9 +190,10 @@ def normalize_state(state: PaperPortfolioState) -> tuple[float, dict[str, int], 
     positions: dict[str, int] = {}
     for position in state.positions:
         symbol = ticker(position.ticker)
-        shares = int(position.shares)
-        if shares <= 0 or shares % LOT_SIZE_SHARES:
-            raise DecisionV1Error("EXECUTION_V1_POSITION_NOT_WHOLE_LOT")
+        shares = whole_lot_shares(
+            position.shares,
+            "EXECUTION_V1_POSITION_NOT_WHOLE_LOT",
+        )
         if symbol in positions:
             raise DecisionV1Error("EXECUTION_V1_DUPLICATE_POSITION")
         positions[symbol] = shares
