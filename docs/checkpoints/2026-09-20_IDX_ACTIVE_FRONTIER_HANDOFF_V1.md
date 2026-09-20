@@ -31,11 +31,14 @@ The system tracks target membership but not target quantity obligations. A posit
 - Existing dividend-aware runtime snapshot reload preserved `AAA:1,200`, empty
   pending buys, and equal runtime hash; this is faithful persistence, not
   residual recovery.
+- Serializer probe was a negative result: prepared execution payloads preserve
+  per-entry planned sizing; the unresolved owner is filled/remaining quantity
+  linkage in execution state and pending obligations.
 
 ## Immediate next questions
 
 1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
-2. Which artifact should own planned/filled/remaining quantities so restart and replay cannot erase the obligation?
+2. Which state/artifact boundary should own filled/remaining quantities, given that planned per-entry sizing is already preserved in the prepared payload?
 3. Can the existing failure-recovery/atomic snapshot path preserve a residual obligation once one is explicitly modeled?
 4. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
 

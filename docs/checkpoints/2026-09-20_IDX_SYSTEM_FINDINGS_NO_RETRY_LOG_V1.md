@@ -26,3 +26,8 @@ This is a durable system-research log. “No retry” means do not repeat the sa
 - Hash chains can preserve a semantically incomplete state; internal integrity is not equivalent to economic completeness.
 - Fail-closed behavior can still be operationally wrong when the rejected state was the only valid path, as in payment-on-decision-date sizing.
 - The current defects were reproducible without protected outcomes or new provider data.
+- The orchestration serializer does preserve per-entry planned sizing inside
+  `execution_plan.sizing_plan.entries` (ticker, lots, shares, notional, and
+  status). No artifact-omission defect was admitted from the serializer probe;
+  the remaining gap is the missing planned-to-filled-to-remaining linkage in
+  execution state and pending obligations.
