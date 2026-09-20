@@ -533,6 +533,14 @@ historical alpha archive:
   five-snapshot chain. The ledger and hashes survived reload; payment cash
   increased while pending replacement remained pending, confirming that cash
   settlement and pending-order reconsideration are separate policy events.
+- `2026-09-20_IDX_RUNTIME_CONFIG_ARTIFACT_IDENTITY_AUDIT_V1.md`:
+  the pinned runtime config loader and controller guard are hash/commit pinned
+  and passed 22 focused tests, while the 27-test orchestration slice also
+  passed. The audit confirms the remaining lineage gap precisely: prepared and
+  execution artifacts bind state/input/plan hashes but omit the full external
+  config SHA, runner SHA, executable identity, and explicit code identity. This
+  is a read-only `FAIL — RUNTIME_CONFIG_IDENTITY_NOT_BOUND`, not evidence of a
+  live contamination or a reason to modify the active system in this lane.
 
 The updated system-level belief is therefore:
 
