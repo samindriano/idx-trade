@@ -235,6 +235,16 @@ def test_explicit_close_round_trips_through_v2_runtime_snapshot(
         obligations=(partial,),
     )
     before_hash = paper_state_hash(before.base_state)
+    with pytest.raises(DecisionV1Error, match="SEAT_POLICY_REQUIRED"):
+        runtime.close_runtime_obligation_explicitly(
+            before,
+            obligation_id=partial.obligation_id,
+            event_id="CLOSE-BBCA-EXPLICIT-CLOSE-RUNTIME-NO-POLICY",
+            session_date="2026-08-24",
+            reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+            status="CANCELED",
+            parent_state_sha256=before_hash,
+        )
     closed = runtime.close_runtime_obligation_explicitly(
         before,
         obligation_id=partial.obligation_id,
