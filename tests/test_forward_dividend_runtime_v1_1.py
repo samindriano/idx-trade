@@ -252,6 +252,10 @@ def test_explicit_close_round_trips_through_v2_runtime_snapshot(
     assert row.status == "CANCELED"
     assert row.remaining_shares == 0
     assert row.event_history[-1].parent_state_sha256 == before_hash
+    assert row.event_history[-1].policy_payload == _seat_policy().payload()
+    assert row.event_history[-1].policy_sha256 == _seat_policy().payload()[
+        "policy_sha256"
+    ]
     assert loaded.state.base_state.pending_buys == ()
     assert loaded.state.base_state.pending_sells == ()
     assert runtime.write_runtime_snapshot(

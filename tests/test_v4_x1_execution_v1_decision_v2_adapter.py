@@ -441,6 +441,10 @@ def test_explicit_obligation_close_allows_decision_reversal(tmp_path, status):
     assert closed.status == status
     assert closed.remaining_shares == 0
     assert closed.filled_shares + closed.relinquished_shares == 5_000
+    assert closed.event_history[-1].policy_payload == _seat_policy().payload()
+    assert closed.event_history[-1].policy_sha256 == _seat_policy().payload()[
+        "policy_sha256"
+    ]
 
     state = closed_state
     runtime.write_runtime_snapshot(
