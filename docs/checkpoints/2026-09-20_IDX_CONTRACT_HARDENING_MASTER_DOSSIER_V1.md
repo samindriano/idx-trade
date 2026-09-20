@@ -146,6 +146,8 @@ The isolated lane currently contains:
   side-effect boundaries without provider or outcome access;
 - dual-calendar V2 missed-execution handling reuses the exact schedule-bound
   prepared parent when no certified Open exists, with regression coverage;
+- latest-snapshot recovery rejects noncanonical snapshot filenames with a
+  typed fail-closed error;
 - post-implementation independent challenge is recorded PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and controller gates;
 - independent challenge V2 also covers real synthetic child interruption,

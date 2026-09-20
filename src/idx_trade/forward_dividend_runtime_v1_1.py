@@ -1137,7 +1137,12 @@ def recover_latest_runtime_snapshot(
             ]
             if not candidates:
                 raise
-            candidates.sort(key=lambda path: date.fromisoformat(path.stem))
+            try:
+                candidates.sort(key=lambda path: date.fromisoformat(path.stem))
+            except ValueError as error:
+                raise DecisionV1Error(
+                    "DIVIDEND_V1_1_RUNTIME_NONCANONICAL_SNAPSHOT_FILENAME"
+                ) from error
             quarantine_runtime_snapshot(
                 runtime_root,
                 candidates[-1],

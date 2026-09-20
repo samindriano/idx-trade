@@ -18,6 +18,7 @@ scheduler, production, or alpha state.
 |---|---|---|
 | Nested execution replay | Rehashed nested evidence/CA/cause/lineage parents are rejected | PASS |
 | Snapshot recovery | Tampered latest is quarantined; valid fork is rejected | PASS |
+| Snapshot filename validation | Noncanonical snapshot artifacts fail closed during recovery | PASS |
 | Controller boundaries | All eight V1/V2 boundaries recover to `RECOVERY_REQUIRED` | PASS |
 | Dual-calendar missed execution | No-certified-Open path uses the exact schedule-bound prepared parent | PASS |
 | Real child interruption | Timed-out subprocess leaves `CHILD_EXECUTION` durable and recovery-fenced | PASS |

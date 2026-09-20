@@ -559,6 +559,28 @@ def test_recovery_does_not_choose_between_valid_forked_histories(
         runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
 
 
+def test_recovery_rejects_noncanonical_snapshot_filename_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    snapshot_dir = (
+        tmp_path / "runtime" / runtime.RUNTIME_DIRNAME / runtime.SNAPSHOT_DIRNAME
+    )
+    (snapshot_dir / "unexpected.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="NONCANONICAL_SNAPSHOT_FILENAME",
+    ):
+        runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+
 def _entitlement(event: fd.CertifiedCashDividend, shares: int = 200) -> fd.PaperDividendEntitlement:
     return fd.PaperDividendEntitlement(
         event_id=event.event_id,

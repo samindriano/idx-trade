@@ -98,6 +98,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   metadata across all eight synthetic side-effect boundaries without provider
   or outcome access, and its no-certified-Open missed-execution branch now
   reuses the exact schedule-bound prepared parent;
+- latest-snapshot recovery rejects noncanonical snapshot filenames with a
+  typed fail-closed error instead of leaking an untyped sorting failure;
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
