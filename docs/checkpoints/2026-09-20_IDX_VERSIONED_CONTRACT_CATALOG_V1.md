@@ -46,6 +46,7 @@ missing planned quantity.
 | Contract | Owner | Current state |
 |---|---|---|
 | `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, and additive hash implemented; recovery open |
+| `MIGRATION_PROVENANCE-V1` | Legacy-state migration decision artifact | Source/hash/classification/disposition/reason/time binding and immutable idempotent writer implemented locally; runtime migration consumer integration open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, and `CA_TIMING_MATRIX-V1` are hash-bound; artifact replay open |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; only additive extension is accepted |
 | `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, structural evaluator, and nested replay parent gate implemented locally; independent challenge open |

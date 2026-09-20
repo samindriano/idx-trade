@@ -125,16 +125,18 @@ The isolated lane currently contains:
   positive-quantity causes to same-session obligations, preserving explicit
   `RETRY_OBLIGATION` semantics;
 - `RUNTIME_LINEAGE-V2` and controller `RECOVERY_REQUIRED` crash fence;
+- `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when
+  valid, fail-closed classification/disposition/reason, UTC decision time, and
+  optional runtime lineage with immutable idempotent persistence;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
-full migration artifact provenance and independent artifact challenge,
+independent artifact challenge,
 reconciliation provenance, authoritative identity-source/child cause replay,
-operational BOUND
-lineage, controller fault matrix, and full migration
-artifact provenance remain open; this is not a production promotion or phase
+operational BOUND lineage, controller fault matrix, and migration-consumer
+integration remain open; this is not a production promotion or phase
 closure.
 
 ## Boundaries

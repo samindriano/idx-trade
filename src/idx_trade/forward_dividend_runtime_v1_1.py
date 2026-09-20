@@ -30,6 +30,11 @@ from .v4_x1_quantity_obligation_v1 import (
     obligations_payload,
     normalize_obligations,
 )
+from .v4_x1_migration_provenance_v1 import (
+    MigrationProvenanceV1,
+    build_migration_provenance_v1,
+    write_migration_provenance_v1,
+)
 
 RUNTIME_SCHEMA = "idx_trade_forward_dividend_runtime_state_v1_1"
 RUNTIME_SCHEMA_V2 = "idx_trade_forward_dividend_runtime_state_v2"
@@ -717,6 +722,44 @@ def write_runtime_snapshot(
     return load_runtime_snapshot(target)
 
 
+def build_runtime_snapshot_migration_provenance(
+    snapshot_path: str | Path,
+    *,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> MigrationProvenanceV1:
+    """Classify one verified snapshot and bind the exact source file hash."""
+
+    target = Path(snapshot_path).expanduser().resolve()
+    snapshot = load_runtime_snapshot(target)
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    source_schema = str(payload.get("schema_version") or "").strip()
+    if not source_schema:
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_SOURCE_SCHEMA_INVALID")
+    return build_migration_provenance_v1(
+        snapshot.state.base_state,
+        source_artifact_sha256=snapshot.file_sha256,
+        source_schema_version=source_schema,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+
+
+def write_runtime_snapshot_migration_provenance(
+    snapshot_path: str | Path,
+    provenance_path: str | Path,
+    *,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> Path:
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    return write_migration_provenance_v1(provenance_path, provenance)
+
+
 def _snapshot_root(runtime_root: str | Path) -> Path:
     return (
         Path(runtime_root).expanduser().resolve()
@@ -1069,6 +1112,8 @@ __all__ = [
     "runtime_state_hash",
     "reconstruct_decision_shadow_state",
     "write_runtime_snapshot",
+    "build_runtime_snapshot_migration_provenance",
+    "write_runtime_snapshot_migration_provenance",
     "load_runtime_snapshot",
     "load_latest_runtime_snapshot",
     "quarantine_runtime_snapshot",

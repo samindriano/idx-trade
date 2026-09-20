@@ -39,6 +39,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - old snapshot payloads still load without an obligation section;
 - V1 → V2 snapshot chain loads with immutable parent binding;
 - legacy classifier returns `UNKNOWN_ORPHANED_PARTIAL` without quantity fabrication;
+- `MIGRATION_PROVENANCE-V1` records source artifact/schema, source state hash
+  when valid, classification/disposition/reason, UTC decision time, and
+  optional runtime lineage; its writer is immutable and idempotent;
 - tampered latest snapshot is quarantined and a verified ancestor is recovered;
 - valid forked histories remain blocked;
 - Decision V2 residual BUY retry works with an existing partial position;
@@ -72,8 +75,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 ## Remaining evidence before Phase 4
 
-- quantity-bearing execution evidence and evaluator replay;
-- full migration artifact provenance and independent artifact challenge;
+- independent challenge of execution/reconciliation evidence and the new
+  migration provenance artifact;
+- migration provenance consumer integration through any authorized runtime
+  migration/recovery entry point;
 - operational use of identity evidence and cause joins through every child
   script, including persisted replay/tamper coverage;
 - operational BOUND lineage through child scripts and controller crash/recovery

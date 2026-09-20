@@ -19,6 +19,12 @@ Compatibility rules:
 - the state classifier is fail-closed: legacy positions/pending without plan
   evidence are `UNKNOWN_ORPHANED_PARTIAL`, not reconstructed quantities;
 - migration output must record source artifact hash and classification;
+- migration provenance is a separate immutable
+  `idx_trade_migration_provenance_v1` artifact binding source artifact/schema,
+  source state hash when valid, classification, disposition, reason, UTC
+  decision time, and optional runtime-lineage hash;
+- malformed state is recorded as `REQUIRES_RECONCILIATION` with no fabricated
+  state hash; provenance writing is create-only and idempotent;
 - no current position, target membership, or seat count fabricates a missing
   plan/fill/remainder;
 - a migration failure blocks normal execution until manual/reconciled state is
