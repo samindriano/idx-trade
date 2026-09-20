@@ -12,6 +12,31 @@ from idx_trade import forward_eod_runner as runner
 JAKARTA = ZoneInfo("Asia/Jakarta")
 
 
+def test_runner_weekend_is_a_noop_without_calendar_sync_or_capture(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        runner,
+        "_now_jakarta",
+        lambda: datetime(2026, 9, 20, 18, 30, tzinfo=JAKARTA),
+    )
+
+    def must_not_run(*args, **kwargs):
+        raise AssertionError("weekend runner must not sync, enrich, or capture")
+
+    monkeypatch.setattr(runner.runtime, "sync_forward_calendar", must_not_run)
+    monkeypatch.setattr(runner, "enrich_session_ohlcv", must_not_run)
+    result = runner.run_eod_catchup(tmp_path)
+
+    assert result["status"] == "NON_TRADING_WEEKEND_NOOP"
+    assert result["weekend_noop"] is True
+    assert result["provider_calls"] is False
+    assert result["captured_sessions"] == []
+    assert result["calendar_sync_attempted"] is False
+    assert result["forward_outcomes_accessed"] is False
+
+
 def _no_legacy_rows(monkeypatch) -> None:
     monkeypatch.setattr(runner.base, "_session_states", lambda paths: {})
 

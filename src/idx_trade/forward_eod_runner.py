@@ -95,6 +95,21 @@ def run_eod_catchup(
             },
         )
 
+    if started_at.weekday() >= 5:
+        result.update(
+            {
+                "status": "NON_TRADING_WEEKEND_NOOP",
+                "finished_at_jakarta": _now_jakarta().isoformat(),
+                "today_capture_allowed": False,
+                "pre_eod_prior_session_catchup_allowed": False,
+                "weekend_noop": True,
+                "provider_calls": False,
+                "calendar_sync_attempted": False,
+            }
+        )
+        persist()
+        return result
+
     try:
         paths = base.runtime_paths(root)
         closed_through = _closed_through_for_run(started_at)

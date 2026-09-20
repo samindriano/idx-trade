@@ -173,6 +173,24 @@ def run_eod_v4_x1_pipeline(
         "late_backfill_counter_policy": "CONTINUITY_ONLY_NOT_X1_COUNTER",
     }
 
+    if started.weekday() >= 5:
+        result.update(
+            {
+                "status": "PIPELINE_OK_NON_TRADING_WEEKEND_NOOP",
+                "eod": {
+                    "status": "NON_TRADING_WEEKEND_NOOP",
+                    "weekend_noop": True,
+                    "provider_calls": False,
+                    "forward_outcomes_accessed": False,
+                    "captured_sessions": [],
+                },
+                "x1_score_attempted": False,
+                "finished_at_jakarta": _now_jakarta().isoformat(),
+            }
+        )
+        _persist(runtime_root, run_id, result)
+        return result
+
     try:
         eod = run_eod_catchup(runtime_root, batch_size=batch_size)
         result["eod"] = eod
