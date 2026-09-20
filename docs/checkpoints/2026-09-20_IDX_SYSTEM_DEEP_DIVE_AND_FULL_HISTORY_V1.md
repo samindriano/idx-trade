@@ -555,6 +555,13 @@ historical alpha archive:
   score-artifact gate normalizes `.JK` and rejects the collision. This is
   `FAIL — EVALUATION_IDENTITY_CONTRACT_SPLIT`; no source or data fix was
   applied.
+- `2026-09-20_IDX_STORAGE_REVISION_ATOMICITY_AUDIT_V1.md`:
+  the lane-local storage/backfill suite passed 8/8, but duplicate dates in
+  existing history raise an uncontrolled ambiguous-Series `ValueError`, while
+  duplicate dates in incoming history silently keep the last row. Atomic
+  writers also replace existing destinations and are not immutable evidence
+  writers. Verdict: `FAIL — DUPLICATE-DATE STORAGE INPUT NOT FAIL-CLOSED`;
+  no source or data fix was applied.
 
 The updated system-level belief is therefore:
 
