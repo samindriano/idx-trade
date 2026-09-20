@@ -65,6 +65,9 @@
   packet hashes, and result schema while the unchanged packet remains valid.
   Packet validity therefore cannot be treated as freshness of a historical
   verifier result; adoption remains unapproved.
+- The available local outcome-blind surface is now substantially exhausted:
+  remaining high-value work requires unavailable authority/data or independent
+  review, while repeated local searches and mutations would be redundant.
 
 ## What failed, is redundant, or is superseded
 

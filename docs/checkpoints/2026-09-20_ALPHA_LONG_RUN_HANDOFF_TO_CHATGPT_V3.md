@@ -520,6 +520,7 @@ Primary navigation files:
 - `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_VERIFIER_FRESHNESS_CHALLENGER_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V2.md`
 
 Machine evidence:
 
