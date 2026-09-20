@@ -476,3 +476,30 @@ strongest lineage blocker is missing runtime/config/projected-CA identity.
 No retry was performed, no protected result was opened, and no other lane was
 modified.
 
+## 12. Continuation index — risk, economics, and component coupling
+
+The following later checkpoints extend this dossier without changing the
+historical alpha archive:
+
+- `2026-09-20_IDX_RISK_CONCENTRATION_HOLDING_AUDIT_V1.md`:
+  nominal entry sizing and local execution guards are present, but no active
+  drawdown, sector, factor, issuer-concentration, or post-entry weight overlay
+  is certified. Underfill, cash state, pending orders, and concentration remain
+  coupled but not represented by one portfolio-risk invariant.
+- `2026-09-20_IDX_TRANSACTION_COST_CAPACITY_AUDIT_V1.md`:
+  fee/slippage/stamp arithmetic is deterministic, while slippage is explicitly
+  uncalibrated, regular-market-value is only a capacity proxy, aggregate
+  session liquidity is not modeled, and paper fills are not broker-fill proof.
+- `2026-09-20_IDX_DECISION_SIZING_EXECUTION_CONTRACT_AUDIT_V1.md`:
+  Decision V2→Sizing V1→Execution V1 has meaningful provenance and fail-closed
+  checks, but full runtime-config identity, projected-CA/NAV identity, and a
+  unified underfill/cash/pending/risk taxonomy remain missing.
+
+The updated system-level belief is therefore:
+
+`local component correctness != complete portfolio-system correctness`
+
+The next distinct local frontier is not another alpha mutation. It is a
+synthetic end-to-end invariant harness that composes these contracts: state
+transitions, partial fills, projected CA cash, nominal risk exposure, cost
+accounting, restart, and artifact identity in one isolated scenario matrix.
