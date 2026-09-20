@@ -217,3 +217,22 @@ access absence.
   records year-specific turnover, persistence, HHI/effective names, rank
   displacement, and between-year selected-ticker Jaccard; non-comparable
   sparse-era pairs are explicit nulls, not zeros.
+
+## Candidate score-separation mechanics
+
+- Script: `research/alpha_candidate_score_separation_v1.py`.
+- Durable result: `research_knowledge/candidate_score_separation_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_SCORE_SEPARATION_RESULT_V1.md`.
+- Code SHA-256:
+  `38777f7c530552ad88eb2e6779b64e2c64a1e4500c538692970eff935cfc80e9`.
+- External result SHA-256:
+  `43866dc33d2ab6041f346666d6c6df674a68d72a20b805276c0ec115959ff9db`.
+- Focused tests: `tests/test_alpha_candidate_score_separation_v1.py`, 2/2
+  passing.
+- The audit measures fixed Top-30 score at positions 30 and 31, same-day IQR
+  normalization, exact ties, unique-score fraction, and same-year next-session
+  turnover association. C2 has the widest median normalized gap (0.05912),
+  C1/C4 are thinner (0.01089/0.00936), and C3 has a 10.18% exact tie fraction.
+- The first execution was discarded after correcting the year-boundary pairing
+  rule. The recorded result is the corrected rerun. This remains structural,
+  representation-dependent evidence only.

@@ -89,6 +89,11 @@
   while C3 has no usable Top-30 date before 2025 and shows sparse-support
   concentration and persistence. These are mechanics only, not capacity or
   predictive stability.
+- Fixed Top-30 score geometry separates boundary margin from turnover: C2 has
+  the widest normalized rank-30/rank-31 gap, C1/C4 have thinner gaps, and C3
+  has a 10.18% exact boundary-tie fraction. Gap-to-next-turnover associations
+  are modest, so turnover is not explained by one thin-margin mechanism. This
+  is representation-dependent structural evidence, not predictive quality.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.

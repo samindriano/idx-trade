@@ -5,7 +5,8 @@
 1. Candidate-specific authority and bounded eras: distinguish which missing
    population, identity, CA, liquidity, and financial gates each candidate
    actually consumes. Calendar-year support and fixed Top-30 mechanics are
-   mapped, but no era is admitted; sparse C3 mechanics remain support-driven.
+   mapped, and score-edge geometry is now separated from turnover; no era is
+   admitted and sparse C3 mechanics remain support-driven.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a

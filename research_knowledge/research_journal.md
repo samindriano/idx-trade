@@ -212,3 +212,17 @@ checkpoint files; this file records why the next question changed.
 - Corrected the initial output contract so between-year Jaccard is `null` and
   marked non-comparable when either year has no selection support.
 - No era, policy, candidate status, or outcome was selected or accessed.
+
+## 2026-09-20 — score-separation mechanics
+
+- Added a fixed Top-30 rank-30/rank-31 score-boundary diagnostic to separate
+  score geometry from turnover. It records same-day-IQR-normalized boundary
+  gaps, top-1-to-cutoff gaps, exact ties, unique-score fraction, and same-year
+  next-session turnover associations.
+- C2 has the widest normalized boundary gap (median 0.05912) and lower mean
+  next turnover (32.62%) than C1 (0.01089; 41.74%) and C4 (0.00936; 23.26%).
+  C3 has 10.18% exact boundary ties and only 275 usable dates, so its lower
+  turnover remains support-sensitive.
+- Corrected the first execution to exclude December-to-January pairs from
+  year-stratified next-session comparisons; only the corrected rerun was
+  retained. No candidate, policy, era, or outcome was selected.
