@@ -152,6 +152,22 @@ quadrants receive zero slots mechanically because the product is negative.
 The 2026 partial-year mixture shifts to 59.90%/40.10% from 78.80%/21.20%
 in 2025. This is not regime-return or predictive evidence.
 
+### 8. Universe breadth versus turnover addendum
+
+The next bounded structural audit tested whether daily finite-support breadth
+explains Top-30 churn. C1/C2/C4 finite support averages 99.54%/100.00%/99.85%
+of the eligible universe, and count-versus-turnover Spearman is only
+0.133/0.061/0.175. This rules out a strong common breadth explanation for
+their turnover in this artifact. C3 is different: finite support averages only
+35.96% of eligible rows, with count-versus-turnover rho -0.372 overall and
+-0.711 in 2026 partial year. C3's low turnover/persistence therefore remains
+support-sensitive. This is correlational structural evidence, not causality,
+capacity, PIT, or predictive stability.
+
+Evidence: `UNIVERSE-BREADTH-TURNOVER-050`,
+`docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md`,
+and `research_knowledge/universe_breadth_turnover_v1.json`.
+
 ### 8. Tooling and audit controls
 
 The knowledge-base verifier, authority-packet verifier, packet/firewall checks,
@@ -162,9 +178,9 @@ freshness challenger were exercised. The current durable state remains:
 - authority packet verifier: `PASS`;
 - protected-looking field scan: `PASS`;
 - protected payloads persisted: `false`;
-- current counts after this handoff: 46 experiments, 37 findings, 15 no-retry
+- current counts after this handoff: 47 experiments, 38 findings, 15 no-retry
   entries, 17 source-capability entries;
-- focused suite after this handoff: 19/19 expected;
+- focused suite after this handoff: 20/20 expected;
 - draft nested-schema and freshness contracts are not production-integrated.
 
 These are bounded process/hash/path/contract checks. They are not proof of
@@ -213,8 +229,10 @@ production state, or merge/push this lane.
 - `research_knowledge/research_journal.md`
 - `research_knowledge/reproducibility.md`
 - `research_knowledge/c1_c4_numerator_overlap_v1.json`
+- `research_knowledge/universe_breadth_turnover_v1.json`
 - `docs/checkpoints/2026-09-20_ALPHA_LONG_RUN_HANDOFF_TO_CHATGPT_V4.md`
 - `docs/checkpoints/2026-09-20_ALPHA_C1_C4_NUMERATOR_OVERLAP_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md`
 
 The authoritative sentence is: this isolated run substantially mapped and
 stress-tested the available outcome-blind alpha research surface, but found no

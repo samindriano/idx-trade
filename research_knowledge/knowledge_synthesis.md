@@ -110,6 +110,12 @@
   numerator-only proxies. Normalizers materially reorder each candidate but do
   not materially explain shared cross-candidate overlap; this remains a
   structural shared-reversal caution, not predictive redundancy evidence.
+- A breadth-versus-turnover decomposition shows that finite-support breadth is
+  almost the full eligible universe for C1/C2/C4 (99.54%/100.00%/99.85%) and
+  has only weak count-versus-turnover associations (0.133/0.061/0.175). C3
+  remains different: finite support averages 35.96%, with count-versus-turnover
+  rho -0.372 overall and -0.711 in 2026 partial year. This strengthens the
+  support-driven interpretation of C3 without making a predictive claim.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.

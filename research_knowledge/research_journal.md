@@ -262,3 +262,18 @@ checkpoint files; this file records why the next question changed.
 - This strengthens the structural shared-reversal caution without proving
   predictive redundancy, orthogonality failure, capacity, or candidate
   promotion. Protected outcomes remain closed.
+
+## 2026-09-20 — universe breadth versus turnover
+
+- Tested whether adjacent-session finite-support breadth explains fixed Top-30
+  turnover, using same-calendar-year official-session pairs only.
+- C1/C2/C4 finite support averages 99.54%/100.00%/99.85% of eligible rows;
+  count-versus-turnover Spearman is only 0.133/0.061/0.175. Absolute count
+  change is similarly weak, so there is no strong common breadth explanation
+  for their churn.
+- C3 finite support averages 35.96% of eligible rows; count-versus-turnover
+  rho is -0.372 overall and -0.711 in 2026 partial year, while absolute
+  count-change rho is 0.439 in 2026. This strengthens the existing conclusion
+  that C3's low turnover and persistence are support-sensitive.
+- The result is structural/correlational only. No candidate, policy, era, or
+  protected outcome was selected or accessed.

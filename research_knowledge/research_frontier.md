@@ -9,8 +9,10 @@
    admitted. Component anatomy and the numerator-overlap decomposition further
    confirm the C1/C4 shared-reversal caution while showing that normalizers add
    rank separation but do not explain most shared overlap; C2's sign-consistent
-   mixture is now mapped without splitting the candidate; sparse C3 remains
-   support-driven.
+   mixture is now mapped without splitting the candidate. A separate
+   breadth-versus-turnover audit rules out a strong common breadth explanation
+   for C1/C2/C4 churn while strengthening the support-driven interpretation of
+   sparse C3.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a

@@ -55,8 +55,8 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 46,
-    "findings_index_entries": 37,
+    "experiment_registry_entries": 47,
+    "findings_index_entries": 38,
     "no_retry_registry_entries": 15,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
@@ -81,6 +81,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_COMPONENT_ANATOMY_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_C2_INTERACTION_QUADRANTS_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_C1_C4_NUMERATOR_OVERLAP_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_MARATHON_AUDIT_HANDOFF_V5.md"
+    "docs/checkpoints/2026-09-20_ALPHA_MARATHON_AUDIT_HANDOFF_V5.md",
+    "docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md"
   ]
 }

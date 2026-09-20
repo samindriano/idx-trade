@@ -1,0 +1,78 @@
+{
+  "schema_version": "IDX_TRADE_UNIVERSE_BREADTH_TURNOVER_V1",
+  "experiment_id": "UNIVERSE-BREADTH-TURNOVER-050",
+  "status": "PASS_STRUCTURAL_UNIVERSE_BREADTH_TURNOVER",
+  "scope": "Outcome-blind fixed Top-30 turnover versus daily eligible and finite-support breadth; same-calendar-year adjacent official-session pairs only.",
+  "code": {
+    "path": "research/alpha_universe_breadth_turnover_v1.py",
+    "sha256": "e3ae3010b707232fcfcfdb966b9618e8e230bb1c11e4477f1d9e593af827fe6a"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-universe-breadth-turnover/alpha_universe_breadth_turnover_v1.json",
+    "sha256": "4c9d752c926f5d206bb2e7842e89188d470adefbe30ff12815cbccea50236468"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "calendar": {
+    "official_session_count": 1260,
+    "official_min": "2021-04-29",
+    "official_max": "2026-07-31",
+    "pair_rule": "adjacent official sessions within the same calendar year"
+  },
+  "candidates": {
+    "C1": {
+      "pairs": 1135,
+      "mean_turnover": 0.417386196769457,
+      "mean_finite_count": 258.7259911894273,
+      "mean_finite_share_of_eligible": 0.9953745264966587,
+      "to_finite_count_vs_turnover_spearman": 0.13333757357717367,
+      "abs_finite_count_delta_vs_turnover_spearman": 0.07882724777198535,
+      "relative_finite_count_delta_vs_turnover_spearman": 0.00267769455832733,
+      "2026_to_finite_count_vs_turnover_spearman": -0.044775646093278346
+    },
+    "C2": {
+      "pairs": 1195,
+      "mean_turnover": 0.326248256624826,
+      "mean_finite_count": 258.740585774059,
+      "mean_finite_share_of_eligible": 1.0,
+      "to_finite_count_vs_turnover_spearman": 0.0605182318280272,
+      "abs_finite_count_delta_vs_turnover_spearman": -0.00690373819105808,
+      "relative_finite_count_delta_vs_turnover_spearman": 0.0127747063120691,
+      "2026_to_finite_count_vs_turnover_spearman": 0.106815027991132
+    },
+    "C3": {
+      "pairs": 274,
+      "mean_turnover": 0.109732360097324,
+      "mean_finite_count": 111.266423357664,
+      "mean_finite_share_of_eligible": 0.359635703152632,
+      "to_finite_count_vs_turnover_spearman": -0.37225226090924,
+      "abs_finite_count_delta_vs_turnover_spearman": 0.345153962017764,
+      "relative_finite_count_delta_vs_turnover_spearman": 0.0553588247560108,
+      "2026_to_finite_count_vs_turnover_spearman": -0.710944995940161,
+      "2026_abs_finite_count_delta_vs_turnover_spearman": 0.439422867005409
+    },
+    "C4": {
+      "pairs": 1195,
+      "mean_turnover": 0.23255230125523,
+      "mean_finite_count": 258.377405857741,
+      "mean_finite_share_of_eligible": 0.998534530851173,
+      "to_finite_count_vs_turnover_spearman": 0.174610329014204,
+      "abs_finite_count_delta_vs_turnover_spearman": 0.0487830931404885,
+      "relative_finite_count_delta_vs_turnover_spearman": 0.04491211617827,
+      "2026_to_finite_count_vs_turnover_spearman": -0.0595529199522704
+    }
+  },
+  "interpretation": [
+    "C1/C2/C4 finite support is almost the full eligible decision universe and its daily breadth has only weak association with Top-30 turnover; breadth is not a strong universal explanation for their churn.",
+    "C3 is different: finite support averages only 35.96% of the eligible universe, and the negative count-turnover association is strong in 2026 partial year. Its low turnover and persistence remain support-sensitive rather than evidence of superior stability.",
+    "The result is descriptive structural evidence only. It does not establish causality, PIT completeness, capacity, predictive stability, or candidate promotion."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}

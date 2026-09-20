@@ -286,3 +286,18 @@ access absence.
 - Stored-score versus numerator-only mean Top-30 overlap is 63.75% for C1 and
   62.22% for C4. Cross-candidate score overlap is 35.80%, versus 36.82% for
   numerator-only proxies. This is structural representation evidence only.
+
+## Universe breadth versus turnover
+
+- Script: `research/alpha_universe_breadth_turnover_v1.py`.
+- Durable result: `research_knowledge/universe_breadth_turnover_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md`.
+- Code SHA-256:
+  `e3ae3010b707232fcfcfdb966b9618e8e230bb1c11e4477f1d9e593af827fe6a`.
+- External result SHA-256:
+  `4c9d752c926f5d206bb2e7842e89188d470adefbe30ff12815cbccea50236468`.
+- Focused test: `tests/test_alpha_universe_breadth_turnover_v1.py`, 1/1
+  passing.
+- C1/C2/C4 count-versus-turnover Spearman is 0.133/0.061/0.175, while C3 is
+  -0.372 overall and -0.711 in 2026 partial year. Same-calendar-year pairing
+  excludes December-to-January artifacts.
