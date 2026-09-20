@@ -34,6 +34,15 @@ from idx_trade.v4_x1_execution_v1_contract import (
 from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 
 
+def _canonical_hash(payload: object) -> str:
+    return hashlib.sha256(
+        (
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+
+
 def _event(
     *,
     event_id: str = "CASH_DIVIDEND_BBCA_RUNTIME_TEST",
@@ -633,6 +642,12 @@ def test_recovery_quarantines_tampered_latest_and_returns_verified_ancestor(
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["schema_version"] == runtime.QUARANTINE_SCHEMA
+    assert manifest["manifest_sha256"] == _canonical_hash(
+        {
+            "schema_version": runtime.QUARANTINE_SCHEMA,
+            "entries": manifest["entries"],
+        }
+    )
     assert len(manifest["entries"]) == 1
     entry = manifest["entries"][0]
     assert entry["original_relative_path"] == latest.path.name
@@ -643,6 +658,43 @@ def test_recovery_quarantines_tampered_latest_and_returns_verified_ancestor(
     repeated = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
     assert repeated.path == first.path
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
+
+
+def test_quarantine_manifest_tamper_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{tampered-latest\n")
+    runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    manifest_path = (
+        tmp_path
+        / "runtime"
+        / runtime.RUNTIME_DIRNAME
+        / runtime.SNAPSHOT_DIRNAME
+        / runtime.QUARANTINE_DIRNAME
+        / runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["entries"][0]["reason"] = "FORGED_REASON"
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="QUARANTINE_MANIFEST_HASH_MISMATCH",
+    ):
+        runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
 
 
 def test_recovery_preserves_verified_obligation_ancestor(

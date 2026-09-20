@@ -288,6 +288,43 @@ def test_running_controller_status_fences_recovery_without_replaying_side_effect
     assert recovered["recovery_reason"] == "PREVIOUS_CONTROLLER_RUN_INTERRUPTED"
 
 
+def test_recovery_required_status_is_terminal_on_repeated_v1_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status_path = config.runtime_root / "operational" / "latest.json"
+    expected = {
+        "controller_status": "RECOVERY_REQUIRED",
+        "controller_contract": "SINGLE_CALENDAR_V1",
+        "recovery_reason": "PREVIOUS_CONTROLLER_RUN_INTERRUPTED",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    controller.write_status_atomic(status_path, expected)
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+    monkeypatch.setattr(
+        controller,
+        "load_session_dates",
+        lambda *args, **kwargs: pytest.fail("terminal recovery fence resumed normal work"),
+    )
+
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 2, tzinfo=JAKARTA),
+    )
+
+    assert recovered == json.loads(status_path.read_text(encoding="utf-8"))
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+
+
 @pytest.mark.parametrize(
     ("phase", "side_effect"),
     (

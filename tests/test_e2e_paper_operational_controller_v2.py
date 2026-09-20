@@ -90,6 +90,48 @@ def test_dual_calendar_controller_preserves_recovery_boundary(
     assert recovered["outcome_access"] is False
 
 
+def test_dual_calendar_recovery_required_status_is_terminal_on_repeat(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _config(tmp_path)
+    status_path = config.runtime_root / "operational" / "latest.json"
+    expected = {
+        "controller_status": "RECOVERY_REQUIRED",
+        "controller_contract": "DUAL_CALENDAR_V1",
+        "recovery_reason": "PREVIOUS_CONTROLLER_RUN_INTERRUPTED",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    v1.write_status_atomic(status_path, expected)
+    monkeypatch.setattr(
+        v2,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root,
+            "integration/test",
+            "abc123",
+            "integration/test",
+            "abc123",
+            True,
+        ),
+    )
+    monkeypatch.setattr(v2, "exclusive_run_lock", lambda path: nullcontext())
+    monkeypatch.setattr(
+        v2,
+        "load_verified_official_trading_schedule",
+        lambda *args, **kwargs: pytest.fail("terminal recovery fence resumed normal work"),
+    )
+
+    recovered = v2.run_operational_cycle_v2(
+        config,
+        now=v2.datetime(2026, 8, 24, 18, 2, tzinfo=JAKARTA),
+    )
+
+    assert recovered == json.loads(status_path.read_text(encoding="utf-8"))
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+
+
 def test_dual_calendar_missed_execution_uses_bound_prepared_parent(
     tmp_path: Path,
     monkeypatch,

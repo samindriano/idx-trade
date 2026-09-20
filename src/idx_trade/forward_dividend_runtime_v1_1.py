@@ -52,7 +52,10 @@ RUNTIME_DIRNAME = "forward_execution_v1_1"
 SNAPSHOT_DIRNAME = "state_snapshots"
 QUARANTINE_DIRNAME = "quarantine"
 QUARANTINE_MANIFEST_FILENAME = "manifest.json"
-QUARANTINE_SCHEMA = "idx_trade_forward_dividend_snapshot_quarantine_v1"
+QUARANTINE_SCHEMA = "idx_trade_forward_dividend_snapshot_quarantine_v2"
+_QUARANTINE_MANIFEST_KEYS = frozenset(
+    {"schema_version", "entries", "manifest_sha256"}
+)
 _VERIFIED_RUNTIME_SNAPSHOT_TOKEN = object()
 
 
@@ -869,8 +872,19 @@ def _load_quarantine_manifest(snapshot_root: Path) -> list[dict[str, str]]:
         raise DecisionV1Error(
             "DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_INVALID"
         ) from exc
-    if not isinstance(payload, dict) or payload.get("schema_version") != QUARANTINE_SCHEMA:
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != _QUARANTINE_MANIFEST_KEYS
+        or payload.get("schema_version") != QUARANTINE_SCHEMA
+    ):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_SCHEMA_CHANGED")
+    declared_manifest_sha = str(payload.get("manifest_sha256") or "")
+    manifest_body = dict(payload)
+    manifest_body.pop("manifest_sha256", None)
+    if _canonical_hash(manifest_body) != declared_manifest_sha:
+        raise DecisionV1Error(
+            "DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_HASH_MISMATCH"
+        )
     raw_entries = payload.get("entries")
     if not isinstance(raw_entries, list):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRIES_INVALID")
@@ -887,7 +901,9 @@ def _load_quarantine_manifest(snapshot_root: Path) -> list[dict[str, str]]:
         }
         if set(raw) != required:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
-        entry = {key: str(raw[key]) for key in required}
+        if any(not isinstance(raw[key], str) for key in required):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        entry = {key: raw[key] for key in required}
         if (
             len(entry["original_sha256"]) != 64
             or any(c not in "0123456789abcdef" for c in entry["original_sha256"].lower())
@@ -902,6 +918,15 @@ def _load_quarantine_manifest(snapshot_root: Path) -> list[dict[str, str]]:
         if not quarantined.is_file() or _sha256_file(quarantined) != entry["original_sha256"]:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ARTIFACT_MISMATCH")
         entries.append(entry)
+    if entries != sorted(
+        entries,
+        key=lambda item: (
+            item["original_relative_path"],
+            item["original_sha256"],
+            item["reason"],
+        ),
+    ):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_ORDER_INVALID")
     return entries
 
 
@@ -971,6 +996,7 @@ def quarantine_runtime_snapshot(
         "schema_version": QUARANTINE_SCHEMA,
         "entries": entries,
     }
+    payload["manifest_sha256"] = _canonical_hash(payload)
     manifest_data = _snapshot_bytes(payload)
     manifest_path = _quarantine_manifest_path(snapshot_root)
     fd, temp_name = tempfile.mkstemp(

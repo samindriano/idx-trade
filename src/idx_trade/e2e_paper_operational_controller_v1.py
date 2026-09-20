@@ -710,6 +710,11 @@ def _recover_interrupted_status(
     if not path.is_file():
         return None
     previous = _read_json(path)
+    if previous.get("controller_status") == "RECOVERY_REQUIRED":
+        # Recovery is a terminal fence until an explicit operator-led recovery
+        # action changes the durable status.  A later controller pass must not
+        # silently resume provider, capture, or child-execution work.
+        return previous
     if previous.get("controller_status") != "RUNNING":
         return None
     recovery: dict[str, Any] = {
