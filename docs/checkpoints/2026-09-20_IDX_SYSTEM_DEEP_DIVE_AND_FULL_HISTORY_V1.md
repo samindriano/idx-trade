@@ -527,6 +527,9 @@ historical alpha archive:
   deterministic paper transition, not broker reconciliation; the
   `reconciliation_required=false` interpretation, pending-age escalation, and
   multi-session interaction with dividend settlement remain policy questions.
+  A direct composition probe also preserved the dividend ledger across the
+  partial exit and settled Rp125,000 exactly once, while process-restart
+  coverage across that combined path remains outstanding.
 
 The updated system-level belief is therefore:
 

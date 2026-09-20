@@ -68,7 +68,37 @@ asserts the key structural results. The larger direct probe used 10,000
 `AAA` shares and produced the same state shape: 1,000 filled, 9,000 residual,
 paired buy blocked, and no negative cash.
 
-## 4. Why this matters for corporate-action and portfolio state
+## 4. Direct CA + partial-fill composition probe
+
+A second isolated probe composed the dividend ledger with the same replacement
+scenario rather than testing them as separate objects:
+
+1. record 5,000 `AAA` shares at cum date;
+2. move to ex date and create a Rp125,000 gross receivable;
+3. execute the capacity-limited `AAA` exit and blocked `BBB` replacement;
+4. carry the exact dividend ledger through the execution result;
+5. move to payment date and settle the receivable once.
+
+Observed values:
+
+| Check | Observation | Result |
+|---|---:|---|
+| Pre-execution receivables | 1 | PASS |
+| Cash before execution | Rp45,000,000 | PASS |
+| Post-partial-exit position | 4,000 `AAA` shares | PASS |
+| Post-execution cash | Rp45,996,502.50 | PASS |
+| Pending replacement | `AAA` sell + `BBB` buy blocked | PASS |
+| Dividend ledger preserved across execution | exact equality | PASS |
+| Payment cash | Rp46,121,502.50 | PASS: +Rp125,000 gross |
+| Receivables after payment | 0 | PASS |
+| Settlements after payment | 1 | PASS |
+
+This is stronger than the isolated component tests because it confirms that a
+partial execution does not overwrite or recompute the dividend ledger. It still
+does not test a multi-process restart between the partial fill and payment, nor
+does it establish external settlement reconciliation.
+
+## 5. Why this matters for corporate-action and portfolio state
 
 Corporate-action accounting is attached to the paper state, not merely the
 current target list. If a holder reaches cum date and later has a partial exit:
@@ -87,7 +117,7 @@ the execution-side binding. Together they prevent a prepared order from being
 executed against a state in which the residual holding or dividend ledger was
 silently changed.
 
-## 5. Validation evidence
+## 6. Validation evidence
 
 From runtime commit `045e25a19d9f71170d2c863e768102937e59ad73`:
 
@@ -102,7 +132,7 @@ capacity/lot/cash invariants, Decision V2 shadow lineage, pending reversal, and
 verified CA attestation. They do not constitute broker integration or a
 population-wide liquidity test.
 
-## 6. Hidden policy assumption and open question
+## 7. Hidden policy assumption and open question
 
 The state sets `reconciliation_required=false` after a partial fill. This is
 internally coherent if `reconciliation_required` means “external accounting
@@ -126,7 +156,7 @@ the pair, a dividend payment occurs meanwhile, or capacity shrinks to zero.
 The current adapter tests cover some reversal paths but do not provide a single
 multi-session matrix combining all of those events.
 
-## 7. No-retry / next frontier
+## 8. No-retry / next frontier
 
 No provider or live execution retry is justified by this result. The next
 highest-value local test is a synthetic multi-session matrix with these axes:
@@ -140,7 +170,7 @@ whether an explicit reconciliation/manual-review state is required. Until that
 policy is frozen, partial-fill acceptance should not be described as full
 portfolio reconciliation.
 
-## 8. Provenance and non-mutation
+## 9. Provenance and non-mutation
 
 - This is a new documentation checkpoint only.
 - Scratch execution used synthetic in-memory objects and temporary test state.
@@ -148,4 +178,3 @@ portfolio reconciliation.
 - No Zapi/IDX/provider call or protected outcome was made.
 - Concurrent `TEAM_STATUS` and research-file changes were not staged or
   modified.
-
