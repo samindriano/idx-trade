@@ -499,7 +499,9 @@ historical alpha archive:
   extraction. This confirms bounded regression coverage, not crash-recovery,
   broker-fill, executable-capacity, or protected-outcome proof. A direct
   injected failure after the T0 snapshot and before `T0.json` reproduced the
-  retry error `E2E_T0_PREEXISTING_RUNTIME_STATE`.
+  retry error `E2E_T0_PREEXISTING_RUNTIME_STATE`; a second injection after the
+  missed-Open continuity snapshot reproduced
+  `E2E_MISSED_EXECUTION_STATE_SESSION_MISMATCH`.
 
 The updated system-level belief is therefore:
 
