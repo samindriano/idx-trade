@@ -38,6 +38,7 @@ from .v4_x1_execution_evidence_v2 import (
     EXECUTION_EVIDENCE_SCHEMA,
     build_execution_evidence_v2,
     evaluate_execution_evidence_v2,
+    parse_execution_evidence_v2_payload,
 )
 from .v4_x1_execution_cause_v1 import ExecutionCauseV1
 from .v4_x1_reconciliation_result_v1 import (
@@ -508,6 +509,12 @@ def _verify_persisted_execution_components(
         raise E2EPaperOrchestrationError(
             error_prefix + "_EVIDENCE_PARENT_HASH_MISMATCH"
         )
+    try:
+        parse_execution_evidence_v2_payload(dict(evidence))
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_INVALID"
+        ) from exc
     if (
         reconciliation.get("decision_session_date")
         != execution_body.get("decision_session_date")

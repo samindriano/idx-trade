@@ -148,6 +148,8 @@ The isolated lane currently contains:
   rehashed join-content tamper;
 - persisted orchestration replay rejects rehashed nested obligation payload
   extensions through canonical deserialization;
+- persisted execution evidence replay canonically parses and reevaluates
+  intrinsic fills, state, turnover, pending, and reconciliation invariants;
 - CA timing verification rejects hash-valid noncanonical rows and inconsistent
   payment timing/action semantics;
 - `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when

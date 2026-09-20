@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+from datetime import date
 import hashlib
 import json
 import math
@@ -21,15 +22,71 @@ from .v4_x1_execution_v1_contract import (
     ExecutionOrderPlan,
     ExecutionResult,
     FillRecord,
+    PAPER_STATE_SOURCE,
     LOT_SIZE_SHARES,
     PaperPortfolioState,
+    PaperPosition,
+    PendingPaperIntent,
     normalize_state,
     paper_state_hash,
 )
-from .v4_x1_quantity_obligation_v1 import obligations_payload
+from .v4_x1_quantity_obligation_v1 import (
+    obligation_from_payload,
+    obligations_payload,
+)
 
 
 EXECUTION_EVIDENCE_SCHEMA = "idx_trade_execution_evidence_v2"
+_EVIDENCE_KEYS = frozenset(
+    {
+        "schema_version",
+        "decision_session_date",
+        "execution_session_date",
+        "order_plan_state_hash",
+        "state_before_hash",
+        "state_after_hash",
+        "state_after",
+        "fills",
+        "gross_turnover_idr",
+        "stamp_duty_idr",
+        "pending_transition_count",
+        "reconciliation_required",
+        "rule_id",
+        "causes",
+        "cause_obligation_binding",
+    }
+)
+_STATE_KEYS = frozenset(
+    {
+        "as_of_session_date",
+        "cash_idr",
+        "positions",
+        "pending_buys",
+        "pending_sells",
+        "reconciliation_required",
+        "source",
+        "obligations",
+    }
+)
+_PENDING_KEYS = frozenset(
+    {"side", "ticker", "rank_consensus", "reason", "replacement_peer"}
+)
+_POSITION_KEYS = frozenset({"ticker", "shares"})
+_FILL_KEYS = frozenset(
+    {
+        "side",
+        "ticker",
+        "planned_shares",
+        "filled_shares",
+        "raw_open",
+        "effective_price",
+        "gross_notional",
+        "fee_idr",
+        "cash_effect_idr",
+        "status",
+        "replacement_peer",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -116,6 +173,237 @@ class ExecutionEvidenceEvaluation:
     status: str
     checks: tuple[str, ...]
     errors: tuple[str, ...]
+
+
+def _state_from_payload(value: object) -> PaperPortfolioState:
+    if not isinstance(value, dict) or set(value) != _STATE_KEYS:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_NOT_CANONICAL")
+    session = value["as_of_session_date"]
+    if not isinstance(session, str):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_DATE_INVALID")
+    try:
+        parsed_session = date.fromisoformat(session)
+    except ValueError as exc:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_DATE_INVALID") from exc
+    if parsed_session.isoformat() != session:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_DATE_INVALID")
+    if value["source"] != PAPER_STATE_SOURCE:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_SOURCE_INVALID")
+    if type(value["reconciliation_required"]) is not bool:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_FLAG_INVALID")
+    positions_raw = value["positions"]
+    pending_buys_raw = value["pending_buys"]
+    pending_sells_raw = value["pending_sells"]
+    obligations_raw = value["obligations"]
+    if not all(
+        isinstance(rows, list)
+        for rows in (
+            positions_raw,
+            pending_buys_raw,
+            pending_sells_raw,
+            obligations_raw,
+        )
+    ):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_ROWS_INVALID")
+    try:
+        positions = tuple(
+            PaperPosition(row["ticker"], row["shares"])
+            for row in positions_raw
+            if isinstance(row, dict) and set(row) == _POSITION_KEYS
+        )
+        pending_buys = tuple(
+            PendingPaperIntent(**row)
+            for row in pending_buys_raw
+            if isinstance(row, dict) and set(row) == _PENDING_KEYS
+        )
+        pending_sells = tuple(
+            PendingPaperIntent(**row)
+            for row in pending_sells_raw
+            if isinstance(row, dict) and set(row) == _PENDING_KEYS
+        )
+        obligations = tuple(
+            obligation_from_payload(row) for row in obligations_raw
+        )
+    except (DecisionV1Error, KeyError, TypeError, ValueError) as exc:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_ROW_INVALID") from exc
+    if (
+        len(positions) != len(positions_raw)
+        or len(pending_buys) != len(pending_buys_raw)
+        or len(pending_sells) != len(pending_sells_raw)
+    ):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_ROW_INVALID")
+    state = PaperPortfolioState(
+        as_of_session_date=session,
+        cash_idr=value["cash_idr"],
+        positions=positions,
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        reconciliation_required=value["reconciliation_required"],
+        source=PAPER_STATE_SOURCE,
+        obligations=obligations,
+    )
+    normalize_state(state)
+    if _state_payload(state) != value:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_STATE_NOT_CANONICAL")
+    return state
+
+
+def parse_execution_evidence_v2_payload(value: object) -> ExecutionEvidenceV2:
+    """Parse and canonically validate persisted execution evidence."""
+
+    if not isinstance(value, dict):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_REQUIRED")
+    raw = dict(value)
+    declared = raw.get("payload_sha256")
+    if (
+        not isinstance(declared, str)
+        or declared != declared.lower()
+        or len(declared) != 64
+        or any(char not in "0123456789abcdef" for char in declared)
+    ):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_HASH_MISMATCH")
+    body = dict(raw)
+    body.pop("payload_sha256")
+    if _canonical_hash(body) != declared:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_HASH_MISMATCH")
+    if set(body) != _EVIDENCE_KEYS:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_NOT_CANONICAL")
+    if body["schema_version"] != EXECUTION_EVIDENCE_SCHEMA:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_SCHEMA_MISMATCH")
+    for key in ("decision_session_date", "execution_session_date"):
+        candidate = body[key]
+        if not isinstance(candidate, str):
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_DATE_INVALID")
+        try:
+            parsed = date.fromisoformat(candidate)
+        except ValueError as exc:
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_DATE_INVALID") from exc
+        if parsed.isoformat() != candidate:
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_DATE_INVALID")
+    for key in ("order_plan_state_hash", "state_before_hash", "state_after_hash"):
+        candidate = body[key]
+        if (
+            not isinstance(candidate, str)
+            or candidate != candidate.lower()
+            or len(candidate) != 64
+            or any(char not in "0123456789abcdef" for char in candidate)
+        ):
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_HASH_INVALID")
+    if body["rule_id"] != "V4_X1_EXECUTION_V1":
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_RULE_MISMATCH")
+    if type(body["reconciliation_required"]) is not bool:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_FLAG_INVALID")
+    if (
+        isinstance(body["pending_transition_count"], bool)
+        or not isinstance(body["pending_transition_count"], int)
+        or body["pending_transition_count"] < 0
+    ):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PENDING_COUNT_INVALID")
+    for key in ("gross_turnover_idr", "stamp_duty_idr"):
+        candidate = body[key]
+        if (
+            isinstance(candidate, bool)
+            or not isinstance(candidate, (int, float))
+            or not math.isfinite(float(candidate))
+            or float(candidate) < 0
+        ):
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_AMOUNT_INVALID")
+    state_after = _state_from_payload(body["state_after"])
+    fills_raw = body["fills"]
+    causes_raw = body["causes"]
+    if not isinstance(fills_raw, list) or not isinstance(causes_raw, list):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_ROWS_INVALID")
+    try:
+        fills = tuple(FillRecord(**row) for row in fills_raw)
+        causes = tuple(ExecutionCauseV1(**row) for row in causes_raw)
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_ROW_INVALID") from exc
+    for row, raw_row in zip(fills, fills_raw):
+        if not isinstance(raw_row, dict) or set(raw_row) != _FILL_KEYS:
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_FILL_NOT_CANONICAL")
+        if (
+            not isinstance(row.side, str)
+            or not isinstance(row.ticker, str)
+            or not row.ticker
+            or not isinstance(row.status, str)
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+                for value in (row.planned_shares, row.filled_shares)
+            )
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                for value in (
+                    row.gross_notional,
+                    row.fee_idr,
+                    row.cash_effect_idr,
+                )
+            )
+            or (
+                row.raw_open is not None
+                and (
+                    isinstance(row.raw_open, bool)
+                    or not isinstance(row.raw_open, (int, float))
+                    or not math.isfinite(float(row.raw_open))
+                )
+            )
+            or (
+                row.effective_price is not None
+                and (
+                    isinstance(row.effective_price, bool)
+                    or not isinstance(row.effective_price, (int, float))
+                    or not math.isfinite(float(row.effective_price))
+                )
+            )
+            or asdict(row) != raw_row
+        ):
+            raise DecisionV1Error("EXECUTION_EVIDENCE_V2_FILL_NOT_CANONICAL")
+    if any(asdict(row) != raw_row for row, raw_row in zip(causes, causes_raw)):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_CAUSE_NOT_CANONICAL")
+    if len(fills) != len(fills_raw) or len(causes) != len(causes_raw):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_ROW_INVALID")
+    binding = body["cause_obligation_binding"]
+    if binding is not None and not isinstance(binding, dict):
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_BINDING_INVALID")
+    try:
+        evidence = ExecutionEvidenceV2(
+            schema_version=body["schema_version"],
+            decision_session_date=body["decision_session_date"],
+            execution_session_date=body["execution_session_date"],
+            order_plan_state_hash=body["order_plan_state_hash"],
+            state_before_hash=body["state_before_hash"],
+            state_after_hash=body["state_after_hash"],
+            state_after=state_after,
+            fills=fills,
+            gross_turnover_idr=body["gross_turnover_idr"],
+            stamp_duty_idr=body["stamp_duty_idr"],
+            pending_transition_count=body["pending_transition_count"],
+            reconciliation_required=body["reconciliation_required"],
+            rule_id=body["rule_id"],
+            causes=causes,
+            cause_obligation_binding=binding,
+        )
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_INVALID") from exc
+    if evidence.payload() != raw:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_NOT_CANONICAL")
+    # Cause rows and their binding are replayed by the orchestration layer
+    # with the session/parent context.  Intrinsic evidence arithmetic is safe
+    # to check here without preempting those more specific binding errors.
+    try:
+        evaluation = evaluate_execution_evidence_v2(
+            replace(evidence, causes=(), cause_obligation_binding=None)
+        )
+    except (DecisionV1Error, TypeError, ValueError) as exc:
+        raise DecisionV1Error("EXECUTION_EVIDENCE_V2_PAYLOAD_INVALID") from exc
+    if evaluation.status != "PASS":
+        raise DecisionV1Error(
+            "EXECUTION_EVIDENCE_V2_INVALID:" + ",".join(evaluation.errors)
+        )
+    return evidence
 
 
 def evaluate_execution_evidence_v2(
@@ -327,4 +615,5 @@ __all__ = [
     "ExecutionEvidenceEvaluation",
     "build_execution_evidence_v2",
     "evaluate_execution_evidence_v2",
+    "parse_execution_evidence_v2_payload",
 ]

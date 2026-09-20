@@ -817,8 +817,12 @@ def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
         ("cause_id", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH"),
         ("join_content", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH"),
         (
+            "evidence_aggregate",
+            "E2E_EXISTING_EXECUTION_EVIDENCE_INVALID",
+        ),
+        (
             "obligation_payload",
-            "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH",
+            "E2E_EXISTING_EXECUTION_EVIDENCE_INVALID",
         ),
     ),
 )
@@ -859,6 +863,10 @@ def test_preopen_replay_rejects_rehashed_cause_binding_tamper(
     elif tamper_kind == "join_content":
         binding["joins"][0]["remaining_shares"] = (
             int(binding["joins"][0]["remaining_shares"]) + 1
+        )
+    elif tamper_kind == "evidence_aggregate":
+        evidence["gross_turnover_idr"] = (
+            float(evidence["gross_turnover_idr"]) + 1.0
         )
     else:
         evidence["state_after"]["obligations"][0][

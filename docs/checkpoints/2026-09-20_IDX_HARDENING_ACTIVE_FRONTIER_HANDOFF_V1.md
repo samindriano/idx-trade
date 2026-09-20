@@ -91,6 +91,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   accepting a child artifact;
 - persisted orchestration replay rejects a hash-valid obligation payload with
   a noncanonical nested field;
+- persisted execution evidence is canonically parsed and intrinsically
+  reevaluated during replay, so rehashed aggregate/state/fill tamper is rejected;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - runtime-lineage verification now rejects hash-valid but noncanonical binding
