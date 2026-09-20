@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as fd
 from idx_trade.decision_v2_minimal import (
     DecisionV2Error,
     DecisionV2Intent,
@@ -317,6 +319,7 @@ def test_pending_sell_reversal_cancels_impossible_buy_and_keeps_actual_holding()
     ),
 )
 def test_active_obligation_reversal_fails_closed_without_explicit_cancellation(
+    tmp_path,
     side,
     target,
     current_shadow,
@@ -346,6 +349,13 @@ def test_active_obligation_reversal_fails_closed_without_explicit_cancellation(
         pending_sells=pending if side == "SELL" else (),
         obligations=(partial,),
     )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        fd.DividendAwarePaperState(base_state=state),
+    )
+    state = runtime.load_latest_runtime_snapshot(
+        tmp_path / "runtime"
+    ).state.base_state
     plan = _plan(
         current_shadow=current_shadow,
         target=target,
