@@ -206,6 +206,14 @@ Important interpretation: PASS means that the controls and fail-closed
 specification are internally consistent. It does not mean the packet is
 executable, the data is admitted, or the alpha is profitable.
 
+Validation caveat at handoff time: a read-only worker unexpectedly left two
+untracked files in the isolated worktree,
+`research/alpha_eligibility_policy_scenario_v1.py` and
+`tests/test_alpha_eligibility_policy_scenario_v1.py`. They are not part of the
+audited evidence, were not staged or committed, and were not used to support
+any conclusion here. Therefore the clean-worktree assertion applies to the
+last verified clean snapshot, not to the final post-worker filesystem state.
+
 ## What is complete vs. what is not proven
 
 ### Substantially complete
