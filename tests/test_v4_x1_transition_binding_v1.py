@@ -59,6 +59,36 @@ def test_decision_identity_binding_is_persisted_and_revalidated() -> None:
     assert verified["resolutions"][0]["canonical_security_id"] == "ISSUER-BBCA"
 
 
+def test_hash_valid_identity_binding_extension_fails_closed() -> None:
+    plan = DecisionV2Plan(
+        decision_session_date="2026-09-01",
+        current_shadow_positions=(),
+        target_positions=("BBCA",),
+        buy_intents=(DecisionV2Intent("BUY_INTENT", "BBCA", 1, "TEST"),),
+        sell_intents=(),
+        hold_tickers=(),
+        incumbent_observations=(),
+        challenger_observations=(),
+        unfilled_slots=0,
+        capacity_state="FULL",
+        rule_id="TEST_RULE",
+    )
+    binding = build_decision_identity_binding_v1(plan, (_identity(),))
+    tampered = dict(binding)
+    tampered["unexpected_extension"] = "accepted-by-hash-only"
+    body = dict(tampered)
+    body.pop("payload_sha256")
+    tampered["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode()
+    ).hexdigest()
+
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_decision_identity_binding_v1(tampered, (_identity(),))
+
+
 def test_cause_binding_exposes_retry_transition_for_partial_obligation() -> None:
     before = PaperPortfolioState("2026-09-01", 1_000_000.0, ())
     obligation = plan_obligation(
@@ -127,6 +157,29 @@ def test_cause_binding_exposes_retry_transition_for_partial_obligation() -> None
     with pytest.raises(DecisionV1Error, match="CAUSE_CONTENT_MISMATCH"):
         verify_cause_obligation_binding_v1(
             tampered,
+            execution_session_date=result.execution_session_date,
+            causes=causes,
+            obligations=result.state_after.obligations,
+        )
+
+    noncanonical = dict(binding)
+    noncanonical["unexpected_extension"] = "accepted-by-hash-only"
+    noncanonical_body = dict(noncanonical)
+    noncanonical_body.pop("payload_sha256")
+    noncanonical["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                noncanonical_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_cause_obligation_binding_v1(
+            noncanonical,
             execution_session_date=result.execution_session_date,
             causes=causes,
             obligations=result.state_after.obligations,

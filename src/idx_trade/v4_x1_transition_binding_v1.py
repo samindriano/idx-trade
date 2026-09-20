@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date
 from typing import Any, Sequence
 
 from .decision_v2_minimal import DecisionV2Plan
@@ -25,6 +26,43 @@ from .v4_x1_quantity_obligation_v1 import (
 
 
 TRANSITION_BINDING_SCHEMA = "idx_trade_transition_binding_v1"
+_DECISION_KEYS = frozenset(
+    {
+        "schema_version",
+        "binding_type",
+        "decision_session_date",
+        "decision_rule_id",
+        "identity_hash",
+        "resolutions",
+    }
+)
+_CAUSE_KEYS = frozenset(
+    {
+        "schema_version",
+        "binding_type",
+        "execution_session_date",
+        "obligations_hash",
+        "joins",
+    }
+)
+_RESOLUTION_KEYS = frozenset(
+    {
+        "ticker",
+        "canonical_security_id",
+        "instrument_class",
+        "identity_revision",
+        "source_evidence_sha256",
+    }
+)
+_JOIN_KEYS = frozenset(
+    {
+        "cause_id",
+        "obligation_id",
+        "obligation_sha256",
+        "remaining_shares",
+        "next_decision_action",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -33,6 +71,20 @@ def _canonical_hash(value: object) -> str:
         + "\n"
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _is_sha(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and value == value.lower()
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _require_sha(value: object) -> None:
+    if not _is_sha(value):
+        raise DecisionV1Error("TRANSITION_BINDING_HASH_INVALID")
 
 
 def _plan_tickers(plan: DecisionV2Plan) -> tuple[str, ...]:
@@ -235,16 +287,111 @@ def verify_decision_identity_binding_v1(
 def verify_transition_binding_payload(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise DecisionV1Error("TRANSITION_BINDING_PAYLOAD_REQUIRED")
-    payload = dict(value)
-    declared = str(payload.pop("payload_sha256") or "").lower()
-    if len(declared) != 64 or _canonical_hash(payload) != declared:
+    raw_declared = value.get("payload_sha256")
+    if (
+        not isinstance(raw_declared, str)
+        or raw_declared != raw_declared.lower()
+        or len(raw_declared) != 64
+        or any(char not in "0123456789abcdef" for char in raw_declared)
+    ):
         raise DecisionV1Error("TRANSITION_BINDING_PAYLOAD_HASH_MISMATCH")
+    payload = dict(value)
+    declared = payload.pop("payload_sha256")
+    if _canonical_hash(payload) != declared:
+        raise DecisionV1Error("TRANSITION_BINDING_PAYLOAD_HASH_MISMATCH")
+    binding_type = payload.get("binding_type")
+    expected_keys = (
+        _DECISION_KEYS if binding_type == "DECISION_IDENTITY" else _CAUSE_KEYS
+    )
+    if set(payload) != expected_keys:
+        raise DecisionV1Error("TRANSITION_BINDING_PAYLOAD_NOT_CANONICAL")
     if payload.get("schema_version") != TRANSITION_BINDING_SCHEMA:
         raise DecisionV1Error("TRANSITION_BINDING_SCHEMA_MISMATCH")
-    if payload.get("binding_type") not in {"DECISION_IDENTITY", "CAUSE_OBLIGATION"}:
+    if binding_type not in {"DECISION_IDENTITY", "CAUSE_OBLIGATION"}:
         raise DecisionV1Error("TRANSITION_BINDING_TYPE_INVALID")
-    if not isinstance(payload.get("resolutions", payload.get("joins")), list):
+    session_key = (
+        "decision_session_date"
+        if binding_type == "DECISION_IDENTITY"
+        else "execution_session_date"
+    )
+    session = payload[session_key]
+    if not isinstance(session, str):
+        raise DecisionV1Error("TRANSITION_BINDING_DATE_INVALID")
+    try:
+        parsed_session = date.fromisoformat(session)
+    except ValueError as exc:
+        raise DecisionV1Error("TRANSITION_BINDING_DATE_INVALID") from exc
+    if parsed_session.isoformat() != session:
+        raise DecisionV1Error("TRANSITION_BINDING_DATE_INVALID")
+    hash_keys = (
+        ("identity_hash",)
+        if binding_type == "DECISION_IDENTITY"
+        else ("obligations_hash",)
+    )
+    for key in hash_keys:
+        candidate = payload[key]
+        if (
+            not isinstance(candidate, str)
+            or candidate != candidate.lower()
+            or len(candidate) != 64
+            or any(char not in "0123456789abcdef" for char in candidate)
+        ):
+            raise DecisionV1Error("TRANSITION_BINDING_HASH_INVALID")
+    rows = payload[
+        "resolutions" if binding_type == "DECISION_IDENTITY" else "joins"
+    ]
+    if not isinstance(rows, list):
         raise DecisionV1Error("TRANSITION_BINDING_ROWS_INVALID")
+    if binding_type == "DECISION_IDENTITY":
+        if not isinstance(payload["decision_rule_id"], str) or not payload["decision_rule_id"]:
+            raise DecisionV1Error("TRANSITION_BINDING_RULE_INVALID")
+        previous_ticker: str | None = None
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != _RESOLUTION_KEYS:
+                raise DecisionV1Error("TRANSITION_BINDING_ROW_NOT_CANONICAL")
+            ticker = row["ticker"]
+            if (
+                not isinstance(ticker, str)
+                or not ticker
+                or (
+                    previous_ticker is not None
+                    and ticker <= previous_ticker
+                )
+                or not isinstance(row["canonical_security_id"], str)
+                or not row["canonical_security_id"]
+                or not isinstance(row["instrument_class"], str)
+                or not row["instrument_class"]
+                or not isinstance(row["identity_revision"], str)
+                or not row["identity_revision"]
+            ):
+                raise DecisionV1Error("TRANSITION_BINDING_ROW_NOT_CANONICAL")
+            _require_sha(row["source_evidence_sha256"])
+            previous_ticker = ticker
+    else:
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != _JOIN_KEYS:
+                raise DecisionV1Error("TRANSITION_BINDING_ROW_NOT_CANONICAL")
+            if (
+                not isinstance(row["cause_id"], str)
+                or len(row["cause_id"]) != 64
+                or any(char not in "0123456789abcdef" for char in row["cause_id"])
+                or (
+                    row["obligation_id"] is not None
+                    and (
+                        not isinstance(row["obligation_id"], str)
+                        or not row["obligation_id"]
+                    )
+                )
+                or (
+                    row["obligation_sha256"] is not None
+                    and not _is_sha(row["obligation_sha256"])
+                )
+                or isinstance(row["remaining_shares"], bool)
+                or not isinstance(row["remaining_shares"], int)
+                or row["remaining_shares"] < 0
+                or row["next_decision_action"] not in {"RETRY_OBLIGATION", "NONE"}
+            ):
+                raise DecisionV1Error("TRANSITION_BINDING_ROW_NOT_CANONICAL")
     payload["payload_sha256"] = declared
     return payload
 

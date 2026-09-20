@@ -152,6 +152,8 @@ The isolated lane currently contains:
   intrinsic fills, state, turnover, pending, and reconciliation invariants;
 - CA timing verification rejects hash-valid noncanonical rows and inconsistent
   payment timing/action semantics;
+- transition-binding verification rejects hash-valid noncanonical identity and
+  cause-obligation envelopes and rows;
 - `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when
   valid, fail-closed classification/disposition/reason, UTC decision time, and
   optional runtime lineage with immutable idempotent persistence;

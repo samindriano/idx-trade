@@ -54,7 +54,7 @@ membership may be used to infer a missing planned quantity.
 | `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, validated CA/evidence provenance, coverage gate, and nested replay parent gate; independent challenge open |
 | `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Alias/revision interval contract plus Decision identity binding implemented locally; authoritative source/child replay open |
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Quantity/exposure/cash cause records with explicit bound-zero transitions plus cause-to-obligation retry binding implemented locally; child replay matrix open |
-| `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound Decision resolutions and recomputed same-session cause/obligation joins; operational source binding open |
+| `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound canonical Decision resolutions and cause/obligation joins with recomputation; operational source binding open |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Hash-bound canonical envelope with binding-status validation implemented; operational child binding and replay matrix open |
 | `CONTROLLER_RECOVERY-V1` | E2E operational controller | Durable `RUNNING` crash fence to `RECOVERY_REQUIRED`; side-effect fault matrix open |
 | `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery is consumed by orchestration state loading; independent controller challenge open |
