@@ -146,6 +146,9 @@ The isolated lane currently contains:
   side-effect boundaries without provider or outcome access;
 - post-implementation independent challenge is recorded PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and controller gates;
+- independent challenge V2 also covers real synthetic child interruption,
+  hash-pinned identity child wiring, prepared selection, and migration
+  activation policy; external/live validation remains intentionally closed;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
