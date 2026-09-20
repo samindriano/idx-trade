@@ -144,6 +144,32 @@ the execution-side binding. Together they prevent a prepared order from being
 executed against a state in which the residual holding or dividend ledger was
 silently changed.
 
+## 6.1 Positive partial-buy composition — current frontier
+
+A separate synthetic composition started with an execution underfill: 5,000
+shares were planned, 1,200 were actually acquired, and no residual buy was
+persisted. The cash-dividend lifecycle then correctly used the actual 1,200
+shares at cum date:
+
+| Check | Result |
+|---|---:|
+| Actual shares at cum date | 1,200 |
+| Hypothetical planned shares | 5,000 |
+| Actual entitlement | 1,200 shares |
+| Actual receivable at IDR 25/share | IDR 30,000 |
+| Hypothetical planned receivable | IDR 125,000 |
+| Difference caused by missing residual exposure | IDR 95,000 |
+| Payment cash increase | IDR 30,000 |
+| Receivable after payment | 0 |
+| Settlement count after replay | 1; same-session replay equal |
+
+This is not evidence that the CA engine over-entitles or double-pays. It is a
+cross-component economic consequence: CA accounting is correct for actual
+holdings, but the missing residual obligation means the system cannot recover
+the intended exposure or the associated future entitlement. The positive
+partial-buy defect therefore reaches CA/NAV/receivable interpretation even
+when the CA ledger itself remains deterministic.
+
 ## 7. Validation evidence
 
 From runtime commit `045e25a19d9f71170d2c863e768102937e59ad73`:
@@ -158,6 +184,10 @@ The tests cover paired-sell blocking, pending transition persistence,
 capacity/lot/cash invariants, Decision V2 shadow lineage, pending reversal, and
 verified CA attestation. They do not constitute broker integration or a
 population-wide liquidity test.
+
+The current positive-buy/CA composition probe is recorded in
+`2026-09-20_IDX_PARTIAL_BUY_TRIGGER_MATRIX_V1.md` and uses only synthetic
+in-memory state; it does not change the bounded CA lifecycle verdict.
 
 ## 8. Hidden policy assumption and open question
 

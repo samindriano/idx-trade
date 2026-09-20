@@ -25,13 +25,16 @@ The system tracks target membership but not target quantity obligations. A posit
 - Durable checkpoint: `2026-09-20_IDX_PARTIAL_BUY_TRIGGER_MATRIX_V1.md`.
 - Decision V2 ten-seat probe: one 2,400/5,000 partial seat plus nine full seats
   still produced `FULL`, zero unfilled slots, and no retry on the next plan.
+- Positive underfill composed with synthetic cash-dividend lifecycle: actual
+  1,200 shares received IDR 30,000 entitlement/settlement versus IDR 125,000
+  planned-share hypothetical; CA replay remained exactly-once.
 
 ## Immediate next questions
 
 1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
 2. Which artifact should own planned/filled/remaining quantities so restart and replay cannot erase the obligation?
-3. Does CA payment/settlement state interact with a residual order obligation across sessions?
-4. Can the existing failure-recovery/atomic snapshot path preserve a residual obligation once one is explicitly modeled?
+3. Can the existing failure-recovery/atomic snapshot path preserve a residual obligation once one is explicitly modeled?
+4. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
 
 ## Constraints
 

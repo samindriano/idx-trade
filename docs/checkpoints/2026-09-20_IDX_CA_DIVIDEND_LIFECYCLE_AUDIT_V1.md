@@ -245,6 +245,11 @@ journal hash chains, blocker resolution, and same-day phase ordering.
    durable T0/continuity crash gaps, missing full runtime-config/projected-CA
    identity, absent portfolio risk overlay, uncalibrated slippage, and missing
    aggregate liquidity guard.
+7. A current synthetic positive-buy underfill composed with the CA lifecycle
+   produced entitlement/receivable/payment for actual 1,200 shares rather than
+   the 5,000 planned shares. The resulting IDR 95,000 difference is an upstream
+   execution-underexposure consequence, not a CA over-entitlement defect; the
+   residual buy was absent before CA processing.
 
 ## 8. Decision and next frontier
 

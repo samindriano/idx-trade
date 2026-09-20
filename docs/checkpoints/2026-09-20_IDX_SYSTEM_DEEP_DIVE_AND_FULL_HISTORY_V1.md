@@ -595,6 +595,11 @@ historical alpha archive:
   loss rather than a single price-gap incident. A separate ten-seat Decision V2
   run filled one seat only partially but still reported `FULL` with zero
   unfilled slots and no retry. No runtime source fix was applied.
+- The same underfilled state was composed with the cash-dividend lifecycle:
+  actual 1,200 shares correctly generated IDR 30,000 entitlement/settlement,
+  while the 5,000-share planned hypothetical would have generated IDR 125,000.
+  This is upstream execution underexposure propagating into CA economics, not
+  a dividend-engine double-pay defect.
 
 The durable rolling controls for this marathon are now:
 
