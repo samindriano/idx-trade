@@ -17,6 +17,7 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     execute_preopen,
     load_score_manifest,
 )
+from idx_trade.e2e_paper_phase_binding_v1 import load_phase_runtime_binding
 from idx_trade.e2e_operational_guard_v1 import (
     JAKARTA,
     attest_deployment,
@@ -34,6 +35,7 @@ from idx_trade.v4_x1_execution_v1_verify import (
     verify_eod_execution_inputs,
     verify_open_execution_inputs,
 )
+from idx_trade.e2e_paper_runtime_config_v1 import E2ERuntimeConfigError
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -56,7 +58,7 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run(args: argparse.Namespace) -> int:
+def _run(args: argparse.Namespace, *, runtime_config_sha256: str) -> int:
     current = load_score_manifest(args.current_score_manifest)
     previous = (
         None
@@ -134,13 +136,7 @@ def _run(args: argparse.Namespace) -> int:
         dividend_evidence=evidence,
         implementation_branch=args.expected_branch,
         implementation_commit=args.expected_commit,
-        runtime_config_sha256=(
-            hashlib.sha256(
-                (Path(args.runtime_root).resolve() / "operational" / "config.json").read_bytes()
-            ).hexdigest()
-            if (Path(args.runtime_root).resolve() / "operational" / "config.json").is_file()
-            else None
-        ),
+        runtime_config_sha256=runtime_config_sha256,
         entrypoint_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     )
     print(
@@ -165,6 +161,14 @@ def main() -> int:
         expected_commit=args.expected_commit,
     )
     try:
+        runtime_config_sha256 = load_phase_runtime_binding(
+            args.runtime_root,
+            expected_branch=args.expected_branch,
+            expected_commit=args.expected_commit,
+        )
+    except E2ERuntimeConfigError as exc:
+        raise SystemExit(str(exc)) from exc
+    try:
         prepared_payload = json.loads(Path(args.prepared).read_text(encoding="utf-8"))
         execution_session = str(prepared_payload.get("execution_session_date") or "")
     except (OSError, json.JSONDecodeError) as exc:
@@ -178,7 +182,7 @@ def main() -> int:
         attestation_path=args.phase_attestation,
     )
     with exclusive_run_lock(Path(args.runtime_root) / "operational" / "phase.lock"):
-        return _run(args)
+        return _run(args, runtime_config_sha256=runtime_config_sha256)
 
 
 if __name__ == "__main__":

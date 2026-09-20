@@ -77,6 +77,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - operational `BOUND` lineage is persisted and rechecked across synthetic
   prepare/execute/replay, with config mismatch rejected;
+- all four V1/V2 phase child entrypoints now require the external hash-pinned
+  runtime config, require its branch/commit identity to match the parent
+  controller, and pass the non-null config SHA into orchestration;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
@@ -93,5 +96,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - authorized automatic migration activation/persistence policy (the explicit
   verified-snapshot consumer is implemented);
 - authoritative identity-source wiring through every child script;
-- child-process runtime binding and independent crash/interruption challenge;
+- independent child-process crash/interruption challenge (the phase child
+  binding gate is implemented, but no live provider/scheduler run is authorized
+  in this lane);
 - independent final challenge.
