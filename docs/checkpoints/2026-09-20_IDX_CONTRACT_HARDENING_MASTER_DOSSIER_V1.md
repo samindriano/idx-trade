@@ -1,6 +1,6 @@
 # IDX-Trade Contract Hardening and Runtime Remediation Marathon V1
 
-Date: 2026-09-20 (Asia/Jakarta)  
+Date: 2026-09-21 (Asia/Jakarta)  
 Lane: isolated implementation `codex/idx-contract-hardening-20260920`  
 Status: `PHASE-1 FOUNDATION + PHASE-2 EXECUTION IN PROGRESS / NO PRODUCTION OR PROTECTED-OUTCOME ACCESS`
 
@@ -159,6 +159,12 @@ The isolated lane currently contains:
 - prepared orchestration replay also reconstructs and exact-compares the
   nested execution plan, rejecting a rehashed forged plan before idempotent
   return;
+- controller V1/V2 now treat an existing `RECOVERY_REQUIRED` status as a
+  terminal fence on repeated invocation, preventing silent provider/capture/
+  child-execution retry;
+- latest-snapshot quarantine manifests now require an exact canonical envelope,
+  sorted entries, and an authenticated own manifest hash; tampering fails
+  closed;
 - persisted execution evidence replay canonically parses and reevaluates
   intrinsic fills, state, turnover, pending, and reconciliation invariants;
 - CA timing verification rejects hash-valid noncanonical rows and inconsistent
@@ -205,7 +211,7 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`f9d323bd` passes `242/242` across the latest
+`2aa210bf` passes `245/245` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
 state-level explicit cancellation/relinquishment replay, evidence, CA,
 identity, transition, lineage, migration, dividend-runtime, and E2E
@@ -218,7 +224,8 @@ live provider/scheduler interruption validation, automatic migration activation,
 and the remaining Decision-seat policy semantics are still open. Explicit
 cancellation/relinquishment is implemented only as a caller-supplied,
 parent-bound transition; it is never inferred from target membership. The
-prepared Decision/execution-plan replay gap is covered by `f9d323bd`; this is not a
+prepared Decision/execution-plan replay gap, terminal recovery fence, and
+authenticated quarantine manifest are covered by `2aa210bf`; this is not a
 production promotion or phase closure.
 
 ## Boundaries

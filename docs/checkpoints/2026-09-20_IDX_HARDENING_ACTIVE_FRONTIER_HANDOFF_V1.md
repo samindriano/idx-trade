@@ -1,6 +1,6 @@
 # IDX-Trade Hardening Active Frontier Handoff V1
 
-Date: 2026-09-20  
+Date: 2026-09-21  
 Lane: `codex/idx-contract-hardening-20260920`  
 Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
@@ -106,6 +106,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - prepared orchestration replay also reconstructs and exact-compares the
   nested execution plan, rejecting a rehashed forged plan before idempotent
   return;
+- controller V1/V2 now treat an existing `RECOVERY_REQUIRED` status as a
+  terminal fence on repeated invocation, preventing silent side-effect retry;
+- latest-snapshot quarantine manifests now use an exact canonical envelope,
+  sorted entry set, own manifest hash, and fail-closed tamper verification;
 - persisted execution evidence is canonically parsed and intrinsically
   reevaluated during replay, so rehashed aggregate/state/fill tamper is rejected;
 - transition-binding verification now enforces canonical identity-resolution
@@ -154,13 +158,13 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `242/242` for the
+- a fresh current-head regression challenge is also PASS at `245/245` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
   controller/orchestration suites; see
   `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at source commit
-  `f9d323bd`;
+  `2aa210bf`;
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
@@ -168,7 +172,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   boolean position shares before whole-lot validation; the follow-up challenge
   is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `f9d323bd` (prepared Decision/execution-plan
+- continuation commits include `2aa210bf` (terminal recovery fence and
+  authenticated quarantine manifest), `f9d323bd` (prepared Decision/execution-plan
   replay binding), `e5040346` (prepared Decision-plan replay binding),
   `9dacf7e6` (strict position-share validation),
   `31e05ee1` (boolean rank validation),
@@ -188,6 +193,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   rechecks passed and the current clean run covers the latest replay changes;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
+- post-hardening full repository regression at `2aa210bf` completed at
+  `883/883 PASS` with only the three pre-existing pandas `FutureWarning`
+  records; no new failure was observed.
 
 ## Remaining evidence before Phase 4
 

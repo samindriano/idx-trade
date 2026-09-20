@@ -1,8 +1,8 @@
 # IDX-Trade Current-Head Regression Challenge V1
 
-Date: 2026-09-20
+Date: 2026-09-21
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `f9d323bd`
+Verification revision: `2aa210bf`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`242/242 PASS`.
+`245/245 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -41,6 +41,10 @@ by the prepared artifact, reconstructs the embedded Decision plan from that
 parent, and rejects a rehashed nested plan while preserving valid idempotent
 reruns. The same exact-parent replay gate now covers the nested execution plan;
 rehashing a forged execution-plan payload is rejected before idempotent return.
+The controller recovery fence now treats an existing `RECOVERY_REQUIRED` status
+as terminal on repeated V1/V2 invocations. The latest-snapshot quarantine
+manifest is versioned, exact-keyed, entry-order canonical, and authenticated by
+its own manifest hash; manifest tampering fails closed.
 
 Earlier in this lane, the full repository command was also attempted twice
 after the preceding contract additions.
@@ -49,7 +53,12 @@ Both runs reached the end of the suite but encountered the known Windows
 `tests/test_official_open_evidence_v1.py` and once in
 `tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
 run in isolation. No contract-hardening test failed; the expanded bounded
-242-test result above is the current clean evidence for this lane.
+245-test result above is the current clean evidence for this lane.
+
+A post-hardening full-repository run also completed at 100%: `883/883 PASS`
+with only the three pre-existing pandas `FutureWarning` records described
+below. No protected/provider/canonical/cloud/capture/telemetry/scheduler state
+was accessed.
 
 ## Verification command
 
