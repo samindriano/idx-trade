@@ -236,3 +236,20 @@ access absence.
 - The first execution was discarded after correcting the year-boundary pairing
   rule. The recorded result is the corrected rerun. This remains structural,
   representation-dependent evidence only.
+
+## Candidate component anatomy
+
+- Script: `research/alpha_candidate_component_anatomy_v1.py`.
+- Durable result: `research_knowledge/candidate_component_anatomy_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_COMPONENT_ANATOMY_RESULT_V1.md`.
+- Code SHA-256:
+  `de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e`.
+- External result SHA-256:
+  `c024d20e01008e2ba13d234843f195dbf859dfd9dbe66cc3404344bb57230295`.
+- Focused tests: `tests/test_alpha_candidate_component_anatomy_v1.py`, 1/1
+  passing.
+- The official-session rolling components exactly reconstruct finite C1/C2/C4
+  scores: 295243, 310761, and 310323 checked values, all with maximum absolute
+  difference 0.0. C1/C4 are numerator-dominated reversals; C2 is an
+  interaction between ret_5 and abnormal-turnover log. The result is
+  implementation/structural evidence only.

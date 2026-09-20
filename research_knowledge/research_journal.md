@@ -226,3 +226,16 @@ checkpoint files; this file records why the next question changed.
 - Corrected the first execution to exclude December-to-January pairs from
   year-stratified next-session comparisons; only the corrected rerun was
   retained. No candidate, policy, era, or outcome was selected.
+
+## 2026-09-20 — formula-component anatomy
+
+- Reconstructed the official-session market-side components for C1/C2/C4 and
+  checked them against the stored guarded scores. All finite values matched
+  exactly: C1 295243, C2 310761, C4 310323, maximum absolute difference 0.0.
+- C1 and C4 rank geometry is dominated by their reversal numerators, with
+  median daily score/component Spearman -0.9599 and -0.9519. C2 is an
+  interaction: ret_5 median association 0.2681 and abnormal-turnover log
+  -0.0045, while its Top-30 names are elevated on both components.
+- This strengthens the shared-reversal caution without proving predictive
+  redundancy. No C5, policy, era, candidate promotion, or protected outcome
+  was introduced.

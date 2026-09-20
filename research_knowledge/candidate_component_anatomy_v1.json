@@ -1,0 +1,67 @@
+{
+  "schema_version": "IDX_TRADE_CANDIDATE_COMPONENT_ANATOMY_V1",
+  "experiment_id": "CANDIDATE-COMPONENT-ANATOMY-047",
+  "status": "PASS_STRUCTURAL_COMPONENT_ANATOMY",
+  "scope": "Outcome-blind component/rank anatomy for fixed C1/C2/C4 formulas; no policy, era, candidate, or outcome selection.",
+  "code": {
+    "path": "research/alpha_candidate_component_anatomy_v1.py",
+    "sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-component-anatomy/alpha_candidate_component_anatomy_v1.json",
+    "sha256": "c024d20e01008e2ba13d234843f195dbf859dfd9dbe66cc3404344bb57230295"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "formula_check": {
+    "C1_checked_values": 295243,
+    "C2_checked_values": 310761,
+    "C4_checked_values": 310323,
+    "max_abs_difference_all": 0.0
+  },
+  "component_score_rank_spearman_medians": {
+    "C1": {
+      "c1_residual": -0.959869619431663,
+      "c1_beta_market_component": 0.0646307793545434,
+      "vol_20": -0.0399240423853777
+    },
+    "C2": {
+      "ret_5": 0.268083490619788,
+      "c2_log_abnormal_turnover": -0.0044898638347409
+    },
+    "C4": {
+      "ret_20": -0.951873950267782,
+      "abs_ret_sum_20": -0.113614251625324
+    }
+  },
+  "top30_component_percentile_medians": {
+    "C1": {
+      "c1_residual": 0.105339805825243,
+      "c1_beta_market_component": 0.541203703703704,
+      "vol_20": 0.471654501216545
+    },
+    "C2": {
+      "ret_5": 0.694404332129964,
+      "c2_log_abnormal_turnover": 0.677246376811594
+    },
+    "C4": {
+      "ret_20": 0.112133891213389,
+      "abs_ret_sum_20": 0.473030303030303
+    }
+  },
+  "interpretation": [
+    "C1 score rank is dominated by the residual-reversal numerator (median daily Spearman -0.9599 because lower residual is preferred); beta-market and volatility components are secondary on this rank diagnostic.",
+    "C4 score rank is likewise dominated by negative 20-session return (median daily Spearman -0.9519); path-length normalization is materially weaker on rank association.",
+    "C2 is an interaction: score rank has moderate association with ret_5 (median 0.2681) and near-zero median association with log abnormal turnover (-0.0045), while selected Top-30 names are elevated on both component percentiles.",
+    "All finite C1/C2/C4 recomputed scores exactly match the guarded feature artifact; this is a formula-consistency check, not scientific or predictive validation."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}

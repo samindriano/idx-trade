@@ -94,6 +94,11 @@
   has a 10.18% exact boundary-tie fraction. Gap-to-next-turnover associations
   are modest, so turnover is not explained by one thin-margin mechanism. This
   is representation-dependent structural evidence, not predictive quality.
+- Formula-component anatomy shows C1 and C4 rank geometry is dominated by their
+  reversal numerators (median daily score/component Spearman -0.9599/-0.9519),
+  while C2 is an interaction between ret_5 and abnormal-turnover log rather
+  than one component. Finite recomputed C1/C2/C4 scores match the guarded
+  artifact exactly; this is implementation evidence only.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.

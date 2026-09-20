@@ -6,7 +6,8 @@
    population, identity, CA, liquidity, and financial gates each candidate
    actually consumes. Calendar-year support and fixed Top-30 mechanics are
    mapped, and score-edge geometry is now separated from turnover; no era is
-   admitted and sparse C3 mechanics remain support-driven.
+   admitted. Component anatomy further confirms the C1/C4 shared-reversal
+   caution and the interaction character of C2; sparse C3 remains support-driven.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a
