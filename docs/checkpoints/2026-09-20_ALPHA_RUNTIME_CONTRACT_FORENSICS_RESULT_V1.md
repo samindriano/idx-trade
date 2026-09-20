@@ -68,6 +68,20 @@ LOW_LEVEL_API_NOT_SELF_CONTAINED`.
   Execution payload identities, including rule IDs, state hash, EOD model
   input hash, and official calendar hash, but not the adapter-config hash.
 
+The exact-runtime call-site census is:
+
+| Verifier | Definition in runtime | Non-test production call found |
+|---|---:|---:|
+| `verify_sizing_v1_config` | 1 | No |
+| `verify_execution_v1_config` | 1 | No |
+| `verify_execution_v1_decision_v2_adapter_config` | 1 | No |
+
+The V1 frozen-config verifier is a separate path used by the older Decision V1
+implementation. The runtime is therefore primarily protected by pinned
+checkout identity, constants, provenance checks, and tests rather than by
+runtime invocation of every JSON config verifier. This is a latent
+configuration-enforcement gap, not evidence of an actual mismatch.
+
 ## Frozen-panel denominator census
 
 Scope: same hash-pinned structural artifacts used by the prior Rank-to-Open

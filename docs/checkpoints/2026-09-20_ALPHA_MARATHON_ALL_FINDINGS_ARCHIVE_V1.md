@@ -885,3 +885,11 @@ definition/tests, and the E2E execution payload does not serialize the
 adapter-config hash. This is retained as configuration-lineage hardening
 work, with no current runtime mismatch proven and no code change authorized in
 this lane.
+
+The exact pinned-runtime call-site census further found that
+`verify_sizing_v1_config`, `verify_execution_v1_config`, and
+`verify_execution_v1_decision_v2_adapter_config` have definitions and tests but
+no non-test production call site. The runtime therefore relies mainly on
+checkout pinning, constants, provenance, and tests rather than invoking every
+JSON config verifier at runtime. This is a latent configuration-enforcement
+gap, not evidence of live drift.
