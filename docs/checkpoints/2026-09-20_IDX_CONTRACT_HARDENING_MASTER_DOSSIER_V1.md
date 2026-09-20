@@ -108,6 +108,8 @@ The isolated lane currently contains:
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
   payment-on-decision, payment-on-execution, and later payment boundaries,
   while permitting only hash-bound additive preopen CA extensions;
+- persisted execution replay rechecks nested evidence/reconciliation/timing/
+  lineage parents, including a tamper test that recomputes only the outer hash;
 - projection guard that rejects changes to positions, pending intents,
   obligations, reconciliation state, or state source identity;
 - versioned `EXECUTION_EVIDENCE-V2` artifact with per-fill quantities,
@@ -128,7 +130,7 @@ Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
-execution evidence and reconciliation artifact restart binding,
+full migration artifact provenance and independent artifact challenge,
 reconciliation provenance, authoritative identity-source/child cause replay,
 operational BOUND
 lineage, controller fault matrix, and full migration

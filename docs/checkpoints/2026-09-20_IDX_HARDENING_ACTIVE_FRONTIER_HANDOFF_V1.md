@@ -61,6 +61,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
   payment-on-decision, payment-on-execution, and later payment boundaries;
   prepared matrices accept only hash-bound additive CA extensions;
+- persisted execution replay now rechecks nested evidence, reconciliation,
+  timing, and runtime-lineage parents and rejects a recomputed outer hash over
+  tampered nested evidence;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - exact base/runtime lineage remains recorded;
@@ -70,8 +73,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 ## Remaining evidence before Phase 4
 
 - quantity-bearing execution evidence and evaluator replay;
-- execution artifact restart binding and tamper/replay matrix;
-- reconciliation-result artifact replay and mismatch matrix;
+- full migration artifact provenance and independent artifact challenge;
 - operational use of identity evidence and cause joins through every child
   script, including persisted replay/tamper coverage;
 - operational BOUND lineage through child scripts and controller crash/recovery

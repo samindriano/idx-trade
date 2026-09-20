@@ -6,8 +6,8 @@
 | REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / REPLAY_OPEN` | Paired retry/reversal and cancellation lineage |
 | REM-STATE-001 | Snapshot omits obligation state | `V2_SCHEMA_IMPLEMENTED` | `IMPLEMENTED_LOCAL / RECOVERY_OPEN` | Versioned snapshot/hash, restart replay, and legacy loader |
 | REM-CA-001 | Projected CA state differs from execution parent | `LINEAGE_CONTRACT_IMPLEMENTED_LOCAL` | `TIMING_MATRIX_IMPLEMENTED_LOCAL / ARTIFACT_REPLAY_OPEN` | Three timing cases, additive CA extension, and restart/idempotency |
-| REM-EVAL-001 | Execution evidence loses quantity semantics | `EVIDENCE_V2_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / ARTIFACT_REPLAY_OPEN` | Versioned evidence artifact, structural evaluator replay, and restart binding |
-| REM-REC-001 | False reconciliation bit lacks provenance | `RESULT_V1_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / ARTIFACT_REPLAY_OPEN` | Typed result, evidence binding, restart/replay |
+| REM-EVAL-001 | Execution evidence loses quantity semantics | `EVIDENCE_V2_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / REPLAY_GATES_IMPLEMENTED` | Versioned evidence artifact, structural evaluator replay, nested parent hash, and independent challenge |
+| REM-REC-001 | False reconciliation bit lacks provenance | `RESULT_V1_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / REPLAY_GATES_IMPLEMENTED` | Typed result, evidence binding, nested replay, and independent challenge |
 | REM-ID-001 | Identity normalization/revision splits | `IDENTITY_CONTRACT_IMPLEMENTED_LOCAL` | `TRANSITION_BINDING_IMPLEMENTED_LOCAL / OPERATIONAL_SOURCE_OPEN` | Alias, same-class revision, and child-consumer replay with authoritative identity source |
 | REM-CAUSE-001 | Exposure/cash cause state collapses | `CAUSE_V1_IMPLEMENTED_LOCAL` | `TRANSITION_BINDING_IMPLEMENTED_LOCAL / REPLAY_MATRIX_OPEN` | Cause-to-obligation join, retry transition, and child-consumer replay |
 | REM-LINEAGE-001 | Config/runner identity absent from artifacts | `LINEAGE_V2_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / OPERATIONAL_BINDING_OPEN` | Config mismatch fail-closed across prepare/execute/replay |

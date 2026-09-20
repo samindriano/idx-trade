@@ -478,6 +478,49 @@ def _verify_lineage_binding(
     return payload
 
 
+def _verify_persisted_execution_components(
+    execution_body: Mapping[str, Any],
+    *,
+    error_prefix: str,
+) -> dict[str, Any]:
+    """Verify the nested evidence/provenance parents during replay."""
+
+    evidence = execution_body.get("execution_evidence")
+    if not isinstance(evidence, Mapping):
+        raise E2EPaperOrchestrationError(error_prefix + "_EVIDENCE_MISSING")
+    try:
+        reconciliation = verify_reconciliation_result_payload(
+            execution_body.get("reconciliation_result")
+            if isinstance(execution_body.get("reconciliation_result"), Mapping)
+            else {}
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_RECONCILIATION_INVALID"
+        ) from exc
+    if reconciliation.get("execution_evidence_sha256") != _canonical_hash(dict(evidence)):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_PARENT_HASH_MISMATCH"
+        )
+    timing = execution_body.get("ca_timing_matrix")
+    if timing is not None:
+        try:
+            verify_ca_timing_matrix_payload(timing)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CA_TIMING_INVALID"
+            ) from exc
+    lineage = execution_body.get("runtime_lineage")
+    if lineage is not None:
+        try:
+            verify_runtime_lineage_v2(lineage if isinstance(lineage, Mapping) else {})
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RUNTIME_LINEAGE_INVALID"
+            ) from exc
+    return reconciliation
+
+
 def _journal_identity_payload(path: str | Path) -> dict[str, list[dict[str, Any]]]:
     """Return the persisted journal evidence identities used for parent binding."""
     journal_path = Path(path).expanduser().resolve()
@@ -759,6 +802,11 @@ def _verify_previous_execution_parent(
     execution_sha = str(body.pop("payload_sha256") or "")
     if not execution_sha or _canonical_hash(body) != execution_sha:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PAYLOAD_HASH_MISMATCH")
+    if execution_kind == "EXECUTION":
+        _verify_persisted_execution_components(
+            execution,
+            error_prefix="E2E_PREVIOUS_EXECUTION",
+        )
     if str(meta.get("last_execution_session_date") or "") != str(execution.get("execution_session_date") or ""):
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_SESSION_MISMATCH")
     if execution.get("execution_session_date") > current_session:
@@ -1179,16 +1227,10 @@ def _recover_staged_execution(
     execution_body = stage.get("execution_body")
     if not isinstance(execution_body, dict):
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_PAYLOAD_MISSING")
-    try:
-        verify_reconciliation_result_payload(
-            execution_body.get("reconciliation_result")
-            if isinstance(execution_body.get("reconciliation_result"), Mapping)
-            else {}
-        )
-    except DecisionV1Error as exc:
-        raise E2EPaperOrchestrationError(
-            "E2E_TRANSACTION_RECONCILIATION_RESULT_INVALID"
-        ) from exc
+    _verify_persisted_execution_components(
+        execution_body,
+        error_prefix="E2E_TRANSACTION",
+    )
     _verify_lineage_binding(
         execution_body.get("runtime_lineage"),
         role="EXECUTION_RESULT",
@@ -1208,8 +1250,6 @@ def _recover_staged_execution(
             raise E2EPaperOrchestrationError(
                 "E2E_TRANSACTION_CA_TIMING_MATRIX_INVALID"
             ) from exc
-        if execution_body.get("ca_timing_matrix") != expected_ca_timing_matrix:
-            raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_TIMING_MATRIX_PARENT_MISMATCH")
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1409,16 +1449,10 @@ def execute_preopen(
         existing_hash = str(existing_body.pop("payload_sha256", ""))
         if not existing_hash or _canonical_hash(existing_body) != existing_hash:
             raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_HASH_MISMATCH")
-        try:
-            verify_reconciliation_result_payload(
-                existing_body.get("reconciliation_result")
-                if isinstance(existing_body.get("reconciliation_result"), Mapping)
-                else {}
-            )
-        except DecisionV1Error as exc:
-            raise E2EPaperOrchestrationError(
-                "E2E_EXISTING_RECONCILIATION_RESULT_INVALID"
-            ) from exc
+        _verify_persisted_execution_components(
+            existing_body,
+            error_prefix="E2E_EXISTING_EXECUTION",
+        )
         _verify_lineage_binding(
             existing_body.get("runtime_lineage"),
             role="EXECUTION_RESULT",

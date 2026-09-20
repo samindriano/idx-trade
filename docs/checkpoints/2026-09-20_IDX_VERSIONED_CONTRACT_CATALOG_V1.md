@@ -48,8 +48,8 @@ missing planned quantity.
 | `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, and additive hash implemented; recovery open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, and `CA_TIMING_MATRIX-V1` are hash-bound; artifact replay open |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; only additive extension is accepted |
-| `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact and structural evaluator implemented locally; artifact restart binding open |
-| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result with CA/evidence provenance; artifact replay open |
+| `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, structural evaluator, and nested replay parent gate implemented locally; independent challenge open |
+| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, CA/evidence provenance, and nested replay parent gate; independent challenge open |
 | `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Alias/revision interval contract plus Decision identity binding implemented locally; authoritative source/child replay open |
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Quantity/exposure/cash cause records plus cause-to-obligation retry binding implemented locally; child replay matrix open |
 | `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound Decision resolutions and same-session cause/obligation joins; operational source binding open |

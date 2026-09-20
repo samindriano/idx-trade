@@ -497,6 +497,51 @@ def test_preopen_recovers_after_snapshot_before_execution_commit(tmp_path: Path)
     assert recovered.file_sha256 == completed.file_sha256
 
 
+def test_preopen_replay_rejects_nested_evidence_parent_tamper(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    payload["execution_evidence"]["gross_turnover_idr"] = 1.0
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_EVIDENCE_PARENT_HASH_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
 def test_preopen_recovers_when_execution_and_snapshot_are_missing(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")
