@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: isolated `codex/alpha-available-data-20260919`
-Status: `IDENTITY_COLLISION_REPRODUCED / DOWNSTREAM_GUARD_LATE`
+Status: `IDENTITY_COLLISION_REPRODUCED / LATENT_PATH_GUARD_LATE`
 
 This is a read-only synthetic audit of the identity-to-universe boundary. It
 uses the exact pinned runtime source from a separate worktree and synthetic
@@ -55,6 +55,12 @@ that counts rows rather than canonical ticker keys, can observe duplicated
 liquidity support. The later Decision rejection also means the system has a
 late guard rather than one consistent identity invariant across the pipeline.
 
+A call-site census of the pinned `src/`, `scripts/`, and `tests/` trees found
+the builder definition and its direct universe tests, but no production/script
+caller in that checkout. The observed defect is therefore a real
+library/legacy-path contract defect and latent system risk; this probe does not
+claim that the current forward controller invokes this builder.
+
 ## 4. Blast radius
 
 - Origin: raw input-key iteration in the universe builder occurs before a
@@ -64,6 +70,8 @@ late guard rather than one consistent identity invariant across the pipeline.
   selected-row counts, and potentially distorted breadth/turnover support.
 - Downstream behavior: V4-X1 Decision rank adaptation fails closed if it sees
   the duplicate frame; other row-oriented consumers are not proven safe.
+- Call-graph qualification: no production/script caller of this builder was
+  found in the pinned checkout, so active forward-path impact is unproven.
 - Existing coverage: the Decision adapter tests normalization and duplicate
   rejection, but the universe tests do not exercise duplicate raw aliases at
   the universe origin.
