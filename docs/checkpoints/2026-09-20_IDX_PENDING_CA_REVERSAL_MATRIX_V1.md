@@ -63,18 +63,26 @@ That is a policy boundary, not evidence of CA over-entitlement or double pay.
 ## 4. Decision reversal
 
 The next synthetic Decision target returned to the actual `AAA` holding and
-requested no replacement. The core execution path produced:
+requested no replacement. The Decision V2 adapter was also exercised with the
+shadow state implied by the pending pair (`BBB`) and the reversed target
+(`AAA`). It explicitly recognized the reversal and produced:
 
 - position: `AAA:2,000`;
 - pending sell: none;
 - pending buy: none;
+- effective buy intents: none;
+- effective sell intents: none;
+- fills: none;
+- `reconciliation_required`: `false`;
 - no fill-based cancellation record;
 - cash unchanged from the post-payment state.
 
-This may be the intended cancellation when the target reverses, but the state
-does not distinguish an explicit cancellation from ordinary absence of pending
-rows. There is no pending-age/expiry/manual-review contract to show whether a
-long-lived residual should have escalated before the reversal.
+Thus the adapter's cancellation behavior is deterministic and intentional at
+the order-selection layer. The remaining gap is auditability: the resulting
+`ExecutionResult` does not emit a typed cancellation/reversal event or retain
+the canceled obligation's lineage. There is also no pending-age/expiry/manual-
+review contract to show whether a long-lived residual should have escalated
+before the reversal.
 
 ## 5. System interpretation
 

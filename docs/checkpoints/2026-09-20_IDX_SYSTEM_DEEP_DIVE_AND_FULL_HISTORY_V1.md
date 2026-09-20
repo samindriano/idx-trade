@@ -616,10 +616,11 @@ historical alpha archive:
 - `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md` extends the frontier across
   four sessions: repeated partial exit and zero capacity preserve a pending
   replacement; a 5,000-share cash-dividend entitlement settles IDR125,000
-  exactly once without triggering a replan; and a later target reversal removes
-  both pending rows without a fill-based cancellation event. The remaining gap
-  is an obligation lifecycle contract (remaining quantity, age, attempts,
-  expiry/escalation, and explicit cancellation), not dividend arithmetic.
+  exactly once without triggering a replan; and the Decision V2 adapter
+  deterministically cancels both pending rows on a later target reversal while
+  emitting no typed cancellation lineage. The remaining gap is an obligation
+  lifecycle contract (remaining quantity, age, attempts, expiry/escalation, and
+  explicit cancellation), not dividend arithmetic.
 
 The durable rolling controls for this marathon are now:
 

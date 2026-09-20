@@ -47,9 +47,10 @@ The system tracks target membership but not target quantity obligations. A posit
 - CA composition: the original 5,000-share cum-date entitlement settled
   IDR125,000 exactly once; cash changed while the pending replacement remained
   unchanged.
-- Target reversal: returning to actual `AAA:2,000` removed both pending rows
-  without a fill-based cancellation event, leaving cancellation/expiry policy
-  and audit lineage unresolved.
+- Target reversal: the Decision V2 adapter explicitly recognized shadow `BBB`
+  → target `AAA`, produced no effective orders or fills, and removed both
+  pending rows. No typed cancellation event or obligation lineage was emitted,
+  leaving expiry/escalation and audit policy unresolved.
 - Durable checkpoint: `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md`.
 
 ## Immediate next questions
