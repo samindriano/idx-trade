@@ -95,6 +95,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   reevaluated during replay, so rehashed aggregate/state/fill tamper is rejected;
 - transition-binding verification now enforces canonical identity-resolution
   and cause-obligation envelopes, rows, hashes, and date semantics;
+- hash-pinned identity evidence now enforces canonical envelope/row shape,
+  source/date fields, and lowercase payload hashes;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - runtime-lineage verification now rejects hash-valid but noncanonical binding

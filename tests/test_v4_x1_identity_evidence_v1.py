@@ -102,3 +102,24 @@ def test_identity_evidence_rejects_outcome_access_and_session_drift(
             as_of_session_date="2026-08-25",
             required_tickers=("T00",),
         )
+
+
+def test_identity_evidence_rejects_hash_valid_noncanonical_extension(
+    tmp_path: Path,
+) -> None:
+    path, file_sha = _write_evidence(tmp_path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["unexpected_extension"] = "accepted-by-hash-only"
+    body = dict(payload)
+    body.pop("payload_sha256")
+    payload["payload_sha256"] = _canonical_hash(body)
+    encoded = (json.dumps(payload, sort_keys=True, indent=2) + "\n").encode()
+    path.write_bytes(encoded)
+
+    with pytest.raises(IdentityEvidenceError, match="PAYLOAD_NOT_CANONICAL"):
+        load_identity_evidence(
+            path,
+            hashlib.sha256(encoded).hexdigest(),
+            as_of_session_date="2026-08-24",
+            required_tickers=("T00",),
+        )

@@ -36,6 +36,7 @@ scheduler, production, or alpha state.
 | Persisted obligation canonical replay | Rehashed nested obligation-field tamper is rejected | PASS |
 | Persisted evidence intrinsic replay | Rehashed execution aggregate tamper is rejected by structural evaluation | PASS |
 | Transition-binding canonical shape | Hash-valid identity/cause binding extensions are rejected | PASS |
+| Identity evidence canonical shape | Hash-valid identity artifact extension is rejected | PASS |
 | CA timing canonical shape | Rehashed extra-field and timing/action tamper is rejected | PASS |
 | Runtime-lineage canonical shape | Hash-valid binding-status drift is rejected | PASS |
 | Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |

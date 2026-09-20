@@ -52,7 +52,7 @@ membership may be used to infer a missing planned quantity.
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; canonical row/semantic verification and additive-only extension are enforced |
 | `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, canonical parser, intrinsic structural evaluator, and nested replay parent gate implemented locally; independent challenge open |
 | `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, validated CA/evidence provenance, coverage gate, and nested replay parent gate; independent challenge open |
-| `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Alias/revision interval contract plus Decision identity binding implemented locally; authoritative source/child replay open |
+| `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Canonical hash-pinned identity evidence, alias/revision interval contract, and Decision identity binding implemented locally; authoritative source/child replay open |
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Quantity/exposure/cash cause records with explicit bound-zero transitions plus cause-to-obligation retry binding implemented locally; child replay matrix open |
 | `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound canonical Decision resolutions and cause/obligation joins with recomputation; operational source binding open |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Hash-bound canonical envelope with binding-status validation implemented; operational child binding and replay matrix open |

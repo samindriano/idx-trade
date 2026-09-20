@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 import hashlib
 import json
 from pathlib import Path
@@ -19,6 +20,27 @@ from .v4_x1_identity_contract_v1 import (
 
 IDENTITY_EVIDENCE_SCHEMA = "idx_trade_security_identity_evidence_v1"
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+_EVIDENCE_KEYS = frozenset(
+    {
+        "schema_version",
+        "source_reference",
+        "as_of_session_date",
+        "identities",
+        "outcome_access",
+    }
+)
+_IDENTITY_ROW_KEYS = frozenset(
+    {
+        "canonical_security_id",
+        "ticker",
+        "instrument_class",
+        "effective_from",
+        "effective_to",
+        "identity_revision",
+        "source_ref",
+        "source_evidence_sha256",
+    }
+)
 
 
 class IdentityEvidenceError(RuntimeError):
@@ -76,23 +98,40 @@ def load_identity_evidence(
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_JSON_INVALID") from exc
     if not isinstance(payload, dict):
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_PAYLOAD_INVALID")
-    body = dict(payload)
-    declared = str(body.pop("payload_sha256") or "").lower()
-    if not _SHA_RE.fullmatch(declared) or _canonical_hash(body) != declared:
+    raw_declared = payload.get("payload_sha256")
+    if (
+        not isinstance(raw_declared, str)
+        or raw_declared != raw_declared.lower()
+        or not _SHA_RE.fullmatch(raw_declared)
+    ):
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_PAYLOAD_SHA_MISMATCH")
+    body = dict(payload)
+    declared = body.pop("payload_sha256")
+    if _canonical_hash(body) != declared:
+        raise IdentityEvidenceError("IDENTITY_EVIDENCE_PAYLOAD_SHA_MISMATCH")
+    if set(body) != _EVIDENCE_KEYS:
+        raise IdentityEvidenceError("IDENTITY_EVIDENCE_PAYLOAD_NOT_CANONICAL")
     if payload.get("schema_version") != IDENTITY_EVIDENCE_SCHEMA:
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_SCHEMA_MISMATCH")
     if payload.get("outcome_access") is not False:
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_OUTCOME_ACCESS_INVALID")
     if payload.get("as_of_session_date") != as_of_session_date:
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_SESSION_MISMATCH")
-    _required_text(payload, "source_reference")
+    source_reference = _required_text(payload, "source_reference")
+    if source_reference != payload["source_reference"]:
+        raise IdentityEvidenceError("IDENTITY_EVIDENCE_FIELD_NOT_CANONICAL:source_reference")
+    try:
+        parsed_as_of = date.fromisoformat(str(payload["as_of_session_date"]))
+    except ValueError as exc:
+        raise IdentityEvidenceError("IDENTITY_EVIDENCE_SESSION_MISMATCH") from exc
+    if parsed_as_of.isoformat() != payload["as_of_session_date"]:
+        raise IdentityEvidenceError("IDENTITY_EVIDENCE_SESSION_MISMATCH")
     raw_rows = payload.get("identities")
     if not isinstance(raw_rows, list) or not raw_rows:
         raise IdentityEvidenceError("IDENTITY_EVIDENCE_ROWS_MISSING")
     rows: list[SecurityIdentityV1] = []
     for raw_row in raw_rows:
-        if not isinstance(raw_row, dict):
+        if not isinstance(raw_row, dict) or set(raw_row) != _IDENTITY_ROW_KEYS:
             raise IdentityEvidenceError("IDENTITY_EVIDENCE_ROW_INVALID")
         try:
             rows.append(SecurityIdentityV1(**raw_row).validate())
