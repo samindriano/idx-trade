@@ -64,8 +64,9 @@ reports zero `READY_FOR_REENTRY` candidates and preserves the `NO-GO` state.
 
 - Packet firewall artifact: `PASS`, with code, Parquet schema, JSON, and text
   records.
-- Packet verifier: `PASS`, all `63/63` checks true, clean worktree, current
-  HEAD recorded as `8f98e09d2fa587219b233d581023b0ea73de7e5e`.
+- Packet verifier: see the latest machine-evidence section below; the current
+  verifier is `PASS`, all `65/65` checks true, with the eligibility conflict
+  encoded fail-closed.
 - Packet remains specification-only; scope flags for outcome/provider/target/
   cloud access are all false.
 - Protected candidate budget remains exactly C1-C4; C3 execution remains
