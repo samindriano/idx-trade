@@ -587,6 +587,13 @@ historical alpha archive:
   and snapshot/reload preserved the underfilled position with a valid hash.
   Verdict: `FAIL — POSITIVE PARTIAL BUY IS NOT PERSISTED AS PENDING`; no
   runtime source fix was applied.
+- `2026-09-20_IDX_PARTIAL_BUY_TRIGGER_MATRIX_V1.md`:
+  four independent synthetic paths—capacity plus Open-price change, buy-fee
+  cash boundary, stamp-threshold boundary, and paired replacement—each
+  produced a positive planned-versus-filled gap with empty pending state and
+  no next-session retry. This confirms a general sizing-to-execution obligation
+  loss rather than a single price-gap incident; no runtime source fix was
+  applied.
 
 The durable rolling controls for this marathon are now:
 

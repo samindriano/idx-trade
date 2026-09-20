@@ -19,13 +19,17 @@ The system tracks target membership but not target quantity obligations. A posit
 - Next session: no retry intent, position remains 2,500.
 - Snapshot round-trip: same partial position, no pending, runtime hash equal.
 - Durable checkpoint: `2026-09-20_IDX_SIZING_EXECUTION_PARTIAL_BUY_AUDIT_V1.md`.
+- Trigger matrix: capacity/Open change, fee boundary, stamp-threshold boundary,
+  and resolved paired replacement all produced positive underfill with empty
+  pending state and no next-session retry.
+- Durable checkpoint: `2026-09-20_IDX_PARTIAL_BUY_TRIGGER_MATRIX_V1.md`.
 
 ## Immediate next questions
 
-1. Does the same loss occur under capacity-limited positive partial buys, fee/stamp-duty pressure, and paired replacement buys?
-2. How should a residual buy interact with Decision V2 shadow state and the 10-seat capacity rule?
-3. Which artifact should own planned/filled/remaining quantities so restart and replay cannot erase the obligation?
-4. Can a synthetic multi-session harness prove that residual quantity, cash, NAV, turnover, and concentration remain consistent?
+1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
+2. Which artifact should own planned/filled/remaining quantities so restart and replay cannot erase the obligation?
+3. How should a residual buy interact with Decision V2 shadow state and the 10-seat capacity rule?
+4. Does CA payment/settlement state interact with a residual order obligation across sessions?
 
 ## Constraints
 
