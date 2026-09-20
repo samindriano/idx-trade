@@ -34,8 +34,8 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 28,
-    "findings_index_entries": 19,
+    "experiment_registry_entries": 29,
+    "findings_index_entries": 20,
     "no_retry_registry_entries": 12,
     "source_capability_entries": 17,
     "human_synthesis_documents": 5

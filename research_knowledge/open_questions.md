@@ -14,3 +14,4 @@ Each question has an ownerless evidence requirement and a stopping rule.
 | Q-008 | Does verifier logic share buggy producer helpers? | `OPEN_TOOLING_AUDIT` | Synthetic adversarial fixtures and helper dependency inspection | Never use protected outcomes as fixtures |
 | Q-009 | Are old PASS outputs hash-bound to current code/policy? | `PARTIALLY_RESOLVED` | Re-run verifier and compare embedded code/contract/packet hashes | Stale output is non-authoritative |
 | Q-010 | Are there new local sources with admission-changing semantics? | `LOCAL_SURFACE_CLOSED` | Only a genuinely new artifact/source contract | Do not repeat broad searches |
+| Q-011 | Does the verifier catch producer semantic mutations and encoded protected payloads? | `OPEN_TOOLING_AUDIT` | Synthetic fixtures and an independent semantic challenger | Do not use PASS as semantic proof |

@@ -31,6 +31,22 @@ fail-closed policy state. They do not authorize execution. The lane verifier
 binds branch/worktree/delta/staging scope and explicitly does not prove runtime
 access absence.
 
+## Verifier independence audit
+
+- The packet verifier does not import the producer module; this is positive
+  module-level independence.
+- It duplicates `sha256_file` and `key_digest`, so helper-assumption coupling is
+  possible even without an import.
+- It verifies contract clauses, hashes, manifests, key sets, and provenance,
+  but does not independently recompute the producer's rolling and score formulas.
+- The target firewall is a hybrid: required-path/hash bindings plus forbidden
+  path/import/output-token scans. It is not a proof against every encoded or
+  semantically disguised protected payload.
+- Current packet output embeds the verifier code hash, and that hash matches the
+  current verifier. The contract does not itself pin an expected verifier
+  version, so stale historical PASS artifacts must be rejected by rechecking
+  embedded packet/contract/code hashes.
+
 ## Regeneration protocol after a policy change
 
 1. Record authoritative eligibility rule, count/median semantics, finite-value
