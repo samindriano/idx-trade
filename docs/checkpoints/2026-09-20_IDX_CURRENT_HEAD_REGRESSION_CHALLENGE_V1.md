@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `1a1fe463`
+Verification revision: `5a85b1d3`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`205/205 PASS`.
+`206/206 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -25,7 +25,9 @@ dividend runtime/orchestration, and E2E controller/orchestration boundaries.
 The state-level explicit-close API is parent-hash bound and its compatibility
 projections are rebuilt from the canonical obligation ledger. Identical close
 events replay idempotently against the post-transition state; altered event
-bytes or a mismatched pre-transition parent remain rejected.
+bytes or a mismatched pre-transition parent remain rejected. The explicit-close
+state also round-trips through the V2 runtime snapshot writer/loader with a
+same-session idempotent write.
 
 The full repository command was also attempted twice after this test addition.
 Both runs reached the end of the suite but encountered the known Windows
