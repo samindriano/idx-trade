@@ -12,7 +12,7 @@
 | REM-ID-001 | Identity normalization/revision splits | `IDENTITY_CONTRACT_IMPLEMENTED_LOCAL` | `TRANSITION_BINDING_IMPLEMENTED_LOCAL / OPERATIONAL_SOURCE_OPEN` | Alias, same-class revision, and child-consumer replay with authoritative identity source |
 | REM-CAUSE-001 | Exposure/cash cause state collapses | `CAUSE_V1_IMPLEMENTED_LOCAL` | `TRANSITION_BINDING_IMPLEMENTED_LOCAL / REPLAY_MATRIX_OPEN` | Cause-to-obligation join, retry transition, and child-consumer replay |
 | REM-LINEAGE-001 | Config/runner identity absent from artifacts | `LINEAGE_V2_IMPLEMENTED_LOCAL` | `BOUND_REPLAY_TESTED / CHILD_RUNTIME_OPEN` | Config mismatch fail-closed across prepare/execute/replay |
-| REM-CTRL-001 | Controller phase/attempt held in memory | `RECOVERY_FENCE_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / V1_FAULT_MATRIX_TESTED` | V2 controller parity and independent crash challenge |
+| REM-CTRL-001 | Controller phase/attempt held in memory | `RECOVERY_FENCE_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / V1_V2_RECOVERY_FENCE_TESTED` | V2 full side-effect fault parity and independent crash challenge |
 | REM-RECOVERY-001 | Latest snapshot rejects without safe recovery | `QUARANTINE_LOCAL_IMPLEMENTED` | `IMPLEMENTED_LOCAL / ORCHESTRATION_BOUND` | Immutable rejection/quarantine, restart replay, and fork-safe ancestor rules |
 | REM-POLICY-001 | Post-entry concentration overlay | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative policy only; no autonomous overlay |
 | REM-POLICY-002 | Dividend tax/net treatment | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative tax policy only; retain gross semantics |

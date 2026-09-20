@@ -72,6 +72,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - operational `BOUND` lineage is persisted and rechecked across synthetic
   prepare/execute/replay, with config mismatch rejected;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
+- dual-calendar V2 controller preserves the same durable recovery boundary
+  metadata without provider or outcome access;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
@@ -84,5 +86,5 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   verified-snapshot consumer is implemented);
 - operational use of identity evidence and cause joins through every child
   script, including persisted replay/tamper coverage;
-- child-process runtime binding and V2 controller crash/recovery parity;
+- child-process runtime binding and V2 full side-effect fault parity;
 - independent final challenge.

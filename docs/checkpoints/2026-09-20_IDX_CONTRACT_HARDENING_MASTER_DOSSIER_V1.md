@@ -131,6 +131,8 @@ The isolated lane currently contains:
   valid, fail-closed classification/disposition/reason, UTC decision time, and
   optional runtime lineage with immutable idempotent persistence;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
+- dual-calendar V2 controller recovery-fence parity is covered without provider
+  or outcome access;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
@@ -138,7 +140,7 @@ execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
 independent artifact challenge,
 reconciliation provenance, authoritative identity-source/child cause replay,
-child-process runtime binding, V2 controller fault parity, and authorized
+child-process runtime binding, V2 full side-effect fault parity, and authorized
 automatic migration activation remain open; this is not a production promotion or phase
 closure.
 
