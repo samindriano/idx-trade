@@ -680,6 +680,65 @@ def test_recovery_preserves_verified_obligation_ancestor(
     )
 
 
+def test_recovery_quarantines_explicit_close_latest_and_keeps_partial_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-CLOSE-RECOVERY-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-21",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-CLOSE-RECOVERY-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=pending_buys,
+            pending_sells=pending_sells,
+            obligations=(partial,),
+        ),
+        registry,
+    )
+    closed_base = close_obligation_explicitly(
+        first.state.base_state,
+        obligation_id=partial.obligation_id,
+        event_id="CLOSE-BBCA-CLOSE-RECOVERY-01",
+        session_date="2026-08-21",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status="RELINQUISHED",
+        parent_state_sha256=paper_state_hash(first.state.base_state),
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        fd.DividendAwarePaperState(
+            base_state=replace(closed_base, as_of_session_date="2026-08-22"),
+            dividend_ledger=first.state.dividend_ledger,
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{tampered-explicit-close-latest\n")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+    assert recovered.path == first.path
+    assert recovered.state.base_state.obligations == (partial,)
+    assert recovered.state.base_state.pending_buys == pending_buys
+    assert recovered.state.base_state.pending_sells == pending_sells
+
+
 def test_recovery_does_not_choose_between_valid_forked_histories(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
