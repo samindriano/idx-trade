@@ -58,14 +58,14 @@ membership may be used to infer a missing planned quantity.
 | `MIGRATION_PROVENANCE-V1` / `MIGRATION_ACTIVATION-V1` | Legacy-state migration provenance and activation decision | Source/hash/classification/disposition/reason/time binding plus immutable policy-gated activation decision and verified-snapshot consumer implemented locally; external policy adoption remains open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, `CA_TIMING_MATRIX-V1`, persisted replay gates, and restart/idempotency coverage implemented locally |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; canonical row/semantic verification and additive-only extension are enforced |
-| `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, canonical parser, intrinsic structural evaluator, and nested replay parent gate implemented locally; current-head independent challenge refresh open |
-| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, validated CA/evidence provenance, coverage gate, and nested replay parent gate; current-head independent challenge refresh open |
+| `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, canonical parser, intrinsic structural evaluator, nested replay parent gate, and current-head synthetic challenge PASS; external/live independent validation remains open |
+| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, validated CA/evidence provenance, coverage gate, nested replay parent gate, and current-head synthetic challenge PASS; external/live independent validation remains open |
 | `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Canonical hash-pinned identity evidence, alias/revision interval contract, and Decision identity binding implemented locally; authoritative source/child replay open |
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Quantity/exposure/cash cause records with explicit bound-zero transitions plus cause-to-obligation retry binding and child replay gates implemented locally |
 | `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound canonical Decision resolutions and cause/obligation joins with recomputation; authoritative source binding open |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Hash-bound canonical envelope, operational child binding, prepared selection, and top-level artifact replay gates tested locally |
 | `CONTROLLER_RECOVERY-V1` | E2E operational controller | Durable `RUNNING` crash fence to `RECOVERY_REQUIRED` and synthetic side-effect matrix tested; live validation open |
-| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery is consumed by orchestration state loading; current-head independent challenge refresh open |
+| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery is consumed by orchestration state loading and current-head synthetic challenge PASS; external/live independent validation remains open |
 
 No contract may change frozen model features, rank semantics, Decision
 thresholds, tax policy, structural-CA authority, or post-entry risk policy
