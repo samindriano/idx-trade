@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
@@ -39,6 +40,13 @@ from .v4_x1_execution_v1_contract import (
     _EXECUTION_PLAN_TOKEN,
     normalize_state,
     paper_state_hash,
+    pending_intents_from_obligations,
+)
+from .v4_x1_quantity_obligation_v1 import (
+    QuantityObligation,
+    apply_fill,
+    mark_blocked,
+    plan_obligation,
 )
 from .v4_x1_execution_v1_allocator import (
     buy_effective_price,
@@ -85,13 +93,23 @@ def _merge_effective_intents(
     positions: dict[str, int],
     pending_buys: dict[str, PendingPaperIntent],
     pending_sells: dict[str, PendingPaperIntent],
+    obligations: tuple[QuantityObligation, ...] = (),
 ) -> tuple[tuple[TradeIntent, ...], tuple[TradeIntent, ...]]:
     target = set(decision_plan.target_positions)
     new_buys = {x.ticker: x for x in decision_plan.buy_intents}
     new_sells = {x.ticker: x for x in decision_plan.sell_intents}
+    active_buys = {
+        row.canonical_ticker
+        for row in obligations
+        if row.side == "BUY" and row.remaining_shares > 0
+    }
 
     for ticker, row in pending_buys.items():
-        if ticker in target and ticker not in positions and ticker not in new_buys:
+        if (
+            ticker in target
+            and ticker not in new_buys
+            and (ticker not in positions or ticker in active_buys)
+        ):
             new_buys[ticker] = TradeIntent(
                 "BUY_INTENT", ticker, row.rank_consensus,
                 "PAPER_RETRY_" + row.reason, row.replacement_peer,
@@ -147,7 +165,11 @@ def prepare_execution_v1(
         raise DecisionV1Error("EXECUTION_V1_DECISION_EXECUTION_REFERENCE_CHANGED")
 
     effective_buys, effective_sells = _merge_effective_intents(
-        decision_plan, positions, pending_buys, pending_sells
+        decision_plan,
+        positions,
+        pending_buys,
+        pending_sells,
+        paper_state.obligations,
     )
     involved = set(positions) | set(decision_plan.target_positions)
     missing_close = involved - set(eod_inputs.raw_close_prices)
@@ -162,6 +184,17 @@ def prepare_execution_v1(
     projected_cash = cash
     for intent in effective_sells:
         shares = positions.get(intent.ticker, 0)
+        active = [
+            row
+            for row in paper_state.obligations
+            if row.side == "SELL"
+            and row.canonical_ticker == intent.ticker
+            and row.remaining_shares > 0
+        ]
+        if len(active) > 1:
+            raise DecisionV1Error("EXECUTION_V1_MULTIPLE_ACTIVE_SELL_OBLIGATIONS")
+        if active:
+            shares = active[0].remaining_shares
         if shares <= 0:
             raise DecisionV1Error("EXECUTION_V1_EFFECTIVE_SELL_WITHOUT_POSITION")
         sells.append(PlannedSell(
@@ -253,17 +286,78 @@ def execute_open_v1(
     pending_sells: dict[str, PendingPaperIntent] = {}
     pending_buys: dict[str, PendingPaperIntent] = {}
     sell_resolution: dict[str, bool] = {}
+    obligations = list(paper_state.obligations)
+
+    def active_obligation(side: str, ticker: str) -> QuantityObligation | None:
+        rows = [
+            row
+            for row in obligations
+            if row.side == side
+            and row.canonical_ticker == ticker
+            and row.remaining_shares > 0
+        ]
+        if len(rows) > 1:
+            raise DecisionV1Error(
+                f"EXECUTION_V1_MULTIPLE_ACTIVE_{side}_OBLIGATIONS"
+            )
+        return rows[0] if rows else None
+
+    def ensure_obligation(
+        *,
+        side: str,
+        ticker: str,
+        planned_shares: int,
+        rank_consensus: int | None,
+        replacement_group_id: str | None,
+    ) -> QuantityObligation:
+        existing = active_obligation(side, ticker)
+        if existing is not None:
+            if existing.remaining_shares != planned_shares:
+                raise DecisionV1Error("EXECUTION_V1_OBLIGATION_REMAINDER_CHANGED")
+            return existing
+        created = plan_obligation(
+            obligation_id=(
+                f"{order_plan.execution_session_date}:{side}:{ticker}:"
+                f"{order_plan.state_hash[:16]}"
+            ),
+            ticker=ticker,
+            side=side,  # type: ignore[arg-type]
+            planned_shares=planned_shares,
+            session_date=order_plan.execution_session_date,
+            replacement_group_id=replacement_group_id,
+            parent_state_sha256=before_hash,
+            rank_consensus=rank_consensus,
+        )
+        obligations.append(created)
+        return created
+
+    def event_id(obligation: QuantityObligation, kind: str) -> str:
+        return (
+            f"{obligation.obligation_id}:{kind}:"
+            f"{order_plan.execution_session_date}"
+        )
 
     for order in order_plan.sells:
         ticker = order.ticker
         shares = positions.get(ticker, 0)
         if shares <= 0:
             raise DecisionV1Error("EXECUTION_V1_PLANNED_SELL_POSITION_DISAPPEARED")
+        obligation = ensure_obligation(
+            side="SELL",
+            ticker=ticker,
+            planned_shares=shares,
+            rank_consensus=order.rank_consensus,
+            replacement_group_id=order.replacement_peer,
+        )
         raw = open_inputs.raw_open_prices.get(ticker)
         if raw is None:
             sell_resolution[ticker] = False
-            pending_sells[ticker] = PendingPaperIntent(
-                "SELL", ticker, order.rank_consensus, order.reason, order.replacement_peer
+            obligations[obligations.index(obligation)] = mark_blocked(
+                obligation,
+                event_id=event_id(obligation, "BLOCK"),
+                session_date=order_plan.execution_session_date,
+                reason="MARKET_EXIT_UNAVAILABLE",
+                parent_state_sha256=before_hash,
             )
             fills.append(FillRecord(
                 "SELL", ticker, shares, 0, None, None, 0.0, 0.0, 0.0,
@@ -279,9 +373,12 @@ def execute_open_v1(
         fill_shares = min(shares, max_capacity_lots * LOT_SIZE_SHARES)
         if fill_shares <= 0:
             sell_resolution[ticker] = False
-            pending_sells[ticker] = PendingPaperIntent(
-                "SELL", ticker, order.rank_consensus,
-                "REFERENCE_DAY_EXIT_CAPACITY_ZERO", order.replacement_peer,
+            obligations[obligations.index(obligation)] = mark_blocked(
+                obligation,
+                event_id=event_id(obligation, "BLOCK"),
+                session_date=order_plan.execution_session_date,
+                reason="REFERENCE_DAY_EXIT_CAPACITY_ZERO",
+                parent_state_sha256=before_hash,
             )
             fills.append(FillRecord(
                 "SELL", ticker, shares, 0, float(raw), effective, 0.0, 0.0, 0.0,
@@ -293,6 +390,18 @@ def execute_open_v1(
         proceeds = gross - sell_fee
         cash += proceeds
         remaining = shares - fill_shares
+        obligations[obligations.index(obligation)] = apply_fill(
+            obligation,
+            event_id=event_id(obligation, "FILL"),
+            session_date=order_plan.execution_session_date,
+            filled_shares=fill_shares,
+            reason=(
+                "PARTIAL_EXIT_CAPACITY"
+                if remaining > 0
+                else "FILLED_EXIT_CAPACITY_GUARDED"
+            ),
+            parent_state_sha256=before_hash,
+        )
         if remaining > 0:
             positions[ticker] = remaining
             sell_resolution[ticker] = False
@@ -316,19 +425,54 @@ def execute_open_v1(
     raw_prices: dict[str, float] = {}
     for ticker, entry in sorted(sizing_by_ticker.items()):
         intent = intent_by_ticker[ticker]
+        existing_obligation = active_obligation("BUY", ticker)
         if entry.shares <= 0:
-            pending_buys[ticker] = PendingPaperIntent(
-                "BUY", ticker, intent.rank_consensus, entry.status, intent.replacement_peer
-            )
+            if existing_obligation is None:
+                pending_buys[ticker] = PendingPaperIntent(
+                    "BUY", ticker, intent.rank_consensus, entry.status, intent.replacement_peer
+                )
+            else:
+                obligations[obligations.index(existing_obligation)] = mark_blocked(
+                    existing_obligation,
+                    event_id=event_id(existing_obligation, "BLOCK"),
+                    session_date=order_plan.execution_session_date,
+                    reason=entry.status,
+                    parent_state_sha256=before_hash,
+                )
             fills.append(FillRecord(
                 "BUY", ticker, 0, 0, None, None, 0.0, 0.0, 0.0,
                 f"{entry.status}_PENDING", intent.replacement_peer,
             ))
             continue
+        planned_shares = (
+            existing_obligation.remaining_shares
+            if existing_obligation is not None
+            else entry.shares
+        )
+        entry = replace(
+            entry,
+            shares=planned_shares,
+            lots=planned_shares // LOT_SIZE_SHARES,
+            sized_notional=(planned_shares // LOT_SIZE_SHARES) * entry.lot_value,
+            sized_weight=(
+                (planned_shares // LOT_SIZE_SHARES) * entry.lot_value
+                / max(order_plan.eod_nav_idr, 1.0)
+            ),
+        )
+        obligation = existing_obligation or ensure_obligation(
+            side="BUY",
+            ticker=ticker,
+            planned_shares=entry.shares,
+            rank_consensus=intent.rank_consensus,
+            replacement_group_id=intent.replacement_peer,
+        )
         if intent.replacement_peer is not None and not sell_resolution.get(intent.replacement_peer, False):
-            pending_buys[ticker] = PendingPaperIntent(
-                "BUY", ticker, intent.rank_consensus,
-                "BLOCKED_BY_UNRESOLVED_PAIRED_SELL", intent.replacement_peer,
+            obligations[obligations.index(obligation)] = mark_blocked(
+                obligation,
+                event_id=event_id(obligation, "BLOCK"),
+                session_date=order_plan.execution_session_date,
+                reason="BLOCKED_BY_UNRESOLVED_PAIRED_SELL",
+                parent_state_sha256=before_hash,
             )
             fills.append(FillRecord(
                 "BUY", ticker, entry.shares, 0, None, None, 0.0, 0.0, 0.0,
@@ -337,9 +481,12 @@ def execute_open_v1(
             continue
         raw = open_inputs.raw_open_prices.get(ticker)
         if raw is None:
-            pending_buys[ticker] = PendingPaperIntent(
-                "BUY", ticker, intent.rank_consensus,
-                "MARKET_ENTRY_UNAVAILABLE", intent.replacement_peer,
+            obligations[obligations.index(obligation)] = mark_blocked(
+                obligation,
+                event_id=event_id(obligation, "BLOCK"),
+                session_date=order_plan.execution_session_date,
+                reason="MARKET_ENTRY_UNAVAILABLE",
+                parent_state_sha256=before_hash,
             )
             fills.append(FillRecord(
                 "BUY", ticker, entry.shares, 0, None, None, 0.0, 0.0, 0.0,
@@ -373,15 +520,26 @@ def execute_open_v1(
                 if order_plan.regular_market_values_t.get(ticker, 0.0) <= 0
                 else "JOINT_CASH_GAP_CAP_OR_CAPACITY_CONSTRAINT"
             )
-            pending_buys[ticker] = PendingPaperIntent(
-                "BUY", ticker, intent.rank_consensus, reason, intent.replacement_peer
+            obligation = active_obligation("BUY", ticker)
+            if obligation is None:
+                raise DecisionV1Error("EXECUTION_V1_BUY_OBLIGATION_MISSING")
+            obligations[obligations.index(obligation)] = mark_blocked(
+                obligation,
+                event_id=event_id(obligation, "BLOCK"),
+                session_date=order_plan.execution_session_date,
+                reason=reason,
+                parent_state_sha256=before_hash,
             )
             fills.append(FillRecord(
                 "BUY", ticker, entry.shares, 0, raw, effective, 0.0, 0.0, 0.0,
                 reason + "_PENDING", intent.replacement_peer,
             ))
             continue
-        if ticker in positions:
+        obligation = active_obligation("BUY", ticker)
+        if obligation is None:
+            raise DecisionV1Error("EXECUTION_V1_BUY_OBLIGATION_MISSING")
+        existing_position_shares = positions.get(ticker, 0)
+        if existing_position_shares and obligation is None:
             raise DecisionV1Error("EXECUTION_V1_BUY_ALREADY_HELD_ACTUAL")
         gross = shares * effective
         buy_fee = fee(gross, BUY_FEE_BPS)
@@ -397,7 +555,19 @@ def execute_open_v1(
         if gross > capacity_notional + 1e-6:
             raise DecisionV1Error("EXECUTION_V1_CAPACITY_INVARIANT_BROKEN")
         cash -= debit
-        positions[ticker] = shares
+        positions[ticker] = existing_position_shares + shares
+        obligations[obligations.index(obligation)] = apply_fill(
+            obligation,
+            event_id=event_id(obligation, "FILL"),
+            session_date=order_plan.execution_session_date,
+            filled_shares=shares,
+            reason=(
+                "PARTIAL_CAPACITY_FILL"
+                if shares < entry.shares
+                else "FILLED_JOINT_LOT_CAPACITY_GUARDED"
+            ),
+            parent_state_sha256=before_hash,
+        )
         fills.append(FillRecord(
             "BUY", ticker, entry.shares, shares, raw, effective, gross, buy_fee, -debit,
             "SIMULATED_FILLED_JOINT_LOT_CAPACITY_GUARDED", intent.replacement_peer,
@@ -417,7 +587,24 @@ def execute_open_v1(
     target = set(order_plan.target_positions)
     missing = target - set(positions)
     extra = set(positions) - target
-    if missing != set(pending_buys) or extra != set(pending_sells):
+    if obligations:
+        projected_buys, projected_sells = pending_intents_from_obligations(obligations)
+        projected_buy_tickers = {row.ticker for row in projected_buys}
+        projected_sell_tickers = {row.ticker for row in projected_sells}
+        if (
+            set(pending_buys) - projected_buy_tickers
+            or set(pending_sells) - projected_sell_tickers
+            or not missing.issubset(projected_buy_tickers)
+            or extra != projected_sell_tickers
+        ):
+            raise DecisionV1Error(
+                f"EXECUTION_V1_OBLIGATION_TRANSITION_ACCOUNTING_BROKEN:"
+                f"MISSING={sorted(missing)}:PBUY={sorted(projected_buy_tickers)}:"
+                f"EXTRA={sorted(extra)}:PSELL={sorted(projected_sell_tickers)}"
+            )
+        pending_buys = {row.ticker: row for row in projected_buys}
+        pending_sells = {row.ticker: row for row in projected_sells}
+    elif missing != set(pending_buys) or extra != set(pending_sells):
         raise DecisionV1Error(
             f"EXECUTION_V1_PENDING_TRANSITION_ACCOUNTING_BROKEN:"
             f"MISSING={sorted(missing)}:PBUY={sorted(pending_buys)}:"
@@ -431,6 +618,7 @@ def execute_open_v1(
         pending_buys=tuple(sorted(pending_buys.values(), key=lambda x: x.ticker)),
         pending_sells=tuple(sorted(pending_sells.values(), key=lambda x: x.ticker)),
         reconciliation_required=False,
+        obligations=tuple(obligations),
     )
     return ExecutionResult(
         execution_session_date=open_inputs.session_date,

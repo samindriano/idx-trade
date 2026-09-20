@@ -64,4 +64,9 @@ def test_low_price_fee_pressure_does_not_zero_entire_batch():
     assert len(result.state_after.positions) == 10
     assert all(position.shares > 0 for position in result.state_after.positions)
     assert result.state_after.cash_idr < 100_000
-    assert not result.state_after.pending_buys
+    assert {row.ticker for row in result.state_after.pending_buys} == set(tickers)
+    assert all(
+        row.remaining_shares > 0
+        for row in result.state_after.obligations
+        if row.canonical_ticker in {pending.ticker for pending in result.state_after.pending_buys}
+    )

@@ -25,6 +25,7 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPosition,
     PendingPaperIntent,
 )
+from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 
 
 def _event(
@@ -111,6 +112,7 @@ def _state(
     positions: tuple[PaperPosition, ...] = (),
     pending_buys: tuple[PendingPaperIntent, ...] = (),
     pending_sells: tuple[PendingPaperIntent, ...] = (),
+    obligations=(),
     ledger: fd.DividendLedger | None = None,
 ) -> fd.DividendAwarePaperState:
     return fd.DividendAwarePaperState(
@@ -120,9 +122,58 @@ def _state(
             positions=positions,
             pending_buys=pending_buys,
             pending_sells=pending_sells,
+            obligations=obligations,
         ),
         dividend_ledger=ledger or fd.DividendLedger(),
     )
+
+
+def test_legacy_state_payload_omits_new_contract_and_new_state_round_trips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    legacy = _state("2026-08-20")
+    legacy_payload = runtime._paper_state_payload(legacy.base_state)
+    assert "obligations" not in legacy_payload
+
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-2026-08-20-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-2026-08-20-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buy = PendingPaperIntent(
+        side="BUY",
+        ticker="BBCA",
+        rank_consensus=None,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    modern = _state(
+        "2026-08-21",
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=(pending_buy,),
+        obligations=(partial,),
+    )
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        modern,
+        registry,
+    )
+    loaded = runtime.load_runtime_snapshot(snapshot.path)
+    assert loaded.state.base_state.obligations == (partial,)
+    assert loaded.state.base_state.pending_buys == (pending_buy,)
+    assert "obligations" in json.loads(snapshot.path.read_text(encoding="utf-8"))[
+        "state"
+    ]["base_paper_state"]
 
 
 def test_runtime_snapshot_roundtrip_binds_state_registry_and_parent(

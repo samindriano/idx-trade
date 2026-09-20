@@ -25,6 +25,11 @@ from .v4_x1_execution_v1_contract import (
     normalize_state,
     paper_state_hash,
 )
+from .v4_x1_quantity_obligation_v1 import (
+    obligation_from_payload,
+    obligations_payload,
+    normalize_obligations,
+)
 
 RUNTIME_SCHEMA = "idx_trade_forward_dividend_runtime_state_v1_1"
 RUNTIME_DIRNAME = "forward_execution_v1_1"
@@ -119,7 +124,7 @@ def _paper_state_payload(state: PaperPortfolioState) -> dict[str, Any]:
             for row in sorted(rows.values(), key=lambda x: x.ticker)
         ]
 
-    return {
+    payload: dict[str, Any] = {
         "as_of_session_date": session,
         "cash_idr": float(cash),
         "positions": [
@@ -131,6 +136,9 @@ def _paper_state_payload(state: PaperPortfolioState) -> dict[str, Any]:
         "reconciliation_required": bool(state.reconciliation_required),
         "source": state.source,
     }
+    if state.obligations:
+        payload["obligations"] = obligations_payload(state.obligations)
+    return payload
 
 
 def _paper_state_from_payload(value: object) -> PaperPortfolioState:
@@ -150,10 +158,13 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
     raw_positions = value.get("positions")
     raw_buys = value.get("pending_buys")
     raw_sells = value.get("pending_sells")
+    raw_obligations = value.get("obligations", [])
     if not isinstance(raw_positions, list):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_POSITIONS_INVALID")
     if not isinstance(raw_buys, list) or not isinstance(raw_sells, list):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PENDING_INVALID")
+    if not isinstance(raw_obligations, list):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_OBLIGATIONS_INVALID")
 
     try:
         positions = tuple(
@@ -205,6 +216,12 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_POSITION_ROW_INVALID")
     if len(pending_buys) != len(raw_buys) or len(pending_sells) != len(raw_sells):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PENDING_ROW_INVALID")
+    try:
+        obligations = normalize_obligations(
+            tuple(obligation_from_payload(row) for row in raw_obligations)
+        )
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_OBLIGATION_ROW_INVALID") from exc
 
     state = PaperPortfolioState(
         as_of_session_date=session,
@@ -214,6 +231,7 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
         pending_sells=pending_sells,
         reconciliation_required=bool(value.get("reconciliation_required")),
         source=PAPER_STATE_SOURCE,
+        obligations=obligations,
     )
     normalize_state(state)
     return state

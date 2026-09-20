@@ -1,0 +1,122 @@
+# IDX-Trade Contract Hardening and Runtime Remediation Marathon V1
+
+Date: 2026-09-20 (Asia/Jakarta)  
+Lane: isolated implementation `codex/idx-contract-hardening-20260920`  
+Status: `PHASE-1 FOUNDATION + PHASE-2 EXECUTION IN PROGRESS / NO PRODUCTION OR PROTECTED-OUTCOME ACCESS`
+
+## Objective
+
+Replace the confirmed semantic state-loss pattern with versioned, auditable,
+restart-safe runtime contracts while preserving frozen alpha/Decision science,
+historical artifacts, and fail-closed legacy behavior.
+
+This is an implementation/remediation lane. It is not an alpha optimization,
+data-acquisition, predictive-evaluation, or deployment lane.
+
+## Implementation base and lineage
+
+| Item | Value |
+|---|---|
+| Implementation worktree | `C:\Users\Sam\.codex\worktrees\idx-contract-hardening-20260920` |
+| Implementation branch | `codex/idx-contract-hardening-20260920` |
+| Implementation base | `402fca4b27e91cf8c82d21ff1394ba2d6da73656` |
+| Audited runtime branch | `runtime/idx-e2e-baseline-paper-v1` |
+| Audited runtime pin | `402fca4b27e91cf8c82d21ff1394ba2d6da73656` |
+| Deep-dive research checkpoint | `d007077694ad861abd86f21cc8f42f7575837298` |
+| Research branch at checkpoint | `codex/alpha-available-data-20260919` |
+| Current `origin/main` relation | `671` commits only in implementation base side; `763` only in `origin/main` side |
+| Runtime-file drift vs `origin/main` | Audited runtime files are deleted from current `origin/main`; no silent porting is permitted |
+
+The implementation base is byte/source-hash aligned with the audited runtime;
+there is no base-versus-audit drift. Current `origin/main` is a different
+lineage for these runtime files, so this lane stays pinned to the retained
+runtime branch until an explicit integration decision exists.
+
+### Audited source hashes
+
+| Source | SHA-256 |
+|---|---|
+| `v4_x1_execution_v1_contract.py` | `0208800825e6f2f91af9d224d7540e829828379ca332f6630889789c936cf1fe` |
+| `v4_x1_execution_v1.py` | `010567bfd6c9156d5c088a96ecb251ed2074c461cc5c326fcf9c98789ab76fc9` |
+| `v4_x1_execution_v1_decision_v2_adapter.py` | `c151e2b1e43850d3f8c462eea58276a814efc9fa82ea233e73ee2cd46da35fd6` |
+| `forward_dividend_runtime_v1_1.py` | `98ebc637340757f03e36c3c8b876f134022ca1282b9bad35cf573b4b784eca23` |
+| `e2e_paper_orchestration_v1.py` | `d10ace3f01e407ed8198460d5571f26e92107f681f3268ad60be1d42cc081eec` |
+| `e2e_paper_runtime_config_v1.py` | `df1e88c4b1f994fc44514a3910e5f066aee4754260e8c7a05e75c4550969631d` |
+| `e2e_paper_runtime_config_v2.py` | `0907f0fd02af7f61e48959efc7f1318a0c6559ef78ba9f34c7ddfc5fd494c356e6` |
+
+The config-v2 hash row is retained from the research checkpoint and must be
+rechecked before any config-lineage implementation claim; source identity
+checks in code remain authoritative.
+
+## Confirmed findings entering remediation
+
+| Finding family | Current disposition | First remediation owner |
+|---|---|---|
+| Positive partial BUY loses residual | `CONFIRMED / IMPLEMENT` | Versioned quantity-obligation state |
+| Partial SELL/replacement lacks full quantity lineage | `CONFIRMED / IMPLEMENT` | Same obligation owner, not a parallel pending ledger |
+| Snapshot persists positions but not obligations | `CONFIRMED / IMPLEMENT` | Versioned snapshot schema and restart replay |
+| CA projected-state versus execution-parent mismatch | `CONFIRMED / CONTRACT_REQUIRED` | Explicit settle/sizing/execution transition |
+| Execution evidence aggregate-only | `CONFIRMED / IMPLEMENT` | Versioned execution-evidence artifact |
+| Reconciliation false bit has no detector provenance | `CONFIRMED / CONTRACT_REQUIRED` | Versioned reconciliation result |
+| Identity alias/revision splits | `CONFIRMED / IMPLEMENT_WHERE_AUTHORITY_PERMITS` | Shared identity contract and typed conflict |
+| Exposure/cash cause state loss | `CONFIRMED / IMPLEMENT` | Join cause state to obligations |
+| Config/runner identity absent from artifacts | `CONFIRMED / IMPLEMENT` | Artifact lineage fields and equality gates |
+| Controller crash windows | `CONFIRMED / IMPLEMENT_AFTER_STATE_OWNER` | Durable operational phase state |
+| Latest snapshot no recovery path | `CONFIRMED / IMPLEMENT_AFTER_CHAIN_CONTRACT` | Immutable quarantine/recovery manifest |
+| Post-entry concentration overlay | `POLICY_GAP / DO NOT INVENT` | Remains unresolved unless authoritative policy appears |
+| Dividend tax/net treatment | `POLICY_GAP / DO NOT INVENT` | Remains gross-only bounded behavior |
+| Unsupported structural CA admission | `EXTERNAL_BLOCKED / FAIL CLOSED` | No provider/data work in this lane |
+
+## Dependency order
+
+1. Quantity-obligation contract and invariant engine.
+2. Execution and Decision/replacement adapter integration.
+3. Durable state, snapshot, restart, and legacy migration.
+4. CA/accounting composition and projected-state lineage.
+5. Execution-evidence evaluation contract.
+6. Reconciliation provenance contract.
+7. Identity and exposure/cash cause contracts.
+8. Config/artifact lineage.
+9. Controller crash recovery.
+10. Latest-snapshot immutable quarantine/recovery.
+11. Independent post-remediation system challenge.
+
+Every material change must show: old failing case, neighboring adversarial
+case, cross-component replay, restart/idempotency, legacy behavior, and a
+second-order challenge.
+
+## Current implementation evidence
+
+The isolated lane currently contains:
+
+- `OBLIGATION-V1` source and invariant tests;
+- additive `PaperPortfolioState.obligations` ownership with compatibility
+  pending projections and an obligation-aware state hash;
+- positive partial BUY persistence and retry completion;
+- partial SELL and paired replacement quantity lineage;
+- duplicate fill/cancel idempotency at the obligation layer;
+- optional obligation snapshot serialization with old payload compatibility.
+
+Focused cross-component suites pass: execution/allocator/exit/replacement,
+Decision adapter, quantity contract, dividend runtime/snapshot, dividend
+execution/orchestration, and E2E paper orchestration/controller. The explicit
+snapshot schema migration, restart fault-injection, Decision seat semantics,
+and legacy classification remain open; this is not a production promotion or
+phase closure.
+
+## Boundaries
+
+- Frozen alpha and Decision V2 substantive science must not change.
+- Protected H5/H10/OOS/PnL and incumbent predictive comparisons remain closed.
+- No canonical-data rewrite, provider acquisition, production deployment,
+  cloud/capture/telemetry/scheduler mutation, counter mutation, push, or merge.
+- Historical artifacts remain immutable evidence; no fabricated legacy
+  quantities and no rewrite to make old results appear compliant.
+
+## Durable companion records
+
+- Remediation registry: `docs/checkpoints/2026-09-20_IDX_REMEDIATION_REGISTRY_V1.md`
+- Contract catalog: `docs/checkpoints/2026-09-20_IDX_VERSIONED_CONTRACT_CATALOG_V1.md`
+- Migration matrix: `docs/checkpoints/2026-09-20_IDX_MIGRATION_COMPATIBILITY_MATRIX_V1.md`
+- Active handoff: `docs/checkpoints/2026-09-20_IDX_HARDENING_ACTIVE_FRONTIER_HANDOFF_V1.md`
+- No-retry/policy log: `docs/checkpoints/2026-09-20_IDX_HARDENING_NO_RETRY_POLICY_LOG_V1.md`

@@ -8,6 +8,11 @@ from typing import Literal
 
 from .v4_x1_decision_v1_contract import DecisionV1Error, TradeIntent
 from .v4_x1_sizing_v1 import SizingPlan
+from .v4_x1_quantity_obligation_v1 import (
+    QuantityObligation,
+    normalize_obligations,
+    obligations_payload,
+)
 
 EXECUTION_RULE_ID = "V4_X1_EXECUTION_V1"
 PAPER_STATE_SOURCE = "EXECUTABLE_PAPER_V1"
@@ -46,6 +51,7 @@ class PaperPortfolioState:
     pending_sells: tuple[PendingPaperIntent, ...] = ()
     reconciliation_required: bool = False
     source: str = PAPER_STATE_SOURCE
+    obligations: tuple[QuantityObligation, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -136,6 +142,31 @@ def normalize_pending(rows: tuple[PendingPaperIntent, ...], side: str) -> dict[s
     return out
 
 
+def pending_intents_from_obligations(
+    obligations: tuple[QuantityObligation, ...] | list[QuantityObligation],
+) -> tuple[tuple[PendingPaperIntent, ...], tuple[PendingPaperIntent, ...]]:
+    """Project only unfulfilled obligation remainder into legacy pending views."""
+
+    buys: list[PendingPaperIntent] = []
+    sells: list[PendingPaperIntent] = []
+    for obligation in normalize_obligations(obligations):
+        if obligation.remaining_shares <= 0:
+            continue
+        latest_event = obligation.event_history[-1]
+        row = PendingPaperIntent(
+            side=obligation.side,
+            ticker=obligation.canonical_ticker,
+            rank_consensus=obligation.rank_consensus,
+            reason=latest_event.reason,
+            replacement_peer=obligation.replacement_group_id,
+        )
+        (buys if obligation.side == "BUY" else sells).append(row)
+    return (
+        tuple(sorted(buys, key=lambda row: row.ticker)),
+        tuple(sorted(sells, key=lambda row: row.ticker)),
+    )
+
+
 def normalize_state(state: PaperPortfolioState) -> tuple[float, dict[str, int], dict[str, PendingPaperIntent], dict[str, PendingPaperIntent]]:
     if not isinstance(state, PaperPortfolioState):
         raise DecisionV1Error("EXECUTION_V1_PAPER_STATE_REQUIRED")
@@ -153,7 +184,14 @@ def normalize_state(state: PaperPortfolioState) -> tuple[float, dict[str, int], 
         positions[symbol] = shares
     pending_buys = normalize_pending(state.pending_buys, "BUY")
     pending_sells = normalize_pending(state.pending_sells, "SELL")
-    if set(pending_buys) & set(positions):
+    obligations = normalize_obligations(state.obligations)
+    if obligations:
+        expected_buys, expected_sells = pending_intents_from_obligations(obligations)
+        expected_buys_map = normalize_pending(expected_buys, "BUY")
+        expected_sells_map = normalize_pending(expected_sells, "SELL")
+        if pending_buys != expected_buys_map or pending_sells != expected_sells_map:
+            raise DecisionV1Error("EXECUTION_V1_OBLIGATION_PENDING_PROJECTION_MISMATCH")
+    elif set(pending_buys) & set(positions):
         raise DecisionV1Error("EXECUTION_V1_PENDING_BUY_ALREADY_HELD")
     if set(pending_sells) - set(positions):
         raise DecisionV1Error("EXECUTION_V1_PENDING_SELL_WITHOUT_POSITION")
@@ -176,6 +214,8 @@ def paper_state_hash(state: PaperPortfolioState) -> str:
         "reconciliation_required": bool(state.reconciliation_required),
         "source": state.source,
     }
+    if state.obligations:
+        value["obligations"] = obligations_payload(state.obligations)
     return hashlib.sha256(
         (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
     ).hexdigest()
