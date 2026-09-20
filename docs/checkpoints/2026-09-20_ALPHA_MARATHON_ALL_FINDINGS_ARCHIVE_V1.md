@@ -788,3 +788,76 @@ touch the incumbent lane.
 Final current state:
 NO-GO — resolve authority and admission gates before any protected predictive
 evaluation.
+
+## J. Post-archive continuation — 2026-09-20
+
+This section was added after the original archive commit and is intentionally
+marked as a later continuation, not backdated into the prior marathon.
+
+### J.1 Runtime-lineage audit
+
+An isolated read-only audit compared the current `origin/main` source tree
+with the runtime actually pinned by the E2E cloud workflow. `origin/main` does
+not contain the Decision V2 adapter symbols in its ordinary `src/idx_trade`
+tree, but the exact runtime commit
+`045e25a19d9f71170d2c863e768102937e59ad73` does contain:
+
+- `decision_v2_minimal.py` and `v4_x1_decision_v2_minimal.py`;
+- `v4_x1_sizing_v1_decision_v2_adapter.py`;
+- `v4_x1_execution_v1_decision_v2_adapter.py`;
+- the E2E orchestration imports and calls for those adapters.
+
+Therefore this observation is not evidence of a production Decision V2 gap:
+the workflow checks out the exact pinned runtime. It is a lineage warning for
+future audits: inspect the deployed/pinned commit, not only the default branch.
+No production, cloud, capture, or model state was changed.
+
+### J.2 Independent worker audit additions
+
+Four read-only audits were run in parallel. Their durable conclusions are:
+
+- No new alpha/portfolio experiment is justified merely by system-completion
+  inconvenience. Historical evidence says churn is mainly entry/exit-state
+  behavior; strict persistence can cause capacity failure; refill decoupling
+  did not solve the mechanism; and fee-aware allocation must be joint rather
+  than independent per-name budgeting.
+- A bounded Rank-to-Open state-transition audit was genuinely non-redundant;
+  it was preregistered and run below.
+- The public/official source authority package remains structurally coherent,
+  but admission is still blocked. The latest package counts were 55
+  experiments, 48 findings, 18 no-retry records, 19 source-capability entries,
+  6 synthesis documents; verifier PASS, with 209 distinct registry references,
+  521 resolved uses, 8 classified unavailable historical uses, and 6 repaired
+  references. Current-head/hash freshness gaps remain explicitly open.
+- A deeper frozen-runtime audit found two fail-closed unknowns: immediate
+  official-session adjacency is not enforced by the Decision V2 resolver, and
+  invalid/nonfinite regular-market-value denominators can become zero capacity
+  rather than UNKNOWN. Additional unknowns include caller-trusted sizing-price
+  provenance, missing runtime config-hash admission, malformed pending
+  buy/sell overlap handling, and an underfill/profile inconsistency. These are
+  operational science-control findings, not permission to reopen Decision V2.
+
+### J.3 Rank-to-Open state-transition audit — new result
+
+The isolated audit in
+`docs/checkpoints/2026-09-20_ALPHA_RANK_OPEN_STATE_TRANSITION_RESULT_V1.md`
+joined the frozen C1-C4 rank surface to the existing frozen Open field only.
+It passed the structural/privacy gates and remained
+`BLOCKED_SOURCE_ADMISSION`:
+
+| Candidate | Complete dates | Selected | Ready Open | Pending Open | Pending rate |
+|---|---:|---:|---:|---:|---:|
+| C1 | 600 | 18,000 | 12,696 | 5,304 | 29.4667% |
+| C2 | 600 | 18,000 | 11,991 | 6,009 | 33.3833% |
+| C3 | 278 | 8,340 | 8,305 | 35 | 0.4197% |
+| C4 | 600 | 18,000 | 12,443 | 5,557 | 30.8722% |
+
+The result shows that aggregate Open coverage is not the same as
+rank-conditioned readiness. It does not establish predictive value, PIT
+knowledge time, source authority, CA correctness, survivorship, or fills. The
+machine result remains in the isolated staging subfolder
+`20260920T-rank-open-state-transition` and was not copied into canonical or
+protected data.
+
+The global interpretation is unchanged: NO-GO for protected predictive
+evaluation and no admission change. The new audit is a structural shadow only.
