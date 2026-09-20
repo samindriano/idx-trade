@@ -8,10 +8,11 @@
    pre-protocol 20-in-60 liquidity rule, but current classification remains
    `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
    authority appears.
-2. Tooling/verifier adversarial audit: `PARTIALLY_RESOLVED`; synthetic
-   challenger confirms semantic false greens and missing verifier-version pin.
-   Reopen only for a reviewed schema allowlist, independent formula challenger,
-   or explicit version contract.
+2. Tooling/verifier adversarial audit: `SUPPORTED_SCOPED`; synthetic semantic
+   challenger confirms false greens, while the independent formula challenger
+   detects five declared score/mask mutations. The semantic allowlist and
+   verifier-version freshness gaps remain open. Reopen for a reviewed schema
+   allowlist, broader reviewed oracle, or explicit version contract.
 3. Common-support methodology: native versus common support, sparse C3 handling,
    and exact one-shot comparison design without opening outcomes. The initial
    structural census is complete; rerun only after policy/source changes.

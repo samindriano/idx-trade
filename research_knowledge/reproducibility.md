@@ -132,6 +132,21 @@ access absence.
 - Result: three false-green surfaces confirmed; top-level packet allowlist
   still rejects unknown fields; verifier-version pin remains absent.
 
+## Formula mutation challenger
+
+- Script: `research/alpha_formula_mutation_challenger_v1.py`.
+- Durable result: `research_knowledge/formula_mutation_challenger_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`.
+- Script SHA-256:
+  `86c6fd1d9ad18cdb2b29f110a5a6f7b522cd4a3c2eebcbdd3251f67f2409d434`.
+- External result SHA-256:
+  `044d92db4c49e0c9744127fcfca6d30820dd80f358f7a43254acd8f33c5d6ce5`.
+- One independent baseline plus five semantic mutations were run on a
+  150-session synthetic fixture. Baseline passed; every declared mutation was
+  detected by score, rank, or eligibility checks.
+- This is mutation-sensitivity evidence only. It does not certify the admitted
+  panel, PIT, corporate-action basis, capacity, or predictive validity.
+
 ## Eligibility provenance history
 
 - Script: `research/alpha_eligibility_provenance_history_v1.py`.

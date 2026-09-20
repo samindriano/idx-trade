@@ -37,6 +37,7 @@
     "historical_archaeology_audit_v1.json",
     "tooling_semantic_challenger_v1.json",
     "eligibility_provenance_history_v1.json",
+    "formula_mutation_challenger_v1.json",
     "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
@@ -45,8 +46,8 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 36,
-    "findings_index_entries": 27,
+    "experiment_registry_entries": 37,
+    "findings_index_entries": 28,
     "no_retry_registry_entries": 15,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
@@ -61,6 +62,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_HISTORICAL_ARCHAEOLOGY_AUDIT_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_TOOLING_SEMANTIC_CHALLENGER_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_PROVENANCE_HISTORY_AUDIT_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_PROVENANCE_HISTORY_AUDIT_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md"
   ]
 }

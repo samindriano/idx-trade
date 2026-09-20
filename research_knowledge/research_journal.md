@@ -129,3 +129,15 @@ checkpoint files; this file records why the next question changed.
 - Narrowed the blocker from unknown provenance to missing current authority
   binding. No population was selected, no candidate was regenerated, and the
   safe status remains `POLICY_AUTHORITY_MISSING`.
+
+## 2026-09-20 — independent formula mutation challenger
+
+- Built a temporary 3-ticker, 150-session fixture and an independently written
+  reference for C1/C2/C4 plus average-tie ranks.
+- Baseline replay passed on all 450 keys. Five declared mutations were then
+  detected: C1 denominator, C1 market timing, C2 log transform, C4 sign, and
+  eligibility mask.
+- A first 72-session fixture was rejected because C1 had no finite support;
+  the accepted run uses 150 sessions. This is harness-quality evidence only.
+- Classified `TOOLING-040` as `SUPPORTED_SCOPED`; no formula, verifier, or
+  production behavior was changed.

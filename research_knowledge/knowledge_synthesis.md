@@ -53,6 +53,10 @@
   window. Stage-A `min_periods=window` remains implementation behavior, and
   the separate security-master 60-session warm-up is not the same rule. This
   still does not bind current policy or authorize population regeneration.
+- A synthetic independent formula challenger now confirms that the current
+  constructor replay detects five declared semantic mutations across C1/C2/C4
+  and eligibility. This strengthens mutation sensitivity only; it does not
+  upgrade implementation reproducibility into scientific validity.
 
 ## What failed, is redundant, or is superseded
 

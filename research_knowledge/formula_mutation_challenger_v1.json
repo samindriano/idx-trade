@@ -1,0 +1,35 @@
+{
+  "schema_version": "IDX_TRADE_FORMULA_MUTATION_CHALLENGER_V1",
+  "experiment_id": "TOOLING-040",
+  "status": "PASS_SEMANTIC_MUTATIONS_DETECTED",
+  "scope": "OUTCOME_BLIND_SYNTHETIC_FIXTURES_ONLY",
+  "code": {
+    "path": "research/alpha_formula_mutation_challenger_v1.py",
+    "sha256": "86c6fd1d9ad18cdb2b29f110a5a6f7b522cd4a3c2eebcbdd3251f67f2409d434"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_formula_mutation_challenger_v1.json",
+    "sha256": "044d92db4c49e0c9744127fcfca6d30820dd80f358f7a43254acd8f33c5d6ce5"
+  },
+  "fixture": {
+    "tickers": 3,
+    "official_sessions": 150,
+    "panel_rows": 450,
+    "trial_count": 6
+  },
+  "baseline": "PASS_INDEPENDENT_FORMULA_AND_RANK_REPLAY",
+  "mutation_detection": {
+    "c1_stock_variance_denominator": true,
+    "c1_current_market_timing": true,
+    "c2_missing_log": true,
+    "c4_sign_flip": true,
+    "eligibility_flip": true
+  },
+  "interpretation": "The existing independent constructor replay is sensitive to these five declared semantic mutations on a deterministic synthetic fixture.",
+  "limitations": [
+    "Synthetic sensitivity does not prove correctness on the admitted panel.",
+    "Mutation detection does not prove PIT, identity, corporate-action, capacity, or predictive validity.",
+    "The challenger does not modify the constructor replay or packet verifier."
+  ],
+  "reopen_trigger": "A separately reviewed independent oracle on a policy-authorized structural fixture or a new producer/verifier semantic contract."
+}

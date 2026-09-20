@@ -100,8 +100,8 @@ Current registry counts after the provenance addendum:
 
 | Registry | Count |
 |---|---:|
-| Experiments | 36 |
-| Findings | 27 |
+| Experiments | 37 |
+| Findings | 28 |
 | No-retry entries | 15 |
 | Source-capability entries | 17 |
 | Protected payloads persisted | `false` |
@@ -296,7 +296,24 @@ Evidence: `ELIGIBILITY-CONFLICT-027`, `ELIGIBILITY-SCENARIO-034`,
 `docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_PROVENANCE_HISTORY_AUDIT_RESULT_V1.md`,
 `research_knowledge/eligibility_provenance_history_v1.json`.
 
-### 4.10 Tooling, firewall, and lane controls
+### 4.10 Formula mutation sensitivity
+
+An independent synthetic challenger used a 3-ticker, 150-session fixture and
+recomputed C1/C2/C4 plus average-tie ranks without importing the producer. The
+baseline matched the existing constructor replay on all 450 keys. Five
+declared mutations were all detected: C1 stock-variance denominator, C1 current
+market timing, C2 missing logarithm, C4 sign flip, and eligibility-mask flip.
+
+This is scoped mutation-sensitivity evidence only. It does not prove formula
+correctness on the admitted panel, PIT safety, basis integrity, capacity, or
+predictive validity. The initial 72-session fixture was rejected because it
+had no finite C1 support; the accepted run uses 150 sessions.
+
+Evidence: `TOOLING-040`,
+`docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`,
+`research_knowledge/formula_mutation_challenger_v1.json`.
+
+### 4.11 Tooling, firewall, and lane controls
 
 The run tested its own research controls with synthetic fixtures:
 
@@ -309,6 +326,8 @@ The run tested its own research controls with synthetic fixtures:
 - mutation audit: expected corrupt-hash, missing-reference, changed-code,
   network-import, protected-marker, C5-injection, policy-selection, and
   re-entry-opening mutations were detected.
+- independent formula mutation challenger: baseline PASS and 5/5 declared
+  semantic mutations detected on a synthetic fixture.
 
 The semantic challenger also found real limitations:
 
@@ -467,6 +486,7 @@ Primary navigation files:
 - `docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_PROVENANCE_HISTORY_AUDIT_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_HISTORICAL_ARCHAEOLOGY_AUDIT_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_TOOLING_SEMANTIC_CHALLENGER_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`
 
 Machine evidence:
 
@@ -480,6 +500,7 @@ Machine evidence:
 - `research_knowledge/data_authority_packet_v1.json`
 - `research_knowledge/tooling_mutation_audit_v1.json`
 - `research_knowledge/tooling_semantic_challenger_v1.json`
+- `research_knowledge/formula_mutation_challenger_v1.json`
 
 ## 11. Final handoff sentence
 
