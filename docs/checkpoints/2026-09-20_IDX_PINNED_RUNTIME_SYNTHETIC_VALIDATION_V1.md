@@ -79,3 +79,20 @@ outcomes.
 The next useful implementation-quality test is fault injection at each durable
 write and external side-effect boundary, not another ordinary regression run.
 
+## Direct fault-injection observation
+
+In the same temporary pinned extraction, `_atomic_write` was monkeypatched to
+raise once during `bootstrap_t0`, after `write_runtime_snapshot` had completed
+but before `T0.json` was written.
+
+Observed output:
+
+```text
+first= RuntimeError INJECTED_AFTER_SNAPSHOT
+retry= E2EPaperOrchestrationError E2E_T0_PREEXISTING_RUNTIME_STATE
+```
+
+This reproduces the T0 crash window as an actual synthetic failure: an
+interrupted bootstrap leaves a runtime snapshot that the next invocation cannot
+reconcile into the matching T0 marker. The test was isolated, outcome-blind,
+and did not modify the repository checkout.
