@@ -59,6 +59,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - Decision V2 reversal against an active quantity obligation now fails closed
   until an explicit cancellation/relinquishment transition exists; legacy
   pending-only reversal behavior remains unchanged;
+- explicit Decision-seat closure now requires a caller-supplied,
+  hash-bound `DecisionSeatClosePolicyV1`; the close event persists the policy
+  hash and missing/unauthorized status or reason semantics fail closed. This
+  adds no production default and does not decide paired-replacement, expiry,
+  or `FULL`-quantity policy;
 - CA sizing lineage keeps the immutable raw state as `ExecutionOrderPlan.state_hash`
   and records projected total-return sizing separately;
 - projected CA state is restricted to cash/ledger changes and a trade-state
@@ -158,13 +163,13 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `245/245` for the
+- a fresh current-head regression challenge is also PASS at `251/251` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
-  evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
-  controller/orchestration suites; see
-  `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at source commit
-  `2aa210bf`;
+  hash-bound Decision-seat policy gate, evidence, CA, identity, transition,
+  lineage, migration, dividend-runtime, and E2E controller/orchestration
+  suites; see `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at
+  source commit `3b5d5e4c`;
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
@@ -172,7 +177,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   boolean position shares before whole-lot validation; the follow-up challenge
   is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `2aa210bf` (terminal recovery fence and
+- continuation commits include `3b5d5e4c` (hash-bound Decision-seat policy
+  gate), `2aa210bf` (terminal recovery fence and
   authenticated quarantine manifest), `f9d323bd` (prepared Decision/execution-plan
   replay binding), `e5040346` (prepared Decision-plan replay binding),
   `9dacf7e6` (strict position-share validation),
@@ -193,9 +199,12 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   rechecks passed and the current clean run covers the latest replay changes;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
-- post-hardening full repository regression at `2aa210bf` completed at
-  `883/883 PASS` with only the three pre-existing pandas `FutureWarning`
-  records; no new failure was observed.
+- the post-policy full repository regression collected `889` tests and ended
+  `888 passed / 1 failed` in both attempts on the existing capture fixture's
+  Windows `PermissionError [WinError 5]` atomic temporary-directory replace;
+  the failing test passed in isolation. No contract-hardening test failed;
+  the bounded `251/251` result is the clean lane evidence. The earlier
+  `2aa210bf` run remains historical `883/883 PASS` evidence.
 
 ## Remaining evidence before Phase 4
 
@@ -208,7 +217,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - external/policy-gated activation and any live protected-runtime validation;
   synthetic independent challenge V2 is recorded in
   `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`.
-- Decision-seat policy semantics remain open; explicit
-  cancellation/relinquishment is implemented only through the parent-bound
-  caller-supplied transition and remains fail-closed by default. The prepared
-  Decision-plan replay gap is now covered by the current-head challenge.
+- Decision-seat policy activation remains open; explicit
+  cancellation/relinquishment is implemented only through the parent-bound,
+  caller-supplied hash-bound policy transition and remains fail-closed by
+  default. Pairing, expiry, and `FULL`-quantity semantics still require
+  authoritative policy. The prepared Decision-plan replay gap is now covered
+  by the current-head challenge.

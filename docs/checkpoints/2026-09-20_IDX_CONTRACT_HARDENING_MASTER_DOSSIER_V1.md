@@ -108,6 +108,11 @@ The isolated lane currently contains:
 - Decision V2 reversal against an active quantity obligation fails closed until
   an explicit cancellation/relinquishment transition is supplied; pending-only
   reversal compatibility remains intact.
+- explicit Decision-seat closure now requires a caller-supplied,
+  hash-bound `DecisionSeatClosePolicyV1`; close events persist the policy hash,
+  while missing or unauthorized status/reason semantics fail closed. No
+  production default, paired-replacement, expiry, or `FULL`-quantity policy is
+  invented by this lane.
 - explicit CA sizing lineage separating raw execution state from projected
   total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
@@ -211,22 +216,23 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`2aa210bf` passes `245/245` across the latest
+`3b5d5e4c` passes `251/251` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
-state-level explicit cancellation/relinquishment replay, evidence, CA,
-identity, transition, lineage, migration, dividend-runtime, and E2E
-controller/orchestration suites; see
+state-level explicit cancellation/relinquishment replay, hash-bound
+Decision-seat policy gate, evidence, CA, identity, transition, lineage,
+migration, dividend-runtime, and E2E controller/orchestration suites; see
 `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`. This is a local
 regression result, not an independent reviewer attestation or production
 promotion. The V2 independent-challenge record remains historical evidence.
 External authorization/adoption, authoritative identity-source provisioning,
 live provider/scheduler interruption validation, automatic migration activation,
-and the remaining Decision-seat policy semantics are still open. Explicit
+and Decision-seat policy activation are still open. Explicit
 cancellation/relinquishment is implemented only as a caller-supplied,
-parent-bound transition; it is never inferred from target membership. The
-prepared Decision/execution-plan replay gap, terminal recovery fence, and
-authenticated quarantine manifest are covered by `2aa210bf`; this is not a
-production promotion or phase closure.
+parent-bound transition with a hash-bound policy envelope; it is never inferred
+from target membership. Pairing, expiry, and `FULL`-quantity semantics remain
+policy gaps. The prepared Decision/execution-plan replay gap, terminal recovery
+fence, and authenticated quarantine manifest are covered by `2aa210bf`; this
+is not a production promotion or phase closure.
 
 ## Boundaries
 

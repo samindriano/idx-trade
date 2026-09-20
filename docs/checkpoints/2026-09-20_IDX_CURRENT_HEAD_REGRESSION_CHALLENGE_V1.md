@@ -2,7 +2,7 @@
 
 Date: 2026-09-21
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `2aa210bf`
+Verification revision: `3b5d5e4c`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`245/245 PASS`.
+`251/251 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -46,24 +46,26 @@ as terminal on repeated V1/V2 invocations. The latest-snapshot quarantine
 manifest is versioned, exact-keyed, entry-order canonical, and authenticated by
 its own manifest hash; manifest tampering fails closed.
 
-Earlier in this lane, the full repository command was also attempted twice
-after the preceding contract additions.
-Both runs reached the end of the suite but encountered the known Windows
-`PermissionError [WinError 5]` atomic-publish race in unrelated tests: once in
-`tests/test_official_open_evidence_v1.py` and once in
-`tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
-run in isolation. No contract-hardening test failed; the expanded bounded
-245-test result above is the current clean evidence for this lane.
+Explicit Decision-seat closure now requires a caller-supplied,
+hash-bound `DecisionSeatClosePolicyV1`. The policy records its authorization
+reference and allowed status/reason set, close events persist the policy hash,
+and missing or unauthorized policy semantics fail closed. No production
+status/reason, paired-replacement, expiry, or `FULL`-quantity policy is chosen
+by this lane.
 
-A post-hardening full-repository run also completed at 100%: `883/883 PASS`
-with only the three pre-existing pandas `FutureWarning` records described
-below. No protected/provider/canonical/cloud/capture/telemetry/scheduler state
-was accessed.
+After this policy-gate change, the full repository collected `889` tests and
+ended `888 passed / 1 failed` in both attempts. The only failure was the
+unrelated existing `tests/test_capture_forward_ca_idx_bei.py::test_direct_transport_failure_uses_zapi_raw_and_verifies_nested_provenance`,
+which hit Windows `PermissionError [WinError 5]` while atomically replacing a
+temporary output directory. That test passed when run in isolation. No
+contract-hardening test failed; the bounded `251/251` result above is the
+clean lane evidence. No protected/provider/canonical/cloud/capture/telemetry/
+scheduler state was accessed.
 
 ## Verification command
 
 ```text
-python -m pytest -q tests/test_v4_x1_quantity_obligation_v1.py tests/test_v4_x1_execution_v1_decision_v2_adapter.py tests/test_v4_x1_execution_v1_exit_capacity.py tests/test_v4_x1_execution_evidence_v2.py tests/test_v4_x1_ca_timing_matrix_v1.py tests/test_v4_x1_identity_contract_v1.py tests/test_v4_x1_identity_evidence_v1.py tests/test_v4_x1_transition_binding_v1.py tests/test_v4_x1_runtime_lineage_v2.py tests/test_v4_x1_migration_provenance_v1.py tests/test_v4_x1_migration_activation_v1.py tests/test_forward_dividend_runtime_v1_1.py tests/test_forward_dividend_orchestration_v1.py tests/test_e2e_paper_orchestration_v1.py tests/test_e2e_paper_operational_controller_v1.py tests/test_e2e_paper_operational_controller_v2.py tests/test_e2e_paper_phase_binding_v1.py tests/test_e2e_paper_runtime_config_v1.py tests/test_e2e_prepared_schedule_binding_v1.py tests/test_decision_v2_minimal.py tests/test_decision_v2_minimal_audit_remediation.py tests/test_v4_x1_decision_v2_minimal.py
+python -m pytest -q tests/test_v4_x1_decision_seat_policy_v1.py tests/test_v4_x1_quantity_obligation_v1.py tests/test_v4_x1_execution_v1_decision_v2_adapter.py tests/test_v4_x1_execution_v1_exit_capacity.py tests/test_v4_x1_execution_evidence_v2.py tests/test_v4_x1_ca_timing_matrix_v1.py tests/test_v4_x1_identity_contract_v1.py tests/test_v4_x1_identity_evidence_v1.py tests/test_v4_x1_transition_binding_v1.py tests/test_v4_x1_runtime_lineage_v2.py tests/test_v4_x1_migration_provenance_v1.py tests/test_v4_x1_migration_activation_v1.py tests/test_forward_dividend_runtime_v1_1.py tests/test_forward_dividend_orchestration_v1.py tests/test_e2e_paper_orchestration_v1.py tests/test_e2e_paper_operational_controller_v1.py tests/test_e2e_paper_operational_controller_v2.py tests/test_e2e_paper_phase_binding_v1.py tests/test_e2e_paper_runtime_config_v1.py tests/test_e2e_prepared_schedule_binding_v1.py tests/test_decision_v2_minimal.py tests/test_decision_v2_minimal_audit_remediation.py tests/test_v4_x1_decision_v2_minimal.py
 ```
 
 ## Interpretation
@@ -73,4 +75,5 @@ evidence gap for these synthetic contracts. It does not close external
 authorization/adoption, authoritative identity-source provisioning, live
 provider/scheduler interruption validation, automatic migration activation, or
 Decision-seat/cancellation policy semantics. Those remain fail-closed and
-outside this lane.
+outside this lane except for the hash-bound policy gate; authoritative policy
+activation remains outside this lane.
