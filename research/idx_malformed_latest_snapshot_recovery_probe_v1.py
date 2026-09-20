@@ -125,7 +125,7 @@ _CHILD = textwrap.dedent(
 
     # Rebuild a separate synthetic chain for payload tamper so the two cases
     # are independent and the first observation cannot affect the second.
-    second_root = runtime_root.parent / "payload-tamper"
+    second_root = runtime_root / "payload-tamper"
     second_root.mkdir(parents=True, exist_ok=True)
     first_two = runtime.write_runtime_snapshot(second_root, state_one, registry)
     second_two = runtime.write_runtime_snapshot(

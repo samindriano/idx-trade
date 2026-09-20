@@ -714,6 +714,12 @@ historical alpha archive:
   The valid prior snapshot remains directly loadable, so this is an availability
   and recovery-contract gap rather than a hash-verification bypass. No runtime
   or data fix was applied.
+- `2026-09-20_IDX_SYSTEM_FRONTIER_CHALLENGE_V1.md` is the dedicated final
+  cross-component challenge for this frontier. It composes the bounded
+  quantity/evaluation, obligation-spec, reconciliation, post-entry-risk, and
+  latest-snapshot probes and confirms a systemic false-green pattern. All
+  remaining blockers are explicitly external/protected or require an
+  authorized implementation lane; no source, runtime, or data fix was applied.
 
 The durable rolling controls for this marathon are now:
 

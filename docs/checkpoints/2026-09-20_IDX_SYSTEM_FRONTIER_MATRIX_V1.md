@@ -36,6 +36,14 @@ Depth labels are evidence states, not promotion claims. `EXTERNAL_EVIDENCE_BLOCK
 
 The system is no longer best described as “component tests mostly pass with a few isolated gaps.” The highest-risk pattern is semantic state loss at boundaries: a component can produce an internally valid artifact whose meaning is incomplete for the next component. The positive partial-buy trigger matrix shows that this is a family-level execution contract failure, not a single gap scenario. The most valuable next work is quantity-aware state modeling and a multi-session residual-order harness, not additional alpha feature search.
 
+The dedicated frontier challenge confirms this interpretation across five
+independent bounded gates: the obligation design can retain a 2,600-share
+remainder while the runtime evaluation boundary sees only 5% filled turnover,
+`reconciliation_required=false` has no mismatch provenance, a 3x winner reaches
+25% weight against a 15% entry cap, and a poisoned latest snapshot blocks
+normal latest-state loading without fallback. These are structural findings,
+not protected performance results.
+
 ## External/protected boundaries
 
 - Protected H5/H10, hidden OOS/PnL, and incumbent predictive comparisons remain closed.

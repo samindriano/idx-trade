@@ -96,6 +96,11 @@ The system tracks target membership but not target quantity obligations. A posit
   The exact runtime fails closed on malformed or payload-tampered latest
   snapshots, but leaves the poisoned file in place and does not fall back to
   the valid prior ancestor; direct prior loading remains possible.
+- Dedicated frontier challenge: `2026-09-20_IDX_SYSTEM_FRONTIER_CHALLENGE_V1.md`.
+  The composed outcome-blind challenge confirms that planned-vs-filled
+  quantity, reconciliation provenance, continuing concentration, and poisoned
+  latest-state recovery remain independent false-green boundaries even though
+  the quantity-obligation design harness itself conserves the remainder.
 
 ## Immediate next questions
 
