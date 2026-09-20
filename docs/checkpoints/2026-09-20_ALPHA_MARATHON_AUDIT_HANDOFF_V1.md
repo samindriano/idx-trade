@@ -265,6 +265,13 @@ The PASS results mean the controls correctly encode a fail-closed specification.
 They do not mean the packet is executable or that the data is scientifically
 admitted.
 
+For an audit, bind the verifier result to its embedded `packet_sha256`,
+`contract_sha256`, and repository HEAD. Older staging outputs may be historical
+reruns with superseded hashes; do not select one by filename alone. The current
+rerun used for this handoff reports HEAD `0d9ab3b5`, packet SHA
+`7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894`, and
+contract SHA `a76cd5acdfe457668b6241c4d28d677e4c2b92a98f2a54b82401338a6d794d4d`.
+
 ## 5. What is genuinely complete versus not complete
 
 ### Complete or substantially complete
