@@ -1855,6 +1855,80 @@ def execute_preopen(
                 "runtime_snapshot_sha256": recovered.runtime_snapshot_sha256,
             })
             return recovered
+    if not target.exists():
+        try:
+            latest_snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+        except Exception as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_PREPARED_STATE_PARENT_MISMATCH"
+            ) from exc
+        if (
+            str(latest_snapshot.path.resolve()) != str(snapshot.path.resolve())
+            or latest_snapshot.file_sha256 != snapshot.file_sha256
+        ):
+            raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
+    shadow = (
+        DecisionV2ShadowState.empty()
+        if bootstrap
+        else replace(
+            dividend_runtime.reconstruct_decision_shadow_state(state),
+            as_of_session_date=previous_score.session_date,
+        )
+    )
+    registered_events = dividend_runtime.registered_certified_events(
+        snapshot.certified_dividend_registry
+    )
+    sizing_events = tuple({
+        event.event_id: event
+        for event in (*registered_events, *ca_reconciliation.certified_events)
+    }.values())
+    sizing_state = _state_for_dividend_sizing(
+        paths,
+        state,
+        sizing_events,
+        session_date=decision_date,
+    )
+    ca_timing_matrix = build_ca_timing_matrix_v1(
+        ca_reconciliation.certified_events,
+        decision_session_date=decision_date,
+        execution_session_date=execution_date,
+        raw_state=state,
+        sizing_state=sizing_state,
+    )
+    try:
+        ca_timing_matrix = verify_ca_timing_matrix_extension(
+            persisted_ca_timing_matrix,
+            ca_timing_matrix,
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_CA_TIMING_MATRIX_PARENT_MISMATCH"
+        ) from exc
+    verified_sizing = verify_decision_v2_plan_for_sizing(
+        plan,
+        current_score,
+        previous_score,
+        shadow,
+        security_identities=security_identities,
+    )
+    if verified_sizing.identity_binding != payload.get("decision_identity_binding"):
+        raise E2EPaperOrchestrationError("E2E_DECISION_IDENTITY_BINDING_MISMATCH")
+    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
+        verified_sizing,
+        state,
+        eod_inputs=eod_inputs,
+        projected_state=sizing_state,
+    )
+    expected_execution_plan = _execution_plan_payload(order_plan)
+    declared_execution_plan = payload.get("execution_plan")
+    if (
+        not isinstance(declared_execution_plan, Mapping)
+        or dict(declared_execution_plan) != expected_execution_plan
+        or _canonical_hash(dict(declared_execution_plan))
+        != payload.get("execution_plan_sha256")
+    ):
+        raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
     if target.exists():
         snapshot_path = (
             paths.root
@@ -1941,17 +2015,6 @@ def execute_preopen(
             execution_date,
             "ALREADY_COMPLETE",
         )
-    try:
-        latest_snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
-    except Exception as exc:
-        raise E2EPaperOrchestrationError(
-            "E2E_PREPARED_STATE_PARENT_MISMATCH"
-        ) from exc
-    if (
-        str(latest_snapshot.path.resolve()) != str(snapshot.path.resolve())
-        or latest_snapshot.file_sha256 != snapshot.file_sha256
-    ):
-        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
     declared_previous_execution = payload.get("previous_execution")
     current_meta = _load_meta(paths)
     actual_previous_execution = (
@@ -1963,61 +2026,6 @@ def execute_preopen(
     )
     if actual_previous_execution != declared_previous_execution:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_CHANGED")
-    _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
-    shadow = (
-        DecisionV2ShadowState.empty()
-        if bootstrap
-        else replace(
-            dividend_runtime.reconstruct_decision_shadow_state(state),
-            as_of_session_date=previous_score.session_date,
-        )
-    )
-    registered_events = dividend_runtime.registered_certified_events(
-        snapshot.certified_dividend_registry
-    )
-    sizing_events = tuple({
-        event.event_id: event
-        for event in (*registered_events, *ca_reconciliation.certified_events)
-    }.values())
-    sizing_state = _state_for_dividend_sizing(
-        paths,
-        state,
-        sizing_events,
-        session_date=decision_date,
-    )
-    ca_timing_matrix = build_ca_timing_matrix_v1(
-        ca_reconciliation.certified_events,
-        decision_session_date=decision_date,
-        execution_session_date=execution_date,
-        raw_state=state,
-        sizing_state=sizing_state,
-    )
-    try:
-        ca_timing_matrix = verify_ca_timing_matrix_extension(
-            persisted_ca_timing_matrix,
-            ca_timing_matrix,
-        )
-    except DecisionV1Error as exc:
-        raise E2EPaperOrchestrationError(
-            "E2E_CA_TIMING_MATRIX_PARENT_MISMATCH"
-        ) from exc
-    verified_sizing = verify_decision_v2_plan_for_sizing(
-        plan,
-        current_score,
-        previous_score,
-        shadow,
-        security_identities=security_identities,
-    )
-    if verified_sizing.identity_binding != payload.get("decision_identity_binding"):
-        raise E2EPaperOrchestrationError("E2E_DECISION_IDENTITY_BINDING_MISMATCH")
-    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
-        verified_sizing,
-        state,
-        eod_inputs=eod_inputs,
-        projected_state=sizing_state,
-    )
-    if _canonical_hash(_execution_plan_payload(order_plan)) != payload.get("execution_plan_sha256"):
-        raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
     evidence_by_event = {
         row.event.event_id: row for row in available_evidence
     }

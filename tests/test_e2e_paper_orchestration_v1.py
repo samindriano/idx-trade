@@ -780,6 +780,54 @@ def test_preopen_replay_rejects_rehashed_decision_plan_tamper(
         )
 
 
+def test_preopen_replay_rejects_rehashed_execution_plan_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    payload["execution_plan"]["target_positions"] = ["FORGED"]
+    payload["execution_plan_sha256"] = _canonical_hash(payload["execution_plan"])
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    prepared.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXECUTION_PARENT_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
 def test_preopen_replay_rejects_rehashed_lineage_contract_tamper(
     tmp_path: Path,
 ) -> None:
