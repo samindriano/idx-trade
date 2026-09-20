@@ -136,6 +136,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   reuses the exact schedule-bound prepared parent;
 - latest-snapshot recovery rejects noncanonical snapshot filenames with a
   typed fail-closed error instead of leaking an untyped sorting failure;
+- top-level T0, prepared, execution, transaction, meta, and missed-execution
+  artifacts now require one of their explicit canonical key envelopes before
+  any replay consumer proceeds; hash-valid unknown top-level extensions fail
+  closed;
 - snapshot loading replays the canonical snapshot builder and rejects a
   hash-valid but noncanonical payload envelope;
 - post-implementation independent challenge record V2 is PASS for nested replay,
@@ -143,10 +147,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
 - continuation commits are `dffd70c9` (reconciliation and migration replay),
-  `4430b6a6` (migration activation replay), and `6ee67c2a` (partial BUY
-  restart retry evidence); the lane remains clean and no commit was pushed or
-  merged;
-- current HEAD (`6ee67c2a`) full repository regression via `python -m pytest -q`
+  `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
+  retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane
+  remains clean and no commit was pushed or merged;
+- current HEAD (`ba38396a`) full repository regression via `python -m pytest -q`
   passed at 100% with only three pre-existing pandas `FutureWarning` records.
   Earlier
   runs hit the known unrelated Windows `PermissionError [WinError 5]`

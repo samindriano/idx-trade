@@ -93,6 +93,8 @@ The isolated lane currently contains:
 - additive `PaperPortfolioState.obligations` ownership with compatibility
   pending projections and an obligation-aware state hash;
 - positive partial BUY persistence and retry completion;
+- positive partial BUY restart replay: the V2 snapshot reload preserves the
+  filled/remainder split before the next-session retry;
 - partial SELL and paired replacement quantity lineage;
 - duplicate fill/cancel idempotency at the obligation layer;
 - explicit `RUNTIME_SCHEMA_V2` obligation snapshot serialization chained to V1
@@ -173,6 +175,9 @@ The isolated lane currently contains:
   ledger and pending projection;
 - snapshot loading replays the canonical builder and rejects hash-valid but
   noncanonical payload envelopes;
+- top-level T0, prepared, execution, transaction, meta, and missed-execution
+  artifacts require explicit canonical key envelopes before replay consumers
+  proceed; hash-valid unknown top-level extensions fail closed;
 - post-implementation independent challenge is recorded PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and controller gates;
 - independent challenge V2 also covers real synthetic child interruption,
@@ -182,13 +187,15 @@ The isolated lane currently contains:
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
-execution/orchestration, and E2E paper orchestration/controller. Controller
-fault-injection, the complete CA/accounting timing matrix and restart proof,
-independent artifact challenge,
-  reconciliation provenance, authoritative identity-source provisioning,
-child-process runtime binding, authorized
-automatic migration activation remain open; this is not a production promotion or phase
-closure.
+execution/orchestration, schedule binding, and E2E paper
+orchestration/controller. Current HEAD `ba38396a` also passes the full
+repository regression with only the three pre-existing pandas warnings. The
+V2 independent-challenge record predates the latest local envelope hardening;
+its synthetic gates remain evidence, not a fresh final challenge at this HEAD.
+External authorization/adoption, authoritative identity-source provisioning,
+live provider/scheduler interruption validation, automatic migration activation,
+and the remaining Decision-seat/cancellation semantics are still open. This
+is not a production promotion or phase closure.
 
 ## Boundaries
 
