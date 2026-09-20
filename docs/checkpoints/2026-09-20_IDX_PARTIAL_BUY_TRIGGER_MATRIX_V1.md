@@ -104,6 +104,24 @@ accepted as completed membership transitions. The architectural consequence is
 to unify buy and sell obligations around planned/filled/remaining quantities,
 not merely change the allocator's status string.
 
+## Test coverage and acceptance impact
+
+The focused green suite does not falsify this behavior:
+
+- `test_capacity_guard_limits_new_buy_to_one_percent_reference_day_value`
+  checks the gross-capacity upper bound, not planned-versus-filled completion.
+- `test_random_cash_lot_and_capacity_invariants` checks non-negative cash,
+  whole lots, entry cap, and capacity cap, but not a residual obligation.
+- `test_joint_allocator_removes_old_bootstrap_cash_drag` accepts the resulting
+  position set and empty pending state without asserting per-entry completion.
+- The independent replay oracle in `ce91d60a` compares planned and filled
+  fields but explicitly expects `pending_transition_count: 0` and persists the
+  filled quantity as the position.
+
+Thus the existing tests prove mechanical safety bounds and deterministic
+replay, not economic completion of the requested quantity. A future acceptance
+gate must assert positive underfill semantics explicitly.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:
