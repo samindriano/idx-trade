@@ -529,7 +529,10 @@ historical alpha archive:
   multi-session interaction with dividend settlement remain policy questions.
   A direct composition probe also preserved the dividend ledger across the
   partial exit and settled Rp125,000 exactly once, while process-restart
-  coverage across that combined path remains outstanding.
+  coverage across that combined path was then exercised through a synthetic
+  five-snapshot chain. The ledger and hashes survived reload; payment cash
+  increased while pending replacement remained pending, confirming that cash
+  settlement and pending-order reconsideration are separate policy events.
 
 The updated system-level belief is therefore:
 

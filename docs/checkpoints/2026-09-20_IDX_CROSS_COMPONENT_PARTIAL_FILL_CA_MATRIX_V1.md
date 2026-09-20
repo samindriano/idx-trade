@@ -98,7 +98,34 @@ partial execution does not overwrite or recompute the dividend ledger. It still
 does not test a multi-process restart between the partial fill and payment, nor
 does it establish external settlement reconciliation.
 
-## 5. Why this matters for corporate-action and portfolio state
+## 5. Multi-session chain with restart and payment
+
+A further synthetic run composed the full local path and reloaded the durable
+snapshot after the partial execution:
+
+`2026-08-27 announced registry -> 2026-08-28 cum entitlement -> 2026-08-31 ex receivable -> 2026-09-01 partial execution -> 2026-09-16 payment`
+
+The chain produced these observations:
+
+| Check | Observation | Result |
+|---|---:|---|
+| Cum entitlement | 5,000 shares | PASS |
+| Ex-date receivable | Rp125,000 | PASS |
+| Partial-execution position | 4,000 `AAA` shares | PASS |
+| Pending transitions after execution | `AAA` sell + `BBB` buy | PASS |
+| Ledger after cold-style snapshot reload | exact equality | PASS |
+| Payment cash | Rp46,121,502.50 | PASS |
+| Payment settlements | 1 | PASS |
+| Latest durable chain loader | session `2026-09-16`, hash equal | PASS |
+| Pending transitions after payment | still `AAA` sell + `BBB` buy | EXPLICIT POLICY OBSERVATION |
+
+The last row is the important interaction. Payment cash is credited, but the
+runtime does not automatically retry the unresolved replacement or reinterpret
+the new cash as a reason to resize. This preserves exactly-once state semantics
+and avoids an implicit extra trade, but it means “cash became available” and
+“pending replacement was reconsidered” are separate lifecycle events.
+
+## 6. Why this matters for corporate-action and portfolio state
 
 Corporate-action accounting is attached to the paper state, not merely the
 current target list. If a holder reaches cum date and later has a partial exit:
@@ -117,7 +144,7 @@ the execution-side binding. Together they prevent a prepared order from being
 executed against a state in which the residual holding or dividend ledger was
 silently changed.
 
-## 6. Validation evidence
+## 7. Validation evidence
 
 From runtime commit `045e25a19d9f71170d2c863e768102937e59ad73`:
 
@@ -132,7 +159,7 @@ capacity/lot/cash invariants, Decision V2 shadow lineage, pending reversal, and
 verified CA attestation. They do not constitute broker integration or a
 population-wide liquidity test.
 
-## 7. Hidden policy assumption and open question
+## 8. Hidden policy assumption and open question
 
 The state sets `reconciliation_required=false` after a partial fill. This is
 internally coherent if `reconciliation_required` means “external accounting
@@ -156,7 +183,7 @@ the pair, a dividend payment occurs meanwhile, or capacity shrinks to zero.
 The current adapter tests cover some reversal paths but do not provide a single
 multi-session matrix combining all of those events.
 
-## 8. No-retry / next frontier
+## 9. No-retry / next frontier
 
 No provider or live execution retry is justified by this result. The next
 highest-value local test is a synthetic multi-session matrix with these axes:
@@ -170,7 +197,7 @@ whether an explicit reconciliation/manual-review state is required. Until that
 policy is frozen, partial-fill acceptance should not be described as full
 portfolio reconciliation.
 
-## 9. Provenance and non-mutation
+## 10. Provenance and non-mutation
 
 - This is a new documentation checkpoint only.
 - Scratch execution used synthetic in-memory objects and temporary test state.
