@@ -28,6 +28,21 @@ MIGRATION_ALREADY_COMPATIBLE = "MIGRATION_ALREADY_COMPATIBLE"
 MIGRATION_BLOCKED_RECONCILIATION = "MIGRATION_BLOCKED_RECONCILIATION"
 REQUIRES_RECONCILIATION = "REQUIRES_RECONCILIATION"
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+_MIGRATION_PROVENANCE_KEYS = frozenset(
+    {
+        "schema_version",
+        "source_artifact_sha256",
+        "source_schema_version",
+        "source_session_date",
+        "source_state_sha256",
+        "classification",
+        "disposition",
+        "reason_code",
+        "decided_at_utc",
+        "runtime_lineage_sha256",
+        "payload_sha256",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -46,16 +61,22 @@ def _require_sha(value: object, code: str) -> str:
 
 
 def _require_date(value: object, code: str) -> str:
-    normalized = str(value).strip()
+    if not isinstance(value, str):
+        raise DecisionV1Error(code)
+    normalized = value.strip()
     try:
-        date.fromisoformat(normalized)
+        parsed = date.fromisoformat(normalized)
     except ValueError as exc:
         raise DecisionV1Error(code) from exc
+    if parsed.isoformat() != normalized:
+        raise DecisionV1Error(code)
     return normalized
 
 
 def _require_utc_timestamp(value: object) -> str:
-    normalized = str(value).strip()
+    if not isinstance(value, str):
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_TIMESTAMP_INVALID")
+    normalized = value.strip()
     try:
         parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
     except ValueError as exc:
@@ -63,6 +84,9 @@ def _require_utc_timestamp(value: object) -> str:
     if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_TIMESTAMP_NOT_UTC")
     if not normalized.endswith("Z"):
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_TIMESTAMP_NOT_CANONICAL")
+    canonical = parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    if canonical != normalized:
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_TIMESTAMP_NOT_CANONICAL")
     return normalized
 
@@ -158,6 +182,8 @@ def verify_migration_provenance_payload(value: dict[str, Any]) -> dict[str, Any]
     if not isinstance(value, dict):
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_REQUIRED")
     payload = dict(value)
+    if set(payload) != _MIGRATION_PROVENANCE_KEYS:
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_PAYLOAD_NOT_CANONICAL")
     declared = _require_sha(
         payload.pop("payload_sha256", None),
         "MIGRATION_PROVENANCE_V1_PAYLOAD_HASH_INVALID",
@@ -170,8 +196,11 @@ def verify_migration_provenance_payload(value: dict[str, Any]) -> dict[str, Any]
         payload.get("source_artifact_sha256"),
         "MIGRATION_PROVENANCE_V1_SOURCE_ARTIFACT_SHA_INVALID",
     )
-    source_schema = str(payload.get("source_schema_version") or "").strip()
-    if not source_schema:
+    source_schema_raw = payload.get("source_schema_version")
+    if not isinstance(source_schema_raw, str) or not source_schema_raw.strip():
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_SOURCE_SCHEMA_INVALID")
+    source_schema = source_schema_raw.strip()
+    if source_schema != source_schema_raw:
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_SOURCE_SCHEMA_INVALID")
     _require_date(
         payload.get("source_session_date"),
@@ -180,17 +209,47 @@ def verify_migration_provenance_payload(value: dict[str, Any]) -> dict[str, Any]
     state_sha = payload.get("source_state_sha256")
     if state_sha is not None:
         _require_sha(state_sha, "MIGRATION_PROVENANCE_V1_SOURCE_STATE_SHA_INVALID")
-    classification = str(payload.get("classification") or "")
-    disposition = str(payload.get("disposition") or "")
+    classification = payload.get("classification")
+    disposition = payload.get("disposition")
+    if not isinstance(classification, str) or not isinstance(disposition, str):
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_CLASSIFICATION_INVALID")
     if disposition != _disposition(classification):
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_DISPOSITION_MISMATCH")
-    reason = str(payload.get("reason_code") or "").strip()
-    if not reason:
+    reason = payload.get("reason_code")
+    if not isinstance(reason, str) or not reason.strip() or reason.strip() != reason:
         raise DecisionV1Error("MIGRATION_PROVENANCE_V1_REASON_MISSING")
-    _require_utc_timestamp(payload.get("decided_at_utc"))
+    decided_at = _require_utc_timestamp(payload.get("decided_at_utc"))
     lineage_sha = payload.get("runtime_lineage_sha256")
     if lineage_sha is not None:
-        _require_sha(lineage_sha, "MIGRATION_PROVENANCE_V1_RUNTIME_LINEAGE_SHA_INVALID")
+        lineage_sha = _require_sha(
+            lineage_sha, "MIGRATION_PROVENANCE_V1_RUNTIME_LINEAGE_SHA_INVALID"
+        )
+    normalized = MigrationProvenanceV1(
+        schema_version=MIGRATION_PROVENANCE_SCHEMA,
+        source_artifact_sha256=_require_sha(
+            payload.get("source_artifact_sha256"),
+            "MIGRATION_PROVENANCE_V1_SOURCE_ARTIFACT_SHA_INVALID",
+        ),
+        source_schema_version=source_schema,
+        source_session_date=_require_date(
+            payload.get("source_session_date"),
+            "MIGRATION_PROVENANCE_V1_SOURCE_DATE_INVALID",
+        ),
+        source_state_sha256=(
+            None
+            if state_sha is None
+            else _require_sha(
+                state_sha, "MIGRATION_PROVENANCE_V1_SOURCE_STATE_SHA_INVALID"
+            )
+        ),
+        classification=classification,
+        disposition=disposition,
+        reason_code=reason,
+        decided_at_utc=decided_at,
+        runtime_lineage_sha256=lineage_sha,
+    )
+    if normalized.payload() != {**payload, "payload_sha256": declared}:
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_PAYLOAD_NOT_CANONICAL")
     payload["payload_sha256"] = declared
     return payload
 

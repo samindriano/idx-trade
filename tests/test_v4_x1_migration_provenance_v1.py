@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -95,6 +96,22 @@ def test_payload_tamper_is_rejected() -> None:
     payload = _build(_state()).payload()
     payload["source_artifact_sha256"] = "c" * 64
     with pytest.raises(DecisionV1Error, match="PAYLOAD_HASH_MISMATCH"):
+        verify_migration_provenance_payload(payload)
+
+
+def test_hash_valid_extension_is_rejected_as_noncanonical() -> None:
+    payload = _build(_state()).payload()
+    payload["unexpected_extension"] = True
+    body = dict(payload)
+    body.pop("payload_sha256")
+    payload["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode()
+    ).hexdigest()
+
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
         verify_migration_provenance_payload(payload)
 
 

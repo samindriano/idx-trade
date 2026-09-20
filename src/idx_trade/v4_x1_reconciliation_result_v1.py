@@ -23,6 +23,28 @@ from .v4_x1_execution_v1_contract import ExecutionOrderPlan
 RECONCILIATION_RESULT_SCHEMA = "idx_trade_reconciliation_result_v1"
 DETECTOR_ID = "IDX_TRADE_INTERNAL_PAPER_RECONCILIATION_V1"
 EXTERNAL_RECONCILIATION_NOT_PERFORMED = "NOT_PERFORMED"
+_RECONCILIATION_RESULT_KEYS = frozenset(
+    {
+        "schema_version",
+        "detector_id",
+        "status",
+        "external_reconciliation",
+        "decision_session_date",
+        "execution_session_date",
+        "required_tickers",
+        "covered_tickers",
+        "relevant_tickers",
+        "order_plan_state_hash",
+        "evidence_state_before_hash",
+        "evidence_state_after_hash",
+        "execution_evidence_sha256",
+        "ca_attestation_sha256",
+        "ca_source_sha256",
+        "ca_journal_sha256",
+        "mismatches",
+        "payload_sha256",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -184,7 +206,11 @@ def build_reconciliation_result_v1(
 
 
 def verify_reconciliation_result_payload(value: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise DecisionV1Error("RECONCILIATION_RESULT_V1_REQUIRED")
     payload = dict(value)
+    if set(payload) != _RECONCILIATION_RESULT_KEYS:
+        raise DecisionV1Error("RECONCILIATION_RESULT_V1_PAYLOAD_NOT_CANONICAL")
     if payload.get("schema_version") != RECONCILIATION_RESULT_SCHEMA:
         raise DecisionV1Error("RECONCILIATION_RESULT_V1_SCHEMA_MISMATCH")
     if payload.get("detector_id") != DETECTOR_ID:

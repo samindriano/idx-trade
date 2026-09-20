@@ -283,3 +283,31 @@ def test_reconciliation_result_v1_rejects_hash_valid_incomplete_provenance() -> 
         match="FIELD_INVALID:execution_evidence_sha256",
     ):
         verify_reconciliation_result_payload(payload)
+
+    extension = build_reconciliation_result_v1(
+        plan,
+        evidence,
+        evaluation,
+        reconciliation,
+        required_tickers=("BBCA",),
+    ).payload()
+    extension["unexpected_extension"] = True
+    extension_body = dict(extension)
+    extension_body.pop("payload_sha256")
+    extension["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                extension_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="PAYLOAD_NOT_CANONICAL",
+    ):
+        verify_reconciliation_result_payload(extension)
