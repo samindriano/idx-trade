@@ -10,6 +10,7 @@ from .v4_x1_decision_v1_contract import DecisionV1Error, TradeIntent
 from .v4_x1_sizing_v1 import SizingPlan
 from .v4_x1_quantity_obligation_v1 import (
     QuantityObligation,
+    cancel_remaining,
     normalize_obligations,
     obligations_payload,
 )
@@ -199,6 +200,58 @@ def normalize_state(state: PaperPortfolioState) -> tuple[float, dict[str, int], 
     if set(pending_sells) - set(positions):
         raise DecisionV1Error("EXECUTION_V1_PENDING_SELL_WITHOUT_POSITION")
     return cash, positions, pending_buys, pending_sells
+
+
+def close_obligation_explicitly(
+    state: PaperPortfolioState,
+    *,
+    obligation_id: str,
+    event_id: str,
+    session_date: str,
+    reason: str,
+    status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
+    parent_state_sha256: str | None = None,
+) -> PaperPortfolioState:
+    """Apply only a caller-supplied close event; never infer a reversal close."""
+
+    if status not in {"CANCELED", "RELINQUISHED"}:
+        raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_STATUS_INVALID")
+    if not isinstance(obligation_id, str) or not obligation_id:
+        raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_ID_INVALID")
+    normalize_state(state)
+    obligations = list(normalize_obligations(state.obligations))
+    matching = [
+        index
+        for index, obligation in enumerate(obligations)
+        if obligation.obligation_id == obligation_id
+    ]
+    if not matching:
+        raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_NOT_FOUND")
+    before_hash = paper_state_hash(state)
+    if parent_state_sha256 is not None and parent_state_sha256 != before_hash:
+        raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_PARENT_MISMATCH")
+    index = matching[0]
+    obligations[index] = cancel_remaining(
+        obligations[index],
+        event_id=event_id,
+        session_date=session_date,
+        reason=reason,
+        parent_state_sha256=before_hash,
+        status=status,
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations(obligations)
+    updated = PaperPortfolioState(
+        as_of_session_date=state.as_of_session_date,
+        cash_idr=state.cash_idr,
+        positions=state.positions,
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        reconciliation_required=state.reconciliation_required,
+        source=state.source,
+        obligations=tuple(obligations),
+    )
+    normalize_state(updated)
+    return updated
 
 
 def classify_state_for_migration(state: PaperPortfolioState) -> str:

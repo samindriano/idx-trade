@@ -26,6 +26,8 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    close_obligation_explicitly,
+    pending_intents_from_obligations,
 )
 from idx_trade.v4_x1_execution_v1_decision_v2_adapter import (
     prepare_execution_v1_from_decision_v2,
@@ -45,7 +47,6 @@ from idx_trade.v4_x1_sizing_v1_decision_v2_adapter import (
 )
 from idx_trade.v4_x1_quantity_obligation_v1 import (
     apply_fill,
-    cancel_remaining,
     plan_obligation,
 )
 
@@ -404,23 +405,29 @@ def test_explicit_obligation_close_allows_decision_reversal(tmp_path, status):
         filled_shares=2_400,
         reason="PARTIAL",
     )
-    closed = cancel_remaining(
-        partial,
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    partial_state = PaperPortfolioState(
+        "2026-08-24",
+        50_000_000,
+        (PaperPosition("AAA", 2_400),),
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        obligations=(partial,),
+    )
+    closed_state = close_obligation_explicitly(
+        partial_state,
+        obligation_id=partial.obligation_id,
         event_id=f"CLOSE-EXPLICIT-{status}",
         session_date="2026-08-24",
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status=status,
     )
+    closed = closed_state.obligations[0]
     assert closed.status == status
     assert closed.remaining_shares == 0
     assert closed.filled_shares + closed.relinquished_shares == 5_000
 
-    state = PaperPortfolioState(
-        "2026-08-24",
-        50_000_000,
-        (PaperPosition("AAA", 2_400),),
-        obligations=(closed,),
-    )
+    state = closed_state
     runtime.write_runtime_snapshot(
         tmp_path / f"runtime-{status}",
         fd.DividendAwarePaperState(base_state=state),

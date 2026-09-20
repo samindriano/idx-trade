@@ -7,6 +7,7 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    close_obligation_explicitly,
     normalize_state,
     paper_state_hash,
     pending_intents_from_obligations,
@@ -152,6 +153,53 @@ def test_retry_block_and_explicit_cancel_preserve_conservation():
         "RETRY-1",
         "CANCEL-1",
     ]
+
+
+def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
+    partial = apply_fill(
+        _planned(),
+        event_id="FILL-STATE-CLOSE",
+        session_date="2026-09-21",
+        filled_shares=2_400,
+        reason="CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    state = PaperPortfolioState(
+        as_of_session_date="2026-09-21",
+        cash_idr=50_000_000,
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        obligations=(partial,),
+    )
+    before_hash = paper_state_hash(state)
+
+    closed = close_obligation_explicitly(
+        state,
+        obligation_id=partial.obligation_id,
+        event_id="CLOSE-STATE-CLOSE",
+        session_date="2026-09-21",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status="RELINQUISHED",
+        parent_state_sha256=before_hash,
+    )
+
+    assert closed.obligations[0].status == "RELINQUISHED"
+    assert closed.obligations[0].remaining_shares == 0
+    assert closed.obligations[0].event_history[-1].parent_state_sha256 == before_hash
+    assert closed.pending_buys == ()
+    assert closed.pending_sells == ()
+    assert paper_state_hash(closed) != before_hash
+
+    with pytest.raises(DecisionV1Error, match="CLOSE_PARENT_MISMATCH"):
+        close_obligation_explicitly(
+            state,
+            obligation_id=partial.obligation_id,
+            event_id="CLOSE-STATE-CLOSE-2",
+            session_date="2026-09-21",
+            reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+            parent_state_sha256="0" * 64,
+        )
 
 
 def test_payload_round_trip_preserves_hash_and_lineage():
