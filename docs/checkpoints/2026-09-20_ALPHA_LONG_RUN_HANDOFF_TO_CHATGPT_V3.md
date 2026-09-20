@@ -100,8 +100,8 @@ Current registry counts after the provenance addendum:
 
 | Registry | Count |
 |---|---:|
-| Experiments | 38 |
-| Findings | 29 |
+| Experiments | 39 |
+| Findings | 30 |
 | No-retry entries | 15 |
 | Source-capability entries | 17 |
 | Protected payloads persisted | `false` |
@@ -327,7 +327,20 @@ Evidence: `TOOLING-041`,
 `docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`,
 `research_knowledge/packet_nested_schema_challenger_v1.json`.
 
-### 4.12 Tooling, firewall, and lane controls
+### 4.12 Verifier-result freshness challenge
+
+A draft versioned-result contract required the result schema, current verifier
+SHA-256, and current packet SHA-256. The baseline passed; missing/stale
+verifier hash, stale packet hash, and stale result schema all failed the draft
+contract. The unchanged packet itself still validated PASS in every wrapper,
+showing that packet validity does not prove freshness of a historical verifier
+result. The draft is not integrated and requires independent review/adoption.
+
+Evidence: `TOOLING-042`,
+`docs/checkpoints/2026-09-20_ALPHA_VERIFIER_FRESHNESS_CHALLENGER_RESULT_V1.md`,
+`research_knowledge/verifier_freshness_challenger_v1.json`.
+
+### 4.13 Tooling, firewall, and lane controls
 
 The run tested its own research controls with synthetic fixtures:
 
@@ -344,6 +357,8 @@ The run tested its own research controls with synthetic fixtures:
   semantic mutations detected on a synthetic fixture.
 - nested packet schema challenger: baseline PASS; draft strict allowlist
   rejected 5/5 declared nested/missing mutations.
+- verifier freshness challenger: baseline PASS; draft contract rejected 4/4
+  missing/stale result mutations.
 
 The semantic challenger also found real limitations:
 
@@ -504,6 +519,7 @@ Primary navigation files:
 - `docs/checkpoints/2026-09-20_ALPHA_TOOLING_SEMANTIC_CHALLENGER_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_VERIFIER_FRESHNESS_CHALLENGER_RESULT_V1.md`
 
 Machine evidence:
 
@@ -519,6 +535,7 @@ Machine evidence:
 - `research_knowledge/tooling_semantic_challenger_v1.json`
 - `research_knowledge/formula_mutation_challenger_v1.json`
 - `research_knowledge/packet_nested_schema_challenger_v1.json`
+- `research_knowledge/verifier_freshness_challenger_v1.json`
 
 ## 11. Final handoff sentence
 

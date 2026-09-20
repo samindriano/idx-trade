@@ -61,6 +61,10 @@
   nested schema cases that the current verifier accepts, while preserving the
   baseline and top-level rejection. It is a research contract only; value
   semantics and verifier-version freshness remain unresolved.
+- A draft freshness contract separately rejects missing/stale verifier hashes,
+  packet hashes, and result schema while the unchanged packet remains valid.
+  Packet validity therefore cannot be treated as freshness of a historical
+  verifier result; adoption remains unapproved.
 
 ## What failed, is redundant, or is superseded
 

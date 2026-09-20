@@ -1,0 +1,32 @@
+{
+  "schema_version": "IDX_TRADE_VERIFIER_FRESHNESS_CHALLENGER_V1",
+  "experiment_id": "TOOLING-042",
+  "status": "PASS_FRESHNESS_MUTATIONS_DETECTED",
+  "scope": "OUTCOME_BLIND_SYNTHETIC_RESULT_WRAPPERS_ONLY",
+  "code": {
+    "path": "research/alpha_verifier_freshness_challenger_v1.py",
+    "sha256": "f4937eddfe80796abfd9f56ef5226bac76f90b0012de6a200fc1f83d2c2332a0"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_verifier_freshness_challenger_v1.json",
+    "sha256": "8975f7e897001a4673df9f6b1c046fede825400d90dd617045940aea0597287d"
+  },
+  "packet_sha256": "f7dee5cefd87538cad4e1e4028c5dc35abe0610bf0cb089d29fad2f0f47dfb2e",
+  "verifier_code_sha256": "5bb75f7ce4dd3e50d922d41b4793b52a02217d9cb5584be98f09cf7f12e764f7",
+  "trial_count": 5,
+  "draft_contract": {
+    "baseline": "PASS",
+    "missing_verifier_hash": "FAIL",
+    "stale_verifier_hash": "FAIL",
+    "stale_packet_hash": "FAIL",
+    "stale_result_schema": "FAIL"
+  },
+  "current_packet_validation": "PASS_FOR_UNCHANGED_PACKET_IN_ALL_CASES",
+  "interpretation": "A draft freshness contract detects missing or stale verifier/packet hashes and stale result schema, while the unchanged current packet remains valid. The draft is not integrated.",
+  "limitations": [
+    "This does not prove historical PASS artifacts were produced by the claimed verifier.",
+    "Freshness binding does not solve semantic schema or formula correctness.",
+    "No provider, cloud, canonical, protected, or production state was accessed or changed."
+  ],
+  "reopen_trigger": "Independent review and explicit adoption of a versioned verifier-result contract."
+}

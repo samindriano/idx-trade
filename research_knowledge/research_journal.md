@@ -153,3 +153,14 @@ checkpoint files; this file records why the next question changed.
   required fields and H-EXC scalar subforms before accepting the result.
 - Classified `TOOLING-041` as `SUPPORTED_SCOPED`; no production verifier or
   packet behavior was changed.
+
+## 2026-09-20 — verifier freshness challenger
+
+- Tested a draft versioned-result contract requiring schema, current verifier
+  SHA-256, and current packet SHA-256.
+- Baseline passed; missing/stale verifier hash, stale packet hash, and stale
+  result schema all failed the draft contract while the unchanged packet still
+  validated PASS.
+- This separates packet validity from freshness of a historical verifier
+  result. Classified `TOOLING-042` as `SUPPORTED_SCOPED`; no production
+  verifier behavior changed.

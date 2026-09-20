@@ -162,6 +162,19 @@ access absence.
 - The draft is not integrated. Value semantics, type/range rules, and expected
   verifier-version freshness remain open.
 
+## Verifier freshness challenger
+
+- Script: `research/alpha_verifier_freshness_challenger_v1.py`.
+- Durable result: `research_knowledge/verifier_freshness_challenger_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_VERIFIER_FRESHNESS_CHALLENGER_RESULT_V1.md`.
+- Script SHA-256:
+  `f4937eddfe80796abfd9f56ef5226bac76f90b0012de6a200fc1f83d2c2332a0`.
+- External result SHA-256:
+  `8975f7e897001a4673df9f6b1c046fede825400d90dd617045940aea0597287d`.
+- The draft freshness contract passed baseline and rejected four missing/stale
+  result mutations; unchanged packet validation remained PASS in every case.
+- The contract is not integrated and requires independent review/adoption.
+
 ## Eligibility provenance history
 
 - Script: `research/alpha_eligibility_provenance_history_v1.py`.
