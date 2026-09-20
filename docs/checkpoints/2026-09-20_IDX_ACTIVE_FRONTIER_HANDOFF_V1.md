@@ -34,13 +34,15 @@ The system tracks target membership but not target quantity obligations. A posit
 - Serializer probe was a negative result: prepared execution payloads preserve
   per-entry planned sizing; the unresolved owner is filled/remaining quantity
   linkage in execution state and pending obligations.
+- Full orchestration staged recovery returned identical execution/snapshot hashes
+  after deleting both outputs, but preserved `T00:2,400` and empty pending buys.
 
 ## Immediate next questions
 
 1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
 2. Which state/artifact boundary should own filled/remaining quantities, given that planned per-entry sizing is already preserved in the prepared payload?
-3. Can the existing failure-recovery/atomic snapshot path preserve a residual obligation once one is explicitly modeled?
-4. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
+3. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
+4. Which recovery invariant should reconcile planned, filled, and remaining quantities after an interrupted execution?
 
 ## Constraints
 

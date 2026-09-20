@@ -604,6 +604,10 @@ historical alpha archive:
   round-tripped the underfilled `AAA:1,200` position with empty pending state
   and equal runtime hash. Restart integrity therefore preserves the semantic
   loss instead of discovering or repairing it.
+- Full orchestration recovery also returned `RECOVERED_STAGED_EXECUTION` with
+  identical execution/snapshot hashes and the same `T00:2,400` underfill with
+  no pending buy. Atomic recovery is deterministic, but cannot reconstruct a
+  residual quantity absent from the transaction/state schema.
 
 The durable rolling controls for this marathon are now:
 

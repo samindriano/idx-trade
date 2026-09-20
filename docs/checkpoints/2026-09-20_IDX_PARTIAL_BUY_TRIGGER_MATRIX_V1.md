@@ -69,6 +69,21 @@ runtime hash equaled a fresh recomputation. This is faithful persistence, not
 recovery: the snapshot layer preserves the semantically incomplete state
 because no residual obligation exists in the state schema.
 
+## Full orchestration recovery observation
+
+The same class of underfill was exercised through the higher-level
+`prepare_post_eod` → `execute_preopen` path with ten target seats. `T00` was
+planned at 5,000 shares and filled at 2,400 while the other target names filled
+normally. After the first `EXECUTION_COMPLETE`, the execution artifact and
+runtime snapshot were removed from a temporary runtime root. The staged
+transaction recovery returned `RECOVERED_STAGED_EXECUTION`; execution-file and
+runtime-snapshot hashes matched the original results, while the recovered state
+still contained `T00:2,400` and zero pending buys.
+
+This closes the recovery behavior question at the current schema: atomic
+recovery is deterministic and idempotent, but it has no quantity obligation
+from which to reconstruct the missing 2,600 shares.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:
