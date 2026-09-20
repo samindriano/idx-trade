@@ -127,6 +127,8 @@ The isolated lane currently contains:
 - `RUNTIME_LINEAGE-V2` and controller `RECOVERY_REQUIRED` crash fence;
 - operational `BOUND` lineage is persisted/rechecked across synthetic
   prepare/execute/replay and config mismatch is rejected;
+- persisted replay cross-checks lineage contract/artifact links and
+  reconciliation CA/session parents, including rehashed-tamper tests;
 - `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when
   valid, fail-closed classification/disposition/reason, UTC decision time, and
   optional runtime lineage with immutable idempotent persistence;

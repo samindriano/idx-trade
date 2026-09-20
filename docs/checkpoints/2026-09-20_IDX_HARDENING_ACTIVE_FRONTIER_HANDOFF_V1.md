@@ -67,6 +67,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - persisted execution replay now rechecks nested evidence, reconciliation,
   timing, and runtime-lineage parents and rejects a recomputed outer hash over
   tampered nested evidence;
+- replay now also cross-checks runtime-lineage contract/artifact links,
+  reconciliation CA parents, and evidence/reconciliation session parents;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - operational `BOUND` lineage is persisted and rechecked across synthetic

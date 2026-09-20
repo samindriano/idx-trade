@@ -626,6 +626,115 @@ def test_preopen_replay_rejects_nested_evidence_parent_tamper(tmp_path: Path) ->
         )
 
 
+def test_preopen_replay_rejects_rehashed_lineage_contract_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    lineage = payload["runtime_lineage"]
+    lineage["contracts"]["ca_timing_matrix_sha256"] = "0" * 64
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_RUNTIME_LINEAGE_CONTRACT_MISMATCH:ca_timing_matrix_sha256",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    reconciliation = payload["reconciliation_result"]
+    reconciliation["ca_source_sha256"] = "0" * 64
+    reconciliation_body = dict(reconciliation)
+    reconciliation_body.pop("payload_sha256", None)
+    reconciliation["payload_sha256"] = _canonical_hash(reconciliation_body)
+    lineage = payload["runtime_lineage"]
+    lineage["artifacts"]["reconciliation_result"]["sha256"] = reconciliation[
+        "payload_sha256"
+    ]
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_RECONCILIATION_CA_PARENT_MISMATCH:ca_source_sha256",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
 def test_preopen_recovers_when_execution_and_snapshot_are_missing(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")

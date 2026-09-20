@@ -502,22 +502,109 @@ def _verify_persisted_execution_components(
         raise E2EPaperOrchestrationError(
             error_prefix + "_EVIDENCE_PARENT_HASH_MISMATCH"
         )
+    if (
+        reconciliation.get("decision_session_date")
+        != execution_body.get("decision_session_date")
+        or reconciliation.get("execution_session_date")
+        != execution_body.get("execution_session_date")
+    ):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_RECONCILIATION_SESSION_PARENT_MISMATCH"
+        )
+    ca_parent = execution_body.get("ca_reconciliation")
+    if not isinstance(ca_parent, Mapping):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_CA_PARENT_MISSING"
+        )
+    for result_key, ca_key in (
+        ("ca_attestation_sha256", "attestation_sha256"),
+        ("ca_source_sha256", "source_sha256"),
+        ("ca_journal_sha256", "v12_journal_sha256"),
+    ):
+        if reconciliation.get(result_key) != ca_parent.get(ca_key):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RECONCILIATION_CA_PARENT_MISMATCH:" + result_key
+            )
+    if (
+        evidence.get("decision_session_date")
+        != execution_body.get("decision_session_date")
+        or evidence.get("execution_session_date")
+        != execution_body.get("execution_session_date")
+    ):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_SESSION_PARENT_MISMATCH"
+        )
     timing = execution_body.get("ca_timing_matrix")
+    verified_timing: Mapping[str, Any] | None = None
     if timing is not None:
         try:
-            verify_ca_timing_matrix_payload(timing)
+            verified_timing = verify_ca_timing_matrix_payload(timing)
         except DecisionV1Error as exc:
             raise E2EPaperOrchestrationError(
                 error_prefix + "_CA_TIMING_INVALID"
             ) from exc
     lineage = execution_body.get("runtime_lineage")
+    verified_lineage: Mapping[str, Any] | None = None
     if lineage is not None:
         try:
-            verify_runtime_lineage_v2(lineage if isinstance(lineage, Mapping) else {})
+            verified_lineage = verify_runtime_lineage_v2(
+                lineage if isinstance(lineage, Mapping) else {}
+            )
         except DecisionV1Error as exc:
             raise E2EPaperOrchestrationError(
                 error_prefix + "_RUNTIME_LINEAGE_INVALID"
             ) from exc
+    if verified_lineage is not None:
+        contracts = verified_lineage.get("contracts")
+        artifacts = verified_lineage.get("artifacts")
+        if not isinstance(contracts, Mapping) or not isinstance(artifacts, Mapping):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RUNTIME_LINEAGE_CONTRACTS_MISSING"
+            )
+
+        expected_contracts = {
+            "execution_evidence_schema": evidence.get("schema_version"),
+            "reconciliation_result_schema": reconciliation.get("schema_version"),
+        }
+        if verified_timing is not None:
+            expected_contracts.update(
+                {
+                    "ca_timing_matrix_schema": verified_timing.get("schema_version"),
+                    "ca_timing_matrix_sha256": verified_timing.get("payload_sha256"),
+                }
+            )
+        identity_binding = execution_body.get("decision_identity_binding")
+        expected_contracts["decision_identity_binding_sha256"] = (
+            None
+            if identity_binding is None
+            else identity_binding.get("payload_sha256")
+            if isinstance(identity_binding, Mapping)
+            else None
+        )
+        for key, expected in expected_contracts.items():
+            # Runtime lineage V2 currently serializes optional contract values
+            # through its string contract normalizer, so an absent optional
+            # binding is represented as the literal ``"None"``.
+            normalized_expected = "None" if expected is None else str(expected)
+            if contracts.get(key) != normalized_expected:
+                raise E2EPaperOrchestrationError(
+                    error_prefix + "_RUNTIME_LINEAGE_CONTRACT_MISMATCH:" + key
+                )
+
+        expected_artifacts = {
+            "execution_evidence": str(evidence.get("payload_sha256") or ""),
+            "reconciliation_result": str(
+                execution_body["reconciliation_result"].get("payload_sha256") or ""
+            ),
+        }
+        if verified_timing is not None:
+            expected_artifacts["ca_timing_matrix"] = verified_timing["payload_sha256"]
+        for key, expected in expected_artifacts.items():
+            artifact = artifacts.get(key)
+            if not isinstance(artifact, Mapping) or artifact.get("sha256") != expected:
+                raise E2EPaperOrchestrationError(
+                    error_prefix + "_RUNTIME_LINEAGE_ARTIFACT_MISMATCH:" + key
+                )
     return reconciliation
 
 
