@@ -19,7 +19,9 @@ EXPECTED_WORKTREE = Path(r"C:\Users\Sam\.codex\worktrees\idx-alpha-available-dat
 EXPECTED_STAGING = Path(
     r"D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded"
 )
-ALLOWED_DELTA_PREFIXES = ("docs/checkpoints/", "research/")
+# Durable outcome-blind knowledge is an explicitly allowed research surface.
+# Protected/canonical/production paths remain outside this allowlist.
+ALLOWED_DELTA_PREFIXES = ("docs/checkpoints/", "research/", "research_knowledge/")
 FORBIDDEN_STAGING_PATTERNS = (
     r"outcome[_-]?vault",
     r"protected[_-]?(?:outcome|target|forward)",
