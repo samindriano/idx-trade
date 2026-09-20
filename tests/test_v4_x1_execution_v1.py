@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as fd
 from idx_trade.v4_x1_decision_v1_contract import DecisionPlan, DecisionV1Error, TradeIntent
 from idx_trade.v4_x1_sizing_v1 import VerifiedDecisionPlan, _VERIFIED_DECISION_PLAN_TOKEN
 from idx_trade.v4_x1_execution_v1_verify import (
@@ -91,7 +93,9 @@ def test_joint_allocator_removes_old_bootstrap_cash_drag():
     } == {"T09", "T10"}
 
 
-def test_positive_partial_buy_is_durable_and_retry_completes_remainder():
+def test_positive_partial_buy_survives_restart_and_retry_completes_remainder(
+    tmp_path,
+):
     decision = _decision(("AAA",), buys=(("AAA", 1, "FILL_VACANCY_TOP10", None),))
     state = _state(50_000_000, {})
     order = prepare_execution_v1(
@@ -118,6 +122,15 @@ def test_positive_partial_buy_is_durable_and_retry_completes_remainder():
     assert obligation.filled_shares == 2400
     assert obligation.remaining_shares == 2600
 
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        fd.DividendAwarePaperState(base_state=first.state_after),
+    )
+    restarted_state = runtime.load_latest_runtime_snapshot(
+        tmp_path / "runtime"
+    ).state.base_state
+    assert restarted_state == first.state_after
+
     retry_decision = _decision(
         ("AAA",),
         current=("AAA",),
@@ -125,7 +138,7 @@ def test_positive_partial_buy_is_durable_and_retry_completes_remainder():
     )
     retry_order = prepare_execution_v1(
         retry_decision,
-        first.state_after,
+        restarted_state,
         eod_inputs=_eod(
             "2026-08-24",
             "2026-08-25",
@@ -135,7 +148,7 @@ def test_positive_partial_buy_is_durable_and_retry_completes_remainder():
     )
     second = execute_open_v1(
         retry_order,
-        first.state_after,
+        restarted_state,
         open_inputs=_open("2026-08-25", {"AAA": 1000}),
         ca_attestation=_ca("2026-08-24", "2026-08-25", ["AAA"]),
     )
