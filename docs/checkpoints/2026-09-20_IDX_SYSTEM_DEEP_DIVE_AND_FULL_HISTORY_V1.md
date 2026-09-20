@@ -1,0 +1,478 @@
+# IDX-Trade — System Deep-Dive and Full Historical Marathon Dossier V1
+
+Date: 2026-09-20 (Asia/Jakarta)
+
+Status: `READ-ONLY FORENSICS / NO-GO FOR SYSTEM-WIDE CERTIFICATION`
+
+This checkpoint has two deliberately separate evidence classes:
+
+- `HISTORICAL / PRIOR`: work completed before this system-wide deep-dive. It is
+  retained as history and is not silently upgraded into current runtime proof.
+- `CURRENT DEEP-DIVE`: new read-only audits performed in the isolated lane on
+  2026-09-20 against the pinned runtime and retained source references.
+
+No protected H5/H10/OOS/PnL/hidden-incumbent outcomes were opened. No provider,
+cloud, capture, telemetry, scheduler, canonical-data, production, or incumbent
+state was modified. No code, configuration, experiment packet, counter, or
+production artifact was changed by this checkpoint.
+
+## 1. Executive conclusion
+
+The system is not yet certifiable as restart-safe, accounting-complete, or
+lineage-complete, even though several important components have strong bounded
+controls and historical test evidence.
+
+The current decision is:
+
+`NO-GO / SYSTEM-COMPLETION BLOCKED BY OPERATIONAL AND EVIDENCE-CONTROL GAPS`
+
+The most decision-changing current findings are:
+
+1. T0 bootstrap and missed-Open continuity have crash windows that cannot be
+   completed or reconciled safely after a process interruption.
+2. The operational controller keeps phase/attempt state in memory; a crash can
+   leave no durable state describing whether a side effect was running,
+   retryable, missed-late, complete, or conflicted.
+3. A positive partial BUY can be recorded as a complete holding while its
+   unfilled planned remainder disappears from the retry path. Dividend tax is
+   explicitly unresolved and the paper ledger credits gross cash.
+4. Cloud/prepared execution artifacts do not bind the complete runtime-config
+   identity. The CA/accounting hash can describe the raw pre-projection state,
+   while sizing consumed a projected state.
+5. Several persisted verifier PASS results are stale or semantically shallow:
+   current-head freshness is not enforced, denylist/token scans admit disguised
+   protected-looking fields, and nested packet schema is permissive.
+
+These findings do not authorize reopening Decision V2, changing sizing policy,
+opening protected evaluation, or repairing production in this lane.
+
+## 2. Lane and provenance
+
+Current isolated lane:
+
+- worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
+- branch: `codex/alpha-available-data-20260919`
+- observed HEAD: `51c527155c6b5ad6ed5b25cb1a68a3a2ce217c1d`
+- latest observed HEAD subject: `research: audit official announcement authority surface`
+- authoritative coordination source read before this work:
+  `origin/main:coordination/TEAM_STATUS.md`
+
+At the time of this checkpoint, two pre-existing untracked files were visible:
+`research/alpha_idx_financial_report_surface_v1.py` and
+`tests/test_alpha_idx_financial_report_surface_v1.py`. They were not created,
+staged, edited, or removed by this deep-dive.
+
+The current lane remains an isolated pre-admission/research lane. The canonical
+project status says the project is in system-completion mode, Decision V2 is
+closed, the E2E paper path is active, the 100-session evaluation is blocked,
+and protected outcomes must remain closed.
+
+## 3. Historical / prior marathon record
+
+### 3.1 The complete prior alpha archive
+
+The complete earlier alpha marathon is already preserved in:
+
+`docs/checkpoints/2026-09-20_ALPHA_MARATHON_ALL_FINDINGS_ARCHIVE_V1.md`
+
+That archive is the authoritative navigation layer for the previous marathon
+and should be read together with its machine records. It contains, among other
+things:
+
+- historical archaeology and failure taxonomy;
+- Stockbit/Zapi capture reliability and retention history;
+- V4-X1 prospective gate and operational reliability history;
+- closed-family alpha archaeology;
+- corrected Stage-A construction and independent replay;
+- fixed C1-C4 structural results;
+- orthogonality, overlap, horizon, normalizer, breadth, turnover, and score
+  geometry diagnostics;
+- H-LIQ, H-VOL, H-EXC-01, and H-EXC-02 red-team boundaries;
+- corporate-action, price-basis, identity, issuer, source, and PIT findings;
+- local Zapi and public EOD/IPO capability probes;
+- eligibility-policy conflict, feature warm-up, anchor-state, and population
+  boundary findings;
+- verifier, packet, freshness, nested-schema, and semantic-challenger limits;
+- exact no-retry and no-admission rules.
+
+Its machine record at the time of the archive reported 54 experiment records,
+47 findings, 17 no-retry records, and 18 source-capability records. Those
+numbers are historical archive metadata, not a claim that the current working
+tree has not advanced since then.
+
+The prior alpha conclusion was:
+
+`NO-GO / PRE-ADMISSION / OUTCOME-BLIND / PREDICTIVE STAGE BLOCKED`
+
+No better predictive model was established. C1/C2/C4 remained structural
+research candidates; C3 remained blocked by sparse/late financial support.
+
+### 3.2 Historical / prior system-completion results
+
+The following results are retained from the pinned historical E2E/runtime
+lineage. They are useful evidence of what was tested and what was previously
+accepted, but they are not a substitute for the current deep-dive findings.
+
+#### Cash dividend and E2E remediation — HISTORICAL / PRIOR
+
+Recorded in the retained coordination handoffs:
+
+- `coordination/handoffs/IDX-CASH-DIVIDEND-E2E-REMEDIATION-RESULT.md`
+- `coordination/handoffs/IDX-CASH-DIVIDEND-E2E-ADVERSARIAL-RESULT.md`
+
+The prior work addressed economic oracles, child-process restart, phase-boundary
+reporting, same-announcement blocker recovery, and cash/dividend lifecycle
+orchestration. The recorded validation included:
+
+- remediation focused suite: 83 passed;
+- remediation full suite: 656 passed;
+- adversarial focused suite: 126 passed;
+- adversarial full suite: 662 passed;
+- `py_compile`: PASS;
+- `git diff --check`: PASS;
+- deterministic core replay: PASS;
+- production-path replay: PASS;
+- resume probe: PASS.
+
+The prior handoff states that the tested path covered capacity, lot, price, fee,
+and cash rules; both BUY and SELL fee/slippage paths; exact below/above stamp
+duty behavior; exact per-session fill vectors; and cold restart of a completed
+execution session. The same historical handoff also says that receivables affect
+total-return NAV for sizing but are not spendable cash, and that divergent
+pre-existing state fails closed.
+
+The new deep-dive below does not invalidate those bounded passes. It identifies
+additional edge paths not closed by them: positive partial-BUY remainder
+handling, unresolved dividend tax policy, T0 bootstrap crash recovery, and
+durable controller/continuity state.
+
+#### E2E controller integration — HISTORICAL / PRIOR
+
+`coordination/handoffs/IDX-E2E-PAPER-CONTROLLER-INTEGRATION-V3.md` records a
+fail-closed phase-oriented controller integration, provider checkout identity,
+and prior focused/full test passes. It explicitly retained independent review,
+cold-restart, invocation, fault-handling, and idempotency decisions as gates
+before weekday acceptance.
+
+#### Cloud-first orchestration — HISTORICAL / PRIOR
+
+`coordination/handoffs/IDX-E2E-CLOUD-FIRST-ORCHESTRATION-V1.md` records prior
+cloud-runtime implementation and validation, including 13 focused cloud-runtime
+tests, the relevant E2E/Official Open regression group, and a full pytest pass
+with three existing pandas warnings. The historical cloud path was intended to
+preserve checkout/input identity and fail closed.
+
+The current deep-dive finds that the cloud entrypoint and prepared artifact
+lineage still do not bind the full runtime-config identity. This is a lineage
+hardening finding, not proof that a historical production run used the wrong
+configuration.
+
+#### Official Open and pre-weekday reconciliation — HISTORICAL / PRIOR
+
+`coordination/handoffs/IDX-E2E-PAPER-FINAL-PRE-WEEKDAY-RECONCILIATION.md` records
+prior Official Open/execution focused validation (47 passed), operational/CA/
+orchestration validation (97 passed), and a full suite of 702 passed with three
+pre-existing pandas warnings. The official IDX CA endpoint was recorded as
+HTTP 403 in that environment, so the handoff kept the external-evidence blocker
+explicit rather than fabricating completion.
+
+## 4. Current deep-dive — runtime, state machine, and restart
+
+Audit snapshot: retained pinned runtime
+`32eaaa8e50d0521de7faef98faa8081219bc667b` for the operational-controller
+analysis. No provider or protected-outcome access occurred.
+
+### 4.1 Bounded PASS: execution artifact atomicity and staged recovery
+
+`src/idx_trade/e2e_paper_orchestration_v1.py:_atomic_write` uses a temporary
+file, fsync, and immutable-conflict checks. `execute_preopen` stages a
+transaction and writes snapshot, execution, and metadata. `_recover_staged_execution`
+can reconstruct missing snapshot/execution artifacts. Existing synthetic tests
+cover duplicate execution and missing execution/snapshot recovery.
+
+This is a bounded execution-artifact PASS, not a whole-controller restart PASS.
+
+### 4.2 FAIL: T0 bootstrap crash window
+
+`bootstrap_t0` writes the runtime snapshot before `state/T0.json`. If the process
+dies between those writes, the next invocation sees pre-existing snapshot state
+and raises `E2E_T0_PREEXISTING_RUNTIME_STATE`; it cannot complete or reconcile the
+matching interrupted bootstrap.
+
+Required closure: a durable bootstrap intent/transaction or an explicit
+recovery rule that validates and completes the matching snapshot/T0 pair.
+
+### 4.3 FAIL: missed-Open continuity is not one recoverable transaction
+
+In `e2e_paper_continuity_schedule_v1.py`, the advanced snapshot, missed-execution
+audit, and metadata are written in separate sequences. Two crash windows are
+material:
+
+- crash after snapshot but before audit: retry can reject the advanced state as
+  `E2E_MISSED_EXECUTION_STATE_SESSION_MISMATCH`;
+- crash after audit but before metadata: retry can return the existing audit
+  without repairing metadata, and the next `prepare_post_eod` can reject the
+  previous score as bootstrap/conflicting state.
+
+Required closure: one recoverable continuity transaction, or an explicit
+reconciliation procedure that must run before the next session is admitted.
+
+### 4.4 FAIL: operational controller is not a durable state machine
+
+`e2e_paper_operational_controller_v2.py:run_operational_cycle_v2` keeps RUNNING
+state in memory; latest state is persisted through finish, while child
+execution occurs later. A crash during CA capture or child execution leaves no
+durable phase, attempt, lease, heartbeat, or terminal reason.
+
+Required closure: persist phase/attempt state before side effects and reconcile
+on restart into explicit `RETRYABLE`, `MISSED_LATE`, `COMPLETE`, and conflict
+states. This must be tested with fault injection at each side-effect boundary.
+
+### 4.5 PASS with limitation / UNKNOWN: locking and malformed prepared state
+
+`e2e_operational_guard_v1.py:exclusive_run_lock` provides OS-level process
+exclusion and releases on crash; the focused lock test passed. Snapshot/schema/
+hash corruption fails closed through verified reads and runtime snapshot checks.
+
+However, `_prepared_for_session` in
+`e2e_paper_operational_controller_v1.py` silently skips malformed prepared
+artifacts. That can surface as `WAITING_PREPARED_EXECUTION` instead of an
+explicit corruption/quarantine state. Malformed-state recovery remains UNKNOWN.
+
+## 5. Current deep-dive — accounting, cash, sizing, execution, and CA
+
+Audit snapshot: retained ref
+`origin/integration/idx-e2e-baseline-paper-v1@6e1bf4a1`.
+
+### 5.1 PASS: core sequencing and bounded fee rules
+
+`execute_open_v1` sells before buys, applies 25 bps sell fees and 15 bps buy
+fees, charges Rp10,000 stamp duty above Rp10m turnover, enforces non-negative
+cash, and keeps whole-lot holdings. The cited tests cover the main sequencing,
+fee, and capacity cases.
+
+### 5.2 UNKNOWN / potential FAIL: positive partial BUY remainder disappears
+
+`joint_open_allocation` caps lots by capacity, but `execute_open_v1` persists
+`pending_buys` only when filled shares are zero. A positive fill below
+`planned_shares` can become a complete held position without preserving the
+unfilled remainder for later retry.
+
+Synthetic counterexample from the audit: with Rp50m NAV, a Rp1,000 target,
+Rp100m reference value, and a 10-lot capacity, 50 lots are planned, 10 are
+held, and the remaining 40 lots have no retry record.
+
+Required policy decision: determine whether planned lots are an upper bound or
+an intended quantity. If intended, persist a residual-order state and define
+its next-session semantics; if upper bound, encode and test that policy
+explicitly rather than silently dropping the remainder.
+
+### 5.3 FAIL: dividend tax treatment is unresolved
+
+`src/idx_trade/forward_dividend_v1.py` declares
+`TAX_TREATMENT = "UNRESOLVED_GROSS_PAPER_CREDIT"`; settlement credits gross
+dividend cash without withholding. The existing test confirms the gross-credit
+behavior, but that is not a tax-complete accounting policy.
+
+Required closure: a frozen tax/accounting policy, explicit ledger fields, and
+replay tests for gross, withholding, and any applicable jurisdictional rule.
+
+### 5.4 PASS: CA fail-closed boundary and cash-dividend routing
+
+Plain CA booleans are rejected. Execution requires hash-verified CA coverage;
+cash-dividend events route through verified reconciliation, and unsupported
+structural actions are not silently transformed. Persisted dividend snapshots
+are immutable/parent-bound and repeated settlement is idempotent in the tested
+path.
+
+Coverage of non-cash structural CA families remains UNKNOWN.
+
+## 6. Current deep-dive — cross-subsystem lineage and configuration
+
+Audit snapshot: detached pinned runtime
+`045e25a19d9f71170d2c863e768102937e59ad73`; the audit reported authoritative
+`origin/main` at `8b5bc6db1a4d89ca0fb2a49760899d3f18453f23` for that historical
+runtime snapshot.
+
+### 6.1 FAIL: cloud path does not enforce the hash-pinned runtime config
+
+`scripts/run_e2e_paper_cloud_v1.py:_controller_config` and `run_once` build
+configuration from environment/current HEAD but do not verify config JSON, config
+SHA, or runner SHA in the same manner as the scheduled bootstrap attestation.
+Cloud result identity records commit/runner data without the complete config
+identity.
+
+Counterexample: the schedule and input manifest remain unchanged while cloud
+environment/provider-path configuration changes.
+
+### 6.2 FAIL: prepared POST_EOD lineage omits runtime-config identity
+
+`prepare_post_eod` and
+`e2e_paper_schedule_binding_v1.py:write_prepared_schedule_binding` bind scores,
+EOD artifacts, calendar, and planned schedule, but not runtime-config SHA,
+runner SHA, executable paths, or complete provider configuration.
+
+Counterexample: prepare under configuration A, execute under compatible
+configuration B; schedule/EOD hashes still pass.
+
+### 6.3 FAIL: CA/accounting hash can describe the wrong state for sizing
+
+`_state_for_dividend_sizing` projects CA state, but the orchestration path can
+overwrite `dividend_state_hash` and `dividend_ledger_hash` with raw pre-
+projection state. A certified dividend can therefore alter projected cash/NAV
+used for sizing while the recorded hash describes the unprojected state.
+
+Required closure: hash and persist the exact projected state consumed by sizing,
+alongside the raw parent hash and transformation/projection identity.
+
+### 6.4 FAIL: cloud/local backend boundary is permissive
+
+`build_cloud_store_from_env` accepts `E2E_CLOUD_STORAGE_BACKEND=local`, and the
+cloud runner does not reject that value at a production entrypoint.
+
+Counterexample: environment drift to `local` can produce a local commit through
+the cloud runner. This is a configuration-safety issue, not evidence that such
+drift occurred in a historical run.
+
+### 6.5 PASS / UNKNOWN: certified cash-dividend parent guards
+
+`_verify_prepared_ca_parent` enforces scope, parent-event immutability, and
+evidence for new events. `execute_open_v1_1_reconciled` rechecks date scope
+before applying events. Coverage of non-cash structural corporate actions is
+still UNKNOWN.
+
+## 7. Current deep-dive — evaluation and verifier integrity
+
+### 7.1 FAIL: persisted verifier PASS is stale
+
+The persisted external result records PASS for contract SHA
+`1385ce...` at HEAD `4ca81d...`, while the current contract SHA is `a76cd5...`
+after commit `02a7429d`. The verifier emits hashes but does not validate the
+freshness of a historical result against the current contract/head.
+
+Therefore the historical PASS cannot be treated as current gate evidence until
+it is independently rebound and rerun against the current head.
+
+### 7.2 FAIL: firewall has semantic false-greens
+
+`research/alpha_research_target_firewall_v1.py` relies on denylist/token scans
+and non-empty Parquet schema checks. Synthetic fields such as
+`future_ret5_value`, `secret_signal`, and disguised variants can pass. The
+result proves only the bounded static assertions that were checked, not absence
+of protected payload semantics.
+
+### 7.3 FAIL: nested authority-packet schema is permissive
+
+`research/verify_alpha_data_authority_packet_v1.py` checks top-level keys and
+broad state conditions but not an exact nested schema. The nested-schema
+challenger recorded cases where unknown/missing nested fields still produced a
+current-verifier PASS. The strict nested allowlist remains unintegrated.
+
+### 7.4 UNKNOWN: verifier independence and formula circularity
+
+Hash/envelope checks do not independently recompute producer formulas and cannot
+prove runtime access absence. Independent constructor/mutation challengers are
+useful controls, but they do not establish source authority or correctness of
+an admitted artifact.
+
+### 7.5 PASS scoped / UNKNOWN real-world absence: protected access gate mechanics
+
+`src/idx_trade/prospective_evaluation_gate_v1.py` requires explicit
+authorization and code pins, rehashes inputs immediately before marker
+publication, enforces marker-before-loader, and fails closed on partial state.
+These are strong static transaction controls. They are not independent proof
+that real runtime access never occurred.
+
+### 7.6 UNKNOWN: external source freshness
+
+The current-head attestation checks Git-bound files and hashes but explicitly
+leaves external-source freshness UNKNOWN. The future packet remains correctly
+blocked until this authority is resolved.
+
+## 8. Interaction map: how the failures compose
+
+The important system interaction is:
+
+`candidate/rank -> predecessor session -> EOD/Open -> CA projection -> NAV/cash
+ -> sizing -> lot allocation -> execution -> PaperState -> restart/replay`
+
+The current evidence shows:
+
+- alpha/rank output can be structurally reproducible while rank-conditioned Open
+  readiness and source admission remain unresolved;
+- Decision/Sizing/Execution can be individually tested while the exact projected
+  CA state and runtime configuration are not fully bound into the stage lineage;
+- execution artifact recovery can be sound while T0/continuity/controller
+  recovery is not;
+- cash and fee arithmetic can pass while partial-fill residual semantics and tax
+  policy remain unresolved;
+- gate mechanics can fail closed while stale/static verifier PASS and semantic
+  false-greens make the evidence registry itself unsafe to treat as current
+  certification.
+
+Consequently, a passing component test is not a system-level PASS unless its
+input identity, projected state, runtime configuration, durable phase state, and
+replay semantics are all bound.
+
+## 9. Consolidated component status
+
+| Surface | Current disposition | Meaning |
+|---|---|---|
+| Alpha structural research | `HISTORICAL / STRUCTURAL ONLY` | Extensive prior evidence; no predictive winner or admission. |
+| Decision V2 | `FROZEN / DONE` | Do not reopen tuning from these operational findings. |
+| Core sell-before-buy/fee/lot arithmetic | `PASS BOUNDED` | Main path tests exist. |
+| Cash-dividend parent/replay path | `PASS BOUNDED` | Certified cash-dividend path is guarded and idempotent in tested cases. |
+| Non-cash CA coverage | `UNKNOWN` | No complete system-level authority established. |
+| Positive partial BUY remainder | `UNKNOWN / POTENTIAL FAIL` | Residual can disappear; policy is not explicit. |
+| Dividend tax accounting | `FAIL / UNRESOLVED` | Gross-credit paper policy is explicitly unresolved. |
+| Execution artifact atomic recovery | `PASS BOUNDED` | Does not cover all phase/state transactions. |
+| T0 bootstrap recovery | `FAIL` | Snapshot/T0 write gap is not recoverable. |
+| Missed-Open continuity recovery | `FAIL` | Snapshot/audit/metadata writes are not one transaction. |
+| Controller durable state machine | `FAIL` | RUNNING/attempt/phase state is memory-only during side effects. |
+| Runtime-config lineage | `FAIL` | Cloud/prepared artifacts omit full config identity. |
+| Projected CA hash lineage | `FAIL` | Recorded hash may describe pre-projection state. |
+| Cloud/local boundary | `FAIL` | Local backend is accepted by cloud entrypoint. |
+| Protected gate mechanics | `PASS SCOPED` | Strong static controls; not proof of real-world absence. |
+| Verifier freshness | `FAIL` | Historical PASS is not bound to current contract/head. |
+| Verifier semantic firewall | `FAIL / KNOWN GAP` | Token/denylist checks false-green on disguised fields. |
+| Nested packet schema | `FAIL / KNOWN GAP` | Unknown/missing nested fields can PASS. |
+| Verifier formula independence | `UNKNOWN` | Producer recomputation and runtime absence are not proven. |
+
+## 10. No-retry and no-mutation boundary
+
+This dossier does not authorize:
+
+- another alpha/model smoke or protected evaluation;
+- a new worker smoke solely to confirm these findings;
+- Decision V2 tuning, sizing-policy tuning, or C5/model expansion;
+- a provider/scraper/Zapi call or canonical-data fill;
+- production/cloud/capture/telemetry/scheduler edits;
+- reset, archive, backfill, counter mutation, merge, push, or deployment;
+- treating a historical PASS as current without freshness rebinding.
+
+The next implementation work, if separately authorized, should be isolated and
+sequenced as bounded hardening experiments with synthetic fault injection:
+
+1. durable T0 and continuity transaction/reconciliation state;
+2. controller phase/attempt/lease persistence and restart classification;
+3. explicit partial-fill residual policy and tests;
+4. frozen dividend tax/accounting policy;
+5. immutable runtime/config identity in prepared and execution artifacts;
+6. projected CA-state hash lineage;
+7. production rejection of local cloud storage;
+8. verifier result freshness, strict nested schema, and semantic allowlist;
+9. independent producer-formula recomputation where a gate depends on it.
+
+## 11. Final handoff
+
+The historical alpha marathon is fully preserved separately and remains
+outcome-blind. The new system-wide deep-dive found meaningful bounded PASS
+surfaces, but also multiple independent FAIL/UNKNOWN conditions that prevent a
+system-level certification. The strongest immediate blocker is restart/state
+durability; the strongest accounting blocker is partial-fill/tax semantics; the
+strongest evidence-control blocker is stale/semantic verifier PASS; and the
+strongest lineage blocker is missing runtime/config/projected-CA identity.
+
+No retry was performed, no protected result was opened, and no other lane was
+modified.
+
