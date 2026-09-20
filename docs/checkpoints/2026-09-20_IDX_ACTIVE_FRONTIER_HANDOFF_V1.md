@@ -56,11 +56,12 @@ The system tracks target membership but not target quantity obligations. A posit
 - Historical compatibility checkpoint: `2026-09-20_IDX_OBLIGATION_HISTORICAL_COMPATIBILITY_AUDIT_V1.md`.
 - Spec harness checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLAY_HARNESS_V1.md`.
 - SELL/replacement harness checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLACEMENT_REPLAY_V1.md`.
+- Artifact boundary checkpoint: `2026-09-20_IDX_OBLIGATION_ARTIFACT_SERIALIZATION_BOUNDARY_V1.md`.
 
 ## Immediate next questions
 
 1. Can an isolated versioned replay harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
-2. Which event-level fields can be serialized into actual prepared/execution artifacts without changing the old oracle?
+2. Which versioned event-level fields can be added to actual snapshots/fills without changing the old oracle?
 3. Which migration fixture classes can be handled as complete, zero-lot pending, or `UNKNOWN_ORPHANED_PARTIAL` without fabricating quantity?
 4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
 5. What evidence would justify moving the proposal from design-only to a separately authorized implementation lane?

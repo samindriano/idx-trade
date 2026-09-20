@@ -641,6 +641,11 @@ historical alpha archive:
   result with a 2/2 SELL/replacement harness: partial SELL, blocked paired BUY,
   JSON reload, retry, and explicit dual cancellation preserve quantities and
   event lineage. Runtime artifact adoption and migration remain unproven.
+- `2026-09-20_IDX_OBLIGATION_ARTIFACT_SERIALIZATION_BOUNDARY_V1.md` closes the
+  serializer ownership question: planned sizing and completed fill vectors are
+  present, but the durable snapshot has no obligation ID, remaining quantity,
+  attempt history, or cancellation lineage. The proposed remediation can be
+  additive/versioned, but current hashes do not prove quantity completeness.
 
 The durable rolling controls for this marathon are now:
 
