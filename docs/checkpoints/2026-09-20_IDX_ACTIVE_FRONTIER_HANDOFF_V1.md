@@ -54,13 +54,14 @@ The system tracks target membership but not target quantity obligations. A posit
 - Durable checkpoint: `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md`.
 - Evidence-driven design checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_STATE_CONTRACT_V1.md`.
 - Historical compatibility checkpoint: `2026-09-20_IDX_OBLIGATION_HISTORICAL_COMPATIBILITY_AUDIT_V1.md`.
+- Spec harness checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLAY_HARNESS_V1.md`.
 
 ## Immediate next questions
 
 1. Can an isolated versioned replay harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
-2. Which migration fixture classes can be handled as complete, zero-lot pending, or `UNKNOWN_ORPHANED_PARTIAL` without fabricating quantity?
-3. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
-4. Can the new oracle remain compatible with immutable historical replay results while adding residual assertions?
+2. Can the harness cover SELL/replacement pairs and explicit recovery events without changing the old oracle?
+3. Which migration fixture classes can be handled as complete, zero-lot pending, or `UNKNOWN_ORPHANED_PARTIAL` without fabricating quantity?
+4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
 5. What evidence would justify moving the proposal from design-only to a separately authorized implementation lane?
 
 ## Constraints

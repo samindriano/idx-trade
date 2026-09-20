@@ -632,6 +632,11 @@ historical alpha archive:
   BUY with no preserved plan must be marked `UNKNOWN_ORPHANED_PARTIAL` rather
   than assigned a fabricated remainder. The old `ce91d60a` replay oracle stays
   immutable; a future residual-aware oracle must be versioned.
+- `2026-09-20_IDX_QUANTITY_OBLIGATION_REPLAY_HARNESS_V1.md` records a separate
+  3/3 spec-harness PASS for quantity conservation, JSON reload, duplicate event
+  idempotency, actual-share CA entitlement, and explicit target-reversal
+  relinquishment. It is a design consistency result only; SELL/replacement and
+  runtime adoption remain open.
 
 The durable rolling controls for this marathon are now:
 
