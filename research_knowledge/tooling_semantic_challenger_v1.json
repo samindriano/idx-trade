@@ -1,0 +1,33 @@
+{
+  "schema_version": "IDX_TRADE_TOOLING_SEMANTIC_CHALLENGER_V1",
+  "experiment_id": "TOOLING-038",
+  "status": "PASS_KNOWN_FALSE_GREENS_EXPOSED",
+  "scope": "OUTCOME_BLIND_SYNTHETIC_FIXTURES_ONLY",
+  "code": {
+    "path": "research/alpha_tooling_semantic_challenger_v1.py",
+    "sha256": "eb171a9209ef1143e939d606e7ea2da5833914083d4b08980f0ceee3920aafa7"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_tooling_semantic_challenger_v1.json",
+    "sha256": "0f389e4fd46795f56e0fed457e101174b8c07fa388c95de27ab90bea6488581d"
+  },
+  "false_green_surfaces": {
+    "disguised_text_passes": true,
+    "disguised_schema_passes": true,
+    "nested_unknown_packet_field_passes": true
+  },
+  "expected_guards": {
+    "top_level_unknown_packet_field_fails": true,
+    "canonical_json_order_independent": true,
+    "verifier_version_pin_absent_recorded": true
+  },
+  "interpretation": [
+    "The current firewall is a denylist/static scan, not a semantic allowlist.",
+    "The authority packet has a top-level allowlist but no complete nested schema allowlist.",
+    "Explicit sorted JSON serialization is deterministic, but the packet contract does not itself enforce canonical serialization.",
+    "The packet verifier audit metadata does not carry an expected verifier-version hash pin."
+  ],
+  "protected_boundary": "CLOSED",
+  "provider_or_cloud_access": false,
+  "reopen_trigger": "A separately reviewed semantic schema allowlist, independent formula challenger, or explicit verifier-version contract."
+}

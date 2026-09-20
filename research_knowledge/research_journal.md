@@ -102,3 +102,16 @@ checkpoint files; this file records why the next question changed.
   headlines, especially V3-B Structure-Lite.
 - Classified the safe metadata-only archaeology lane as bounded exhausted and
   moved the frontier to the next non-redundant question.
+
+## 2026-09-20 — semantic tooling challenger
+
+- Ran `TOOLING-038` using temporary outcome-blind text, Parquet, and packet
+  mutations.
+- Confirmed false greens for disguised semantic text/schema fields and unknown
+  nested packet fields; unknown top-level packet fields still fail closed.
+- Confirmed that canonical JSON is deterministic only when explicit sorted
+  serialization is applied, and that the packet audit lacks an expected
+  verifier-version hash pin.
+- Kept the protected boundary closed and classified current PASS states as
+  scoped hash/path/denylist evidence only; no firewall production behavior was
+  changed.

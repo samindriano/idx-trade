@@ -43,6 +43,10 @@
   implementation replayability is partial, and the latest PIT/integrity
   adjudication controls earlier promotion headlines; no old implementation
   should be recreated without a genuinely new artifact or disputed claim.
+- An independent tooling challenger confirmed false greens for disguised text
+  fields, disguised schema columns, and unknown nested packet fields. The
+  current PASS state is therefore scoped hash/path/denylist evidence, not a
+  semantic allowlist or verifier-version freshness guarantee.
 
 ## What failed, is redundant, or is superseded
 

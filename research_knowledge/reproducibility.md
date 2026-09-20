@@ -120,3 +120,14 @@ access absence.
   were counted but not read.
 - Result: family-level archaeology supported; exact old implementation
   replayability partial; no candidate or protected comparison authorized.
+
+## Semantic tooling challenger
+
+- Script: `research/alpha_tooling_semantic_challenger_v1.py`.
+- Script SHA-256:
+  `eb171a9209ef1143e939d606e7ea2da5833914083d4b08980f0ceee3920aafa7`.
+- Durable result: `research_knowledge/tooling_semantic_challenger_v1.json`.
+- External result SHA-256:
+  `0f389e4fd46795f56e0fed457e101174b8c07fa388c95de27ab90bea6488581d`.
+- Result: three false-green surfaces confirmed; top-level packet allowlist
+  still rejects unknown fields; verifier-version pin remains absent.

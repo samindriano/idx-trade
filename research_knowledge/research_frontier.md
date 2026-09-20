@@ -7,9 +7,10 @@
    settings, and Data-QA policy. Counterfactual impact is now quantified, but
    current classification remains `POLICY_AUTHORITY_MISSING` unless
    authoritative local evidence appears.
-2. Tooling/verifier adversarial audit: producer/verifier independence, allowlist
-   strength, deterministic serialization, stale-hash rejection, synthetic
-   forbidden-fixture detection, and mutation detection.
+2. Tooling/verifier adversarial audit: `PARTIALLY_RESOLVED`; synthetic
+   challenger confirms semantic false greens and missing verifier-version pin.
+   Reopen only for a reviewed schema allowlist, independent formula challenger,
+   or explicit version contract.
 3. Common-support methodology: native versus common support, sparse C3 handling,
    and exact one-shot comparison design without opening outcomes. The initial
    structural census is complete; rerun only after policy/source changes.
