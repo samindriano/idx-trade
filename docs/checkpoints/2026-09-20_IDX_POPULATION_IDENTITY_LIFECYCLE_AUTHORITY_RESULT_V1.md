@@ -69,9 +69,25 @@ The 115-code official-delisting-only residual also has zero exact matches in
 the retained announcement-search files. This is query-bounded no-hit evidence,
 not proof of no announcement, relisting, issuer continuity, or effective event.
 
+Final counts are: 1,176 observed codes; 984 KSEI attempts; 371 KSEI/ISIN
+resolutions; 1,044 issuer-name evidence codes; zero legal issuer-continuity
+proofs; 1,112 interval/event-bearing codes; zero lifecycle-proven codes;
+962 current/active listing codes; 159 delisting-record codes; and zero proven
+relistings. Relative to the 945-code panel, the crosswalk adds 231 observed
+codes; relative to the 979-code security master, 197; relative to the 980-code
+anchor, 196. These are coverage deltas, not admission authority.
+
+Fail-closed authority counts are: `IDENTITY_PROVEN` 0,
+`IDENTITY_BOUNDED` 1,043, `LIFECYCLE_PROVEN` 0,
+`LIFECYCLE_PARTIAL` 1,106, `LIFECYCLE_CONFLICTING` 6,
+`PIT_EFFECTIVE_DATE_PROVEN` 0, `PIT_EFFECTIVE_DATE_UNKNOWN` 1,176, and
+`POPULATION_COMPLETE` 0. The historical population remains
+`POPULATION_UNKNOWN`; it is not relabeled incomplete merely because omissions
+from the panel and current master were found.
+
 ## Verification
 
-Focused tests: `9 passed`. Parser compilation: PASS. No protected outcomes,
+Focused tests: `11 passed`. Parser compilation: PASS. No protected outcomes,
 canonical data, production/cloud/capture/telemetry/provider/scheduler state, or
 incumbent research state was accessed or mutated.
 

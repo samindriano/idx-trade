@@ -771,6 +771,19 @@
       "NPII"
     ]
   },
+  "authority_classification_summary": {
+    "IDENTITY_BOUNDED": 1043,
+    "IDENTITY_PROVEN": 0,
+    "LIFECYCLE_CONFLICTING": 6,
+    "LIFECYCLE_PARTIAL": 1106,
+    "LIFECYCLE_PROVEN": 0,
+    "PIT_EFFECTIVE_DATE_PROVEN": 0,
+    "PIT_EFFECTIVE_DATE_UNKNOWN": 1176,
+    "POPULATION_COMPLETE": 0,
+    "POPULATION_INCOMPLETE": 0,
+    "POPULATION_UNKNOWN": 1176,
+    "interpretation": "Population completeness is not assigned as complete or incomplete; the retained union is observed-only and its historical denominator is unknown."
+  },
   "authority_classifications": {
     "identity": "IDENTITY_BOUNDED",
     "lifecycle": "LIFECYCLE_PARTIAL",
@@ -200622,6 +200635,23 @@
       "ticker reuse and relisting resolution"
     ]
   },
+  "final_coverage_metrics": {
+    "current_listing_codes": 962,
+    "delisting_codes": 159,
+    "historical_only_delisting_codes": 115,
+    "isin_resolved_codes": 371,
+    "issuer_legal_continuity_proven_codes": 0,
+    "issuer_name_evidence_codes": 1044,
+    "ksei_population_attempted_codes": 984,
+    "ksei_resolved_codes": 371,
+    "lifecycle_conflicting_codes": 6,
+    "lifecycle_interval_or_event_codes": 1112,
+    "lifecycle_partial_codes": 1106,
+    "lifecycle_proven_codes": 0,
+    "observed_research_population_codes": 1176,
+    "official_corporate_action_sample_codes": 3,
+    "relisting_proven_codes": 0
+  },
   "financial_meta": {
     "code_column": "ticker",
     "columns": [
@@ -200678,7 +200708,7 @@
     "rows": 1129024,
     "sessions": 1288
   },
-  "generated_at_utc": "2026-09-20T12:49:55.244725+00:00",
+  "generated_at_utc": "2026-09-20T13:01:18.114811+00:00",
   "historical_only_announcement_audit": {
     "exact_code_count": 0,
     "exact_hit_count": 0,

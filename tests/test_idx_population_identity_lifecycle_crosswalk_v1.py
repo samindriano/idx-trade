@@ -163,3 +163,27 @@ def test_historical_only_announcement_audit_does_not_turn_no_hits_into_absence()
     assert audit["exact_hit_count"] == 0
     assert audit["exact_code_count"] == 0
     assert "not evidence" in audit["interpretation"]
+
+
+def test_final_coverage_metrics_keep_identity_and_lifecycle_authority_separate() -> None:
+    packet_path = Path(__file__).parents[1] / "research_knowledge" / "identity_lifecycle_population_crosswalk_v1.json"
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    metrics = packet["final_coverage_metrics"]
+    assert metrics["observed_research_population_codes"] == 1176
+    assert metrics["ksei_population_attempted_codes"] == 984
+    assert metrics["ksei_resolved_codes"] == metrics["isin_resolved_codes"] == 371
+    assert metrics["issuer_legal_continuity_proven_codes"] == 0
+    assert metrics["lifecycle_proven_codes"] == 0
+    assert metrics["relisting_proven_codes"] == 0
+
+
+def test_authority_classification_summary_is_fail_closed() -> None:
+    packet_path = Path(__file__).parents[1] / "research_knowledge" / "identity_lifecycle_population_crosswalk_v1.json"
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    summary = packet["authority_classification_summary"]
+    assert summary["IDENTITY_PROVEN"] == 0
+    assert summary["LIFECYCLE_PROVEN"] == 0
+    assert summary["PIT_EFFECTIVE_DATE_PROVEN"] == 0
+    assert summary["POPULATION_COMPLETE"] == 0
+    assert summary["POPULATION_UNKNOWN"] == 1176
+    assert "historical denominator is unknown" in summary["interpretation"]

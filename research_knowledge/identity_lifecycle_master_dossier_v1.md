@@ -42,6 +42,14 @@ key-reconciliation result only.
 | Corporate-action identity/basis | `UNKNOWN` | Event/announcement discovery exists in prior lanes | Exchange-effective first session, price basis, security-level linkage |
 | Research admission | `BLOCKED` | Evidence-only structural artifacts | No candidate admission follows from this lane |
 
+The explicit fail-closed classification counts are: `IDENTITY_PROVEN` 0,
+`IDENTITY_BOUNDED` 1,043, `LIFECYCLE_PROVEN` 0, `LIFECYCLE_PARTIAL` 1,106,
+`LIFECYCLE_CONFLICTING` 6, `PIT_EFFECTIVE_DATE_PROVEN` 0,
+`PIT_EFFECTIVE_DATE_UNKNOWN` 1,176, and `POPULATION_COMPLETE` 0. Neither
+`POPULATION_INCOMPLETE` nor `POPULATION_COMPLETE` is assigned to the historical
+population; its classification is `POPULATION_UNKNOWN` for all 1,176 observed
+codes because the denominator is unavailable.
+
 ## Source census
 
 The machine-readable packet contains exact code lists and pairwise set
@@ -82,6 +90,34 @@ Key exact counterexample sets include:
   `BSMT-C1`, `CABR-C1`, `ZEUS-C1`) retained outside the normalized union.
 
 The exact lists are in `identity_lifecycle_population_crosswalk_v1.json`.
+
+## Final coverage and downstream impact
+
+| Metric | Result |
+|---|---:|
+| Observed research population | 1,176 |
+| KSEI population attempts | 984 |
+| KSEI-resolved securities | 371 |
+| ISIN-resolved securities | 371 |
+| Issuer-name evidence | 1,044 |
+| Legal issuer continuity proven | 0 |
+| Codes with interval/event evidence | 1,112 |
+| Lifecycle-proven codes | 0 |
+| Lifecycle-partial codes | 1,106 |
+| Lifecycle-conflicting codes | 6 |
+| Current/active listing codes | 962 / 962 |
+| Delisting-record codes | 159 |
+| Relisting-proven codes | 0 |
+
+Before/after impact is structural only: the pre-crosswalk panel had 945 codes,
+the security master 979, the anchor 980, the financial bundle 729, and Foreign
+Flow 983. After crosswalk, the observed union is 1,176, adding 231 codes beyond
+the panel, 197 beyond the security master, and 196 beyond the anchor. The
+crosswalk also adds 984 KSEI-table observations, 371 valid KSEI/ISIN details,
+and 1,112 interval/event-bearing codes. Still unknown are the historical
+denominator, daily PIT membership, available-at/knowledge time, revisions,
+legal issuer continuity, ticker reuse/relisting, effective corporate-action
+basis, and executable capacity.
 
 ## KSEI acquisition and interpretation
 
@@ -208,7 +244,7 @@ generalized into population completeness without an enumerating contract.
 ## Durable artifacts
 
 - `research_knowledge/identity_lifecycle_population_crosswalk_v1.json`
-  SHA-256 `e413e7364cee58185bb2010c514c7a0dd7ffb7b5006d9581448dbe43679c3552`
+  SHA-256 `ea4f5454ab332a2460964a503a11327cd2a44269d155315fff481ef812efc9c5`
 - `research_knowledge/security_identity_lifecycle_graph_v1.json`
   SHA-256 `e1ce93c7f1e2d0e944365d98abfdeff9083448121c602976a84b66d1715cecd7`
 - `research_knowledge/identity_lifecycle_residuals_v1.json`
