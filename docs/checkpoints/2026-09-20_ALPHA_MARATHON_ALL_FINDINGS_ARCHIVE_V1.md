@@ -893,3 +893,77 @@ no non-test production call site. The runtime therefore relies mainly on
 checkout pinning, constants, provenance, and tests rather than invoking every
 JSON config verifier at runtime. This is a latent configuration-enforcement
 gap, not evidence of live drift.
+
+## L. Additional committed 2026-09-20 structural findings
+
+The following independently committed checkpoints are now part of the
+durable marathon navigation. They remain structural and do not change the
+NO-GO/admission status.
+
+### L.1 Eligibility versus feature warm-up
+
+[`ALPHA_ELIGIBILITY_FEATURE_WARMUP_RESULT_V1.md`](2026-09-20_ALPHA_ELIGIBILITY_FEATURE_WARMUP_RESULT_V1.md)
+separates the security eligibility mask from candidate score availability:
+
+- every finite C1-C4 score is inside `eligible_decision_universe`;
+- C1 has 295,243 finite rows and 15,518 eligible-but-missing rows, with a
+  median first-finite delay of 4 sessions;
+- C2 has 310,761 finite rows and no eligible-but-missing rows;
+- C3 has 30,994 finite rows and 279,767 eligible-but-missing rows, with a
+  median first-finite delay of 1,322 sessions;
+- C4 has 310,323 finite rows and 438 eligible-but-missing rows;
+- finite scores outside eligibility: zero for every candidate.
+
+This changes the interpretation of C3 sparsity: it is primarily a
+feature/data-availability boundary inside eligibility, not a score leak. It
+does not establish why the warm-up is absent or whether eligibility is
+authoritative.
+
+### L.2 Eligibility policy changes actual selected names
+
+[`ALPHA_ELIGIBILITY_SELECTION_OVERLAP_RESULT_V1.md`](2026-09-20_ALPHA_ELIGIBILITY_SELECTION_OVERLAP_RESULT_V1.md)
+reconstructed the unresolved minimum-20 versus min-periods-60 policy branches
+and compared fixed Top-30 membership on common dates:
+
+| Candidate | Mean overlap | Mean Jaccard | Mean symmetric difference |
+|---|---:|---:|---:|
+| C1 | 96.52% | 93.48% | 2.09 names |
+| C2 | 100.00% | 100.00% | 0.00 names |
+| C3 | 94.05% | 89.20% | 3.57 names |
+| C4 | 91.71% | 85.24% | 4.98 names |
+
+The policy conflict is therefore decision-set material for C1/C3/C4, not a
+row-count bookkeeping difference. Policy authority remains missing; no branch
+was selected or admitted.
+
+### L.3 C1/C4 horizon and normalizer bridge
+
+[`ALPHA_C1_C4_HORIZON_BRIDGE_RESULT_V1.md`](2026-09-20_ALPHA_C1_C4_HORIZON_BRIDGE_RESULT_V1.md)
+shows that stored C1/C4 overlap is not a single horizon identity:
+
+- raw `-ret_5` versus raw `-ret_20`: 37.96% mean Top-30 overlap;
+- stored C1 versus stored C4: 35.80%;
+- C1 stored versus raw `-ret_5`: 60.19%;
+- C4 stored versus raw `-ret_20`: 62.22%;
+- C1 beta residual numerator versus raw `-ret_5`: 84.55%.
+
+The normalizers materially shape membership while retaining a related reversal
+surface. This is structural representation evidence, not predictive
+redundancy or candidate admission.
+
+### L.4 Anchor state oscillation and population boundary
+
+[`ALPHA_ANCHOR_STATE_TRANSITION_RESULT_V1.md`](2026-09-20_ALPHA_ANCHOR_STATE_TRANSITION_RESULT_V1.md)
+finds `ACTIVE`/`NO_TRADE` oscillation across 980 anchor tickers: 583 changed
+state, median 10 transitions, 95th percentile 212.9, maximum 374, and 91
+tickers above 100 transitions. These are observed state geometries, not
+suspension, delisting, relisting, ticker reuse, or issuer-lifecycle evidence.
+
+The red-team adjudication
+[`ALPHA_REDTEAM_ADJUDICATION_RESULT_V1.md`](2026-09-20_ALPHA_REDTEAM_ADJUDICATION_RESULT_V1.md)
+also narrows the CNTX boundary: 458 ACTIVE-anchor rows are absent from the
+panel, all CNTX; the panel has zero NO_TRADE rows. Observed-panel replay is
+reproducible, but population completeness and survivorship remain UNKNOWN.
+The adjudication weakens causal wording around C3 support sensitivity and
+classifies C2 quadrant evidence as formula/anatomy evidence rather than an
+independent mechanism.
