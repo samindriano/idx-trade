@@ -1,0 +1,81 @@
+{
+  "schema_version": "IDX_TRADE_C1_C4_NUMERATOR_OVERLAP_V1",
+  "experiment_id": "C1-C4-NUMERATOR-OVERLAP-049",
+  "status": "PASS_STRUCTURAL_C1_C4_NUMERATOR_OVERLAP",
+  "scope": "Outcome-blind fixed Top-30 overlap between stored C1/C4 scores and numerator-only reversal proxies, plus cross-candidate score/numerator overlap.",
+  "code": {
+    "path": "research/alpha_c1_c4_numerator_overlap_v1.py",
+    "sha256": "8e6975f93920a7a11404ba8be3f1cce8a2ffe18c186f3db2a0255ffa5679a830"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-c1-c4-overlap/alpha_c1_c4_numerator_overlap_v1.json",
+    "sha256": "24fa534373f33af6e255432284d4c563cd27e374ed8f43183c6496ee08d58ab8"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e"
+  },
+  "proxy_definitions": {
+    "C1_numerator_reversal": "-(ret_5 - beta_60_prior * market_ret_5)",
+    "C4_numerator_reversal": "-ret_20",
+    "selection": "fixed Top-30 descending value with ascending ticker tie-break"
+  },
+  "calendar": {
+    "official_session_count": 1260,
+    "official_min": "2021-04-29",
+    "official_max": "2026-07-31"
+  },
+  "overall": {
+    "within_candidate": {
+      "C1_score_vs_numerator": {
+        "common_dates": 1141,
+        "mean_overlap_fraction": 0.6375401694420099,
+        "median_overlap_fraction": 0.6333333333333333,
+        "mean_jaccard": 0.4763480859459856,
+        "median_jaccard": 0.4634146341463415
+      },
+      "C4_score_vs_numerator": {
+        "common_dates": 1201,
+        "mean_overlap_fraction": 0.6221759644740494,
+        "median_overlap_fraction": 0.6333333333333333,
+        "mean_jaccard": 0.46634712895555996,
+        "median_jaccard": 0.4634146341463415
+      }
+    },
+    "cross_candidate": {
+      "score_vs_score": {
+        "common_dates": 1141,
+        "mean_overlap_fraction": 0.35801928133216476,
+        "median_overlap_fraction": 0.36666666666666664,
+        "mean_jaccard": 0.2222837902898199,
+        "median_jaccard": 0.22448979591836735
+      },
+      "numerator_vs_numerator": {
+        "common_dates": 1141,
+        "mean_overlap_fraction": 0.36824423020742036,
+        "median_overlap_fraction": 0.36666666666666664,
+        "mean_jaccard": 0.22999040669498566,
+        "median_jaccard": 0.22448979591836735
+      }
+    }
+  },
+  "by_year_mean_overlap_fraction": {
+    "cross_score_vs_score": {"2021": 0.35694444444444445, "2022": 0.367750677506775, "2023": 0.37503486750348675, "2024": 0.3676511954992968, "2025": 0.34618644067796606, "2026": 0.31432098765432104},
+    "cross_numerator_vs_numerator": {"2021": 0.3631944444444444, "2022": 0.3796747967479675, "2023": 0.4093444909344491, "2024": 0.3819971870604782, "2025": 0.3298022598870057, "2026": 0.3195061728395061},
+    "C1_score_vs_numerator": {"2021": 0.6076388888888888, "2022": 0.6455284552845528, "2023": 0.6623430962343096, "2024": 0.671589310829817, "2025": 0.609322033898305, "2026": 0.5792592592592593},
+    "C4_score_vs_numerator": {"2021": 0.652469135802469, "2022": 0.5766937669376693, "2023": 0.617573221757322, "2024": 0.6779184247538677, "2025": 0.6557909604519774, "2026": 0.5323456790123456}
+  },
+  "interpretation": [
+    "C1 and C4 stored-score selections overlap their own numerator-only reversal proxies by about 63.75% and 62.22% on average, so denominator/normalizer terms materially but incompletely reorder each candidate.",
+    "Cross-candidate numerator-only overlap is 36.82% versus 35.80% for stored scores; the small increase shows that normalizers add some separation but do not materially explain the shared C1/C4 reversal surface.",
+    "This is structural implementation evidence only. It does not establish predictive redundancy, orthogonality, PIT safety, corporate-action validity, capacity, or candidate promotion."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}

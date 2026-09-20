@@ -104,6 +104,12 @@
   cross-sign zero is mechanically implied by the product sign. The mix shifts
   to 59.90%/40.10% in 2026 partial year from 78.80%/21.20% in 2025. This is
   structural composition, not regime-return evidence or a reason to split C2.
+- The C1/C4 numerator-overlap decomposition shows that stored-score versus
+  numerator-only Top-30 overlap is 63.75% for C1 and 62.22% for C4, while
+  cross-candidate overlap is 35.80% for stored scores versus 36.82% for
+  numerator-only proxies. Normalizers materially reorder each candidate but do
+  not materially explain shared cross-candidate overlap; this remains a
+  structural shared-reversal caution, not predictive redundancy evidence.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.

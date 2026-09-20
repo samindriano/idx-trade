@@ -249,3 +249,16 @@ checkpoint files; this file records why the next question changed.
 - The mixture shifts from 78.80%/21.20% in 2025 to 59.90%/40.10% in 2026
   partial year. This is a descriptive composition shift, not a regime-return
   claim and not a reason to create a new candidate.
+
+## 2026-09-20 — C1/C4 numerator-overlap decomposition
+
+- Compared stored C1/C4 Top-30 selections with numerator-only reversal proxies,
+  then compared stored-score cross-candidate overlap with numerator-only
+  cross-candidate overlap.
+- Within-candidate mean overlap is 63.75% for C1 and 62.22% for C4. Across
+  candidates it is 35.80% for stored scores versus 36.82% for numerator-only
+  proxies. Normalizers therefore matter, but they do not materially explain
+  the shared C1/C4 overlap.
+- This strengthens the structural shared-reversal caution without proving
+  predictive redundancy, orthogonality failure, capacity, or candidate
+  promotion. Protected outcomes remain closed.

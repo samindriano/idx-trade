@@ -271,3 +271,18 @@ access absence.
   negative-return/low-activity. Cross-sign zero selection is a product-sign
   consequence, not a predictive negative. The 2026 composition shift remains
   structural only.
+
+## C1/C4 numerator-overlap decomposition
+
+- Script: `research/alpha_c1_c4_numerator_overlap_v1.py`.
+- Durable result: `research_knowledge/c1_c4_numerator_overlap_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_C1_C4_NUMERATOR_OVERLAP_RESULT_V1.md`.
+- Code SHA-256:
+  `8e6975f93920a7a11404ba8be3f1cce8a2ffe18c186f3db2a0255ffa5679a830`.
+- External result SHA-256:
+  `24fa534373f33af6e255432284d4c563cd27e374ed8f43183c6496ee08d58ab8`.
+- Focused test: `tests/test_alpha_c1_c4_numerator_overlap_v1.py`, 1/1
+  passing.
+- Stored-score versus numerator-only mean Top-30 overlap is 63.75% for C1 and
+  62.22% for C4. Cross-candidate score overlap is 35.80%, versus 36.82% for
+  numerator-only proxies. This is structural representation evidence only.
