@@ -3,7 +3,7 @@
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
 Implementation base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
-Challenge head: `e888452a`
+Challenge head: `f61446d6`
 
 ## Boundary
 
@@ -25,7 +25,7 @@ scheduler, production, or alpha state.
 | Identity adversarial cases | File/payload/session/ticker/outcome-access tampering fails closed | PASS |
 | Prepared selection | Hash-pinned controller rejects unbound prepared artifacts | PASS |
 | Migration provenance | Source hash/classification/provenance remains immutable | PASS |
-| Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked | PASS |
+| Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |
 
 ## Verification
 

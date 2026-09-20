@@ -88,16 +88,18 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - caller-supplied identity evidence is now an optional but hash-pinned runtime
   config input; all four phase children validate its file/payload/session and
   required-ticker resolution before passing it to Decision identity binding;
-- migration activation now has an explicit immutable policy/decision gate:
-  compatible state may activate, legacy mode requires explicit authorization,
-  and orphaned/reconciliation-required state remains blocked;
+- migration activation now has an explicit immutable policy/decision gate and a
+  verified-snapshot consumer: compatible state may activate, legacy mode
+  requires explicit authorization, and orphaned/reconciliation-required state
+  remains blocked; provenance and the decision are persisted separately without
+  mutating runtime state;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
   or outcome access;
-- post-implementation independent challenge record is PASS for nested replay,
-  lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller
-  gates; see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V1.md`;
+- post-implementation independent challenge record V2 is PASS for nested replay,
+  lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
+  see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
 - full repository regression via `python -m pytest -q`: PASS; only three
   pre-existing pandas `FutureWarning` records, no test failures;

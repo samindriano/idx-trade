@@ -4,6 +4,8 @@ import json
 
 import pytest
 
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as dividend
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
 from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
@@ -101,3 +103,44 @@ def test_activation_decision_is_immutable_and_hash_verified(tmp_path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(DecisionV1Error, match="HASH_MISMATCH"):
         load_migration_activation_decision_v1(path)
+
+
+def test_runtime_snapshot_consumer_persists_provenance_and_policy_decision(
+    tmp_path,
+) -> None:
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(),
+    )
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        dividend.DividendAwarePaperState(
+            base_state=state,
+            dividend_ledger=dividend.DividendLedger(),
+        ),
+    )
+    snapshot_bytes_before = snapshot.path.read_bytes()
+    policy = _policy(allow_legacy_mode=False)
+    decision = runtime.build_runtime_snapshot_migration_activation_decision(
+        snapshot.path,
+        policy=policy,
+        decided_at_utc="2026-09-20T10:00:00Z",
+    )
+    assert decision.activation_status == REQUIRES_AUTHORIZATION
+    provenance_path, decision_path = (
+        tmp_path / "migration.json",
+        tmp_path / "activation.json",
+    )
+    persisted = runtime.write_runtime_snapshot_migration_activation_decision(
+        snapshot.path,
+        provenance_path,
+        decision_path,
+        policy=policy,
+        decided_at_utc="2026-09-20T10:00:00Z",
+    )
+    assert persisted == (provenance_path.resolve(), decision_path.resolve())
+    assert snapshot.path.read_bytes() == snapshot_bytes_before
+    assert load_migration_activation_decision_v1(decision_path)["activation_status"] == (
+        REQUIRES_AUTHORIZATION
+    )

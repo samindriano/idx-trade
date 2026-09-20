@@ -35,6 +35,12 @@ from .v4_x1_migration_provenance_v1 import (
     build_migration_provenance_v1,
     write_migration_provenance_v1,
 )
+from .v4_x1_migration_activation_v1 import (
+    MigrationActivationDecisionV1,
+    MigrationActivationPolicyV1,
+    authorize_migration_activation,
+    write_migration_activation_decision_v1,
+)
 
 RUNTIME_SCHEMA = "idx_trade_forward_dividend_runtime_state_v1_1"
 RUNTIME_SCHEMA_V2 = "idx_trade_forward_dividend_runtime_state_v2"
@@ -760,6 +766,51 @@ def write_runtime_snapshot_migration_provenance(
     return write_migration_provenance_v1(provenance_path, provenance)
 
 
+def build_runtime_snapshot_migration_activation_decision(
+    snapshot_path: str | Path,
+    *,
+    policy: MigrationActivationPolicyV1,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> MigrationActivationDecisionV1:
+    """Authorize one verified snapshot through an explicit policy only."""
+
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    return authorize_migration_activation(provenance.payload(), policy)
+
+
+def write_runtime_snapshot_migration_activation_decision(
+    snapshot_path: str | Path,
+    provenance_path: str | Path,
+    decision_path: str | Path,
+    *,
+    policy: MigrationActivationPolicyV1,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> tuple[Path, Path]:
+    """Persist provenance and its policy decision without mutating runtime state."""
+
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    decision = authorize_migration_activation(provenance.payload(), policy)
+    persisted_provenance = write_migration_provenance_v1(
+        provenance_path,
+        provenance,
+    )
+    persisted_decision = write_migration_activation_decision_v1(
+        decision_path,
+        decision,
+    )
+    return persisted_provenance, persisted_decision
+
+
 def _snapshot_root(runtime_root: str | Path) -> Path:
     return (
         Path(runtime_root).expanduser().resolve()
@@ -1114,6 +1165,8 @@ __all__ = [
     "write_runtime_snapshot",
     "build_runtime_snapshot_migration_provenance",
     "write_runtime_snapshot_migration_provenance",
+    "build_runtime_snapshot_migration_activation_decision",
+    "write_runtime_snapshot_migration_activation_decision",
     "load_runtime_snapshot",
     "load_latest_runtime_snapshot",
     "quarantine_runtime_snapshot",

@@ -22,9 +22,12 @@ runtime snapshot or activate a scheduler/provider path.
 ## Evidence
 
 `tests/test_v4_x1_migration_activation_v1.py` covers denied/authorized legacy
-mode, compatible state, orphaned-state blocking, and immutable decision replay.
-Together with `tests/test_v4_x1_migration_provenance_v1.py`, the focused migration
-suite passes.
+mode, compatible state, orphaned-state blocking, immutable decision replay, and
+the runtime-snapshot consumer. The consumer persists the migration provenance
+and the corresponding policy decision as separate immutable artifacts; it does
+not mutate the verified snapshot or activate runtime execution. Together with
+`tests/test_v4_x1_migration_provenance_v1.py`, the focused migration suite
+passes, and the full repository suite remains green.
 
 The remaining item is external adoption of an authorized policy for a real
 runtime. No such policy or source artifact is invented or activated in this
