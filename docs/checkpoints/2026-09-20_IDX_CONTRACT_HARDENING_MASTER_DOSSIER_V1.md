@@ -167,4 +167,5 @@ closure.
 - Contract catalog: `docs/checkpoints/2026-09-20_IDX_VERSIONED_CONTRACT_CATALOG_V1.md`
 - Migration matrix: `docs/checkpoints/2026-09-20_IDX_MIGRATION_COMPATIBILITY_MATRIX_V1.md`
 - Active handoff: `docs/checkpoints/2026-09-20_IDX_HARDENING_ACTIVE_FRONTIER_HANDOFF_V1.md`
+- Challenge result: `docs/checkpoints/2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V1.md`
 - No-retry/policy log: `docs/checkpoints/2026-09-20_IDX_HARDENING_NO_RETRY_POLICY_LOG_V1.md`
