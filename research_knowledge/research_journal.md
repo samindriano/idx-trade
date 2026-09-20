@@ -497,3 +497,42 @@ checkpoint files; this file records why the next question changed.
   announcement, plan, approval, advertisement, correction, event, and effective
   transition are separate claims, and a date in one class cannot be promoted
   into another.
+
+## 2026-09-20 — official authority crosswalk and classification audit
+
+- Reconciled the acquired official report/XBRL, quarterly report index, ratio,
+  trading-history, issued-history, and profile surfaces against the current
+  panel and V2 financial bundle in isolated staging. The result is recorded in
+  `research_knowledge/official_idx_authority_crosswalk_v1.json` and the
+  corresponding checkpoint.
+- The annual surface has 5,870 index rows for 1,009 codes, 5,868 rows with an
+  instance attachment, and 5,864 retained archives. Two rows have no instance
+  attachment and four expected keys were not downloaded; none was filled from a
+  different report or period. All 5,864 retained archives parse structurally.
+- The quarterly index has 9,971 Q1/H1/9M rows, but quarterly XBRL remains
+  unmaterialized. This is an acquisition residual, not a reason to treat annual
+  facts as quarterly PIT facts.
+- The 60 ratio snapshots have 51,662 rows and 976 codes. Named classification
+  fields are present on every row and unchanged across adjacent response
+  snapshots for each observed code; `industryCode` is empty. This is a useful
+  stability result but does not establish historical effective time, knowledge
+  time, or PIT sector membership. `fsDate` remains a financial-period field.
+- In the exact panel calendar window, official trading history has 981,833 of
+  981,940 panel keys, 107 panel-only keys, and 125,282 official-only keys. No
+  duplicate official keys exist, but 1,785 intersecting keys conflict on raw
+  close/high/low fields; volume has zero mismatches. The official route is not
+  canonically interchangeable with the panel on this evidence.
+- Updated source capability, findings, experiment, no-retry, manifest, frontier,
+  and open-question records. No predictive outcome, canonical data, provider,
+  production, cloud, capture, telemetry, scheduler, or incumbent state changed.
+- Audited annual `File_Modified` against report-period end. All 5,870 rows have
+  parseable timestamps, but the lag median is 91.468 days, the maximum is
+  2,287.839 days, and 320/54/15 rows exceed 180/365/730 days. This confirms
+  timing dispersion on a mutable source surface; it does not establish
+  publication, available-at, knowledge-time, or revision semantics.
+- Re-indexed the structural XBRL projection for concept, unit, and period-key
+  collisions. Every selected field has both IDR and USD units; net income,
+  operating cash flow, and equity have multiple concepts and 11,728/10,254/
+  11,727 duplicate code/year/period groups, with two for revenue. Structural
+  completeness therefore cannot be promoted into unique financial semantics or
+  V2 substitution.

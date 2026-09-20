@@ -86,6 +86,34 @@ authority, are materially repetitive, all high-information outcome-blind lanes
 are reasonably explored, or a genuine hard resource limit appears. Do not treat
 the current predictive block as the end of the knowledge program.
 
+## 2026-09-20 — official authority crosswalk and historical classification
+
+- The official report/XBRL, quarterly-index, ratio, trading-history,
+  issued-history, and current-profile surfaces are now reconciled exactly to
+  the observed panel and V2 financial bundle. The raw coverage gain is real,
+  but the residuals and raw-field conflicts are now explicit rather than hidden
+  behind source labels.
+- The ratio route carries named sector hierarchy on all retained rows and shows
+  zero adjacent-snapshot classification changes for observed codes. This
+  narrows the question: the surface is useful for classification-stability
+  diagnostics, but it contains no proven historical classification effective
+  time, and its `industryCode` field is empty.
+- The next high-value evidence is not another copy of these raw surfaces. It is
+  a population-wide PIT security master/lifecycle and issuer identity contract,
+  a report/ratio publication-vintage contract, exchange-effective CA basis, or
+  an explicit policy-authorized admission contract. Quarterly XBRL remains a
+  bounded acquisition residual, but materializing it without those semantics
+  would add facts rather than authority.
+- The annual `File_Modified` audit strengthens the timing boundary: period-end
+  lags have a 91.468-day median and a 2,287.839-day maximum, with 15 rows over
+  two years. The field is useful for mutable-surface forensics only; no further
+  lag histogram is valuable without a versioned publication/vintage contract.
+- The XBRL semantic-collision audit closes another tempting false shortcut:
+  every selected field has IDR and USD units, and several fields have multiple
+  concepts and duplicate undimensioned period keys. Further raw XBRL parsing
+  without a reviewed concept/unit/consolidation/revision policy would add
+  facts, not financial authority.
+
 ## 2026-09-20 — public EOD/IPO acquisition frontier
 
 - Acquired and hash-bound two public EOD snapshot families plus an IPO-only

@@ -1,0 +1,201 @@
+{
+  "schema_version": "IDX_TRADE_OFFICIAL_AUTHORITY_CROSSWALK_V1",
+  "status": "RAW_STRUCTURAL_CROSSWALK_NO_ADMISSION",
+  "as_of": "2026-09-20",
+  "protected_boundary": "CLOSED",
+  "purpose": "Reconcile newly acquired official IDX report, ratio, trading-history, issued-history, and profile surfaces against the current research corpus without promoting raw observations into PIT or canonical authority.",
+  "external_evidence": {
+    "crosswalk_json": {
+      "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-authority-crosswalk/alpha_idx_authority_crosswalk_v1.json",
+      "sha256": "811f2cb68a3528ce25a5fbd0f6173e4d502584a9dc7760d2a760f951dfa8db6b"
+    },
+    "xbrl_projection_jsonl": {
+      "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-authority-crosswalk/alpha_idx_xbrl_candidate_facts_v1.jsonl",
+      "sha256": "545ceb8d852a30ae505f4331683f8d1abf8cfc0a06a17b83e0f7482675d99a24"
+    },
+    "inputs": {
+      "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+      "financial_bundle_sha256": "c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b"
+    }
+  },
+  "official_surface_inventory": {
+    "annual_report_index": {
+      "rows": 5870,
+      "code_union": 1009,
+      "years": "2019-2025",
+      "rows_with_instance_attachment": 5868,
+      "retained_instance_archives": 5864,
+      "rows_without_instance_attachment": [
+        ["2024", "ASDF"],
+        ["2024", "BINA"]
+      ],
+      "expected_instance_keys_not_downloaded": [
+        ["2025", "CASH"],
+        ["2025", "OBMD"],
+        ["2025", "RIGS"],
+        ["2025", "SWAT"]
+      ],
+      "file_modified_lag_audit": {
+        "status": "DESCRIPTIVE_FILE_MODIFIED_LAG_ONLY",
+        "rows_with_valid_dates": 5870,
+        "rows_without_valid_dates": 0,
+        "lag_days_min": 22.827938,
+        "lag_days_median": 91.468067,
+        "lag_days_max": 2287.839437,
+        "lag_days_over_180_count": 320,
+        "lag_days_over_365_count": 54,
+        "lag_days_over_730_count": 15,
+        "largest_lag_samples": [
+          ["SKYB", "2019", "2026-04-05T20:08:47.377", 2287.839437],
+          ["SKYB", "2020", "2026-04-05T21:22:48.89", 1921.890844],
+          ["SKYB", "2021", "2026-04-07T08:30:17.473", 1558.354368],
+          ["TAXI", "2021", "2025-04-23T15:10:46.043", 1209.632477],
+          ["IATA", "2019", "2022-09-14T18:23:03.483", 988.766013]
+        ],
+        "interpretation": "File_Modified is a descriptive source timestamp relative to the annual period end. Its lag distribution does not prove publication, available-at, knowledge-time, or revision semantics and is not a PIT admission substitute."
+      }
+    },
+    "quarterly_report_index": {
+      "rows": 9971,
+      "code_union": 994,
+      "periods": ["TW1", "TW2", "TW3"],
+      "year_range": "2022-2025",
+      "xbrl_materialized": false
+    },
+    "xbrl_structural_projection": {
+      "archives_requested": 5864,
+      "archives_parsed": 5864,
+      "parse_errors": 0,
+      "archive_field_presence": {
+        "total_assets": 5864,
+        "total_liabilities": 5864,
+        "total_equity": 5864,
+        "net_income": 5864,
+        "operating_cash_flow": 5864,
+        "cash_and_equivalents": 5463,
+        "revenue": 5064
+      },
+      "field_period_semantics": "report-period/context structural metadata only; dimensions, taxonomy, units, consolidation, restatement, revision, issuer identity, and knowledge time remain unresolved"
+      ,"semantic_collision_audit": {
+        "status": "SEMANTIC_COLLISION_AUDIT_ONLY",
+        "units_by_field": "Every selected field has both IDR and USD units in the raw projection.",
+        "concept_multiplicity": {
+          "net_income": ["ProfitLoss", "ProfitLossAttributableToParentEntity"],
+          "operating_cash_flow": ["CashGeneratedFromUsedInOperations", "NetCashFlowsReceivedFromUsedInOperatingActivities"],
+          "total_equity": ["Equity", "EquityAttributableToEquityOwnersOfParentEntity"]
+        },
+        "duplicate_code_year_period_groups": {
+          "net_income": 11728,
+          "operating_cash_flow": 10254,
+          "total_equity": 11727,
+          "revenue": 2
+        },
+        "interpretation": "Structural parsing does not choose a concept, unit, consolidation, restatement, or issuer identity policy; raw facts remain non-admitted."
+      }
+    },
+    "ratio_snapshots": {
+      "snapshots": 60,
+      "rows": 51662,
+      "code_union": 976,
+      "fs_date_range": ["2018-09-30", "2025-12-22"],
+      "required_field_missing_rows": 0,
+      "classification_audit": {
+        "status": "BOUNDED_SNAPSHOT_CLASSIFICATION_ONLY",
+        "observed_code_count": 976,
+        "code_snapshot_observations": 51662,
+        "named_classification_complete_rows": 51662,
+        "code_classification_complete_rows": 0,
+        "duplicate_code_snapshots": 0,
+        "codes_with_any_adjacent_snapshot_change": 0,
+        "distinct_values": {
+          "sector": 11,
+          "subSector": 33,
+          "industry": 59,
+          "subIndustry": 103,
+          "sectorCode": 11,
+          "subSectorCode": 33,
+          "industryCode": 0,
+          "subIndustryCode": 103
+        },
+        "interpretation": "All retained rows carry named classification fields and the fields are stable across the 60 response snapshots for each observed code. This is snapshot-stability evidence only: the query month is not proven knowledge time, fsDate is a financial period, and the empty industryCode field prevents treating the response as a complete coded classification authority."
+      }
+    },
+    "trading_history": {
+      "codes": 983,
+      "rows": 1365333,
+      "date_range": ["2020-01-02", "2026-09-18"],
+      "zero_volume_rows": 166027,
+      "foreign_nonzero_rows": 745451,
+      "file_summary_sha256": "1aa5fdc70717cb5463da050463c499890ebcf5df8a1d37072fe0625c848790e0"
+    },
+    "issued_history": {
+      "code_responses": 1043,
+      "event_rows": 1563,
+      "date_range": ["1911-01-01", "2026-09-18"],
+      "explicit_delisting_labels": 23,
+      "partial_delisting_labels": 33
+    },
+    "current_profiles": {
+      "code_responses": 1043,
+      "populated_profiles": 1016,
+      "empty_profiles": 27,
+      "stock_isin_fields_observed": 0,
+      "bond_rows_with_isin": 439
+    }
+  },
+  "corpus_crosswalk": {
+    "current_panel": {
+      "rows_and_keys": 981940,
+      "tickers": 945,
+      "date_range": ["2021-04-29", "2026-07-31"]
+    },
+    "current_financial_v2_bundle": {
+      "rows": 277244,
+      "tickers": 729,
+      "core3_available_rows": 70520,
+      "all_five_available_rows": 34412
+    },
+    "universe_residuals": {
+      "panel_without_annual_report": ["BACH", "EMMI", "FORZ", "FREN", "JECX", "JELI", "JMAS", "KPAL", "KPAS", "MAMI", "MASA", "MFIN", "PRAS", "PRDL", "RANS", "RMBA", "TURI", "WBSA"],
+      "panel_without_ratio": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS", "WBSA"],
+      "panel_without_trading": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"],
+      "trading_without_panel_count": 44,
+      "trading_without_panel_includes": ["CNTX", "APOL", "ARMY", "COWL", "GOLL", "IIKP", "OCAP", "PLAS", "SCPI", "SMRU", "TDPM", "UNIT"]
+    }
+  },
+  "same_window_official_trading_crosswalk": {
+    "panel_window_keys": 981940,
+    "official_raw_keys_in_same_calendar_window": 1107115,
+    "exact_key_intersection": 981833,
+    "panel_keys_missing_from_official": 107,
+    "official_only_keys": 125282,
+    "panel_only_tickers": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"],
+    "duplicate_official_keys": 0,
+    "conflicting_key_count_on_intersection": 1785,
+    "raw_field_mismatch_counts": {
+      "close": 1307,
+      "high": 1647,
+      "low": 1537,
+      "volume": 0
+    },
+    "interpretation": "The official route is close in key coverage but not byte-equivalent to the frozen panel. Official-only rows include dates outside the panel's observed key set, including non-session-looking dates; this is a raw field/key crosswalk, not a session, adjustment, corporate-action, or canonical-replacement decision."
+  },
+  "authority_matrix": {
+    "official_report_index_and_xbrl": "RAW_DISCOVERY_AND_STRUCTURAL_FACT_COVERAGE_ONLY",
+    "official_quarterly_index": "RAW_DISCOVERY_ONLY_UNMATERIALIZED",
+    "official_ratio_snapshots": "RAW_SNAPSHOT_AND_CLASSIFICATION_STABILITY_ONLY",
+    "official_trading_history": "RAW_DAILY_FIELD_AND_KEY_CROSSWALK_ONLY",
+    "official_issued_history": "RAW_EVENT_DISCOVERY_ONLY",
+    "official_current_profiles": "CURRENT_IDENTITY_CROSSCHECK_ONLY",
+    "existing_financial_v2_bundle": "SEPARATE_CAPABILITY_BASELINE_NOT_REPLACED"
+  },
+  "remaining_blockers": [
+    "population-complete historical PIT membership with delisted/relisted/ticker-reuse handling",
+    "issuer/security/ISIN continuity and corporate-action effective-basis linkage",
+    "publication/knowledge-time and revision/vintage semantics for reports, ratios, prices, and flows",
+    "taxonomy/unit/consolidation/restatement policy for financial facts",
+    "explicit eligibility policy authority and candidate-specific admission contract",
+    "executable historical liquidity/capacity authority"
+  ],
+  "decision": "The official surfaces materially expand raw coverage and expose useful residuals, but none is admitted as PIT, population-complete, canonical, corporate-action-safe, or predictive research authority. Raw XBRL remains separate from the existing V2 financial bundle. No production, canonical, cloud, provider, capture, telemetry, scheduler, or protected-outcome state was changed."
+}

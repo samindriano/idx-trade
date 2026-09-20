@@ -60,6 +60,7 @@
     "official_idx_directory_audit_v1.json",
     "official_announcement_surface_v1.json",
     "official_idx_acquisition_surfaces_v1.json",
+    "official_idx_authority_crosswalk_v1.json",
     "official_idx_profile_detail_surface_v1.json",
     "official_corporate_action_announcement_probe_v1.json",
     "data_authority_packet_v1.md",
@@ -70,9 +71,9 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 58,
-    "findings_index_entries": 51,
-    "no_retry_registry_entries": 21,
+    "experiment_registry_entries": 61,
+    "findings_index_entries": 54,
+    "no_retry_registry_entries": 22,
     "source_capability_entries": 26,
     "human_synthesis_documents": 6
   },
@@ -106,6 +107,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_C1_C4_HORIZON_BRIDGE_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_PUBLIC_EOD_SOURCE_COVERAGE_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_RAW_ACQUISITION_SURFACES_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_RAW_ACQUISITION_SURFACES_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_AUTHORITY_CROSSWALK_RESULT_V1.md"
   ]
 }

@@ -266,6 +266,43 @@
   relevant, but it cannot replace population completeness or explicit policy
   authority for an admitted historical subset.
 
+## 2026-09-20 — official authority crosswalk and classification boundary
+
+- The acquired official surfaces are now crosswalked exactly against the
+  current corpus. Annual discovery has 5,870 rows for 1,009 codes, 5,868 rows
+  with an instance attachment, and 5,864 retained archives; two no-attachment
+  rows and four undownloaded expected keys remain explicit residuals. Quarterly
+  discovery has 9,971 Q1/H1/9M rows, but quarterly XBRL is not materialized.
+- All 5,864 retained annual archives parse structurally without error. Assets,
+  liabilities, equity, net income, and operating cash flow appear in every
+  archive; cash appears in 5,463 and revenue in 5,064. This is raw concept and
+  period coverage, not taxonomy, restatement, issuer, revision, or PIT proof.
+- The 60 ratio snapshots contain 51,662 rows for 976 codes. Named sector,
+  subsector, industry, and subindustry fields are present on all rows and stay
+  unchanged for each code across adjacent response snapshots. This is
+  snapshot-stability evidence, not historical effective-time or PIT authority;
+  the coded `industryCode` field is empty in the retained surface.
+- Same-window official trading history intersects 981,833 of 981,940 panel
+  keys, leaves 107 panel keys absent, and adds 125,282 official-only keys.
+  There are no duplicate official keys, but 1,785 intersection keys conflict
+  on raw fields (close 1,307; high 1,647; low 1,537; volume 0). The route is
+  therefore not byte-equivalent canonical history, and dates still require
+  session, basis, and availability semantics.
+- The V2 financial bundle remains separate. Raw official XBRL and ratio data
+  do not close population, issuer/ISIN, available-at/revision, CA-effective,
+  capacity, or eligibility authority. The correct durable verdict is raw
+  crosswalk support with no admission.
+- The annual index's `File_Modified` field is also not a publication proxy: all
+  5,870 rows parse, but the period-end lag has a 91.468-day median, reaches
+  2,287.839 days, and exceeds 180/365/730 days on 320/54/15 rows. This is
+  descriptive mutable-surface timing evidence, not report knowledge time or
+  PIT availability.
+- The XBRL projection also contains both IDR and USD units for every selected
+  field, multiple concepts for net income/operating cash flow/equity, and
+  duplicate undimensioned code/year/period groups. Archive-level field presence
+  therefore cannot be treated as a unique normalized financial fact; semantic,
+  unit, consolidation, restatement, issuer, and revision policy remain required.
+
 ## Highest-value missing data
 
 1. Historical point-in-time population/universe with delisted/relisted/ticker-
