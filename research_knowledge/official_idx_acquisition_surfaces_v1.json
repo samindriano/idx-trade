@@ -1,0 +1,111 @@
+{
+  "schema_version": "IDX_TRADE_OFFICIAL_ACQUISITION_SURFACES_V1",
+  "as_of": "2026-09-20",
+  "status": "RAW_EVIDENCE_ONLY_NO_ADMISSION",
+  "protected_boundary": "CLOSED",
+  "scope": "Outcome-blind acquisition and authority-surface research; no canonical, production, cloud, provider, capture, telemetry, incumbent, or protected-outcome mutation.",
+  "source_repositories": [
+    {"name": "indonesia-financial-data-mcp", "head": "ac28eaa9d7909fc56bf0ce302fe297ae4b4e6056", "role": "official IDX endpoint and XBRL attachment route documentation"},
+    {"name": "idx-panel-data-descriptor", "head": "c3e64ef59fec97a9e2ec4907d4bc01536992b91", "role": "independent Yahoo/yfinance panel-source audit"},
+    {"name": "IDX-API", "head": "910b8db70893b93920a1bba331d00a1a245907c6", "role": "official trading and listing-activity route discovery"},
+    {"name": "idx-dataset", "head": "9bb3b26bd28ab46bc2f3e74a7c03805ce053301b", "role": "observed public ticker inventory for bounded union acquisition"}
+  ],
+  "surfaces": {
+    "official_financial_report_index_xbrl": {
+      "classification": "PARTIAL_RAW_OFFICIAL_NO_PIT_ADMISSION",
+      "endpoint": "https://www.idx.id/primary/ListedCompany/GetFinancialReport",
+      "index_artifact": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/public-source-probes/idx-financial-reports/annual-index",
+      "annual_index_rows_2019_2025": 5870,
+      "annual_unique_ticker_union_2019_2025": 1009,
+      "annual_rows_by_year": {"2019": 702, "2020": 742, "2021": 793, "2022": 858, "2023": 903, "2024": 934, "2025": 938},
+      "annual_instance_zip_acquisition_2019_2025": {"requested_rows": 4967, "downloaded_zips": 4961, "missing_or_ambiguous": ["2024:ASDF", "2024:BINA", "2025:CASH", "2025:OBMD", "2025:RIGS", "2025:SWAT"], "bytes": 440360997, "result_sha256": {"2019": "346A689B4410769882219EA542C76FC186DFF7FF8D3C189DBD20FED7AABD29B5", "2020": "AA0CCBBE099A6CC357E3337C4793BF479FF7269941A306D5B69D6E01197A2A9D", "2021": "F6722AF0BC0B1CACAB3C92AF3F140091B5C51AF345FFC2F8DAFFB6E9B3D0331A", "2022": "025D68A195CE3354A75C8513703506BEA50B30E8137609429F02A31A2C87F8FD", "2024": "90526D219C20C83B651237996527C0BEF2ACA9E18752A42C0545982245C265E5", "2025": "03FF0A788DE6B42501B4B95DF34459BE0593AAC85419BA58882CCD29922AA761"}},
+      "all_annual_instance_zips_including_full_2023": {"zip_files": 5864, "bytes": 551373014},
+      "full_2023_instance_zip_download": {"rows": 903, "downloaded": 903, "index_sha256": "5c2a25aaa38d56f83e5d570a263e3abf4d55dfa90277a226e360368a09541112", "result_sha256": "88B1B088502712810B02CEFC851CEBF09511F983DCD194193D8F13CAB42FE263"},
+      "xbrl_structure_audit_2023": {"zip_files": 903, "parsed_files": 903, "context_total": 2776695, "unit_total": 1806, "fact_element_total": 12794410, "result_sha256": "118F77C3B799F29B8459873F31A5972CBD4C880A655C37DD07AE1CFCEBE6D367"},
+      "xbrl_structure_audit_annual_2019_2025": {"zip_files": 4961, "parsed_files": 4961, "context_total": 10992124, "unit_total": 9922, "fact_element_total": 46629573, "period_min": "2017-12-31", "period_max": "2026-06-30", "result_sha256": "538A512213E0ED0F6EFBE1234BFA0745F53FE010AE88689F5286AAE57D903C99"},
+      "what_it_adds": "Broad official report-index and raw instance.zip coverage, plus a reproducible revision/mutability surface.",
+      "not_proven": ["report availability at a historical decision time", "File_Modified meaning", "issuer/ISIN continuity", "population completeness", "taxonomy/restatement comparability"]
+    },
+    "official_financial_ratio_snapshots": {
+      "classification": "PARTIAL_RAW_OFFICIAL_NO_PIT_ADMISSION",
+      "endpoint": "https://www.idx.id/primary/DigitalStatistic/GetApiDataPaginated",
+      "snapshots": 60,
+      "query_range": "2021-01 through 2025-12",
+      "total_rows": 51662,
+      "required_field_missing_rows": 0,
+      "observed_2020_12_rows": 0,
+      "result_sha256": "369A0688EB3A56B5867EFF76F8F4E2A24A1F1F9704320A3EE66B6134BD5AC78A",
+      "what_it_adds": "Issuer-level monthly ratio and statement-date coverage census for financial-source timing and revision research.",
+      "not_proven": ["query month as publication/available-at cutoff", "restatement/vintage stability", "issuer/ISIN continuity", "historical population completeness"]
+    },
+    "official_trading_history": {
+      "classification": "PARTIAL_RAW_OFFICIAL_NO_PIT_OR_CA_ADMISSION",
+      "endpoint": "https://www.idx.id/primary/ListedCompany/GetTradingInfoSS",
+      "query_contract": "code=<ticker>&start=0&length=1000000",
+      "raw_files": 983,
+      "unique_codes": 983,
+      "raw_rows": 1365333,
+      "date_range": ["2020-01-02", "2026-09-18"],
+      "zero_volume_rows": 166027,
+      "foreign_nonzero_rows": 745451,
+      "codes_with_multiple_listed_share_values": 438,
+      "result_sha256": "A13EEF40ACC84EFF9DD53604A302BF252493E667DA7BD142399E2A450F1DDF31",
+      "what_it_adds": "Official per-security daily fields, foreign buy/sell fields, share-count transitions, and raw zero-trade semantics across the observed 983-code price inventory.",
+      "not_proven": ["population completeness", "available-at/revision semantics", "adjusted-price or CA basis", "delisted/relisted/ticker-reuse continuity", "capacity or tradability interpretation of zero fields"]
+    },
+    "official_issued_history": {
+      "classification": "BOUNDED_RAW_OFFICIAL_EVENT_SURFACE_NO_PIT_ADMISSION",
+      "endpoint": "https://www.idx.id/primary/ListingActivity/GetIssuedHistory",
+      "observed_code_union": 1043,
+      "raw_files": 1043,
+      "raw_rows": 1563,
+      "nonempty_histories": 971,
+      "empty_histories": 72,
+      "date_range": ["1911-01-01", "2026-09-18"],
+      "selected_action_counts": {"IPO": 393, "Company Listing": 116, "HMETD": 220, "Stock Split": 188, "Saham Bonus": 108, "Partial Delisting": 33, "Delisting": 23, "Pencatatan Kembali Sebagian": 15},
+      "result_sha256": "3C498EAA61049714DC505A6921F7665013F3B02AB0AE3BA11D5F7AF6F2FEBC34",
+      "what_it_adds": "Official event discovery that exposes lifecycle/action rows for price-only and delisted codes omitted by the financial-report union; CNTX appears in the broadened union.",
+      "not_proven": ["complete event-index coverage", "event-to-effective-session mapping", "issuer/ISIN continuity", "knowledge/revision time", "price-basis transitions", "empty response as proof of no event"]
+    },
+    "official_profile_detail": {
+      "classification": "BOUNDED_CURRENT_IDENTITY_SURFACE_NO_HISTORICAL_ADMISSION",
+      "endpoint": "https://www.idx.id/primary/ListedCompany/GetCompanyProfilesDetail",
+      "observed_code_union": 1043,
+      "raw_files": 1043,
+      "profiles_found": 1016,
+      "profiles_empty": 27,
+      "codes_with_stock_profile_isin_fields": 0,
+      "bond_rows_with_isin": 439,
+      "result_sha256": "55254859E41F50DFFB83B0E11B2614D61626AF8CCD74E6EE61ABC45D5982EB15",
+      "what_it_adds": "Current code/name/listing/status and profile-field presence cross-check across the observed code union; it separately exposes empty current profiles.",
+      "not_proven": ["historical profile vintages", "stock ISIN/issuer continuity", "ticker reuse", "historical population completeness", "publication/knowledge time", "revision semantics"]
+    },
+    "github_yahoo_panel_descriptor": {
+      "classification": "UNAUTHORITATIVE_EXTERNAL_EVIDENCE_ONLY",
+      "repository_head": "c3e64ef59fec97a9e2ec4907d4bc01536992b91",
+      "file": "data_acquisition/raw/idx_stock_prices.csv",
+      "sha256": "A00E128A852183E768000235E6B3A787C8EBB539C6647FBDF9042F077FAF0AE6",
+      "rows": 373577,
+      "tickers": 95,
+      "date_range": ["2010-01-04", "2026-07-01"],
+      "zero_volume_rows": 25621,
+      "source_semantics": "Yahoo/yfinance auto_adjust=True; panel fundamentals are a cross-sectional snapshot and the project documents the panel as limited rather than PIT-complete.",
+      "allowed_use": "early OHLCV source-discovery and basis-gap evidence only",
+      "not_proven": ["IDX population completeness", "PIT availability", "issuer/ISIN continuity", "CA basis", "revision/vintage semantics"]
+    }
+  },
+  "cross_surface_findings": [
+    "Official report indexes cover many more issuer-year rows than the observed price inventory, but code-set overlap is not historical population proof.",
+    "The official issued-history route demonstrates that the queried code universe materially changes visible lifecycle events: the 1,009-code financial union had no explicit Delisting rows in the bounded result, while adding 34 price-only codes surfaced 23 Delisting rows, including CNTX.",
+    "Current official raw surfaces are useful for source discovery and structural audits, but none supplies the combined daily PIT membership, issuer/ISIN continuity, publication/knowledge time, revision, and corporate-action effective-basis contract required for predictive admission.",
+    "The official report File_Modified, ratio fsDate, trading row date, event date, profile listing date, and current-directory listing date are distinct fields; none may be silently promoted into historical available-at authority.",
+    "The current profile-detail route improves present-day code/name/listing/status cross-checks but exposes no stock-ISIN field in the profile objects; nested bond ISINs do not repair stock issuer/security continuity."
+  ],
+  "admission": {
+    "raw_acquisition": "SUPPORTED_BOUNDED",
+    "structural_source_research": "SUPPORTED_WITH_EXPLICIT_LIMITS",
+    "historical_predictive_research": "BLOCKED",
+    "policy_selection": "NONE",
+    "protected_outcomes": "CLOSED"
+  }
+}

@@ -58,6 +58,15 @@
 7. Re-entry preparation: only after an external/authoritative admission artifact
    changes the current blocked state.
 
+8. Official acquisition expansion: the report-index/XBRL, monthly financial
+   ratio, per-security trading-history, and issued-history routes now provide a
+   substantially broader raw evidence surface. The issued-history union is
+   especially informative because adding price-only codes exposes explicit
+   delistings, including CNTX, that the financial-report code union misses.
+   Current profile-detail work is a separate current-identity probe. None of
+   these surfaces yet supplies the combined PIT population, issuer/ISIN,
+   publication/revision, CA-effective-basis, or capacity contract.
+
 ## Exhausted or low-value surfaces
 
 - Repeating the same provider/source search without a new row-level contract.
@@ -67,6 +76,8 @@
 - Tuning H-LIQ/H-VOL/H-EXC horizons without a predeclared scientific reason.
 - Creating C5 or optimizing combination weights before admission.
 - Opening protected outcomes to resolve a structural or policy question.
+- Treating official report, ratio, trading, issued-history, or current-profile
+  endpoints as complete PIT/security-master authority because they are official.
 
 ## Stop condition for this frontier
 

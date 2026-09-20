@@ -193,6 +193,32 @@
   retained bodies states an effective exchange trading transition. Announcement,
   plan, advertisement, correction, event, and effective-transition dates remain
   distinct; no price-basis repair or admission follows.
+- A broader official IDX acquisition lane now covers report-index metadata,
+  raw XBRL attachments, monthly financial-ratio snapshots, per-security daily
+  trading history, and issued-history event rows. The report index has 5,870
+  annual rows across 1,009 observed codes for 2019-2025; 5,864 annual
+  instance archives were retained (six 2024/2025 rows were missing or
+  ambiguous), and all 4,961 newly downloaded archives passed the XML
+  structure audit, including 903/903 in 2023.
+  The ratio route has 60 snapshots
+  and 51,662 rows; the trading route has 1,365,333 rows for 983 codes; and the
+  issued-history union has 1,563 rows for 1,043 observed codes.
+- The issued-history code-universe comparison is materially informative:
+  financial-report codes alone produced no explicit `Delisting` label in the
+  bounded result, while adding the 34 price-only codes surfaced 23 explicit
+  delisting labels, including CNTX. This demonstrates a source-universe
+  visibility gap, not historical population completeness or survivorship safety.
+- Official status does not equal authority. `File_Modified`, ratio `fsDate`,
+  trading row dates, event dates, and current-directory listing dates remain
+  separate fields with no shared available-at, revision, issuer/ISIN, or
+  exchange-effective CA contract. All newly acquired surfaces are therefore
+  raw/evidence-only and predictive research remains blocked.
+- The official company-detail route returns populated current profiles for
+  1,016/1,043 observed codes and empty profiles for 27. The profile objects
+  expose current code/name/listing/status fields but no stock-ISIN field in
+  the bounded audit; 439 bond/sukuk nested rows carry `ISINCode`, which is not
+  stock identity continuity. This narrows the current identity surface without
+  resolving historical issuer/security mapping.
 - The local public-source frontier is not exhausted: further work should target
   a genuinely authoritative population-wide PIT/lifecycle contract or a newly
   acquired official event archive, not more copies of the same ticker-file

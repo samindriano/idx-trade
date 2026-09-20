@@ -436,6 +436,45 @@ checkpoint files; this file records why the next question changed.
   Pencatatan` mixes treasury/security cancellation, go-private, and explicit
   listing/relisting titles. Search-term matching cannot substitute for event
   classification or security-state transition authority.
+
+## 2026-09-20 — official acquisition expansion
+
+- Discovered and pinned public source-contract documentation for official IDX
+  issuer, report, XBRL, trading-history, and listing-activity routes from
+  `indonesia-financial-data-mcp` and `IDX-API`. Ordinary requests to
+  `www.idx.co.id` received a Cloudflare challenge in bounded probes, while the
+  public `www.idx.id` host returned HTTP 200; no bypass or credentialed call was
+  used.
+- Retained 5,870 annual report-index rows for 2019-2025 and a complete
+  2023 annual instance.zip pull for 903 issuers. The broader annual pull
+  retained 5,864 archives (six 2024/2025 rows were missing or ambiguous), and
+  all 4,961 newly downloaded archives passed the XML-structure audit,
+  including all 903 2023 archives. This improves raw financial/XBRL coverage
+  but does not prove report availability, taxonomy comparability, issuer
+  continuity, or revision/vintage semantics.
+- Retained 60 monthly financial-ratio snapshots (51,662 rows) and recorded
+  that the older 2020-12 query returned zero rows. Query month and `fsDate`
+  remain selection/statement fields, not proven available-at timestamps.
+- Retained official daily trading history for 983 observed codes: 1,365,333
+  rows from 2020-01-02 through 2026-09-18. Zero-volume/open/high/low rows and
+  listed-share transitions are preserved as raw observations; no suspension,
+  adjustment, CA, or capacity inference was made.
+- Retained issued-history responses for the 1,043-code union of financial and
+  public price inventories: 1,563 action rows across 971 nonempty histories.
+  Adding the 34 price-only codes surfaced 23 explicit `Delisting` labels,
+  including CNTX, that the financial-only code universe missed. This is a
+  reproducible code-universe visibility result, not a complete lifecycle
+  authority.
+- The machine evidence packet is
+  `research_knowledge/official_idx_acquisition_surfaces_v1.json`; all new
+  surfaces remain `RAW_EVIDENCE_ONLY_NO_ADMISSION`, and protected outcomes,
+  canonical data, production, cloud, provider, capture, telemetry, and
+  incumbent state remained closed.
+- A current company-detail acquisition across the same 1,043-code union found
+  1,016 populated and 27 empty profiles. No stock-ISIN field appeared in the
+  profile objects; `ISINCode` was observed only in 439 bond/sukuk nested rows.
+  Current profile fields therefore improve code/name/listing/status cross-checks
+  but do not resolve historical issuer/security identity or PIT continuity.
 - Retrieved and reconciled page 2 for the two multi-page probes: `Perubahan
   Nama` has 182 unique IDs from 2023-07-10 through 2026-09-01, and
   `Penggabungan` has 175 unique IDs from 2023-07-03 through 2026-09-02.

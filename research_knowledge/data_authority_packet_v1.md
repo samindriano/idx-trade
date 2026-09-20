@@ -93,6 +93,38 @@ ticker-reuse, issuer/ISIN continuity, and survivorship authority remain
 unknown. Ticker identity, security identity, and issuer identity are not
 interchangeable.
 
+### New official IDX acquisition surfaces
+
+The isolated acquisition lane found a materially broader official source
+surface, but it remains raw evidence rather than admission authority:
+
+- The report-index route covers 5,870 annual rows and 1,009 observed issuer
+  codes for 2019-2025. We retained 5,864 instance.zip attachments across the
+  annual rows (six 2024/2025 rows were missing or ambiguous), and all 903
+  retained 2023 instance.zip attachments opened and parsed structurally; all
+  4,961 newly retained annual archives also passed the XML-structure audit.
+  `File_Modified` can occur years after the report year, so it is a mutable
+  index/revision signal, not an available-at time.
+- The monthly financial-ratio route produced 60 snapshots and 51,662 rows.
+  The query month and `fsDate` are not proven publication or knowledge-time
+  cutoffs; one older query returned zero rows.
+- The official trading-history route produced 1,365,333 rows for 983 observed
+  codes from 2020-01-02 through 2026-09-18. Zero-volume/open/high/low rows and
+  listed-share changes are retained as raw semantics; they do not establish
+  suspension, tradability, adjustment basis, or capacity.
+- The issued-history route produced 1,563 event rows for the 1,043-code union
+  of the financial-report and public price inventories. Adding the 34
+  price-only codes surfaced 23 explicit `Delisting` labels, including CNTX,
+  that were absent from the financial-only union. This proves code-universe
+  dependence of event discovery, not complete lifecycle coverage or an
+  effective exchange transition.
+
+These surfaces improve source discovery, coverage census, and contract design.
+They do not close population completeness, survivorship, issuer/ISIN
+continuity, publication/knowledge time, revision/vintage, corporate-action
+effective basis, or capacity. The durable machine summary is
+`research_knowledge/official_idx_acquisition_surfaces_v1.json`.
+
 The official IDX current company-profile directory is a separately bounded
 current snapshot: 962 unique codes, exact agreement with the prior official
 current snapshot by code and listing date, and a subset relation to the anchor.
@@ -188,3 +220,6 @@ the protected boundary remains closed.
 - Candidate-era mechanics: `research_knowledge/candidate_era_mechanics_v1.json`
 - Official current-directory audit: `research_knowledge/official_idx_directory_audit_v1.json`
 - Official current-directory checkpoint: `docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md`
+- Official raw acquisition summary: `research_knowledge/official_idx_acquisition_surfaces_v1.json`
+- Official profile-detail summary: `research_knowledge/official_idx_profile_detail_surface_v1.json`
+- Official raw acquisition checkpoint: `docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_RAW_ACQUISITION_SURFACES_RESULT_V1.md`

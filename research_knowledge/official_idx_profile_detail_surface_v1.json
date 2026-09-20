@@ -1,0 +1,34 @@
+{
+  "schema_version": "IDX_TRADE_OFFICIAL_PROFILE_DETAIL_SURFACE_V1",
+  "as_of": "2026-09-20",
+  "status": "CURRENT_PROFILE_EVIDENCE_ONLY",
+  "endpoint": "https://www.idx.id/primary/ListedCompany/GetCompanyProfilesDetail",
+  "query_contract": "KodeEmiten=<ticker>&language=id-id",
+  "observed_code_union": 1043,
+  "raw_files": 1043,
+  "profiles_found": 1016,
+  "profiles_empty": 27,
+  "codes_with_stock_profile_isin_fields": 0,
+  "bond_rows_with_isin": 439,
+  "listing_date_present": 1016,
+  "result_sha256": "55254859E41F50DFFB83B0E11B2614D61626AF8CCD74E6EE61ABC45D5982EB15",
+  "code_sha256": "60d3275a8e305da2cdb080107f332acd2e88918acbc1e68c870828edc9c9aa36",
+  "what_is_proven": [
+    "The current official detail route returns populated profile objects for 1,016 of 1,043 observed codes and empty profiles for 27 codes.",
+    "The retained current profile objects expose code/name/listing/status and related fields; the bounded field audit found no stock-ISIN field in the profile object.",
+    "ISINCode appears in bond/sukuk nested records where present, which is not a stock security identity mapping."
+  ],
+  "what_remains_unknown": [
+    "historical profile vintages and point-in-time identity",
+    "stock ISIN and issuer/security continuity",
+    "ticker reuse, replacement, delisted security identity, and population completeness",
+    "publication/knowledge time and profile revision semantics"
+  ],
+  "admission": {
+    "current_identity_cross_check": "SUPPORTED_BOUNDED",
+    "historical_research_admission": "BLOCKED",
+    "forbidden_use": "historical issuer/ISIN substitution or PIT universe admission"
+  },
+  "protected_boundary": "CLOSED",
+  "raw_artifact": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-official-profile-detail-surface/alpha_idx_profile_detail_surface_all_observed_union.json"
+}
