@@ -95,6 +95,39 @@ def test_cause_binding_exposes_retry_transition_for_partial_obligation() -> None
         reconciliation_required=False,
     )
     causes = derive_execution_causes(result, state_before=before)
+    assert causes[0].position_before_shares == 0
+    assert causes[0].position_after_shares == 100
+    assert causes[0].exposure_delta_shares == 100
     binding = build_cause_obligation_binding_v1(result, causes)
     assert binding["joins"][0]["obligation_id"] == obligation.obligation_id
     assert binding["joins"][0]["next_decision_action"] == "RETRY_OBLIGATION"
+
+
+def test_execution_cause_reports_zero_after_full_exit_when_state_is_bound() -> None:
+    before = PaperPortfolioState(
+        "2026-09-01",
+        1_000_000.0,
+        (PaperPosition("BBCA", 100),),
+    )
+    after = PaperPortfolioState("2026-09-02", 1_001_000.0, ())
+    result = ExecutionResult(
+        execution_session_date="2026-09-02",
+        state_before_hash=paper_state_hash(before),
+        state_after=after,
+        fills=(
+            FillRecord(
+                "SELL", "BBCA", 100, 100, 10_000.0, 10_000.0,
+                0.0, 0.0, 1_000.0, "SIMULATED_FILLED", None,
+            ),
+        ),
+        stamp_duty_idr=0.0,
+        gross_turnover_idr=1_000.0,
+        pending_transition_count=0,
+        reconciliation_required=False,
+    )
+
+    causes = derive_execution_causes(result, state_before=before)
+
+    assert causes[0].position_before_shares == 100
+    assert causes[0].position_after_shares == 0
+    assert causes[0].exposure_delta_shares == -100

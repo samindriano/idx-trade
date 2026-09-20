@@ -72,6 +72,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - `RECONCILIATION_RESULT-V1` verification now validates canonical dates,
   hash-shaped provenance fields, normalized ticker sets, coverage inclusion,
   and mismatch-row shape before accepting a hash-valid PASS payload;
+- `EXPOSURE_CAUSE-V1` now distinguishes unavailable position state from a
+  bound zero position, so entry and full-exit deltas are explicit `0 -> fill`
+  and `held -> 0` transitions;
 - replay now also cross-checks runtime-lineage contract/artifact links,
   reconciliation CA parents, and evidence/reconciliation session parents;
 - replay validates cause-obligation binding payloads, execution-session scope,

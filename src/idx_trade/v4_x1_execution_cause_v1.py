@@ -76,13 +76,14 @@ def derive_execution_causes(
     causes: list[ExecutionCauseV1] = []
     for index, fill in enumerate(result.fills):
         ticker = canonical_security_identity(fill.ticker)
-        before_shares = before_positions.get(ticker) if state_before is not None else None
-        after_shares = after_positions.get(ticker)
-        delta = (
-            None
-            if before_shares is None
-            else (after_shares or 0) - before_shares
-        )
+        if state_before is None:
+            before_shares = None
+            after_shares = after_positions.get(ticker)
+            delta = None
+        else:
+            before_shares = before_positions.get(ticker, 0)
+            after_shares = after_positions.get(ticker, 0)
+            delta = after_shares - before_shares
         remaining = max(0, int(fill.planned_shares) - int(fill.filled_shares))
         next_action = "RETRY" if remaining > 0 else "NONE"
         identity = {

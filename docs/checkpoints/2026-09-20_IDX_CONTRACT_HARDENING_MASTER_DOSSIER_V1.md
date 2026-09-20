@@ -123,6 +123,8 @@ The isolated lane currently contains:
 - `IDENTITY_CANONICAL-V1` interval/alias/revision validation with unresolved
   identity failure;
 - `EXPOSURE_CAUSE-V1` records attached to quantity-bearing evidence;
+- bound exposure causes explicitly report zero position on new entry and full
+  exit, while preserving `None` only when the before-state is unavailable;
 - `TRANSITION_BINDING-V1` hash-binds Decision identity resolutions and joins
   positive-quantity causes to same-session obligations, preserving explicit
   `RETRY_OBLIGATION` semantics;
