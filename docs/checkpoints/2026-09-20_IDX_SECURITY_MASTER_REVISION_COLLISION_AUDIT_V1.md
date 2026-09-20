@@ -16,6 +16,8 @@ security data and does not call a provider or production path.
 - Probe: `research/idx_security_master_revision_collision_probe_v1.py`
 - Test: `tests/test_idx_security_master_revision_collision_probe_v1.py`
 - Focused result: `1 passed`; `py_compile` and `git diff --check` passed.
+- Adjacent pinned-runtime baseline: universe + Decision V2 + sizing adapter
+  suite `11 passed`.
 
 ## 2. Synthetic collision
 

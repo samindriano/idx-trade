@@ -25,6 +25,9 @@ Test: `tests/test_idx_runtime_config_artifact_lineage_probe_v1.py`
 
 Focused result: `1 passed`; `py_compile` and `git diff --check` passed.
 
+Adjacent pinned-runtime baseline (separate regression suites, no live run):
+operational guard + runtime config + dual calendar + orchestration `43 passed`.
+
 ## 2. Revalidation result
 
 | Check | Result |
