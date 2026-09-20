@@ -9,10 +9,11 @@
    `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
    authority appears.
 2. Tooling/verifier adversarial audit: `SUPPORTED_SCOPED`; synthetic semantic
-   challenger confirms false greens, while the independent formula challenger
-   detects five declared score/mask mutations. The semantic allowlist and
-   verifier-version freshness gaps remain open. Reopen for a reviewed schema
-   allowlist, broader reviewed oracle, or explicit version contract.
+   challenger confirms false greens, the independent formula challenger detects
+   five declared score/mask mutations, and a draft nested allowlist rejects
+   five nested/missing schema mutations. The draft is not integrated and
+   verifier-version freshness remains open. Reopen for independent review,
+   broader oracle coverage, or an explicit version contract.
 3. Common-support methodology: native versus common support, sparse C3 handling,
    and exact one-shot comparison design without opening outcomes. The initial
    structural census is complete; rerun only after policy/source changes.

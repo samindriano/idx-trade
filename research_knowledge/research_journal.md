@@ -141,3 +141,15 @@ checkpoint files; this file records why the next question changed.
   the accepted run uses 150 sessions. This is harness-quality evidence only.
 - Classified `TOOLING-040` as `SUPPORTED_SCOPED`; no formula, verifier, or
   production behavior was changed.
+
+## 2026-09-20 — nested packet schema challenger
+
+- Built a research-only draft exact nested-key allowlist for the current
+  authority packet and compared it with the existing verifier.
+- Baseline passed both layers. The strict draft rejected five declared nested
+  or missing-field mutations; the current verifier accepted four of those and
+  rejected the unknown top-level field.
+- Corrected an initial over-strict draft that confused candidate-specific
+  required fields and H-EXC scalar subforms before accepting the result.
+- Classified `TOOLING-041` as `SUPPORTED_SCOPED`; no production verifier or
+  packet behavior was changed.

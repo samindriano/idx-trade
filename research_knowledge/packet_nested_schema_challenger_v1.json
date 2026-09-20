@@ -1,0 +1,40 @@
+{
+  "schema_version": "IDX_TRADE_PACKET_NESTED_SCHEMA_CHALLENGER_V1",
+  "experiment_id": "TOOLING-041",
+  "status": "PASS_NESTED_ALLOWLIST_CHALLENGE",
+  "scope": "OUTCOME_BLIND_SYNTHETIC_PACKET_FIXTURES_ONLY",
+  "code": {
+    "path": "research/alpha_packet_nested_schema_challenger_v1.py",
+    "sha256": "b3a621052952dda41619a55e4939f90f7c964882367eae3a2b5ce3eb2caf27a1"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_packet_nested_schema_challenger_v1.json",
+    "sha256": "2e1a8ef14427bd8226a16c160bc70f7e72aefb943fb59ec621310069d2163429"
+  },
+  "packet_sha256": "f7dee5cefd87538cad4e1e4028c5dc35abe0610bf0cb089d29fad2f0f47dfb2e",
+  "current_verifier_sha256": "5bb75f7ce4dd3e50d922d41b4793b52a02217d9cb5584be98f09cf7f12e764f7",
+  "trial_count": 6,
+  "strict_allowlist": {
+    "baseline": "PASS",
+    "unknown_candidate_nested_field": "FAIL",
+    "unknown_top_level_field": "FAIL",
+    "unknown_bounded_admission_field": "FAIL",
+    "unknown_provenance_timeline_field": "FAIL",
+    "missing_required_candidate_field": "FAIL"
+  },
+  "current_verifier_behavior": {
+    "baseline": "PASS",
+    "unknown_candidate_nested_field": "PASS",
+    "unknown_top_level_field": "FAIL",
+    "unknown_bounded_admission_field": "PASS",
+    "unknown_provenance_timeline_field": "PASS",
+    "missing_required_candidate_field": "PASS"
+  },
+  "interpretation": "A draft strict nested allowlist rejects five schema mutations that the current verifier accepts, while preserving the current top-level rejection. The draft is not integrated.",
+  "limitations": [
+    "The allowlist is reviewed only within this isolated research lane.",
+    "Value semantics, type ranges, and verifier-version freshness remain open.",
+    "No provider, cloud, canonical, protected, or production state was accessed or changed."
+  ],
+  "reopen_trigger": "Independent review and explicit adoption decision for a nested schema/version contract."
+}

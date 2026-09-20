@@ -57,6 +57,10 @@
   constructor replay detects five declared semantic mutations across C1/C2/C4
   and eligibility. This strengthens mutation sensitivity only; it does not
   upgrade implementation reproducibility into scientific validity.
+- A draft strict nested packet allowlist rejects five declared unknown/missing
+  nested schema cases that the current verifier accepts, while preserving the
+  baseline and top-level rejection. It is a research contract only; value
+  semantics and verifier-version freshness remain unresolved.
 
 ## What failed, is redundant, or is superseded
 

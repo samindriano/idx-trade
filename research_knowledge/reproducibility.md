@@ -147,6 +147,21 @@ access absence.
 - This is mutation-sensitivity evidence only. It does not certify the admitted
   panel, PIT, corporate-action basis, capacity, or predictive validity.
 
+## Nested packet schema challenger
+
+- Script: `research/alpha_packet_nested_schema_challenger_v1.py`.
+- Durable result: `research_knowledge/packet_nested_schema_challenger_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`.
+- Script SHA-256:
+  `b3a621052952dda41619a55e4939f90f7c964882367eae3a2b5ce3eb2caf27a1`.
+- External result SHA-256:
+  `2e1a8ef14427bd8226a16c160bc70f7e72aefb943fb59ec621310069d2163429`.
+- The draft strict allowlist passed the baseline and rejected five declared
+  nested/missing schema mutations; the current verifier rejected only the
+  unknown top-level mutation and accepted the four nested/missing cases.
+- The draft is not integrated. Value semantics, type/range rules, and expected
+  verifier-version freshness remain open.
+
 ## Eligibility provenance history
 
 - Script: `research/alpha_eligibility_provenance_history_v1.py`.

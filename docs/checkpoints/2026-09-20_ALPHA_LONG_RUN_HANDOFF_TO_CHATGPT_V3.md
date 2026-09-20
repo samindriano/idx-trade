@@ -100,8 +100,8 @@ Current registry counts after the provenance addendum:
 
 | Registry | Count |
 |---|---:|
-| Experiments | 37 |
-| Findings | 28 |
+| Experiments | 38 |
+| Findings | 29 |
 | No-retry entries | 15 |
 | Source-capability entries | 17 |
 | Protected payloads persisted | `false` |
@@ -313,7 +313,21 @@ Evidence: `TOOLING-040`,
 `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`,
 `research_knowledge/formula_mutation_challenger_v1.json`.
 
-### 4.11 Tooling, firewall, and lane controls
+### 4.11 Nested packet schema challenge
+
+A research-only draft exact nested-key allowlist was compared with the current
+authority-packet verifier. The baseline passed both layers. The strict draft
+rejected five declared nested/missing schema mutations, while the current
+verifier rejected only the unknown top-level mutation and accepted four nested
+or missing-field mutations. This makes the nested false-green surface
+concrete, but the draft is not integrated and does not solve value semantics or
+verifier-version freshness.
+
+Evidence: `TOOLING-041`,
+`docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`,
+`research_knowledge/packet_nested_schema_challenger_v1.json`.
+
+### 4.12 Tooling, firewall, and lane controls
 
 The run tested its own research controls with synthetic fixtures:
 
@@ -328,6 +342,8 @@ The run tested its own research controls with synthetic fixtures:
   re-entry-opening mutations were detected.
 - independent formula mutation challenger: baseline PASS and 5/5 declared
   semantic mutations detected on a synthetic fixture.
+- nested packet schema challenger: baseline PASS; draft strict allowlist
+  rejected 5/5 declared nested/missing mutations.
 
 The semantic challenger also found real limitations:
 
@@ -487,6 +503,7 @@ Primary navigation files:
 - `docs/checkpoints/2026-09-20_ALPHA_HISTORICAL_ARCHAEOLOGY_AUDIT_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_TOOLING_SEMANTIC_CHALLENGER_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_FORMULA_MUTATION_CHALLENGER_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_PACKET_NESTED_SCHEMA_CHALLENGER_RESULT_V1.md`
 
 Machine evidence:
 
@@ -501,6 +518,7 @@ Machine evidence:
 - `research_knowledge/tooling_mutation_audit_v1.json`
 - `research_knowledge/tooling_semantic_challenger_v1.json`
 - `research_knowledge/formula_mutation_challenger_v1.json`
+- `research_knowledge/packet_nested_schema_challenger_v1.json`
 
 ## 11. Final handoff sentence
 
