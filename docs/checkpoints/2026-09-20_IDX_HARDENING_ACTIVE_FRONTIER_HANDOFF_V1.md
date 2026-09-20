@@ -126,11 +126,12 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
-- current HEAD full repository regression via `python -m pytest -q` passed at
-  100% with only three pre-existing pandas `FutureWarning` records; two
-  earlier reruns encountered unrelated Windows `PermissionError [WinError 5]`
-  atomic-replace fixture flakes in capture and official-open tests, and each
-  targeted recheck passed;
+- the latest full repository regression via `python -m pytest -q` reached the
+  final suite but hit the known unrelated Windows `PermissionError [WinError
+  5]` atomic-replace fixture flake in `official_open_evidence_v1.py`; the
+  failing test, CA timing suite, and orchestration suite passed in targeted
+  recheck. The last clean full-suite run was before this CA-only hardening
+  commit; no current full-suite PASS is claimed for this commit;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
 

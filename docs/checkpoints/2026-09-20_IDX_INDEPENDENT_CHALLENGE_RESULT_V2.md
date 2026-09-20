@@ -44,11 +44,12 @@ scheduler, production, or alpha state.
 python -m pytest -q
 ```
 
-The current HEAD full-suite run is PASS at 100%, with only the three
-pre-existing pandas `FutureWarning` records. Two earlier reruns hit unrelated
-Windows `PermissionError [WinError 5]` atomic-replace fixture flakes; targeted
-rechecks of both failing tests passed, and the later clean run completed the
-full regression.
+The latest full-suite run reached the final suite but hit the known unrelated
+Windows `PermissionError [WinError 5]` atomic-replace fixture flake in
+`official_open_evidence_v1.py`. The failing test, CA timing suite, and
+orchestration suite passed in targeted recheck. The last clean full-suite run
+was before this CA-only hardening commit; no current full-suite PASS is claimed
+for this commit.
 Focused new evidence is in:
 
 - `tests/test_e2e_paper_operational_controller_v1.py`;
