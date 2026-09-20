@@ -148,12 +148,20 @@ def test_retry_block_and_explicit_cancel_preserve_conservation():
         seat_policy=_seat_policy(),
     )
     replayed_cancel = cancel_remaining(
-        retried,
+        canceled,
         event_id="CANCEL-1",
         session_date="2026-09-24",
         reason="TARGET_REVERSAL",
         seat_policy=_seat_policy(),
     )
+    with pytest.raises(DecisionV1Error, match="EVENT_CONFLICT"):
+        cancel_remaining(
+            canceled,
+            event_id="CANCEL-1",
+            session_date="2026-09-24",
+            reason="TARGET_REVERSAL",
+            seat_policy=_seat_policy("DIFFERENT_AUTHORIZED_REASON"),
+        )
 
     assert blocked.status == "BLOCKED"
     assert retried.status == "PARTIAL"
@@ -299,6 +307,41 @@ def test_payload_round_trip_preserves_hash_and_lineage():
 
     assert reloaded == obligation
     assert obligation_hash(reloaded) == obligation_hash(obligation)
+
+
+def test_persisted_close_policy_envelope_is_restart_verifiable():
+    obligation = cancel_remaining(
+        apply_fill(
+            _planned(),
+            event_id="FILL-POLICY-REPLAY",
+            session_date="2026-09-21",
+            filled_shares=2_400,
+            reason="PARTIAL",
+        ),
+        event_id="CANCEL-POLICY-REPLAY",
+        session_date="2026-09-22",
+        reason="EXPLICIT_RELINQUISH",
+        status="RELINQUISHED",
+        seat_policy=_seat_policy(),
+    )
+
+    tampered = obligation_payload(obligation)
+    tampered["event_history"][-1]["policy_payload"] = _seat_policy(
+        "OTHER_REASON"
+    ).payload()
+    with pytest.raises(
+        DecisionV1Error,
+        match="QUANTITY_OBLIGATION_CLOSE_POLICY_HASH_MISMATCH",
+    ):
+        obligation_from_payload(tampered)
+
+    missing = obligation_payload(obligation)
+    missing["event_history"][-1].pop("policy_payload")
+    with pytest.raises(
+        DecisionV1Error,
+        match="QUANTITY_OBLIGATION_CLOSE_POLICY_PAYLOAD_REQUIRED",
+    ):
+        obligation_from_payload(missing)
 
 
 def test_hash_valid_noncanonical_obligation_payload_fails_closed():

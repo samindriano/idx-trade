@@ -11,12 +11,14 @@ from dataclasses import dataclass, replace
 from datetime import date
 import hashlib
 import json
+from copy import deepcopy
 from typing import Any, Literal
 
 from .v4_x1_decision_v1_contract import DecisionV1Error
 from .v4_x1_decision_seat_policy_v1 import (
     DecisionSeatClosePolicyV1,
     authorize_decision_seat_close,
+    verify_decision_seat_policy_payload,
 )
 
 
@@ -89,6 +91,7 @@ class ObligationEvent:
     reason: str = ""
     parent_state_sha256: str | None = None
     policy_sha256: str | None = None
+    policy_payload: dict[str, Any] | None = None
 
     def validate(self) -> "ObligationEvent":
         _text(self.event_id, "QUANTITY_OBLIGATION_EVENT_ID_INVALID")
@@ -124,6 +127,34 @@ class ObligationEvent:
                 raise DecisionV1Error(
                     "QUANTITY_OBLIGATION_CLOSE_POLICY_PROVENANCE_REQUIRED"
                 )
+            if self.policy_payload is None:
+                raise DecisionV1Error(
+                    "QUANTITY_OBLIGATION_CLOSE_POLICY_PAYLOAD_REQUIRED"
+                )
+            verified_policy = verify_decision_seat_policy_payload(
+                self.policy_payload
+            )
+            if verified_policy["policy_sha256"] != self.policy_sha256:
+                raise DecisionV1Error(
+                    "QUANTITY_OBLIGATION_CLOSE_POLICY_HASH_MISMATCH"
+                )
+            required_status = (
+                "RELINQUISHED"
+                if self.event_type == "RELINQUISH"
+                else "CANCELED"
+            )
+            if required_status not in verified_policy["allowed_close_statuses"]:
+                raise DecisionV1Error(
+                    "QUANTITY_OBLIGATION_CLOSE_POLICY_STATUS_NOT_AUTHORIZED"
+                )
+            if self.reason not in verified_policy["allowed_close_reasons"]:
+                raise DecisionV1Error(
+                    "QUANTITY_OBLIGATION_CLOSE_POLICY_REASON_NOT_AUTHORIZED"
+                )
+        elif self.policy_sha256 is not None or self.policy_payload is not None:
+            raise DecisionV1Error(
+                "QUANTITY_OBLIGATION_POLICY_PROVENANCE_TYPE_MISMATCH"
+            )
         if self.policy_sha256 is not None:
             policy_sha = _text(
                 self.policy_sha256,
@@ -433,6 +464,7 @@ def cancel_remaining(
         status=status,
         reason=reason,
     )
+    policy_payload = seat_policy.payload() if seat_policy is not None else None
     event_type = "RELINQUISH" if status == "RELINQUISHED" else "CANCEL"
     event_id_text = _text(event_id, "QUANTITY_OBLIGATION_EVENT_ID_INVALID")
     reason_text = _text(reason, "QUANTITY_OBLIGATION_REASON_INVALID")
@@ -443,6 +475,8 @@ def cancel_remaining(
                 or existing.session_date != session_date
                 or existing.reason != reason_text
                 or existing.parent_state_sha256 != parent_state_sha256
+                or existing.policy_sha256 != policy_sha256
+                or existing.policy_payload != policy_payload
             ):
                 raise DecisionV1Error("QUANTITY_OBLIGATION_EVENT_CONFLICT")
             return obligation
@@ -461,6 +495,7 @@ def cancel_remaining(
             reason=reason_text,
             parent_state_sha256=parent_state_sha256,
             policy_sha256=policy_sha256,
+            policy_payload=policy_payload,
         ),
         next_status=status,
         next_remaining=0,
@@ -501,6 +536,11 @@ def obligation_payload(obligation: QuantityObligation) -> dict[str, Any]:
                     if event.policy_sha256 is not None
                     else {}
                 ),
+                **(
+                    {"policy_payload": deepcopy(event.policy_payload)}
+                    if event.policy_payload is not None
+                    else {}
+                ),
             }
             for event in obligation.event_history
         ],
@@ -519,6 +559,7 @@ def _event_from_payload(value: object) -> ObligationEvent:
         reason=str(value.get("reason") or ""),
         parent_state_sha256=value.get("parent_state_sha256"),
         policy_sha256=value.get("policy_sha256"),
+        policy_payload=value.get("policy_payload"),
     )
     return event.validate()
 
