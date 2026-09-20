@@ -88,4 +88,3 @@ No remediation was applied in this lane.
 ## No-retry boundary
 
 Do not rerun the same four trigger shapes as if they were independent bugs. Reopen this finding only with evidence about a different state owner, a quantity-aware artifact, a multi-session accounting interaction, or an authorized implementation change.
-
