@@ -208,7 +208,8 @@ checkpoint files; this file records why the next question changed.
   natural calendar year.
 - C1/C2/C4 show mild 2026 partial-year turnover increases versus 2022; C3
   has no usable Top-30 date before 2025 and its long persistence/high HHI are
-  support-driven.
+  support-sensitive; current evidence does not establish sparse support as the
+  cause of its turnover/persistence pattern.
 - Corrected the initial output contract so between-year Jaccard is `null` and
   marked non-comparable when either year has no selection support.
 - No era, policy, candidate status, or outcome was selected or accessed.
@@ -277,3 +278,58 @@ checkpoint files; this file records why the next question changed.
   that C3's low turnover and persistence are support-sensitive.
 - The result is structural/correlational only. No candidate, policy, era, or
   protected outcome was selected or accessed.
+
+## 2026-09-20 — eligibility versus feature warm-up
+
+- Decomposed finite candidate support by the current
+  `eligible_decision_universe` mask. Every finite C1/C2/C3/C4 score is inside
+  the mask; there are no finite scores outside eligibility.
+- Eligible-row missingness is C1 `15518`, C2 `0`, C3 `279767`, and C4 `438`.
+  This separates security eligibility from candidate feature warm-up/source
+  availability and shows that C3 sparsity is within eligible rows on the
+  observed artifact.
+- This is an implementation/data-surface distinction only. It does not bind
+  the eligibility policy, historical population completeness, PIT/report
+  availability, identity, CA basis, or predictive validity.
+
+## 2026-09-20 — independent red-team adjudication
+
+- Confirmed the CNTX population boundary: 458 ACTIVE anchor rows from
+  2021-04-29 through 2024-08-01 are absent from the 981,940-row panel, and
+  the replay seeds its ticker universe from panel tickers. Zero key mismatch
+  therefore proves observed-panel replay reproducibility only, not historical
+  population completeness or survivorship safety.
+- Reproduced five stale current-tree registry-reference occurrences and
+  repaired them to existing canonical artifacts; the strengthened verifier
+  surfaced one additional stale occurrence and repaired it too. Six unique
+  unavailable historical commit-qualified refs are now explicitly
+  ledger-classified as unavailable; the knowledge verifier fails closed on
+  unclassified reference rot.
+- Independent C3 support/turnover association is approximately Spearman
+  `-0.3545581106` over 271 usable same-year pairs. C3 is support-sensitive,
+  but sparse support is not established as the cause of turnover/persistence.
+- Reclassified C2 quadrant shares as formula component/anatomy evidence rather
+  than independent mechanism confirmation because the sign behavior is largely
+  implied by `ret_5 * log(abnormal turnover)` ordering.
+- Added and passed a full eligible-mask stored/recomputed finiteness assertion:
+  C1/C2/C4 mismatch counts are `0/0/0`. These remain implementation checks,
+  not PIT, population, or predictive admission.
+
+## 2026-09-20 — panel versus anchor state census
+
+- Compared the panel with every regular ACTIVE/NO_TRADE anchor key. The anchor
+  has `982398` ACTIVE and `121666` NO_TRADE rows; the panel overlaps all
+  `981940` ACTIVE keys and zero NO_TRADE keys.
+- `CNTX` is the only ACTIVE ticker absent from the panel, while `34` anchor
+  tickers are NO_TRADE-only. This clarifies that the panel is an active-trade
+  subset of the observed anchor surface, not proof of a complete historical
+  universe or survivorship safety.
+
+## 2026-09-20 — anchor state-transition semantics
+
+- Ordered `ACTIVE`/`NO_TRADE` states by ticker across the 1,260-session anchor
+  surface. `583/980` tickers switch state; the median changed-ticker count is
+  `10`, the 95th percentile is `212.9`, and the maximum is `374` transitions.
+- The sequence is state geometry, not lifecycle proof. No transition was mapped
+  to suspension, delisting, relisting, ticker reuse, issuer change, or a clean
+  interval without state and identity authority.

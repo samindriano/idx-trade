@@ -11,14 +11,18 @@
    rank separation but do not explain most shared overlap; C2's sign-consistent
    mixture is now mapped without splitting the candidate. A separate
    breadth-versus-turnover audit rules out a strong common breadth explanation
-   for C1/C2/C4 churn while strengthening the support-driven interpretation of
-   sparse C3.
+   for C1/C2/C4 churn. A new eligibility-versus-feature audit separates the
+   eligibility mask from candidate-specific finite support: C3 is sparse within
+   eligible rows, but causation is not established.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a
    pre-protocol 20-in-60 liquidity rule, but current classification remains
    `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
    authority appears.
+   The anchor-state census adds a separate identity boundary: ACTIVE/NO_TRADE
+   sequences are highly oscillatory and cannot be treated as lifecycle or
+   issuer transitions without identity/publication semantics.
 3. Tooling/verifier adversarial audit: `SUPPORTED_SCOPED`; synthetic semantic
    challenger confirms false greens, the independent formula challenger detects
    five declared score/mask mutations, a draft nested allowlist rejects five

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_ELIGIBILITY_FEATURE_WARMUP_SEPARATION",
+  "scope": "Outcome-blind eligibility-gating versus candidate feature warm-up decomposition",
+  "protected_boundary": "CLOSED",
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "rows": 981940,
+    "ticker_count": 945,
+    "date_count": 1260,
+    "eligible_rows": 310761
+  },
+  "interpretation": "All finite C1/C2/C3/C4 scores are inside the current eligibility mask. Within eligible rows, remaining missingness is candidate-specific feature availability/warm-up rather than additional score support outside eligibility.",
+  "candidates": {
+    "C1": {
+      "all_finite_rows": 295243,
+      "eligible_finite_rows": 295243,
+      "eligible_missing_rows": 15518,
+      "outside_eligible_finite_rows": 0,
+      "tickers_with_both_first_dates": 704,
+      "tickers_finite_after_first_eligibility": 532,
+      "median_first_finite_minus_eligible_days": 4.0,
+      "max_first_finite_minus_eligible_days": 1821
+    },
+    "C2": {
+      "all_finite_rows": 310761,
+      "eligible_finite_rows": 310761,
+      "eligible_missing_rows": 0,
+      "outside_eligible_finite_rows": 0,
+      "tickers_with_both_first_dates": 711,
+      "tickers_finite_after_first_eligibility": 0,
+      "median_first_finite_minus_eligible_days": 0.0,
+      "max_first_finite_minus_eligible_days": 0
+    },
+    "C3": {
+      "all_finite_rows": 30994,
+      "eligible_finite_rows": 30994,
+      "eligible_missing_rows": 279767,
+      "outside_eligible_finite_rows": 0,
+      "tickers_with_both_first_dates": 265,
+      "tickers_finite_after_first_eligibility": 245,
+      "median_first_finite_minus_eligible_days": 1322.0,
+      "max_first_finite_minus_eligible_days": 1743
+    },
+    "C4": {
+      "all_finite_rows": 310323,
+      "eligible_finite_rows": 310323,
+      "eligible_missing_rows": 438,
+      "outside_eligible_finite_rows": 0,
+      "tickers_with_both_first_dates": 711,
+      "tickers_finite_after_first_eligibility": 2,
+      "median_first_finite_minus_eligible_days": 0.0,
+      "max_first_finite_minus_eligible_days": 923
+    }
+  },
+  "code": {
+    "script": "research/alpha_eligibility_feature_warmup_audit_v1.py",
+    "code_sha256": "a703573c66ba05c98d2616f5e42ab2637f6f34740692d0d4fbdd078d74ee5311",
+    "external_result": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-eligibility-feature-warmup/eligibility_feature_warmup_v1.json",
+    "external_result_sha256": "f5d98741ad16ed3171ec7b107d787138f83417655161e02ce2520a86aa81d481"
+  },
+  "limitations": "This separates implementation gating from feature finiteness on the observed panel. It does not establish the authority of the eligibility policy, historical population completeness, PIT/report availability, identity continuity, CA basis, or predictive validity."
+}

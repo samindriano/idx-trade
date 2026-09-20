@@ -47,7 +47,8 @@ causal or predictive evidence.
 
 C3's 10.18% exact boundary-tie fraction is consistent with its rank-aggregated,
 sparse financial surface. Its low turnover and apparently stable boundary are
-support-driven and cannot be treated as signal quality.
+support-sensitive, with causation not established, and cannot be treated as
+signal quality.
 
 Calendar-year medians show no universal monotone drift:
 

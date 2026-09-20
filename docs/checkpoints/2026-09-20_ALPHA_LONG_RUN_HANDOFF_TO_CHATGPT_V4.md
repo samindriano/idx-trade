@@ -263,8 +263,9 @@ Fixed Top-30 calendar-year mechanics then showed:
   sessions.
 
 These are descriptive mechanics. C3's apparent persistence/concentration is
-support-driven. No era, policy, candidate status, capacity, orthogonality, or
-predictive interpretation was admitted.
+support-sensitive, but current evidence does not establish sparse support as
+the cause of its turnover/persistence pattern. No era, policy, candidate
+status, capacity, orthogonality, or predictive interpretation was admitted.
 
 The follow-up score-separation diagnostic added a distinct geometry view:
 
@@ -289,13 +290,13 @@ interaction between `ret_5` and abnormal-turnover log rather than a single
 component. This strengthens the shared-reversal caution but is not predictive
 redundancy or scientific validation.
 
-The C2 quadrant addendum shows that fixed Top-30 slots are a two-mode,
-sign-consistent mixture: `68.68%` positive-return/high-activity and `31.32%`
-negative-return/low-activity. Cross-sign quadrants receive zero slots because
-their product is negative; that is a formula consequence, not a negative
-predictive result. The mix shifts to `59.90%/40.10%` in 2026 partial year from
-`78.80%/21.20%` in 2025. This remains structural composition only and does
-not justify splitting C2 or claiming regime returns.
+The C2 quadrant addendum is retained as component/anatomy evidence, not
+independent mechanism confirmation: fixed Top-30 slots are `68.68%`
+positive-return/high-activity and `31.32%` negative-return/low-activity, while
+cross-sign zero selection is largely implied by the product sign. The mix shifts
+to `59.90%/40.10%` in 2026 partial year from `78.80%/21.20%` in 2025. This
+remains structural formula composition only and does not justify splitting C2 or
+claiming regime returns.
 
 ## 4. Tooling and audit-control work
 

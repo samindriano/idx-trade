@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_FORMULA_MISSINGNESS_MATCH",
+  "scope": "Outcome-blind full-mask companion check for fixed C1/C2/C4 component anatomy",
+  "protected_boundary": "CLOSED",
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "feature_rows": 981940,
+    "panel_rows": 981940,
+    "official_session_count": 1260
+  },
+  "candidates": {
+    "C1": {
+      "eligible_rows": 310761,
+      "stored_finite_rows": 295243,
+      "recomputed_finite_rows": 295243,
+      "missingness_mismatch_rows": 0,
+      "formula_missingness_match": true
+    },
+    "C2": {
+      "eligible_rows": 310761,
+      "stored_finite_rows": 310761,
+      "recomputed_finite_rows": 310761,
+      "missingness_mismatch_rows": 0,
+      "formula_missingness_match": true
+    },
+    "C4": {
+      "eligible_rows": 310761,
+      "stored_finite_rows": 310323,
+      "recomputed_finite_rows": 310323,
+      "missingness_mismatch_rows": 0,
+      "formula_missingness_match": true
+    }
+  },
+  "all_candidates_match": true,
+  "code": {
+    "verifier": "research/verify_alpha_candidate_component_anatomy_missingness_v1.py",
+    "verifier_sha256": "bf823f9d2f523e501ba0107552b549cec7958d89bf24c5af014543b942516600",
+    "producer_helper": "research/alpha_candidate_component_anatomy_v1.py",
+    "external_result": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-component-anatomy-redteam/alpha_candidate_component_anatomy_missingness_v1.json",
+    "external_result_sha256": "ce7c6d49d279cb1eafdc24a3c880390e4c58fec1a425429e2ebc9e02d804a12d"
+  },
+  "interpretation": "The finite-support equality relied upon by component anatomy is accompanied by a full eligible-mask finiteness equality. This is implementation consistency only; it does not prove PIT, population completeness, survivorship, CA basis, or predictive validity."
+}

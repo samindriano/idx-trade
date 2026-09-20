@@ -60,7 +60,9 @@ wide-support candidates but is much smaller for sparse C3:
 | C3 | — | 0.0164 | 0.0130 |
 | C4 | 0.0741 | 0.0789 | 0.0823 |
 
-C3's low displacement is support-driven and not evidence of a superior signal.
+C3's low displacement is support-sensitive. Current evidence does not establish
+sparse support as the cause of its turnover/persistence pattern or displacement,
+and this is not evidence of a superior signal.
 
 ## Adjudication
 

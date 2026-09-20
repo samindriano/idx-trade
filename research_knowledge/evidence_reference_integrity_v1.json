@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_SCOPED",
+  "scope": "Durable JSONL registry evidence references only",
+  "generated_date": "2026-09-20",
+  "policy": {
+    "current_tree_refs": "must resolve in this checkout",
+    "absolute_refs": "must resolve at their recorded external path",
+    "commit_qualified_refs": "must resolve in the local Git object database or be explicitly classified below",
+    "unavailable_refs_are_not_evidence": true
+  },
+  "repaired_refs": [
+    {
+      "registry": "experiment_registry.jsonl",
+      "ref_before": "docs/checkpoints/2026-09-20_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+      "ref_after": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md"
+    },
+    {
+      "registry": "experiment_registry.jsonl",
+      "record_id": "COMMON-SUPPORT-033",
+      "ref_before": "docs/checkpoints/2026-09-20_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+      "ref_after": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-19_ALPHA_FUTURE_EVALUATION_PACKET_V2.md"
+    },
+    {
+      "registry": "experiment_registry.jsonl",
+      "record_id": "COMMON-SUPPORT-033",
+      "ref_before": "docs/checkpoints/2026-09-19_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md",
+      "ref_after": "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md"
+    },
+    {
+      "registry": "experiment_registry.jsonl",
+      "ref_before": "docs/checkpoints/2026-09-20_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md",
+      "ref_after": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md"
+    },
+    {
+      "registry": "findings_index.jsonl",
+      "ref_before": "docs/checkpoints/2026-09-19_ALPHA_REENTRY_QUEUE_V1.md",
+      "ref_after": "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md"
+    },
+    {
+      "registry": "no_retry_registry.jsonl",
+      "ref_before": "docs/checkpoints/2026-09-19_ALPHA_REENTRY_QUEUE_V1.md",
+      "ref_after": "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md",
+      "classification": "STALE_PATH_REPAIRED",
+      "canonical_artifact": "docs/checkpoints/2026-09-19_REENTRY_QUEUE_V1.md"
+    }
+  ],
+  "unavailable_refs": [
+    {
+      "ref": "origin/1ebced27:research/alpha_stage_a_v2.py",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "research/alpha_stage_a_v2.py"
+    },
+    {
+      "ref": "origin/26aac816:docs/RESEARCH_SPECIFICATION_V1.md",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database; no exact current-tree byte replacement is asserted.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md"
+    },
+    {
+      "ref": "origin/26aac816:src/idx_trade/research_features.py",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database; the current implementation lineage is not byte-equivalence evidence.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "research/alpha_stage_a_v2.py"
+    },
+    {
+      "ref": "origin/2b056802:research/alpha_stage_a_v1.py",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "research/alpha_stage_a_v1.py"
+    },
+    {
+      "ref": "origin/65233e195:src/idx_trade/security_master.py",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database; current security-master code is not historical snapshot proof.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "src/idx_trade/security_master.py"
+    },
+    {
+      "ref": "origin/a02a1547:docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md",
+      "classification": "UNAVAILABLE",
+      "reason": "The historical commit object is not present in this checkout's Git object database.",
+      "replacement_status": "SUPERSEDED_OR_NONEXACT",
+      "current_tree_replacement": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md"
+    }
+  ]
+}

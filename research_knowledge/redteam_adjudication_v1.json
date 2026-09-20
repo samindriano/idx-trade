@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_SCOPED_ADJUDICATION",
+  "date": "2026-09-20",
+  "scope": "Independent red-team adjudication of population boundary, registry references, C3 mechanics, C2 quadrant anatomy, and component missingness",
+  "protected_boundary": "CLOSED",
+  "cntx_population_gap": {
+    "panel_rows": 981940,
+    "panel_ticker_count": 945,
+    "active_anchor_rows": 982398,
+    "active_anchor_ticker_count": 946,
+    "cntx_active_anchor_rows": 458,
+    "cntx_active_anchor_min": "2021-04-29",
+    "cntx_active_anchor_max": "2024-08-01",
+    "cntx_panel_rows": 0,
+    "all_active_anchor_only_rows_are_cntx": true,
+    "replay_universe_seed": "panel unique tickers",
+    "proven": "Observed-panel replay completeness and panel-to-anchor overlap only.",
+    "not_proven": "Historical population completeness, survivorship safety, or inclusion of panel-absent securities."
+  },
+  "c3_support_turnover": {
+    "usable_same_year_consecutive_session_pairs": 271,
+    "spearman_finite_support_count_vs_turnover": -0.35455811064257575,
+    "pearson_finite_support_count_vs_turnover": -0.21374288547799766,
+    "interpretation": "C3 behavior is support-sensitive, but current evidence does not establish sparse support as the cause of its turnover or persistence pattern.",
+    "causal_inference": "FORBIDDEN"
+  },
+  "c2_quadrants": {
+    "formula": "ret_5 * log(abnormal turnover)",
+    "usable_dates": 1201,
+    "positive_return_positive_activity_selected_share": 0.6868,
+    "negative_return_negative_activity_selected_share": 0.3132,
+    "cross_sign_selected_share": 0.0,
+    "classification": "COMPONENT_ANATOMY_NOT_INDEPENDENT_MECHANISM_CONFIRMATION",
+    "reason": "The zero cross-sign selection and positive/positive versus negative/negative sign modes are largely implied by product ordering when enough positive-score names exist."
+  },
+  "component_missingness": {
+    "artifact": "research_knowledge/candidate_component_anatomy_missingness_v1.json",
+    "c1_mismatch_rows": 0,
+    "c2_mismatch_rows": 0,
+    "c4_mismatch_rows": 0,
+    "status": "ASSERTED_AND_PASSED"
+  },
+  "reference_integrity": {
+    "stale_current_tree_occurrences_repaired": 6,
+    "challenger_reported_stale_occurrences": 5,
+    "additional_verifier_discovered_stale_occurrences": 1,
+    "unavailable_historical_git_refs_classified": 6,
+    "verifier": "research/verify_alpha_knowledge_base_v1.py",
+    "status": "PASS_SCOPED"
+  },
+  "interpretation": "No finding changes candidate admission, eligibility policy, population authority, predictive access, canonical data, provider, cloud, capture, telemetry, scheduler, or production state."
+}

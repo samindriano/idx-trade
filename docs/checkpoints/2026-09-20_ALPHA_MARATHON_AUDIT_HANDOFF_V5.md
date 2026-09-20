@@ -125,7 +125,8 @@ of full population coverage.
 Calendar-year fixed Top-30 mechanics show mild 2026 partial-year turnover
 increases versus 2022 for C1/C2/C4: 43.78%/35.55%/25.47% versus
 41.21%/33.39%/23.32%. C3’s apparent persistence and concentration are
-support-driven. Score-edge geometry gives median normalized boundary gaps of
+support-sensitive, but causation is not established. Score-edge geometry gives
+median normalized boundary gaps of
 0.01089 (C1), 0.05912 (C2), 0.01810 (C3), and 0.00936 (C4); gap-to-next-
 turnover associations are modest and not causal.
 

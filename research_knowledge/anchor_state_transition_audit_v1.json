@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_ANCHOR_STATE_TRANSITION_CENSUS",
+  "scope": "Observed ACTIVE/NO_TRADE transition geometry; no lifecycle or identity inference",
+  "protected_boundary": "CLOSED",
+  "inputs": {
+    "anchor_sha256": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e",
+    "anchor_rows": 1104064,
+    "ticker_count": 980
+  },
+  "first_last_profiles": {
+    "ACTIVE->ACTIVE": 799,
+    "ACTIVE->NO_TRADE": 99,
+    "NO_TRADE->ACTIVE": 31,
+    "NO_TRADE->NO_TRADE": 51
+  },
+  "state_change_ticker_count": 583,
+  "transition_ticker_median": 10.0,
+  "transition_ticker_q95": 212.9,
+  "maximum_transitions": 374,
+  "maximum_active_blocks": 187,
+  "maximum_no_trade_blocks": 188,
+  "tickers_over_100_transitions": 91,
+  "interpretation": "Repeated ACTIVE/NO_TRADE changes are observed state geometry. They do not establish suspension, delisting, relisting, ticker reuse, issuer continuity, or lifecycle semantics.",
+  "code": {
+    "script": "research/alpha_anchor_state_transition_audit_v1.py",
+    "code_sha256": "1b7b0a6e2d0f1dcddd914665c1e3eedc7b7ff737c228c8510e75199b7d7cee5f",
+    "external_result": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-anchor-state-transitions/anchor_state_transition_audit_v1.json",
+    "external_result_sha256": "fa22bc9f2b5c9d81d46e018b5685827c054da6bfec9d2fcb86c7e05fbf0bf612"
+  },
+  "limitations": "This is a state-label sequence audit only. It cannot identify the cause of a state change or establish issuer/ISIN continuity, delisting, relisting, suspension, ticker reuse, PIT availability, or population completeness."
+}

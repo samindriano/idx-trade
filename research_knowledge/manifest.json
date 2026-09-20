@@ -40,13 +40,20 @@
     "formula_mutation_challenger_v1.json",
     "packet_nested_schema_challenger_v1.json",
     "verifier_freshness_challenger_v1.json",
+    "evidence_reference_integrity_v1.json",
     "candidate_era_authority_v1.json",
     "eligibility_era_delta_v1.json",
     "candidate_era_mechanics_v1.json",
     "candidate_score_separation_v1.json",
     "candidate_component_anatomy_v1.json",
+    "candidate_component_anatomy_missingness_v1.json",
     "c2_interaction_quadrants_v1.json",
+    "redteam_adjudication_v1.json",
+    "eligibility_feature_warmup_v1.json",
+    "panel_anchor_state_census_v1.json",
+    "anchor_state_transition_audit_v1.json",
     "c1_c4_numerator_overlap_v1.json",
+    "universe_breadth_turnover_v1.json",
     "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
@@ -55,9 +62,9 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 47,
-    "findings_index_entries": 38,
-    "no_retry_registry_entries": 15,
+    "experiment_registry_entries": 51,
+    "findings_index_entries": 44,
+    "no_retry_registry_entries": 16,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
   },
@@ -82,6 +89,10 @@
     "docs/checkpoints/2026-09-20_ALPHA_C2_INTERACTION_QUADRANTS_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_C1_C4_NUMERATOR_OVERLAP_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_MARATHON_AUDIT_HANDOFF_V5.md",
-    "docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_UNIVERSE_BREADTH_TURNOVER_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_REDTEAM_ADJUDICATION_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_FEATURE_WARMUP_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_PANEL_ANCHOR_STATE_CENSUS_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_ANCHOR_STATE_TRANSITION_RESULT_V1.md"
   ]
 }

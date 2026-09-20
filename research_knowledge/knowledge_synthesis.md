@@ -30,6 +30,13 @@
   while C2 remains unchanged because its rolling feature warm-up still requires
   60 observations. This separates eligibility from feature availability in the
   current implementation without resolving policy authority.
+- A direct eligibility-versus-feature audit confirms all finite C1/C2/C3/C4
+  scores are gated inside the 310761-row eligibility mask. Missingness within
+  eligible rows is candidate-specific: C1 15518, C2 0, C3 279767, and C4 438.
+  C3's sparse support is therefore a feature/data-availability boundary within
+  eligible rows on this artifact, not score support outside the observed
+  universe. This still does not establish the eligibility, PIT, or population
+  authority behind either boundary.
 
 ## What we think we know
 
@@ -72,8 +79,21 @@
   admitted subset.
 - Every observed panel key is an ACTIVE tradability-anchor key and none is
   NO_TRADE, but 458 ACTIVE anchor rows are absent from the panel in 2021-2024.
-  Therefore panel-to-anchor overlap is a structural consistency result, not
-  proof that the panel is the full historical population.
+  The 458 surplus rows are all CNTX, and the replay seeds its ticker universe
+  from panel tickers, so a panel-absent ticker cannot enter eligibility replay.
+  Therefore panel-to-anchor overlap and 981,940-key zero-mismatch are observed-
+  panel reproducibility results, not proof that the panel is the full historical
+  population or survivorship-safe.
+- The broader anchor-state census shows 982398 ACTIVE rows and 121666 NO_TRADE
+  rows across 980 tickers. The panel overlaps all ACTIVE keys and zero
+  NO_TRADE keys; 34 anchor tickers are NO_TRADE-only and CNTX is the lone
+  ACTIVE ticker absent from the panel. This establishes active-trade panel
+  semantics, not completeness of the anchor or historical universe.
+- ACTIVE/NO_TRADE sequences are themselves highly oscillatory: 583/980 tickers
+  switch state, with median 10 transitions among changed tickers, 95th
+  percentile 212.9, and maximum 374. These state labels cannot be inferred as
+  suspension, delisting, relisting, ticker reuse, issuer continuity, or clean
+  lifecycle intervals without a state/identity contract.
 - The global Data-QA block is candidate-specific in substance: C1/C4 directly
   require price/CA authority; C2 additionally requires volume/liquidity
   semantics and capacity; C3 directly requires financial publication,
@@ -99,11 +119,12 @@
   while C2 is an interaction between ret_5 and abnormal-turnover log rather
   than one component. Finite recomputed C1/C2/C4 scores match the guarded
   artifact exactly; this is implementation evidence only.
-- C2 Top-30 selection is a two-mode sign-consistent mixture: 68.68% pooled
-  positive-return/high-activity and 31.32% negative-return/low-activity; the
-  cross-sign zero is mechanically implied by the product sign. The mix shifts
-  to 59.90%/40.10% in 2026 partial year from 78.80%/21.20% in 2025. This is
-  structural composition, not regime-return evidence or a reason to split C2.
+- C2 quadrant behavior is component/anatomy evidence, not independent mechanism
+  confirmation: 68.68% pooled positive-return/high-activity and 31.32%
+  negative-return/low-activity selection, with cross-sign zero largely implied
+  by the product sign. The mix shifts to 59.90%/40.10% in 2026 partial year
+  from 78.80%/21.20% in 2025. This is formula composition, not regime-return
+  evidence or a reason to split C2.
 - The C1/C4 numerator-overlap decomposition shows that stored-score versus
   numerator-only Top-30 overlap is 63.75% for C1 and 62.22% for C4, while
   cross-candidate overlap is 35.80% for stored scores versus 36.82% for
@@ -115,7 +136,8 @@
   has only weak count-versus-turnover associations (0.133/0.061/0.175). C3
   remains different: finite support averages 35.96%, with count-versus-turnover
   rho -0.372 overall and -0.711 in 2026 partial year. This strengthens the
-  support-driven interpretation of C3 without making a predictive claim.
+  support-sensitive interpretation of C3 without establishing sparse support as
+  the cause of its turnover/persistence pattern or making a predictive claim.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.
