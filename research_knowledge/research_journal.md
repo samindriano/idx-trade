@@ -85,3 +85,7 @@ checkpoint files; this file records why the next question changed.
   closed.
 - The authority packet remains `BLOCKED_PRE_ADMISSION`; it is a reusable
   bounded map, not permission to open outcomes or re-enter predictive work.
+- The lane verifier then exposed a separate process-scope false negative:
+  legitimate `tests/` files were outside its allowlist. Adding only `tests/`
+  keeps the lane narrow and removes that false failure; it does not strengthen
+  runtime-access claims.

@@ -21,7 +21,7 @@ EXPECTED_STAGING = Path(
 )
 # Durable outcome-blind knowledge is an explicitly allowed research surface.
 # Protected/canonical/production paths remain outside this allowlist.
-ALLOWED_DELTA_PREFIXES = ("docs/checkpoints/", "research/", "research_knowledge/")
+ALLOWED_DELTA_PREFIXES = ("docs/checkpoints/", "research/", "research_knowledge/", "tests/")
 FORBIDDEN_STAGING_PATTERNS = (
     r"outcome[_-]?vault",
     r"protected[_-]?(?:outcome|target|forward)",

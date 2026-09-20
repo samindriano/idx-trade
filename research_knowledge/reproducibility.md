@@ -98,3 +98,11 @@ access absence.
 - Known gaps remain: the firewall is not a semantic allowlist, disguised fields
   and unexpected non-matching schema columns can pass, and producer formulas
   are not independently recomputed by the envelope verifiers.
+
+## Lane allowlist correction
+
+- The lane verifier initially classified `tests/` as out of scope even though
+  the new files were isolated research unit tests.
+- `tests/` is now an explicit allowed research prefix; canonical, production,
+  cloud, capture, telemetry, and protected paths remain outside the allowlist.
+- This is a process-scope correction, not proof that runtime access was absent.
