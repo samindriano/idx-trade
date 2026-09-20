@@ -677,6 +677,13 @@ historical alpha archive:
   `reconciliation_required=false` is not broker/paper reconciliation proof;
   a versioned evidence source and mismatch taxonomy remain open. No runtime or
   data fix was applied.
+- `2026-09-20_IDX_EXPOSURE_CASH_STATE_TAXONOMY_AUDIT_V1.md` closes a separate
+  Decision-to-restart boundary question. The Decision artifact retains
+  `capacity_state`/`unfilled_slots`, but the restartable `PaperState` and
+  `reconstruct_decision_shadow_state` retain only cash, positions, and pending
+  tickers. Distinct no-challenger and capacity-limited histories can therefore
+  share a state hash. This is a causal observability/economic-interpretation
+  gap, not proof of arithmetic corruption, and no runtime/data fix was applied.
 
 The durable rolling controls for this marathon are now:
 

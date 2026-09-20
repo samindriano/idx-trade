@@ -75,6 +75,10 @@ The system tracks target membership but not target quantity obligations. A posit
   The pinned runtime carries `reconciliation_required` through state/hash and
   uses it as a prior gate, but does not produce it from a mismatch detector;
   `false` is not reconciliation evidence.
+- Exposure/cash taxonomy checkpoint: `2026-09-20_IDX_EXPOSURE_CASH_STATE_TAXONOMY_AUDIT_V1.md`.
+  Decision artifacts preserve `capacity_state`/`unfilled_slots`, but the
+  restartable state and shadow reconstruction do not; no-challenger and
+  capacity-limited histories can therefore converge to the same state hash.
 
 ## Immediate next questions
 
@@ -97,6 +101,8 @@ The system tracks target membership but not target quantity obligations. A posit
 9. What explicit evidence source and mismatch taxonomy should produce
    `reconciliation_required=true`, and how should that evidence survive replay
    and restart?
+10. Which versioned state owner should preserve exposure/cash causes and join
+    them to quantity obligations without fabricating legacy history?
 
 ## Constraints
 
