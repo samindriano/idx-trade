@@ -707,6 +707,13 @@ historical alpha archive:
   filled can be evaluated as a valid 5% turnover row with no residual evidence.
   This is a quantity-completeness/interpretation gap, not protected-outcome
   access or a claim that a real evaluation passed.
+- `2026-09-20_IDX_MALFORMED_LATEST_SNAPSHOT_RECOVERY_AUDIT_V1.md` adds a distinct
+  failure-recovery result at exact runtime HEAD `402fca4b...`: malformed JSON
+  and payload-tampered latest snapshots fail closed with repeatable errors,
+  but the latest file remains and no ancestor fallback or quarantine occurs.
+  The valid prior snapshot remains directly loadable, so this is an availability
+  and recovery-contract gap rather than a hash-verification bypass. No runtime
+  or data fix was applied.
 
 The durable rolling controls for this marathon are now:
 

@@ -92,6 +92,10 @@ The system tracks target membership but not target quantity obligations. A posit
 - Execution-evaluation quantity checkpoint: `2026-09-20_IDX_EXECUTION_EVALUATION_QUANTITY_BOUNDARY_AUDIT_V1.md`.
   The protected execution validator admits only aggregate gross notional/NAV
   columns; planned-versus-filled quantity and residual obligations are absent.
+- Malformed-latest recovery checkpoint: `2026-09-20_IDX_MALFORMED_LATEST_SNAPSHOT_RECOVERY_AUDIT_V1.md`.
+  The exact runtime fails closed on malformed or payload-tampered latest
+  snapshots, but leaves the poisoned file in place and does not fall back to
+  the valid prior ancestor; direct prior loading remains possible.
 
 ## Immediate next questions
 
@@ -123,6 +127,9 @@ The system tracks target membership but not target quantity obligations. A posit
     bound to the prospective evaluation gate without opening protected outcomes?
 13. Which versioned execution-evidence join should bind planned, filled,
     remaining, position, pending, and cost state to evaluation metrics?
+14. What authorized immutable recovery/quarantine manifest should handle a
+    poisoned latest snapshot without silently bypassing a fork or missing
+    session?
 
 ## Constraints
 
