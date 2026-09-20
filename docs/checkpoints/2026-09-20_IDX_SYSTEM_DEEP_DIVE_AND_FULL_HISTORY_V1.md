@@ -664,10 +664,11 @@ historical alpha archive:
   current artifact reproducibility blocker without executing or mutating the
   runtime.
 - `2026-09-20_IDX_SECURITY_MASTER_REVISION_COLLISION_AUDIT_V1.md` adds an
-  identity-history boundary result: conflicting active/delisted rows sharing
-  `(ticker, listed_from)` are silently reduced with `keep="last"`, leaving a
-  valid-looking but history-dependent master. No canonical or runtime data was
-  changed.
+  identity-history result refined by archaeology: active-vs-delisted duplicate
+  preference was explicit in the original design, but same-class revisions
+  sharing `(ticker, listed_from)` remain order-sensitive under `keep="last"`,
+  leaving a valid-looking but history-dependent master. No canonical or runtime
+  data was changed.
 
 The durable rolling controls for this marathon are now:
 

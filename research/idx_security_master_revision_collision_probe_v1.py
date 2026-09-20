@@ -39,34 +39,47 @@ def run_probe() -> dict[str, Any]:
     sys.path.insert(0, str(RUNTIME_ROOT / "src"))
     from idx_trade.security_master import build_security_master
 
-    active = pd.DataFrame({
-        "ticker": ["ABCD"],
-        "company_name": ["ABCD Active"],
-        "listed_from": ["2020-01-01"],
-        "listed_to": [None],
-        "source": ["IDX_ACTIVE"],
-    })
-    delisted = pd.DataFrame({
-        "ticker": ["ABCD"],
-        "company_name": ["ABCD Historical"],
-        "listed_from": ["2020-01-01"],
-        "listed_to": ["2024-12-31"],
-        "source": ["IDX_DELISTED"],
-    })
-    output = build_security_master(active, delisted)
+    columns = ["ticker", "company_name", "listed_from", "listed_to", "source"]
+    active = pd.DataFrame(columns=columns)
+    revisions = [
+        {
+            "ticker": "ABCD",
+            "company_name": "History A",
+            "listed_from": "2020-01-01",
+            "listed_to": "2024-12-31",
+            "source": "ARCHIVE_A",
+        },
+        {
+            "ticker": "ABCD",
+            "company_name": "History B",
+            "listed_from": "2020-01-01",
+            "listed_to": "2025-12-31",
+            "source": "ARCHIVE_B",
+        },
+    ]
+
+    def selected(rows: list[dict[str, str]]) -> dict[str, str]:
+        output = build_security_master(active, pd.DataFrame(rows, columns=columns))
+        row = output.iloc[0]
+        return {
+            "company_name": str(row["company_name"]),
+            "listed_to": str(row["listed_to"].date()),
+            "source": str(row["source"]),
+        }
+
+    a_then_b = selected(revisions)
+    b_then_a = selected(list(reversed(revisions)))
     result = {
-        "status": "SAME_KEY_HISTORY_COLLISION_SILENTLY_REDUCED",
+        "status": "SAME_KEY_REVISION_COLLISION_IS_ORDER_SENSITIVE",
         "runtime_head": _head(),
         "security_master_sha256": _sha256(RUNTIME_ROOT / "src/idx_trade/security_master.py"),
         "input_rows": 2,
-        "output_rows": int(len(output)),
-        "output_ticker": output.iloc[0]["ticker"],
-        "output_company_name": output.iloc[0]["company_name"],
-        "output_listed_to": str(output.iloc[0]["listed_to"].date()),
-        "output_source": output.iloc[0]["source"],
+        "a_then_b": a_then_b,
+        "b_then_a": b_then_a,
+        "order_sensitive": a_then_b != b_then_a,
         "writes_performed": False,
     }
-    if result["output_rows"] != 1 or result["output_company_name"] != "ABCD Historical":
+    if not result["order_sensitive"]:
         raise AssertionError("SECURITY_MASTER_COLLISION_FIXTURE_NOT_OBSERVED")
     return result
 

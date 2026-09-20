@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: isolated `codex/alpha-available-data-20260919`
-Status: `FAIL — SAME-KEY HISTORY COLLISION NOT FAIL-CLOSED`
+Status: `FAIL — SAME-KEY REVISION COLLISION IS ORDER-SENSITIVE`
 
 This is a read-only synthetic audit of the security-master identity/history
 boundary against the pinned runtime. It does not inspect or rewrite canonical
@@ -19,36 +19,49 @@ security data and does not call a provider or production path.
 - Adjacent pinned-runtime baseline: universe + Decision V2 + sizing adapter
   suite `11 passed`.
 
-## 2. Synthetic collision
+## 2. Historical intent and synthetic collision
 
-Two input rows used the same normalized `(ticker, listed_from)` key:
+Historical archaeology found that the original introduction commit
+`65233e195128d542457693643b3faba5546e6173` explicitly documented the policy
+“Prefer a delisted row when active+delisted sources describe the same listing
+interval.” The earlier active-versus-delisted example is therefore an intended
+policy case, not by itself a defect.
+
+The remaining question is whether conflicting same-key revisions are also
+disambiguated. They are not.
+
+Two delisted input rows used the same normalized `(ticker, listed_from)` key but
+different end dates and sources:
 
 | Input | Company | Listed-from | Listed-to | Source |
 |---|---|---|---|---|
-| active | ABCD Active | 2020-01-01 | open | IDX_ACTIVE |
-| delisted | ABCD Historical | 2020-01-01 | 2024-12-31 | IDX_DELISTED |
+| revision A | History A | 2020-01-01 | 2024-12-31 | ARCHIVE_A |
+| revision B | History B | 2020-01-01 | 2025-12-31 | ARCHIVE_B |
 
-`build_security_master()` returned one row only:
+`build_security_master()` returned one row, and reversing input order changed
+which revision survived:
 
-| Output rows | Company retained | Listed-to retained | Source retained |
-|---:|---|---|---|
-| 1 | ABCD Historical | 2024-12-31 | IDX_DELISTED |
+| Input order | Company retained | Listed-to retained | Source retained |
+|---|---|---|---|
+| A then B | History B | 2025-12-31 | ARCHIVE_B |
+| B then A | History A | 2024-12-31 | ARCHIVE_A |
 
 The builder sorts and calls `drop_duplicates(["ticker", "listed_from"],
-keep="last")`. It does not emit a typed conflict or preserve both competing
-history claims.
+keep="last"). It does not emit a typed conflict, preserve both competing
+history claims, or select by a declared revision authority/date.
 
 ## 3. Blast radius
 
-- Origin: security-master canonicalization treats same-key records as a
-  replacement-order problem rather than an identity/revision conflict.
+- Origin: security-master canonicalization applies the documented
+  active-vs-delisted preference, but applies the same deduplication to
+  conflicting same-class revisions without an authority rule.
 - Trigger: duplicate issuer key and listing start with conflicting end/source
   or company metadata.
 - Affected state: listing era, existence state, warmup, tradability/universe
   eligibility, and any downstream identity/provenance report derived from the
   master.
-- Failure class: silent data-history loss; the output remains syntactically
-  valid and can pass later eligibility checks.
+- Failure class: order-dependent data-history loss; the output remains
+  syntactically valid and can pass later eligibility checks.
 - Restart/replay: deterministic for the same input order/sort policy; no
   runtime restart is needed.
 - Existing coverage: universe tests cover delisting and IPO warmup separately,
@@ -60,7 +73,9 @@ receives one.
 
 ## 4. Verdict and safe design consequence
 
-`SECURITY_MASTER_REVISION_CONFLICT = NOT_TYPED`
+`ACTIVE_VS_DELISTED_PREFERENCE = INTENTIONAL_HISTORICAL_POLICY`
+
+`SAME_CLASS_REVISION_CONFLICT = NOT_TYPED`
 
 `IDENTITY_HISTORY_FAIL_CLOSED = NO`
 
