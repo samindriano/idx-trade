@@ -34,6 +34,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   `bf7c708c1a2be8b5d7519d8728985cc987d966b783d14e58f4e52524e2df19d6`;
 - old positive partial BUY regression corrected and passing;
 - zero-fill/partial SELL/replacement neighboring tests;
+- synthetic two-session partial SELL retry completes the paired replacement
+  BUY with both quantity obligations reaching `FILLED`;
 - duplicate fill and cancellation idempotency;
 - state hash includes obligations only when the new contract is present;
 - obligation deserialization replays the canonical payload builder and rejects
