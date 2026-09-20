@@ -23,6 +23,14 @@ explicit cancellation/relinquishment replay, execution evidence, CA timing,
 identity/transition binding, runtime lineage, migration provenance/activation,
 dividend runtime/orchestration, and E2E controller/orchestration boundaries.
 
+The full repository command was also attempted twice after this test addition.
+Both runs reached the end of the suite but encountered the known Windows
+`PermissionError [WinError 5]` atomic-publish race in unrelated tests: once in
+`tests/test_official_open_evidence_v1.py` and once in
+`tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
+run in isolation. No contract-hardening test failed; the bounded 204-test
+result above is the current clean evidence for this lane.
+
 ## Verification command
 
 ```text
