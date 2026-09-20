@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `5a85b1d3`
+Verification revision: `c91e2895`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`206/206 PASS`.
+`207/207 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -27,7 +27,9 @@ projections are rebuilt from the canonical obligation ledger. Identical close
 events replay idempotently against the post-transition state; altered event
 bytes or a mismatched pre-transition parent remain rejected. The explicit-close
 state also round-trips through the V2 runtime snapshot writer/loader with a
-same-session idempotent write.
+same-session idempotent write. A tampered latest explicit-close snapshot is
+quarantined and the verified partial ancestor is recovered without selecting
+the closed artifact.
 
 The full repository command was also attempted twice after this test addition.
 Both runs reached the end of the suite but encountered the known Windows
