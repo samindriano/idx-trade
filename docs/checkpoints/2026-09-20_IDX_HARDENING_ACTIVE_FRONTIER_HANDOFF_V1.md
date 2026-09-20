@@ -40,13 +40,18 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - tampered latest snapshot is quarantined and a verified ancestor is recovered;
 - valid forked histories remain blocked;
 - Decision V2 residual BUY retry works with an existing partial position;
+- CA sizing lineage keeps the immutable raw state as `ExecutionOrderPlan.state_hash`
+  and records projected total-return sizing separately;
+- projected CA state is restricted to cash/ledger changes and a trade-state
+  mutation fails closed;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
 
-## Required handoff evidence before Phase 4
+## Remaining evidence before Phase 4
 
-- CA timing and projected/raw state binding;
+- CA payment-on-decision, payment-before-decision, and payment-on-execution
+  timing matrix with restart/idempotency;
 - quantity-bearing execution evidence and evaluator replay;
 - reconciliation result provenance and mismatch detector;
 - identity/config/cause-state contracts;

@@ -55,7 +55,7 @@ checks in code remain authoritative.
 | Positive partial BUY loses residual | `CONFIRMED / IMPLEMENT` | Versioned quantity-obligation state |
 | Partial SELL/replacement lacks full quantity lineage | `CONFIRMED / IMPLEMENT` | Same obligation owner, not a parallel pending ledger |
 | Snapshot persists positions but not obligations | `CONFIRMED / IMPLEMENT` | Versioned snapshot schema and restart replay |
-| CA projected-state versus execution-parent mismatch | `CONFIRMED / CONTRACT_REQUIRED` | Explicit settle/sizing/execution transition |
+| CA projected-state versus execution-parent mismatch | `CONFIRMED / LOCAL_LINEAGE_IMPLEMENTED` | Raw execution parent plus projected NAV-only sizing lineage; timing matrix remains open |
 | Execution evidence aggregate-only | `CONFIRMED / IMPLEMENT` | Versioned execution-evidence artifact |
 | Reconciliation false bit has no detector provenance | `CONFIRMED / CONTRACT_REQUIRED` | Versioned reconciliation result |
 | Identity alias/revision splits | `CONFIRMED / IMPLEMENT_WHERE_AUTHORITY_PERMITS` | Shared identity contract and typed conflict |
@@ -103,11 +103,16 @@ The isolated lane currently contains:
   fork histories still rejected;
 - Decision V2 residual retry for a partial BUY whose actual position already
   exists, without changing Decision science.
+- explicit CA sizing lineage separating raw execution state from projected
+  total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
+- projection guard that rejects changes to positions, pending intents,
+  obligations, reconciliation state, or state source identity;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
-fault-injection, CA/accounting timing composition, execution evidence,
+fault-injection, the complete CA/accounting timing matrix and restart proof,
+execution evidence,
 reconciliation provenance, identity/config contracts, and full migration
 artifact provenance remain open; this is not a production promotion or phase
 closure.

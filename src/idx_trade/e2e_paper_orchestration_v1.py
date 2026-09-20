@@ -298,6 +298,9 @@ def _execution_plan_payload(
             "dividend_state_hash": dividend_plan.dividend_state_hash,
             "dividend_ledger_hash": dividend_plan.dividend_ledger_hash,
             "total_return_nav_idr": dividend_plan.total_return_nav_idr,
+            "sizing_lineage": None
+            if dividend_plan.sizing_lineage is None
+            else asdict(dividend_plan.sizing_lineage),
         } if dividend_plan is not None else {}),
     }
 
@@ -951,16 +954,9 @@ def prepare_post_eod(
     )
     order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
         verified_sizing,
-        sizing_state,
+        state,
         eod_inputs=eod_inputs,
-    )
-    # The prepared plan is sized from the projected CA state, but execution
-    # still verifies and advances the immutable runtime state from its raw
-    # snapshot.  Keep the parent hashes bound to that raw snapshot.
-    order_plan = replace(
-        order_plan,
-        dividend_state_hash=dividend.dividend_aware_state_hash(state),
-        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
+        projected_state=sizing_state,
     )
     order_payload = _execution_plan_payload(order_plan)
     payload = {
@@ -1294,13 +1290,9 @@ def execute_preopen(
     verified_sizing = verify_decision_v2_plan_for_sizing(plan, current_score, previous_score, shadow)
     order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
         verified_sizing,
-        sizing_state,
+        state,
         eod_inputs=eod_inputs,
-    )
-    order_plan = replace(
-        order_plan,
-        dividend_state_hash=dividend.dividend_aware_state_hash(state),
-        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
+        projected_state=sizing_state,
     )
     if _canonical_hash(_execution_plan_payload(order_plan)) != payload.get("execution_plan_sha256"):
         raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")

@@ -198,12 +198,38 @@ class DividendAwarePaperState:
     dividend_ledger: DividendLedger = field(default_factory=DividendLedger)
 
 
+DIVIDEND_SIZING_TRANSITION_RAW_STATE = "RAW_STATE"
+DIVIDEND_SIZING_TRANSITION_PROJECTED_NAV_ONLY = (
+    "PROJECTED_CA_NAV_ONLY_RAW_EXECUTION_PARENT"
+)
+
+
+@dataclass(frozen=True)
+class DividendSizingLineage:
+    """Explicitly bind projected CA sizing to the raw execution parent.
+
+    A lifecycle projection may change cash or the dividend ledger while an
+    execution still has to consume the immutable persisted snapshot.  This
+    record makes that distinction part of the plan instead of relying on a
+    later hash rebind.
+    """
+
+    execution_state_hash: str
+    execution_base_state_hash: str
+    sizing_state_hash: str
+    sizing_base_state_hash: str
+    execution_cash_idr: float
+    sizing_cash_idr: float
+    transition_policy: str
+
+
 @dataclass(frozen=True)
 class DividendAwareExecutionOrderPlan:
     base_plan: ExecutionOrderPlan
     dividend_state_hash: str
     dividend_ledger_hash: str
     total_return_nav_idr: float
+    sizing_lineage: DividendSizingLineage | None = None
 
 
 @dataclass(frozen=True)
@@ -707,16 +733,60 @@ def paper_total_return_nav_idr(
     return float(nav)
 
 
+def _sizing_lineage(
+    execution_state: DividendAwarePaperState,
+    sizing_state: DividendAwarePaperState,
+) -> DividendSizingLineage:
+    if not isinstance(execution_state, DividendAwarePaperState):
+        raise DecisionV1Error("DIVIDEND_V1_EXECUTION_STATE_REQUIRED")
+    if not isinstance(sizing_state, DividendAwarePaperState):
+        raise DecisionV1Error("DIVIDEND_V1_SIZING_STATE_REQUIRED")
+    if execution_state.base_state.as_of_session_date != sizing_state.base_state.as_of_session_date:
+        raise DecisionV1Error("DIVIDEND_V1_SIZING_STATE_SESSION_MISMATCH")
+
+    # The CA lifecycle projection is allowed to change cash and the dividend
+    # ledger only.  It must never alter positions, pending intents,
+    # obligations, reconciliation state, or the execution source identity.
+    projected_base_without_cash = replace(
+        sizing_state.base_state,
+        cash_idr=execution_state.base_state.cash_idr,
+    )
+    if projected_base_without_cash != execution_state.base_state:
+        raise DecisionV1Error("DIVIDEND_V1_SIZING_STATE_TRADE_STATE_CHANGED")
+
+    execution_hash = dividend_aware_state_hash(execution_state)
+    sizing_hash = dividend_aware_state_hash(sizing_state)
+    execution_base_hash = paper_state_hash(execution_state.base_state)
+    sizing_base_hash = paper_state_hash(sizing_state.base_state)
+    policy = (
+        DIVIDEND_SIZING_TRANSITION_RAW_STATE
+        if execution_state == sizing_state
+        else DIVIDEND_SIZING_TRANSITION_PROJECTED_NAV_ONLY
+    )
+    return DividendSizingLineage(
+        execution_state_hash=execution_hash,
+        execution_base_state_hash=execution_base_hash,
+        sizing_state_hash=sizing_hash,
+        sizing_base_state_hash=sizing_base_hash,
+        execution_cash_idr=float(execution_state.base_state.cash_idr),
+        sizing_cash_idr=float(sizing_state.base_state.cash_idr),
+        transition_policy=policy,
+    )
+
+
 def prepare_execution_v1_1(
     verified_plan: VerifiedDecisionPlan,
     state: DividendAwarePaperState,
     *,
     eod_inputs: VerifiedEODExecutionInputs,
+    projected_state: DividendAwarePaperState | None = None,
 ) -> DividendAwareExecutionOrderPlan:
-    state_hash = dividend_aware_state_hash(state)
+    sizing_state = state if projected_state is None else projected_state
+    lineage = _sizing_lineage(state, sizing_state)
+    state_hash = lineage.execution_state_hash
     ledger_hash = dividend_ledger_hash(state.dividend_ledger)
     base_plan = prepare_execution_v1(verified_plan, state.base_state, eod_inputs=eod_inputs)
-    corrected_nav = paper_total_return_nav_idr(state, eod_inputs.raw_close_prices)
+    corrected_nav = paper_total_return_nav_idr(sizing_state, eod_inputs.raw_close_prices)
     if not math.isclose(corrected_nav, base_plan.eod_nav_idr, rel_tol=0.0, abs_tol=1e-6):
         sizing_plan = _size_entries_for_intents(
             verified_plan,
@@ -733,6 +803,7 @@ def prepare_execution_v1_1(
         dividend_state_hash=state_hash,
         dividend_ledger_hash=ledger_hash,
         total_return_nav_idr=corrected_nav,
+        sizing_lineage=lineage,
     )
 
 
@@ -741,6 +812,7 @@ def prepare_execution_v1_1_from_decision_v2(
     state: DividendAwarePaperState,
     *,
     eod_inputs: object,
+    projected_state: DividendAwarePaperState | None = None,
 ) -> DividendAwareExecutionOrderPlan:
     """Dividend-aware wrapper for the accepted Decision V2 execution adapter.
 
@@ -754,12 +826,14 @@ def prepare_execution_v1_1_from_decision_v2(
     from .v4_x1_sizing_v1_decision_v2_adapter import _require_verified_v2
     from .v4_x1_sizing_v1 import _size_entries_core
 
+    sizing_state = state if projected_state is None else projected_state
+    lineage = _sizing_lineage(state, sizing_state)
     base_plan = prepare_execution_v1_from_decision_v2(
         verified_plan,
         state.base_state,
         eod_inputs=eod_inputs,
     )
-    corrected_nav = paper_total_return_nav_idr(state, eod_inputs.raw_close_prices)
+    corrected_nav = paper_total_return_nav_idr(sizing_state, eod_inputs.raw_close_prices)
     if not math.isclose(corrected_nav, base_plan.eod_nav_idr, rel_tol=0.0, abs_tol=1e-6):
         decision_plan = _require_verified_v2(verified_plan)
         sizing_plan = _size_entries_core(
@@ -778,6 +852,7 @@ def prepare_execution_v1_1_from_decision_v2(
         dividend_state_hash=dividend_aware_state_hash(state),
         dividend_ledger_hash=dividend_ledger_hash(state.dividend_ledger),
         total_return_nav_idr=float(corrected_nav),
+        sizing_lineage=lineage,
     )
 
 
@@ -794,6 +869,21 @@ def execute_open_v1_1(
         raise DecisionV1Error("DIVIDEND_V1_STATE_HASH_MISMATCH")
     if dividend_ledger_hash(state.dividend_ledger) != order_plan.dividend_ledger_hash:
         raise DecisionV1Error("DIVIDEND_V1_LEDGER_HASH_MISMATCH")
+    lineage = order_plan.sizing_lineage
+    if lineage is not None:
+        if lineage.execution_state_hash != order_plan.dividend_state_hash:
+            raise DecisionV1Error("DIVIDEND_V1_SIZING_LINEAGE_EXECUTION_HASH_MISMATCH")
+        if lineage.execution_base_state_hash != paper_state_hash(state.base_state):
+            raise DecisionV1Error("DIVIDEND_V1_SIZING_LINEAGE_BASE_HASH_MISMATCH")
+        if not math.isclose(
+            lineage.execution_cash_idr,
+            state.base_state.cash_idr,
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        ):
+            raise DecisionV1Error("DIVIDEND_V1_SIZING_LINEAGE_CASH_MISMATCH")
+        if order_plan.base_plan.state_hash != lineage.execution_base_state_hash:
+            raise DecisionV1Error("DIVIDEND_V1_EXECUTION_PARENT_HASH_MISMATCH")
     result = execute_open_v1(
         order_plan.base_plan,
         state.base_state,
