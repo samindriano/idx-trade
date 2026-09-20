@@ -227,16 +227,35 @@ def close_obligation_explicitly(
     ]
     if not matching:
         raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_NOT_FOUND")
-    before_hash = paper_state_hash(state)
-    if parent_state_sha256 is not None and parent_state_sha256 != before_hash:
-        raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_PARENT_MISMATCH")
     index = matching[0]
+    existing_event = next(
+        (
+            event
+            for event in obligations[index].event_history
+            if event.event_id == event_id
+        ),
+        None,
+    )
+    if existing_event is None:
+        before_hash = paper_state_hash(state)
+        if parent_state_sha256 is not None and parent_state_sha256 != before_hash:
+            raise DecisionV1Error("EXECUTION_V1_OBLIGATION_CLOSE_PARENT_MISMATCH")
+        event_parent_state_sha256 = before_hash
+    else:
+        # Replay the same event against its post-transition state without
+        # mistaking the new state hash for a conflicting parent. The primitive
+        # below still compares every event field and rejects altered bytes.
+        event_parent_state_sha256 = (
+            existing_event.parent_state_sha256
+            if parent_state_sha256 is None
+            else parent_state_sha256
+        )
     obligations[index] = cancel_remaining(
         obligations[index],
         event_id=event_id,
         session_date=session_date,
         reason=reason,
-        parent_state_sha256=before_hash,
+        parent_state_sha256=event_parent_state_sha256,
         status=status,
     )
     pending_buys, pending_sells = pending_intents_from_obligations(obligations)
