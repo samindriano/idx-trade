@@ -115,3 +115,17 @@ checkpoint files; this file records why the next question changed.
 - Kept the protected boundary closed and classified current PASS states as
   scoped hash/path/denylist evidence only; no firewall production behavior was
   changed.
+
+## 2026-09-20 — eligibility provenance history audit
+
+- Audited retained pre-protocol Git refs for the origin of the minimum-20 and
+  min-periods-60 rules without regenerating the panel or opening outcomes.
+- Confirmed a legacy primary-liquidity contract with a 60 official-session
+  lookback and at least 20 finite ACTIVE observations; this predates the
+  2026-09-19 protocol and is not merely new protocol wording.
+- Confirmed Stage-A V1/V2 complete-window rolling behavior and that V2's later
+  `>=20` check is redundant under `min_periods=window`; generic security-master
+  60-session IPO warm-up is a separate concept.
+- Narrowed the blocker from unknown provenance to missing current authority
+  binding. No population was selected, no candidate was regenerated, and the
+  safe status remains `POLICY_AUTHORITY_MISSING`.

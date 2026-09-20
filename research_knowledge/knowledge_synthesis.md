@@ -47,6 +47,12 @@
   fields, disguised schema columns, and unknown nested packet fields. The
   current PASS state is therefore scoped hash/path/denylist evidence, not a
   semantic allowlist or verifier-version freshness guarantee.
+- Eligibility provenance is now narrowed by retained history: the legacy
+  primary-liquidity rule predates the new protocol and explicitly means at
+  least 20 finite ACTIVE observations inside a trailing 60 official-session
+  window. Stage-A `min_periods=window` remains implementation behavior, and
+  the separate security-master 60-session warm-up is not the same rule. This
+  still does not bind current policy or authorize population regeneration.
 
 ## What failed, is redundant, or is superseded
 

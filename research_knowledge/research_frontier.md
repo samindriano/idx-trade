@@ -4,9 +4,10 @@
 
 1. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
-   settings, and Data-QA policy. Counterfactual impact is now quantified, but
-   current classification remains `POLICY_AUTHORITY_MISSING` unless
-   authoritative local evidence appears.
+   settings, and Data-QA policy. Historical provenance is now narrowed to a
+   pre-protocol 20-in-60 liquidity rule, but current classification remains
+   `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
+   authority appears.
 2. Tooling/verifier adversarial audit: `PARTIALLY_RESOLVED`; synthetic
    challenger confirms semantic false greens and missing verifier-version pin.
    Reopen only for a reviewed schema allowlist, independent formula challenger,

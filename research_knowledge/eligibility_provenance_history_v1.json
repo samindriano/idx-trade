@@ -1,0 +1,73 @@
+{
+  "schema_version": "IDX_TRADE_ELIGIBILITY_PROVENANCE_HISTORY_V1",
+  "experiment_id": "ELIGIBILITY-PROVENANCE-039",
+  "status": "SUPPORTED_PROVENANCE_NARROWED",
+  "scope": "Outcome-blind Git-history/docs/code provenance audit; no panel regeneration, provider access, or protected outcome access.",
+  "code": {
+    "path": "research/alpha_eligibility_provenance_history_v1.py",
+    "sha256": "82af867fd58cff6e3999b42fa0063c7f8da8c0436063329607b7cc8d42853166"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_eligibility_provenance_history_v1.json",
+    "sha256": "c6e4ba13928e36718394bba90d4566686c64cc2d2ecdd2c39c84eb44a5c33a9a"
+  },
+  "historical_sources": [
+    {
+      "role": "legacy_primary_liquidity_rule",
+      "ref": "26aac816",
+      "path": "src/idx_trade/research_features.py",
+      "sha256": "e59bb6eacb8e771f3f2672b2d3de9f39210cd8a0eab49f6599b325e8caedc520",
+      "lookback_sessions": 60,
+      "minimum_active_observations": 20,
+      "manual_finite_observation_logic": true
+    },
+    {
+      "role": "legacy_specification",
+      "ref": "26aac816",
+      "path": "docs/RESEARCH_SPECIFICATION_V1.md",
+      "sha256": "73c252f4d5724320bcf42a47c6f604735ba000b622e8514660dc62fea1aab51e",
+      "mentions_20_in_60_window": true
+    },
+    {
+      "role": "new_protocol",
+      "ref": "a02a1547",
+      "path": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md",
+      "sha256": "ca188ad75030aff75d6917e234724167c01439812744ca94e81eb3f089125dfe",
+      "mentions_20_in_60_window": true
+    },
+    {
+      "role": "stage_a_v1_implementation",
+      "ref": "2b056802",
+      "path": "research/alpha_stage_a_v1.py",
+      "sha256": "3a5f018663a4a7848d19daec15a882523027ca4c1ad6cb719911c8c9a41dbc54",
+      "complete_window_min_periods": true,
+      "explicit_ge_20_mask": false
+    },
+    {
+      "role": "stage_a_v2_implementation",
+      "ref": "1ebced27",
+      "path": "research/alpha_stage_a_v2.py",
+      "sha256": "663d599f24c2b70ea284a042874ccff3b495d9ccef907049368646faaa4320f1",
+      "complete_window_min_periods": true,
+      "explicit_ge_20_mask": true
+    },
+    {
+      "role": "generic_security_master_warmup",
+      "ref": "65233e195",
+      "path": "src/idx_trade/security_master.py",
+      "sha256": "f30c3d6d00cb47a392f795f657e15c9348511c55407b4b1efca06b1836ef1bad",
+      "separate_ipo_warmup_reason": true
+    }
+  ],
+  "conclusion": {
+    "minimum_20_historical_provenance": "SUPPORTED_FROM_PRE_PROTOCOL_LEGACY_RULE",
+    "lookback_60_historical_provenance": "SUPPORTED_AS_WINDOW_LENGTH",
+    "min_periods_60_as_historical_liquidity_policy": "NOT_SUPPORTED_BY_LEGACY_RULE",
+    "stage_a_min_periods_60": "CURRENT_IMPLEMENTATION_BEHAVIOR",
+    "security_master_warmup_60": "SEPARATE_IPO_WARMUP_CONCEPT",
+    "current_policy_binding": "STILL_REQUIRES_EXPLICIT_PROJECT_AUTHORITY_FOR_THIS_NEW_CANDIDATE_PROTOCOL",
+    "population_selection_authorized": false,
+    "protected_payloads_read": false,
+    "reopen_trigger": "Explicit hash-bound policy decision stating whether the historical 20-in-60 primary liquidity contract governs this new candidate protocol, followed by isolated regeneration/replay."
+  }
+}

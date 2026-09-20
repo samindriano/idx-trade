@@ -131,3 +131,19 @@ access absence.
   `0f389e4fd46795f56e0fed457e101174b8c07fa388c95de27ab90bea6488581d`.
 - Result: three false-green surfaces confirmed; top-level packet allowlist
   still rejects unknown fields; verifier-version pin remains absent.
+
+## Eligibility provenance history
+
+- Script: `research/alpha_eligibility_provenance_history_v1.py`.
+- Durable result: `research_knowledge/eligibility_provenance_history_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_PROVENANCE_HISTORY_AUDIT_RESULT_V1.md`.
+- Script SHA-256:
+  `82af867fd58cff6e3999b42fa0063c7f8da8c0436063329607b7cc8d42853166`.
+- External result SHA-256:
+  `c6e4ba13928e36718394bba90d4566686c64cc2d2ecdd2c39c84eb44a5c33a9a`.
+- The audit verifies that the legacy pre-protocol primary liquidity rule uses
+  a 60 official-session window and at least 20 finite ACTIVE observations.
+  Stage-A complete-window rolling and the separate security-master warm-up are
+  recorded as distinct implementation/concept surfaces.
+- This narrows provenance but does not bind current project policy. No
+  population was selected or regenerated, and no protected outcome was read.
