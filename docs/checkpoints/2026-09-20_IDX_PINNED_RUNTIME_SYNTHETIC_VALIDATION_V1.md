@@ -96,3 +96,19 @@ This reproduces the T0 crash window as an actual synthetic failure: an
 interrupted bootstrap leaves a runtime snapshot that the next invocation cannot
 reconcile into the matching T0 marker. The test was isolated, outcome-blind,
 and did not modify the repository checkout.
+
+A second fault injection patched the missed-Open continuity writer to fail once
+after the advanced runtime snapshot but before the missed-execution audit. The
+same prepared synthetic session was then retried.
+
+Observed output:
+
+```text
+first= RuntimeError INJECTED_AFTER_CONTINUITY_SNAPSHOT
+retry= E2EPaperOrchestrationError E2E_MISSED_EXECUTION_STATE_SESSION_MISMATCH
+```
+
+This independently reproduces the continuity crash gap: the retry sees the
+advanced execution-date snapshot but no audit artifact and refuses to reconcile
+it. The correct future fix is a recoverable snapshot/audit transaction or an
+explicit reconciliation record, not a retry loop.
