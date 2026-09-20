@@ -575,6 +575,12 @@ historical alpha archive:
   pending after the canonical `AAA` sell has fully filled. Verdict: `FAIL —
   EXECUTION IDENTITY/STATE COERCION BOUNDARY`; no runtime source fix was
   applied.
+- `2026-09-20_IDX_DIVIDEND_SIZING_STATE_HASH_AUDIT_V1.md`:
+  a synthetic payment-on-decision-date case settled projected cash for sizing
+  but failed at next-stage execution with `EXECUTION_V1_STATE_HASH_MISMATCH`:
+  the base plan was hashed from projected state while execution used the raw
+  persisted state. Verdict: `FAIL — PROJECTED CA SIZING STATE IS NOT
+  EXECUTION-PARENT-COMPATIBLE`; no runtime source fix was applied.
 
 The updated system-level belief is therefore:
 
