@@ -202,6 +202,17 @@ def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
     )
     assert replayed == closed
 
+    with pytest.raises(DecisionV1Error, match="EVENT_CONFLICT"):
+        close_obligation_explicitly(
+            closed,
+            obligation_id=partial.obligation_id,
+            event_id="CLOSE-STATE-CLOSE",
+            session_date="2026-09-21",
+            reason="ALTERED_CLOSE_REASON",
+            status="RELINQUISHED",
+            parent_state_sha256=before_hash,
+        )
+
     with pytest.raises(DecisionV1Error, match="CLOSE_PARENT_MISMATCH"):
         close_obligation_explicitly(
             state,
