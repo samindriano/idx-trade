@@ -25,7 +25,8 @@ is blocked by unresolved Data QA/PIT/identity/corporate-action/capacity authorit
   `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
 - Baseline used for lane integrity: `58f094b8`
-- Current HEAD at this handoff: `8f56cfe6eb8dfc1e27c452f6447cca4ab225345b`
+- Research HEAD before this summary commit: `8f56cfe6eb8dfc1e27c452f6447cca4ab225345b`
+- Current HEAD including this summary: `1925bba0b2aeac82a1fd82f6ab952fc85fc54eaa`
 - Recorded commit span: `2026-09-19T09:11:47+07:00` to
   `2026-09-20T08:13:12+07:00`, 167 commits, roughly 23 hours of calendar
   span. This is a commit/log span, not a claim of continuous active compute.
