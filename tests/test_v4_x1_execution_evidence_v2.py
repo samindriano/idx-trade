@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
+from idx_trade import forward_dividend_execution_v1_1 as dividend_execution
+from idx_trade.v4_x1_reconciliation_result_v1 import (
+    build_reconciliation_result_v1,
+    verify_reconciliation_result_payload,
+)
 from idx_trade.v4_x1_execution_evidence_v2 import (
     EXECUTION_EVIDENCE_SCHEMA,
     build_execution_evidence_v2,
@@ -106,3 +112,95 @@ def test_execution_evidence_v2_rejects_tampered_aggregate() -> None:
 
     assert evaluation.status == "FAIL"
     assert "EXECUTION_EVIDENCE_V2_GROSS_TURNOVER_MISMATCH" in evaluation.errors
+
+
+def test_reconciliation_result_v1_records_internal_detector_provenance() -> None:
+    before = PaperPortfolioState("2026-09-01", 1_000_000.0, ())
+    after = PaperPortfolioState("2026-09-02", 1_000_000.0, ())
+    plan = _plan(before)
+    execution = ExecutionResult(
+        execution_session_date="2026-09-02",
+        state_before_hash=paper_state_hash(before),
+        state_after=after,
+        fills=(),
+        stamp_duty_idr=0.0,
+        gross_turnover_idr=0.0,
+        pending_transition_count=0,
+        reconciliation_required=False,
+    )
+    evidence = build_execution_evidence_v2(plan, execution)
+    evaluation = evaluate_execution_evidence_v2(
+        evidence,
+        expected_order_plan=plan,
+        expected_state_before=before,
+    )
+    reconciliation = dividend_execution.VerifiedDividendCAReconciliation(
+        from_session_date="2026-09-01",
+        through_session_date="2026-09-02",
+        covered_tickers=frozenset({"BBCA"}),
+        original_status="NO_RELEVANT_EVENTS",
+        relevant_tickers=frozenset(),
+        certified_events=(),
+        legacy_attestation=object(),
+        attestation_path=Path("attestation.json"),
+        attestation_sha256="a" * 64,
+        source_path=Path("source.json"),
+        source_sha256="b" * 64,
+        _verification_token=dividend_execution._DIVIDEND_RECONCILIATION_TOKEN,
+    )
+
+    result = build_reconciliation_result_v1(
+        plan,
+        evidence,
+        evaluation,
+        reconciliation,
+        required_tickers=("BBCA",),
+    )
+
+    assert result.status == "PASS_INTERNAL_PAPER"
+    assert result.external_reconciliation == "NOT_PERFORMED"
+    verified = verify_reconciliation_result_payload(result.payload())
+    assert verified["detector_id"] == "IDX_TRADE_INTERNAL_PAPER_RECONCILIATION_V1"
+
+
+def test_reconciliation_result_v1_fails_closed_on_ca_coverage_gap() -> None:
+    before = PaperPortfolioState("2026-09-01", 1_000_000.0, ())
+    after = PaperPortfolioState("2026-09-02", 1_000_000.0, ())
+    plan = _plan(before)
+    execution = ExecutionResult(
+        execution_session_date="2026-09-02",
+        state_before_hash=paper_state_hash(before),
+        state_after=after,
+        fills=(),
+        stamp_duty_idr=0.0,
+        gross_turnover_idr=0.0,
+        pending_transition_count=0,
+        reconciliation_required=False,
+    )
+    evidence = build_execution_evidence_v2(plan, execution)
+    evaluation = evaluate_execution_evidence_v2(evidence, expected_order_plan=plan)
+    reconciliation = dividend_execution.VerifiedDividendCAReconciliation(
+        from_session_date="2026-09-01",
+        through_session_date="2026-09-02",
+        covered_tickers=frozenset(),
+        original_status="NO_RELEVANT_EVENTS",
+        relevant_tickers=frozenset(),
+        certified_events=(),
+        legacy_attestation=object(),
+        attestation_path=Path("attestation.json"),
+        attestation_sha256="a" * 64,
+        source_path=Path("source.json"),
+        source_sha256="b" * 64,
+        _verification_token=dividend_execution._DIVIDEND_RECONCILIATION_TOKEN,
+    )
+
+    result = build_reconciliation_result_v1(
+        plan,
+        evidence,
+        evaluation,
+        reconciliation,
+        required_tickers=("BBCA",),
+    )
+
+    assert result.status == "FAIL"
+    assert result.mismatches[0].code == "RECONCILIATION_RESULT_V1_CA_COVERAGE_INCOMPLETE"

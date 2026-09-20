@@ -110,12 +110,15 @@ The isolated lane currently contains:
 - versioned `EXECUTION_EVIDENCE-V2` artifact with per-fill quantities,
   parent/state hashes, cash/position replay, turnover, pending, and
   reconciliation checks;
+- typed `RECONCILIATION_RESULT-V1` provenance artifact binding the internal
+  detector to CA attestation/source and execution-evidence hashes, with
+  explicit `NOT_PERFORMED` external reconciliation scope;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
-execution evidence artifact restart binding,
+execution evidence and reconciliation artifact restart binding,
 reconciliation provenance, identity/config contracts, and full migration
 artifact provenance remain open; this is not a production promotion or phase
 closure.

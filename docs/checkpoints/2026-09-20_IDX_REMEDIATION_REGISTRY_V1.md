@@ -7,7 +7,7 @@
 | REM-STATE-001 | Snapshot omits obligation state | `V2_SCHEMA_IMPLEMENTED` | `IMPLEMENTED_LOCAL / RECOVERY_OPEN` | Versioned snapshot/hash, restart replay, and legacy loader |
 | REM-CA-001 | Projected CA state differs from execution parent | `LINEAGE_CONTRACT_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / TIMING_MATRIX_OPEN` | Three timing cases plus restart/idempotency |
 | REM-EVAL-001 | Execution evidence loses quantity semantics | `EVIDENCE_V2_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / ARTIFACT_REPLAY_OPEN` | Versioned evidence artifact, structural evaluator replay, and restart binding |
-| REM-REC-001 | False reconciliation bit lacks provenance | `UNADJUDICATED` | `UNADJUDICATED` | Typed result, evidence binding, restart/replay |
+| REM-REC-001 | False reconciliation bit lacks provenance | `RESULT_V1_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / ARTIFACT_REPLAY_OPEN` | Typed result, evidence binding, restart/replay |
 | REM-ID-001 | Identity normalization/revision splits | `UNADJUDICATED` | `UNADJUDICATED` | Alias, same-class revision, and downstream containment matrix |
 | REM-CAUSE-001 | Exposure/cash cause state collapses | `UNADJUDICATED` | `UNADJUDICATED` | Cause-state join with obligations and next Decision |
 | REM-LINEAGE-001 | Config/runner identity absent from artifacts | `UNADJUDICATED` | `UNADJUDICATED` | Config mismatch fail-closed across prepare/execute/replay |

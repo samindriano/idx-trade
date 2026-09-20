@@ -34,8 +34,15 @@ from .forward_dividend_execution_v1_1 import (
     VerifiedDividendCAReconciliation,
     execute_open_v1_1_reconciled,
 )
-from .v4_x1_execution_evidence_v2 import build_execution_evidence_v2
-from .v4_x1_decision_v1_contract import VerifiedScoreSession
+from .v4_x1_execution_evidence_v2 import (
+    build_execution_evidence_v2,
+    evaluate_execution_evidence_v2,
+)
+from .v4_x1_reconciliation_result_v1 import (
+    build_reconciliation_result_v1,
+    verify_reconciliation_result_payload,
+)
+from .v4_x1_decision_v1_contract import DecisionV1Error, VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
 from .v4_x1_decision_v2_minimal import plan_v4_x1_decision_v2_minimal
 from .v4_x1_execution_v1_contract import (
@@ -1044,6 +1051,16 @@ def _recover_staged_execution(
     execution_body = stage.get("execution_body")
     if not isinstance(execution_body, dict):
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_PAYLOAD_MISSING")
+    try:
+        verify_reconciliation_result_payload(
+            execution_body.get("reconciliation_result")
+            if isinstance(execution_body.get("reconciliation_result"), Mapping)
+            else {}
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_TRANSACTION_RECONCILIATION_RESULT_INVALID"
+        ) from exc
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1196,6 +1213,16 @@ def execute_preopen(
         existing_hash = str(existing_body.pop("payload_sha256", ""))
         if not existing_hash or _canonical_hash(existing_body) != existing_hash:
             raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_HASH_MISMATCH")
+        try:
+            verify_reconciliation_result_payload(
+                existing_body.get("reconciliation_result")
+                if isinstance(existing_body.get("reconciliation_result"), Mapping)
+                else {}
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_EXISTING_RECONCILIATION_RESULT_INVALID"
+            ) from exc
         if (
             str(existing_body.get("prepared_path") or "") != str(prepared)
             or str(existing_body.get("prepared_sha256") or "")
@@ -1331,6 +1358,23 @@ def execute_preopen(
         order_plan.base_plan,
         result.base_result,
     )
+    execution_evidence_evaluation = evaluate_execution_evidence_v2(
+        execution_evidence,
+        expected_order_plan=order_plan.base_plan,
+        expected_state_before=state.base_state,
+    )
+    reconciliation_result = build_reconciliation_result_v1(
+        order_plan.base_plan,
+        execution_evidence,
+        execution_evidence_evaluation,
+        lifecycle_reconciliation,
+        required_tickers=required,
+    )
+    if reconciliation_result.status != "PASS_INTERNAL_PAPER":
+        raise E2EPaperOrchestrationError(
+            "E2E_INTERNAL_RECONCILIATION_FAILED:"
+            + ",".join(row.code for row in reconciliation_result.mismatches)
+        )
     snapshot_payload = dividend_runtime._snapshot_payload(
         result.state_after,
         registry,
@@ -1375,6 +1419,7 @@ def execute_preopen(
         "runtime_state_sha256": snapshot_payload["hashes"]["runtime_state_sha256"],
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
         "execution_evidence": execution_evidence.payload(),
+        "reconciliation_result": reconciliation_result.payload(),
         "fills": [asdict(x) for x in result.base_result.fills],
         "gross_turnover_idr": result.base_result.gross_turnover_idr,
         "stamp_duty_idr": result.base_result.stamp_duty_idr,

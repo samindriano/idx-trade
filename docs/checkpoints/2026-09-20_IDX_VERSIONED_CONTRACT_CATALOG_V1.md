@@ -48,7 +48,7 @@ missing planned quantity.
 | `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, and additive hash implemented; recovery open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent and projected NAV-only sizing are explicitly hash-bound; timing matrix open |
 | `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact and structural evaluator implemented locally; artifact restart binding open |
-| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Planned |
+| `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result with CA/evidence provenance; artifact replay open |
 | `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Planned |
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Planned |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Planned |

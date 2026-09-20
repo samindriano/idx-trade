@@ -168,10 +168,12 @@ def evaluate_execution_evidence_v2(
         expected_positions_after = dict(before_positions)
         for fill in evidence.fills:
             if fill.side == "BUY":
-                expected_positions_after[fill.ticker] = (
+                next_shares = (
                     expected_positions_after.get(fill.ticker, 0)
                     + fill.filled_shares
                 )
+                if next_shares:
+                    expected_positions_after[fill.ticker] = next_shares
             elif fill.side == "SELL":
                 remaining = expected_positions_after.get(fill.ticker, 0) - fill.filled_shares
                 if remaining < 0:
