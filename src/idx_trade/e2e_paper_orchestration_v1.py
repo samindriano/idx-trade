@@ -34,6 +34,7 @@ from .forward_dividend_execution_v1_1 import (
     VerifiedDividendCAReconciliation,
     execute_open_v1_1_reconciled,
 )
+from .v4_x1_execution_evidence_v2 import build_execution_evidence_v2
 from .v4_x1_decision_v1_contract import VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
 from .v4_x1_decision_v2_minimal import plan_v4_x1_decision_v2_minimal
@@ -1326,6 +1327,10 @@ def execute_preopen(
         reconciliation=lifecycle_reconciliation,
         historical_states_by_date=historical_states_by_date,
     )
+    execution_evidence = build_execution_evidence_v2(
+        order_plan.base_plan,
+        result.base_result,
+    )
     snapshot_payload = dividend_runtime._snapshot_payload(
         result.state_after,
         registry,
@@ -1369,6 +1374,7 @@ def execute_preopen(
         "runtime_snapshot_sha256": snapshot_file_sha,
         "runtime_state_sha256": snapshot_payload["hashes"]["runtime_state_sha256"],
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
+        "execution_evidence": execution_evidence.payload(),
         "fills": [asdict(x) for x in result.base_result.fills],
         "gross_turnover_idr": result.base_result.gross_turnover_idr,
         "stamp_duty_idr": result.base_result.stamp_duty_idr,

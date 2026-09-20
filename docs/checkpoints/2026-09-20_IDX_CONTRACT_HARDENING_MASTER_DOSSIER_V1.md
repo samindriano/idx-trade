@@ -107,12 +107,15 @@ The isolated lane currently contains:
   total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
 - projection guard that rejects changes to positions, pending intents,
   obligations, reconciliation state, or state source identity;
+- versioned `EXECUTION_EVIDENCE-V2` artifact with per-fill quantities,
+  parent/state hashes, cash/position replay, turnover, pending, and
+  reconciliation checks;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
-execution evidence,
+execution evidence artifact restart binding,
 reconciliation provenance, identity/config contracts, and full migration
 artifact provenance remain open; this is not a production promotion or phase
 closure.

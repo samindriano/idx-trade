@@ -44,6 +44,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   and records projected total-return sizing separately;
 - projected CA state is restricted to cash/ledger changes and a trade-state
   mutation fails closed;
+- `EXECUTION_EVIDENCE-V2` now carries per-fill quantities, parent/state hashes,
+  state transition replay, turnover, pending, and reconciliation checks;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
@@ -53,6 +55,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - CA payment-on-decision, payment-before-decision, and payment-on-execution
   timing matrix with restart/idempotency;
 - quantity-bearing execution evidence and evaluator replay;
+- execution artifact restart binding and tamper/replay matrix;
 - reconciliation result provenance and mismatch detector;
 - identity/config/cause-state contracts;
 - controller crash/recovery replay and independent final challenge.
