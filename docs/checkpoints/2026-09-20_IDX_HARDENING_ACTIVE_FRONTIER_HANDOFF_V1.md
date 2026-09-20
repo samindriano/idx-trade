@@ -224,4 +224,5 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   caller-supplied hash-bound policy transition and remains fail-closed by
   default. Pairing, expiry, and `FULL`-quantity semantics still require
   authoritative policy. The prepared Decision-plan replay gap is now covered
-  by the current-head challenge.
+  by the current-head challenge. The requirement-by-requirement audit is
+  recorded in `2026-09-21_IDX_CONTRACT_HARDENING_COMPLETION_AUDIT_V1.md`.
