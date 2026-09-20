@@ -348,3 +348,18 @@ checkpoint files; this file records why the next question changed.
   independent 60-session feature warm-up. This strengthens the policy blocker;
   it does not establish policy correctness, predictive robustness, capacity, or
   candidate admission.
+
+## 2026-09-20 — C1/C4 horizon bridge
+
+- Reconstructed raw `-ret_5`, C1 residual numerator, stored C1, raw `-ret_20`,
+  and stored C4 representations on the frozen structural surface.
+- Raw 5-session versus raw 20-session Top-30 overlap is `37.96%`, close to
+  residual-numerator versus raw C4 `36.82%` and stored C1 versus stored C4
+  `35.80%`. This does not support a single horizon-only explanation for shared
+  C1/C4 membership.
+- C1 raw versus residual-numerator overlap is `84.55%`; stored C1 versus
+  residual numerator is `63.75%`; stored C4 versus raw 20-session reversal is
+  `62.22%`. Beta residualization changes the short-horizon representation, but
+  the C1/C4 normalizers materially shape final Top-30 membership.
+- The result is structural formula anatomy only. No predictive redundancy,
+  orthogonality, capacity, candidate, policy, or outcome claim follows.

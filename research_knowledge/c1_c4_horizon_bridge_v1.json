@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "C1-C4-HORIZON-BRIDGE-056",
+  "status": "PASS_STRUCTURAL_C1_C4_HORIZON_BRIDGE",
+  "scope": "Outcome-blind fixed Top-30 overlap and daily rank association across C1 raw/residual/normalized and C4 raw/normalized reversal representations.",
+  "top_k": 30,
+  "signal_definitions": {
+    "C1_STORED": "-c1_residual / vol_20",
+    "C1_RAW_REVERSAL_5": "-ret_5",
+    "C1_RESIDUAL_NUMERATOR": "-(ret_5 - beta_60_prior * market_ret_5)",
+    "C4_STORED": "-ret_20 / abs_ret_sum_20",
+    "C4_RAW_REVERSAL_20": "-ret_20"
+  },
+  "pairwise_summary": [
+    {"left": "C1_STORED", "right": "C1_RAW_REVERSAL_5", "common_selection_dates": 1141, "mean_overlap_fraction": 0.6019281332164768, "mean_jaccard": 0.44042051937485355, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.9030159767446708},
+    {"left": "C1_STORED", "right": "C1_RESIDUAL_NUMERATOR", "common_selection_dates": 1141, "mean_overlap_fraction": 0.6375401694420099, "mean_jaccard": 0.4763480859459856, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.9547817712488307},
+    {"left": "C1_RAW_REVERSAL_5", "right": "C1_RESIDUAL_NUMERATOR", "common_selection_dates": 1141, "mean_overlap_fraction": 0.8455448437043529, "mean_jaccard": 0.7522016886592799, "exact_match_fraction": 0.07624890446976336, "mean_daily_rank_spearman": 0.9338061617269326},
+    {"left": "C1_STORED", "right": "C4_STORED", "common_selection_dates": 1141, "mean_overlap_fraction": 0.35801928133216476, "mean_jaccard": 0.2222837902898199, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.4625647512134776},
+    {"left": "C1_RESIDUAL_NUMERATOR", "right": "C4_RAW_REVERSAL_20", "common_selection_dates": 1141, "mean_overlap_fraction": 0.36824423020742036, "mean_jaccard": 0.22999040669498566, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.408449357635455},
+    {"left": "C1_RAW_REVERSAL_5", "right": "C4_RAW_REVERSAL_20", "common_selection_dates": 1201, "mean_overlap_fraction": 0.37957257840688313, "mean_jaccard": 0.23924543538413648, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.43266092400165773},
+    {"left": "C1_STORED", "right": "C4_RAW_REVERSAL_20", "common_selection_dates": 1141, "mean_overlap_fraction": 0.3057259713701432, "mean_jaccard": 0.18420024723833436, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.4268748747122541},
+    {"left": "C1_RESIDUAL_NUMERATOR", "right": "C4_STORED", "common_selection_dates": 1141, "mean_overlap_fraction": 0.2775343266140812, "mean_jaccard": 0.16468983276790414, "exact_match_fraction": 0.0, "mean_daily_rank_spearman": 0.4244113892984329},
+    {"left": "C4_STORED", "right": "C4_RAW_REVERSAL_20", "common_selection_dates": 1201, "mean_overlap_fraction": 0.6221759644740494, "mean_jaccard": 0.46634712895555996, "exact_match_fraction": 0.0008326394671107411, "mean_daily_rank_spearman": 0.9369697467362684}
+  ],
+  "interpretation": [
+    "C1 raw 5-session reversal and C1 residual numerator remain strongly related but are not identical: mean Top-30 overlap is 84.55% and mean daily rank Spearman is 0.9338.",
+    "C1 normalization changes Top-30 membership more than beta residualization on this surface: stored C1 versus residual numerator overlap is 63.75%, versus 60.19% for stored C1 versus raw reversal.",
+    "Raw short-horizon versus raw 20-session reversal overlap is 37.96%, close to residual-numerator versus raw C4 overlap at 36.82% and stored C1 versus stored C4 at 35.80%. The shared C1/C4 overlap is therefore not explained by one simple horizon-only identity.",
+    "C4 normalization also materially reorders membership: stored C4 versus raw 20-session reversal overlap is 62.22%.",
+    "These are representation-level structural findings only; no predictive redundancy, orthogonality, risk-adjusted value, PIT safety, or candidate admission follows."
+  ],
+  "calendar": {"official_session_count": 1260, "official_min": "2021-04-29", "official_max": "2026-07-31"},
+  "admission": {"policy_selected": false, "era_admitted": false, "candidate_status_changed": false, "protected_boundary": "CLOSED"},
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e"
+  },
+  "code": {
+    "script": "research/alpha_c1_c4_horizon_bridge_v1.py",
+    "sha256": "85c8ddce7de8c18070390f4b8647e792997c0943e41dbc92a532014bc0ed82b5",
+    "focused_test": "tests/test_alpha_c1_c4_horizon_bridge_v1.py",
+    "test_sha256": "6e80b7bd6ba5e67b7f208c06e34f8338860734276e8b64c2c1a754e4c6ba6e68"
+  },
+  "external_result": {
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260920T-c1-c4-horizon-bridge\\c1_c4_horizon_bridge_v1.json",
+    "sha256": "f7499f1bdf9559b0af5b05625547197315b2fe3bb838a998eaa7282126ebdddd"
+  }
+}

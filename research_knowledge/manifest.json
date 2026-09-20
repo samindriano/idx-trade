@@ -53,6 +53,7 @@
     "panel_anchor_state_census_v1.json",
     "anchor_state_transition_audit_v1.json",
     "eligibility_selection_overlap_v1.json",
+    "c1_c4_horizon_bridge_v1.json",
     "c1_c4_numerator_overlap_v1.json",
     "universe_breadth_turnover_v1.json",
     "data_authority_packet_v1.md",
@@ -63,8 +64,8 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 52,
-    "findings_index_entries": 45,
+    "experiment_registry_entries": 53,
+    "findings_index_entries": 46,
     "no_retry_registry_entries": 16,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
@@ -95,6 +96,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_FEATURE_WARMUP_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_PANEL_ANCHOR_STATE_CENSUS_RESULT_V1.md",
     "docs/checkpoints/2026-09-20_ALPHA_ANCHOR_STATE_TRANSITION_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_SELECTION_OVERLAP_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_SELECTION_OVERLAP_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_C1_C4_HORIZON_BRIDGE_RESULT_V1.md"
   ]
 }

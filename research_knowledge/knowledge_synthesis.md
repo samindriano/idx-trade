@@ -44,6 +44,13 @@
   and an average 4.98-name symmetric difference. C2's invariance is explained
   by its separate 60-session feature warm-up. This strengthens the policy
   blocker without selecting a branch or implying predictive robustness.
+- A horizon bridge separates raw reversal, C1 beta residualization, and final
+  normalizers. Raw `-ret_5` versus raw `-ret_20` Top-30 overlap is 37.96%,
+  close to residual-numerator versus raw C4 at 36.82% and stored C1 versus
+  stored C4 at 35.80%. C1 raw versus residual overlap is 84.55%, while stored
+  C1 versus residual is 63.75% and stored C4 versus raw `-ret_20` is 62.22%.
+  Related horizons contribute to shared reversal structure, but normalizers
+  materially shape final membership; this remains structural only.
 
 ## What we think we know
 

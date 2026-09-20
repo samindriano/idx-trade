@@ -17,6 +17,10 @@
    comparison confirms that the unresolved policy fork changes actual C1/C3/C4
    decision sets while leaving C2 invariant; policy authority is therefore
    decision-set material, not just denominator metadata.
+   A horizon bridge further separates raw 5/20-session reversal from C1 beta
+   residualization and C1/C4 normalizers: related raw horizons explain only a
+   moderate portion of overlap, while denominators materially reorder each
+   candidate's final Top-30.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a
