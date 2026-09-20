@@ -53,3 +53,35 @@ checkpoint files; this file records why the next question changed.
   separate generic warm-up path. No evidence supports an incumbent-specific
   origin, and Data-QA is a separate blocked gate.
 - Classification remains `POLICY_AUTHORITY_MISSING`; no population was chosen.
+
+## 2026-09-20 — eligibility counterfactual clarification
+
+- Replayed the two unresolved policy interpretations outcome-blind on the
+  hash-bound panel, financial bundle, official sessions, and tradability
+  anchors.
+- Minimum-20 produces 348,765 eligible rows versus 310,761 under minimum-60;
+  the mask difference is 38,004 rows across 619 tickers.
+- Common-finite rank changes are material for C1/C3/C4 (73.1086%/96.6122%/
+  99.5192%) but zero for C2 because C2's feature rolling warm-up remains 60.
+- This strengthens the conclusion that security eligibility and feature
+  availability have been conflated in the current implementation. It does not
+  establish policy authority or authorize regeneration.
+- The first turnover comparison used all official dates and was superseded by
+  an explicit previous-official-session calculation over the frozen 600-session
+  scope; the corrected minimum-60 values align with the official structural
+  scope to rounding.
+
+## 2026-09-20 — tooling mutation and authority-packet audit
+
+- A synthetic audit exercised corrupt hashes, missing bindings, changed code,
+  network imports, obvious protected markers, C5 injection, policy selection,
+  and re-entry opening. All expected failures failed closed; safe baselines
+  passed.
+- The audit found that the hybrid firewall is not a semantic allowlist:
+  disguised field names and unexpected non-matching schema columns can pass.
+- A newly surfaced data-authority packet initially passed despite five missing
+  evidence refs. The verifier was corrected to require relative refs and
+  counterfactual refs to exist; a dedicated missing-reference test now fails
+  closed.
+- The authority packet remains `BLOCKED_PRE_ADMISSION`; it is a reusable
+  bounded map, not permission to open outcomes or re-enter predictive work.

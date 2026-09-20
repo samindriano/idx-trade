@@ -1,0 +1,24 @@
+{
+  "schema_version": "IDX_TRADE_FIREWALL_MUTATION_AUDIT_V1",
+  "status": "PASS_EXPECTED_FAILURES_AND_RECORDED_GAPS",
+  "scope": "Outcome-blind synthetic fixtures only; no provider, target, outcome, or cloud access.",
+  "script": {
+    "path": "research/alpha_data_authority_tooling_audit_v1.py",
+    "sha256": "39a57a3fb3039623ae711652ba532aff85ad8cb13d3dee24d09f52cfa2573d02"
+  },
+  "staging_result_sha256": "85577c7a9c35efe0c46abc9f77e4abc20110b33df0cc060ed8de6f32c61f9881",
+  "existing_firewall": "HYBRID_REQUIRED_PATH_HASH_AND_DENYLIST",
+  "cases": {
+    "safe_code": "PASS",
+    "network_import": "FAIL_EXPECTED",
+    "obvious_protected_token": "FAIL_EXPECTED",
+    "true_access_marker": "FAIL_EXPECTED",
+    "disguised_field": "KNOWN_GAP_PASSES_CURRENT_DENYLIST",
+    "unexpected_schema_column": "KNOWN_GAP_PASSES_CURRENT_DENYLIST"
+  },
+  "interpretation": [
+    "The current firewall is not a semantic schema allowlist.",
+    "Disguised fields and unexpected non-denylisted columns require an independent allowlist or semantic challenger before protected access.",
+    "These gaps keep the final authority package blocked; they are not treated as false negatives or silently rescued."
+  ]
+}

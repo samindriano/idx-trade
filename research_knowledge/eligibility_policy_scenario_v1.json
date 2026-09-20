@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "ELIGIBILITY-SCENARIO-034",
+  "status": "PASS_STRUCTURAL_SCENARIO_ONLY",
+  "policy_decision": "BLOCKED_POLICY_CONFLICT",
+  "scope": "Outcome-blind counterfactual comparison of minimum-20 versus min-periods-60; no policy selected.",
+  "code": {
+    "path": "research/alpha_eligibility_policy_scenario_v1.py",
+    "sha256": "58d3280c9e191903bd195bfa11a92201ee693ead1b752f1010f5b93b15cd0e11"
+  },
+  "result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_eligibility_policy_scenario_v1.json",
+    "sha256": "3fb1331937d14c5fa17a066aaa0eaab1170064c4652a14e7d5e78190c3666c98"
+  },
+  "inputs": {
+    "panel_rows": 981940,
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "financial_sha256": "c6004832e651b380161ec216efb2020dddbe86419d89c4521f77aeb09335876b",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "tradability_anchors_sha256": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
+  },
+  "universe_scenarios": {
+    "minimum_20": {
+      "eligible_rows": 348765,
+      "eligible_tickers": 740,
+      "eligible_dates": 1241,
+      "policy_sha256": "b5582063008781f687ac5d63da549fb73de621e1e739b0381a57d19139b3d0e6"
+    },
+    "minimum_60": {
+      "eligible_rows": 310761,
+      "eligible_tickers": 711,
+      "eligible_dates": 1201,
+      "policy_sha256": "38c3d28b477527fd62981cd6a1c390b33f4ba295ade25334f43c796216814983"
+    },
+    "difference": {
+      "newly_admitted_rows": 38004,
+      "newly_admitted_tickers": 619,
+      "newly_admitted_dates": 1241
+    }
+  },
+  "common_finite_rank_effects_20_vs_60": {
+    "C1": {
+      "common_finite_rows": 295243,
+      "rank_change_fraction": 0.731085919056506,
+      "mean_abs_rank_delta": 0.010885973249952307
+    },
+    "C2": {
+      "common_finite_rows": 310761,
+      "rank_change_fraction": 0.0,
+      "mean_abs_rank_delta": 0.0
+    },
+    "C3": {
+      "common_finite_rows": 30994,
+      "rank_change_fraction": 0.9661224753178035,
+      "mean_abs_rank_delta": 0.0148363545936587
+    },
+    "C4": {
+      "common_finite_rows": 310323,
+      "rank_change_fraction": 0.9951921062892535,
+      "mean_abs_rank_delta": 0.005951265728793881
+    }
+  },
+  "interpretation": [
+    "The population conflict is material, not merely a larger-sample choice.",
+    "C2 remains rank-identical because its feature rolling warm-up still requires 60 observations; this empirically separates eligibility from feature availability in the current implementation.",
+    "C1, C3, and C4 rank geometry changes materially under the counterfactual mask.",
+    "The result does not establish which policy is authoritative and does not authorize regeneration or predictive evaluation."
+  ],
+  "limitations": [
+    "No forward outcomes, IC, Rank-IC, PnL, incumbent result, or protected array was read.",
+    "No listing-age, delisting-completeness, ticker-reuse, or PIT sector authority is present.",
+    "Frozen Top-30 turnover was computed on the last 600 official sessions only for scope alignment; it remains structural."
+  ],
+  "reopen_trigger": "Hash-bound authoritative policy record plus authorized isolated regeneration and replay."
+}

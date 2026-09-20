@@ -4,8 +4,9 @@
 
 1. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
-   settings, and Data-QA policy. Current classification:
-   `POLICY_AUTHORITY_MISSING` unless authoritative local evidence appears.
+   settings, and Data-QA policy. Counterfactual impact is now quantified, but
+   current classification remains `POLICY_AUTHORITY_MISSING` unless
+   authoritative local evidence appears.
 2. Tooling/verifier adversarial audit: producer/verifier independence, allowlist
    strength, deterministic serialization, stale-hash rejection, synthetic
    forbidden-fixture detection, and mutation detection.

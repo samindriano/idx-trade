@@ -1,0 +1,28 @@
+{
+  "schema_version": "IDX_TRADE_VERIFIER_MUTATION_AUDIT_V1",
+  "status": "PASS_EXPECTED_FAILURES",
+  "scope": "Outcome-blind synthetic fixtures only; no provider, target, outcome, or cloud access.",
+  "script": {
+    "path": "research/alpha_data_authority_tooling_audit_v1.py",
+    "sha256": "39a57a3fb3039623ae711652ba532aff85ad8cb13d3dee24d09f52cfa2573d02"
+  },
+  "staging_result_sha256": "85577c7a9c35efe0c46abc9f77e4abc20110b33df0cc060ed8de6f32c61f9881",
+  "artifact_contract": {
+    "baseline": "PASS",
+    "corrupt_code_hash": "FAIL_EXPECTED",
+    "missing_manifest_hash": "FAIL_EXPECTED",
+    "corrupt_input_hash": "FAIL_EXPECTED",
+    "changed_code_without_rebind": "FAIL_EXPECTED"
+  },
+  "authority_packet_allowlist": {
+    "baseline": "PASS",
+    "candidate_injection": "FAIL_EXPECTED",
+    "policy_selection": "FAIL_EXPECTED",
+    "reentry_opening": "FAIL_EXPECTED"
+  },
+  "limitations": [
+    "Hash and envelope checks do not independently recompute producer formulas.",
+    "The packet verifier is admission-shape evidence, not source-authority or predictive evidence.",
+    "A green synthetic audit does not open the protected boundary."
+  ]
+}

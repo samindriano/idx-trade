@@ -68,3 +68,33 @@ access absence.
   eligible rows; daily max `175`, 277 dates with at least 30 names, median 0.
 - The first daily aggregation attempt was wrong and was corrected before the
   accepted output; the corrected method groups the all-four boolean by date.
+
+## Eligibility counterfactual scenario
+
+- Script: `research/alpha_eligibility_policy_scenario_v1.py`.
+- Unit test: `tests/test_alpha_eligibility_policy_scenario_v1.py`, 2/2 passing.
+- Result summary: `research_knowledge/eligibility_policy_scenario_v1.json`.
+- External result SHA-256:
+  `3fb1331937d14c5fa17a066aaa0eaab1170064c4652a14e7d5e78190c3666c98`.
+- Code SHA-256:
+  `58d3280c9e191903bd195bfa11a92201ee693ead1b752f1010f5b93b15cd0e11`.
+- The replay reads only the allowlisted structural panel, financial bundle,
+  official sessions, and tradability anchors. It writes only to the isolated
+  staging root and contains no protected outcome values.
+- It evaluates both policy branches without selecting one. The 600-session
+  Top-30 scope uses previous-official-session logic to align with the existing
+  structural lab; all-session summaries are retained only as diagnostics.
+- The result is `PASS_STRUCTURAL_SCENARIO_ONLY` with
+  `BLOCKED_POLICY_CONFLICT`, not policy resolution or predictive evidence.
+
+## Tooling mutation audit
+
+- Script: `research/alpha_data_authority_tooling_audit_v1.py`.
+- Durable result: `research_knowledge/tooling_mutation_audit_v1.json`.
+- The audit uses temporary fixtures only and reports
+  `PASS_EXPECTED_MUTATIONS_AND_RECORDED_GAPS`.
+- The corrected authority-packet verifier now checks both evidence-reference
+  path shape and file existence, including the counterfactual scenario ref.
+- Known gaps remain: the firewall is not a semantic allowlist, disguised fields
+  and unexpected non-matching schema columns can pass, and producer formulas
+  are not independently recomputed by the envelope verifiers.

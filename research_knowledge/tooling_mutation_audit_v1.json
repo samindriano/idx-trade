@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "TOOLING-MUTATION-035",
+  "status": "PASS_EXPECTED_MUTATIONS_AND_RECORDED_GAPS",
+  "scope": "Outcome-blind synthetic mutation audit using temporary fixtures only.",
+  "code": {
+    "path": "research/alpha_data_authority_tooling_audit_v1.py",
+    "sha256": "39a57a3fb3039623ae711652ba532aff85ad8cb13d3dee24d09f52cfa2573d02"
+  },
+  "expected_failures": {
+    "corrupt_code_hash": true,
+    "missing_manifest_hash": true,
+    "corrupt_input_hash": true,
+    "changed_code_without_rebind": true,
+    "network_import": true,
+    "obvious_protected_token": true,
+    "true_access_marker": true,
+    "candidate_injection": true,
+    "policy_selection": true,
+    "reentry_opening": true
+  },
+  "baseline_passes": {
+    "artifact_contract": true,
+    "safe_firewall_code": true,
+    "authority_packet": true
+  },
+  "known_gaps": [
+    "Firewall is hybrid denylist/static scanning, not a semantic schema allowlist.",
+    "Disguised protected-looking text fields can pass when their token is absent from the denylist.",
+    "Unexpected non-matching Parquet columns can pass the denylist schema check.",
+    "Artifact and packet verifiers bind hashes/shape but do not independently recompute producer formulas.",
+    "Lane/process checks cannot prove runtime access absence."
+  ],
+  "boundary": {
+    "temporary_fixtures_only": true,
+    "provider_accessed": false,
+    "cloud_accessed": false,
+    "protected_outcome_accessed": false,
+    "canonical_mutation": false
+  },
+  "reopen_trigger": "Introduce an explicit allowlist/semantic challenger or a new verifier version; do not use protected outcomes as fixtures."
+}

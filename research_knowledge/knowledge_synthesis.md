@@ -13,6 +13,10 @@
   authority are separate gates and remain incomplete.
 - Constructor, packet, firewall, and lane verifiers provide scoped reproducibility
   and process evidence, not scientific validity.
+- Synthetic mutation testing confirms expected hash/closure failures, while
+  exposing a real firewall limitation: denylist/token checks can miss disguised
+  semantic fields or unexpected schema columns. Authority-packet evidence refs
+  now fail closed when files are missing.
 - Eligibility provenance is partially clarified: the protocol says 60 is the
   trailing official-session lookback and 20 is the minimum finite observations;
   the generic security-master warm-up path is separate. Both Stage-A versions
@@ -21,6 +25,11 @@
 - The exact finite four-way C1/C2/C3/C4 intersection under the current mask is
   30861 rows (9.9308% of current eligible rows); C3 sparsity dominates it. This
   is a structural common-support census, not outcome evidence.
+- The minimum-20 versus min-periods-60 conflict is structurally material: it
+  changes 38004 rows and 619 tickers. C1/C3/C4 rank geometry changes materially,
+  while C2 remains unchanged because its rolling feature warm-up still requires
+  60 observations. This separates eligibility from feature availability in the
+  current implementation without resolving policy authority.
 
 ## What we think we know
 
@@ -44,6 +53,12 @@
 ## What remains unknown or blocked
 
 - `POLICY_AUTHORITY_MISSING` for min-periods semantics.
+- The two policy branches produce materially different structural populations;
+  a future comparison must not mix their masks or silently treat one as the
+  admitted population.
+- A packet-shaped data-authority map is useful as a bounded admission summary,
+  but its PASS is only trustworthy after evidence existence, packet closure,
+  and synthetic mutation checks pass.
 - Population completeness, historical PIT/available-at time, survivorship,
   issuer/ISIN continuity, CA basis, revision/vintage, common support, and
   executable capacity.

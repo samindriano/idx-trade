@@ -1,0 +1,173 @@
+{
+  "schema_version": "IDX_TRADE_DATA_AUTHORITY_PACKET_V1",
+  "status": "BLOCKED_PRE_ADMISSION",
+  "scope": "outcome-blind data authority and research admission",
+  "lane": {
+    "branch": "codex/alpha-available-data-20260919",
+    "worktree": "C:/Users/Sam/.codex/worktrees/idx-alpha-available-data-20260919",
+    "head_at_packet_creation": "855bb153cd7a5a4a7b862cd6986a81556eb0020e",
+    "protected_boundary": "CLOSED",
+    "canonical_mutation": false,
+    "provider_access": false,
+    "cloud_access": false
+  },
+  "eligibility_policy": {
+    "status": "ELIGIBILITY_POLICY_AUTHORITY_MISSING",
+    "authoritative_rule": null,
+    "prose_interpretation": {
+      "window": 60,
+      "minimum_finite_observations": 20,
+      "source": "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PROGRAM_PROTOCOL_V1.md:40-44,183-189"
+    },
+    "implementation_interpretation": {
+      "window": 60,
+      "count_min_periods": 60,
+      "median_min_periods": 60,
+      "source": "research/alpha_stage_a_v2.py:92-96,149-154"
+    },
+    "semantics": {
+      "minimum_20": "population liquidity rule lower bound inside a trailing 60 official-session window; exact count/median binding is not authorized",
+      "min_periods_60": "pandas rolling availability requirement used by the implementation; it makes the partial-window >=20 path unreachable",
+      "security_warmup_60": "separate minimum_warmup_sessions=60 IPO_WARMUP rule in the generic security-master universe path",
+      "policy_selection": "none"
+    },
+    "provenance_timeline": [
+      {"commit": "a02a1547", "timestamp": "2026-09-19T11:16:39+07:00", "role": "normative protocol freeze", "finding": "trailing-60 plus at least-20 prose"},
+      {"commit": "1ebced27", "timestamp": "2026-09-19T11:41:01+07:00", "role": "implementation", "finding": "rolling min_periods inherits window"},
+      {"commit": "9e4e54fa", "timestamp": "2026-09-19T20:34:54+07:00", "role": "future packet closure", "finding": "both prose and implementation behavior retained"},
+      {"commit": "e446c1e8", "timestamp": "2026-09-20T04:26:31+07:00", "role": "policy resolution packet", "finding": "BLOCKED_POLICY_CONFLICT recorded"}
+    ],
+    "counterfactual_scenario": "research_knowledge/eligibility_policy_scenario_v1.json"
+  },
+  "taxonomy": {
+    "population_eligibility": {"status": "BLOCKED", "reason": "policy conflict plus no population-complete PIT authority"},
+    "security_date_eligibility": {"status": "BOUNDED_CODE_ONLY", "reason": "LISTED, ACTIVE, and security-master IPO_WARMUP are explicit in code; historical source authority is incomplete"},
+    "tradability": {"status": "BOUNDED_STRUCTURAL", "reason": "regular ACTIVE anchors support structural masks only"},
+    "listing_age_requirement": {"status": "DEFINED_SEPARATELY", "reason": "minimum_warmup_sessions=60 is not a rolling feature min_periods setting"},
+    "feature_warmup": {"status": "FEATURE_SPECIFIC", "reason": "5, 20, and 60-session rolling operations have their own availability requirements"},
+    "rolling_window_min_periods": {"status": "IMPLEMENTATION_SPECIFIC", "reason": "Stage-A helper uses min_periods=window"},
+    "feature_finiteness": {"status": "STRUCTURAL", "reason": "finite score masks are measured separately from population eligibility"},
+    "candidate_support": {"status": "BOUNDED_STRUCTURAL", "reason": "native support and common support are quantified without outcomes"},
+    "common_support": {"status": "METHOD_READY_NOT_ADMITTED", "reason": "all-four intersection is 30,861 rows under the current non-authoritative mask"},
+    "model_training_eligibility": {"status": "NOT_REQUIRED", "reason": "no fitting or training is authorized in this lane"},
+    "portfolio_eligibility": {"status": "BLOCKED", "reason": "capacity, price basis, population, and protected evaluation gates remain unresolved"}
+  },
+  "capability_verdicts": {
+    "ELIGIBILITY_POLICY": "ELIGIBILITY_POLICY_AUTHORITY_MISSING",
+    "POPULATION_AUTHORITY": "POPULATION_AUTHORITY_UNKNOWN",
+    "SURVIVORSHIP": "SURVIVORSHIP_UNKNOWN",
+    "SECURITY_IDENTITY": "SECURITY_IDENTITY_PARTIAL",
+    "ISSUER_IDENTITY": "ISSUER_IDENTITY_UNKNOWN",
+    "CA_BASIS": "CA_BASIS_UNKNOWN",
+    "FINANCIAL_PIT": "FINANCIAL_PIT_PARTIAL_BLOCKED",
+    "LIQUIDITY_PIT": "LIQUIDITY_PIT_PARTIAL_STRUCTURAL_ONLY",
+    "VERIFIER_STRENGTH": "VERIFIER_PASS_SCOPED_NOT_SCIENTIFIC",
+    "FIREWALL_STRENGTH": "FIREWALL_PARTIAL_HYBRID_WITH_PACKET_ALLOWLIST"
+  },
+  "candidate_matrix": {
+    "C1": {
+      "state": "STRUCTURALLY_ADMISSIBLE",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "issuer_identity": "UNKNOWN", "ca_basis": "BLOCKED", "financial_pit": "NOT_REQUIRED", "liquidity_pit": "PARTIAL", "executable_capacity": "UNKNOWN"},
+      "reason": "price/return/beta structure is reproducible, but population, PIT, identity, CA basis, and capacity are not admitted"
+    },
+    "C2": {
+      "state": "STRUCTURALLY_ADMISSIBLE",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "issuer_identity": "UNKNOWN", "ca_basis": "BLOCKED", "financial_pit": "NOT_REQUIRED", "liquidity_pit": "PARTIAL", "executable_capacity": "UNKNOWN"},
+      "reason": "price/volume/turnover structure is reproducible, but historical liquidity and source authority remain incomplete"
+    },
+    "C3": {
+      "state": "BLOCKED",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "security_identity": "PARTIAL", "issuer_identity": "UNKNOWN", "financial_pit": "BLOCKED", "revision_vintage": "BLOCKED", "common_support": "BLOCKED"},
+      "reason": "all-five/YoY financial support is sparse and report-availability, identity, and revision authority are incomplete"
+    },
+    "C4": {
+      "state": "STRUCTURALLY_ADMISSIBLE",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "issuer_identity": "UNKNOWN", "ca_basis": "BLOCKED", "financial_pit": "NOT_REQUIRED", "liquidity_pit": "PARTIAL", "executable_capacity": "UNKNOWN"},
+      "reason": "path-efficiency structure is reproducible, but population and price-basis authority remain unresolved"
+    },
+    "H-LIQ": {
+      "state": "BLOCKED",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "ca_basis": "BLOCKED", "liquidity_pit": "PARTIAL", "executable_capacity": "UNKNOWN"},
+      "reason": "future structural hypothesis; same-surface dependence, basis, and capacity remain unresolved"
+    },
+    "H-VOL": {
+      "state": "BLOCKED",
+      "predictive_reentry": "BLOCKED",
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "ca_basis": "BLOCKED", "executable_capacity": "UNKNOWN"},
+      "reason": "future volatility-compression hypothesis; horizon and price-basis stability are unresolved"
+    },
+    "H-EXC": {
+      "state": "BLOCKED",
+      "predictive_reentry": "BLOCKED",
+      "subforms": {"H-EXC-01": "NOT_APPLICABLE", "H-EXC-02": "BLOCKED"},
+      "required": {"population": "BLOCKED", "price_pit": "PARTIAL", "security_identity": "PARTIAL", "ca_basis": "BLOCKED"},
+      "reason": "raw H-EXC-01 is rejected as written; bounded H-EXC-02 remains future research only"
+    }
+  },
+  "bounded_admission": {
+    "structural_research": "BOUNDED_PASS",
+    "predictive_research": "NOT_PROVEN",
+    "basis": ["official 1260-session calendar", "regular ACTIVE anchor mask", "explicit frozen panel hashes", "outcome-blind candidate support census"],
+    "missing_for_defensible_subset": ["population-complete PIT membership", "issuer/ISIN continuity", "event-complete CA/basis lineage", "revision/publication authority", "candidate-specific common-support admission"],
+    "selection_rule": "must be deterministic, target-free, source-authorized, and frozen before protected access"
+  },
+  "verifier_audit": {
+    "packet_65_of_65": "PASS_SCOPED",
+    "lane_10_of_10": "PASS_PROCESS_SCOPE_ONLY",
+    "knowledge_base_verifier": "PASS",
+    "independent_constructor_replay": "PASS_IMPLEMENTATION_REPRODUCTION_ONLY",
+    "synthetic_mutation_audit": "PASS_EXPECTED_MUTATIONS_AND_RECORDED_GAPS",
+    "limitations": ["hash/key helper duplication", "no independent formula recomputation in packet verifier", "lane verifier cannot prove runtime access absence"]
+  },
+  "firewall_audit": {
+    "existing_firewall": "HYBRID_REQUIRED_PATH_HASH_AND_DENYLIST",
+    "authority_packet_allowlist": "PASS_LOCAL_UNIT_FIXTURES_ONLY",
+    "synthetic_obvious_forbidden_payload": "REJECTED",
+    "synthetic_disguised_field": "KNOWN_GAP_RECORDED",
+    "synthetic_unexpected_schema_column": "KNOWN_GAP_RECORDED",
+    "production_target_access": "CLOSED"
+  },
+  "reentry_requirements": {
+    "ready_for_reentry_packet": false,
+    "before_any_protected_access": ["candidate formula", "feature windows and missingness", "eligibility policy", "PIT universe", "common support", "identity and CA basis", "ranking/tie handling", "target semantics", "execution lag", "evaluation dates", "IC/Rank-IC definitions", "OOS geometry", "top-k", "turnover/friction", "multiple-testing", "promotion/failure criteria"],
+    "protected_boundary": "CLOSED"
+  },
+  "remaining_authority_decisions": [
+    "Project owner must select 20 or 60 and bind exact rolling count/median/finite-value/calendar semantics.",
+    "Project owner must explicitly separate security-date eligibility, listing-age warm-up, feature warm-up, and rolling-estimator availability.",
+    "A future bounded predictive subset must be authorized only if its population, identity, CA/basis, revision, and common-support rules are source-proven and target-free.",
+    "The future C1-C4 comparison must freeze native versus common support after the eligibility decision; C3 cannot be silently rescued by dropping YoY or PIT requirements."
+  ],
+  "unavailable_authority": [
+    "population-complete daily PIT universe with delisted/relisted/ticker-reuse coverage",
+    "issuer/ISIN continuity and security replacement authority",
+    "population-complete corporate-action event-to-window and price-basis lineage",
+    "financial publication/available-at, revision/vintage, and issuer-mapped historical bundle",
+    "historical executable ADV/spread/queue/fill/capacity evidence",
+    "PIT-safe sector history"
+  ],
+  "evidence_refs": [
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_POLICY_RESOLUTION_PACKET_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_LONG_RUN_HANDOFF_TO_CHATGPT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_LISTING_DELISTING_LIFECYCLE_SOURCE_AUDIT_RESULT_V1.md",
+    "docs/checkpoints/2026-09-19_ALPHA_IDENTITY_CONTINUITY_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_CA_ISSUER_PRICE_BASIS_ADMISSION_SPEC_V1.md",
+    "docs/checkpoints/2026-09-19_C3_FINANCIAL_CONTRACT_MAP_RESULT_V1.md",
+    "docs/checkpoints/2026-09-19_ALPHA_CAPACITY_FRICTION_TAIL_RESULT_V1.md",
+    "research_knowledge/eligibility_policy_scenario_v1.json",
+    "research_knowledge/reproducibility.md",
+    "research_knowledge/tooling_mutation_audit_v1.json",
+    "research_knowledge/data_authority_packet_v1.md",
+    "research_knowledge/verifier_mutation_audit_v1.json",
+    "research_knowledge/firewall_mutation_audit_v1.json",
+    "research/alpha_data_authority_tooling_audit_v1.py",
+    "research/verify_alpha_data_authority_packet_v1.py",
+    "tests/test_alpha_data_authority_packet_v1.py"
+  ]
+}

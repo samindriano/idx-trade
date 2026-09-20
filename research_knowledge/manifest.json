@@ -28,6 +28,12 @@
     "no_retry_registry.jsonl",
     "source_capability_matrix.json",
     "common_support_census_v1.json",
+    "eligibility_policy_scenario_v1.json",
+    "data_authority_packet_v1.json",
+    "tooling_mutation_audit_v1.json",
+    "verifier_mutation_audit_v1.json",
+    "firewall_mutation_audit_v1.json",
+    "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
     "open_questions.md",
@@ -35,11 +41,11 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 30,
-    "findings_index_entries": 21,
+    "experiment_registry_entries": 32,
+    "findings_index_entries": 23,
     "no_retry_registry_entries": 12,
     "source_capability_entries": 17,
-    "human_synthesis_documents": 5
+    "human_synthesis_documents": 6
   },
   "counting_rule": "JSONL line counts are authoritative; entries are append-only and reference evidence-of-record paths.",
   "authoritative_readins": [
