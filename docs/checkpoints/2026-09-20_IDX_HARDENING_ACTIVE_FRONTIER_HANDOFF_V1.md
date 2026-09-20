@@ -154,7 +154,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane
   remains clean and no commit was pushed or merged. The follow-up adversarial
   replay assertion is `600866ae`, and active-obligation reversal fail-closed
-  coverage is `3e8a7e5a`;
+  coverage is `3e8a7e5a`; its post-snapshot second-order replay assertion is
+  `3996cfd0`;
 - current HEAD (`3e8a7e5a`) full repository regression via
   `python -m pytest -q` passed at 100% with only three pre-existing pandas
   `FutureWarning` records.

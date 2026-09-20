@@ -196,7 +196,8 @@ repository regression with only the three pre-existing pandas warnings. The
 follow-up top-level execution replay tamper assertion also passes at
 `600866ae`; it rehashes an unknown top-level extension and confirms existing
 execution replay rejects it before any idempotent completion path. The active
-obligation reversal guard is covered by the same current full-suite run.
+obligation reversal guard is covered by the same current full-suite run, with a
+post-snapshot second-order assertion at `3996cfd0`.
 The V2 independent-challenge record predates the latest local envelope
 hardening;
 its synthetic gates remain evidence, not a fresh final challenge at this HEAD.
