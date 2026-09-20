@@ -12,6 +12,30 @@ from idx_trade import v4_x1_eod_pipeline as pipeline
 JAKARTA = ZoneInfo("Asia/Jakarta")
 
 
+def test_weekend_pipeline_is_a_noop_and_does_not_call_eod_or_score(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(pipeline, "_persist", lambda *args, **kwargs: None)
+
+    def must_not_run(*args, **kwargs):
+        raise AssertionError("weekend pipeline must not run EOD or scoring")
+
+    monkeypatch.setattr(pipeline, "run_eod_catchup", must_not_run)
+    monkeypatch.setattr(pipeline.x1, "score_v4_x1_session", must_not_run)
+    result = pipeline.run_eod_v4_x1_pipeline(
+        tmp_path,
+        tmp_path,
+        repo_root=tmp_path,
+        now=datetime(2026, 9, 20, 20, 30, tzinfo=JAKARTA),
+    )
+
+    assert result["status"] == "PIPELINE_OK_NON_TRADING_WEEKEND_NOOP"
+    assert result["x1_score_attempted"] is False
+    assert result["eod"]["provider_calls"] is False
+    assert result["eod"]["captured_sessions"] == []
+
+
 def test_same_day_filter_rejects_old_pending_and_late_completion() -> None:
     now = datetime(2026, 8, 20, 20, 0, tzinfo=JAKARTA)
     pending = [

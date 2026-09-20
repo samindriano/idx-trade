@@ -77,10 +77,10 @@
     "tests/test_v4_x1_clean_forward_score.py": "53f2d6648dcde43c765ac754b10c09eeb2f1643d",
     "tests/test_v4_x1_clean_eod_pipeline.py": "778fb2d2b2027b84510a3d1db608e0c09c29ae51",
     "src/idx_trade/v4_x1_forward_score.py": "eecb2bb09dadb1cb33922450289671130401893b",
-    "src/idx_trade/v4_x1_eod_pipeline.py": "a35c9990be1c7f619795db313bb341f05fa7170a",
+    "src/idx_trade/v4_x1_eod_pipeline.py": "1ca224f422fed2dcc31da3d5c8da27d873810a32",
     "src/idx_trade/v4_x1_eod_legacy_compat.py": "6bcf09e58ac8deb0e7e1bec923bc732ab164f80b",
-    "src/idx_trade/forward_monitoring.py": "972d86e31f4c163ea64383c63a708da6fb39b0e4",
-    "src/idx_trade/forward_eod_runner.py": "5d189bc73a901a3abe0a2f94e54a88b71897765d",
+    "src/idx_trade/forward_monitoring.py": "3217108a44aa029007fb8a374061c5e7d73c3d52",
+    "src/idx_trade/forward_eod_runner.py": "5b04d0ada42c272a11383684ba339eb82e861c59",
     "src/idx_trade/forward_ohlcv.py": "31b250973cdea5378b88e07575dbad9ea37acd57",
     "src/idx_trade/ranking_v4_3_features.py": "59ad05f815870ae00480dc7945fe18371d8eff9c",
     "src/idx_trade/ranking_v4_3_preregistration.py": "cc1308feb51bbed16606bf7bded1ca0111644326"
