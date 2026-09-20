@@ -96,7 +96,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
-  or outcome access;
+  or outcome access, and its no-certified-Open missed-execution branch now
+  reuses the exact schedule-bound prepared parent;
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;

@@ -374,7 +374,7 @@ def run_operational_cycle_v2(
                         status,
                         phase="POST_EOD",
                         side_effect="MISSED_EXECUTION_WRITE",
-                        prepared_path=str(prepared_today[0]),
+                        prepared_path=str(prepared[0]),
                     )
                     missed = advance_missed_execution_no_certified_open_with_schedule(
                         config.runtime_root,

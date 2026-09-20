@@ -19,6 +19,7 @@ scheduler, production, or alpha state.
 | Nested execution replay | Rehashed nested evidence/CA/cause/lineage parents are rejected | PASS |
 | Snapshot recovery | Tampered latest is quarantined; valid fork is rejected | PASS |
 | Controller boundaries | All eight V1/V2 boundaries recover to `RECOVERY_REQUIRED` | PASS |
+| Dual-calendar missed execution | No-certified-Open path uses the exact schedule-bound prepared parent | PASS |
 | Real child interruption | Timed-out subprocess leaves `CHILD_EXECUTION` durable and recovery-fenced | PASS |
 | Phase runtime binding | All four phase children require config SHA and parent identity | PASS |
 | Identity child wiring | Hash-pinned identity artifact validates and reaches orchestration | PASS |
