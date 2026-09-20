@@ -191,16 +191,21 @@ The isolated lane currently contains:
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, schedule binding, and E2E paper
-orchestration/controller. Current HEAD `3e8a7e5a` also passes the full
+orchestration/controller. Source commit `3e8a7e5a` also passes the full
 repository regression with only the three pre-existing pandas warnings. The
 follow-up top-level execution replay tamper assertion also passes at
 `600866ae`; it rehashes an unknown top-level extension and confirms existing
 execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
-The V2 independent-challenge record predates the latest local envelope
-hardening;
-its synthetic gates remain evidence, not a fresh final challenge at this HEAD.
+A fresh current-head regression challenge at verification revision
+`24708c5dca74da89a6116e8594622d2a1f80448b` passes `202/202` across the latest
+top-level replay, active-obligation reversal, quantity-obligation, evidence,
+CA, identity, transition, lineage, migration, dividend-runtime, and E2E
+controller/orchestration suites; see
+`2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`. This is a local
+regression result, not an independent reviewer attestation or production
+promotion. The V2 independent-challenge record remains historical evidence.
 External authorization/adoption, authoritative identity-source provisioning,
 live provider/scheduler interruption validation, automatic migration activation,
 and the remaining Decision-seat/cancellation semantics are still open. This

@@ -148,6 +148,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
+- a fresh current-head regression challenge is also PASS at `202/202` for the
+  latest top-level replay, active-obligation reversal, quantity-obligation,
+  evidence, CA, identity, transition, lineage, migration, dividend-runtime,
+  and E2E controller/orchestration suites; see
+  `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`;
 - exact base/runtime lineage remains recorded;
 - continuation commits are `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
@@ -156,7 +161,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   replay assertion is `600866ae`, and active-obligation reversal fail-closed
   coverage is `3e8a7e5a`; its post-snapshot second-order replay assertion is
   `3996cfd0`;
-- current HEAD (`3e8a7e5a`) full repository regression via
+- source commit `3e8a7e5a` full repository regression via
   `python -m pytest -q` passed at 100% with only three pre-existing pandas
   `FutureWarning` records.
   Earlier
