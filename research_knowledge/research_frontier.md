@@ -13,13 +13,17 @@
    breadth-versus-turnover audit rules out a strong common breadth explanation
    for C1/C2/C4 churn. A new eligibility-versus-feature audit separates the
    eligibility mask from candidate-specific finite support: C3 is sparse within
-   eligible rows, but causation is not established.
+   eligible rows, but causation is not established. A direct cross-policy Top-30
+   comparison confirms that the unresolved policy fork changes actual C1/C3/C4
+   decision sets while leaving C2 invariant; policy authority is therefore
+   decision-set material, not just denominator metadata.
 2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a
    pre-protocol 20-in-60 liquidity rule, but current classification remains
    `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
-   authority appears.
+   authority appears. The cross-policy membership audit strengthens the
+   consequence of leaving that authority unresolved.
    The anchor-state census adds a separate identity boundary: ACTIVE/NO_TRADE
    sequences are highly oscillatory and cannot be treated as lifecycle or
    issuer transitions without identity/publication semantics.

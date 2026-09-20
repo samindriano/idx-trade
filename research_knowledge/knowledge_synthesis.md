@@ -37,6 +37,13 @@
   eligible rows on this artifact, not score support outside the observed
   universe. This still does not establish the eligibility, PIT, or population
   authority behind either boundary.
+- A direct cross-policy Top-30 comparison shows that the minimum-20 versus
+  min-periods-60 fork changes actual decision sets, not only eligibility row
+  counts: mean cross-policy overlap is 96.52% for C1, exactly 100% for C2,
+  94.05% for C3, and 91.71% for C4. C4 has only 12.74% exact daily matches
+  and an average 4.98-name symmetric difference. C2's invariance is explained
+  by its separate 60-session feature warm-up. This strengthens the policy
+  blocker without selecting a branch or implying predictive robustness.
 
 ## What we think we know
 

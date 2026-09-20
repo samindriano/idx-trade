@@ -5,7 +5,7 @@ Each question has an ownerless evidence requirement and a stopping rule.
 | ID | Question | Current state | Smallest useful next evidence | Stop/reopen rule |
 |---|---|---|---|---|
 | Q-001 | What is the final authority for minimum-20 versus min-periods-60? | `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` | Hash-bound policy/contract binding whether the pre-protocol 20-in-60 liquidity rule governs this new candidate protocol | Do not regenerate until resolved |
-| Q-002 | Is eligibility distinct from feature warm-up and rolling estimator stability? | `SUPPORTED_PARTIAL / COUNTERFACTUAL CONFIRMED` | The 20-vs-60 replay shows C2 ranks unchanged because feature warm-up remains 60, while C1/C3/C4 change under the mask; no final policy binding | Record ambiguity if no authority; do not mix masks |
+| Q-002 | Is eligibility distinct from feature warm-up and rolling estimator stability? | `SUPPORTED_SCOPED / CROSS-POLICY SELECTION SENSITIVITY CONFIRMED` | The 20-vs-60 replay shows C2 Top-30 sets exactly unchanged because feature warm-up remains 60, while C1/C3/C4 decision sets change materially; no final policy binding | Record ambiguity if no authority; do not mix masks |
 | Q-003 | Is the historical population complete and survivorship-safe? | `BLOCKED_BY_PIT` | Daily PIT universe with delisted/relisted/ticker-reuse/issuer identity | No predictive evaluation without it |
 | Q-004 | Are price features on a stable CA/issuer basis? | `BLOCKED_BY_DATA` | Event-to-window, issuer/ISIN, effective/knowledge-time basis evidence | No rescale/infer/repair |
 | Q-005 | Are source revisions/publication times known? | `BLOCKED_BY_PIT` | Vintage/publication metadata for financial/flow/source archives | No feature admission without it |

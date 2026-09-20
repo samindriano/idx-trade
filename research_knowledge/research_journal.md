@@ -333,3 +333,18 @@ checkpoint files; this file records why the next question changed.
 - The sequence is state geometry, not lifecycle proof. No transition was mapped
   to suspension, delisting, relisting, ticker reuse, issuer change, or a clean
   interval without state and identity authority.
+
+## 2026-09-20 — eligibility policy versus Top-30 membership
+
+- Added a direct cross-policy selection-set comparison for the minimum-20 and
+  min-periods-60 counterfactual branches. Both branches were reconstructed from
+  the frozen panel, financial capability bundle, official sessions, and regular
+  ACTIVE anchors; no policy was selected.
+- Mean cross-policy Top-30 overlap is C1 `96.52%`, C2 `100.00%`, C3 `94.05%`
+  over 278 common selection dates, and C4 `91.71%` over 1201 dates. Exact
+  daily matches are C1 `32.52%`, C2 `100%`, C3 `22.30%`, and C4 `12.74%`.
+- The policy fork therefore changes actual decision sets for C1/C3/C4, not only
+  row counts or rank denominators. C2's exact invariance is consistent with its
+  independent 60-session feature warm-up. This strengthens the policy blocker;
+  it does not establish policy correctness, predictive robustness, capacity, or
+  candidate admission.
