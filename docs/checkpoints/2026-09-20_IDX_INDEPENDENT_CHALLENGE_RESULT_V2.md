@@ -27,6 +27,7 @@ scheduler, production, or alpha state.
 | Identity adversarial cases | File/payload/session/ticker/outcome-access tampering fails closed | PASS |
 | Prepared selection | Hash-pinned controller rejects unbound prepared artifacts | PASS |
 | Migration provenance | Source hash/classification/provenance remains immutable | PASS |
+| Reconciliation provenance shape | Hash-valid incomplete reconciliation provenance is rejected | PASS |
 | Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |
 
 ## Verification

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import hashlib
+import json
 from pathlib import Path
 
+import pytest
+
 from idx_trade import forward_dividend_execution_v1_1 as dividend_execution
+from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
 from idx_trade.v4_x1_reconciliation_result_v1 import (
     build_reconciliation_result_v1,
     verify_reconciliation_result_payload,
@@ -224,3 +229,57 @@ def test_reconciliation_result_v1_fails_closed_on_ca_coverage_gap() -> None:
 
     assert result.status == "FAIL"
     assert result.mismatches[0].code == "RECONCILIATION_RESULT_V1_CA_COVERAGE_INCOMPLETE"
+
+
+def test_reconciliation_result_v1_rejects_hash_valid_incomplete_provenance() -> None:
+    before = PaperPortfolioState("2026-09-01", 1_000_000.0, ())
+    after = PaperPortfolioState("2026-09-02", 1_000_000.0, ())
+    plan = _plan(before)
+    execution = ExecutionResult(
+        execution_session_date="2026-09-02",
+        state_before_hash=paper_state_hash(before),
+        state_after=after,
+        fills=(),
+        stamp_duty_idr=0.0,
+        gross_turnover_idr=0.0,
+        pending_transition_count=0,
+        reconciliation_required=False,
+    )
+    evidence = build_execution_evidence_v2(plan, execution)
+    evaluation = evaluate_execution_evidence_v2(evidence, expected_order_plan=plan)
+    reconciliation = dividend_execution.VerifiedDividendCAReconciliation(
+        from_session_date="2026-09-01",
+        through_session_date="2026-09-02",
+        covered_tickers=frozenset({"BBCA"}),
+        original_status="NO_RELEVANT_EVENTS",
+        relevant_tickers=frozenset(),
+        certified_events=(),
+        legacy_attestation=object(),
+        attestation_path=Path("attestation.json"),
+        attestation_sha256="a" * 64,
+        source_path=Path("source.json"),
+        source_sha256="b" * 64,
+        _verification_token=dividend_execution._DIVIDEND_RECONCILIATION_TOKEN,
+    )
+    payload = build_reconciliation_result_v1(
+        plan,
+        evidence,
+        evaluation,
+        reconciliation,
+        required_tickers=("BBCA",),
+    ).payload()
+    payload["execution_evidence_sha256"] = "not-a-sha"
+    body = dict(payload)
+    body.pop("payload_sha256")
+    payload["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode()
+    ).hexdigest()
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="FIELD_INVALID:execution_evidence_sha256",
+    ):
+        verify_reconciliation_result_payload(payload)

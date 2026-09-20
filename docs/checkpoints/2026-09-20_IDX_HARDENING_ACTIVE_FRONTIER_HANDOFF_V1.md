@@ -69,6 +69,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - persisted execution replay now rechecks nested evidence, reconciliation,
   timing, and runtime-lineage parents and rejects a recomputed outer hash over
   tampered nested evidence;
+- `RECONCILIATION_RESULT-V1` verification now validates canonical dates,
+  hash-shaped provenance fields, normalized ticker sets, coverage inclusion,
+  and mismatch-row shape before accepting a hash-valid PASS payload;
 - replay now also cross-checks runtime-lineage contract/artifact links,
   reconciliation CA parents, and evidence/reconciliation session parents;
 - replay validates cause-obligation binding payloads, execution-session scope,

@@ -117,7 +117,9 @@ The isolated lane currently contains:
   reconciliation checks;
 - typed `RECONCILIATION_RESULT-V1` provenance artifact binding the internal
   detector to CA attestation/source and execution-evidence hashes, with
-  explicit `NOT_PERFORMED` external reconciliation scope;
+  explicit `NOT_PERFORMED` external reconciliation scope; its verifier also
+  validates dates, hash-shaped provenance fields, normalized ticker sets, and
+  coverage inclusion;
 - `IDENTITY_CANONICAL-V1` interval/alias/revision validation with unresolved
   identity failure;
 - `EXPOSURE_CAUSE-V1` records attached to quantity-bearing evidence;

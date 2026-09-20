@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import date
 import hashlib
 import json
 from typing import Any, Mapping, Sequence
@@ -193,6 +194,70 @@ def verify_reconciliation_result_payload(value: Mapping[str, Any]) -> dict[str, 
     declared = str(payload.pop("payload_sha256") or "")
     if not declared or _canonical_hash(payload) != declared:
         raise DecisionV1Error("RECONCILIATION_RESULT_V1_PAYLOAD_HASH_MISMATCH")
+    for key in ("decision_session_date", "execution_session_date"):
+        raw_date = payload.get(key)
+        if not isinstance(raw_date, str):
+            raise DecisionV1Error(f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}")
+        try:
+            parsed_date = date.fromisoformat(raw_date)
+        except ValueError as exc:
+            raise DecisionV1Error(
+                f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}"
+            ) from exc
+        if parsed_date.isoformat() != raw_date:
+            raise DecisionV1Error(f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}")
+
+    def require_sha256(key: str, *, allow_none: bool = False) -> None:
+        raw_hash = payload.get(key)
+        if allow_none and raw_hash is None:
+            return
+        if (
+            not isinstance(raw_hash, str)
+            or len(raw_hash) != 64
+            or any(char not in "0123456789abcdef" for char in raw_hash)
+        ):
+            raise DecisionV1Error(f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}")
+
+    for key in (
+        "order_plan_state_hash",
+        "evidence_state_before_hash",
+        "evidence_state_after_hash",
+        "execution_evidence_sha256",
+        "ca_attestation_sha256",
+        "ca_source_sha256",
+    ):
+        require_sha256(key)
+    require_sha256("ca_journal_sha256", allow_none=True)
+
+    ticker_sets: dict[str, set[str]] = {}
+    for key in ("required_tickers", "covered_tickers", "relevant_tickers"):
+        raw_tickers = payload.get(key)
+        if not isinstance(raw_tickers, list) or any(
+            not isinstance(ticker, str) or not ticker.strip()
+            for ticker in raw_tickers
+        ):
+            raise DecisionV1Error(f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}")
+        normalized = [ticker.strip().upper() for ticker in raw_tickers]
+        if raw_tickers != sorted(set(normalized)):
+            raise DecisionV1Error(f"RECONCILIATION_RESULT_V1_FIELD_INVALID:{key}")
+        ticker_sets[key] = set(normalized)
+    if not ticker_sets["required_tickers"].issubset(
+        ticker_sets["covered_tickers"]
+    ):
+        raise DecisionV1Error("RECONCILIATION_RESULT_V1_COVERAGE_INVALID")
+
+    mismatches = payload.get("mismatches")
+    if not isinstance(mismatches, list):
+        raise DecisionV1Error("RECONCILIATION_RESULT_V1_FIELD_INVALID:mismatches")
+    for mismatch in mismatches:
+        if (
+            not isinstance(mismatch, dict)
+            or set(mismatch) != {"code", "expected", "observed"}
+            or any(not isinstance(mismatch[key], str) for key in mismatch)
+        ):
+            raise DecisionV1Error(
+                "RECONCILIATION_RESULT_V1_FIELD_INVALID:mismatches"
+            )
     if payload.get("status") != "PASS_INTERNAL_PAPER":
         raise DecisionV1Error("RECONCILIATION_RESULT_V1_NOT_PASS")
     if payload.get("mismatches"):
