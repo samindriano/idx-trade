@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `24708c5dca74da89a6116e8594622d2a1f80448b`
+Verification revision: `9dfce6b5e353697c0d104652f3e254ce2aa6886e`
 
 ## Boundary
 
@@ -15,13 +15,13 @@ alpha state.
 
 ## Result
 
-`202/202 PASS`.
+`204/204 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
-execution evidence, CA timing, identity/transition binding, runtime lineage,
-migration provenance/activation, dividend runtime/orchestration, and E2E
-controller/orchestration boundaries.
+explicit cancellation/relinquishment replay, execution evidence, CA timing,
+identity/transition binding, runtime lineage, migration provenance/activation,
+dividend runtime/orchestration, and E2E controller/orchestration boundaries.
 
 ## Verification command
 
