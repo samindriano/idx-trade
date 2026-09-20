@@ -41,6 +41,7 @@ from idx_trade.v4_x1_sizing_v1_decision_v2_adapter import (
     _VERIFIED_DECISION_V2_SIZING_PLAN_TOKEN,
     verify_decision_v2_plan_for_sizing,
 )
+from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 
 
 def _score(session_date, rows):
@@ -308,3 +309,60 @@ def test_decision_v2_shadow_must_match_paper_plus_pending_lineage():
             state,
             eod_inputs=_eod("2026-08-21", "2026-08-24", {}),
         )
+
+
+def test_partial_buy_obligation_is_retried_even_when_actual_position_exists():
+    planned = plan_obligation(
+        obligation_id="BUY-AAA-DECISION-V2-01",
+        ticker="AAA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-21",
+        rank_consensus=1,
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-AAA-DECISION-V2-01",
+        session_date="2026-08-24",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    state = PaperPortfolioState(
+        "2026-08-24",
+        47_500_000,
+        (PaperPosition("AAA", 2_400),),
+        pending_buys=(
+            PendingPaperIntent("BUY", "AAA", 1, "OPEN_CAPACITY_PARTIAL"),
+        ),
+        obligations=(partial,),
+    )
+    plan = _plan(
+        current_shadow=("AAA",),
+        target=("AAA",),
+        date="2026-08-24",
+    )
+
+    order = prepare_execution_v1_from_decision_v2(
+        _synthetic_verified(plan),
+        state,
+        eod_inputs=_eod(
+            "2026-08-24",
+            "2026-08-25",
+            {"AAA": 1000.0},
+            {"AAA": 300_000_000.0},
+        ),
+    )
+    assert [intent.ticker for intent in order.effective_buy_intents] == ["AAA"]
+    assert order.effective_buy_intents[0].reason.startswith("PAPER_RETRY_")
+
+    result = execute_open_v1(
+        order,
+        state,
+        open_inputs=_open("2026-08-25", {"AAA": 1000.0}),
+        ca_attestation=_ca("2026-08-24", "2026-08-25", ["AAA"]),
+    )
+    assert [(row.ticker, row.shares) for row in result.state_after.positions] == [
+        ("AAA", 5000)
+    ]
+    assert not result.state_after.pending_buys
+    assert result.state_after.obligations[0].status == "FILLED"

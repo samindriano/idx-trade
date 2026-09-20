@@ -98,14 +98,19 @@ The isolated lane currently contains:
 - explicit `RUNTIME_SCHEMA_V2` obligation snapshot serialization chained to V1
   parents, with old payload compatibility;
 - legacy migration classification that returns `UNKNOWN_ORPHANED_PARTIAL`
-  instead of fabricating missing plan/fill quantities.
+  instead of fabricating missing plan/fill quantities;
+- immutable quarantine/recovery for a tampered latest snapshot, with valid
+  fork histories still rejected;
+- Decision V2 residual retry for a partial BUY whose actual position already
+  exists, without changing Decision science.
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
-execution/orchestration, and E2E paper orchestration/controller. Restart
-fault-injection, latest-snapshot quarantine, Decision seat semantics, and full
-migration artifact provenance remain open; this is not a production promotion
-or phase closure.
+execution/orchestration, and E2E paper orchestration/controller. Controller
+fault-injection, CA/accounting timing composition, execution evidence,
+reconciliation provenance, identity/config contracts, and full migration
+artifact provenance remain open; this is not a production promotion or phase
+closure.
 
 ## Boundaries
 

@@ -12,7 +12,7 @@
 | REM-CAUSE-001 | Exposure/cash cause state collapses | `UNADJUDICATED` | `UNADJUDICATED` | Cause-state join with obligations and next Decision |
 | REM-LINEAGE-001 | Config/runner identity absent from artifacts | `UNADJUDICATED` | `UNADJUDICATED` | Config mismatch fail-closed across prepare/execute/replay |
 | REM-CTRL-001 | Controller phase/attempt held in memory | `UNADJUDICATED` | `UNADJUDICATED` | Fault injection at each side-effect boundary |
-| REM-RECOVERY-001 | Latest snapshot rejects without safe recovery | `UNADJUDICATED` | `UNADJUDICATED` | Immutable rejection/quarantine and fork-safe ancestor rules |
+| REM-RECOVERY-001 | Latest snapshot rejects without safe recovery | `QUARANTINE_LOCAL_IMPLEMENTED` | `IMPLEMENTED_LOCAL / CONTROLLER_OPEN` | Immutable rejection/quarantine, restart replay, and fork-safe ancestor rules |
 | REM-POLICY-001 | Post-entry concentration overlay | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative policy only; no autonomous overlay |
 | REM-POLICY-002 | Dividend tax/net treatment | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative tax policy only; retain gross semantics |
 | REM-EXTERNAL-001 | Unsupported structural CA admission | `EXTERNAL_BLOCKED` | `EXTERNAL_BLOCKED` | External source/authority contract outside this lane |

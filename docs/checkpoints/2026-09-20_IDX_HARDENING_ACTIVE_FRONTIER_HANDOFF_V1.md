@@ -6,15 +6,15 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 ## Current frontier
 
-`restart/fault-injection + latest-snapshot recovery → Decision seat semantics → CA composition`
+`CA/accounting projected-vs-raw state → execution evidence → reconciliation provenance`
 
 ## Immediate sequence
 
-1. Add restart/replay and fault-injection coverage around obligation snapshots.
-2. Add immutable latest-snapshot quarantine/recovery and fork-safe selection.
-3. Complete Decision seat/reversal semantics without retuning Decision rules.
-4. Add migration artifact provenance and legacy classification persistence.
-5. Only then move to CA composition and projected-vs-raw state lineage.
+1. Compose CA settle/sizing/execution timing with obligation state and restart.
+2. Add quantity-bearing execution evidence and structural evaluator replay.
+3. Add reconciliation result provenance and typed mismatch detector.
+4. Harden identity, exposure/cash causes, and config/artifact lineage.
+5. Add controller crash recovery and final independent challenge.
 
 ## Do not do yet
 
@@ -37,14 +37,17 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - old snapshot payloads still load without an obligation section;
 - V1 → V2 snapshot chain loads with immutable parent binding;
 - legacy classifier returns `UNKNOWN_ORPHANED_PARTIAL` without quantity fabrication;
-- exact base/runtime lineage remains recorded.
+- tampered latest snapshot is quarantined and a verified ancestor is recovered;
+- valid forked histories remain blocked;
+- Decision V2 residual BUY retry works with an existing partial position;
+- exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
 
-## Required handoff evidence before Phase 3
+## Required handoff evidence before Phase 4
 
-- restart/fault-injection replay;
-- restart/fault-injection and latest-snapshot quarantine/recovery;
-- migration artifact provenance;
-- Decision seat/reversal semantics;
-- CA timing and projected/raw state binding.
+- CA timing and projected/raw state binding;
+- quantity-bearing execution evidence and evaluator replay;
+- reconciliation result provenance and mismatch detector;
+- identity/config/cause-state contracts;
+- controller crash/recovery replay and independent final challenge.

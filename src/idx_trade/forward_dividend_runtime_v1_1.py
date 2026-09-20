@@ -36,6 +36,9 @@ RUNTIME_SCHEMA_V2 = "idx_trade_forward_dividend_runtime_state_v2"
 SUPPORTED_RUNTIME_SCHEMAS = frozenset({RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2})
 RUNTIME_DIRNAME = "forward_execution_v1_1"
 SNAPSHOT_DIRNAME = "state_snapshots"
+QUARANTINE_DIRNAME = "quarantine"
+QUARANTINE_MANIFEST_FILENAME = "manifest.json"
+QUARANTINE_SCHEMA = "idx_trade_forward_dividend_snapshot_quarantine_v1"
 _VERIFIED_RUNTIME_SNAPSHOT_TOKEN = object()
 
 
@@ -714,6 +717,151 @@ def write_runtime_snapshot(
     return load_runtime_snapshot(target)
 
 
+def _snapshot_root(runtime_root: str | Path) -> Path:
+    return (
+        Path(runtime_root).expanduser().resolve()
+        / RUNTIME_DIRNAME
+        / SNAPSHOT_DIRNAME
+    )
+
+
+def _quarantine_manifest_path(snapshot_root: Path) -> Path:
+    return snapshot_root / QUARANTINE_DIRNAME / QUARANTINE_MANIFEST_FILENAME
+
+
+def _load_quarantine_manifest(snapshot_root: Path) -> list[dict[str, str]]:
+    manifest_path = _quarantine_manifest_path(snapshot_root)
+    if not manifest_path.exists():
+        return []
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise DecisionV1Error(
+            "DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_INVALID"
+        ) from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != QUARANTINE_SCHEMA:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_SCHEMA_CHANGED")
+    raw_entries = payload.get("entries")
+    if not isinstance(raw_entries, list):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRIES_INVALID")
+
+    entries: list[dict[str, str]] = []
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        required = {
+            "original_relative_path",
+            "original_sha256",
+            "quarantined_relative_path",
+            "reason",
+        }
+        if set(raw) != required:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        entry = {key: str(raw[key]) for key in required}
+        if (
+            len(entry["original_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in entry["original_sha256"].lower())
+            or not entry["reason"]
+        ):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        quarantined = (snapshot_root / entry["quarantined_relative_path"]).resolve()
+        try:
+            quarantined.relative_to(snapshot_root.resolve())
+        except ValueError as exc:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_PATH_ESCAPE") from exc
+        if not quarantined.is_file() or _sha256_file(quarantined) != entry["original_sha256"]:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ARTIFACT_MISMATCH")
+        entries.append(entry)
+    return entries
+
+
+def quarantine_runtime_snapshot(
+    runtime_root: str | Path,
+    snapshot_path: str | Path,
+    *,
+    reason: str,
+) -> Path:
+    """Record an untrusted snapshot without mutating its original bytes."""
+
+    snapshot_root = _snapshot_root(runtime_root)
+    path = Path(snapshot_path).expanduser().resolve()
+    try:
+        relative = path.relative_to(snapshot_root.resolve())
+    except ValueError as exc:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_SCOPE_INVALID") from exc
+    if len(relative.parts) != 1 or path.suffix.lower() != ".json":
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_TARGET_INVALID")
+    if not path.is_file():
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_TARGET_MISSING")
+    reason_text = str(reason).strip()
+    if not reason_text:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_REASON_INVALID")
+
+    entries = _load_quarantine_manifest(snapshot_root)
+    original_sha = _sha256_file(path)
+    original_relative = relative.as_posix()
+    for entry in entries:
+        if (
+            entry["original_relative_path"] == original_relative
+            and entry["original_sha256"] == original_sha
+            and entry["reason"] == reason_text
+        ):
+            return _quarantine_manifest_path(snapshot_root)
+
+    quarantine_dir = snapshot_root / QUARANTINE_DIRNAME
+    quarantine_dir.mkdir(parents=True, exist_ok=True)
+    quarantined_relative = (
+        f"{QUARANTINE_DIRNAME}/{path.name}.{original_sha}.artifact"
+    )
+    quarantined = snapshot_root / quarantined_relative
+    data = path.read_bytes()
+    if quarantined.exists():
+        if quarantined.read_bytes() != data:
+            raise DecisionV1Error(
+                "DIVIDEND_V1_1_RUNTIME_QUARANTINE_ARTIFACT_CONFLICT"
+            )
+    else:
+        quarantined.write_bytes(data)
+    entries.append(
+        {
+            "original_relative_path": original_relative,
+            "original_sha256": original_sha,
+            "quarantined_relative_path": quarantined_relative,
+            "reason": reason_text,
+        }
+    )
+    entries.sort(
+        key=lambda item: (
+            item["original_relative_path"],
+            item["original_sha256"],
+            item["reason"],
+        )
+    )
+    payload = {
+        "schema_version": QUARANTINE_SCHEMA,
+        "entries": entries,
+    }
+    manifest_data = _snapshot_bytes(payload)
+    manifest_path = _quarantine_manifest_path(snapshot_root)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=".quarantine-manifest.",
+        suffix=".tmp",
+        dir=quarantine_dir,
+    )
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(manifest_data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, manifest_path)
+    finally:
+        temp.unlink(missing_ok=True)
+    if manifest_path.read_bytes() != manifest_data:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_WRITE_MISMATCH")
+    return manifest_path
+
+
 def _load_runtime_snapshot(
     path: Path,
     *,
@@ -834,15 +982,17 @@ def load_runtime_snapshot(
 def load_latest_runtime_snapshot(
     runtime_root: str | Path,
 ) -> VerifiedDividendRuntimeSnapshot:
-    root = (
-        Path(runtime_root).expanduser().resolve()
-        / RUNTIME_DIRNAME
-        / SNAPSHOT_DIRNAME
-    )
+    root = _snapshot_root(runtime_root)
     if not root.is_dir():
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_DIR_MISSING")
+    quarantined = {
+        entry["original_relative_path"]
+        for entry in _load_quarantine_manifest(root)
+    }
     candidates: list[tuple[date, Path]] = []
     for path in root.glob("*.json"):
+        if path.name in quarantined:
+            continue
         try:
             session = date.fromisoformat(path.stem)
         except ValueError:
@@ -868,12 +1018,48 @@ def load_latest_runtime_snapshot(
     return latest
 
 
+def recover_latest_runtime_snapshot(
+    runtime_root: str | Path,
+) -> VerifiedDividendRuntimeSnapshot:
+    """Quarantine only untrusted latest-chain artifacts, never select a fork."""
+
+    root = _snapshot_root(runtime_root)
+    if not root.is_dir():
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_DIR_MISSING")
+    while True:
+        try:
+            return load_latest_runtime_snapshot(runtime_root)
+        except DecisionV1Error as exc:
+            if "SNAPSHOT_CHAIN_FORK" in str(exc):
+                raise
+            quarantined = {
+                entry["original_relative_path"]
+                for entry in _load_quarantine_manifest(root)
+            }
+            candidates = [
+                path
+                for path in root.glob("*.json")
+                if path.name not in quarantined
+            ]
+            if not candidates:
+                raise
+            candidates.sort(key=lambda path: date.fromisoformat(path.stem))
+            quarantine_runtime_snapshot(
+                runtime_root,
+                candidates[-1],
+                reason=str(exc),
+            )
+
+
 __all__ = [
     "RUNTIME_SCHEMA",
     "RUNTIME_SCHEMA_V2",
     "SUPPORTED_RUNTIME_SCHEMAS",
     "RUNTIME_DIRNAME",
     "SNAPSHOT_DIRNAME",
+    "QUARANTINE_DIRNAME",
+    "QUARANTINE_MANIFEST_FILENAME",
+    "QUARANTINE_SCHEMA",
     "RegisteredDividendEvidence",
     "VerifiedDividendRuntimeSnapshot",
     "normalize_certified_dividend_registry",
@@ -885,4 +1071,6 @@ __all__ = [
     "write_runtime_snapshot",
     "load_runtime_snapshot",
     "load_latest_runtime_snapshot",
+    "quarantine_runtime_snapshot",
+    "recover_latest_runtime_snapshot",
 ]

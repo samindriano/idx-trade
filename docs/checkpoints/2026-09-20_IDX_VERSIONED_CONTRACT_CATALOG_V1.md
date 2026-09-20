@@ -52,7 +52,7 @@ missing planned quantity.
 | `EXPOSURE_CAUSE-V1` | State/obligation join | Planned |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Planned |
 | `CONTROLLER_RECOVERY-V1` | E2E operational controller | Planned |
-| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Planned |
+| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery implemented; controller integration open |
 
 No contract may change frozen model features, rank semantics, Decision
 thresholds, tax policy, structural-CA authority, or post-entry risk policy

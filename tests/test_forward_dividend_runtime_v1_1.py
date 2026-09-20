@@ -487,6 +487,78 @@ def test_latest_loader_rejects_forked_snapshot_history(
         runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
 
 
+def test_recovery_quarantines_tampered_latest_and_returns_verified_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    tampered_bytes = b"{not-json\n"
+    latest.path.write_bytes(tampered_bytes)
+
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_INVALID"):
+        runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    assert recovered.path == first.path
+    assert latest.path.read_bytes() == tampered_bytes
+    manifest_path = (
+        tmp_path
+        / "runtime"
+        / runtime.RUNTIME_DIRNAME
+        / runtime.SNAPSHOT_DIRNAME
+        / runtime.QUARANTINE_DIRNAME
+        / runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == runtime.QUARANTINE_SCHEMA
+    assert len(manifest["entries"]) == 1
+    entry = manifest["entries"][0]
+    assert entry["original_relative_path"] == latest.path.name
+    assert entry["original_sha256"] == hashlib.sha256(tampered_bytes).hexdigest()
+    quarantined = manifest_path.parent / entry["quarantined_relative_path"].split("/", 1)[1]
+    assert quarantined.read_bytes() == tampered_bytes
+
+    repeated = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    assert repeated.path == first.path
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
+
+
+def test_recovery_does_not_choose_between_valid_forked_histories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-24"),
+        registry,
+    )
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_CHAIN_FORK"):
+        runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+
 def _entitlement(event: fd.CertifiedCashDividend, shares: int = 200) -> fd.PaperDividendEntitlement:
     return fd.PaperDividendEntitlement(
         event_id=event.event_id,
