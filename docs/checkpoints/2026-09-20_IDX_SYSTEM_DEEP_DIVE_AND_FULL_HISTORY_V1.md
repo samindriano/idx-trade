@@ -504,6 +504,12 @@ historical alpha archive:
   retry error `E2E_T0_PREEXISTING_RUNTIME_STATE`; a second injection after the
   missed-Open continuity snapshot reproduced
   `E2E_MISSED_EXECUTION_STATE_SESSION_MISMATCH`.
+- `2026-09-20_IDX_DECISION_STATE_REGIME_MATRIX_V1.md`:
+  a four-session synthetic rank sequence confirmed the persistence asymmetry:
+  a fresh rank-1 challenger is delayed, a confirmed exit can create a real
+  nine-seat underfill, and the challenger fills only after prior-rank
+  qualification. This is a Decision/cash/exposure state, not merely a rank
+  output.
 
 The updated system-level belief is therefore:
 
