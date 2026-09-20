@@ -494,6 +494,10 @@ historical alpha archive:
   Decision V2→Sizing V1→Execution V1 has meaningful provenance and fail-closed
   checks, but full runtime-config identity, projected-CA/NAV identity, and a
   unified underfill/cash/pending/risk taxonomy remain missing.
+- `2026-09-20_IDX_PINNED_RUNTIME_SYNTHETIC_VALIDATION_V1.md`:
+  the pinned component/E2E test slices passed `86` tests in an isolated scratch
+  extraction. This confirms bounded regression coverage, not crash-recovery,
+  broker-fill, executable-capacity, or protected-outcome proof.
 
 The updated system-level belief is therefore:
 
