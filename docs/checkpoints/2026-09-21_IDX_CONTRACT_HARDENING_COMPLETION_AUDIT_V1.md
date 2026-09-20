@@ -3,7 +3,7 @@
 Date: 2026-09-21 (Asia/Jakarta)
 Lane: `codex/idx-contract-hardening-20260920`
 Implementation base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
-Source verification revision: `cda6a9e4`
+Source verification revision: `938c8bc9` (implementation source `cda6a9e4`)
 Documentation head: `143b9b45`
 
 ## Scope and boundary
