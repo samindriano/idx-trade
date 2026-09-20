@@ -28,6 +28,9 @@ The system tracks target membership but not target quantity obligations. A posit
 - Positive underfill composed with synthetic cash-dividend lifecycle: actual
   1,200 shares received IDR 30,000 entitlement/settlement versus IDR 125,000
   planned-share hypothetical; CA replay remained exactly-once.
+- Existing dividend-aware runtime snapshot reload preserved `AAA:1,200`, empty
+  pending buys, and equal runtime hash; this is faithful persistence, not
+  residual recovery.
 
 ## Immediate next questions
 

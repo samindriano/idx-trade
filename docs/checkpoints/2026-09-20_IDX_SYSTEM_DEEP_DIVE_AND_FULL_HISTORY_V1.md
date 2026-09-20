@@ -600,6 +600,10 @@ historical alpha archive:
   while the 5,000-share planned hypothetical would have generated IDR 125,000.
   This is upstream execution underexposure propagating into CA economics, not
   a dividend-engine double-pay defect.
+- The existing dividend-aware runtime snapshot writer/loader faithfully
+  round-tripped the underfilled `AAA:1,200` position with empty pending state
+  and equal runtime hash. Restart integrity therefore preserves the semantic
+  loss instead of discovering or repairing it.
 
 The durable rolling controls for this marathon are now:
 

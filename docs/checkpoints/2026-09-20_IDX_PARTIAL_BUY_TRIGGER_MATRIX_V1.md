@@ -60,6 +60,15 @@ membership invariant, but it had no representation of the missing 2,600
 `T01` shares. This extends the failure into the Decision V2 shadow and seat-cap
 boundary: a full seat count is not equivalent to a fulfilled target quantity.
 
+## Runtime snapshot restart observation
+
+The underfilled `AAA: 1,200` state was written through the existing dividend-aware
+runtime snapshot writer into a temporary directory and loaded back. The loaded
+position remained `AAA: 1,200`, pending buys remained empty, and the loaded
+runtime hash equaled a fresh recomputation. This is faithful persistence, not
+recovery: the snapshot layer preserves the semantically incomplete state
+because no residual obligation exists in the state schema.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:
