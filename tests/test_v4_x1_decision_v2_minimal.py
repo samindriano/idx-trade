@@ -93,6 +93,17 @@ def test_adapter_normalizes_idx_tickers_and_is_row_order_independent() -> None:
     assert a.rows[0].ticker == "BBCA"
 
 
+def test_adapter_rejects_boolean_rank_before_numeric_coercion() -> None:
+    good = _verified("2026-01-02", _order(*[f"A{i}" for i in range(1, 31)]))
+    scores = good.scores.copy()
+    scores["rank_consensus"] = scores["rank_consensus"].astype(object)
+    scores.loc[0, "rank_consensus"] = True
+    bad = VerifiedScoreSession(**{**good.__dict__, "scores": scores})
+
+    with pytest.raises(DecisionV2Error, match="RANK_BOOLEAN_FORBIDDEN"):
+        rank_session_from_v4_x1_verified(bad)
+
+
 def test_adapter_runs_bootstrap_and_nonbootstrap_without_h5_h10_inputs() -> None:
     held = [f"A{i}" for i in range(1, 11)]
     first = _verified("2026-01-02", _order(*held))
