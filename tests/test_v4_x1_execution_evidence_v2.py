@@ -78,7 +78,7 @@ def test_execution_evidence_v2_replays_quantity_and_parent_state() -> None:
         reconciliation_required=False,
     )
 
-    evidence = build_execution_evidence_v2(plan, result)
+    evidence = build_execution_evidence_v2(plan, result, state_before=before)
     evaluation = evaluate_execution_evidence_v2(
         evidence,
         expected_order_plan=plan,
@@ -89,6 +89,8 @@ def test_execution_evidence_v2_replays_quantity_and_parent_state() -> None:
     assert "state_before_parent" in evaluation.checks
     assert evidence.payload()["schema_version"] == EXECUTION_EVIDENCE_SCHEMA
     assert evidence.payload()["fills"][0]["filled_shares"] == 100
+    assert evidence.payload()["causes"][0]["cause_code"] == "FILLED"
+    assert evidence.payload()["causes"][0]["next_action"] == "NONE"
 
 
 def test_execution_evidence_v2_rejects_tampered_aggregate() -> None:

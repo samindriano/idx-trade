@@ -58,10 +58,10 @@ checks in code remain authoritative.
 | CA projected-state versus execution-parent mismatch | `CONFIRMED / LOCAL_LINEAGE_IMPLEMENTED` | Raw execution parent plus projected NAV-only sizing lineage; timing matrix remains open |
 | Execution evidence aggregate-only | `CONFIRMED / IMPLEMENT` | Versioned execution-evidence artifact |
 | Reconciliation false bit has no detector provenance | `CONFIRMED / CONTRACT_REQUIRED` | Versioned reconciliation result |
-| Identity alias/revision splits | `CONFIRMED / IMPLEMENT_WHERE_AUTHORITY_PERMITS` | Shared identity contract and typed conflict |
-| Exposure/cash cause state loss | `CONFIRMED / IMPLEMENT` | Join cause state to obligations |
-| Config/runner identity absent from artifacts | `CONFIRMED / IMPLEMENT` | Artifact lineage fields and equality gates |
-| Controller crash windows | `CONFIRMED / IMPLEMENT_AFTER_STATE_OWNER` | Durable operational phase state |
+| Identity alias/revision splits | `CONFIRMED / LOCAL_CONTRACT_IMPLEMENTED` | Shared identity contract and typed conflict; downstream binding remains open |
+| Exposure/cash cause state loss | `CONFIRMED / LOCAL_CONTRACT_IMPLEMENTED` | Structured cause records in evidence; obligation/Decision join remains open |
+| Config/runner identity absent from artifacts | `CONFIRMED / LOCAL_LINEAGE_IMPLEMENTED` | Artifact lineage fields and equality gates; operational binding matrix remains open |
+| Controller crash windows | `CONFIRMED / LOCAL_RECOVERY_FENCE_IMPLEMENTED` | Durable recovery-required fence; side-effect matrix remains open |
 | Latest snapshot no recovery path | `CONFIRMED / IMPLEMENT_AFTER_CHAIN_CONTRACT` | Immutable quarantine/recovery manifest |
 | Post-entry concentration overlay | `POLICY_GAP / DO NOT INVENT` | Remains unresolved unless authoritative policy appears |
 | Dividend tax/net treatment | `POLICY_GAP / DO NOT INVENT` | Remains gross-only bounded behavior |
@@ -113,13 +113,18 @@ The isolated lane currently contains:
 - typed `RECONCILIATION_RESULT-V1` provenance artifact binding the internal
   detector to CA attestation/source and execution-evidence hashes, with
   explicit `NOT_PERFORMED` external reconciliation scope;
+- `IDENTITY_CANONICAL-V1` interval/alias/revision validation with unresolved
+  identity failure;
+- `EXPOSURE_CAUSE-V1` records attached to quantity-bearing evidence;
+- `RUNTIME_LINEAGE-V2` and controller `RECOVERY_REQUIRED` crash fence;
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
 execution evidence and reconciliation artifact restart binding,
-reconciliation provenance, identity/config contracts, and full migration
+reconciliation provenance, downstream identity/cause joins, operational BOUND
+lineage, controller fault matrix, and full migration
 artifact provenance remain open; this is not a production promotion or phase
 closure.
 

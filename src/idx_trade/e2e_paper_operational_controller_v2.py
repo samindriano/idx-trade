@@ -94,6 +94,13 @@ def run_operational_cycle_v2(
     lock_path = config.runtime_root / "operational" / "controller.lock"
     with exclusive_run_lock(lock_path):
         current = (now or datetime.now(tz=JAKARTA)).astimezone(JAKARTA)
+        recovered = v1._recover_interrupted_status(
+            config,
+            current=current,
+            controller_contract="DUAL_CALENDAR_V1",
+        )
+        if recovered is not None:
+            return recovered
         today = current.date().isoformat()
         status: dict[str, Any] = {
             "controller_status": "RUNNING",

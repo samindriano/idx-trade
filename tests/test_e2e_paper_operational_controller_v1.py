@@ -204,3 +204,37 @@ def test_sunday_controller_is_a_persisted_noop(tmp_path: Path, monkeypatch: pyte
     assert status["provider_calls"] is False
     assert status["outcome_access"] is False
     assert (config.runtime_root / "operational" / "latest.json").is_file()
+
+
+def test_running_controller_status_fences_recovery_without_replaying_side_effects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status_path = config.runtime_root / "operational" / "latest.json"
+    controller.write_status_atomic(
+        status_path,
+        {
+            "controller_status": "RUNNING",
+            "started_at_jakarta": "2026-08-24T18:00:00+07:00",
+            "provider_calls": False,
+            "outcome_access": False,
+        },
+    )
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 1, tzinfo=JAKARTA),
+    )
+
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+    assert recovered["provider_calls"] is False
+    assert recovered["recovery_reason"] == "PREVIOUS_CONTROLLER_RUN_INTERRUPTED"

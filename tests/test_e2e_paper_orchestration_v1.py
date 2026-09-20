@@ -217,8 +217,15 @@ def test_t0_post_eod_preopen_is_atomic_and_idempotent(tmp_path: Path) -> None:
     eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
     ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
     prepared = prepare_post_eod(root, current_score=current, previous_score=None, eod_inputs=eod, ca_reconciliation=ca)
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["runtime_lineage"]["role"] == "PREPARED_EXECUTION"
+    assert prepared_payload["runtime_lineage"]["binding_status"] == "LOCAL_UNBOUND"
     result = execute_preopen(root, prepared_path=prepared.path, current_score=current, previous_score=None, eod_inputs=eod, open_inputs=_open(tmp_path, "2026-08-25", tickers), ca_reconciliation=ca)
     assert result.status == "EXECUTION_COMPLETE"
+    execution_payload = json.loads(result.path.read_text(encoding="utf-8"))
+    assert execution_payload["runtime_lineage"]["role"] == "EXECUTION_RESULT"
+    assert execution_payload["execution_evidence"]["schema_version"] == "idx_trade_execution_evidence_v2"
+    assert execution_payload["reconciliation_result"]["status"] == "PASS_INTERNAL_PAPER"
     rerun = execute_preopen(root, prepared_path=prepared.path, current_score=current, previous_score=None, eod_inputs=eod, open_inputs=_open(tmp_path, "2026-08-25", tickers), ca_reconciliation=ca)
     assert rerun.status == "ALREADY_COMPLETE"
     assert result.file_sha256 == rerun.file_sha256

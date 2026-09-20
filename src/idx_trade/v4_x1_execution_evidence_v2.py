@@ -9,6 +9,10 @@ import math
 from typing import Any
 
 from .v4_x1_decision_v1_contract import DecisionV1Error
+from .v4_x1_execution_cause_v1 import (
+    ExecutionCauseV1,
+    derive_execution_causes,
+)
 from .v4_x1_execution_v1_contract import (
     ExecutionOrderPlan,
     ExecutionResult,
@@ -77,6 +81,7 @@ class ExecutionEvidenceV2:
     pending_transition_count: int
     reconciliation_required: bool
     rule_id: str
+    causes: tuple[ExecutionCauseV1, ...] = ()
 
     def payload(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -93,6 +98,7 @@ class ExecutionEvidenceV2:
             "pending_transition_count": self.pending_transition_count,
             "reconciliation_required": self.reconciliation_required,
             "rule_id": self.rule_id,
+            "causes": [row.payload() for row in self.causes],
         }
         body["payload_sha256"] = _canonical_hash(body)
         return body
@@ -254,6 +260,8 @@ def evaluate_execution_evidence_v2(
 def build_execution_evidence_v2(
     order_plan: ExecutionOrderPlan,
     result: ExecutionResult,
+    *,
+    state_before: PaperPortfolioState | None = None,
 ) -> ExecutionEvidenceV2:
     if not isinstance(order_plan, ExecutionOrderPlan):
         raise DecisionV1Error("EXECUTION_EVIDENCE_V2_ORDER_PLAN_REQUIRED")
@@ -273,6 +281,7 @@ def build_execution_evidence_v2(
         pending_transition_count=int(result.pending_transition_count),
         reconciliation_required=bool(result.reconciliation_required),
         rule_id=result.rule_id,
+        causes=derive_execution_causes(result, state_before=state_before),
     )
     evaluation = evaluate_execution_evidence_v2(
         evidence,

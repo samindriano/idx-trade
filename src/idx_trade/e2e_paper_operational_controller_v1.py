@@ -681,6 +681,42 @@ def _status_path(config: OperationalControllerConfig) -> Path:
     return config.runtime_root / "operational" / "latest.json"
 
 
+def _recover_interrupted_status(
+    config: OperationalControllerConfig,
+    *,
+    current: datetime,
+    controller_contract: str = "SINGLE_CALENDAR_V1",
+) -> dict[str, Any] | None:
+    """Persist a recovery-required fence after a crash before a side effect.
+
+    A prior ``RUNNING`` status is not evidence that a child completed.  The
+    next controller pass therefore records the interruption and stops; it
+    never silently replays a provider/capture/execution side effect.
+    """
+
+    path = _status_path(config)
+    if not path.is_file():
+        return None
+    previous = _read_json(path)
+    if previous.get("controller_status") != "RUNNING":
+        return None
+    recovery: dict[str, Any] = {
+        "controller_status": "RECOVERY_REQUIRED",
+        "controller_contract": controller_contract,
+        "recovery_reason": "PREVIOUS_CONTROLLER_RUN_INTERRUPTED",
+        "previous_status_path": str(path.resolve()),
+        "previous_status_file_sha256": _sha256(path),
+        "previous_started_at_jakarta": previous.get("started_at_jakarta"),
+        "recovery_started_at_jakarta": current.isoformat(),
+        "provider_calls": False,
+        "model_refit": False,
+        "model_rescore": False,
+        "outcome_access": False,
+    }
+    recovery["status_sha256"] = write_status_atomic(path, recovery)
+    return recovery
+
+
 def _prepared_for_session(config: OperationalControllerConfig, session: str) -> list[Path]:
     prepared_dir = config.runtime_root / "prepared"
     candidates: list[Path] = []
@@ -732,6 +768,9 @@ def _run_operational_cycle_legacy(
     lock_path = config.runtime_root / "operational" / "controller.lock"
     with exclusive_run_lock(lock_path):
         current = (now or datetime.now(tz=JAKARTA)).astimezone(JAKARTA)
+        recovered = _recover_interrupted_status(config, current=current)
+        if recovered is not None:
+            return recovered
         today = current.date().isoformat()
         status: dict[str, Any] = {
             "controller_status": "RUNNING",
@@ -868,6 +907,9 @@ def run_operational_cycle(
     lock_path = config.runtime_root / "operational" / "controller.lock"
     with exclusive_run_lock(lock_path):
         current = (now or datetime.now(tz=JAKARTA)).astimezone(JAKARTA)
+        recovered = _recover_interrupted_status(config, current=current)
+        if recovered is not None:
+            return recovered
         today = current.date().isoformat()
         status: dict[str, Any] = {
             "controller_status": "RUNNING",

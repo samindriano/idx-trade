@@ -35,12 +35,19 @@ from .forward_dividend_execution_v1_1 import (
     execute_open_v1_1_reconciled,
 )
 from .v4_x1_execution_evidence_v2 import (
+    EXECUTION_EVIDENCE_SCHEMA,
     build_execution_evidence_v2,
     evaluate_execution_evidence_v2,
 )
 from .v4_x1_reconciliation_result_v1 import (
+    RECONCILIATION_RESULT_SCHEMA,
     build_reconciliation_result_v1,
     verify_reconciliation_result_payload,
+)
+from .v4_x1_execution_v1 import EXPECTED_EXECUTION_CONFIG_SHA256
+from .v4_x1_runtime_lineage_v2 import (
+    build_runtime_lineage_v2,
+    verify_runtime_lineage_v2,
 )
 from .v4_x1_decision_v1_contract import DecisionV1Error, VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
@@ -422,6 +429,44 @@ def _verify_persisted_reconciliation_payload(value: object) -> dict[str, Any]:
         if declared_identity is not None and declared_identity != actual_identity:
             raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_MISMATCH")
         payload["v12_journal_identity"] = actual_identity
+    return payload
+
+
+def _verify_lineage_binding(
+    value: object,
+    *,
+    role: str,
+    implementation_branch: str | None,
+    implementation_commit: str | None,
+    runtime_config_sha256: str | None,
+) -> dict[str, Any]:
+    try:
+        payload = verify_runtime_lineage_v2(
+            value if isinstance(value, Mapping) else {}
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_INVALID") from exc
+    if payload.get("role") != role:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_ROLE_MISMATCH")
+    expected_commit = (
+        None
+        if implementation_commit is None
+        else str(implementation_commit).strip().lower()
+    )
+    expected_config = (
+        None
+        if runtime_config_sha256 is None
+        else str(runtime_config_sha256).strip().lower()
+    )
+    if implementation_branch is not None:
+        if payload.get("implementation_branch") != str(implementation_branch).strip():
+            raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_BRANCH_MISMATCH")
+    if expected_commit is not None and payload.get("implementation_commit") != expected_commit:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_COMMIT_MISMATCH")
+    if expected_config is not None and payload.get("config_sha256") != expected_config:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_CONFIG_MISMATCH")
+    if any(value is not None for value in (implementation_branch, implementation_commit, runtime_config_sha256)) and payload.get("binding_status") != "BOUND":
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_UNBOUND_OPERATIONAL_PARENT")
     return payload
 
 
@@ -898,6 +943,10 @@ def prepare_post_eod(
     previous_score: VerifiedScoreSession | None,
     eod_inputs: VerifiedEODExecutionInputs,
     ca_reconciliation: VerifiedDividendCAReconciliation,
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
+    entrypoint_sha256: str | None = None,
 ) -> PreparedExecutionResult:
     """Build one immutable PREPARED_EXECUTION artifact without accessing Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -967,6 +1016,51 @@ def prepare_post_eod(
         projected_state=sizing_state,
     )
     order_payload = _execution_plan_payload(order_plan)
+    ca_payload = _reconciliation_payload(ca_reconciliation)
+    prepared_lineage = build_runtime_lineage_v2(
+        role="PREPARED_EXECUTION",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        config_sha256=runtime_config_sha256,
+        entrypoint_sha256=entrypoint_sha256,
+        artifacts={
+            "state_snapshot": {
+                "path": str(snapshot.path.resolve()),
+                "sha256": snapshot.file_sha256,
+                "state_sha256": dividend.dividend_aware_state_hash(state),
+            },
+            "score_manifest": {
+                "path": str(current_score.manifest_path.resolve()),
+                "sha256": current_score.manifest_sha256,
+                "artifact_sha256": current_score.artifact_sha256,
+            },
+            "eod_ohlcv": {
+                "path": str(eod_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": eod_inputs.ohlcv_artifact_sha256,
+            },
+            "eod_model_input": {
+                "path": str(eod_inputs.model_input_path.resolve()),
+                "sha256": eod_inputs.model_input_sha256,
+            },
+            "official_calendar": {
+                "path": str(eod_inputs.official_calendar_path.resolve()),
+                "sha256": eod_inputs.official_calendar_sha256,
+            },
+            "ca_attestation": {
+                "path": ca_payload["attestation_path"],
+                "sha256": ca_payload["attestation_sha256"],
+            },
+            "ca_source": {
+                "path": ca_payload["source_path"],
+                "sha256": ca_payload["source_sha256"],
+            },
+        },
+        contracts={
+            "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
+            "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
+            "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+        },
+    )
     payload = {
         "schema_version": PREPARED_SCHEMA,
         "status": "PREPARED_EXECUTION",
@@ -991,7 +1085,8 @@ def prepare_post_eod(
             "model_input": _path_sha(eod_inputs.model_input_path, "E2E_EOD_MODEL_INPUT_MISSING"),
             "calendar": _path_sha(eod_inputs.official_calendar_path, "E2E_CALENDAR_MISSING"),
         },
-        "ca_reconciliation": _reconciliation_payload(ca_reconciliation),
+        "ca_reconciliation": ca_payload,
+        "runtime_lineage": prepared_lineage,
         "outcome_access": False,
     }
     payload["payload_sha256"] = _canonical_hash(payload)
@@ -1007,6 +1102,9 @@ def _recover_staged_execution(
     execution_date: str,
     expected_ca_reconciliation: Mapping[str, Any],
     expected_open_parent: Mapping[str, Any],
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
 ) -> CompletedExecutionResult | None:
     stage_path = paths.execution_dir / ".transactions" / f"{execution_date}.json"
     if not stage_path.is_file():
@@ -1061,6 +1159,13 @@ def _recover_staged_execution(
         raise E2EPaperOrchestrationError(
             "E2E_TRANSACTION_RECONCILIATION_RESULT_INVALID"
         ) from exc
+    _verify_lineage_binding(
+        execution_body.get("runtime_lineage"),
+        role="EXECUTION_RESULT",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        runtime_config_sha256=runtime_config_sha256,
+    )
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1103,6 +1208,10 @@ def execute_preopen(
     open_inputs: VerifiedOpenExecutionInputs,
     ca_reconciliation: VerifiedDividendCAReconciliation,
     dividend_evidence: Sequence[VerifiedCashDividendEvidence] = (),
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
+    entrypoint_sha256: str | None = None,
 ) -> CompletedExecutionResult:
     """Verify one prepared parent and execute exactly once at official Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -1114,6 +1223,13 @@ def execute_preopen(
         raise E2EPaperOrchestrationError("E2E_PREPARED_PAYLOAD_SHA_MISMATCH")
     if payload.get("status") != "PREPARED_EXECUTION":
         raise E2EPaperOrchestrationError("E2E_PREPARED_STATUS_INVALID")
+    prepared_lineage = _verify_lineage_binding(
+        payload.get("runtime_lineage"),
+        role="PREPARED_EXECUTION",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        runtime_config_sha256=runtime_config_sha256,
+    )
     decision_date = _date(payload.get("decision_session_date"))
     execution_date = _date(payload.get("execution_session_date"))
     if current_score.session_date != decision_date or eod_inputs.session_date != decision_date or open_inputs.session_date != execution_date:
@@ -1184,9 +1300,12 @@ def execute_preopen(
             paths,
             prepared=prepared,
             execution_date=execution_date,
-            expected_ca_reconciliation=current_ca_payload,
-            expected_open_parent=_open_parent_payload(open_inputs),
-        )
+                expected_ca_reconciliation=current_ca_payload,
+                expected_open_parent=_open_parent_payload(open_inputs),
+                implementation_branch=implementation_branch,
+                implementation_commit=implementation_commit,
+                runtime_config_sha256=runtime_config_sha256,
+            )
         if recovered is not None:
             _write_meta(paths, {
                 "last_score_manifest_path": str(current_score.manifest_path.resolve()),
@@ -1223,6 +1342,13 @@ def execute_preopen(
             raise E2EPaperOrchestrationError(
                 "E2E_EXISTING_RECONCILIATION_RESULT_INVALID"
             ) from exc
+        _verify_lineage_binding(
+            existing_body.get("runtime_lineage"),
+            role="EXECUTION_RESULT",
+            implementation_branch=implementation_branch,
+            implementation_commit=implementation_commit,
+            runtime_config_sha256=runtime_config_sha256,
+        )
         if (
             str(existing_body.get("prepared_path") or "") != str(prepared)
             or str(existing_body.get("prepared_sha256") or "")
@@ -1357,6 +1483,7 @@ def execute_preopen(
     execution_evidence = build_execution_evidence_v2(
         order_plan.base_plan,
         result.base_result,
+        state_before=state.base_state,
     )
     execution_evidence_evaluation = evaluate_execution_evidence_v2(
         execution_evidence,
@@ -1389,6 +1516,69 @@ def execute_preopen(
     snapshot_bytes = _pretty_json_bytes(snapshot_payload)
     snapshot_file_sha = _sha256_bytes(snapshot_bytes)
     prepared_sha = _sha256_file(prepared)
+    execution_evidence_payload = execution_evidence.payload()
+    reconciliation_result_payload = reconciliation_result.payload()
+    execution_lineage = build_runtime_lineage_v2(
+        role="EXECUTION_RESULT",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        config_sha256=runtime_config_sha256,
+        entrypoint_sha256=entrypoint_sha256,
+        artifacts={
+            "prepared_execution": {
+                "path": str(prepared.resolve()),
+                "sha256": _sha256_file(prepared),
+            },
+            "current_score_manifest": {
+                "path": str(current_score.manifest_path.resolve()),
+                "sha256": current_score.manifest_sha256,
+                "artifact_sha256": current_score.artifact_sha256,
+            },
+            "eod_ohlcv": {
+                "path": str(eod_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": eod_inputs.ohlcv_artifact_sha256,
+            },
+            "eod_model_input": {
+                "path": str(eod_inputs.model_input_path.resolve()),
+                "sha256": eod_inputs.model_input_sha256,
+            },
+            "official_open_manifest": {
+                "path": (
+                    str(open_inputs.manifest_path.resolve())
+                    if open_inputs.manifest_path is not None
+                    else None
+                ),
+                "sha256": open_inputs.manifest_sha256 or None,
+            },
+            "official_open_normalized": {
+                "path": str(open_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": open_inputs.ohlcv_artifact_sha256,
+            },
+            "ca_attestation": {
+                "path": current_ca_payload["attestation_path"],
+                "sha256": current_ca_payload["attestation_sha256"],
+            },
+            "ca_source": {
+                "path": current_ca_payload["source_path"],
+                "sha256": current_ca_payload["source_sha256"],
+            },
+            "execution_evidence": {
+                "sha256": execution_evidence_payload["payload_sha256"],
+            },
+            "reconciliation_result": {
+                "sha256": reconciliation_result_payload["payload_sha256"],
+            },
+            "runtime_snapshot": {
+                "path": str(snapshot_path.resolve()),
+                "sha256": snapshot_file_sha,
+            },
+        },
+        contracts={
+            "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
+            "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
+            "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+        },
+    )
     execution_body = {
         "schema_version": EXECUTION_SCHEMA,
         "status": "EXECUTION_COMPLETE",
@@ -1418,8 +1608,9 @@ def execute_preopen(
         "runtime_snapshot_sha256": snapshot_file_sha,
         "runtime_state_sha256": snapshot_payload["hashes"]["runtime_state_sha256"],
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
-        "execution_evidence": execution_evidence.payload(),
-        "reconciliation_result": reconciliation_result.payload(),
+        "execution_evidence": execution_evidence_payload,
+        "reconciliation_result": reconciliation_result_payload,
+        "runtime_lineage": execution_lineage,
         "fills": [asdict(x) for x in result.base_result.fills],
         "gross_turnover_idr": result.base_result.gross_turnover_idr,
         "stamp_duty_idr": result.base_result.stamp_duty_idr,

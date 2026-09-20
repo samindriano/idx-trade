@@ -13,8 +13,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 1. Compose CA settle/sizing/execution timing with obligation state and restart.
 2. Add quantity-bearing execution evidence and structural evaluator replay.
 3. Add reconciliation result provenance and typed mismatch detector.
-4. Harden identity, exposure/cash causes, and config/artifact lineage.
-5. Add controller crash recovery and final independent challenge.
+4. Bind identity, exposure/cash causes, and config/artifact lineage into all
+   operational consumers and Decision transitions.
+5. Complete controller side-effect fault matrix, latest-snapshot controller
+   integration, and final independent challenge.
 
 ## Do not do yet
 
@@ -49,6 +51,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - `RECONCILIATION_RESULT-V1` now records the internal detector, CA source and
   attestation hashes, evidence hash, typed mismatches, and explicitly marks
   broker reconciliation as not performed;
+- identity alias/revision intervals and unresolved lookup are fail-closed;
+- execution evidence emits structured exposure/cash cause records with
+  remainder and next-action semantics;
+- `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
+  and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
@@ -60,6 +67,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - quantity-bearing execution evidence and evaluator replay;
 - execution artifact restart binding and tamper/replay matrix;
 - reconciliation-result artifact replay and mismatch matrix;
-- reconciliation result provenance and mismatch detector;
-- identity/config/cause-state contracts;
-- controller crash/recovery replay and independent final challenge.
+- identity/cause downstream binding into obligations and next Decision;
+- operational BOUND lineage through child scripts and controller crash/recovery
+  replay at each side-effect boundary;
+- independent final challenge.
