@@ -1,0 +1,64 @@
+{
+  "schema_version": "IDX_TRADE_C1_C4_NORMALIZER_DIRECTION_V1",
+  "experiment_id": "C1-C4-NORMALIZER-DIRECTION-052",
+  "status": "PASS_STRUCTURAL_C1_C4_NORMALIZER_DIRECTION",
+  "scope": "Outcome-blind denominator-direction audit for C1/C4 score-versus-numerator Top-30 membership changes.",
+  "code": {
+    "path": "research/alpha_c1_c4_normalizer_direction_v1.py",
+    "sha256": "e8ed247a90f55c65365bfd278b12e0b4d2c61d3e8ca5c709c03a10e3bff025c0"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-c1-c4-normalizer-direction/alpha_c1_c4_normalizer_direction_v1.json",
+    "sha256": "ce269fee9faf34ebe7e90242ca57a285441620e89ead23b7ced30356db023a6d"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e"
+  },
+  "calendar": {
+    "official_session_count": 1260,
+    "official_min": "2021-04-29",
+    "official_max": "2026-07-31"
+  },
+  "candidates": {
+    "C1": {
+      "denominator": "vol_20",
+      "numerator_proxy": "-1.0 * c1_residual",
+      "selection_dates": 1141,
+      "groups": {
+        "both_mean_daily_median_denominator_percentile": 0.6258636763732429,
+        "score_only_mean_daily_median_denominator_percentile": 0.18735137813969643,
+        "numerator_only_mean_daily_median_denominator_percentile": 0.8795027149735366,
+        "score_only_minus_numerator_only_median_daily_delta": -0.6983122362869199,
+        "score_only_mean_group_count": 10.873794916739701,
+        "numerator_only_mean_group_count": 10.873794916739701
+      }
+    },
+    "C4": {
+      "denominator": "abs_ret_sum_20",
+      "numerator_proxy": "-1.0 * ret_20",
+      "selection_dates": 1201,
+      "groups": {
+        "both_mean_daily_median_denominator_percentile": 0.6335111011643733,
+        "score_only_mean_daily_median_denominator_percentile": 0.1786103422469903,
+        "numerator_only_mean_daily_median_denominator_percentile": 0.8337671283884509,
+        "score_only_minus_numerator_only_median_daily_delta": -0.6569847127042698,
+        "score_only_mean_group_count": 11.344166666666666,
+        "numerator_only_mean_group_count": 11.344166666666666
+      }
+    }
+  },
+  "interpretation": [
+    "For both C1 and C4, names added by the normalized score have much lower denominator percentiles than names selected by the numerator proxy but rejected by the normalized score.",
+    "The C1 denominator direction is a lower-volatility tilt through vol_20; the C4 direction is a lower-path-amplitude tilt through abs_ret_sum_20. This explains the direction of normalizer-driven membership changes, not predictive value.",
+    "The evidence is structural and representation-dependent. It does not establish risk-adjusted returns, causality, PIT safety, capacity, or candidate promotion."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}
