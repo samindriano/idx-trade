@@ -1,0 +1,67 @@
+{
+  "schema_version": "IDX_TRADE_C2_INTERACTION_QUADRANTS_V1",
+  "experiment_id": "C2-INTERACTION-QUADRANTS-048",
+  "status": "PASS_STRUCTURAL_C2_INTERACTION_QUADRANTS",
+  "scope": "Outcome-blind C2 ret_5 by abnormal-turnover sign quadrant for fixed Top-30 selections; no policy, era, candidate, or outcome selection.",
+  "code": {
+    "path": "research/alpha_c2_interaction_quadrants_v1.py",
+    "sha256": "e8fd8223bf73ffc14e61741fbf4d31f9966f01aadfabe96d34a531a2d04fcdfc"
+  },
+  "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e",
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-c2-quadrants/alpha_c2_interaction_quadrants_v1.json",
+    "sha256": "cb6ca355519ae6f4b3359e30e7aa2d10e5f783ce8213bffd3049af004647d57e"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  },
+  "overall": {
+    "usable_dates": 1201,
+    "ret_pos_activity_pos": {
+      "eligible_share": 0.29126563500568,
+      "selected_share": 0.68684429641965,
+      "pooled_enrichment": 2.35813708818157,
+      "selected_slots": 24747
+    },
+    "ret_neg_activity_neg": {
+      "eligible_share": 0.277930628360702,
+      "selected_share": 0.31315570358035,
+      "pooled_enrichment": 1.12674053028057,
+      "selected_slots": 11283
+    },
+    "ret_pos_activity_neg": {
+      "eligible_share": 0.201463504107658,
+      "selected_share": 0.0,
+      "pooled_enrichment": 0.0,
+      "selected_slots": 0
+    },
+    "ret_neg_activity_pos": {
+      "eligible_share": 0.22934023252596,
+      "selected_share": 0.0,
+      "pooled_enrichment": 0.0,
+      "selected_slots": 0
+    },
+    "selected_positive_score_fraction": 1.0
+  },
+  "by_year_selected_share": {
+    "2021": {"ret_pos_activity_pos": 0.76820987654321, "ret_neg_activity_neg": 0.23179012345679},
+    "2022": {"ret_pos_activity_pos": 0.646883468834688, "ret_neg_activity_neg": 0.353116531165312},
+    "2023": {"ret_pos_activity_pos": 0.650627615062762, "ret_neg_activity_neg": 0.349372384937238},
+    "2024": {"ret_pos_activity_pos": 0.677074542897328, "ret_neg_activity_neg": 0.322925457102672},
+    "2025": {"ret_pos_activity_pos": 0.787994350282486, "ret_neg_activity_neg": 0.212005649717514},
+    "2026": {"ret_pos_activity_pos": 0.599012345679012, "ret_neg_activity_neg": 0.400987654320988}
+  },
+  "interpretation": [
+    "The two cross-sign quadrants have negative C2 products and receive zero Top-30 slots; this is a formula-selection consequence, not evidence that those market states are absent or unprofitable.",
+    "C2 Top-30 selection is a mixture of positive-return/high-activity confirmation and negative-return/low-activity confirmation, with the former dominant pooled and in 2025.",
+    "The 2026 partial-year shift toward negative-return/low-activity confirmation is descriptive regime mixture only; it is not a return, regime-alpha, or predictive-stability claim."
+  ],
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED"
+  }
+}

@@ -45,6 +45,7 @@
     "candidate_era_mechanics_v1.json",
     "candidate_score_separation_v1.json",
     "candidate_component_anatomy_v1.json",
+    "c2_interaction_quadrants_v1.json",
     "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
@@ -53,8 +54,8 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 44,
-    "findings_index_entries": 35,
+    "experiment_registry_entries": 45,
+    "findings_index_entries": 36,
     "no_retry_registry_entries": 15,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
@@ -76,6 +77,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V2.md",
     "docs/checkpoints/2026-09-20_ALPHA_LONG_RUN_HANDOFF_TO_CHATGPT_V4.md",
     "docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_SCORE_SEPARATION_RESULT_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_COMPONENT_ANATOMY_RESULT_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_COMPONENT_ANATOMY_RESULT_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_C2_INTERACTION_QUADRANTS_RESULT_V1.md"
   ]
 }

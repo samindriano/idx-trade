@@ -253,3 +253,21 @@ access absence.
   difference 0.0. C1/C4 are numerator-dominated reversals; C2 is an
   interaction between ret_5 and abnormal-turnover log. The result is
   implementation/structural evidence only.
+
+## C2 interaction quadrants
+
+- Script: `research/alpha_c2_interaction_quadrants_v1.py`.
+- Durable result: `research_knowledge/c2_interaction_quadrants_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_C2_INTERACTION_QUADRANTS_RESULT_V1.md`.
+- Code SHA-256:
+  `e8fd8223bf73ffc14e61741fbf4d31f9966f01aadfabe96d34a531a2d04fcdfc`.
+- Component helper SHA-256:
+  `de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e`.
+- External result SHA-256:
+  `cb6ca355519ae6f4b3359e30e7aa2d10e5f783ce8213bffd3049af004647d57e`.
+- Focused tests: `tests/test_alpha_c2_interaction_quadrants_v1.py`, 1/1
+  passing.
+- Pooled Top-30 slots are 68.68% positive-return/high-activity and 31.32%
+  negative-return/low-activity. Cross-sign zero selection is a product-sign
+  consequence, not a predictive negative. The 2026 composition shift remains
+  structural only.

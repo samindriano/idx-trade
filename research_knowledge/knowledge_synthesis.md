@@ -99,6 +99,11 @@
   while C2 is an interaction between ret_5 and abnormal-turnover log rather
   than one component. Finite recomputed C1/C2/C4 scores match the guarded
   artifact exactly; this is implementation evidence only.
+- C2 Top-30 selection is a two-mode sign-consistent mixture: 68.68% pooled
+  positive-return/high-activity and 31.32% negative-return/low-activity; the
+  cross-sign zero is mechanically implied by the product sign. The mix shifts
+  to 59.90%/40.10% in 2026 partial year from 78.80%/21.20% in 2025. This is
+  structural composition, not regime-return evidence or a reason to split C2.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.

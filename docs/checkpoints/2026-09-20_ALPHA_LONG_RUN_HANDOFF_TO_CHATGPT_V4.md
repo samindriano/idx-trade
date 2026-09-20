@@ -289,19 +289,27 @@ interaction between `ret_5` and abnormal-turnover log rather than a single
 component. This strengthens the shared-reversal caution but is not predictive
 redundancy or scientific validation.
 
+The C2 quadrant addendum shows that fixed Top-30 slots are a two-mode,
+sign-consistent mixture: `68.68%` positive-return/high-activity and `31.32%`
+negative-return/low-activity. Cross-sign quadrants receive zero slots because
+their product is negative; that is a formula consequence, not a negative
+predictive result. The mix shifts to `59.90%/40.10%` in 2026 partial year from
+`78.80%/21.20%` in 2025. This remains structural composition only and does
+not justify splitting C2 or claiming regime returns.
+
 ## 4. Tooling and audit-control work
 
 The run also audited whether its own research controls could produce false
 green states:
 
-- knowledge-base verifier: current `PASS`; current counts 44 experiments, 35
+- knowledge-base verifier: current `PASS`; current counts 45 experiments, 36
   findings, 15 no-retry entries, 17 source-capability entries, 6 synthesis
   documents;
 - authority-packet verifier: current `PASS` after missing evidence-reference
   checks were repaired;
 - packet/firewall control: hash-bound output `PASS`, 65/65 checks;
 - lane verifier: latest process-scope output `PASS`, 10/10 checks;
-- focused authority/eligibility tests: current focused suite 17/17 passing;
+- focused authority/eligibility tests: current focused suite 18/18 passing;
 - formula mutation challenger: five declared C1/C2/C4 semantic mutations
   detected on a 3-ticker/150-session synthetic fixture;
 - nested packet schema challenger: draft strict allowlist rejected five
@@ -379,18 +387,19 @@ promote a structural hypothesis based on this handoff.
    ```powershell
    python research/verify_alpha_knowledge_base_v1.py
    python research/verify_alpha_data_authority_packet_v1.py --packet research_knowledge/data_authority_packet_v1.json
-   python -m pytest tests/test_alpha_candidate_era_authority_v1.py tests/test_alpha_candidate_era_mechanics_v1.py tests/test_alpha_eligibility_era_delta_v1.py tests/test_alpha_candidate_score_separation_v1.py tests/test_alpha_candidate_component_anatomy_v1.py tests/test_alpha_data_authority_packet_v1.py tests/test_alpha_eligibility_policy_scenario_v1.py -q
+   python -m pytest tests/test_alpha_candidate_era_authority_v1.py tests/test_alpha_candidate_era_mechanics_v1.py tests/test_alpha_eligibility_era_delta_v1.py tests/test_alpha_candidate_score_separation_v1.py tests/test_alpha_candidate_component_anatomy_v1.py tests/test_alpha_c2_interaction_quadrants_v1.py tests/test_alpha_data_authority_packet_v1.py tests/test_alpha_eligibility_policy_scenario_v1.py -q
    ```
 
 4. Check that the registries reference files that exist and that the protected
    payload scan remains closed.
-5. Verify the five continuation results:
+5. Verify the six continuation results:
 
    - `research_knowledge/candidate_era_authority_v1.json`
    - `research_knowledge/eligibility_era_delta_v1.json`
    - `research_knowledge/candidate_era_mechanics_v1.json`
    - `research_knowledge/candidate_score_separation_v1.json`
    - `research_knowledge/candidate_component_anatomy_v1.json`
+   - `research_knowledge/c2_interaction_quadrants_v1.json`
 
 6. Treat every `PASS_STRUCTURAL_ONLY`, `SUPPORTED_SCOPED`, and verifier PASS as
    bounded evidence, not as a promotion or predictive result.
@@ -425,6 +434,7 @@ Most relevant checkpoints:
 - `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_ERA_MECHANICS_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_SCORE_SEPARATION_RESULT_V1.md`
 - `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_COMPONENT_ANATOMY_RESULT_V1.md`
+- `docs/checkpoints/2026-09-20_ALPHA_C2_INTERACTION_QUADRANTS_RESULT_V1.md`
 
 ## 10. Final handoff sentence
 

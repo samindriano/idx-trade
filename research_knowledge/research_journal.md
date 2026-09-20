@@ -239,3 +239,13 @@ checkpoint files; this file records why the next question changed.
 - This strengthens the shared-reversal caution without proving predictive
   redundancy. No C5, policy, era, candidate promotion, or protected outcome
   was introduced.
+
+## 2026-09-20 — C2 interaction quadrants
+
+- Decomposed fixed C2 Top-30 slots into the four sign quadrants of `ret_5` and
+  log abnormal turnover. Pooled selection is 68.68% positive-return/high-
+  activity and 31.32% negative-return/low-activity; cross-sign quadrants get
+  zero slots because their product is negative.
+- The mixture shifts from 78.80%/21.20% in 2025 to 59.90%/40.10% in 2026
+  partial year. This is a descriptive composition shift, not a regime-return
+  claim and not a reason to create a new candidate.
