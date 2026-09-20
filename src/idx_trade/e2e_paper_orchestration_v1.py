@@ -1779,6 +1779,53 @@ def execute_preopen(
         execution_date=execution_date,
         required_tickers=required,
     )
+    state_ref = payload.get("state")
+    if not isinstance(state_ref, Mapping):
+        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    try:
+        snapshot = dividend_runtime.load_runtime_snapshot(
+            Path(str(state_ref.get("snapshot_path") or "")).expanduser().resolve()
+        )
+    except Exception as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_PREPARED_STATE_PARENT_MISMATCH"
+        ) from exc
+    if (
+        str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve())
+        or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256
+        or str(state_ref.get("state_sha256"))
+        != dividend.dividend_aware_state_hash(snapshot.state)
+    ):
+        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    state = snapshot.state
+    declared_bootstrap = payload.get("bootstrap")
+    if not isinstance(declared_bootstrap, bool):
+        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
+    replay_meta = None
+    if not declared_bootstrap:
+        if previous_score is None:
+            raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
+        replay_meta = {
+            "last_score_manifest_path": str(previous_score.manifest_path.resolve()),
+            "last_score_manifest_sha256": previous_score.manifest_sha256,
+        }
+    plan, bootstrap = _resolve_scores(
+        current_score,
+        previous_score,
+        state=state,
+        meta=replay_meta,
+        current_date=decision_date,
+    )
+    declared_plan = payload.get("decision_plan")
+    expected_plan = _decision_payload(plan)
+    if (
+        not isinstance(declared_plan, Mapping)
+        or dict(declared_plan) != expected_plan
+        or _canonical_hash(dict(declared_plan))
+        != payload.get("decision_plan_sha256")
+        or payload.get("bootstrap") != bootstrap
+    ):
+        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
     target = paths.execution_dir / f"{execution_date}.json"
     if not target.exists():
         recovered = _recover_staged_execution(
@@ -1894,12 +1941,17 @@ def execute_preopen(
             execution_date,
             "ALREADY_COMPLETE",
         )
-    state = _load_latest_state(paths)
-    state_ref = payload.get("state")
-    snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
-    if not isinstance(state_ref, dict) or str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve()) or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256 or str(state_ref.get("state_sha256")) != dividend.dividend_aware_state_hash(state):
+    try:
+        latest_snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+    except Exception as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_PREPARED_STATE_PARENT_MISMATCH"
+        ) from exc
+    if (
+        str(latest_snapshot.path.resolve()) != str(snapshot.path.resolve())
+        or latest_snapshot.file_sha256 != snapshot.file_sha256
+    ):
         raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
-    plan, _ = _resolve_scores(current_score, previous_score, state=state, meta=_load_meta(paths), current_date=decision_date)
     declared_previous_execution = payload.get("previous_execution")
     current_meta = _load_meta(paths)
     actual_previous_execution = (
@@ -1911,18 +1963,15 @@ def execute_preopen(
     )
     if actual_previous_execution != declared_previous_execution:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_CHANGED")
-    if _canonical_hash(_decision_payload(plan)) != payload.get("decision_plan_sha256"):
-        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
     _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
     shadow = (
         DecisionV2ShadowState.empty()
-        if bool(payload.get("bootstrap"))
+        if bootstrap
         else replace(
             dividend_runtime.reconstruct_decision_shadow_state(state),
             as_of_session_date=previous_score.session_date,
         )
     )
-    snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
     registered_events = dividend_runtime.registered_certified_events(
         snapshot.certified_dividend_registry
     )
