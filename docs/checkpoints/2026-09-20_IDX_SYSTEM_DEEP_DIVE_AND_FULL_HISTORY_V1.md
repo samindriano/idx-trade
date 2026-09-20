@@ -626,6 +626,12 @@ historical alpha archive:
   obligation ID with planned/filled/remaining/relinquished quantities, typed
   retry/block/cancel/expiry events, explicit CA settlement policy, and hash/
   restart binding. It is design-only and deliberately not a runtime patch.
+- `2026-09-20_IDX_OBLIGATION_HISTORICAL_COMPATIBILITY_AUDIT_V1.md` reconciles
+  `e1531b3c`, `d8d34b79`, and `ce91d60a`: zero-lot BUY pending and positive
+  partial-SELL persistence can be migrated, but a historical positive partial
+  BUY with no preserved plan must be marked `UNKNOWN_ORPHANED_PARTIAL` rather
+  than assigned a fabricated remainder. The old `ce91d60a` replay oracle stays
+  immutable; a future residual-aware oracle must be versioned.
 
 The durable rolling controls for this marathon are now:
 

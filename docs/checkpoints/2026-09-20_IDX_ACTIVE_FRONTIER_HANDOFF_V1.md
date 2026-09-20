@@ -53,13 +53,14 @@ The system tracks target membership but not target quantity obligations. A posit
   leaving expiry/escalation and audit policy unresolved.
 - Durable checkpoint: `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md`.
 - Evidence-driven design checkpoint: `2026-09-20_IDX_QUANTITY_OBLIGATION_STATE_CONTRACT_V1.md`.
+- Historical compatibility checkpoint: `2026-09-20_IDX_OBLIGATION_HISTORICAL_COMPATIBILITY_AUDIT_V1.md`.
 
 ## Immediate next questions
 
-1. Which historical replay/state contracts must the proposed obligation ledger preserve or deliberately supersede?
-2. Can an isolated remediation harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
-3. Which migration rule converts existing ticker-level pending rows and positive partial positions without fabricating remaining quantity?
-4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
+1. Can an isolated versioned replay harness prove one obligation identity across partial fill, retry, CA payment, reversal, and restart?
+2. Which migration fixture classes can be handled as complete, zero-lot pending, or `UNKNOWN_ORPHANED_PARTIAL` without fabricating quantity?
+3. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
+4. Can the new oracle remain compatible with immutable historical replay results while adding residual assertions?
 5. What evidence would justify moving the proposal from design-only to a separately authorized implementation lane?
 
 ## Constraints
