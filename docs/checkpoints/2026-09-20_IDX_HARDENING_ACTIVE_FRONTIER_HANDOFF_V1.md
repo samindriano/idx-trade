@@ -148,14 +148,18 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `207/207` for the
+- a fresh current-head regression challenge is also PASS at `230/230` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
   controller/orchestration suites; see
   `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`;
+- the V4-X1 Decision adapter now rejects boolean rank values before numeric
+  coercion; the regression test and expanded bounded challenge are recorded at
+  `31e05ee1` with `230/230 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits are `dffd70c9` (reconciliation and migration replay),
+- continuation commits include `31e05ee1` (boolean rank validation),
+  `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
   retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane
   remains clean and no commit was pushed or merged. The follow-up adversarial

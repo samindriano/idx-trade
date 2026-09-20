@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `178d2634`
+Verification revision: `31e05ee1`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`207/207 PASS`.
+`230/230 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -32,19 +32,22 @@ quarantined and the verified partial ancestor is recovered without selecting
 the closed artifact.
 The runtime-aware wrapper preserves the dividend ledger while delegating all
 quantity transition and projection ownership to the base obligation contract.
+The V4-X1 Decision adapter also rejects boolean rank values before numeric
+coercion, preventing `True` from becoming rank `1`.
 
-The full repository command was also attempted twice after this test addition.
+Earlier in this lane, the full repository command was also attempted twice
+after the preceding contract additions.
 Both runs reached the end of the suite but encountered the known Windows
 `PermissionError [WinError 5]` atomic-publish race in unrelated tests: once in
 `tests/test_official_open_evidence_v1.py` and once in
 `tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
-run in isolation. No contract-hardening test failed; the bounded 204-test
-207-test result above is the current clean evidence for this lane.
+run in isolation. No contract-hardening test failed; the expanded bounded
+230-test result above is the current clean evidence for this lane.
 
 ## Verification command
 
 ```text
-python -m pytest -q tests/test_v4_x1_quantity_obligation_v1.py tests/test_v4_x1_execution_v1_decision_v2_adapter.py tests/test_v4_x1_execution_v1_exit_capacity.py tests/test_v4_x1_execution_evidence_v2.py tests/test_v4_x1_ca_timing_matrix_v1.py tests/test_v4_x1_identity_contract_v1.py tests/test_v4_x1_identity_evidence_v1.py tests/test_v4_x1_transition_binding_v1.py tests/test_v4_x1_runtime_lineage_v2.py tests/test_v4_x1_migration_provenance_v1.py tests/test_v4_x1_migration_activation_v1.py tests/test_forward_dividend_runtime_v1_1.py tests/test_forward_dividend_orchestration_v1.py tests/test_e2e_paper_orchestration_v1.py tests/test_e2e_paper_operational_controller_v1.py tests/test_e2e_paper_operational_controller_v2.py tests/test_e2e_paper_phase_binding_v1.py tests/test_e2e_paper_runtime_config_v1.py tests/test_e2e_prepared_schedule_binding_v1.py
+python -m pytest -q tests/test_v4_x1_quantity_obligation_v1.py tests/test_v4_x1_execution_v1_decision_v2_adapter.py tests/test_v4_x1_execution_v1_exit_capacity.py tests/test_v4_x1_execution_evidence_v2.py tests/test_v4_x1_ca_timing_matrix_v1.py tests/test_v4_x1_identity_contract_v1.py tests/test_v4_x1_identity_evidence_v1.py tests/test_v4_x1_transition_binding_v1.py tests/test_v4_x1_runtime_lineage_v2.py tests/test_v4_x1_migration_provenance_v1.py tests/test_v4_x1_migration_activation_v1.py tests/test_forward_dividend_runtime_v1_1.py tests/test_forward_dividend_orchestration_v1.py tests/test_e2e_paper_orchestration_v1.py tests/test_e2e_paper_operational_controller_v1.py tests/test_e2e_paper_operational_controller_v2.py tests/test_e2e_paper_phase_binding_v1.py tests/test_e2e_paper_runtime_config_v1.py tests/test_e2e_prepared_schedule_binding_v1.py tests/test_decision_v2_minimal.py tests/test_decision_v2_minimal_audit_remediation.py tests/test_v4_x1_decision_v2_minimal.py
 ```
 
 ## Interpretation
