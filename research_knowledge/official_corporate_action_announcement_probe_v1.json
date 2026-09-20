@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_BOUNDED_CORPORATE_ACTION_EVENT_EVIDENCE",
+  "scope": "Outcome-blind audit of a small official IDX stock-split announcement sample; event-document semantics only",
+  "source": {
+    "endpoint": "https://www.idx.id/primary/NewsAnnouncement/GetAllAnnouncement",
+    "query": "Pemecahan Saham",
+    "raw_sha256": "0912cd3a830f64c27013c7ec6af47959fff4aa71523ec5de771443aee2c07440",
+    "sample_records": 5,
+    "codes": ["BPII", "PBID", "RMKE"]
+  },
+  "document_evidence": [
+    {
+      "code": "BPII",
+      "publish_date": "2024-03-08",
+      "document_sha256": "e035fa83734efc53621444d3d0bd9e215de6acc56aeac235c8d2b6108112f7c4",
+      "semantics": "stock-split plan; requests shareholder approval at RUPSLB scheduled for 16 April 2024",
+      "effective_transition_stated": false
+    },
+    {
+      "code": "BPII",
+      "publish_date": "2024-04-03",
+      "document_sha256": "16185b30be593490cef30b271cea8858d8bd562588f7137226337cdcb776bed6",
+      "semantics": "additional disclosure for a stock-split plan; again points to shareholder approval at RUPSLB on 16 April 2024",
+      "effective_transition_stated": false
+    },
+    {
+      "code": "PBID",
+      "publish_date": "2024-05-17",
+      "document_sha256": "5dd6290edf3d61d656a7e757d0f1644aed8a9b3c194c7d0e776ebb4087624ccb",
+      "semantics": "proof of advertisement of a stock-split implementation schedule; body records media publication on 17 May 2024",
+      "effective_transition_stated": false
+    },
+    {
+      "code": "RMKE",
+      "publish_date": "2026-07-02",
+      "document_sha256": "9facb1c1b77f7ea3636e465ef14018e117d67e05d1c77a801aeddd56c919577c",
+      "semantics": "correction to a 20 May 2026 stock-split filing; body points to a detailed attachment and records the event date, but no effective market-transition date",
+      "effective_transition_stated": false
+    },
+    {
+      "code": "RMKE",
+      "publish_date": "2026-05-20",
+      "document_sha256": "3f8b9598a4681010532d467e2899de4bfc88bd19be699fff9ed2fd4ab3eba276",
+      "semantics": "advertised linked filing returned HTTP 403 and was not treated as a PDF or evidence",
+      "effective_transition_stated": null
+    }
+  ],
+  "what_is_proven": [
+    "Official announcement documents distinguish a plan, an approval process, an advertisement of a schedule, and a correction of an earlier filing.",
+    "A document's event date or advertisement date is not automatically an effective market-transition date.",
+    "A linked attachment can be unavailable even when the announcement metadata is present; the unavailable document cannot be reconstructed from the parent filing."
+  ],
+  "what_remains_unknown": [
+    "RUPSLB approval and completion dates for the sampled plans",
+    "exchange trading adjustment/effective dates and the first session using the new share basis",
+    "knowledge-time and revision semantics for the event and attachment",
+    "population-wide corporate-action event-to-price-window linkage"
+  ],
+  "admission": {
+    "official_event_document_semantics": "SUPPORTED_BOUNDED",
+    "price_basis_transition_authority": "MISSING",
+    "predictive_research_admission": "BLOCKED",
+    "allowed_use": "event-family and timing-semantics research only",
+    "forbidden_use": "infer effective price basis, repair historical prices, or admit a candidate from announcement dates"
+  },
+  "canonical_mutation": false,
+  "protected_boundary": "CLOSED"
+}

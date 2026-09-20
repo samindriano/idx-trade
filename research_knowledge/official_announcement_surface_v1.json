@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_OFFICIAL_ANNOUNCEMENT_SURFACE_RESEARCH_ONLY",
+  "scope": "Official IDX announcement search/index surface and retained linked-file checks; bounded event and timing research only",
+  "evidence_artifact": {
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260920T-official-announcement-surface\\alpha_official_announcement_surface_v1.json",
+    "sha256": "77deaaf213572c8e456b680a6e67eff1e56c55231c98ef51075020fdb0940fc9",
+    "code_sha256": "4749e0a6443dadeaea723d54beb8f4a8516b0dd2ef3973f89e28dd1cb493aba4"
+  },
+  "source": {
+    "endpoint": "https://www.idx.id/primary/NewsAnnouncement/GetAllAnnouncement",
+    "classification_query": "Perubahan Klasifikasi Industri",
+    "classification_raw_sha256": "490d29d37d22e6a5252b4dd7a3f54cb4121bf1f3954c841f88c2274cb271648d",
+    "classification_item_count": 11,
+    "classification_publish_date_range": ["2023-10-02T13:03:42", "2026-06-24T18:55:00"],
+    "classification_company_codes": ["DEFI", "LAPD", "MDKA", "MGNA", "PALM", "PANI", "PNGO", "SWID"],
+    "classification_exchange_announcements": [
+      "Peng-00128/BEI.POP/06-2024",
+      "No. Peng-00110/BEI.POP/06-2025",
+      "No. Peng-00100/BEI.POP/06-2026"
+    ],
+    "keyword_queries": {
+      "Penghapusan Pencatatan": {"item_count": 10, "page_count": 1, "raw_sha256": "d1828306d9c9abe5e71811d2236c2d87400f2019df3b521adf50e5f44b1d755c"},
+      "Pencatatan Kembali": {"item_count": 4, "page_count": 1, "raw_sha256": "55c6ad3994a0a117cabb778129e0829bf2f7bb7a1ccdf738e66d45cf7b8b3b5e"},
+      "Perubahan Nama": {"item_count": 182, "page_count": 2, "page_1_observed": 100, "page_2_observed": 82, "combined_unique_ids": 182, "combined_date_range": ["2023-07-10T17:49:57", "2026-09-01T19:47:10"], "raw_sha256": "62b3c45d21ffb10c633e7c01b772dc34c01fb960f145566254c28cc50e34e19d", "page_2_raw_sha256": "5ffc78a1db219599a64ad115cd6d031067402906712db4d7ffe66f7b48152650"},
+      "Perubahan Kode": {"item_count": 2, "page_count": 1, "empty_code_count": 1, "raw_sha256": "385f57474854221694b77da0db41692adaae190272ddd8ba27b44af638ccec23"},
+      "Penggabungan": {"item_count": 175, "page_count": 2, "page_1_observed": 100, "page_2_observed": 75, "combined_unique_ids": 175, "combined_date_range": ["2023-07-03T16:18:05", "2026-09-02T08:43:34"], "raw_sha256": "8c43caaeb533fac85e8bcc467619507f8067c136dc705b7b79345e0517bcdee9", "page_2_raw_sha256": "62e5c3cf8a5b5197f3bab7da4cc17c068d850d2f177805c473e5d2fc0882d08f"},
+      "Pemecahan Saham": {"item_count": 19, "page_count": 1, "raw_sha256": "0912cd3a830f64c27013c7ec6af47959fff4aa71523ec5de771443aee2c07440"}
+    },
+    "keyword_semantics": {
+      "Pencatatan Kembali": {"board_or_officer_structure_titles": 2, "security_listing_relisting_titles": 2},
+      "Penghapusan Pencatatan": {"treasury_or_other_security_cancellation_titles": 4, "go_private_or_delisting_plan_titles": 2, "explicit_security_listing_relisting_titles": 2}
+    },
+    "entity_semantics": {
+      "Perubahan Nama": {"items": 182, "unique_codes": 108, "repeated_code_count": 43, "jenis_counts": {"STOCK": 171, "Broker": 11}},
+      "Penggabungan": {"items": 175, "unique_codes": 71, "repeated_code_count": 32, "jenis_counts": {"STOCK": 175}}
+    },
+    "date_filter_probe": {
+      "query_shape": "pageNumber=1&pageSize=10&dateFrom=2025-01-01&dateTo=2026-09-20&lang=id",
+      "status_line": "HTTP/1.1 503 Service Unavailable",
+      "interpretation": "bounded failure; not used to claim date-range completeness"
+    }
+  },
+  "document_integrity": {
+    "company_attachment_files": 17,
+    "http_200_pdf_files": 10,
+    "non_pdf_or_non_200_files": 7,
+    "valid_attachment_hash_collision_count": 1,
+    "collision_sha256": "c61853066827620e5cd9935daabbe806baea56ad603d22575454ae6a0dbae404",
+    "annual_package_comparison": {
+      "2024_same_as_prior": true,
+      "2025_same_as_prior": true,
+      "2026_same_as_prior": true,
+      "2024_sha256": "4ecf5ebb2809c9007b68bfe0aa1c426428d77178ff9acbf744364afba00ad223",
+      "2025_sha256": "09ecc0b059b6c486aa3220faacb55fa638e1991d26c37e26d9455fec0ceec7de",
+      "2026_sha256": "d95b27f4bab74a2da9ab737c3bdd96bc4626cfb97635ffa32a9449be78d7db98"
+    }
+  },
+  "timing_evidence": {
+    "company_documents_with_explicit_effective_date": 4,
+    "codes": ["DEFI", "PANI", "PNGO", "SWID"],
+    "document_effective_date_text": "24 Juni 2024",
+    "api_publish_date": "2025-01-22",
+    "conclusion": "Publication metadata and document-stated effective date are distinct fields; never substitute one for the other."
+  },
+  "what_is_proven": [
+    "The ordinary public endpoint returns structured announcement IDs, announcement numbers, publish timestamps, codes, and attachment links for bounded keyword searches.",
+    "The classification query returns three exchange-wide packages and eight company-specific records.",
+    "The 2024-2026 exchange-wide packages add no new annual payload beyond the previously retained official sector archive because their bytes match exactly.",
+    "At least four company-specific documents state an effective date of 24 June 2024 while their API records carry a 22 January 2025 publish timestamp.",
+    "Attachment URLs are not self-authenticating: some return 403 HTML bodies and several successful links have an identical PDF hash.",
+    "Lifecycle keyword semantics are mixed: two of four Pencatatan Kembali results concern board/officer structure, and Penghapusan Pencatatan mixes treasury/security cancellations, go-private plans, and explicit listing events.",
+    "Announcement counts are not event or issuer-transition counts: the 182 Perubahan Nama results contain 108 unique codes with 43 repeated codes and 11 Broker records, while the 175 Penggabungan results contain 71 unique codes with 32 repeated codes."
+  ],
+  "what_remains_unknown": [
+    "complete historical announcement coverage across dates and keyword variants",
+    "daily PIT membership, survivorship, delisting, relisting, and ticker-reuse completeness",
+    "issuer/ISIN continuity",
+    "whether every downstream market or index field adopts the document-stated effective date",
+    "row-level available-at/knowledge time and revision/vintage semantics"
+  ],
+  "admission": {
+    "metadata": "SUPPORTED_BOUNDED_EVENT_DISCOVERY",
+    "audited_document_content": "BOUNDED_EVENT_EVIDENCE",
+    "historical_pit_population": "MISSING",
+    "historical_research_admission": "BLOCKED",
+    "allowed_use": "bounded event discovery, publication-vs-effective timing audit, and source-design research",
+    "forbidden_use": "complete lifecycle substitution, daily PIT membership inference, silent effective-date imputation, or predictive admission"
+  },
+  "network_used_by_audit": false,
+  "canonical_mutation": false,
+  "protected_boundary": "CLOSED"
+}

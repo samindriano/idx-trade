@@ -48,10 +48,13 @@
    current six-ticker snapshot gap and confirm CNTX discoverability. The
    official current company-profile directory independently confirms the six
    listing dates and exactly reproduces the prior official current snapshot,
-   but remains a current snapshot rather than historical PIT authority.
-   Continue only toward a new official event archive or population-wide
-   lifecycle contract; do not repeat same-family ticker-file or current-
-   directory snapshots.
+   but remains a current snapshot rather than historical PIT authority. A new
+   official announcement-search surface adds bounded event discovery and
+   publication-versus-effective timing evidence, but multi-page search,
+   unreliable date filtering, and attachment integrity gaps prevent treating it
+   as a complete event ledger. Continue only toward a complete official event
+   archive or population-wide lifecycle contract; do not repeat same-family
+   ticker-file or current-directory snapshots.
 7. Re-entry preparation: only after an external/authoritative admission artifact
    changes the current blocked state.
 
@@ -91,3 +94,36 @@ the current predictive block as the end of the knowledge program.
   official current snapshot, and a strict subset relation to the anchor. It
   resolves the current-directory comparison only; it does not add daily PIT,
   issuer/ISIN transition, revision, or corporate-action authority.
+
+## 2026-09-20 — official announcement-search surface
+
+- The ordinary public `NewsAnnouncement/GetAllAnnouncement` endpoint returned
+  structured results for six bounded keyword probes covering delisting,
+  relisting, name/code changes, mergers, and stock splits. Retained results
+  total 392 items, with multi-page counts for name changes and mergers; these
+  counts are search-result counts, not complete historical-event counts.
+- The classification query returned 11 records: three exchange-wide annual
+  packages and eight company-specific announcements. The 2024-2026 annual
+  package bytes match the existing official sector archive exactly, so the
+  durable gain is metadata and timing evidence rather than new annual payload.
+- Four company-specific documents state an effective date of 24 June 2024 while
+  API metadata reports publication on 22 January 2025. Publish time and
+  document-stated effective time are separate; neither is a substitute for a
+  row-level knowledge-time contract.
+- Seven of 17 retained attachment responses were non-PDF or non-200, and
+  several successful URLs shared one PDF hash. Attachment links require
+  content verification and cannot be treated as self-authenticating evidence.
+- A date-filter request returned HTTP 503. The announcement surface is
+  therefore `SUPPORTED_BOUNDED_EVENT_DISCOVERY`, not complete PIT/lifecycle,
+  issuer/ISIN, or corporate-action authority.
+
+## 2026-09-20 — official corporate-action document semantics
+
+- A five-document stock-split sample distinguishes process claims from market
+  transitions: BPII plan filings require RUPSLB approval, PBID records schedule
+  advertisement, and an RMKE correction records an underlying event date while
+  pointing to an unavailable detailed attachment.
+- None of the retained bodies states an exchange-effective first trading
+  session or price basis. The sample therefore narrows event taxonomy but does
+  not reopen CA admission. Do not infer price adjustments, basis transitions,
+  or historical repair from announcement/event dates.

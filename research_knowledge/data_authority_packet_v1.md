@@ -100,6 +100,24 @@ It supports current-directory identity cross-checks only; it does not supply
 historical daily membership, issuer/ISIN transitions, publication time,
 revision/vintage semantics, or corporate-action basis.
 
+The public IDX announcement search endpoint is a separate bounded event-
+discovery surface. It returns announcement identifiers, codes, publish
+timestamps, and attachment links for keyword searches, but multi-page results,
+an HTTP 503 date-filter probe, empty code fields, non-PDF attachment responses,
+and content-hash collisions prevent treating it as a complete event ledger.
+Four company-specific classification documents state an effective date of 24
+June 2024 while their API publish metadata is 22 January 2025. Publication,
+effective, and knowledge-time semantics must remain separate; the endpoint
+does not repair the population/PIT/issuer/CA blocker.
+
+A focused stock-split document probe further separates event semantics from
+price-basis authority: BPII filings describe a plan pending RUPSLB approval,
+PBID records advertisement of a schedule, and an RMKE correction records an
+underlying event date while pointing to a detailed attachment. None of the
+retained bodies states an effective exchange trading transition; the RMKE
+original attachment was unavailable. Announcement, plan, advertisement,
+correction, event, and effective-transition dates must not be collapsed.
+
 Corporate-action and price-basis lineage is not event-complete at the
 event-to-window level. No split, rights, bonus, conversion, or adjustment is
 inferred from dates, ratios, price movement, or missing rows. Price candidates

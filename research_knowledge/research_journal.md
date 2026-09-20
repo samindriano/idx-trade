@@ -406,3 +406,55 @@ checkpoint files; this file records why the next question changed.
 - The existing 440-month official lifecycle archive remains event-level and
   identity/PIT blocked. The current directory was not used to reinterpret its
   conflicts or to repair any historical state.
+
+## 2026-09-20 — official announcement-search surface
+
+- Re-probed the official public `NewsAnnouncement/GetAllAnnouncement` endpoint
+  using a retained frontend-discovered route and six bounded keyword queries:
+  delisting, relisting, name changes, code changes, mergers, and stock splits.
+  The retained result set contains 392 search-result items; name-change and
+  merger queries are multi-page. These counts are not treated as complete
+  historical event coverage.
+- The classification query returned 11 records: eight company-specific
+  announcements and three exchange-wide annual packages. The 2024, 2025, and
+  2026 package bytes exactly match the previously acquired official sector
+  archive, so no duplicate annual payload was promoted.
+- Four downloadable company-specific PDFs (DEFI, PANI, PNGO, SWID) state an
+  effective date of 24 June 2024 while their API metadata reports 22 January
+  2025 publication. This is direct evidence that publication date and
+  document-stated effective date are distinct and neither alone is a
+  knowledge-time authority.
+- Seven of 17 retained attachment responses were non-PDF or non-200, and six
+  successful links shared one PDF hash. Attachment URLs therefore require
+  content verification and cannot be treated as self-authenticating identity.
+- A date-filter request returned HTTP 503. The source is recorded as
+  `SUPPORTED_BOUNDED_EVENT_DISCOVERY`, not complete PIT/lifecycle,
+  issuer/ISIN, or corporate-action authority. No canonical, provider,
+  protected-outcome, cloud, production, capture, or telemetry state changed.
+- Keyword meaning is itself not an event taxonomy: two of four `Pencatatan
+  Kembali` results concern board/officer structure, while `Penghapusan
+  Pencatatan` mixes treasury/security cancellation, go-private, and explicit
+  listing/relisting titles. Search-term matching cannot substitute for event
+  classification or security-state transition authority.
+- Retrieved and reconciled page 2 for the two multi-page probes: `Perubahan
+  Nama` has 182 unique IDs from 2023-07-10 through 2026-09-01, and
+  `Penggabungan` has 175 unique IDs from 2023-07-03 through 2026-09-02.
+  This closes pagination for those two queries only; it does not establish
+  complete announcement-index coverage.
+- Within those completed query results, `Perubahan Nama` has 108 unique codes,
+  43 repeated codes, and 11 Broker records; `Penggabungan` has 71 unique codes
+  and 32 repeated codes. Repeated codes and document counts therefore cannot
+  be promoted to issuer-transition or physical-event counts.
+
+## 2026-09-20 — official corporate-action document semantics
+
+- Inspected five retained official stock-split announcement documents for BPII,
+  PBID, and RMKE. BPII documents are a plan pending RUPSLB approval; PBID is
+  proof of schedule advertisement; RMKE is a correction that records an
+  underlying event date and points to a detailed attachment.
+- None of the retained bodies states an effective exchange trading transition.
+  The RMKE original filing returned HTTP 403 and was not treated as evidence.
+- This adds no price-basis authority. It strengthens the event taxonomy rule:
+  announcement, plan, approval, advertisement, correction, event, and effective
+  transition are separate claims, and a date in one class cannot be promoted
+  into another.

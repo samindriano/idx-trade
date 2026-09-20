@@ -171,6 +171,28 @@
   directory identity from historical-anchor membership; it does not establish
   daily PIT membership, survivorship safety, issuer/ISIN continuity, revisions,
   or CA basis.
+- The official IDX announcement search endpoint adds bounded event discovery
+  for delisting/relisting, name/code changes, mergers, splits, and industry
+  classification. It is not a complete event ledger: multi-page results exist,
+  a date-filter probe returned HTTP 503, one query returned an empty code, and
+  linked-file integrity was mixed. Keyword semantics are also mixed: two of
+  four `Pencatatan Kembali` results concern board/officer structure, and
+  `Penghapusan Pencatatan` includes treasury/security cancellation and
+  go-private titles alongside explicit listing events. Four company-specific
+  classification documents state an effective date of 24 June 2024 while API
+  metadata reports a 22 January 2025 publish time. This proves publication and
+  effective-date fields must remain separate; it does not supply knowledge
+  time, daily PIT membership, issuer/ISIN continuity, or event-to-window CA
+  authority. The completed name-change and merger pages also contain repeated
+  codes and mixed issuer types, so announcement counts are not event or
+  issuer-transition counts.
+- A focused stock-split document probe sharpens the CA boundary: BPII records
+  a plan pending RUPSLB approval, PBID records advertisement of an
+  implementation schedule, and an RMKE correction records an underlying event
+  date while its detailed original attachment is unavailable. None of the
+  retained bodies states an effective exchange trading transition. Announcement,
+  plan, advertisement, correction, event, and effective-transition dates remain
+  distinct; no price-basis repair or admission follows.
 - The local public-source frontier is not exhausted: further work should target
   a genuinely authoritative population-wide PIT/lifecycle contract or a newly
   acquired official event archive, not more copies of the same ticker-file
@@ -200,6 +222,9 @@
   executable capacity.
 - Public EOD/IPO snapshots explain a current timing gap but do not resolve any
   of those admission authorities.
+- The official announcement surface provides bounded event metadata and some
+  document-stated effective dates, but its search completeness, attachment
+  identity, knowledge time, and population linkage remain unresolved.
 - Every predictive question: IC, ICIR, OOS, PnL, incumbent comparison, and
   prospective evidence.
 

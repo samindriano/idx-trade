@@ -58,6 +58,8 @@
     "universe_breadth_turnover_v1.json",
     "public_eod_source_coverage_v1.json",
     "official_idx_directory_audit_v1.json",
+    "official_announcement_surface_v1.json",
+    "official_corporate_action_announcement_probe_v1.json",
     "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
@@ -66,10 +68,10 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 55,
-    "findings_index_entries": 48,
-    "no_retry_registry_entries": 18,
-    "source_capability_entries": 19,
+    "experiment_registry_entries": 57,
+    "findings_index_entries": 50,
+    "no_retry_registry_entries": 20,
+    "source_capability_entries": 20,
     "human_synthesis_documents": 6
   },
   "counting_rule": "JSONL line counts are authoritative; entries are append-only and reference evidence-of-record paths.",
