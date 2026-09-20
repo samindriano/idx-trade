@@ -663,6 +663,11 @@ historical alpha archive:
   completed orchestration artifact identity still omits them. This confirms a
   current artifact reproducibility blocker without executing or mutating the
   runtime.
+- `2026-09-20_IDX_SECURITY_MASTER_REVISION_COLLISION_AUDIT_V1.md` adds an
+  identity-history boundary result: conflicting active/delisted rows sharing
+  `(ticker, listed_from)` are silently reduced with `keep="last"`, leaving a
+  valid-looking but history-dependent master. No canonical or runtime data was
+  changed.
 
 The durable rolling controls for this marathon are now:
 

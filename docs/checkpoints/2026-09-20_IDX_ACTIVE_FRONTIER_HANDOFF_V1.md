@@ -68,6 +68,9 @@ The system tracks target membership but not target quantity obligations. A posit
 - Runtime-config revalidation checkpoint: `2026-09-20_IDX_RUNTIME_CONFIG_ARTIFACT_IDENTITY_REVALIDATION_V1.md`.
   At current runtime HEAD `402fca4b...`, config/runner hashes remain present in
   the loader but absent from prepared/execution orchestration artifact identity.
+- Security-master revision checkpoint: `2026-09-20_IDX_SECURITY_MASTER_REVISION_COLLISION_AUDIT_V1.md`.
+  Same-key active/delisted history is silently reduced by `keep="last"`; the
+  boundary has no typed identity/revision conflict.
 
 ## Immediate next questions
 
@@ -85,6 +88,8 @@ The system tracks target membership but not target quantity obligations. A posit
    output before the Decision duplicate-ticker guard?
 7. What separately authorized versioned stage/artifact contract can bind
    runtime config and runner identity without rewriting historical artifacts?
+8. Which source/revision policy should adjudicate same-key security-master
+   conflicts before universe eligibility is derived?
 
 ## Constraints
 
