@@ -46,6 +46,7 @@ def test_loads_hash_pinned_external_config(tmp_path: Path) -> None:
     loaded = load_runtime_config(root)
     assert loaded.controller.runtime_root == root.resolve()
     assert loaded.controller.expected_commit == "a" * 40
+    assert loaded.controller.runtime_config_sha256 == loaded.config_sha256
 
 
 def test_loads_dynamic_per_window_ca_capture_config(tmp_path: Path) -> None:

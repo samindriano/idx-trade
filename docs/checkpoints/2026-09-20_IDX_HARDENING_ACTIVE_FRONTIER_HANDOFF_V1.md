@@ -77,6 +77,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - operational `BOUND` lineage is persisted and rechecked across synthetic
   prepare/execute/replay, with config mismatch rejected;
+- hash-pinned controller selection now rejects prepared artifacts whose
+  operational runtime lineage is missing or unbound;
 - all four V1/V2 phase child entrypoints now require the external hash-pinned
   runtime config, require its branch/commit identity to match the parent
   controller, and pass the non-null config SHA into orchestration;

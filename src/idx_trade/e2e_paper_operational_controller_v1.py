@@ -28,6 +28,7 @@ from .e2e_operational_guard_v1 import (
 )
 from .e2e_paper_orchestration_v1 import (
     PREPARED_SCHEMA,
+    _verify_lineage_binding,
     _read_verified_json,
     bootstrap_t0,
     derive_required_execution_tickers,
@@ -52,6 +53,7 @@ class OperationalControllerConfig:
     repo_root: Path
     expected_branch: str
     expected_commit: str
+    runtime_config_sha256: str | None = None
     provider_checkout: Path | None = None
     provider_expected_commit: str | None = None
     uv_exe: Path | None = None
@@ -779,6 +781,17 @@ def _prepared_for_session(config: OperationalControllerConfig, session: str) -> 
                 valid_refs = False
                 break
         if valid_refs:
+            if config.runtime_config_sha256 is not None:
+                try:
+                    _verify_lineage_binding(
+                        payload.get("runtime_lineage"),
+                        role="PREPARED_EXECUTION",
+                        implementation_branch=config.expected_branch,
+                        implementation_commit=config.expected_commit,
+                        runtime_config_sha256=config.runtime_config_sha256,
+                    )
+                except Exception:
+                    continue
             candidates.append(path)
     return candidates
 

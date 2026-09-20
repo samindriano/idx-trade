@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from datetime import datetime
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
@@ -228,6 +229,8 @@ def test_prepared_selection_requires_schema_payload_and_eod_file_hashes(tmp_path
         encoding="utf-8",
     )
     assert controller._prepared_for_session(config, "2026-08-24") == [prepared_dir / "valid.json"]
+    bound_config = replace(config, runtime_config_sha256="b" * 64)
+    assert controller._prepared_for_session(bound_config, "2026-08-24") == []
 
 
 def test_sunday_controller_is_a_persisted_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

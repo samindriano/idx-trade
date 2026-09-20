@@ -143,6 +143,7 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         repo_root=_absolute_path(payload, "repo_root"),
         expected_branch=expected_branch,
         expected_commit=expected_commit,
+        runtime_config_sha256=actual_sha,
         provider_checkout=_absolute_path(payload, "provider_checkout"),
         provider_expected_commit=provider_commit,
         uv_exe=_absolute_path(payload, "uv_exe"),
