@@ -90,6 +90,24 @@ def _reconcile_effective_intents_v2(
     if set(new_sells) & target:
         raise DecisionV2Error("EXECUTION_V1_DECISION_V2_SELL_STILL_IN_TARGET")
 
+    # A pending projection can be reversed mechanically when it has no
+    # quantity-bearing obligation behind it.  Once an obligation has filled
+    # any quantity, silently dropping its remainder would destroy the
+    # conservation ledger.  Cancellation/relinquishment is a separate
+    # explicit transition and is intentionally not inferred from Decision
+    # target membership here.
+    for row in obligations:
+        if row.remaining_shares <= 0:
+            continue
+        if row.side == "BUY" and row.canonical_ticker not in target:
+            raise DecisionV2Error(
+                "EXECUTION_V1_DECISION_V2_ACTIVE_BUY_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION"
+            )
+        if row.side == "SELL" and row.canonical_ticker in target:
+            raise DecisionV2Error(
+                "EXECUTION_V1_DECISION_V2_ACTIVE_SELL_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION"
+            )
+
     partial_buy_retries = {
         row.canonical_ticker
         for row in obligations

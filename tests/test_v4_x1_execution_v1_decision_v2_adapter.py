@@ -295,6 +295,85 @@ def test_pending_sell_reversal_cancels_impossible_buy_and_keeps_actual_holding()
     assert not result.state_after.pending_sells
 
 
+@pytest.mark.parametrize(
+    "side, target, current_shadow, positions, pending, error",
+    (
+        (
+            "BUY",
+            ("BBB",),
+            ("AAA",),
+            (("AAA", 2400),),
+            (PendingPaperIntent("BUY", "AAA", None, "PARTIAL"),),
+            "ACTIVE_BUY_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION",
+        ),
+        (
+            "SELL",
+            ("AAA",),
+            (),
+            (('AAA', 5000),),
+            (PendingPaperIntent("SELL", "AAA", None, "PARTIAL"),),
+            "ACTIVE_SELL_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION",
+        ),
+    ),
+)
+def test_active_obligation_reversal_fails_closed_without_explicit_cancellation(
+    side,
+    target,
+    current_shadow,
+    positions,
+    pending,
+    error,
+):
+    planned = plan_obligation(
+        obligation_id=f"{side}-REVERSAL-01",
+        ticker="AAA",
+        side=side,
+        planned_shares=5000,
+        session_date="2026-08-21",
+    )
+    partial = apply_fill(
+        planned,
+        event_id=f"{side}-FILL-01",
+        session_date="2026-08-24",
+        filled_shares=2400 if side == "BUY" else 2500,
+        reason="PARTIAL",
+    )
+    state = PaperPortfolioState(
+        "2026-08-24",
+        47_500_000,
+        tuple(PaperPosition(ticker, shares) for ticker, shares in positions),
+        pending_buys=pending if side == "BUY" else (),
+        pending_sells=pending if side == "SELL" else (),
+        obligations=(partial,),
+    )
+    plan = _plan(
+        current_shadow=current_shadow,
+        target=target,
+            buys=(
+                DecisionV2Intent(
+                    "BUY_INTENT", "BBB", 1, "SOFT_RANK_GAP_REPLACEMENT", "AAA"
+                ),
+            ) if side == "BUY" else (),
+            sells=(
+                DecisionV2Intent(
+                    "SELL_INTENT", "AAA", 21, "SOFT_RANK_GAP_REPLACEMENT", "BBB"
+                ),
+            ) if side == "BUY" else (),
+        date="2026-08-24",
+    )
+
+    with pytest.raises(DecisionV2Error, match=error):
+        prepare_execution_v1_from_decision_v2(
+            _synthetic_verified(plan),
+            state,
+            eod_inputs=_eod(
+                "2026-08-24",
+                "2026-08-25",
+                {"AAA": 1000.0, "BBB": 1000.0},
+            ),
+        )
+
+
 def test_decision_v2_shadow_must_match_paper_plus_pending_lineage():
     state = PaperPortfolioState(
         "2026-08-21",
