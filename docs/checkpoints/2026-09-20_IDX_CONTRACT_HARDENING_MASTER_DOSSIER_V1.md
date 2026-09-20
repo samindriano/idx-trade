@@ -147,7 +147,7 @@ Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, and E2E paper orchestration/controller. Controller
 fault-injection, the complete CA/accounting timing matrix and restart proof,
 independent artifact challenge,
-reconciliation provenance, authoritative identity-source wiring,
+  reconciliation provenance, authoritative identity-source provisioning,
 child-process runtime binding, authorized
 automatic migration activation remain open; this is not a production promotion or phase
 closure.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from .e2e_paper_runtime_config_v1 import (
@@ -11,14 +12,21 @@ from .e2e_paper_runtime_config_v1 import (
 from .e2e_paper_runtime_config_v2 import load_runtime_config_v2
 
 
+@dataclass(frozen=True)
+class PhaseRuntimeBinding:
+    config_sha256: str
+    identity_evidence_path: Path | None
+    identity_evidence_sha256: str | None
+
+
 def load_phase_runtime_binding(
     runtime_root: str | Path,
     *,
     expected_branch: str,
     expected_commit: str,
     dual_calendar: bool = False,
-) -> str:
-    """Return the hash of the one config snapshot that binds a phase child.
+) -> PhaseRuntimeBinding:
+    """Load the one config snapshot that binds a phase child.
 
     Phase scripts are only valid as scheduled children when the external
     configuration exists, is hash-pinned, and names the same repository
@@ -38,7 +46,11 @@ def load_phase_runtime_binding(
         or configured_commit != str(expected_commit).strip().lower()
     ):
         raise E2ERuntimeConfigError("E2E_PHASE_RUNTIME_REPO_IDENTITY_MISMATCH")
-    return loaded.config_sha256
+    return PhaseRuntimeBinding(
+        config_sha256=loaded.config_sha256,
+        identity_evidence_path=loaded.controller.identity_evidence_path,
+        identity_evidence_sha256=loaded.controller.identity_evidence_sha256,
+    )
 
 
-__all__ = ["load_phase_runtime_binding"]
+__all__ = ["PhaseRuntimeBinding", "load_phase_runtime_binding"]

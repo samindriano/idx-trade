@@ -64,6 +64,28 @@ def test_loads_dynamic_per_window_ca_capture_config(tmp_path: Path) -> None:
     assert loaded.controller.ca_capture_script_sha256 == "e" * 64
 
 
+def test_loads_optional_hash_pinned_identity_evidence_config(tmp_path: Path) -> None:
+    root = _write_config(
+        tmp_path,
+        identity_evidence_path=str(tmp_path / "identity-evidence.json"),
+        identity_evidence_sha256="e" * 64,
+    )
+    loaded = load_runtime_config(root)
+    assert loaded.controller.identity_evidence_path == (
+        tmp_path / "identity-evidence.json"
+    ).resolve()
+    assert loaded.controller.identity_evidence_sha256 == "e" * 64
+
+
+def test_identity_evidence_config_requires_path_and_sha_pair(tmp_path: Path) -> None:
+    root = _write_config(
+        tmp_path,
+        identity_evidence_path=str(tmp_path / "identity-evidence.json"),
+    )
+    with pytest.raises(E2ERuntimeConfigError, match="IDENTITY_EVIDENCE_FIELDS_INCOMPLETE"):
+        load_runtime_config(root)
+
+
 def test_dynamic_ca_fields_are_all_or_none(tmp_path: Path) -> None:
     root = _write_config(
         tmp_path,

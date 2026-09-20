@@ -83,6 +83,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - an independent synthetic subprocess timeout now proves the durable
   `CHILD_EXECUTION` boundary remains `RUNNING` and the next controller pass
   returns `RECOVERY_REQUIRED` without replaying provider/outcome work;
+- caller-supplied identity evidence is now an optional but hash-pinned runtime
+  config input; all four phase children validate its file/payload/session and
+  required-ticker resolution before passing it to Decision identity binding;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
@@ -100,7 +103,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 - authorized automatic migration activation/persistence policy (the explicit
   verified-snapshot consumer is implemented);
-- authoritative identity-source wiring through every child script;
+- authoritative identity-source provisioning/activation and policy approval;
 - live provider/scheduler crash/interruption validation is not authorized in
   this lane; the synthetic subprocess challenge is PASS;
 - independent final challenge.

@@ -66,6 +66,8 @@ class OperationalControllerConfig:
     ca_capture_script_sha256: str | None = None
     initial_journal_path: Path | None = None
     initial_journal_sha256: str | None = None
+    identity_evidence_path: Path | None = None
+    identity_evidence_sha256: str | None = None
     preopen_capture_start: time = time(8, 30)
 
 
@@ -221,6 +223,14 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
         initial = Path(config.initial_journal_path).expanduser().resolve()
         if not initial.is_file() or _sha256(initial) != str(config.initial_journal_sha256).lower():
             return "INITIAL_JOURNAL_HASH_MISMATCH"
+    identity_path_present = config.identity_evidence_path is not None
+    identity_sha_present = config.identity_evidence_sha256 is not None
+    if identity_path_present != identity_sha_present:
+        return "IDENTITY_EVIDENCE_FIELDS_INCOMPLETE"
+    if identity_path_present:
+        identity_path = Path(config.identity_evidence_path).expanduser().resolve()
+        if not identity_path.is_file() or _sha256(identity_path) != str(config.identity_evidence_sha256).lower():
+            return "IDENTITY_EVIDENCE_HASH_MISMATCH"
     try:
         actual = subprocess.run(
             ["git", "-C", str(provider), "rev-parse", "HEAD"],

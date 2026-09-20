@@ -17,6 +17,7 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     prepare_post_eod,
 )
 from idx_trade.e2e_paper_phase_binding_v1 import load_phase_runtime_binding
+from idx_trade.v4_x1_identity_evidence_v1 import load_identity_evidence
 from idx_trade.e2e_operational_guard_v1 import (
     JAKARTA,
     attest_deployment,
@@ -63,7 +64,13 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run(args: argparse.Namespace, *, runtime_config_sha256: str) -> int:
+def _run(
+    args: argparse.Namespace,
+    *,
+    runtime_config_sha256: str,
+    identity_evidence_path: Path | None,
+    identity_evidence_sha256: str | None,
+) -> int:
     current = load_score_manifest(args.current_score_manifest)
     previous = (
         None
@@ -108,6 +115,16 @@ def _run(args: argparse.Namespace, *, runtime_config_sha256: str) -> int:
         previous_score=previous,
         eod_inputs=eod,
     )
+    identity_evidence = (
+        load_identity_evidence(
+            identity_evidence_path,
+            identity_evidence_sha256 or "",
+            as_of_session_date=current.session_date,
+            required_tickers=execution_universe,
+        )
+        if identity_evidence_path is not None
+        else None
+    )
     if args.ca_journal:
         if evidence:
             raise SystemExit("DIVIDEND_V1_2_JOURNAL_EVIDENCE_MUST_BE_INLINE")
@@ -132,6 +149,7 @@ def _run(args: argparse.Namespace, *, runtime_config_sha256: str) -> int:
         previous_score=previous,
         eod_inputs=eod,
         ca_reconciliation=ca,
+        security_identities=identity_evidence,
         implementation_branch=args.expected_branch,
         implementation_commit=args.expected_commit,
         runtime_config_sha256=runtime_config_sha256,
@@ -158,7 +176,7 @@ def main() -> int:
         expected_commit=args.expected_commit,
     )
     try:
-        runtime_config_sha256 = load_phase_runtime_binding(
+        runtime_binding = load_phase_runtime_binding(
             args.runtime_root,
             expected_branch=args.expected_branch,
             expected_commit=args.expected_commit,
@@ -174,7 +192,12 @@ def main() -> int:
         attestation_path=args.phase_attestation,
     )
     with exclusive_run_lock(Path(args.runtime_root) / "operational" / "phase.lock"):
-        return _run(args, runtime_config_sha256=runtime_config_sha256)
+        return _run(
+            args,
+            runtime_config_sha256=runtime_binding.config_sha256,
+            identity_evidence_path=runtime_binding.identity_evidence_path,
+            identity_evidence_sha256=runtime_binding.identity_evidence_sha256,
+        )
 
 
 if __name__ == "__main__":

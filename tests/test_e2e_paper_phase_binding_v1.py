@@ -58,11 +58,13 @@ def test_phase_binding_requires_hash_pinned_config_and_matching_identity(
     expected = hashlib.sha256(
         (root / "operational" / "config.json").read_bytes()
     ).hexdigest()
-    assert load_phase_runtime_binding(
+    binding = load_phase_runtime_binding(
         root,
         expected_branch="codex/phase-binding-test",
         expected_commit="a" * 40,
-    ) == expected
+    )
+    assert binding.config_sha256 == expected
+    assert binding.identity_evidence_path is None
     with pytest.raises(E2ERuntimeConfigError, match="REPO_IDENTITY_MISMATCH"):
         load_phase_runtime_binding(
             root,
@@ -92,16 +94,19 @@ def test_dual_calendar_phase_binding_uses_v2_loader(
             controller=SimpleNamespace(
                 expected_branch="codex/phase-binding-test",
                 expected_commit="a" * 40,
+                identity_evidence_path=None,
+                identity_evidence_sha256=None,
             ),
         )
 
     monkeypatch.setattr(phase_binding, "load_runtime_config_v2", fake_loader)
-    assert load_phase_runtime_binding(
+    binding = load_phase_runtime_binding(
         tmp_path / "dual",
         expected_branch="codex/phase-binding-test",
         expected_commit="a" * 40,
         dual_calendar=True,
-    ) == "e" * 64
+    )
+    assert binding.config_sha256 == "e" * 64
     assert observed == [tmp_path / "dual"]
 
 
@@ -124,6 +129,14 @@ def test_all_phase_scripts_use_mandatory_runtime_binding() -> None:
             and node.func.id == "load_phase_runtime_binding"
         ]
         assert len(binding_calls) == 1
+        identity_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "load_identity_evidence"
+        ]
+        assert len(identity_calls) == 1
         if is_v2:
             assert any(
                 keyword.arg == "dual_calendar"
@@ -146,3 +159,10 @@ def test_all_phase_scripts_use_mandatory_runtime_binding() -> None:
         )
         assert isinstance(runtime_keyword.value, ast.Name)
         assert runtime_keyword.value.id == "runtime_config_sha256"
+        identity_keyword = next(
+            keyword
+            for keyword in orchestration_calls[0].keywords
+            if keyword.arg == "security_identities"
+        )
+        assert isinstance(identity_keyword.value, ast.Name)
+        assert identity_keyword.value.id == "identity_evidence"
