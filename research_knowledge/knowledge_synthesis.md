@@ -39,6 +39,10 @@
   regime-dependent in the top-value bucket.
 - Lower proxy turnover does not imply executable capacity or profitability.
 - Broad local source search is now low-value unless a new source contract appears.
+- Historical archaeology is supported at family/classification level. Exact old
+  implementation replayability is partial, and the latest PIT/integrity
+  adjudication controls earlier promotion headlines; no old implementation
+  should be recreated without a genuinely new artifact or disputed claim.
 
 ## What failed, is redundant, or is superseded
 

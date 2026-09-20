@@ -33,6 +33,7 @@
     "tooling_mutation_audit_v1.json",
     "verifier_mutation_audit_v1.json",
     "firewall_mutation_audit_v1.json",
+    "historical_archaeology_audit_v1.json",
     "data_authority_packet_v1.md",
     "research_journal.md",
     "knowledge_synthesis.md",
@@ -41,9 +42,9 @@
     "reproducibility.md"
   ],
   "counts": {
-    "experiment_registry_entries": 33,
-    "findings_index_entries": 24,
-    "no_retry_registry_entries": 12,
+    "experiment_registry_entries": 34,
+    "findings_index_entries": 25,
+    "no_retry_registry_entries": 13,
     "source_capability_entries": 17,
     "human_synthesis_documents": 6
   },
@@ -54,6 +55,7 @@
     "docs/checkpoints/2026-09-20_ALPHA_PROGRAM_COMPLETION_AUDIT_V1.md",
     "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_LEDGER_V1.md",
     "docs/checkpoints/2026-09-19_ALPHA_RESEARCH_PHASE_MATRIX_V1.md",
-    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md"
+    "docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_CONTRACT_CONTRADICTION_V1.md",
+    "docs/checkpoints/2026-09-20_ALPHA_HISTORICAL_ARCHAEOLOGY_AUDIT_RESULT_V1.md"
   ]
 }

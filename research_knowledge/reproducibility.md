@@ -106,3 +106,17 @@ access absence.
 - `tests/` is now an explicit allowed research prefix; canonical, production,
   cloud, capture, telemetry, and protected paths remain outside the allowlist.
 - This is a process-scope correction, not proof that runtime access was absent.
+
+## Historical archaeology audit
+
+- Script: `research/alpha_historical_archaeology_audit_v1.py`.
+- Script SHA-256:
+  `bb6214e69b4553be52ed07b40344e5a57af6ed1af4d2798d408f819c6b51fff9`.
+- Durable result: `research_knowledge/historical_archaeology_audit_v1.json`.
+- External result SHA-256:
+  `dd1201a169e4f0f9b2194c637e3f91204f20cf5146ac22a58dd65abeb97e904c`.
+- Method: current evidence-document existence/hash checks plus Git ref,
+  commit, and safe tree-name inspection; protected-looking historical paths
+  were counted but not read.
+- Result: family-level archaeology supported; exact old implementation
+  replayability partial; no candidate or protected comparison authorized.

@@ -1,0 +1,46 @@
+{
+  "schema_version": "IDX_TRADE_HISTORICAL_ARCHAEOLOGY_AUDIT_V1",
+  "experiment_id": "ARCHAEOLOGY-037",
+  "status": "SUPPORTED_BOUNDED_MAP_WITH_REPLAY_GAPS",
+  "scope": "Outcome-blind metadata/tree audit of historical research archaeology; no historical target/outcome payload content read.",
+  "code": {
+    "path": "research/alpha_historical_archaeology_audit_v1.py",
+    "sha256": "bb6214e69b4553be52ed07b40344e5a57af6ed1af4d2798d408f819c6b51fff9"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_historical_archaeology_audit_v1.json",
+    "sha256": "dd1201a169e4f0f9b2194c637e3f91204f20cf5146ac22a58dd65abeb97e904c"
+  },
+  "current_documents": {
+    "archaeology": "6ac0620bbf105880ec3fffcbf0589dc7c6079c8bf4cf366d4e20a0d213a8fd00",
+    "failure_taxonomy": "59c135351f59088ac495fba1d7dfdd7a32710404db034ee0adf40b21386d34c5",
+    "tombstones": "5027a830288f46e764bbfd59fd703f1fea94e19f0125497589ffeaaf82034a68",
+    "retained_lineage": "cda151368dfa96aeeffa487032927b489596fdbdbfbd9b1e93931af45ae78757"
+  },
+  "retained_refs": [
+    {"label": "ranking_v2_lineage", "head": "9378943bde44b33e311bec1e1daf38ca5cd9b5d3", "safe_relevant_path_count": 131, "protected_looking_paths_not_read": 25},
+    {"label": "v4_ca_lineage", "head": "806895880e262641820dbe30e85a1faf7f26b87f", "safe_relevant_path_count": 160, "protected_looking_paths_not_read": 46},
+    {"label": "v4x1_lineage", "head": "bfe40f69090c2cc3550bf4d00335643fba70fc5c", "safe_relevant_path_count": 224, "protected_looking_paths_not_read": 46},
+    {"label": "alpha_frontier_lineage", "head": "1537ba35e79c73e64fee19d499190f529122403b", "safe_relevant_path_count": 14, "protected_looking_paths_not_read": 10},
+    {"label": "financial_lineage", "head": "f2f401e3e68893426858a60e1093832cf122bd41", "safe_relevant_path_count": 16, "protected_looking_paths_not_read": 1},
+    {"label": "foreign_flow_lineage", "head": "10a72f25b840d3689e39352c779d95ca33c40f77", "safe_relevant_path_count": 8, "protected_looking_paths_not_read": 0}
+  ],
+  "family_conclusions": [
+    {"family": "Ranking V1/V2 and V3-A:E", "map": "SUPPORTED", "exact_replay": "BOUNDED_REPLAYABLE_REFERENCE"},
+    {"family": "V4-A:C", "map": "SUPPORTED", "exact_replay": "BOUNDED_REPLAYABLE_REFERENCE"},
+    {"family": "V4-D sector", "map": "SUPPORTED", "exact_replay": "BLOCKED_SOURCE_ADMISSION"},
+    {"family": "V4-E:F:G", "map": "SUPPORTED", "exact_replay": "PARTIAL_HISTORICAL_REPLAYABILITY"},
+    {"family": "V4-X1/O2", "map": "SUPPORTED", "exact_replay": "PROTECTED_OR_LINEAGE_ONLY"},
+    {"family": "auxiliary/source work", "map": "SUPPORTED", "exact_replay": "TOMBSTONE_OR_SOURCE_BLOCKED"}
+  ],
+  "authority_conclusion": {
+    "family_map": "SUPPORTED",
+    "exact_old_implementation_replay": "PARTIAL",
+    "latest_pit_and_integrity_adjudication_controls": true,
+    "global_absence_claim": false,
+    "new_candidate_authorized": false,
+    "protected_payloads_read": false,
+    "provider_or_cloud_access": false,
+    "reopen_trigger": "A genuinely new historical source artifact, exact old implementation required for a disputed classification, or authoritative evidence contradicting the current PIT/integrity adjudication."
+  }
+}

@@ -13,8 +13,10 @@
 3. Common-support methodology: native versus common support, sparse C3 handling,
    and exact one-shot comparison design without opening outcomes. The initial
    structural census is complete; rerun only after policy/source changes.
-4. Historical reinterpretation: map prior failures to implementation, data, PIT,
-   target mismatch, coverage, model-family, instability, or economics causes.
+4. Historical reinterpretation: `BOUNDED_MAP_COMPLETE`; family-level
+   classifications and latest PIT/integrity supersession are recorded. Reopen
+   only for a genuinely new historical artifact or a disputed classification
+   requiring exact source replay.
 5. Re-entry preparation: only after an external/authoritative admission artifact
    changes the current blocked state.
 

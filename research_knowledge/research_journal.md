@@ -89,3 +89,16 @@ checkpoint files; this file records why the next question changed.
   legitimate `tests/` files were outside its allowlist. Adding only `tests/`
   keeps the lane narrow and removes that false failure; it does not strengthen
   runtime-access claims.
+
+## 2026-09-20 — bounded historical archaeology closure
+
+- Ran `ARCHAEOLOGY-037` over the current archaeology/failure/tombstone/lineage
+  documents and six retained Git refs using metadata/tree names only.
+- Confirmed the family-level map is supported, while exact source-level replay
+  remains partial for V4-E/F/G and protected/auxiliary families.
+- Counted protected-looking historical paths without reading them; no historical
+  target/outcome payload was opened.
+- Latest PIT/integrity adjudication remains authoritative over earlier promotion
+  headlines, especially V3-B Structure-Lite.
+- Classified the safe metadata-only archaeology lane as bounded exhausted and
+  moved the frontier to the next non-redundant question.
