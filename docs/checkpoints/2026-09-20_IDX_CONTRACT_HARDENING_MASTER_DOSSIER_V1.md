@@ -199,11 +199,11 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`9dfce6b5e353697c0d104652f3e254ce2aa6886e` passes `204/204` across the latest
-top-level replay, active-obligation reversal, quantity-obligation, explicit
-cancellation/relinquishment replay, evidence, CA, identity, transition,
-lineage, migration, dividend-runtime, and E2E controller/orchestration suites;
-see
+`bbc1924c1e6ed4d1b77945c3cdede420a35cd792` passes `205/205` across the latest
+top-level replay, active-obligation reversal, quantity-obligation, parent-bound
+state-level explicit cancellation/relinquishment replay, evidence, CA,
+identity, transition, lineage, migration, dividend-runtime, and E2E
+controller/orchestration suites; see
 `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`. This is a local
 regression result, not an independent reviewer attestation or production
 promotion. The V2 independent-challenge record remains historical evidence.

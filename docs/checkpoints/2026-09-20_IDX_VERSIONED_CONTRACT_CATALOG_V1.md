@@ -39,7 +39,10 @@ membership may be used to infer a missing planned quantity.
 3. A position is not evidence that its obligation is complete.
 4. A Decision seat is economically complete only when its obligation is
    `FILLED` or explicitly `RELINQUISHED`/`CANCELED` under an existing policy.
-5. Legacy snapshots without plan/fill evidence remain `UNKNOWN_ORPHANED_PARTIAL`
+5. `close_obligation_explicitly` is the state-level owner for an explicit
+   close event; it binds the event to the pre-transition state hash and
+   rebuilds compatibility projections from the obligation ledger.
+6. Legacy snapshots without plan/fill evidence remain `UNKNOWN_ORPHANED_PARTIAL`
    when a positive partial cannot be proven complete.
 
 ## Other versioned contracts to follow

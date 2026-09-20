@@ -148,10 +148,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `204/204` for the
+- a fresh current-head regression challenge is also PASS at `205/205` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
-  explicit cancellation/relinquishment replay, evidence, CA, identity,
-  transition, lineage, migration, dividend-runtime, and E2E
+  parent-bound state-level explicit cancellation/relinquishment replay,
+  evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
   controller/orchestration suites; see
   `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`;
 - exact base/runtime lineage remains recorded;
