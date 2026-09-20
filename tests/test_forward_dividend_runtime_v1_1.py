@@ -28,7 +28,6 @@ from idx_trade.v4_x1_execution_v1_contract import (
     OBLIGATION_V1_STATE,
     UNKNOWN_ORPHANED_PARTIAL,
     classify_state_for_migration,
-    close_obligation_explicitly,
     paper_state_hash,
     pending_intents_from_obligations,
 )
@@ -213,18 +212,14 @@ def test_explicit_close_round_trips_through_v2_runtime_snapshot(
         obligations=(partial,),
     )
     before_hash = paper_state_hash(before.base_state)
-    closed_base = close_obligation_explicitly(
-        before.base_state,
+    closed = runtime.close_runtime_obligation_explicitly(
+        before,
         obligation_id=partial.obligation_id,
         event_id="CLOSE-BBCA-EXPLICIT-CLOSE-RUNTIME",
         session_date="2026-08-24",
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status="CANCELED",
         parent_state_sha256=before_hash,
-    )
-    closed = fd.DividendAwarePaperState(
-        base_state=closed_base,
-        dividend_ledger=before.dividend_ledger,
     )
 
     snapshot = runtime.write_runtime_snapshot(tmp_path / "runtime", closed, registry)
@@ -711,8 +706,8 @@ def test_recovery_quarantines_explicit_close_latest_and_keeps_partial_ancestor(
         ),
         registry,
     )
-    closed_base = close_obligation_explicitly(
-        first.state.base_state,
+    closed = runtime.close_runtime_obligation_explicitly(
+        first.state,
         obligation_id=partial.obligation_id,
         event_id="CLOSE-BBCA-CLOSE-RECOVERY-01",
         session_date="2026-08-21",
@@ -723,7 +718,7 @@ def test_recovery_quarantines_explicit_close_latest_and_keeps_partial_ancestor(
     latest = runtime.write_runtime_snapshot(
         tmp_path / "runtime",
         fd.DividendAwarePaperState(
-            base_state=replace(closed_base, as_of_session_date="2026-08-22"),
+            base_state=replace(closed.base_state, as_of_session_date="2026-08-22"),
             dividend_ledger=first.state.dividend_ledger,
         ),
         registry,

@@ -8,7 +8,7 @@ import math
 import os
 from pathlib import Path
 import tempfile
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 from . import forward_dividend_execution_v1_1 as gate
 from . import forward_dividend_v1 as dividend
@@ -22,6 +22,7 @@ from .v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    close_obligation_explicitly as close_paper_obligation_explicitly,
     normalize_state,
     paper_state_hash,
 )
@@ -590,6 +591,35 @@ def reconstruct_decision_shadow_state(
         as_of_session_date=session,
         positions=tuple(sorted(shadow)),
         rule_id=profile.rule_id,
+    )
+
+
+def close_runtime_obligation_explicitly(
+    state: dividend.DividendAwarePaperState,
+    *,
+    obligation_id: str,
+    event_id: str,
+    session_date: str,
+    reason: str,
+    status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
+    parent_state_sha256: str | None = None,
+) -> dividend.DividendAwarePaperState:
+    """Close one obligation in the runtime-aware state via an explicit event."""
+
+    if not isinstance(state, dividend.DividendAwarePaperState):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_AWARE_STATE_REQUIRED")
+    closed_base = close_paper_obligation_explicitly(
+        state.base_state,
+        obligation_id=obligation_id,
+        event_id=event_id,
+        session_date=session_date,
+        reason=reason,
+        status=status,
+        parent_state_sha256=parent_state_sha256,
+    )
+    return dividend.DividendAwarePaperState(
+        base_state=closed_base,
+        dividend_ledger=state.dividend_ledger,
     )
 
 
@@ -1180,6 +1210,7 @@ __all__ = [
     "registered_certified_events",
     "runtime_state_hash",
     "reconstruct_decision_shadow_state",
+    "close_runtime_obligation_explicitly",
     "write_runtime_snapshot",
     "build_runtime_snapshot_migration_provenance",
     "write_runtime_snapshot_migration_provenance",
