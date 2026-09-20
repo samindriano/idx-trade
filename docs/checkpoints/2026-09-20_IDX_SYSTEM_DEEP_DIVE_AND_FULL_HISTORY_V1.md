@@ -568,6 +568,13 @@ historical alpha archive:
   like a no-event; duplicate dates are also silently reduced to the last row.
   Verdict: `FAIL — INVALID OPTIONAL CA VALUES ARE NOT PRESERVED AS UNKNOWN`;
   no source or data fix was applied.
+- `2026-09-20_IDX_EXECUTION_STATE_IDENTITY_AUDIT_V1.md`:
+  the retained runtime branch passed 59 focused execution/E2E tests, but a
+  fractional share value is silently truncated during state normalization and
+  a `replacement_peer` alias such as `AAA.JK` can leave a replacement buy
+  pending after the canonical `AAA` sell has fully filled. Verdict: `FAIL —
+  EXECUTION IDENTITY/STATE COERCION BOUNDARY`; no runtime source fix was
+  applied.
 
 The updated system-level belief is therefore:
 
