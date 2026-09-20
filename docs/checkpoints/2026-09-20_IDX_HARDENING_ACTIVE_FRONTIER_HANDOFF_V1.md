@@ -78,7 +78,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - replay now also cross-checks runtime-lineage contract/artifact links,
   reconciliation CA parents, and evidence/reconciliation session parents;
 - replay validates cause-obligation binding payloads, execution-session scope,
-  and cause/join row identity before accepting a child artifact;
+  cause/join row identity, and recomputed obligation join content before
+  accepting a child artifact;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - operational `BOUND` lineage is persisted and rechecked across synthetic

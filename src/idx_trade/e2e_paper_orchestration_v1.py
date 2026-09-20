@@ -39,6 +39,7 @@ from .v4_x1_execution_evidence_v2 import (
     build_execution_evidence_v2,
     evaluate_execution_evidence_v2,
 )
+from .v4_x1_execution_cause_v1 import ExecutionCauseV1
 from .v4_x1_reconciliation_result_v1 import (
     RECONCILIATION_RESULT_SCHEMA,
     build_reconciliation_result_v1,
@@ -50,6 +51,7 @@ from .v4_x1_runtime_lineage_v2 import (
     verify_runtime_lineage_v2,
 )
 from .v4_x1_transition_binding_v1 import (
+    verify_cause_obligation_binding_v1,
     verify_decision_identity_binding_v1,
     verify_transition_binding_payload,
 )
@@ -68,6 +70,7 @@ from .v4_x1_execution_v1_contract import (
     PendingPaperIntent,
     PaperPosition,
 )
+from .v4_x1_quantity_obligation_v1 import obligation_from_payload
 from .v4_x1_execution_v1_decision_v2_adapter import (
     prepare_execution_v1_from_decision_v2,
 )
@@ -578,6 +581,37 @@ def _verify_persisted_execution_components(
             raise E2EPaperOrchestrationError(
                 error_prefix + "_CAUSE_BINDING_ROWS_MISMATCH"
             )
+        state_after = evidence.get("state_after")
+        obligation_rows = (
+            state_after.get("obligations")
+            if isinstance(state_after, Mapping)
+            else None
+        )
+        try:
+            typed_causes = tuple(
+                ExecutionCauseV1(**dict(row))
+                for row in causes
+                if isinstance(row, Mapping)
+            )
+            if len(typed_causes) != len(causes) or not isinstance(
+                obligation_rows, list
+            ):
+                raise DecisionV1Error("TRANSITION_BINDING_CAUSE_ROWS_INVALID")
+            typed_obligations = tuple(
+                obligation_from_payload(row) for row in obligation_rows
+            )
+            verify_cause_obligation_binding_v1(
+                verified_binding,
+                execution_session_date=str(
+                    execution_body.get("execution_session_date") or ""
+                ),
+                causes=typed_causes,
+                obligations=typed_obligations,
+            )
+        except (DecisionV1Error, TypeError) as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_CONTENT_MISMATCH"
+            ) from exc
     timing = execution_body.get("ca_timing_matrix")
     verified_timing: Mapping[str, Any] | None = None
     if timing is not None:

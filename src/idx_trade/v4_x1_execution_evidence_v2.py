@@ -15,7 +15,7 @@ from .v4_x1_execution_cause_v1 import (
 )
 from .v4_x1_transition_binding_v1 import (
     build_cause_obligation_binding_v1,
-    verify_transition_binding_payload,
+    verify_cause_obligation_binding_v1,
 )
 from .v4_x1_execution_v1_contract import (
     ExecutionOrderPlan,
@@ -259,19 +259,13 @@ def evaluate_execution_evidence_v2(
             errors.append("EXECUTION_EVIDENCE_V2_CAUSE_OBLIGATION_BINDING_MISSING")
     else:
         try:
-            binding = verify_transition_binding_payload(
-                evidence.cause_obligation_binding
+            verify_cause_obligation_binding_v1(
+                evidence.cause_obligation_binding,
+                execution_session_date=evidence.execution_session_date,
+                causes=evidence.causes,
+                obligations=evidence.state_after.obligations,
             )
-            if binding.get("binding_type") != "CAUSE_OBLIGATION":
-                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_TYPE_MISMATCH")
-            if binding.get("execution_session_date") != evidence.execution_session_date:
-                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_SESSION_MISMATCH")
-            cause_ids = [row.cause_id for row in evidence.causes]
-            join_ids = [row.get("cause_id") for row in binding.get("joins", ())]
-            if cause_ids != join_ids:
-                errors.append("EXECUTION_EVIDENCE_V2_CAUSE_BINDING_ROWS_MISMATCH")
-            else:
-                checks.append("cause_obligation_binding")
+            checks.append("cause_obligation_binding")
         except DecisionV1Error as exc:
             errors.append(str(exc))
 

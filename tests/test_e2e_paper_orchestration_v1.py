@@ -811,8 +811,17 @@ def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
         )
 
 
-def test_preopen_replay_rejects_rehashed_cause_binding_row_tamper(
+@pytest.mark.parametrize(
+    ("tamper_kind", "expected_error"),
+    (
+        ("cause_id", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH"),
+        ("join_content", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH"),
+    ),
+)
+def test_preopen_replay_rejects_rehashed_cause_binding_tamper(
     tmp_path: Path,
+    tamper_kind: str,
+    expected_error: str,
 ) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")
@@ -839,10 +848,17 @@ def test_preopen_replay_rejects_rehashed_cause_binding_row_tamper(
     payload = json.loads(completed.path.read_text(encoding="utf-8"))
     evidence = payload["execution_evidence"]
     assert evidence["causes"]
-    forged_cause_id = "0" * 64
-    evidence["causes"][0]["cause_id"] = forged_cause_id
     binding = evidence["cause_obligation_binding"]
     assert binding["joins"]
+    if tamper_kind == "cause_id":
+        evidence["causes"][0]["cause_id"] = "0" * 64
+    else:
+        binding["joins"][0]["remaining_shares"] = (
+            int(binding["joins"][0]["remaining_shares"]) + 1
+        )
+    binding_body = dict(binding)
+    binding_body.pop("payload_sha256", None)
+    binding["payload_sha256"] = _canonical_hash(binding_body)
     evidence_body = dict(evidence)
     evidence_body.pop("payload_sha256", None)
     evidence["payload_sha256"] = _canonical_hash(evidence_body)
@@ -868,7 +884,7 @@ def test_preopen_replay_rejects_rehashed_cause_binding_row_tamper(
 
     with pytest.raises(
         E2EPaperOrchestrationError,
-        match="E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH",
+        match=expected_error,
     ):
         execute_preopen(
             root,

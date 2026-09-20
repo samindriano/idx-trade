@@ -29,6 +29,7 @@ scheduler, production, or alpha state.
 | Migration provenance | Source hash/classification/provenance remains immutable | PASS |
 | Reconciliation provenance shape | Hash-valid incomplete reconciliation provenance is rejected | PASS |
 | Exposure cause zero-boundary | Bound BUY/SELL state reports explicit zero-side exposure transitions | PASS |
+| Cause-obligation join content | Rehashed join remainder/obligation tamper is rejected during replay | PASS |
 | Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |
 
 ## Verification

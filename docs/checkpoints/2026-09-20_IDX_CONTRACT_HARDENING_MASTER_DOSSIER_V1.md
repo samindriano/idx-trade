@@ -138,7 +138,8 @@ The isolated lane currently contains:
 - persisted replay cross-checks lineage contract/artifact links and
   reconciliation CA/session parents, including rehashed-tamper tests;
 - persisted replay validates cause-obligation binding rows and session scope,
-  including a rehashed cause-row tamper test;
+  recomputes obligation join content from state-after rows, and rejects a
+  rehashed join-content tamper;
 - `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when
   valid, fail-closed classification/disposition/reason, UTC decision time, and
   optional runtime lineage with immutable idempotent persistence;

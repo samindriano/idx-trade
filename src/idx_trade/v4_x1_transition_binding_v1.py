@@ -17,6 +17,7 @@ from .v4_x1_identity_contract_v1 import (
     security_identity_hash,
 )
 from .v4_x1_quantity_obligation_v1 import (
+    QuantityObligation,
     normalize_obligations,
     obligation_hash,
     obligations_hash,
@@ -85,30 +86,25 @@ def build_decision_identity_binding_v1(
     return body
 
 
-def build_cause_obligation_binding_v1(
-    result: ExecutionResult,
+def _build_cause_obligation_binding_payload(
+    *,
+    obligations: Sequence[QuantityObligation],
+    execution_session_date: str,
     causes: Sequence[ExecutionCauseV1],
 ) -> dict[str, Any]:
-    """Bind each non-zero execution cause to the obligation it changed.
+    """Build a cause/obligation join from verified state-after rows."""
 
-    A zero-share sizing row may legitimately have no obligation.  Every cause
-    with a positive planned quantity must resolve to exactly one obligation
-    attempted in the same execution session; otherwise the join fails closed.
-    """
-
-    if not isinstance(result, ExecutionResult):
-        raise DecisionV1Error("TRANSITION_BINDING_EXECUTION_RESULT_REQUIRED")
-    obligations = normalize_obligations(result.state_after.obligations)
+    normalized_obligations = normalize_obligations(tuple(obligations))
     joins: list[dict[str, Any]] = []
     for cause in causes:
         if not isinstance(cause, ExecutionCauseV1):
             raise DecisionV1Error("TRANSITION_BINDING_CAUSE_INVALID")
         matches = tuple(
             row
-            for row in obligations
+            for row in normalized_obligations
             if row.side == cause.side
             and row.canonical_ticker == cause.ticker
-            and row.latest_attempt_session_date == result.execution_session_date
+            and row.latest_attempt_session_date == execution_session_date
         )
         if cause.planned_shares == 0:
             if len(matches) > 1:
@@ -158,12 +154,51 @@ def build_cause_obligation_binding_v1(
     body: dict[str, Any] = {
         "schema_version": TRANSITION_BINDING_SCHEMA,
         "binding_type": "CAUSE_OBLIGATION",
-        "execution_session_date": result.execution_session_date,
-        "obligations_hash": obligations_hash(obligations),
+        "execution_session_date": execution_session_date,
+        "obligations_hash": obligations_hash(normalized_obligations),
         "joins": joins,
     }
     body["payload_sha256"] = _canonical_hash(body)
     return body
+
+
+def build_cause_obligation_binding_v1(
+    result: ExecutionResult,
+    causes: Sequence[ExecutionCauseV1],
+) -> dict[str, Any]:
+    """Bind each execution cause to the obligation it changed."""
+
+    if not isinstance(result, ExecutionResult):
+        raise DecisionV1Error("TRANSITION_BINDING_EXECUTION_RESULT_REQUIRED")
+    return _build_cause_obligation_binding_payload(
+        obligations=result.state_after.obligations,
+        execution_session_date=result.execution_session_date,
+        causes=causes,
+    )
+
+
+def verify_cause_obligation_binding_v1(
+    value: object,
+    *,
+    execution_session_date: str,
+    causes: Sequence[ExecutionCauseV1],
+    obligations: Sequence[QuantityObligation],
+) -> dict[str, Any]:
+    """Verify every persisted join against the exact state-after obligations."""
+
+    payload = verify_transition_binding_payload(value)
+    if payload.get("binding_type") != "CAUSE_OBLIGATION":
+        raise DecisionV1Error("TRANSITION_BINDING_CAUSE_TYPE_INVALID")
+    if payload.get("execution_session_date") != execution_session_date:
+        raise DecisionV1Error("TRANSITION_BINDING_CAUSE_SESSION_MISMATCH")
+    expected = _build_cause_obligation_binding_payload(
+        obligations=obligations,
+        execution_session_date=execution_session_date,
+        causes=causes,
+    )
+    if payload != expected:
+        raise DecisionV1Error("TRANSITION_BINDING_CAUSE_CONTENT_MISMATCH")
+    return payload
 
 
 def verify_decision_identity_binding_v1(
@@ -218,6 +253,7 @@ __all__ = [
     "TRANSITION_BINDING_SCHEMA",
     "build_decision_identity_binding_v1",
     "build_cause_obligation_binding_v1",
+    "verify_cause_obligation_binding_v1",
     "verify_decision_identity_binding_v1",
     "verify_transition_binding_payload",
 ]

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
+
+import pytest
+
 from idx_trade.decision_v2_minimal import DecisionV2Intent, DecisionV2Plan
+from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
 from idx_trade.v4_x1_execution_cause_v1 import derive_execution_causes
 from idx_trade.v4_x1_execution_v1_contract import (
     ExecutionResult,
@@ -15,6 +21,7 @@ from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 from idx_trade.v4_x1_transition_binding_v1 import (
     build_cause_obligation_binding_v1,
     build_decision_identity_binding_v1,
+    verify_cause_obligation_binding_v1,
     verify_decision_identity_binding_v1,
 )
 
@@ -101,6 +108,29 @@ def test_cause_binding_exposes_retry_transition_for_partial_obligation() -> None
     binding = build_cause_obligation_binding_v1(result, causes)
     assert binding["joins"][0]["obligation_id"] == obligation.obligation_id
     assert binding["joins"][0]["next_decision_action"] == "RETRY_OBLIGATION"
+
+    tampered = dict(binding)
+    tampered["joins"] = [dict(binding["joins"][0], remaining_shares=0)]
+    tampered_body = dict(tampered)
+    tampered_body.pop("payload_sha256")
+    tampered["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                tampered_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="CAUSE_CONTENT_MISMATCH"):
+        verify_cause_obligation_binding_v1(
+            tampered,
+            execution_session_date=result.execution_session_date,
+            causes=causes,
+            obligations=result.state_after.obligations,
+        )
 
 
 def test_execution_cause_reports_zero_after_full_exit_when_state_is_bound() -> None:
