@@ -38,11 +38,14 @@ membership may be used to infer a missing planned quantity.
 2. `pending_buys`/`pending_sells` are compatibility projections only.
 3. A position is not evidence that its obligation is complete.
 4. A Decision seat is economically complete only when its obligation is
-   `FILLED` or explicitly `RELINQUISHED`/`CANCELED` under an existing policy.
+   `FILLED` or explicitly `RELINQUISHED`/`CANCELED` under a verified,
+   caller-supplied `DecisionSeatClosePolicyV1`; production policy activation
+   remains external and no default is inferred.
 5. `close_obligation_explicitly` is the state-level owner for an explicit
-   close event; it binds the event to the pre-transition state hash and
-   rebuilds compatibility projections from the obligation ledger. Identical
-   event replay is idempotent; altered event bytes remain rejected.
+   close event; it binds the event to the pre-transition state hash, persists
+   the policy envelope/hash, and rebuilds compatibility projections from the
+   obligation ledger. Restart replay re-verifies policy provenance; identical
+   event replay is idempotent, while altered event/policy bytes are rejected.
 6. Legacy snapshots without plan/fill evidence remain `UNKNOWN_ORPHANED_PARTIAL`
    when a positive partial cannot be proven complete.
 
@@ -51,6 +54,7 @@ membership may be used to infer a missing planned quantity.
 | Contract | Owner | Current state |
 |---|---|---|
 | `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, additive hash, canonical payload replay, parent-bound explicit-close runtime wrapper, quarantine, ancestor recovery, and orchestration binding tested; live closure open |
+| `DECISION_SEAT_POLICY-V1` | Explicit Decision-seat closure authorization | Caller-supplied hash-bound status/reason envelope, durable close-event provenance, restart verification, and policy-conflict rejection implemented locally; production policy activation and paired/expiry/`FULL` semantics remain open |
 | `MIGRATION_PROVENANCE-V1` / `MIGRATION_ACTIVATION-V1` | Legacy-state migration provenance and activation decision | Source/hash/classification/disposition/reason/time binding plus immutable policy-gated activation decision and verified-snapshot consumer implemented locally; external policy adoption remains open |
 | `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, `CA_TIMING_MATRIX-V1`, persisted replay gates, and restart/idempotency coverage implemented locally |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; canonical row/semantic verification and additive-only extension are enforced |

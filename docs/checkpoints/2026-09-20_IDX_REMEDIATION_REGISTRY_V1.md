@@ -3,7 +3,7 @@
 | ID | Finding | Contract state | Implementation state | Required evidence before closure |
 |---|---|---|---|---|
 | REM-OBL-001 | Positive partial BUY loses residual | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / RESTART_TESTED / DECISION_SEMANTICS_OPEN` | Runtime BUY/SELL state, replay, restart, Decision seat semantics |
-| REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / PAIR_RETRY_RESTART_TESTED / PERSISTED_CANONICAL_REPLAY_GATED / ACTIVE_REVERSAL_FAIL_CLOSED / EXPLICIT_CLOSE_STATE_API_PARENT_BOUND / EXPLICIT_CLOSE_RESTART_REPLAY_GATED / REPLAY_OPEN` | Paired retry/reversal and explicit cancellation/relinquishment lineage |
+| REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / PAIR_RETRY_RESTART_TESTED / PERSISTED_CANONICAL_REPLAY_GATED / ACTIVE_REVERSAL_FAIL_CLOSED / EXPLICIT_CLOSE_STATE_API_PARENT_BOUND / EXPLICIT_CLOSE_RESTART_REPLAY_GATED / POLICY_PROVENANCE_DURABLE / REPLAY_OPEN` | Paired retry/reversal and explicit cancellation/relinquishment lineage |
 | REM-STATE-001 | Snapshot omits obligation state | `V2_SCHEMA_IMPLEMENTED` | `IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / RECOVERY_TESTED / ORCHESTRATION_BOUND / LIVE_OPEN` | Versioned snapshot/hash, canonical payload replay, restart replay, and legacy loader |
 | REM-MIG-001 | Legacy migration decision lacks durable provenance | `PROVENANCE_V1_IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / POLICY_GATE_IMPLEMENTED_EXTERNAL_ADOPTION_OPEN` | Immutable source/hash/classification artifact, explicit policy-gated activation decision, and verified-snapshot consumer; external policy adoption |
 | REM-CA-001 | Projected CA state differs from execution parent | `LINEAGE_CONTRACT_IMPLEMENTED_LOCAL` | `TIMING_MATRIX_IMPLEMENTED_LOCAL / CANONICAL_REPLAY_GATED / REPLAY_GATES_IMPLEMENTED / RESTART_IDEMPOTENCY_TESTED` | Three timing cases, additive CA extension, and restart/idempotency |
@@ -16,6 +16,7 @@
 | REM-RECOVERY-001 | Latest snapshot rejects without safe recovery | `QUARANTINE_LOCAL_IMPLEMENTED` | `IMPLEMENTED_LOCAL / ORCHESTRATION_BOUND / SYNTHETIC_RECOVERY_CHALLENGE_PASS` | Immutable rejection/quarantine, restart replay, and fork-safe ancestor rules |
 | REM-POLICY-001 | Post-entry concentration overlay | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative policy only; no autonomous overlay |
 | REM-POLICY-002 | Dividend tax/net treatment | `POLICY_BLOCKED` | `POLICY_BLOCKED` | Authoritative tax policy only; retain gross semantics |
+| REM-POLICY-003 | Decision-seat close status/reason and paired lifecycle semantics | `HASH_BOUND_GATE_IMPLEMENTED / POLICY_ACTIVATION_OPEN` | `FAIL_CLOSED_DEFAULT / PROVENANCE_DURABLE / REPLAY_TESTED` | Authoritative production policy for status/reason, pairing, expiry, and `FULL` quantity; no autonomous default |
 | REM-EXTERNAL-001 | Unsupported structural CA admission | `EXTERNAL_BLOCKED` | `EXTERNAL_BLOCKED` | External source/authority contract outside this lane |
 
 Status vocabulary is intentionally strict: `UNADJUDICATED` is not a PASS;
