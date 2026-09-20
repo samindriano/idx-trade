@@ -249,9 +249,9 @@ Latest recorded checks:
 - packet contract verifier: `PASS`, 65/65;
 - privacy/target firewall: `PASS`, 31/31;
 - isolated lane integrity verifier: `PASS`, 10/10;
-- staging count: 159;
+- staging count: 160 (including the current verifier attestation output);
 - staging filename digest:
-  `06c1dd3e07d4d1768990dc9ecd818cd2c86924248df933ba9af18a27c3008813`;
+  `0c3bd7a88d5ce352b2ff397084e955b19cfa2a6602943486706183d1d8beddf3`;
 - packet SHA-256:
   `7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894`;
 - packet contract SHA-256:
