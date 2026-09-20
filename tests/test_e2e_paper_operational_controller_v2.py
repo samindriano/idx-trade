@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import nullcontext
 from pathlib import Path
 
+import pytest
+
 from idx_trade import e2e_paper_operational_controller_v1 as v1
 from idx_trade import e2e_paper_operational_controller_v2 as v2
 from idx_trade.e2e_operational_guard_v1 import DeploymentAttestation, JAKARTA
@@ -25,9 +27,24 @@ def _config(tmp_path: Path) -> v2.OperationalControllerConfigV2:
     )
 
 
+@pytest.mark.parametrize(
+    ("phase", "side_effect"),
+    (
+        ("PREOPEN", "CA_CAPTURE"),
+        ("PREOPEN", "PHASE_ATTESTATION"),
+        ("PREOPEN", "CHILD_EXECUTION"),
+        ("POST_EOD", "BOOTSTRAP_T0_WRITE"),
+        ("POST_EOD", "CA_CAPTURE"),
+        ("POST_EOD", "PHASE_ATTESTATION"),
+        ("POST_EOD", "CHILD_EXECUTION"),
+        ("POST_EOD", "MISSED_EXECUTION_WRITE"),
+    ),
+)
 def test_dual_calendar_controller_preserves_recovery_boundary(
     tmp_path: Path,
     monkeypatch,
+    phase: str,
+    side_effect: str,
 ) -> None:
     config = _config(tmp_path)
     status = {
@@ -40,8 +57,8 @@ def test_dual_calendar_controller_preserves_recovery_boundary(
     v1._persist_running_boundary(
         config,
         status,
-        phase="POST_EOD",
-        side_effect="CHILD_EXECUTION",
+        phase=phase,
+        side_effect=side_effect,
     )
     monkeypatch.setattr(
         v2,
@@ -64,7 +81,7 @@ def test_dual_calendar_controller_preserves_recovery_boundary(
 
     assert recovered["controller_status"] == "RECOVERY_REQUIRED"
     assert recovered["controller_contract"] == "DUAL_CALENDAR_V1"
-    assert recovered["interrupted_phase"] == "POST_EOD"
-    assert recovered["interrupted_side_effect"] == "CHILD_EXECUTION"
+    assert recovered["interrupted_phase"] == phase
+    assert recovered["interrupted_side_effect"] == side_effect
     assert recovered["provider_calls"] is False
     assert recovered["outcome_access"] is False
