@@ -37,6 +37,10 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - synthetic two-session partial SELL retry reloads the V2 snapshot before
   retry, then completes the paired replacement BUY with both quantity
   obligations reaching `FILLED`;
+- positive partial BUY now also writes and reloads a V2 snapshot before retry;
+  the reloaded obligation preserves the `2400 filled / 2600 remaining`
+  quantity split and the retry completes exactly to `5000` without a duplicate
+  position or pending intent;
 - duplicate fill and cancellation idempotency;
 - state hash includes obligations only when the new contract is present;
 - obligation deserialization replays the canonical payload builder and rejects
@@ -138,10 +142,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
 - exact base/runtime lineage remains recorded;
-- continuation commits are `dffd70c9` (reconciliation and migration replay)
-  and `4430b6a6` (migration activation replay); the lane remains clean and no
-  commit was pushed or merged;
-- current HEAD (`4430b6a6`) full repository regression via `python -m pytest -q`
+- continuation commits are `dffd70c9` (reconciliation and migration replay),
+  `4430b6a6` (migration activation replay), and `6ee67c2a` (partial BUY
+  restart retry evidence); the lane remains clean and no commit was pushed or
+  merged;
+- current HEAD (`6ee67c2a`) full repository regression via `python -m pytest -q`
   passed at 100% with only three pre-existing pandas `FutureWarning` records.
   Earlier
   runs hit the known unrelated Windows `PermissionError [WinError 5]`
