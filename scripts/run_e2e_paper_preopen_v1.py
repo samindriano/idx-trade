@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -131,6 +132,16 @@ def _run(args: argparse.Namespace) -> int:
         open_inputs=open_inputs,
         ca_reconciliation=ca,
         dividend_evidence=evidence,
+        implementation_branch=args.expected_branch,
+        implementation_commit=args.expected_commit,
+        runtime_config_sha256=(
+            hashlib.sha256(
+                (Path(args.runtime_root).resolve() / "operational" / "config.json").read_bytes()
+            ).hexdigest()
+            if (Path(args.runtime_root).resolve() / "operational" / "config.json").is_file()
+            else None
+        ),
+        entrypoint_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     )
     print(
         {
