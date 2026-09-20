@@ -233,6 +233,22 @@ def test_t0_post_eod_preopen_is_atomic_and_idempotent(tmp_path: Path) -> None:
     assert rerun.status == "ALREADY_COMPLETE"
     assert result.file_sha256 == rerun.file_sha256
 
+    execution_payload["unexpected_extension"] = True
+    execution_body = dict(execution_payload)
+    execution_body.pop("payload_sha256")
+    execution_payload["payload_sha256"] = _canonical_hash(execution_body)
+    result.path.write_text(json.dumps(execution_payload, sort_keys=True), encoding="utf-8")
+    with pytest.raises(E2EPaperOrchestrationError, match="PAYLOAD_NOT_CANONICAL"):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
 
 def test_bound_runtime_lineage_survives_execution_and_rejects_config_mismatch(
     tmp_path: Path,
