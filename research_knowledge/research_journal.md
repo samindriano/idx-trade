@@ -325,6 +325,31 @@ checkpoint files; this file records why the next question changed.
   subset of the observed anchor surface, not proof of a complete historical
   universe or survivorship safety.
 
+## 2026-09-20 — public EOD/IPO source coverage
+
+- Acquired three public GitHub source families into the isolated staging root:
+  two pinned EOD ticker-file snapshots and one IPO-only JSON snapshot. Also
+  inspected a pinned IDX-API wrapper for official issuer, delisting,
+  new-listing, and relisting route names.
+- Both EOD snapshots contain CNTX. The newer snapshot has 983 files and
+  1,289,820 rows through 2026-05-29; the older explicit all-ticker folder has
+  958 files and 1,078,040 rows through 2025-02-21.
+- The newer snapshot covers 1,060,071/1,062,767 anchor keys and
+  943,283/945,693 panel keys through its own date cutoff. Its six missing
+  ticker files exactly match the IPO dataset's declared new-stock list
+  (BACH, EMMI, JECX, JELI, PRDL, RANS), giving bounded evidence for a
+  snapshot-timing/new-issue explanation.
+- This changes the CNTX conclusion from “panel-absent” to
+  “panel-absent but discoverable in independent public EOD snapshots.” It does
+  not change the population/PIT/survivorship blocker: neither snapshot has
+  row-level public-availability/revision semantics, issuer/ISIN continuity,
+  complete historical membership, or CA-effective-basis authority.
+- Ordinary curl access to the official IDX host received a Cloudflare 403
+  challenge. No authenticated/provider call, bypass, canonical write, or
+  protected-outcome access occurred. Do not retry the same snapshot family;
+  reopen only for a new official event archive or authoritative PIT/lifecycle
+  contract.
+
 ## 2026-09-20 — anchor state-transition semantics
 
 - Ordered `ACTIVE`/`NO_TRADE` states by ticker across the 1,260-session anchor
@@ -363,3 +388,21 @@ checkpoint files; this file records why the next question changed.
   the C1/C4 normalizers materially shape final Top-30 membership.
 - The result is structural formula anatomy only. No predictive redundancy,
   orthogonality, capacity, candidate, policy, or outcome claim follows.
+
+## 2026-09-20 — official IDX current-directory cross-check
+
+- Retained an ordinary public GET to IDX `GetCompanyProfiles` in isolated
+  staging. The response is HTTP 200 with 962 rows and 962 unique current
+  codes; all status values are zero and listing dates range from 1977-08-10 to
+  2026-07-10.
+- The dedicated verifier passed 9/9 checks. The new response exactly matches
+  the prior official current snapshot by code and listing date, and official
+  current codes are a strict subset of the 980-code anchor surface. The 18
+  anchor-only codes include CNTX.
+- The six official current codes absent from the newer Pholenk EOD snapshot
+  have official listing dates 2026-07-07 through 2026-07-10. This strengthens
+  the bounded snapshot-timing/new-issue explanation already supported by the
+  IPO snapshot, but does not establish row-level availability time.
+- The existing 440-month official lifecycle archive remains event-level and
+  identity/PIT blocked. The current directory was not used to reinterpret its
+  conflicts or to repair any historical state.

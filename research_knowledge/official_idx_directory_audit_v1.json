@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_OFFICIAL_CURRENT_DIRECTORY_RESEARCH_ONLY",
+  "scope": "Official IDX current company-profile directory snapshot; capability and comparison evidence only",
+  "evidence_artifact": {
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_official_idx_directory_audit_v1.json",
+    "sha256": "71ea60909334bb8944ec673067a92b731ab4b87d414ef517be670746333106de"
+  },
+  "source": {
+    "endpoint": "https://www.idx.id/primary/ListedCompany/GetCompanyProfiles?start=0&length=9999&code=",
+    "raw_sha256": "bdca057527fa061fd2318f7c9aa6c4f2c508d50a98f013c38ea1a7c4c9ad2312",
+    "headers_sha256": "9ce728a337c52d05f2b497ea84be50a1f5a735fc13338f49bbf2ebebae114121",
+    "http_status": 200,
+    "retrieval_date_header": "Sun, 20 Sep 2026 06:11:24 GMT",
+    "records": 962,
+    "unique_codes": 962,
+    "status_values": ["0"],
+    "listing_date_range": ["1977-08-10", "2026-07-10"],
+    "issuer_name_listing_board_sector_fields_present": true,
+    "issuer_or_isin_transition_fields_present": false
+  },
+  "comparisons": {
+    "anchor_ticker_count": 980,
+    "official_minus_anchor": [],
+    "anchor_minus_official": ["CNTB", "CNTX", "FINN", "FORZ", "FREN", "HDTX", "JKSW", "KPAL", "KPAS", "KRAH", "MAMI", "MASA", "MFIN", "MYRX", "NIPS", "PRAS", "RMBA", "TURI"],
+    "official_current_is_subset_of_anchor": true,
+    "prior_official_code_set_equal": true,
+    "prior_official_listing_date_differences": [],
+    "official_minus_pholenk": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"],
+    "official_minus_pholenk_listing_dates": {"BACH": "2026-07-08", "EMMI": "2026-07-08", "JECX": "2026-07-07", "JELI": "2026-07-07", "PRDL": "2026-07-09", "RANS": "2026-07-10"}
+  },
+  "what_is_proven": [
+    "The ordinary public official IDX current-directory response is structurally valid and exposes 962 unique current issuer codes.",
+    "The new current-directory response exactly matches the prior official current snapshot by code and listing date, providing an independently rechecked current-snapshot surface.",
+    "The official current codes are a subset of the 980-code anchor surface; CNTX and 17 other anchor-only codes are not current-directory records.",
+    "The six current official codes absent from the newer public EOD snapshot have July 7-10, 2026 listing dates, supporting a bounded snapshot-timing explanation for that gap."
+  ],
+  "what_remains_unknown": [
+    "daily historical membership and population completeness",
+    "survivorship, delisting, relisting, and ticker-reuse semantics",
+    "issuer/ISIN transition continuity",
+    "publication or available-at time and revision/vintage behavior",
+    "corporate-action effective-basis linkage"
+  ],
+  "admission": {
+    "current_directory_capability": "SUPPORTED_CURRENT_SNAPSHOT",
+    "historical_population_completeness": "UNKNOWN",
+    "historical_research": "BLOCKED",
+    "allowed_use": "current directory identity cross-check and bounded acquisition design only",
+    "forbidden_use": "historical PIT universe substitution, survivorship certification, canonical backfill, or predictive admission"
+  },
+  "reopen_trigger": "A population-wide daily PIT/lifecycle contract with issuer/ISIN continuity, publication/knowledge time, revisions, and corporate-action basis semantics."
+}

@@ -57,6 +57,7 @@
     "POPULATION_AUTHORITY": "POPULATION_AUTHORITY_UNKNOWN",
     "SURVIVORSHIP": "SURVIVORSHIP_UNKNOWN",
     "SECURITY_IDENTITY": "SECURITY_IDENTITY_PARTIAL",
+    "CURRENT_DIRECTORY": "SUPPORTED_CURRENT_SNAPSHOT",
     "ISSUER_IDENTITY": "ISSUER_IDENTITY_UNKNOWN",
     "CA_BASIS": "CA_BASIS_UNKNOWN",
     "FINANCIAL_PIT": "FINANCIAL_PIT_PARTIAL_BLOCKED",
@@ -169,6 +170,8 @@
     "research_knowledge/candidate_era_authority_v1.json",
     "research_knowledge/eligibility_era_delta_v1.json",
     "research_knowledge/candidate_era_mechanics_v1.json",
+    "research_knowledge/official_idx_directory_audit_v1.json",
+    "docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md",
     "research/alpha_data_authority_tooling_audit_v1.py",
     "research/verify_alpha_data_authority_packet_v1.py",
     "tests/test_alpha_data_authority_packet_v1.py"

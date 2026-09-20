@@ -301,3 +301,44 @@ access absence.
 - C1/C2/C4 count-versus-turnover Spearman is 0.133/0.061/0.175, while C3 is
   -0.372 overall and -0.711 in 2026 partial year. Same-calendar-year pairing
   excludes December-to-January artifacts.
+
+## Public EOD/IPO source coverage
+
+- Script: `research/alpha_public_eod_source_coverage_v1.py`.
+- Code SHA-256:
+  `dcd84d230b6e2018b09cbffca82cbbd42c3577a059249ad0505b3587d83d06eb`.
+- Focused tests: `tests/test_alpha_public_eod_source_coverage_v1.py`, 4/4
+  passing.
+- Durable result: `research_knowledge/public_eod_source_coverage_v1.json`.
+- Durable result SHA-256:
+  `00a695dc7c520991a4d7473ace4dc8103afda966fa05c6f7ec18bd08dbe2dfa4`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_PUBLIC_EOD_SOURCE_COVERAGE_RESULT_V1.md`.
+- Full external artifact:
+  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_public_eod_source_coverage_v1.json`.
+- External result SHA-256:
+  `44522e840f0e639c6616f13f54626a69408c5df625cc61ee7f283a8826dfe94b`.
+- The audit is outcome-blind and capability-only. It pins the acquired source
+  commits/trees, counts raw EOD rows, checks exact key overlap to the frozen
+  panel/anchors through the source cutoff, and cross-references the six
+  missing tickers to an independent IPO declaration. It does not grant PIT,
+  population, identity, revision, or corporate-action authority.
+
+## Official IDX current-directory audit
+
+- Script: `research/alpha_official_idx_directory_audit_v1.py`.
+- Script SHA-256 after the final comparison-field update:
+  `d5ef6f2c811acc108ac830d878807d263074e97eb7b84ad42e1a2ce55ddd1f8c`.
+- Focused tests: `tests/test_alpha_official_idx_directory_audit_v1.py`, 2/2
+  passing.
+- Durable result: `research_knowledge/official_idx_directory_audit_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md`.
+- Full external artifact:
+  `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded\20260919T-finalized-guarded\alpha_official_idx_directory_audit_v1.json`.
+- External result SHA-256:
+  `71ea60909334bb8944ec673067a92b731ab4b87d414ef517be670746333106de`.
+- The verifier reads only the retained official response, response headers,
+  prior official current snapshot, frozen anchor, and public EOD ticker-file
+  names. It verifies 962 unique current codes, exact current-snapshot code and
+  listing-date agreement, official-subset-of-anchor, and the six July 2026
+  listing dates. It does not establish daily PIT, lifecycle identity, revision,
+  or corporate-action authority.

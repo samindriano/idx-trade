@@ -59,7 +59,9 @@
 - H-LIQ-01 has a distinct structural surface but can become participation- and
   regime-dependent in the top-value bucket.
 - Lower proxy turnover does not imply executable capacity or profitability.
-- Broad local source search is now low-value unless a new source contract appears.
+- Broad local source search is now low-value unless a new source contract
+  appears. The official current directory is a bounded current snapshot, not
+  the missing historical PIT/lifecycle contract.
 - Historical archaeology is supported at family/classification level. Exact old
   implementation replayability is partial, and the latest PIT/integrity
   adjudication controls earlier promotion headlines; no old implementation
@@ -152,9 +154,27 @@
   rho -0.372 overall and -0.711 in 2026 partial year. This strengthens the
   support-sensitive interpretation of C3 without establishing sparse support as
   the cause of its turnover/persistence pattern or making a predictive claim.
-- The available local outcome-blind surface is now substantially exhausted:
-  remaining high-value work requires unavailable authority/data or independent
-  review, while repeated local searches and mutations would be redundant.
+- Independent public-source acquisition materially sharpens the population
+  boundary: two pinned EOD snapshots both contain CNTX, and a separate IPO
+  snapshot's declared new-stock list exactly matches the six anchor/panel
+  tickers absent from the newer EOD snapshot. This supports public
+  discoverability and a bounded snapshot-timing explanation, but the sources
+  still lack row-level publication/available-at time, revision/vintage,
+  issuer/ISIN continuity, complete historical membership, and CA-basis
+  authority. Public-source rows therefore remain capability evidence only.
+- A direct ordinary public GET to IDX's current company-profile directory
+  independently returned 962 unique current codes. The code and listing-date
+  sets exactly match the prior official current snapshot, the current codes are
+  a subset of the 980-code anchor, and the six current codes absent from the
+  newer public EOD snapshot have official July 7-10, 2026 listing dates. This
+  strengthens the bounded snapshot-timing explanation and separates current
+  directory identity from historical-anchor membership; it does not establish
+  daily PIT membership, survivorship safety, issuer/ISIN continuity, revisions,
+  or CA basis.
+- The local public-source frontier is not exhausted: further work should target
+  a genuinely authoritative population-wide PIT/lifecycle contract or a newly
+  acquired official event archive, not more copies of the same ticker-file
+  snapshot family.
 
 ## What failed, is redundant, or is superseded
 
@@ -178,6 +198,8 @@
 - Population completeness, historical PIT/available-at time, survivorship,
   issuer/ISIN continuity, CA basis, revision/vintage, common support, and
   executable capacity.
+- Public EOD/IPO snapshots explain a current timing gap but do not resolve any
+  of those admission authorities.
 - Every predictive question: IC, ICIR, OOS, PnL, incumbent comparison, and
   prospective evidence.
 

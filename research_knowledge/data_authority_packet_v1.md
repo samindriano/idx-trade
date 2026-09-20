@@ -93,6 +93,13 @@ ticker-reuse, issuer/ISIN continuity, and survivorship authority remain
 unknown. Ticker identity, security identity, and issuer identity are not
 interchangeable.
 
+The official IDX current company-profile directory is a separately bounded
+current snapshot: 962 unique codes, exact agreement with the prior official
+current snapshot by code and listing date, and a subset relation to the anchor.
+It supports current-directory identity cross-checks only; it does not supply
+historical daily membership, issuer/ISIN transitions, publication time,
+revision/vintage semantics, or corporate-action basis.
+
 Corporate-action and price-basis lineage is not event-complete at the
 event-to-window level. No split, rights, bonus, conversion, or adjustment is
 inferred from dates, ratios, price movement, or missing rows. Price candidates
@@ -161,3 +168,5 @@ the protected boundary remains closed.
 - Candidate-era map: `research_knowledge/candidate_era_authority_v1.json`
 - Eligibility delta by era: `research_knowledge/eligibility_era_delta_v1.json`
 - Candidate-era mechanics: `research_knowledge/candidate_era_mechanics_v1.json`
+- Official current-directory audit: `research_knowledge/official_idx_directory_audit_v1.json`
+- Official current-directory checkpoint: `docs/checkpoints/2026-09-20_ALPHA_OFFICIAL_IDX_DIRECTORY_AUDIT_RESULT_V1.md`

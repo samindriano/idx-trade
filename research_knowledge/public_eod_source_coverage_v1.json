@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_PUBLIC_SOURCE_COVERAGE_RESEARCH_ONLY",
+  "scope": "Pinned public IDX-derived EOD and IPO snapshots; capability and authority-boundary research only",
+  "evidence_artifact": {
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_public_eod_source_coverage_v1.json",
+    "sha256": "44522e840f0e639c6616f13f54626a69408c5df625cc61ee7f283a8826dfe94b"
+  },
+  "sources": {
+    "pholenk_idx_dataset": {
+      "repository": "https://github.com/Pholenk/IDX-Dataset",
+      "commit": "9bb3b26bd28ab46bc2f3e74a7c03805ce053301b",
+      "tree": "fdf171acdbbd0d752e2611e0f0f01a6e72bc7703",
+      "metadata_sha256": "8fc0631b661010183df946759c08c1779c3d74bba05e0ab5e09ddf39231cb89d",
+      "files": 983,
+      "rows": 1289820,
+      "date_range": ["2020-01-02", "2026-05-29"],
+      "duplicate_date_ticker_rows": 0,
+      "zero_volume_rows": 156317,
+      "any_zero_ohlc_rows": 1045981,
+      "files_with_listed_share_changes": 427,
+      "files_with_multiple_names": 78
+    },
+    "dataset_saham_idx": {
+      "repository": "https://github.com/wildangunawan/Dataset-Saham-IDX",
+      "commit": "bc0ac7712ce5e46f1067349e13ab9f338883c6c4",
+      "tree": "b85e5df6bd941ee1798d78ef1110efd25c66a547",
+      "files_in_explicit_semua_folder": 958,
+      "rows_in_explicit_semua_folder": 1078040,
+      "date_range": ["2019-07-29", "2025-02-21"],
+      "non_null_delisting_date_cells": 0
+    },
+    "public_ipo_dataset": {
+      "repository": "https://github.com/ricotandrio/web-indonesia-ipo-data",
+      "commit": "5f1ca215b29e0bb962b4a09217414a2619c20fd8",
+      "tree": "b16bd78107225b37f08a2156b8b43108e331064b",
+      "information_sha256": "1a9d920c7e8dc33c52a52933d435b4fba93d34224034d3844eb68759500aa46f",
+      "ticker_files": 251,
+      "updated_at": "28 June 2026",
+      "declared_new_stocks": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"]
+    },
+    "idx_api_source_discovery": {
+      "repository": "https://github.com/NeaByteLab/IDX-API",
+      "commit": "910b8db70893b93920a1bba331d00a1a245907c6",
+      "capabilities_documented": ["GetCompanyProfiles", "LINK_DELISTING", "LINK_STOCK_NEW_LISTING", "GetRelistingData"],
+      "live_probe": "initial ordinary curl to the legacy official host/endpoint received HTTP 403 Cloudflare challenge; no authenticated/provider call was made; a later ordinary idx.id current-directory GET is recorded separately"
+    },
+    "official_idx_current_directory": {
+      "endpoint": "https://www.idx.id/primary/ListedCompany/GetCompanyProfiles?start=0&length=9999&code=",
+      "raw_sha256": "bdca057527fa061fd2318f7c9aa6c4f2c508d50a98f013c38ea1a7c4c9ad2312",
+      "headers_sha256": "9ce728a337c52d05f2b497ea84be50a1f5a735fc13338f49bbf2ebebae114121",
+      "records": 962,
+      "unique_codes": 962,
+      "listing_date_range": ["1977-08-10", "2026-07-10"],
+      "current_snapshot_only": true,
+      "authority_limits": ["no daily historical membership", "no issuer/ISIN transition chain", "no publication/available-at or revision contract", "no corporate-action basis linkage"]
+    }
+  },
+  "cross_source": {
+    "ticker_intersection_eod_snapshots": 958,
+    "both_eod_snapshots_contain_cntx": true,
+    "pholenk_snapshot_date": "2026-05-29",
+    "anchor_full_public_exact_keys": {"found": 1060071, "rows": 1104064, "missing": 43993, "fraction": 0.9601535780534461},
+    "anchor_through_snapshot_public_exact_keys": {"found": 1060071, "rows": 1062767, "missing": 2696, "fraction": 0.9974632257117505},
+    "panel_full_public_exact_keys": {"found": 943283, "rows": 981940, "missing": 38657, "fraction": 0.960632014176019},
+    "panel_through_snapshot_public_exact_keys": {"found": 943283, "rows": 945693, "missing": 2410, "fraction": 0.9974516042732684},
+    "eod_snapshot_gap_tickers": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"],
+    "ipo_declared_new_equals_eod_snapshot_gap": true,
+    "cntx_public_rows": 1537,
+    "cntx_public_date_range": ["2020-01-02", "2026-05-29"],
+    "cntx_public_zero_volume_rows": 824,
+    "cntx_anchor_active_rows": 458,
+    "cntx_anchor_no_trade_rows": 800,
+    "official_current_minus_pholenk": ["BACH", "EMMI", "JECX", "JELI", "PRDL", "RANS"],
+    "official_current_minus_pholenk_listing_dates": {"BACH": "2026-07-08", "EMMI": "2026-07-08", "JECX": "2026-07-07", "JELI": "2026-07-07", "PRDL": "2026-07-09", "RANS": "2026-07-10"},
+    "official_current_minus_anchor": [],
+    "anchor_minus_official_current_count": 18
+  },
+  "what_is_proven": [
+    "CNTX is discoverable in two independent public ticker-file snapshots, so its panel absence is not universal absence from available public EOD sources.",
+    "The six anchor/panel tickers absent from the May-29 EOD snapshot exactly match the IPO dataset's declared new-stock list updated June 28, 2026; this explains the observed snapshot timing gap as a bounded, independently supported hypothesis.",
+    "Public EOD rows cover approximately 99.75% of frozen anchor/panel keys through the public snapshot date, but residual missing keys remain and the source is not population-complete by contract.",
+    "The public EOD source contains raw volume/OHLC/share/name fields and visible zero-volume or zero-OHLC patterns, but field presence is not event, identity, PIT, or corporate-action authority.",
+    "The official current directory independently confirms the six newer codes and their July 7-10, 2026 listing dates, while the 18 anchor-only historical codes remain outside the current directory; this resolves only the current-snapshot comparison, not historical population completeness."
+  ],
+  "what_remains_unknown": [
+    "historical population completeness and survivorship safety",
+    "row-level publication/knowledge/available-at timing and revisions",
+    "issuer/ISIN continuity, ticker reuse, delisted/relisted lifecycle completeness",
+    "corporate-action effective transition and price-basis semantics",
+    "whether the public snapshots omit any population outside their ticker-file sets"
+  ],
+  "admission": {
+    "historical_research": "BLOCKED",
+    "allowed_use": "source capability, gap explanation, and future acquisition design only",
+    "forbidden_use": "canonical substitution, backfill, eligibility authority, or predictive admission"
+  },
+  "reopen_trigger": "An authoritative population-wide PIT security master or equivalent contract with issuer/ISIN lifecycle, publication/knowledge time, corporate-action basis, and revision semantics."
+}

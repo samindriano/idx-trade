@@ -44,12 +44,22 @@
    classifications and latest PIT/integrity supersession are recorded. Reopen
    only for a genuinely new historical artifact or a disputed classification
    requiring exact source replay.
-6. Re-entry preparation: only after an external/authoritative admission artifact
+6. Public acquisition frontier: pinned EOD and IPO snapshots now explain the
+   current six-ticker snapshot gap and confirm CNTX discoverability. The
+   official current company-profile directory independently confirms the six
+   listing dates and exactly reproduces the prior official current snapshot,
+   but remains a current snapshot rather than historical PIT authority.
+   Continue only toward a new official event archive or population-wide
+   lifecycle contract; do not repeat same-family ticker-file or current-
+   directory snapshots.
+7. Re-entry preparation: only after an external/authoritative admission artifact
    changes the current blocked state.
 
 ## Exhausted or low-value surfaces
 
 - Repeating the same provider/source search without a new row-level contract.
+- Repeating the same public GitHub ticker-file snapshots without new PIT,
+  lifecycle, issuer/ISIN, or revision authority.
 - Re-running monotone transforms or already corrected structural replays.
 - Tuning H-LIQ/H-VOL/H-EXC horizons without a predeclared scientific reason.
 - Creating C5 or optimizing combination weights before admission.
@@ -61,3 +71,23 @@ Stop autonomous continuation only when remaining questions require unavailable
 authority, are materially repetitive, all high-information outcome-blind lanes
 are reasonably explored, or a genuine hard resource limit appears. Do not treat
 the current predictive block as the end of the knowledge program.
+
+## 2026-09-20 — public EOD/IPO acquisition frontier
+
+- Acquired and hash-bound two public EOD snapshot families plus an IPO-only
+  JSON dataset. The newer source has 983 ticker files/1,289,820 rows through
+  2026-05-29; the older explicit all-ticker source has 958 files/1,078,040
+  rows through 2025-02-21. Both contain CNTX.
+- Through the newer snapshot date, exact source presence is 1,060,071/1,062,767
+  anchor keys and 943,283/945,693 panel keys. The six missing ticker files
+  exactly equal the IPO dataset's declared new-stock list: BACH, EMMI, JECX,
+  JELI, PRDL, and RANS. This is bounded timing/new-issue evidence only.
+- The sources expose raw EOD fields and some lifecycle/new-issue discovery paths,
+  but no row-level available-at/publication/revision contract, population-wide
+  membership, issuer/ISIN continuity, or CA-effective-basis authority. Historical
+  research admission remains blocked.
+- The official IDX current-directory response is an additional bounded source:
+  962 unique current codes, exact code/listing-date agreement with the prior
+  official current snapshot, and a strict subset relation to the anchor. It
+  resolves the current-directory comparison only; it does not add daily PIT,
+  issuer/ISIN transition, revision, or corporate-action authority.
