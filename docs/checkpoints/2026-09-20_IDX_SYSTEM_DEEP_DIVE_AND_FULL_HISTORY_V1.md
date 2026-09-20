@@ -581,6 +581,21 @@ historical alpha archive:
   the base plan was hashed from projected state while execution used the raw
   persisted state. Verdict: `FAIL — PROJECTED CA SIZING STATE IS NOT
   EXECUTION-PARENT-COMPATIBLE`; no runtime source fix was applied.
+- `2026-09-20_IDX_SIZING_EXECUTION_PARTIAL_BUY_AUDIT_V1.md`:
+  a positive partial buy filled 2,500 of 5,000 planned shares after an Open
+  price gap, but produced no pending buy; the next session generated no retry,
+  and snapshot/reload preserved the underfilled position with a valid hash.
+  Verdict: `FAIL — POSITIVE PARTIAL BUY IS NOT PERSISTED AS PENDING`; no
+  runtime source fix was applied.
+
+The durable rolling controls for this marathon are now:
+
+- `2026-09-20_IDX_SYSTEM_FRONTIER_MATRIX_V1.md` — subsystem depth, evidence,
+  open questions, and next frontiers;
+- `2026-09-20_IDX_SYSTEM_FINDINGS_NO_RETRY_LOG_V1.md` — findings, blast-radius
+  implications, negative results, and no-retry boundaries;
+- `2026-09-20_IDX_ACTIVE_FRONTIER_HANDOFF_V1.md` — current hypothesis and
+  immediate next questions.
 
 The updated system-level belief is therefore:
 
