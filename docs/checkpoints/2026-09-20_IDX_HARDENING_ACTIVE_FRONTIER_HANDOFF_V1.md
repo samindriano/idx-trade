@@ -88,6 +88,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - caller-supplied identity evidence is now an optional but hash-pinned runtime
   config input; all four phase children validate its file/payload/session and
   required-ticker resolution before passing it to Decision identity binding;
+- migration activation now has an explicit immutable policy/decision gate:
+  compatible state may activate, legacy mode requires explicit authorization,
+  and orphaned/reconciliation-required state remains blocked;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller preserves the same durable recovery boundary
   metadata across all eight synthetic side-effect boundaries without provider
@@ -103,8 +106,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 ## Remaining evidence before Phase 4
 
-- authorized automatic migration activation/persistence policy (the explicit
-  verified-snapshot consumer is implemented);
+- external authorization/adoption of the migration activation policy (the
+  local immutable policy/decision gate and verified-snapshot consumer are
+  implemented);
 - authoritative identity-source provisioning/activation and policy approval;
 - live provider/scheduler crash/interruption validation is not authorized in
   this lane; the synthetic subprocess challenge is PASS;

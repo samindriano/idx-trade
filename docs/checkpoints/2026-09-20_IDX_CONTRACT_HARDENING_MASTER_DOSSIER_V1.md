@@ -138,6 +138,9 @@ The isolated lane currently contains:
 - `MIGRATION_PROVENANCE-V1` records legacy source hash/schema, state hash when
   valid, fail-closed classification/disposition/reason, UTC decision time, and
   optional runtime lineage with immutable idempotent persistence;
+- `MIGRATION_ACTIVATION-V1` adds an immutable explicit-policy decision gate:
+  compatible state can activate, legacy mode requires authorization, and
+  orphaned/reconciliation-required state remains blocked;
 - orchestration state loading consumes verified-ancestor snapshot recovery;
 - dual-calendar V2 controller recovery-fence parity covers all eight synthetic
   side-effect boundaries without provider or outcome access;
