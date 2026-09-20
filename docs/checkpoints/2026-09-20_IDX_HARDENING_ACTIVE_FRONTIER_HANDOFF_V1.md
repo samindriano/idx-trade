@@ -36,6 +36,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - zero-fill/partial SELL/replacement neighboring tests;
 - duplicate fill and cancellation idempotency;
 - state hash includes obligations only when the new contract is present;
+- obligation deserialization replays the canonical payload builder and rejects
+  hash-valid/noncanonical field extensions;
 - old snapshot payloads still load without an obligation section;
 - V1 → V2 snapshot chain loads with immutable parent binding;
 - legacy classifier returns `UNKNOWN_ORPHANED_PARTIAL` without quantity fabrication;

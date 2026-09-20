@@ -515,7 +515,10 @@ def obligation_from_payload(value: object) -> QuantityObligation:
         rank_consensus=value.get("rank_consensus"),
         event_history=tuple(_event_from_payload(row) for row in history_raw),
     )
-    return obligation.validate()
+    normalized = obligation.validate()
+    if obligation_payload(normalized) != value:
+        raise DecisionV1Error("QUANTITY_OBLIGATION_PAYLOAD_NOT_CANONICAL")
+    return normalized
 
 
 def obligation_hash(obligation: QuantityObligation) -> str:

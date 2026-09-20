@@ -174,6 +174,14 @@ def test_payload_round_trip_preserves_hash_and_lineage():
     assert obligation_hash(reloaded) == obligation_hash(obligation)
 
 
+def test_hash_valid_noncanonical_obligation_payload_fails_closed():
+    payload = obligation_payload(_planned())
+    payload["unexpected_extension"] = "accepted-by-hash-only"
+
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        obligation_from_payload(payload)
+
+
 def test_conservation_and_closed_state_are_fail_closed():
     with pytest.raises(DecisionV1Error, match="CONSERVATION_FAILED"):
         obligation_from_payload(

@@ -28,8 +28,9 @@ planned_shares = filled_shares + remaining_shares + relinquished_shares
 
 All quantities are nonnegative whole lots. Duplicate event IDs are idempotent
 only when the replayed event bytes are identical. A conflicting duplicate is a
-hard failure. No current position or ticker membership may be used to infer a
-missing planned quantity.
+hard failure. Obligation payload deserialization replays the canonical payload
+builder and rejects extra or coercible fields. No current position or ticker
+membership may be used to infer a missing planned quantity.
 
 ## State ownership rules
 
