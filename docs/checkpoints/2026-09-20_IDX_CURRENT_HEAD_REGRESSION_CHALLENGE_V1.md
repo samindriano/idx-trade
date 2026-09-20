@@ -2,7 +2,7 @@
 
 Date: 2026-09-21
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `d57ec5d0`
+Verification revision: `cda6a9e4`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`252/252 PASS`.
+`253/253 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -54,8 +54,8 @@ event ID with a different policy is a conflict; missing or unauthorized policy
 semantics fail closed. No production status/reason, paired-replacement,
 expiry, or `FULL`-quantity policy is chosen by this lane.
 
-The current full repository run collected `890` tests and completed
-`890/890 PASS`, with only the three pre-existing pandas `FutureWarning`
+The current full repository run collected `891` tests and completed
+`891/891 PASS`, with only the three pre-existing pandas `FutureWarning`
 records. An intermediate run before the durable policy-envelope hardening hit
 the unrelated Windows `PermissionError [WinError 5]` temporary-directory
 replace in the capture fixture; its targeted test passed in isolation and the

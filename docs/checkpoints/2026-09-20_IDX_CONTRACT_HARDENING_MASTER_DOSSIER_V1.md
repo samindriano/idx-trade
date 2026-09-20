@@ -217,7 +217,7 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`d57ec5d0` passes `252/252` across the latest
+`cda6a9e4` passes `253/253` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
 state-level explicit cancellation/relinquishment replay, hash-bound and
 durable Decision-seat policy gate, evidence, CA, identity, transition, lineage,
@@ -225,6 +225,8 @@ migration, dividend-runtime, and E2E controller/orchestration suites; see
 `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`. This is a local
 regression result, not an independent reviewer attestation or production
 promotion. The V2 independent-challenge record remains historical evidence.
+The current full repository run at `cda6a9e4` collected `891` tests and passed
+`891/891`, with only the three pre-existing pandas warnings.
 External authorization/adoption, authoritative identity-source provisioning,
 live provider/scheduler interruption validation, automatic migration activation,
 and Decision-seat policy activation are still open. Explicit

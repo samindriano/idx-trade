@@ -164,13 +164,13 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `252/252` for the
+- a fresh current-head regression challenge is also PASS at `253/253` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   hash-bound Decision-seat policy gate, evidence, CA, identity, transition,
   lineage, migration, dividend-runtime, and E2E controller/orchestration
   suites; see `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at
-  source commit `d57ec5d0`;
+  source commit `cda6a9e4`;
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
@@ -178,7 +178,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   boolean position shares before whole-lot validation; the follow-up challenge
   is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `d57ec5d0` (durable Decision-seat policy
+- continuation commits include `cda6a9e4` (typed policy-payload verification
+  failures), `d57ec5d0` (durable Decision-seat policy
   provenance and replay conflict gate), `3b5d5e4c` (hash-bound policy gate),
   `2aa210bf` (terminal recovery fence and
   authenticated quarantine manifest), `f9d323bd` (prepared Decision/execution-plan
@@ -201,9 +202,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   rechecks passed and the current clean run covers the latest replay changes;
   direct `pytest -q` invocation has a pre-existing root-namespace collection
   issue for tests importing `scripts.*`.
-- the current post-policy full repository regression collected `890` tests and
-  completed `890/890 PASS` with only the three pre-existing pandas warnings;
-  the bounded `252/252` result is also clean. An intermediate Windows capture
+- the current post-policy full repository regression collected `891` tests and
+  completed `891/891 PASS` with only the three pre-existing pandas warnings;
+  the bounded `253/253` result is also clean. An intermediate Windows capture
   fixture `PermissionError [WinError 5]` was not reproduced at this head. The
   earlier `2aa210bf` run remains historical `883/883 PASS` evidence.
 
