@@ -100,6 +100,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   accepting a child artifact;
 - persisted orchestration replay rejects a hash-valid obligation payload with
   a noncanonical nested field;
+- prepared orchestration replay now loads the exact declared parent snapshot,
+  reconstructs the embedded Decision plan from that parent, and rejects a
+  rehashed nested plan without breaking valid idempotent reruns;
 - persisted execution evidence is canonically parsed and intrinsically
   reevaluated during replay, so rehashed aggregate/state/fill tamper is rejected;
 - transition-binding verification now enforces canonical identity-resolution
@@ -148,12 +151,13 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `232/232` for the
+- a fresh current-head regression challenge is also PASS at `239/239` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
   controller/orchestration suites; see
-  `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`;
+  `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`, at source commit
+  `e5040346`;
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
@@ -161,7 +165,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   boolean position shares before whole-lot validation; the follow-up challenge
   is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `9dacf7e6` (strict position-share validation),
+- continuation commits include `e5040346` (prepared Decision-plan replay
+  binding), `9dacf7e6` (strict position-share validation),
   `31e05ee1` (boolean rank validation),
   `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
@@ -191,6 +196,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - external/policy-gated activation and any live protected-runtime validation;
   synthetic independent challenge V2 is recorded in
   `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`.
-- Decision-seat policy semantics and broader top-level replay closure remain
-  open; explicit cancellation/relinquishment is implemented only through the
-  parent-bound caller-supplied transition and remains fail-closed by default.
+- Decision-seat policy semantics remain open; explicit
+  cancellation/relinquishment is implemented only through the parent-bound
+  caller-supplied transition and remains fail-closed by default. The prepared
+  Decision-plan replay gap is now covered by the current-head challenge.
