@@ -61,6 +61,10 @@ The system tracks target membership but not target quantity obligations. A posit
   The isolated 6/6 harness recovers only complete fills, explicit zero-lot
   pending, and positive partials backed by preserved fill vectors; a
   snapshot-only positive position remains `UNKNOWN_ORPHANED_PARTIAL`.
+- Identity collision checkpoint: `2026-09-20_IDX_UNIVERSE_IDENTITY_COLLISION_AUDIT_V1.md`.
+  The pinned runtime emits two selected `ABCD` rows from `ABCD` and `ABCD.JK`
+  input aliases; the later Decision adapter rejects the duplicate, but the
+  universe origin has no uniqueness guard.
 
 ## Immediate next questions
 
@@ -74,6 +78,8 @@ The system tracks target membership but not target quantity obligations. A posit
    restart or interrupted execution?
 5. What evidence would justify moving the proposal from design-only to a
    separately authorized implementation lane?
+6. Which other row-oriented consumers can receive the duplicate universe
+   output before the Decision duplicate-ticker guard?
 
 ## Constraints
 

@@ -652,6 +652,11 @@ historical alpha archive:
   snapshot-only positive position remains `UNKNOWN_ORPHANED_PARTIAL` and a
   quantity inversion requires reconciliation. This is an isolated harness
   result; no runtime migration or historical rewrite was performed.
+- `2026-09-20_IDX_UNIVERSE_IDENTITY_COLLISION_AUDIT_V1.md` adds a distinct
+  identity-to-universe finding: the pinned runtime turns `ABCD` and `ABCD.JK`
+  input aliases into two selected `ABCD` rows with ranks 1/2. The later
+  Decision adapter rejects the duplicate, but the universe origin does not
+  enforce canonical-key uniqueness; no runtime fix was applied.
 
 The durable rolling controls for this marathon are now:
 
