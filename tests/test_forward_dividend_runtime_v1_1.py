@@ -561,6 +561,67 @@ def test_recovery_quarantines_tampered_latest_and_returns_verified_ancestor(
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
 
 
+def test_recovery_preserves_verified_obligation_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-RECOVERY-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-RECOVERY-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=(
+                PendingPaperIntent("BUY", "BBCA", None, "OPEN_CAPACITY_PARTIAL"),
+            ),
+            obligations=(partial,),
+        ),
+        registry,
+    )
+    advanced = apply_fill(
+        partial,
+        event_id="FILL-BBCA-RECOVERY-02",
+        session_date="2026-08-22",
+        filled_shares=1_000,
+        reason="RETRY_FILL",
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-22",
+            positions=(PaperPosition("BBCA", 3_400),),
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "RETRY_FILL"),),
+            obligations=(advanced,),
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{interrupted-after-write\n")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+    assert recovered.path == first.path
+    assert recovered.state.base_state.obligations == (partial,)
+    assert recovered.state.base_state.positions == (PaperPosition("BBCA", 2_400),)
+    assert recovered.state.base_state.pending_buys == (
+        PendingPaperIntent("BUY", "BBCA", None, "OPEN_CAPACITY_PARTIAL"),
+    )
+
+
 def test_recovery_does_not_choose_between_valid_forked_histories(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

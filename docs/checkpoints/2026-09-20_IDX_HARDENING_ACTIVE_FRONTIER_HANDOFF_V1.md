@@ -43,6 +43,8 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   when valid, classification/disposition/reason, UTC decision time, and
   optional runtime lineage; its writer is immutable and idempotent;
 - tampered latest snapshot is quarantined and a verified ancestor is recovered;
+- synthetic recovery also preserves the verified ancestor's partial obligation
+  ledger, position, and pending projection;
 - valid forked histories remain blocked;
 - Decision V2 residual BUY retry works with an existing partial position;
 - CA sizing lineage keeps the immutable raw state as `ExecutionOrderPlan.state_hash`

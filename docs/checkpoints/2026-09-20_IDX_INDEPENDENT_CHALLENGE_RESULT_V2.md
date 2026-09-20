@@ -17,7 +17,7 @@ scheduler, production, or alpha state.
 | Gate | Evidence | Result |
 |---|---|---|
 | Nested execution replay | Rehashed nested evidence/CA/cause/lineage parents are rejected | PASS |
-| Snapshot recovery | Tampered latest is quarantined; valid fork is rejected | PASS |
+| Snapshot recovery | Tampered latest is quarantined; valid fork is rejected; partial obligation ancestor is preserved | PASS |
 | Snapshot filename validation | Noncanonical snapshot artifacts fail closed during recovery | PASS |
 | Snapshot payload canonical shape | Hash-valid noncanonical snapshot envelope is rejected | PASS |
 | Controller boundaries | All eight V1/V2 boundaries recover to `RECOVERY_REQUIRED` | PASS |
