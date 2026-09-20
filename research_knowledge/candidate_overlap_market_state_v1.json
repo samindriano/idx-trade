@@ -1,0 +1,64 @@
+{
+  "admission": {
+    "candidate_status_changed": false,
+    "era_admitted": false,
+    "policy_selected": false,
+    "protected_boundary": "CLOSED"
+  },
+  "calendar": {
+    "official_max": "2026-07-31",
+    "official_min": "2021-04-29",
+    "official_session_count": 1260
+  },
+  "code_sha256": "d3c5a27bb2f089999c59b372eded1591bb96d862b19d5207259e152cd93afbfa",
+  "inputs": {
+    "component_helper_sha256": "de8466ce25cce5fad2e91ada8877e8c8f8806492655355072ad45c88eb14255e",
+    "features": {
+      "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_stage_a_v3_features.parquet",
+      "rows": 981940,
+      "sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4"
+    },
+    "official_sessions": {
+      "path": "D:\\Documents\\Project\\idx-v4-x1-clean-historical-input-stage-r2-20260820\\official_exchange_sessions_1260.csv",
+      "sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+    },
+    "panel": {
+      "path": "D:\\Documents\\Project\\idx-trade-data-gate-20260808v\\v4_x_clean_data_consolidation_v1_final_20260820_v2\\model_safe_signal_research_panel_1260_final_clean.parquet",
+      "rows": 981940,
+      "sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e"
+    }
+  },
+  "scope": "Outcome-blind same-day Top-30 C1/C2/C4 overlap conditional on deterministic 2x2 market-breadth states.",
+  "state_rule": "return-positive breadth and activity-positive breadth each thresholded at 0.5; no tuning or outcome conditioning",
+  "status": "PASS_STRUCTURAL_CANDIDATE_OVERLAP_MARKET_STATE",
+  "summary": {
+    "by_state": {
+      "HIGH_HIGH": {
+        "C1_C2": {"mean_jaccard": 0.04817921831676826, "mean_overlap_fraction": 0.08898467432950193, "median_jaccard": 0.034482758620689655, "median_overlap_fraction": 0.06666666666666667},
+        "C1_C4": {"mean_jaccard": 0.21586603821226574, "mean_overlap_fraction": 0.3497126436781609, "median_jaccard": 0.22448979591836735, "median_overlap_fraction": 0.36666666666666664},
+        "C2_C4": {"mean_jaccard": 0.04446894350605321, "mean_overlap_fraction": 0.0828544061302682, "median_jaccard": 0.034482758620689655, "median_overlap_fraction": 0.06666666666666667},
+        "dates": 348
+      },
+      "LOW_LOW": {
+        "C1_C2": {"mean_jaccard": 0.11107924278979343, "mean_overlap_fraction": 0.19637681159420292, "median_jaccard": 0.1111111111111111, "median_overlap_fraction": 0.2},
+        "C1_C4": {"mean_jaccard": 0.21986879203573878, "mean_overlap_fraction": 0.3555072463768116, "median_jaccard": 0.2, "median_overlap_fraction": 0.3333333333333333},
+        "C2_C4": {"mean_jaccard": 0.09116788959982262, "mean_overlap_fraction": 0.16405797101449276, "median_jaccard": 0.09090909090909091, "median_overlap_fraction": 0.16666666666666666},
+        "dates": 230
+      },
+      "RET_HIGH_ACT_LOW": {
+        "C1_C2": {"mean_jaccard": 0.08480982302582508, "mean_overlap_fraction": 0.15045454545454548, "median_jaccard": 0.07142857142857142, "median_overlap_fraction": 0.13333333333333333},
+        "C1_C4": {"mean_jaccard": 0.1965395148878408, "mean_overlap_fraction": 0.323030303030303, "median_jaccard": 0.17647058823529413, "median_overlap_fraction": 0.3},
+        "C2_C4": {"mean_jaccard": 0.06313459077812224, "mean_overlap_fraction": 0.11515151515151516, "median_jaccard": 0.05263157894736842, "median_overlap_fraction": 0.1},
+        "dates": 220
+      },
+      "RET_LOW_ACT_HIGH": {
+        "C1_C2": {"mean_jaccard": 0.08517004241266266, "mean_overlap_fraction": 0.15364431486880464, "median_jaccard": 0.09090909090909091, "median_overlap_fraction": 0.16666666666666666},
+        "C1_C4": {"mean_jaccard": 0.2469268454206155, "mean_overlap_fraction": 0.39057337220602517, "median_jaccard": 0.25, "median_overlap_fraction": 0.4},
+        "C2_C4": {"mean_jaccard": 0.08263715551026705, "mean_overlap_fraction": 0.14956268221574343, "median_jaccard": 0.07142857142857142, "median_overlap_fraction": 0.13333333333333333},
+        "dates": 343
+      }
+    },
+    "dates": 1141
+  },
+  "top_k": 30
+}
