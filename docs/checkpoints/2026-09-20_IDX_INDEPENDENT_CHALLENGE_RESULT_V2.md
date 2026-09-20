@@ -3,7 +3,7 @@
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
 Implementation base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
-Challenge head: `f61446d6`
+Challenge head: local lane `HEAD` at verification time (recorded by Git)
 
 ## Boundary
 
