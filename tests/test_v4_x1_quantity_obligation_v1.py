@@ -3,6 +3,10 @@ from __future__ import annotations
 import pytest
 
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
+from idx_trade.v4_x1_decision_seat_policy_v1 import (
+    DecisionSeatClosePolicyV1,
+    SEAT_POLICY_SCHEMA,
+)
 from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
@@ -33,6 +37,21 @@ def _planned():
         session_date="2026-09-20",
         replacement_group_id="REPLACE-AAA-BBCA-01",
         parent_state_sha256="a" * 64,
+    )
+
+
+def _seat_policy(*extra_reasons: str) -> DecisionSeatClosePolicyV1:
+    return DecisionSeatClosePolicyV1(
+        schema_version=SEAT_POLICY_SCHEMA,
+        policy_id="synthetic-seat-close-policy",
+        authorization_ref="synthetic-test-authority",
+        allowed_close_statuses=("CANCELED", "RELINQUISHED"),
+        allowed_close_reasons=tuple(sorted({
+            "EXPLICIT_DECISION_REVERSAL_CLOSE",
+            "EXPLICIT_RELINQUISH",
+            "TARGET_REVERSAL",
+            *extra_reasons,
+        })),
     )
 
 
@@ -126,12 +145,14 @@ def test_retry_block_and_explicit_cancel_preserve_conservation():
         event_id="CANCEL-1",
         session_date="2026-09-24",
         reason="TARGET_REVERSAL",
+        seat_policy=_seat_policy(),
     )
     replayed_cancel = cancel_remaining(
         retried,
         event_id="CANCEL-1",
         session_date="2026-09-24",
         reason="TARGET_REVERSAL",
+        seat_policy=_seat_policy(),
     )
 
     assert blocked.status == "BLOCKED"
@@ -182,11 +203,15 @@ def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status="RELINQUISHED",
         parent_state_sha256=before_hash,
+        seat_policy=_seat_policy(),
     )
 
     assert closed.obligations[0].status == "RELINQUISHED"
     assert closed.obligations[0].remaining_shares == 0
     assert closed.obligations[0].event_history[-1].parent_state_sha256 == before_hash
+    assert closed.obligations[0].event_history[-1].policy_sha256 == (
+        _seat_policy().payload()["policy_sha256"]
+    )
     assert closed.pending_buys == ()
     assert closed.pending_sells == ()
     assert paper_state_hash(closed) != before_hash
@@ -199,6 +224,7 @@ def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status="RELINQUISHED",
         parent_state_sha256=before_hash,
+        seat_policy=_seat_policy(),
     )
     assert replayed == closed
 
@@ -211,6 +237,7 @@ def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
             reason="ALTERED_CLOSE_REASON",
             status="RELINQUISHED",
             parent_state_sha256=before_hash,
+            seat_policy=_seat_policy("ALTERED_CLOSE_REASON"),
         )
 
     with pytest.raises(DecisionV1Error, match="CLOSE_PARENT_MISMATCH"):
@@ -221,6 +248,35 @@ def test_state_level_explicit_close_rebuilds_projection_and_binds_parent_hash():
             session_date="2026-09-21",
             reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
             parent_state_sha256="0" * 64,
+            seat_policy=_seat_policy(),
+        )
+
+
+def test_state_level_explicit_close_requires_hash_bound_policy() -> None:
+    partial = apply_fill(
+        _planned(),
+        event_id="FILL-POLICY-REQUIRED",
+        session_date="2026-09-21",
+        filled_shares=2_400,
+        reason="CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    state = PaperPortfolioState(
+        as_of_session_date="2026-09-21",
+        cash_idr=50_000_000,
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        obligations=(partial,),
+    )
+
+    with pytest.raises(DecisionV1Error, match="SEAT_POLICY_REQUIRED"):
+        close_obligation_explicitly(
+            state,
+            obligation_id=partial.obligation_id,
+            event_id="CLOSE-POLICY-REQUIRED",
+            session_date="2026-09-21",
+            reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         )
 
 
@@ -237,6 +293,7 @@ def test_payload_round_trip_preserves_hash_and_lineage():
         session_date="2026-09-22",
         reason="EXPLICIT_RELINQUISH",
         status="RELINQUISHED",
+        seat_policy=_seat_policy(),
     )
     reloaded = obligation_from_payload(obligation_payload(obligation))
 

@@ -17,6 +17,10 @@ from idx_trade.decision_v2_minimal import (
     plan_decision_v2_minimal,
 )
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
+from idx_trade.v4_x1_decision_seat_policy_v1 import (
+    DecisionSeatClosePolicyV1,
+    SEAT_POLICY_SCHEMA,
+)
 from idx_trade.v4_x1_decision_v2_minimal import (
     V4_X1_DECISION_V2_MINIMAL_PROFILE_V1,
 )
@@ -41,6 +45,16 @@ def _canonical_hash(payload: object) -> str:
             + "\n"
         ).encode("utf-8")
     ).hexdigest()
+
+
+def _seat_policy() -> DecisionSeatClosePolicyV1:
+    return DecisionSeatClosePolicyV1(
+        schema_version=SEAT_POLICY_SCHEMA,
+        policy_id="synthetic-seat-close-policy",
+        authorization_ref="synthetic-test-authority",
+        allowed_close_statuses=("CANCELED", "RELINQUISHED"),
+        allowed_close_reasons=("EXPLICIT_DECISION_REVERSAL_CLOSE",),
+    )
 
 
 def _event(
@@ -229,6 +243,7 @@ def test_explicit_close_round_trips_through_v2_runtime_snapshot(
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status="CANCELED",
         parent_state_sha256=before_hash,
+        seat_policy=_seat_policy(),
     )
 
     snapshot = runtime.write_runtime_snapshot(tmp_path / "runtime", closed, registry)
@@ -797,6 +812,7 @@ def test_recovery_quarantines_explicit_close_latest_and_keeps_partial_ancestor(
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status="RELINQUISHED",
         parent_state_sha256=paper_state_hash(first.state.base_state),
+        seat_policy=_seat_policy(),
     )
     latest = runtime.write_runtime_snapshot(
         tmp_path / "runtime",

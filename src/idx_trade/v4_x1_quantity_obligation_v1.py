@@ -14,6 +14,10 @@ import json
 from typing import Any, Literal
 
 from .v4_x1_decision_v1_contract import DecisionV1Error
+from .v4_x1_decision_seat_policy_v1 import (
+    DecisionSeatClosePolicyV1,
+    authorize_decision_seat_close,
+)
 
 
 QUANTITY_OBLIGATION_SCHEMA = "idx_trade_quantity_obligation_v1"
@@ -84,6 +88,7 @@ class ObligationEvent:
     relinquished_delta_shares: int = 0
     reason: str = ""
     parent_state_sha256: str | None = None
+    policy_sha256: str | None = None
 
     def validate(self) -> "ObligationEvent":
         _text(self.event_id, "QUANTITY_OBLIGATION_EVENT_ID_INVALID")
@@ -114,6 +119,20 @@ class ObligationEvent:
             )
             if len(parent) != 64 or any(c not in "0123456789abcdef" for c in parent.lower()):
                 raise DecisionV1Error("QUANTITY_OBLIGATION_PARENT_HASH_INVALID")
+        if self.event_type in {"CANCEL", "RELINQUISH"}:
+            if self.policy_sha256 is None:
+                raise DecisionV1Error(
+                    "QUANTITY_OBLIGATION_CLOSE_POLICY_PROVENANCE_REQUIRED"
+                )
+        if self.policy_sha256 is not None:
+            policy_sha = _text(
+                self.policy_sha256,
+                "QUANTITY_OBLIGATION_POLICY_HASH_INVALID",
+            )
+            if len(policy_sha) != 64 or any(
+                c not in "0123456789abcdef" for c in policy_sha
+            ):
+                raise DecisionV1Error("QUANTITY_OBLIGATION_POLICY_HASH_INVALID")
         return self
 
 
@@ -407,7 +426,13 @@ def cancel_remaining(
     reason: str,
     parent_state_sha256: str | None = None,
     status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
+    seat_policy: DecisionSeatClosePolicyV1 | None = None,
 ) -> QuantityObligation:
+    policy_sha256 = authorize_decision_seat_close(
+        seat_policy,
+        status=status,
+        reason=reason,
+    )
     event_type = "RELINQUISH" if status == "RELINQUISHED" else "CANCEL"
     event_id_text = _text(event_id, "QUANTITY_OBLIGATION_EVENT_ID_INVALID")
     reason_text = _text(reason, "QUANTITY_OBLIGATION_REASON_INVALID")
@@ -435,6 +460,7 @@ def cancel_remaining(
             relinquished_delta_shares=remaining,
             reason=reason_text,
             parent_state_sha256=parent_state_sha256,
+            policy_sha256=policy_sha256,
         ),
         next_status=status,
         next_remaining=0,
@@ -470,6 +496,11 @@ def obligation_payload(obligation: QuantityObligation) -> dict[str, Any]:
                 "relinquished_delta_shares": event.relinquished_delta_shares,
                 "reason": event.reason,
                 "parent_state_sha256": event.parent_state_sha256,
+                **(
+                    {"policy_sha256": event.policy_sha256}
+                    if event.policy_sha256 is not None
+                    else {}
+                ),
             }
             for event in obligation.event_history
         ],
@@ -487,6 +518,7 @@ def _event_from_payload(value: object) -> ObligationEvent:
         relinquished_delta_shares=value.get("relinquished_delta_shares", 0),
         reason=str(value.get("reason") or ""),
         parent_state_sha256=value.get("parent_state_sha256"),
+        policy_sha256=value.get("policy_sha256"),
     )
     return event.validate()
 

@@ -8,6 +8,7 @@ from numbers import Integral
 from typing import Literal
 
 from .v4_x1_decision_v1_contract import DecisionV1Error, TradeIntent
+from .v4_x1_decision_seat_policy_v1 import DecisionSeatClosePolicyV1
 from .v4_x1_sizing_v1 import SizingPlan
 from .v4_x1_quantity_obligation_v1 import (
     QuantityObligation,
@@ -239,6 +240,7 @@ def close_obligation_explicitly(
     reason: str,
     status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
     parent_state_sha256: str | None = None,
+    seat_policy: DecisionSeatClosePolicyV1 | None = None,
 ) -> PaperPortfolioState:
     """Apply only a caller-supplied close event; never infer a reversal close."""
 
@@ -285,6 +287,7 @@ def close_obligation_explicitly(
         reason=reason,
         parent_state_sha256=event_parent_state_sha256,
         status=status,
+        seat_policy=seat_policy,
     )
     pending_buys, pending_sells = pending_intents_from_obligations(obligations)
     updated = PaperPortfolioState(

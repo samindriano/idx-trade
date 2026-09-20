@@ -14,6 +14,7 @@ from . import forward_dividend_execution_v1_1 as gate
 from . import forward_dividend_v1 as dividend
 from .decision_v2_minimal import DecisionV2ShadowState
 from .v4_x1_decision_v1_contract import DecisionV1Error
+from .v4_x1_decision_seat_policy_v1 import DecisionSeatClosePolicyV1
 from .v4_x1_decision_v2_minimal import (
     V4_X1_DECISION_V2_MINIMAL_PROFILE_V1,
 )
@@ -612,6 +613,7 @@ def close_runtime_obligation_explicitly(
     reason: str,
     status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
     parent_state_sha256: str | None = None,
+    seat_policy: DecisionSeatClosePolicyV1 | None = None,
 ) -> dividend.DividendAwarePaperState:
     """Close one obligation in the runtime-aware state via an explicit event."""
 
@@ -625,6 +627,7 @@ def close_runtime_obligation_explicitly(
         reason=reason,
         status=status,
         parent_state_sha256=parent_state_sha256,
+        seat_policy=seat_policy,
     )
     return dividend.DividendAwarePaperState(
         base_state=closed_base,

@@ -17,6 +17,10 @@ from idx_trade.v4_x1_decision_v1_contract import (
     VerifiedScoreSession,
     _VERIFIED_TOKEN,
 )
+from idx_trade.v4_x1_decision_seat_policy_v1 import (
+    DecisionSeatClosePolicyV1,
+    SEAT_POLICY_SCHEMA,
+)
 from idx_trade.v4_x1_decision_v2_minimal import (
     V4_X1_DECISION_V2_MINIMAL_PROFILE_V1,
     plan_v4_x1_decision_v2_minimal,
@@ -49,6 +53,16 @@ from idx_trade.v4_x1_quantity_obligation_v1 import (
     apply_fill,
     plan_obligation,
 )
+
+
+def _seat_policy() -> DecisionSeatClosePolicyV1:
+    return DecisionSeatClosePolicyV1(
+        schema_version=SEAT_POLICY_SCHEMA,
+        policy_id="synthetic-seat-close-policy",
+        authorization_ref="synthetic-test-authority",
+        allowed_close_statuses=("CANCELED", "RELINQUISHED"),
+        allowed_close_reasons=("EXPLICIT_DECISION_REVERSAL_CLOSE",),
+    )
 
 
 def _score(session_date, rows):
@@ -421,6 +435,7 @@ def test_explicit_obligation_close_allows_decision_reversal(tmp_path, status):
         session_date="2026-08-24",
         reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
         status=status,
+        seat_policy=_seat_policy(),
     )
     closed = closed_state.obligations[0]
     assert closed.status == status
