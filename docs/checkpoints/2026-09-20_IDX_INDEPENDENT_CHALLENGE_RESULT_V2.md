@@ -32,7 +32,7 @@ scheduler, production, or alpha state.
 | Exposure cause zero-boundary | Bound BUY/SELL state reports explicit zero-side exposure transitions | PASS |
 | Cause-obligation join content | Rehashed join remainder/obligation tamper is rejected during replay | PASS |
 | Obligation payload canonical shape | Hash-valid extra obligation fields are rejected | PASS |
-| Partial SELL/replacement retry | SELL remainder completes before paired BUY is filled | PASS |
+| Partial SELL/replacement restart retry | V2 snapshot reload preserves SELL remainder; BUY fills only after SELL completion | PASS |
 | Runtime-lineage canonical shape | Hash-valid binding-status drift is rejected | PASS |
 | Migration activation policy | Legacy requires explicit authorization; orphaned state remains blocked; verified snapshot consumer persists provenance + decision | PASS |
 

@@ -134,8 +134,9 @@ The isolated lane currently contains:
 - runtime-lineage verification rejects hash-valid noncanonical binding status
   and field combinations;
 - obligation deserialization rejects hash-valid noncanonical field extensions;
-- synthetic paired replacement retry carries partial SELL remainder into the
-  next session and fills the replacement BUY only after SELL completion;
+- synthetic paired replacement retry reloads the V2 snapshot, carries the
+  partial SELL remainder into the next session, and fills the replacement BUY
+  only after SELL completion;
 - operational `BOUND` lineage is persisted/rechecked across synthetic
   prepare/execute/replay and config mismatch is rejected;
 - hash-pinned controller prepared-artifact selection rejects missing/unbound

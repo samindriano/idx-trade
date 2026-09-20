@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as fd
 from idx_trade.v4_x1_decision_v1_contract import DecisionPlan, TradeIntent
 from idx_trade.v4_x1_sizing_v1 import VerifiedDecisionPlan, _VERIFIED_DECISION_PLAN_TOKEN
 from idx_trade.v4_x1_execution_v1_verify import (
@@ -68,7 +70,9 @@ def test_sell_capacity_can_partial_fill_and_blocks_paired_buy():
     assert {position.ticker for position in result.state_after.positions} == {"AAA"}
 
 
-def test_partial_sell_retry_completes_replacement_buy_with_obligation_lineage():
+def test_partial_sell_retry_completes_replacement_buy_with_obligation_lineage(
+    tmp_path: Path,
+):
     plan = DecisionPlan(
         "2026-08-21",
         "OFFICIAL_OPEN_T_PLUS_1",
@@ -123,6 +127,22 @@ def test_partial_sell_retry_completes_replacement_buy_with_obligation_lineage():
     assert first_buy.status == "BLOCKED"
     assert first_buy.remaining_shares == first_buy.planned_shares
 
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        fd.DividendAwarePaperState(base_state=first.state_after),
+    )
+    restarted_state = runtime.load_latest_runtime_snapshot(
+        tmp_path / "runtime"
+    ).state.base_state
+    assert {
+        row.obligation_id: row for row in restarted_state.obligations
+    } == {
+        row.obligation_id: row for row in first.state_after.obligations
+    }
+    assert restarted_state.positions == first.state_after.positions
+    assert restarted_state.pending_buys == first.state_after.pending_buys
+    assert restarted_state.pending_sells == first.state_after.pending_sells
+
     retry_plan = DecisionPlan(
         "2026-08-24",
         "OFFICIAL_OPEN_T_PLUS_1",
@@ -147,7 +167,7 @@ def test_partial_sell_retry_completes_replacement_buy_with_obligation_lineage():
         _verification_token=_EOD_INPUT_TOKEN,
     )
     retry_order = prepare_execution_v1(
-        retry_decision, first.state_after, eod_inputs=retry_eod
+        retry_decision, restarted_state, eod_inputs=retry_eod
     )
     retry_open = VerifiedOpenExecutionInputs(
         "2026-08-25",
@@ -164,7 +184,7 @@ def test_partial_sell_retry_completes_replacement_buy_with_obligation_lineage():
     )
     second = execute_open_v1(
         retry_order,
-        first.state_after,
+        restarted_state,
         open_inputs=retry_open,
         ca_attestation=retry_ca,
     )
