@@ -5,7 +5,7 @@ Lane: isolated `codex/alpha-available-data-20260919`
 
 ## Active frontier
 
-**Sizing → Open execution → pending quantity → next-session Decision → restart**
+**Residual obligation lifecycle → CA settlement → pending expiry/reversal → restart**
 
 ## Current hypothesis
 
@@ -40,13 +40,24 @@ The system tracks target membership but not target quantity obligations. A posit
   sells were explicitly made pending in `d8d34b79`, while positive partial buys
   remained membership-complete in the earlier `e1531b3c` contract and replay
   oracle `ce91d60a`.
+- New four-session synthetic matrix: repeated partial exits reduced `AAA`
+  5,000 → 4,000 → 3,000 → 2,000, then zero capacity left the sell/buy pair
+  pending; no age, attempt, or remaining-share field existed in the pending
+  schema.
+- CA composition: the original 5,000-share cum-date entitlement settled
+  IDR125,000 exactly once; cash changed while the pending replacement remained
+  unchanged.
+- Target reversal: returning to actual `AAA:2,000` removed both pending rows
+  without a fill-based cancellation event, leaving cancellation/expiry policy
+  and audit lineage unresolved.
+- Durable checkpoint: `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md`.
 
 ## Immediate next questions
 
-1. Can a residual-aware synthetic multi-session harness prove planned/filled/remaining quantity, cash, NAV, turnover, and concentration consistency?
-2. Which state/artifact boundary should own filled/remaining quantities, given that planned per-entry sizing is already preserved in the prepared payload?
-3. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
-4. Which recovery invariant should reconcile planned, filled, and remaining quantities after an interrupted execution?
+1. Which obligation ledger should own planned/filled/remaining quantity, age, attempts, and reason history?
+2. Should CA settlement trigger a replan, or only change cash while pending obligations remain unchanged?
+3. What explicit cancellation, expiry, escalation, and manual-review events are required when Decision reverses or capacity stays zero?
+4. Which recovery invariant should reconcile the obligation ledger after restart or interrupted execution?
 5. Which historical replay/state contracts must a unified quantity-obligation design preserve or deliberately supersede?
 
 ## Constraints

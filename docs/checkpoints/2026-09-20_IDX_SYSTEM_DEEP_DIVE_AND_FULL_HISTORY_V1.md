@@ -613,6 +613,13 @@ historical alpha archive:
   hardened positive partial sells, and `ce91d60a` replayed positive buy
   planned/filled differences with pending count zero. The current defect is
   therefore a historical contract split, not only an allocator edge case.
+- `2026-09-20_IDX_PENDING_CA_REVERSAL_MATRIX_V1.md` extends the frontier across
+  four sessions: repeated partial exit and zero capacity preserve a pending
+  replacement; a 5,000-share cash-dividend entitlement settles IDR125,000
+  exactly once without triggering a replan; and a later target reversal removes
+  both pending rows without a fill-based cancellation event. The remaining gap
+  is an obligation lifecycle contract (remaining quantity, age, attempts,
+  expiry/escalation, and explicit cancellation), not dividend arithmetic.
 
 The durable rolling controls for this marathon are now:
 
@@ -628,6 +635,6 @@ The updated system-level belief is therefore:
 `local component correctness != complete portfolio-system correctness`
 
 The next distinct local frontier is not another alpha mutation. It is a
-synthetic end-to-end invariant harness that composes these contracts: state
-transitions, partial fills, projected CA cash, nominal risk exposure, cost
+quantity-aware obligation/state graph that composes state transitions, partial
+fills, CA settlement, pending expiry/reversal, nominal risk exposure, cost
 accounting, restart, and artifact identity in one isolated scenario matrix.
