@@ -735,6 +735,76 @@ def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
         )
 
 
+def test_preopen_replay_rejects_rehashed_cause_binding_row_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    evidence = payload["execution_evidence"]
+    assert evidence["causes"]
+    forged_cause_id = "0" * 64
+    evidence["causes"][0]["cause_id"] = forged_cause_id
+    binding = evidence["cause_obligation_binding"]
+    assert binding["joins"]
+    evidence_body = dict(evidence)
+    evidence_body.pop("payload_sha256", None)
+    evidence["payload_sha256"] = _canonical_hash(evidence_body)
+    reconciliation = payload["reconciliation_result"]
+    reconciliation["execution_evidence_sha256"] = _canonical_hash(evidence)
+    reconciliation_body = dict(reconciliation)
+    reconciliation_body.pop("payload_sha256", None)
+    reconciliation["payload_sha256"] = _canonical_hash(reconciliation_body)
+    lineage = payload["runtime_lineage"]
+    lineage["artifacts"]["execution_evidence"]["sha256"] = evidence[
+        "payload_sha256"
+    ]
+    lineage["artifacts"]["reconciliation_result"]["sha256"] = reconciliation[
+        "payload_sha256"
+    ]
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
 def test_preopen_recovers_when_execution_and_snapshot_are_missing(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     bootstrap_t0(root, session_date="2026-08-24")

@@ -49,7 +49,10 @@ from .v4_x1_runtime_lineage_v2 import (
     build_runtime_lineage_v2,
     verify_runtime_lineage_v2,
 )
-from .v4_x1_transition_binding_v1 import verify_decision_identity_binding_v1
+from .v4_x1_transition_binding_v1 import (
+    verify_decision_identity_binding_v1,
+    verify_transition_binding_payload,
+)
 from .v4_x1_ca_timing_matrix_v1 import (
     CA_TIMING_MATRIX_SCHEMA,
     build_ca_timing_matrix_v1,
@@ -534,6 +537,47 @@ def _verify_persisted_execution_components(
         raise E2EPaperOrchestrationError(
             error_prefix + "_EVIDENCE_SESSION_PARENT_MISMATCH"
         )
+    causes = evidence.get("causes")
+    cause_binding = evidence.get("cause_obligation_binding")
+    if not isinstance(causes, list):
+        raise E2EPaperOrchestrationError(error_prefix + "_CAUSE_ROWS_INVALID")
+    if cause_binding is None:
+        if causes:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_MISSING"
+            )
+    else:
+        try:
+            verified_binding = verify_transition_binding_payload(cause_binding)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_INVALID"
+            ) from exc
+        if verified_binding.get("binding_type") != "CAUSE_OBLIGATION":
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_TYPE_MISMATCH"
+            )
+        if (
+            verified_binding.get("execution_session_date")
+            != execution_body.get("execution_session_date")
+        ):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_SESSION_MISMATCH"
+            )
+        cause_ids = [
+            row.get("cause_id")
+            for row in causes
+            if isinstance(row, Mapping)
+        ]
+        join_ids = [
+            row.get("cause_id")
+            for row in verified_binding.get("joins", ())
+            if isinstance(row, Mapping)
+        ]
+        if len(cause_ids) != len(causes) or cause_ids != join_ids:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_ROWS_MISMATCH"
+            )
     timing = execution_body.get("ca_timing_matrix")
     verified_timing: Mapping[str, Any] | None = None
     if timing is not None:
