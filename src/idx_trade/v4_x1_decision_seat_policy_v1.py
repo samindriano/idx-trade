@@ -117,7 +117,13 @@ def verify_decision_seat_policy_payload(value: object) -> dict[str, Any]:
         payload.pop("policy_sha256", None),
         "DECISION_SEAT_POLICY_HASH_INVALID",
     )
-    if _canonical_hash(payload) != declared:
+    try:
+        computed = _canonical_hash(payload)
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error(
+            "DECISION_SEAT_POLICY_PAYLOAD_NOT_CANONICAL"
+        ) from exc
+    if computed != declared:
         raise DecisionV1Error("DECISION_SEAT_POLICY_HASH_MISMATCH")
     statuses = payload.get("allowed_close_statuses")
     reasons = payload.get("allowed_close_reasons")

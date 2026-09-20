@@ -69,3 +69,10 @@ def test_policy_rejects_hash_valid_noncanonical_extension() -> None:
     ).hexdigest()
     with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
         verify_decision_seat_policy_payload(payload)
+
+
+def test_policy_rejects_non_json_payload_with_typed_error() -> None:
+    payload = _policy().payload()
+    payload["allowed_close_reasons"] = {"EXPLICIT_CLOSE"}
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_decision_seat_policy_payload(payload)
