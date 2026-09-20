@@ -20,7 +20,7 @@ cloud/capture/telemetry, canonical data, or protected outcomes.
 - `e2e_paper_runtime_config_v2.py` SHA-256:
   `0907F0FD02AF7F61E48959C7F1318A0C6559EF78BA9F34C7DDFC5FD494C356E6`
 
-Probe: `research/idx_runtime_config_artifact_lineage_probe_v1.py`  
+Probe: `research/idx_runtime_config_artifact_lineage_probe_v1.py`
 Test: `tests/test_idx_runtime_config_artifact_lineage_probe_v1.py`
 
 Focused result: `1 passed`; `py_compile` and `git diff --check` passed.
