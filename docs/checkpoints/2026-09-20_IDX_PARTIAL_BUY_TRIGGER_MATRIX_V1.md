@@ -26,6 +26,26 @@ The stamp row is intentionally precise: the executed 9,900-share batch stayed be
 
 The paired-replacement row had an exact 5,000-share `AAA` sell fill, followed by a 1,200-share `BBB` buy fill. Both pending collections were empty and the state held only `BBB: 1,200`.
 
+## Multi-session and portfolio-state observations
+
+The following values came from a synthetic cold reconstruction of each
+`PaperPortfolioState`; the reconstructed state hash equaled the live result
+hash in all four rows. The mark-to-market NAV uses the synthetic next-session
+close and is not protected predictive evidence.
+
+| Scenario | Completion ratio | Target seats / actual seats | Target membership | Pending buys | Cold-reload hash | Next retry | Mark NAV after next close |
+|---|---:|---:|---|---:|---|---|---:|
+| Capacity | 24% | 1 / 1 | equal | 0 | equal | absent | IDR 49,993,996.40 |
+| Fee boundary | 90% | 2 / 2 | equal | 0 | equal | absent | IDR 9,997,748.65 |
+| Stamp boundary | 99% | 2 / 2 | equal | 0 | equal | absent | IDR 100,005,235.15 |
+| Paired replacement | 24% | 1 / 1 | equal | 0 | equal | absent | IDR 49,976,508.90 |
+
+This proves a stronger blast-radius statement: seat-count, ticker-membership,
+hash-equality, and cash/NAV arithmetic can all look internally valid while the
+planned quantity is not delivered. Gross turnover also reflects only the
+actual fill; it does not retain a residual obligation that a later metric or
+session can discover.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:
