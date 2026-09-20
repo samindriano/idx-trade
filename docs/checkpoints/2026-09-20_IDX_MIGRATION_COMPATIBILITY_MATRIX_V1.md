@@ -14,9 +14,10 @@ Compatibility rules:
 
 - old artifacts remain byte-immutable;
 - old hashes are not rewritten;
-- the current lane has additive obligation serialization in the retained V1.1
-  runtime; an explicit new snapshot schema/version and migration classifier
-  are still open and must be added before this matrix can be called complete;
+- new obligation snapshots use `idx_trade_forward_dividend_runtime_state_v2`
+  and may chain to an immutable V1 parent;
+- the state classifier is fail-closed: legacy positions/pending without plan
+  evidence are `UNKNOWN_ORPHANED_PARTIAL`, not reconstructed quantities;
 - migration output must record source artifact hash and classification;
 - no current position, target membership, or seat count fabricates a missing
   plan/fill/remainder;

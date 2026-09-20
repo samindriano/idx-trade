@@ -24,6 +24,10 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    LEGACY_POSITION_ONLY,
+    OBLIGATION_V1_STATE,
+    UNKNOWN_ORPHANED_PARTIAL,
+    classify_state_for_migration,
 )
 from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
 
@@ -168,12 +172,94 @@ def test_legacy_state_payload_omits_new_contract_and_new_state_round_trips(
         modern,
         registry,
     )
+    payload = json.loads(snapshot.path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == runtime.RUNTIME_SCHEMA_V2
     loaded = runtime.load_runtime_snapshot(snapshot.path)
     assert loaded.state.base_state.obligations == (partial,)
     assert loaded.state.base_state.pending_buys == (pending_buy,)
     assert "obligations" in json.loads(snapshot.path.read_text(encoding="utf-8"))[
         "state"
     ]["base_paper_state"]
+
+
+def test_v1_legacy_snapshot_can_parent_v2_obligation_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-2026-08-20-CHAIN",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+        rank_consensus=1,
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-2026-08-20-CHAIN",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buy = PendingPaperIntent("BUY", "BBCA", 1, "OPEN_CAPACITY_PARTIAL")
+    second = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=(pending_buy,),
+            obligations=(partial,),
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+
+    assert json.loads(first.path.read_text(encoding="utf-8"))["schema_version"] == (
+        runtime.RUNTIME_SCHEMA
+    )
+    assert json.loads(second.path.read_text(encoding="utf-8"))["schema_version"] == (
+        runtime.RUNTIME_SCHEMA_V2
+    )
+    loaded = runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+    assert loaded.path == second.path
+    assert loaded.previous_snapshot_path == first.path
+    assert loaded.state.base_state.obligations == (partial,)
+
+
+def test_legacy_migration_classification_never_fabricates_quantities():
+    assert classify_state_for_migration(_state("2026-08-20" ).base_state) == (
+        LEGACY_POSITION_ONLY
+    )
+    assert classify_state_for_migration(
+        _state("2026-08-20", positions=(PaperPosition("BBCA", 2_400),)).base_state
+    ) == UNKNOWN_ORPHANED_PARTIAL
+    assert classify_state_for_migration(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "LEGACY"),),
+            obligations=(),
+        ).base_state
+    ) == UNKNOWN_ORPHANED_PARTIAL
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-CLASSIFIED",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    assert classify_state_for_migration(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "PLANNED"),),
+            obligations=(planned,),
+        ).base_state
+    ) == OBLIGATION_V1_STATE
 
 
 def test_runtime_snapshot_roundtrip_binds_state_registry_and_parent(

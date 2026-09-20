@@ -45,7 +45,7 @@ missing planned quantity.
 
 | Contract | Owner | Current state |
 |---|---|---|
-| `PAPER_STATE-V2` | Paper state + snapshot | Additive obligation field/hash implemented; explicit snapshot schema pending |
+| `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, and additive hash implemented; recovery open |
 | `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Planned |
 | `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Planned |
 | `IDENTITY_CANONICAL-V1` | Security/universe/evaluator boundaries | Planned |

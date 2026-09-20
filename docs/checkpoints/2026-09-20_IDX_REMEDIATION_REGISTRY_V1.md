@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | REM-OBL-001 | Positive partial BUY loses residual | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / RESTART_OPEN` | Runtime BUY/SELL state, replay, restart, Decision seat semantics |
 | REM-OBL-002 | Partial SELL/replacement lacks quantity lineage | `IMPLEMENTED_LOCAL` | `IMPLEMENTED_LOCAL / REPLAY_OPEN` | Paired retry/reversal and cancellation lineage |
-| REM-STATE-001 | Snapshot omits obligation state | `ADDITIVE_EXTENSION_IMPLEMENTED` | `IMPLEMENTED_LOCAL / EXPLICIT_VERSION_OPEN` | Versioned snapshot/hash and legacy loader |
+| REM-STATE-001 | Snapshot omits obligation state | `V2_SCHEMA_IMPLEMENTED` | `IMPLEMENTED_LOCAL / RECOVERY_OPEN` | Versioned snapshot/hash, restart replay, and legacy loader |
 | REM-CA-001 | Projected CA state differs from execution parent | `UNADJUDICATED` | `UNADJUDICATED` | Three timing cases plus restart/idempotency |
 | REM-EVAL-001 | Execution evidence loses quantity semantics | `UNADJUDICATED` | `UNADJUDICATED` | Versioned evidence schema and structural evaluator replay |
 | REM-REC-001 | False reconciliation bit lacks provenance | `UNADJUDICATED` | `UNADJUDICATED` | Typed result, evidence binding, restart/replay |

@@ -16,6 +16,9 @@ from .v4_x1_quantity_obligation_v1 import (
 
 EXECUTION_RULE_ID = "V4_X1_EXECUTION_V1"
 PAPER_STATE_SOURCE = "EXECUTABLE_PAPER_V1"
+LEGACY_POSITION_ONLY = "LEGACY_POSITION_ONLY"
+UNKNOWN_ORPHANED_PARTIAL = "UNKNOWN_ORPHANED_PARTIAL"
+OBLIGATION_V1_STATE = "OBLIGATION_V1"
 LOT_SIZE_SHARES = 100
 BUY_FEE_BPS = 15.0
 SELL_FEE_BPS = 25.0
@@ -196,6 +199,18 @@ def normalize_state(state: PaperPortfolioState) -> tuple[float, dict[str, int], 
     if set(pending_sells) - set(positions):
         raise DecisionV1Error("EXECUTION_V1_PENDING_SELL_WITHOUT_POSITION")
     return cash, positions, pending_buys, pending_sells
+
+
+def classify_state_for_migration(state: PaperPortfolioState) -> str:
+    """Classify legacy evidence without inventing a missing quantity vector."""
+
+    cash, positions, pending_buys, pending_sells = normalize_state(state)
+    del cash
+    if state.obligations:
+        return OBLIGATION_V1_STATE
+    if positions or pending_buys or pending_sells:
+        return UNKNOWN_ORPHANED_PARTIAL
+    return LEGACY_POSITION_ONLY
 
 
 def paper_state_hash(state: PaperPortfolioState) -> str:

@@ -95,14 +95,17 @@ The isolated lane currently contains:
 - positive partial BUY persistence and retry completion;
 - partial SELL and paired replacement quantity lineage;
 - duplicate fill/cancel idempotency at the obligation layer;
-- optional obligation snapshot serialization with old payload compatibility.
+- explicit `RUNTIME_SCHEMA_V2` obligation snapshot serialization chained to V1
+  parents, with old payload compatibility;
+- legacy migration classification that returns `UNKNOWN_ORPHANED_PARTIAL`
+  instead of fabricating missing plan/fill quantities.
 
 Focused cross-component suites pass: execution/allocator/exit/replacement,
 Decision adapter, quantity contract, dividend runtime/snapshot, dividend
-execution/orchestration, and E2E paper orchestration/controller. The explicit
-snapshot schema migration, restart fault-injection, Decision seat semantics,
-and legacy classification remain open; this is not a production promotion or
-phase closure.
+execution/orchestration, and E2E paper orchestration/controller. Restart
+fault-injection, latest-snapshot quarantine, Decision seat semantics, and full
+migration artifact provenance remain open; this is not a production promotion
+or phase closure.
 
 ## Boundaries
 

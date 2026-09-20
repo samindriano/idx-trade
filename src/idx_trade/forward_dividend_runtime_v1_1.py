@@ -32,6 +32,8 @@ from .v4_x1_quantity_obligation_v1 import (
 )
 
 RUNTIME_SCHEMA = "idx_trade_forward_dividend_runtime_state_v1_1"
+RUNTIME_SCHEMA_V2 = "idx_trade_forward_dividend_runtime_state_v2"
+SUPPORTED_RUNTIME_SCHEMAS = frozenset({RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2})
 RUNTIME_DIRNAME = "forward_execution_v1_1"
 SNAPSHOT_DIRNAME = "state_snapshots"
 _VERIFIED_RUNTIME_SNAPSHOT_TOKEN = object()
@@ -637,7 +639,11 @@ def _snapshot_payload(
         "runtime_state_sha256": runtime_state_hash(state, normalized_registry),
     }
     payload: dict[str, Any] = {
-        "schema_version": RUNTIME_SCHEMA,
+        "schema_version": (
+            RUNTIME_SCHEMA_V2
+            if state.base_state.obligations
+            else RUNTIME_SCHEMA
+        ),
         "session_date": session,
         "state": {
             "base_paper_state": base_payload,
@@ -723,7 +729,10 @@ def _load_runtime_snapshot(
         payload = json.loads(resolved.read_text(encoding="utf-8"))
     except Exception as exc:
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_INVALID") from exc
-    if not isinstance(payload, dict) or payload.get("schema_version") != RUNTIME_SCHEMA:
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") not in SUPPORTED_RUNTIME_SCHEMAS
+    ):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SCHEMA_CHANGED")
 
     session = _iso_date(
@@ -861,6 +870,8 @@ def load_latest_runtime_snapshot(
 
 __all__ = [
     "RUNTIME_SCHEMA",
+    "RUNTIME_SCHEMA_V2",
+    "SUPPORTED_RUNTIME_SCHEMAS",
     "RUNTIME_DIRNAME",
     "SNAPSHOT_DIRNAME",
     "RegisteredDividendEvidence",
