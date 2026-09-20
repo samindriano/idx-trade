@@ -50,6 +50,12 @@ from .v4_x1_runtime_lineage_v2 import (
     verify_runtime_lineage_v2,
 )
 from .v4_x1_transition_binding_v1 import verify_decision_identity_binding_v1
+from .v4_x1_ca_timing_matrix_v1 import (
+    CA_TIMING_MATRIX_SCHEMA,
+    build_ca_timing_matrix_v1,
+    verify_ca_timing_matrix_extension,
+    verify_ca_timing_matrix_payload,
+)
 from .v4_x1_decision_v1_contract import DecisionV1Error, VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
 from .v4_x1_decision_v2_minimal import plan_v4_x1_decision_v2_minimal
@@ -1001,6 +1007,13 @@ def prepare_post_eod(
         sizing_events,
         session_date=session,
     )
+    ca_timing_matrix = build_ca_timing_matrix_v1(
+        ca_reconciliation.certified_events,
+        decision_session_date=session,
+        execution_session_date=eod_inputs.next_official_session_date,
+        raw_state=state,
+        sizing_state=sizing_state,
+    )
     decision_shadow = (
         DecisionV2ShadowState.empty()
         if bootstrap
@@ -1071,6 +1084,8 @@ def prepare_post_eod(
                 if verified_sizing.identity_binding is None
                 else verified_sizing.identity_binding["payload_sha256"]
             ),
+            "ca_timing_matrix_schema": CA_TIMING_MATRIX_SCHEMA,
+            "ca_timing_matrix_sha256": ca_timing_matrix["payload_sha256"],
         },
     )
     payload = {
@@ -1098,6 +1113,7 @@ def prepare_post_eod(
             "calendar": _path_sha(eod_inputs.official_calendar_path, "E2E_CALENDAR_MISSING"),
         },
         "ca_reconciliation": ca_payload,
+        "ca_timing_matrix": ca_timing_matrix,
         "decision_identity_binding": verified_sizing.identity_binding,
         "runtime_lineage": prepared_lineage,
         "outcome_access": False,
@@ -1115,6 +1131,7 @@ def _recover_staged_execution(
     execution_date: str,
     expected_ca_reconciliation: Mapping[str, Any],
     expected_open_parent: Mapping[str, Any],
+    expected_ca_timing_matrix: Mapping[str, Any] | None = None,
     implementation_branch: str | None = None,
     implementation_commit: str | None = None,
     runtime_config_sha256: str | None = None,
@@ -1179,6 +1196,20 @@ def _recover_staged_execution(
         implementation_commit=implementation_commit,
         runtime_config_sha256=runtime_config_sha256,
     )
+    if expected_ca_timing_matrix is not None:
+        try:
+            verify_ca_timing_matrix_extension(
+                expected_ca_timing_matrix,
+                execution_body.get("ca_timing_matrix")
+                if isinstance(execution_body.get("ca_timing_matrix"), Mapping)
+                else {},
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_TRANSACTION_CA_TIMING_MATRIX_INVALID"
+            ) from exc
+        if execution_body.get("ca_timing_matrix") != expected_ca_timing_matrix:
+            raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_TIMING_MATRIX_PARENT_MISMATCH")
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1263,6 +1294,14 @@ def execute_preopen(
         raise E2EPaperOrchestrationError(
             "E2E_UNEXPECTED_DECISION_IDENTITY_EVIDENCE"
         )
+    persisted_ca_timing_matrix = payload.get("ca_timing_matrix")
+    if persisted_ca_timing_matrix is not None:
+        try:
+            verify_ca_timing_matrix_payload(persisted_ca_timing_matrix)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_PREPARED_CA_TIMING_MATRIX_INVALID"
+            ) from exc
     decision_date = _date(payload.get("decision_session_date"))
     execution_date = _date(payload.get("execution_session_date"))
     if current_score.session_date != decision_date or eod_inputs.session_date != decision_date or open_inputs.session_date != execution_date:
@@ -1335,6 +1374,11 @@ def execute_preopen(
             execution_date=execution_date,
                 expected_ca_reconciliation=current_ca_payload,
                 expected_open_parent=_open_parent_payload(open_inputs),
+                expected_ca_timing_matrix=(
+                    persisted_ca_timing_matrix
+                    if isinstance(persisted_ca_timing_matrix, Mapping)
+                    else None
+                ),
                 implementation_branch=implementation_branch,
                 implementation_commit=implementation_commit,
                 runtime_config_sha256=runtime_config_sha256,
@@ -1392,6 +1436,17 @@ def execute_preopen(
             raise E2EPaperOrchestrationError(
                 "E2E_EXISTING_EXECUTION_CA_PARENT_MISMATCH"
             )
+        try:
+            verify_ca_timing_matrix_extension(
+                persisted_ca_timing_matrix,
+                existing_body.get("ca_timing_matrix")
+                if isinstance(existing_body.get("ca_timing_matrix"), Mapping)
+                else {},
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_EXISTING_EXECUTION_CA_TIMING_MATRIX_PARENT_MISMATCH"
+            ) from exc
         expected_open = _open_parent_payload(open_inputs)
         for key, expected in expected_open.items():
             if existing_body.get(key) != expected:
@@ -1474,6 +1529,22 @@ def execute_preopen(
         sizing_events,
         session_date=decision_date,
     )
+    ca_timing_matrix = build_ca_timing_matrix_v1(
+        ca_reconciliation.certified_events,
+        decision_session_date=decision_date,
+        execution_session_date=execution_date,
+        raw_state=state,
+        sizing_state=sizing_state,
+    )
+    try:
+        ca_timing_matrix = verify_ca_timing_matrix_extension(
+            persisted_ca_timing_matrix,
+            ca_timing_matrix,
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_CA_TIMING_MATRIX_PARENT_MISMATCH"
+        ) from exc
     verified_sizing = verify_decision_v2_plan_for_sizing(
         plan,
         current_score,
@@ -1603,6 +1674,9 @@ def execute_preopen(
                 "path": current_ca_payload["source_path"],
                 "sha256": current_ca_payload["source_sha256"],
             },
+            "ca_timing_matrix": {
+                "sha256": ca_timing_matrix["payload_sha256"],
+            },
             "execution_evidence": {
                 "sha256": execution_evidence_payload["payload_sha256"],
             },
@@ -1623,6 +1697,8 @@ def execute_preopen(
                 if verified_sizing.identity_binding is None
                 else verified_sizing.identity_binding["payload_sha256"]
             ),
+            "ca_timing_matrix_schema": CA_TIMING_MATRIX_SCHEMA,
+            "ca_timing_matrix_sha256": ca_timing_matrix["payload_sha256"],
         },
     )
     execution_body = {
@@ -1656,6 +1732,7 @@ def execute_preopen(
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
         "execution_evidence": execution_evidence_payload,
         "reconciliation_result": reconciliation_result_payload,
+        "ca_timing_matrix": ca_timing_matrix,
         "decision_identity_binding": verified_sizing.identity_binding,
         "runtime_lineage": execution_lineage,
         "fills": [asdict(x) for x in result.base_result.fills],

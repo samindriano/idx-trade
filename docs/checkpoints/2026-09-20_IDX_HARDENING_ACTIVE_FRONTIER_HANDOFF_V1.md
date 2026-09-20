@@ -58,6 +58,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   identity evidence and joins positive-quantity causes to the exact
   same-session obligation, exposing `RETRY_OBLIGATION` without changing
   Decision math;
+- `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
+  payment-on-decision, payment-on-execution, and later payment boundaries;
+  prepared matrices accept only hash-bound additive CA extensions;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
 - exact base/runtime lineage remains recorded;
@@ -66,8 +69,6 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 ## Remaining evidence before Phase 4
 
-- CA payment-on-decision, payment-before-decision, and payment-on-execution
-  timing matrix with restart/idempotency;
 - quantity-bearing execution evidence and evaluator replay;
 - execution artifact restart binding and tamper/replay matrix;
 - reconciliation-result artifact replay and mismatch matrix;

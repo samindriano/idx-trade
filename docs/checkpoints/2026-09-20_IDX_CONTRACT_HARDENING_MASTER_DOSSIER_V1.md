@@ -55,7 +55,7 @@ checks in code remain authoritative.
 | Positive partial BUY loses residual | `CONFIRMED / IMPLEMENT` | Versioned quantity-obligation state |
 | Partial SELL/replacement lacks full quantity lineage | `CONFIRMED / IMPLEMENT` | Same obligation owner, not a parallel pending ledger |
 | Snapshot persists positions but not obligations | `CONFIRMED / IMPLEMENT` | Versioned snapshot schema and restart replay |
-| CA projected-state versus execution-parent mismatch | `CONFIRMED / LOCAL_LINEAGE_IMPLEMENTED` | Raw execution parent plus projected NAV-only sizing lineage; timing matrix remains open |
+| CA projected-state versus execution-parent mismatch | `CONFIRMED / LOCAL_TIMING_MATRIX_IMPLEMENTED` | Raw execution parent plus projected NAV-only sizing and additive timing-matrix extension; artifact replay remains open |
 | Execution evidence aggregate-only | `CONFIRMED / IMPLEMENT` | Versioned execution-evidence artifact |
 | Reconciliation false bit has no detector provenance | `CONFIRMED / CONTRACT_REQUIRED` | Versioned reconciliation result |
 | Identity alias/revision splits | `CONFIRMED / LOCAL_TRANSITION_BINDING_IMPLEMENTED` | Shared identity contract and hash-bound Decision resolution; authoritative source/child replay remains open |
@@ -105,6 +105,9 @@ The isolated lane currently contains:
   exists, without changing Decision science.
 - explicit CA sizing lineage separating raw execution state from projected
   total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
+- `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
+  payment-on-decision, payment-on-execution, and later payment boundaries,
+  while permitting only hash-bound additive preopen CA extensions;
 - projection guard that rejects changes to positions, pending intents,
   obligations, reconciliation state, or state source identity;
 - versioned `EXECUTION_EVIDENCE-V2` artifact with per-fill quantities,
