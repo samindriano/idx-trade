@@ -711,7 +711,9 @@ def _verify_dividend_evidence_bindings(
 
 def _load_latest_state(paths: E2EPaperPaths) -> dividend.DividendAwarePaperState:
     try:
-        snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+        # A corrupted latest snapshot may be quarantined only when a verified
+        # ancestor exists.  Forks and unrecoverable chains remain fail-closed.
+        snapshot = dividend_runtime.recover_latest_runtime_snapshot(paths.root)
     except Exception as exc:
         raise E2EPaperOrchestrationError("E2E_RUNTIME_STATE_MISSING") from exc
     return snapshot.state

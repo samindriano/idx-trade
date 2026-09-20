@@ -46,8 +46,8 @@ missing planned quantity.
 | Contract | Owner | Current state |
 |---|---|---|
 | `PAPER_STATE-V2` | Paper state + snapshot | V2 schema, V1→V2 parent chain, and additive hash implemented; recovery open |
-| `MIGRATION_PROVENANCE-V1` | Legacy-state migration decision artifact | Source/hash/classification/disposition/reason/time binding and immutable idempotent writer implemented locally; runtime migration consumer integration open |
-| `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, and `CA_TIMING_MATRIX-V1` are hash-bound; artifact replay open |
+| `MIGRATION_PROVENANCE-V1` | Legacy-state migration decision artifact | Source/hash/classification/disposition/reason/time binding, immutable writer, and verified-snapshot consumer implemented locally; automatic migration activation remains open |
+| `CA_SIZING_LINEAGE-V1` | Dividend-aware sizing/execution wrapper | Raw execution parent, projected NAV-only sizing, `CA_TIMING_MATRIX-V1`, and persisted replay gates implemented locally |
 | `CA_TIMING_MATRIX-V1` | Prepared/execution CA timing boundary | Before-decision, on-decision, on-execution, and later payment rows; only additive extension is accepted |
 | `EXECUTION_EVIDENCE-V2` | Execution artifact/evaluator adapter | Quantity-bearing artifact, structural evaluator, and nested replay parent gate implemented locally; independent challenge open |
 | `RECONCILIATION_RESULT-V1` | Internal paper reconciliation | Typed internal detector result, CA/evidence provenance, and nested replay parent gate; independent challenge open |
@@ -56,7 +56,7 @@ missing planned quantity.
 | `TRANSITION_BINDING-V1` | Decision identity and cause/obligation transitions | Hash-bound Decision resolutions and same-session cause/obligation joins; operational source binding open |
 | `RUNTIME_LINEAGE-V2` | Config/prepare/execute/snapshot/replay | Hash-bound envelope implemented; operational child binding and replay matrix open |
 | `CONTROLLER_RECOVERY-V1` | E2E operational controller | Durable `RUNNING` crash fence to `RECOVERY_REQUIRED`; side-effect fault matrix open |
-| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery implemented; controller integration open |
+| `SNAPSHOT_RECOVERY-V1` | Immutable rejection/quarantine | Local quarantine/recovery is consumed by orchestration state loading; independent controller challenge open |
 
 No contract may change frozen model features, rank semantics, Decision
 thresholds, tax policy, structural-CA authority, or post-entry risk policy

@@ -16,6 +16,8 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     INITIAL_NAV_IDR,
     _reconciliation_payload,
     _verify_prepared_ca_parent,
+    _load_latest_state,
+    E2EPaperPaths,
     execute_preopen,
     bootstrap_t0,
     prepare_post_eod,
@@ -229,6 +231,88 @@ def test_t0_post_eod_preopen_is_atomic_and_idempotent(tmp_path: Path) -> None:
     rerun = execute_preopen(root, prepared_path=prepared.path, current_score=current, previous_score=None, eod_inputs=eod, open_inputs=_open(tmp_path, "2026-08-25", tickers), ca_reconciliation=ca)
     assert rerun.status == "ALREADY_COMPLETE"
     assert result.file_sha256 == rerun.file_sha256
+
+
+def test_bound_runtime_lineage_survives_execution_and_rejects_config_mismatch(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    bound = {
+        "implementation_branch": "codex/runtime-bound-test",
+        "implementation_commit": "a" * 40,
+        "runtime_config_sha256": "b" * 64,
+        "entrypoint_sha256": "c" * 64,
+    }
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+        **bound,
+    )
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["runtime_lineage"]["binding_status"] == "BOUND"
+    result = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+        **bound,
+    )
+    execution_payload = json.loads(result.path.read_text(encoding="utf-8"))
+    assert execution_payload["runtime_lineage"]["binding_status"] == "BOUND"
+    with pytest.raises(E2EPaperOrchestrationError, match="RUNTIME_LINEAGE_CONFIG_MISMATCH"):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+            **{**bound, "runtime_config_sha256": "d" * 64},
+        )
+
+
+def test_orchestration_state_loader_recovers_verified_snapshot_ancestor(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    first = dividend_runtime.load_latest_runtime_snapshot(root)
+    second_state = replace(
+        first.state,
+        base_state=replace(first.state.base_state, as_of_session_date="2026-08-25"),
+    )
+    second = dividend_runtime.write_runtime_snapshot(
+        root,
+        second_state,
+        (),
+        previous_snapshot=first,
+    )
+    tampered = json.loads(second.path.read_text(encoding="utf-8"))
+    tampered["state"]["base_paper_state"]["cash_idr"] = 1.0
+    second.path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    recovered = _load_latest_state(E2EPaperPaths.from_root(root))
+    assert recovered.base_state.as_of_session_date == "2026-08-24"
+    quarantine_manifest = (
+        root
+        / dividend_runtime.RUNTIME_DIRNAME
+        / dividend_runtime.SNAPSHOT_DIRNAME
+        / dividend_runtime.QUARANTINE_DIRNAME
+        / dividend_runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    assert quarantine_manifest.is_file()
 
 
 def test_existing_execution_rejects_forged_ca_reconciliation_token(

@@ -69,6 +69,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
   tampered nested evidence;
 - `RUNTIME_LINEAGE-V2` binds implementation/config/entrypoint/artifact hashes,
   and interrupted controller `RUNNING` state fences to `RECOVERY_REQUIRED`;
+- operational `BOUND` lineage is persisted and rechecked across synthetic
+  prepare/execute/replay, with config mismatch rejected;
+- orchestration state loading consumes verified-ancestor snapshot recovery;
 - exact base/runtime lineage remains recorded;
 - full repository regression: `pytest -q` PASS; only three pre-existing pandas
   `FutureWarning` records, no test failures.
@@ -77,10 +80,9 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 
 - independent challenge of execution/reconciliation evidence and the new
   migration provenance artifact;
-- migration provenance consumer integration through any authorized runtime
-  migration/recovery entry point;
+- authorized automatic migration activation/persistence policy (the explicit
+  verified-snapshot consumer is implemented);
 - operational use of identity evidence and cause joins through every child
   script, including persisted replay/tamper coverage;
-- operational BOUND lineage through child scripts and controller crash/recovery
-  replay at each side-effect boundary;
+- child-process runtime binding and V2 controller crash/recovery parity;
 - independent final challenge.
