@@ -541,6 +541,14 @@ historical alpha archive:
   config SHA, runner SHA, executable identity, and explicit code identity. This
   is a read-only `FAIL — RUNTIME_CONFIG_IDENTITY_NOT_BOUND`, not evidence of a
   live contamination or a reason to modify the active system in this lane.
+- `2026-09-20_IDX_UNIVERSE_IDENTITY_WARMUP_STRESS_AUDIT_V1.md`:
+  a 19-test baseline passed, but three synthetic cross-component probes found
+  structural gaps: pre-listing observations count toward IPO warmup and
+  liquidity, normalized `TICKER`/`TICKER.JK` aliases can create duplicate
+  selected rows, and overlapping listing eras are accepted while downstream
+  state remains ticker-only. This is `FAIL —
+  UNIVERSE_IDENTITY_AND_WARMUP_BOUNDARY_NOT_PROVEN`; no policy or source fix
+  was applied.
 
 The updated system-level belief is therefore:
 
