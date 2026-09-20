@@ -36,6 +36,10 @@ The system tracks target membership but not target quantity obligations. A posit
   linkage in execution state and pending obligations.
 - Full orchestration staged recovery returned identical execution/snapshot hashes
   after deleting both outputs, but preserved `T00:2,400` and empty pending buys.
+- Historical archaeology confirmed an entry/exit asymmetry: positive partial
+  sells were explicitly made pending in `d8d34b79`, while positive partial buys
+  remained membership-complete in the earlier `e1531b3c` contract and replay
+  oracle `ce91d60a`.
 
 ## Immediate next questions
 
@@ -43,6 +47,7 @@ The system tracks target membership but not target quantity obligations. A posit
 2. Which state/artifact boundary should own filled/remaining quantities, given that planned per-entry sizing is already preserved in the prepared payload?
 3. Can a residual-aware CA timing matrix distinguish actual entitlement from an unmet target quantity without over-entitling?
 4. Which recovery invariant should reconcile planned, filled, and remaining quantities after an interrupted execution?
+5. Which historical replay/state contracts must a unified quantity-obligation design preserve or deliberately supersede?
 
 ## Constraints
 

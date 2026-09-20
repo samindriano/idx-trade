@@ -84,6 +84,26 @@ This closes the recovery behavior question at the current schema: atomic
 recovery is deterministic and idempotent, but it has no quantity obligation
 from which to reconstruct the missing 2,600 shares.
 
+## Historical design archaeology
+
+The current asymmetry is visible in the implementation history:
+
+- `e1531b3c` (`fix(execution): remediate paper state divergence and execution
+  allocation`) introduced the joint allocator, `FillRecord.planned_shares` /
+  `filled_shares`, zero-lot `pending_buys`, and a ticker-set pending invariant.
+- `d8d34b79` (`fix(execution): capacity-guard exits and persist partial sells`)
+  explicitly added positive partial-sell persistence and `pending_sells`, but
+  did not add positive partial-buy persistence.
+- `ce91d60a` later added an independent production replay oracle that records
+  planned versus filled buy shares while returning `pending_transition_count: 0`
+  and using filled shares as the durable positions.
+
+The evidence supports a historical contract asymmetry: partial exits were
+recognized as recoverable obligations, while positive entry underfills were
+accepted as completed membership transitions. The architectural consequence is
+to unify buy and sell obligations around planned/filled/remaining quantities,
+not merely change the allocator's status string.
+
 ## Why this is one contract failure
 
 The trigger varies, but the state transition is identical:

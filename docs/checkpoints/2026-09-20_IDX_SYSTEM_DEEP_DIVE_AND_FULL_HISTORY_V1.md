@@ -608,6 +608,11 @@ historical alpha archive:
   identical execution/snapshot hashes and the same `T00:2,400` underfill with
   no pending buy. Atomic recovery is deterministic, but cannot reconstruct a
   residual quantity absent from the transaction/state schema.
+- Historical archaeology explains the asymmetry: `e1531b3c` introduced
+  zero-lot buy pending plus ticker-set invariants, `d8d34b79` later explicitly
+  hardened positive partial sells, and `ce91d60a` replayed positive buy
+  planned/filled differences with pending count zero. The current defect is
+  therefore a historical contract split, not only an allocator edge case.
 
 The durable rolling controls for this marathon are now:
 
