@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -21,6 +22,8 @@ from idx_trade.v4_x1_migration_activation_v1 import (
     MigrationActivationPolicyV1,
     authorize_migration_activation,
     load_migration_activation_decision_v1,
+    verify_migration_activation_decision_payload,
+    verify_migration_activation_policy_payload,
     write_migration_activation_decision_v1,
 )
 from idx_trade.v4_x1_migration_provenance_v1 import build_migration_provenance_v1
@@ -103,6 +106,54 @@ def test_activation_decision_is_immutable_and_hash_verified(tmp_path) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(DecisionV1Error, match="HASH_MISMATCH"):
         load_migration_activation_decision_v1(path)
+
+
+def test_hash_valid_activation_extensions_are_rejected_as_noncanonical() -> None:
+    policy_payload = _policy(allow_legacy_mode=True).payload()
+    policy_payload["unexpected_extension"] = True
+    policy_body = dict(policy_payload)
+    policy_body.pop("policy_sha256")
+    policy_payload["policy_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                policy_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_migration_activation_policy_payload(policy_payload)
+
+    decision = authorize_migration_activation(
+        _provenance(
+            PaperPortfolioState(
+                as_of_session_date="2026-08-20",
+                cash_idr=1_000_000.0,
+                positions=(),
+            )
+        ),
+        _policy(allow_legacy_mode=True),
+    )
+    decision_payload = decision.payload()
+    decision_payload["unexpected_extension"] = True
+    decision_body = dict(decision_payload)
+    decision_body.pop("payload_sha256")
+    decision_payload["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                decision_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_migration_activation_decision_payload(decision_payload)
 
 
 def test_runtime_snapshot_consumer_persists_provenance_and_policy_decision(

@@ -26,6 +26,27 @@ ACTIVATE_LEGACY_MODE = "ACTIVATE_LEGACY_MODE"
 REQUIRES_AUTHORIZATION = "REQUIRES_AUTHORIZATION"
 BLOCKED_RECONCILIATION = "BLOCKED_RECONCILIATION"
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+_ACTIVATION_POLICY_KEYS = frozenset(
+    {
+        "schema_version",
+        "policy_id",
+        "authorization_ref",
+        "allow_legacy_mode",
+        "outcome_access",
+        "policy_sha256",
+    }
+)
+_ACTIVATION_DECISION_KEYS = frozenset(
+    {
+        "schema_version",
+        "provenance_payload_sha256",
+        "policy_sha256",
+        "activation_status",
+        "reason_code",
+        "outcome_access",
+        "payload_sha256",
+    }
+)
 
 
 def _canonical_hash(value: object) -> str:
@@ -37,15 +58,17 @@ def _canonical_hash(value: object) -> str:
 
 
 def _required_text(value: object, code: str) -> str:
-    text = str(value or "").strip()
-    if not text:
+    if not isinstance(value, str):
+        raise DecisionV1Error(code)
+    text = value.strip()
+    if not text or text != value:
         raise DecisionV1Error(code)
     return text
 
 
 def _sha(value: object, code: str) -> str:
     text = _required_text(value, code).lower()
-    if not _SHA_RE.fullmatch(text):
+    if not _SHA_RE.fullmatch(text) or text != value:
         raise DecisionV1Error(code)
     return text
 
@@ -111,15 +134,25 @@ def verify_migration_activation_policy_payload(value: dict[str, Any]) -> dict[st
     if not isinstance(value, dict):
         raise DecisionV1Error("MIGRATION_ACTIVATION_POLICY_REQUIRED")
     payload = dict(value)
+    if set(payload) != _ACTIVATION_POLICY_KEYS:
+        raise DecisionV1Error("MIGRATION_ACTIVATION_POLICY_PAYLOAD_NOT_CANONICAL")
     declared = _sha(
         payload.pop("policy_sha256", None),
         "MIGRATION_ACTIVATION_POLICY_SHA_INVALID",
     )
     if _canonical_hash(payload) != declared:
         raise DecisionV1Error("MIGRATION_ACTIVATION_POLICY_HASH_MISMATCH")
-    policy = MigrationActivationPolicyV1(**payload)
-    if policy.payload()["policy_sha256"] != declared:
-        raise DecisionV1Error("MIGRATION_ACTIVATION_POLICY_HASH_MISMATCH")
+    try:
+        policy = MigrationActivationPolicyV1(**payload)
+        canonical = policy.payload()
+    except (DecisionV1Error, TypeError) as exc:
+        if isinstance(exc, DecisionV1Error):
+            raise
+        raise DecisionV1Error(
+            "MIGRATION_ACTIVATION_POLICY_PAYLOAD_NOT_CANONICAL"
+        ) from exc
+    if canonical != {**payload, "policy_sha256": declared}:
+        raise DecisionV1Error("MIGRATION_ACTIVATION_POLICY_PAYLOAD_NOT_CANONICAL")
     return {**payload, "policy_sha256": declared}
 
 
@@ -127,15 +160,25 @@ def verify_migration_activation_decision_payload(value: dict[str, Any]) -> dict[
     if not isinstance(value, dict):
         raise DecisionV1Error("MIGRATION_ACTIVATION_DECISION_REQUIRED")
     payload = dict(value)
+    if set(payload) != _ACTIVATION_DECISION_KEYS:
+        raise DecisionV1Error("MIGRATION_ACTIVATION_DECISION_PAYLOAD_NOT_CANONICAL")
     declared = _sha(
         payload.pop("payload_sha256", None),
         "MIGRATION_ACTIVATION_DECISION_HASH_INVALID",
     )
     if _canonical_hash(payload) != declared:
         raise DecisionV1Error("MIGRATION_ACTIVATION_DECISION_HASH_MISMATCH")
-    decision = MigrationActivationDecisionV1(**payload)
-    if decision.payload()["payload_sha256"] != declared:
-        raise DecisionV1Error("MIGRATION_ACTIVATION_DECISION_HASH_MISMATCH")
+    try:
+        decision = MigrationActivationDecisionV1(**payload)
+        canonical = decision.payload()
+    except (DecisionV1Error, TypeError) as exc:
+        if isinstance(exc, DecisionV1Error):
+            raise
+        raise DecisionV1Error(
+            "MIGRATION_ACTIVATION_DECISION_PAYLOAD_NOT_CANONICAL"
+        ) from exc
+    if canonical != {**payload, "payload_sha256": declared}:
+        raise DecisionV1Error("MIGRATION_ACTIVATION_DECISION_PAYLOAD_NOT_CANONICAL")
     return {**payload, "payload_sha256": declared}
 
 
