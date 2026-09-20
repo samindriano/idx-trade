@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `c91e2895`
+Verification revision: `178d2634`
 
 ## Boundary
 
@@ -30,6 +30,8 @@ state also round-trips through the V2 runtime snapshot writer/loader with a
 same-session idempotent write. A tampered latest explicit-close snapshot is
 quarantined and the verified partial ancestor is recovered without selecting
 the closed artifact.
+The runtime-aware wrapper preserves the dividend ledger while delegating all
+quantity transition and projection ownership to the base obligation contract.
 
 The full repository command was also attempted twice after this test addition.
 Both runs reached the end of the suite but encountered the known Windows
@@ -37,7 +39,7 @@ Both runs reached the end of the suite but encountered the known Windows
 `tests/test_official_open_evidence_v1.py` and once in
 `tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
 run in isolation. No contract-hardening test failed; the bounded 204-test
-result above is the current clean evidence for this lane.
+207-test result above is the current clean evidence for this lane.
 
 ## Verification command
 
