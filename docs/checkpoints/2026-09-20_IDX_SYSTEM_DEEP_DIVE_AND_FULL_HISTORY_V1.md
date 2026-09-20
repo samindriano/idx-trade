@@ -490,6 +490,8 @@ historical alpha archive:
   fee/slippage/stamp arithmetic is deterministic, while slippage is explicitly
   uncalibrated, regular-market-value is only a capacity proxy, aggregate
   session liquidity is not modeled, and paper fills are not broker-fill proof.
+  A ten-name synthetic order set confirmed all individual caps can pass with
+  aggregate gross fill near Rp9.009m and no aggregate liquidity guard.
 - `2026-09-20_IDX_DECISION_SIZING_EXECUTION_CONTRACT_AUDIT_V1.md`:
   Decision V2→Sizing V1→Execution V1 has meaningful provenance and fail-closed
   checks, but full runtime-config identity, projected-CA/NAV identity, and a
