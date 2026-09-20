@@ -511,6 +511,16 @@ historical alpha archive:
   qualification. This is a Decision/cash/exposure state, not merely a rank
   output.
 
+- `2026-09-20_IDX_CA_DIVIDEND_LIFECYCLE_AUDIT_V1.md`:
+  the earlier direct- IDX cash-dividend work is preserved as HISTORICAL/PRIOR,
+  while the current pinned-runtime continuation confirms the bounded
+  certified-event -> entitlement -> receivable -> settlement -> cash path,
+  NAV-versus-spendable-cash separation, late-certification historical-state
+  requirement, and recursive runtime/journal checks. Zapi's historical
+  coverage/revision request remains a source lead only: local admission is
+  still blocked, non-cash CA remains fail-closed, and tax/net policy is
+  unresolved. The continuation slice passed `116` tests.
+
 The updated system-level belief is therefore:
 
 `local component correctness != complete portfolio-system correctness`
