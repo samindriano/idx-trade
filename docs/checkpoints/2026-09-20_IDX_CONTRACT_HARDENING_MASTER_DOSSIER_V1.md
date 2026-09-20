@@ -2,7 +2,7 @@
 
 Date: 2026-09-21 (Asia/Jakarta)
 Lane: isolated implementation `codex/idx-contract-hardening-20260920`  
-Status: `PHASE-1 FOUNDATION + PHASE-2 EXECUTION IN PROGRESS / NO PRODUCTION OR PROTECTED-OUTCOME ACCESS`
+Status: `AUTHORIZED LOCAL REMEDIATION COMPLETE / EXTERNAL GATES OPEN / NO PRODUCTION OR PROTECTED-OUTCOME ACCESS`
 
 ## Objective
 
@@ -234,8 +234,9 @@ cancellation/relinquishment is implemented only as a caller-supplied,
 parent-bound transition with a hash-bound policy envelope; it is never inferred
 from target membership. Pairing, expiry, and `FULL`-quantity semantics remain
 policy gaps. The prepared Decision/execution-plan replay gap, terminal recovery
-fence, and authenticated quarantine manifest are covered by `2aa210bf`; this
-is not a production promotion or phase closure.
+fence, and authenticated quarantine manifest are covered by `2aa210bf`. This
+closes the authorized local remediation scope, not production promotion or
+external policy adoption.
 
 ## Boundaries
 

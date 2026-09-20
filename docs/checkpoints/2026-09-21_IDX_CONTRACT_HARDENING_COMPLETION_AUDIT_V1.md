@@ -60,8 +60,7 @@ assumptions. Legacy ambiguity remains fail-closed.
 
 ## Determination
 
-Local implementation and synthetic verification evidence satisfy the
-authorized, outcome-blind remediation scope. The overall goal remains active,
-not marked complete, because production policy activation, authoritative
-identity-source adoption, and live protected-runtime validation are explicitly
-outside this lane and cannot be inferred from synthetic tests.
+The authorized local, outcome-blind remediation scope is complete and
+verified. This is not a production promotion: production policy activation,
+authoritative identity-source adoption, and live protected-runtime validation
+remain explicitly external and are not claimed or inferred by this lane.
