@@ -512,7 +512,7 @@ historical alpha archive:
   output.
 
 - `2026-09-20_IDX_CA_DIVIDEND_LIFECYCLE_AUDIT_V1.md`:
-  the earlier direct- IDX cash-dividend work is preserved as HISTORICAL/PRIOR,
+  the earlier direct IDX cash-dividend work is preserved as HISTORICAL/PRIOR,
   while the current pinned-runtime continuation confirms the bounded
   certified-event -> entitlement -> receivable -> settlement -> cash path,
   NAV-versus-spendable-cash separation, late-certification historical-state
@@ -520,6 +520,13 @@ historical alpha archive:
   coverage/revision request remains a source lead only: local admission is
   still blocked, non-cash CA remains fail-closed, and tax/net policy is
   unresolved. The continuation slice passed `116` tests.
+- `2026-09-20_IDX_CROSS_COMPONENT_PARTIAL_FILL_CA_MATRIX_V1.md`:
+  an isolated replacement scenario confirmed that a 1% capacity-limited exit
+  can partially fill, preserve the residual holding and pending sell, and
+  block the paired buy while maintaining cash/lot invariants. The result is a
+  deterministic paper transition, not broker reconciliation; the
+  `reconciliation_required=false` interpretation, pending-age escalation, and
+  multi-session interaction with dividend settlement remain policy questions.
 
 The updated system-level belief is therefore:
 
