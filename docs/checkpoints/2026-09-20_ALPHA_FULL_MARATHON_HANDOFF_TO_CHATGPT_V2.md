@@ -32,8 +32,10 @@ capacity. Another blind model tweak is not justified before those gates.
 - Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
 - Baseline: `58f094b8`
-- Current HEAD: `f34dcecb2d332464f405638f5df1aa9ed3a45506`
-- Current status before this documentation commit: clean.
+- Evidence snapshot HEAD before this handoff document: `f34dcecb2d332464f405638f5df1aa9ed3a45506`.
+- The handoff document is documentation-only; an auditor should read the final
+  branch HEAD directly before relying on hash-bound machine evidence below.
+- Worktree status at the evidence snapshot: clean.
 - Current durable manifest: `research_knowledge/manifest.json`.
 - Recorded active commit span: roughly 23 hours of calendar time; this is not
   a claim of 23 continuous hours of compute or human attention.
@@ -254,7 +256,8 @@ changes.
 
 ## 5. Current hash-bound machine evidence
 
-- HEAD: `f34dcecb2d332464f405638f5df1aa9ed3a45506`.
+- Evidence-run HEAD: `f34dcecb2d332464f405638f5df1aa9ed3a45506` (the cited
+  verifier outputs predate this documentation-only handoff commit).
 - Future packet SHA-256: `7756bc138cd4b7da9ac2a5ad09c7fe5a10addeb76e54f9132b292bb73d212894`.
 - Future packet contract SHA-256: `a76cd5acdfe457668b6241c4d28d677e4c2b92a98f2a54b82401338a6d794d4d`.
 - Eligibility guard SHA-256: `743ad3b809a11536506487e26dbb4d57809089960f91dd30ee777be8ccff5dd6`.
