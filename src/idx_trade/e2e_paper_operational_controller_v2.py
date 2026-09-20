@@ -188,6 +188,13 @@ def run_operational_cycle_v2(
                         prepared_path=str(prepared[0]),
                     )
                 payload = v1._read_json(prepared[0])
+                v1._persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="CA_CAPTURE",
+                    prepared_path=str(prepared[0]),
+                )
                 ca_status = v1._ensure_ca_phase(
                     config,
                     session=today,
@@ -253,6 +260,13 @@ def run_operational_cycle_v2(
                 eod = payload["eod_inputs"]
                 before_execution = config.runtime_root / "executions" / f"{today}.json"
                 was_complete = before_execution.is_file()
+                v1._persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="PHASE_ATTESTATION",
+                    prepared_path=str(prepared[0]),
+                )
                 phase_attestation_path, _ = write_phase_attestation(
                     config.runtime_root,
                     phase="PREOPEN",
@@ -281,6 +295,13 @@ def run_operational_cycle_v2(
                 ]
                 if previous_score_path is not None:
                     command.extend(("--previous-score-manifest", str(previous_score_path)))
+                v1._persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="CHILD_EXECUTION",
+                    prepared_path=str(prepared[0]),
+                )
                 v1._run_child(config, "preopen_v2", command)
                 execution = v1._read_json(before_execution)
                 return finish(
@@ -348,6 +369,13 @@ def run_operational_cycle_v2(
                     prepared_ca = v1._reconcile_prepared_ca(
                         prepared_payload, required_tickers=required_prepared
                     )
+                    v1._persist_running_boundary(
+                        config,
+                        status,
+                        phase="POST_EOD",
+                        side_effect="MISSED_EXECUTION_WRITE",
+                        prepared_path=str(prepared_today[0]),
+                    )
                     missed = advance_missed_execution_no_certified_open_with_schedule(
                         config.runtime_root,
                         prepared_path=prepared[0],
@@ -397,12 +425,27 @@ def run_operational_cycle_v2(
                     )
                 raise
 
+            v1._persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="BOOTSTRAP_T0_WRITE",
+                decision_session_date=today,
+            )
             bootstrap_t0(config.runtime_root, session_date=today)
             required = derive_required_execution_tickers(
                 config.runtime_root,
                 current_score=current_score,
                 previous_score=previous_score,
                 eod_inputs=eod_inputs,
+            )
+            v1._persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="CA_CAPTURE",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
             )
             ca_status = v1._ensure_ca_phase(
                 config,
@@ -419,6 +462,14 @@ def run_operational_cycle_v2(
                 through_session=eod_inputs.next_official_session_date,
             )
             ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
+            v1._persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="PHASE_ATTESTATION",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
+            )
             phase_attestation_path, _ = write_phase_attestation(
                 config.runtime_root,
                 phase="POST_EOD",
@@ -445,6 +496,14 @@ def run_operational_cycle_v2(
             ]
             if previous_path is not None:
                 command.extend(("--previous-score-manifest", str(previous_path)))
+            v1._persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="CHILD_EXECUTION",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
+            )
             v1._run_child(config, "post_eod_v2", command)
             prepared_after, unbound_after = _verified_prepared_for_session(
                 config, eod_inputs.next_official_session_date
