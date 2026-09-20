@@ -30,7 +30,7 @@ All work described here was performed in the isolated research lane:
 - Worktree: `C:\Users\Sam\.codex\worktrees\idx-alpha-available-data-20260919`
 - Branch: `codex/alpha-available-data-20260919`
 - Baseline: `58f094b8`
-- Latest committed HEAD: `c14527ef`
+- Latest committed HEAD: `4a796f2c`
 - External staging root:
   `D:\Documents\Project\idx-alpha-available-data-staging-20260919\stage-a-final-guarded`
 - Frozen feature artifact SHA-256:
@@ -58,13 +58,13 @@ human attention, compute time, or token usage.
 Parallel alpha workers briefly left this worktree dirty while the handoff was
 being assembled. Their bounded additions were subsequently integrated in
 `c14527ef` (`research: adjudicate alpha red-team authority findings`). The
-four-file market-state overlap experiment is in `a4dc06b5`. The V6 document is
-the only new uncommitted file while it is being prepared; the older auditor
+market-state overlap experiment is in `a4dc06b5`, the eligibility decision-set
+audit in `be175157`, and the horizon bridge in `4a796f2c`. The older auditor
 should still inspect `git status --short` before treating any checkout as a
 clean snapshot.
 
-The current committed knowledge verifier returns `PASS` with 51 experiment
-records, 44 findings, 16 no-retry records, and 17 source capability entries.
+The current committed knowledge verifier returns `PASS` with 53 experiment
+records, 46 findings, 16 no-retry records, and 17 source capability entries.
 The last pre-parallel committed registry snapshot at `778561cf` contained 47
 experiments, 38 findings, and 15 no-retry records. This difference is
 provenance information, not a scientific result.
@@ -309,9 +309,18 @@ The last committed appendices are:
    39.06% in `RET_LOW_ACT_HIGH`; mean C2/C4 is lowest in `HIGH_HIGH` at 8.29%.
    This is state-dependent structural complementarity, not predictive
    orthogonality or a conditioning rule.
+6. Eligibility policy versus selection: the minimum-20 versus min-periods-60
+   fork produces mean cross-policy Top-30 overlap of 96.52%/100.00%/94.05%/
+   91.71% for C1/C2/C3/C4. C4 has only 12.74% exact daily matches, so the
+   unresolved policy changes decision sets rather than only row counts.
+7. C1/C4 horizon bridge: raw `-ret_5` versus raw `-ret_20` overlap is 37.96%,
+   close to residual-numerator/raw-C4 overlap 36.82% and stored-score overlap
+   35.80%. C1 raw/residual overlap is 84.55%, while C1 and C4 normalizers
+   reduce stored-versus-numerator overlap to 63.75% and 62.22%.
 
-Latest appendix commits: `a4dc06b5` and `c14527ef`, with the overlap focused
-test `1/1`; JSON, diff, and knowledge-verifier validation passed.
+Latest appendix commits: `a4dc06b5`, `be175157`, and `4a796f2c`, with focused
+tests `1/1` for each new experiment; JSON, diff, and knowledge-verifier
+validation passed.
 
 ## 4. Candidate and hypothesis status at handoff
 
@@ -378,6 +387,8 @@ The principal machine-readable structural results include:
 - `c2_market_breadth_mixture_v1.json`
 - `c1_c4_normalizer_direction_v1.json`
 - `candidate_overlap_market_state_v1.json`
+- `eligibility_selection_overlap_v1.json`
+- `c1_c4_horizon_bridge_v1.json`
 - `historical_archaeology_audit_v1.json`
 - `formula_mutation_challenger_v1.json`
 - `packet_nested_schema_challenger_v1.json`
@@ -392,7 +403,7 @@ git status --short --branch
 git log --oneline --decorate -20
 python research/verify_alpha_knowledge_base_v1.py
 python research/verify_alpha_data_authority_packet_v1.py --packet research_knowledge/data_authority_packet_v1.json
-python -m pytest tests/test_alpha_candidate_overlap_market_state_v1.py -q
+python -m pytest tests/test_alpha_candidate_overlap_market_state_v1.py tests/test_alpha_eligibility_selection_overlap_v1.py tests/test_alpha_c1_c4_horizon_bridge_v1.py -q
 git diff --check
 ```
 
