@@ -199,7 +199,7 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`ee4837da` passes `205/205` across the latest
+`1a1fe463` passes `205/205` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
 state-level explicit cancellation/relinquishment replay, evidence, CA,
 identity, transition, lineage, migration, dividend-runtime, and E2E

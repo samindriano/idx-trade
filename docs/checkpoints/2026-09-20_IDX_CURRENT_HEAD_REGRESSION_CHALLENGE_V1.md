@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `ee4837da`
+Verification revision: `1a1fe463`
 
 ## Boundary
 
