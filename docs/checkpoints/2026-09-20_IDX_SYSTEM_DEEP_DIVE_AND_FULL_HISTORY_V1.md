@@ -701,6 +701,12 @@ historical alpha archive:
   gate has strong provenance/code-pin controls, but no independent formula
   oracle is bound, so agreement is not formula correctness. No protected result
   or evaluator/gate code was changed.
+- `2026-09-20_IDX_EXECUTION_EVALUATION_QUANTITY_BOUNDARY_AUDIT_V1.md` adds the
+  execution-to-evaluation boundary result: the protected validator admits only
+  aggregate buy/sell notional and prior NAV, so an IDR5m plan with IDR2.5m
+  filled can be evaluated as a valid 5% turnover row with no residual evidence.
+  This is a quantity-completeness/interpretation gap, not protected-outcome
+  access or a claim that a real evaluation passed.
 
 The durable rolling controls for this marathon are now:
 

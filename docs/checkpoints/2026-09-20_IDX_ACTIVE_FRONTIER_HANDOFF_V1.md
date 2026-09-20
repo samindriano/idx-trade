@@ -89,6 +89,9 @@ The system tracks target membership but not target quantity obligations. A posit
 - Formula-independence checkpoint: `2026-09-20_IDX_PROSPECTIVE_FORMULA_INDEPENDENCE_AUDIT_V1.md`.
   The protected gate and development evaluator share all five metric function
   objects; provenance/pin checks are independent, formula recomputation is not.
+- Execution-evaluation quantity checkpoint: `2026-09-20_IDX_EXECUTION_EVALUATION_QUANTITY_BOUNDARY_AUDIT_V1.md`.
+  The protected execution validator admits only aggregate gross notional/NAV
+  columns; planned-versus-filled quantity and residual obligations are absent.
 
 ## Immediate next questions
 
@@ -118,6 +121,8 @@ The system tracks target membership but not target quantity obligations. A posit
     scope, or does paper admissibility require a separately authorized overlay?
 12. Which independently reviewed formula oracle or verifier contract should be
     bound to the prospective evaluation gate without opening protected outcomes?
+13. Which versioned execution-evidence join should bind planned, filled,
+    remaining, position, pending, and cost state to evaluation metrics?
 
 ## Constraints
 
