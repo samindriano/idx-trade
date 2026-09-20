@@ -2,7 +2,7 @@
 
 Date: 2026-09-21
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `3b5d5e4c`
+Verification revision: `d57ec5d0`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`251/251 PASS`.
+`252/252 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -48,19 +48,19 @@ its own manifest hash; manifest tampering fails closed.
 
 Explicit Decision-seat closure now requires a caller-supplied,
 hash-bound `DecisionSeatClosePolicyV1`. The policy records its authorization
-reference and allowed status/reason set, close events persist the policy hash,
-and missing or unauthorized policy semantics fail closed. No production
-status/reason, paired-replacement, expiry, or `FULL`-quantity policy is chosen
-by this lane.
+reference and allowed status/reason set, close events persist both the policy
+envelope and hash, and restart deserialization re-verifies them. Reusing an
+event ID with a different policy is a conflict; missing or unauthorized policy
+semantics fail closed. No production status/reason, paired-replacement,
+expiry, or `FULL`-quantity policy is chosen by this lane.
 
-After this policy-gate change, the full repository collected `889` tests and
-ended `888 passed / 1 failed` in both attempts. The only failure was the
-unrelated existing `tests/test_capture_forward_ca_idx_bei.py::test_direct_transport_failure_uses_zapi_raw_and_verifies_nested_provenance`,
-which hit Windows `PermissionError [WinError 5]` while atomically replacing a
-temporary output directory. That test passed when run in isolation. No
-contract-hardening test failed; the bounded `251/251` result above is the
-clean lane evidence. No protected/provider/canonical/cloud/capture/telemetry/
-scheduler state was accessed.
+The current full repository run collected `890` tests and completed
+`890/890 PASS`, with only the three pre-existing pandas `FutureWarning`
+records. An intermediate run before the durable policy-envelope hardening hit
+the unrelated Windows `PermissionError [WinError 5]` temporary-directory
+replace in the capture fixture; its targeted test passed in isolation and the
+current full run is clean. No protected/provider/canonical/cloud/capture/
+telemetry/scheduler state was accessed.
 
 ## Verification command
 

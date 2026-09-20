@@ -109,10 +109,11 @@ The isolated lane currently contains:
   an explicit cancellation/relinquishment transition is supplied; pending-only
   reversal compatibility remains intact.
 - explicit Decision-seat closure now requires a caller-supplied,
-  hash-bound `DecisionSeatClosePolicyV1`; close events persist the policy hash,
-  while missing or unauthorized status/reason semantics fail closed. No
-  production default, paired-replacement, expiry, or `FULL`-quantity policy is
-  invented by this lane.
+  hash-bound `DecisionSeatClosePolicyV1`; close events persist the policy
+  envelope and hash, restart re-verifies both, and missing or unauthorized
+  status/reason semantics fail closed. Reusing an event ID with a different
+  policy is a conflict. No production default, paired-replacement, expiry, or
+  `FULL`-quantity policy is invented by this lane.
 - explicit CA sizing lineage separating raw execution state from projected
   total-return NAV; the E2E plan no longer silently rebinds only outer hashes;
 - `CA_TIMING_MATRIX-V1` classifies payment-before-decision,
@@ -216,10 +217,10 @@ execution replay rejects it before any idempotent completion path. The active
 obligation reversal guard is covered by the same current full-suite run, with a
 post-snapshot second-order assertion at `3996cfd0`.
 A fresh current-head regression challenge at verification revision
-`3b5d5e4c` passes `251/251` across the latest
+`d57ec5d0` passes `252/252` across the latest
 top-level replay, active-obligation reversal, quantity-obligation, parent-bound
-state-level explicit cancellation/relinquishment replay, hash-bound
-Decision-seat policy gate, evidence, CA, identity, transition, lineage,
+state-level explicit cancellation/relinquishment replay, hash-bound and
+durable Decision-seat policy gate, evidence, CA, identity, transition, lineage,
 migration, dividend-runtime, and E2E controller/orchestration suites; see
 `2026-09-20_IDX_CURRENT_HEAD_REGRESSION_CHALLENGE_V1.md`. This is a local
 regression result, not an independent reviewer attestation or production
