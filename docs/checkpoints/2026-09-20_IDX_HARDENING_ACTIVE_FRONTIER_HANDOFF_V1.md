@@ -148,7 +148,7 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - post-implementation independent challenge record V2 is PASS for nested replay,
   lineage, CA, cause, identity, snapshot, migration, and V1/V2 controller gates;
   see `2026-09-20_IDX_INDEPENDENT_CHALLENGE_RESULT_V2.md`;
-- a fresh current-head regression challenge is also PASS at `230/230` for the
+- a fresh current-head regression challenge is also PASS at `232/232` for the
   latest top-level replay, active-obligation reversal, quantity-obligation,
   parent-bound state-level explicit cancellation/relinquishment replay,
   evidence, CA, identity, transition, lineage, migration, dividend-runtime, and E2E
@@ -157,8 +157,12 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - the V4-X1 Decision adapter now rejects boolean rank values before numeric
   coercion; the regression test and expanded bounded challenge are recorded at
   `31e05ee1` with `230/230 PASS`;
+- execution state and runtime snapshot decoding now reject non-integer or
+  boolean position shares before whole-lot validation; the follow-up challenge
+  is recorded at `9dacf7e6` with `232/232 PASS`;
 - exact base/runtime lineage remains recorded;
-- continuation commits include `31e05ee1` (boolean rank validation),
+- continuation commits include `9dacf7e6` (strict position-share validation),
+  `31e05ee1` (boolean rank validation),
   `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
   retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane

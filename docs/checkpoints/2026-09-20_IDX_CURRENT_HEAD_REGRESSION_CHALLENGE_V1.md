@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Lane: `codex/idx-contract-hardening-20260920`
-Verification revision: `31e05ee1`
+Verification revision: `9dacf7e6`
 
 ## Boundary
 
@@ -15,7 +15,7 @@ alpha state.
 
 ## Result
 
-`230/230 PASS`.
+`232/232 PASS`.
 
 The suite covers the latest top-level replay envelope hardening, active
 obligation reversal fail-closed behavior, persisted quantity obligations,
@@ -34,6 +34,9 @@ The runtime-aware wrapper preserves the dividend ledger while delegating all
 quantity transition and projection ownership to the base obligation contract.
 The V4-X1 Decision adapter also rejects boolean rank values before numeric
 coercion, preventing `True` from becoming rank `1`.
+Execution state and runtime snapshot decoding now reject non-integer or boolean
+position shares before whole-lot validation, preventing lossy `100.9 -> 100`
+coercion.
 
 Earlier in this lane, the full repository command was also attempted twice
 after the preceding contract additions.
@@ -42,7 +45,7 @@ Both runs reached the end of the suite but encountered the known Windows
 `tests/test_official_open_evidence_v1.py` and once in
 `tests/test_capture_forward_ca_idx_bei.py`. The first failure test passed when
 run in isolation. No contract-hardening test failed; the expanded bounded
-230-test result above is the current clean evidence for this lane.
+232-test result above is the current clean evidence for this lane.
 
 ## Verification command
 
