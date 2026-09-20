@@ -190,7 +190,11 @@ Decision adapter, quantity contract, dividend runtime/snapshot, dividend
 execution/orchestration, schedule binding, and E2E paper
 orchestration/controller. Current HEAD `ba38396a` also passes the full
 repository regression with only the three pre-existing pandas warnings. The
-V2 independent-challenge record predates the latest local envelope hardening;
+follow-up top-level execution replay tamper assertion also passes at
+`600866ae`; it rehashes an unknown top-level extension and confirms existing
+execution replay rejects it before any idempotent completion path.
+The V2 independent-challenge record predates the latest local envelope
+hardening;
 its synthetic gates remain evidence, not a fresh final challenge at this HEAD.
 External authorization/adoption, authoritative identity-source provisioning,
 live provider/scheduler interruption validation, automatic migration activation,

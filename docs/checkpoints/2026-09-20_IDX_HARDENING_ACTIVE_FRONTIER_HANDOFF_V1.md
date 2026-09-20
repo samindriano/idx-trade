@@ -149,9 +149,11 @@ Base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - continuation commits are `dffd70c9` (reconciliation and migration replay),
   `4430b6a6` (migration activation replay), `6ee67c2a` (partial BUY restart
   retry evidence), and `ba38396a` (top-level E2E envelope replay); the lane
-  remains clean and no commit was pushed or merged;
-- current HEAD (`ba38396a`) full repository regression via `python -m pytest -q`
-  passed at 100% with only three pre-existing pandas `FutureWarning` records.
+  remains clean and no commit was pushed or merged. The follow-up adversarial
+  replay assertion is `600866ae`;
+- current source HEAD (`ba38396a`) full repository regression via
+  `python -m pytest -q` passed at 100% with only three pre-existing pandas
+  `FutureWarning` records; current HEAD adds only the passing replay test.
   Earlier
   runs hit the known unrelated Windows `PermissionError [WinError 5]`
   atomic-replace fixture flake in `official_open_evidence_v1.py`; targeted
