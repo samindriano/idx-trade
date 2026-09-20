@@ -65,6 +65,30 @@
   packet hashes, and result schema while the unchanged packet remains valid.
   Packet validity therefore cannot be treated as freshness of a historical
   verifier result; adoption remains unapproved.
+- Candidate-specific calendar-year strata materially separate the support
+  surface: C1/C2/C4 have broad finite structural support from 2022 onward,
+  while C3 has zero finite rows through 2024 and begins on 2025-04-25 with
+  partial support through 2026-07-17. This is a descriptive era map, not an
+  admitted subset.
+- Every observed panel key is an ACTIVE tradability-anchor key and none is
+  NO_TRADE, but 458 ACTIVE anchor rows are absent from the panel in 2021-2024.
+  Therefore panel-to-anchor overlap is a structural consistency result, not
+  proof that the panel is the full historical population.
+- The global Data-QA block is candidate-specific in substance: C1/C4 directly
+  require price/CA authority; C2 additionally requires volume/liquidity
+  semantics and capacity; C3 directly requires financial publication,
+  revision, and provenance authority while inheriting the upstream liquidity
+  mask. No candidate or era is admitted by this decomposition.
+- The minimum-20 versus minimum-60 mask delta occurs in every calendar year:
+  11,623 rows in 2021, 4,257 in 2022, 4,577 in 2023, 4,669 in 2024,
+  7,741 in 2025, and 5,137 in 2026. The ambiguity is therefore not only a
+  first-era warm-up artifact; the 2025-2026 candidate-era surface remains
+  policy-sensitive.
+- Calendar-year Top-30 mechanics add a distinct structural view beyond the
+  existing six-block lab: C1/C2/C4 turnover rises mildly in 2026 partial year,
+  while C3 has no usable Top-30 date before 2025 and shows sparse-support
+  concentration and persistence. These are mechanics only, not capacity or
+  predictive stability.
 - The available local outcome-blind surface is now substantially exhausted:
   remaining high-value work requires unavailable authority/data or independent
   review, while repeated local searches and mutations would be redundant.
@@ -102,6 +126,9 @@
 - New source evidence with publication/knowledge time and semantics, not merely
   more rows or a larger sample.
 - A genuine non-redundant mechanism with a pre-registered admission path.
+- A candidate-specific source contract may narrow which missing authority is
+  relevant, but it cannot replace population completeness or explicit policy
+  authority for an admitted historical subset.
 
 ## Highest-value missing data
 

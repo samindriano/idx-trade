@@ -66,6 +66,25 @@ performance, outcome, or economic evidence. Rank denominators, finite dates,
 and tickers are preserved in the full staging result referenced by the compact
 summary.
 
+## Candidate-specific authority and bounded eras
+
+The follow-up era map uses natural calendar years, not result-optimized
+subsets. C1/C2/C4 have broad finite structural support from 2022 onward. C3
+has zero finite rows through 2024, begins on 2025-04-25, and remains partial
+through 2026-07-17. No era is admitted.
+
+Every observed panel key is an ACTIVE tradability-anchor key and none is a
+NO_TRADE key. However, the anchor table contains 458 ACTIVE rows absent from
+the panel in 2021-2024. This is evidence of structural overlap and panel
+coverage, not proof of a complete historical population.
+
+The dependency split is candidate-specific: C1/C4 directly require price and
+corporate-action basis authority; C2 additionally requires volume/liquidity
+semantics and capacity; C3 directly requires financial publication timing,
+revision, and provenance authority, while still inheriting the upstream
+liquidity mask. This narrows future admission work but changes no candidate
+status and does not replace population or policy authority.
+
 ## Population, identity, corporate actions, and financial PIT
 
 The available regular-ACTIVE anchors provide bounded structural masks, not a
@@ -139,3 +158,6 @@ the protected boundary remains closed.
 - Verifier audit: `research_knowledge/verifier_mutation_audit_v1.json`
 - Firewall audit: `research_knowledge/firewall_mutation_audit_v1.json`
 - Reproduction record: `research_knowledge/reproducibility.md`
+- Candidate-era map: `research_knowledge/candidate_era_authority_v1.json`
+- Eligibility delta by era: `research_knowledge/eligibility_era_delta_v1.json`
+- Candidate-era mechanics: `research_knowledge/candidate_era_mechanics_v1.json`

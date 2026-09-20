@@ -166,6 +166,9 @@
     "research_knowledge/data_authority_packet_v1.md",
     "research_knowledge/verifier_mutation_audit_v1.json",
     "research_knowledge/firewall_mutation_audit_v1.json",
+    "research_knowledge/candidate_era_authority_v1.json",
+    "research_knowledge/eligibility_era_delta_v1.json",
+    "research_knowledge/candidate_era_mechanics_v1.json",
     "research/alpha_data_authority_tooling_audit_v1.py",
     "research/verify_alpha_data_authority_packet_v1.py",
     "tests/test_alpha_data_authority_packet_v1.py"

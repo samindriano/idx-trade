@@ -2,26 +2,30 @@
 
 ## Current frontier order
 
-1. Eligibility provenance: distinguish security eligibility, feature warm-up,
+1. Candidate-specific authority and bounded eras: distinguish which missing
+   population, identity, CA, liquidity, and financial gates each candidate
+   actually consumes. Calendar-year support and fixed Top-30 mechanics are
+   mapped, but no era is admitted; sparse C3 mechanics remain support-driven.
+2. Eligibility provenance: distinguish security eligibility, feature warm-up,
    rolling estimator stability, legacy implementation, incumbent-specific
    settings, and Data-QA policy. Historical provenance is now narrowed to a
    pre-protocol 20-in-60 liquidity rule, but current classification remains
    `POLICY_AUTHORITY_MISSING / PROVENANCE_NARROWED` unless an explicit binding
    authority appears.
-2. Tooling/verifier adversarial audit: `SUPPORTED_SCOPED`; synthetic semantic
+3. Tooling/verifier adversarial audit: `SUPPORTED_SCOPED`; synthetic semantic
    challenger confirms false greens, the independent formula challenger detects
    five declared score/mask mutations, a draft nested allowlist rejects five
    nested/missing schema mutations, and a draft freshness contract rejects
    stale result wrappers. Drafts are not integrated; independent review and
    adoption remain open.
-3. Common-support methodology: native versus common support, sparse C3 handling,
+4. Common-support methodology: native versus common support, sparse C3 handling,
    and exact one-shot comparison design without opening outcomes. The initial
    structural census is complete; rerun only after policy/source changes.
-4. Historical reinterpretation: `BOUNDED_MAP_COMPLETE`; family-level
+5. Historical reinterpretation: `BOUNDED_MAP_COMPLETE`; family-level
    classifications and latest PIT/integrity supersession are recorded. Reopen
    only for a genuinely new historical artifact or a disputed classification
    requiring exact source replay.
-5. Re-entry preparation: only after an external/authoritative admission artifact
+6. Re-entry preparation: only after an external/authoritative admission artifact
    changes the current blocked state.
 
 ## Exhausted or low-value surfaces

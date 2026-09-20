@@ -1,0 +1,140 @@
+{
+  "schema_version": "IDX_TRADE_CANDIDATE_ERA_AUTHORITY_V1",
+  "experiment_id": "CANDIDATE-ERA-AUTHORITY-043",
+  "status": "PASS_STRUCTURAL_ERA_AND_DEPENDENCY_MAP",
+  "scope": "Outcome-blind calendar-year support and candidate-dependency census; no policy or era selected.",
+  "code": {
+    "path": "research/alpha_candidate_era_authority_v1.py",
+    "sha256": "1952850c517a8a6126b10d8f51f29594ef56aa93aec53550466dc139723dae06"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260920T-candidate-era/alpha_candidate_era_authority_v1.json",
+    "sha256": "16d0455d9579ab837ed83774a59f07e6c595aa87a6dc66b5ec722932d7a87457"
+  },
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a",
+    "panel_sha256": "25eb0d0c6fdbd1daefd0f735c08f18feeeef6dfbd0bd55cf8ab7527cf4784c2e",
+    "tradability_anchors_sha256": "33d53f4cf71944e665b1f94a180d5f4ffad084221c08d63858f10fcb93dbe18e"
+  },
+  "year_summary": {
+    "2021": {
+      "eligible_rows": 27527,
+      "eligible_dates": 108,
+      "eligible_tickers": 334,
+      "C1_finite_rows": 13349,
+      "C1_coverage": 0.484942,
+      "C2_finite_rows": 27527,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 0,
+      "C3_coverage": 0.0,
+      "C4_finite_rows": 27516,
+      "C4_coverage": 0.9996,
+      "financial_pit_valid_rows": 0
+    },
+    "2022": {
+      "eligible_rows": 66931,
+      "eligible_dates": 246,
+      "eligible_tickers": 446,
+      "C1_finite_rows": 66651,
+      "C1_coverage": 0.995817,
+      "C2_finite_rows": 66931,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 0,
+      "C3_coverage": 0.0,
+      "C4_finite_rows": 66822,
+      "C4_coverage": 0.998371,
+      "financial_pit_valid_rows": 0
+    },
+    "2023": {
+      "eligible_rows": 58688,
+      "eligible_dates": 239,
+      "eligible_tickers": 402,
+      "C1_finite_rows": 58381,
+      "C1_coverage": 0.994769,
+      "C2_finite_rows": 58688,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 0,
+      "C3_coverage": 0.0,
+      "C4_finite_rows": 58544,
+      "C4_coverage": 0.997546,
+      "financial_pit_valid_rows": 0
+    },
+    "2024": {
+      "eligible_rows": 53876,
+      "eligible_dates": 237,
+      "eligible_tickers": 366,
+      "C1_finite_rows": 53646,
+      "C1_coverage": 0.995731,
+      "C2_finite_rows": 53876,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 0,
+      "C3_coverage": 0.0,
+      "C4_finite_rows": 53800,
+      "C4_coverage": 0.998589,
+      "financial_pit_valid_rows": 0
+    },
+    "2025": {
+      "eligible_rows": 58949,
+      "eligible_dates": 236,
+      "eligible_tickers": 456,
+      "C1_finite_rows": 58685,
+      "C1_coverage": 0.995522,
+      "C2_finite_rows": 58949,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 13343,
+      "C3_coverage": 0.226348,
+      "C4_finite_rows": 58898,
+      "C4_coverage": 0.999135,
+      "financial_pit_valid_rows": 13343
+    },
+    "2026": {
+      "eligible_rows": 44790,
+      "eligible_dates": 135,
+      "eligible_tickers": 492,
+      "C1_finite_rows": 44531,
+      "C1_coverage": 0.994217,
+      "C2_finite_rows": 44790,
+      "C2_coverage": 1.0,
+      "C3_finite_rows": 17651,
+      "C3_coverage": 0.394084,
+      "C4_finite_rows": 44743,
+      "C4_coverage": 0.998951,
+      "financial_pit_valid_rows": 17651
+    }
+  },
+  "panel_anchor_boundary": {
+    "panel_rows": 981940,
+    "panel_tickers": 945,
+    "active_anchor_rows": 982398,
+    "no_trade_anchor_rows": 121666,
+    "panel_keys_with_active_anchor": 981940,
+    "panel_keys_with_no_trade_anchor": 0,
+    "panel_keys_without_active_anchor": 0,
+    "active_anchor_rows_absent_from_panel_by_year": {
+      "2021": 150,
+      "2022": 217,
+      "2023": 80,
+      "2024": 11,
+      "2025": 0,
+      "2026": 0
+    },
+    "interpretation": "All observed panel keys are ACTIVE anchors, but extra ACTIVE anchor rows are absent from the panel in earlier years; this is structural overlap, not population completeness."
+  },
+  "candidate_specific_conclusion": {
+    "C1": "Price/market-relative score; direct gates are eligibility policy, PIT population, security/issuer identity, and CA price basis. Financial PIT is not a direct score input.",
+    "C2": "Price/volume/turnover score; same population/identity/CA gates plus historical liquidity semantics and direct capacity relevance.",
+    "C3": "Financial score; direct gates are eligibility/population/identity plus publication timing, revision/vintage, and bundle provenance. Price is not a direct score input, but liquidity eligibility remains upstream.",
+    "C4": "Price/path score; direct gates are eligibility policy, PIT population, security/issuer identity, and CA price basis. Financial PIT is not a direct score input.",
+    "bounded_era_reading": "C1/C2/C4 have broad finite structural support from 2022 onward but no admitted era. C3 has no finite support through 2024 and begins on 2025-04-25, remaining partial through 2026-07-17."
+  },
+  "admission": {
+    "policy_selected": false,
+    "era_admitted": false,
+    "candidate_status_changed": false,
+    "protected_boundary": "CLOSED",
+    "provider_or_cloud_access": false,
+    "canonical_mutation": false
+  },
+  "reopen_trigger": "A hash-bound policy and candidate-specific source/PIT/identity/CA contract, or genuinely new authoritative population/financial evidence, followed by isolated regeneration."
+}

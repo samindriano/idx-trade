@@ -1,0 +1,49 @@
+{
+  "schema_version": "IDX_TRADE_CANDIDATE_ERA_MECHANICS_V1",
+  "experiment_id": "CANDIDATE-ERA-MECHANICS-045",
+  "status": "PASS_STRUCTURAL_ERA_MECHANICS",
+  "scope": "Fixed Top-30 calendar-year mechanics; no era, policy, or candidate selected.",
+  "top_k": 30,
+  "calendar": {
+    "official_session_count": 1260,
+    "official_min": "2021-04-29",
+    "official_max": "2026-07-31",
+    "turnover_rule": "only consecutive official sessions within the same calendar year"
+  },
+  "code": {
+    "path": "research/alpha_candidate_era_mechanics_v1.py",
+    "sha256": "b58269a65eaafa627bf912cce7e860196d151939703baec3335e50297fd94039"
+  },
+  "external_result": {
+    "path": "D:/Documents/Project/idx-alpha-available-data-staging-20260919/stage-a-final-guarded/20260919T-finalized-guarded/alpha_candidate_era_mechanics_v1.json",
+    "sha256": "797c41486fd08ee86c04988331dc6179994570fe7c2374cc72b14657d04ec34e"
+  },
+  "summary": {
+    "C1": {
+      "2022": {"finite_coverage": 0.9958165872, "usable_top30_dates": 246, "turnover_mean": 0.4121088435, "persistence_mean": 2.4125531219, "effective_names": 287.7208182, "rank_displacement_mean": 0.1485250113},
+      "2025": {"finite_coverage": 0.9955215525, "usable_top30_dates": 236, "turnover_mean": 0.4231205674, "persistence_mean": 2.3498174577, "effective_names": 254.2809314, "rank_displacement_mean": 0.1526981145},
+      "2026": {"finite_coverage": 0.9942174593, "usable_top30_dates": 135, "turnover_mean": 0.4378109453, "persistence_mean": 2.2625698324, "effective_names": 279.6293771, "rank_displacement_mean": 0.1545931493}
+    },
+    "C2": {
+      "2022": {"finite_coverage": 1.0, "usable_top30_dates": 246, "turnover_mean": 0.3338775510, "persistence_mean": 2.9710144928, "effective_names": 231.0104086, "rank_displacement_mean": 0.1512903206},
+      "2025": {"finite_coverage": 1.0, "usable_top30_dates": 236, "turnover_mean": 0.3232624113, "persistence_mean": 3.0662624513, "effective_names": 237.0916934, "rank_displacement_mean": 0.1584803869},
+      "2026": {"finite_coverage": 1.0, "usable_top30_dates": 135, "turnover_mean": 0.3554726368, "persistence_mean": 2.7758738862, "effective_names": 219.6194735, "rank_displacement_mean": 0.1490564818}
+    },
+    "C3": {
+      "2024": {"finite_coverage": 0.0, "usable_top30_dates": 0},
+      "2025": {"finite_coverage": 0.2263481993, "usable_top30_dates": 153, "turnover_mean": 0.1075555556, "persistence_mean": 7.9965156794, "effective_names": 61.6866842, "rank_displacement_mean": 0.0164467737},
+      "2026": {"finite_coverage": 0.3940835008, "usable_top30_dates": 125, "turnover_mean": 0.1123655914, "persistence_mean": 8.3705357143, "effective_names": 50.9562564, "rank_displacement_mean": 0.0130259535}
+    },
+    "C4": {
+      "2022": {"finite_coverage": 0.9983714572, "usable_top30_dates": 246, "turnover_mean": 0.2331972789, "persistence_mean": 4.2316513761, "effective_names": 238.4731247, "rank_displacement_mean": 0.0741090309},
+      "2025": {"finite_coverage": 0.9991348454, "usable_top30_dates": 236, "turnover_mean": 0.2422695035, "persistence_mean": 4.0736478711, "effective_names": 211.2684604, "rank_displacement_mean": 0.0789003781},
+      "2026": {"finite_coverage": 0.9989506586, "usable_top30_dates": 135, "turnover_mean": 0.2547263682, "persistence_mean": 3.8425047438, "effective_names": 210.3046388, "rank_displacement_mean": 0.0823326282}
+    }
+  },
+  "adjacent_year_jaccard_2025_2026": {"C1": 0.6438356164, "C2": 0.5747572816, "C3": 0.5371900826, "C4": 0.5511482255},
+  "admission": {"policy_selected": false, "era_admitted": false, "candidate_status_changed": false, "protected_boundary": "CLOSED"},
+  "inputs": {
+    "features_sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "official_sessions_sha256": "661d3f19d0dc427d2a8b5c832594de5d43c9433ffac414f35835f47c9faaf09a"
+  }
+}

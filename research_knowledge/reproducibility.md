@@ -190,3 +190,30 @@ access absence.
   recorded as distinct implementation/concept surfaces.
 - This narrows provenance but does not bind current project policy. No
   population was selected or regenerated, and no protected outcome was read.
+
+## Eligibility policy delta by calendar year
+
+- Script: `research/alpha_eligibility_era_delta_v1.py`.
+- Durable result: `research_knowledge/eligibility_era_delta_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_ELIGIBILITY_ERA_DELTA_RESULT_V1.md`.
+- Code SHA-256:
+  `dd20ca55a6ac8d967e3e76853724d2e81f49d074a40a9e78aed6f2d70f198f7c`.
+- Durable result SHA-256:
+  `2a5764e2bccb5b50f8834eac89b1f389ce41880cffb86b2fe357e433970416cb`.
+- The min20-minus-min60 delta is present in every calendar year and totals
+  38004 rows across 619 tickers and 1241 dates. No policy or era was selected.
+
+## Candidate calendar-year mechanics
+
+- Script: `research/alpha_candidate_era_mechanics_v1.py`.
+- Durable result: `research_knowledge/candidate_era_mechanics_v1.json`.
+- Checkpoint: `docs/checkpoints/2026-09-20_ALPHA_CANDIDATE_ERA_MECHANICS_RESULT_V1.md`.
+- Code SHA-256:
+  `b58269a65eaafa627bf912cce7e860196d151939703baec3335e50297fd94039`.
+- External result SHA-256:
+  `797c41486fd08ee86c04988331dc6179994570fe7c2374cc72b14657d04ec34e`.
+- Focused tests: `tests/test_alpha_candidate_era_mechanics_v1.py`, 2/2 passing.
+- The result uses fixed Top-30 descending rank and no outcome fields. It
+  records year-specific turnover, persistence, HHI/effective names, rank
+  displacement, and between-year selected-ticker Jaccard; non-comparable
+  sparse-era pairs are explicit nulls, not zeros.

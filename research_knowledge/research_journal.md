@@ -174,3 +174,41 @@ checkpoint files; this file records why the next question changed.
   independent review; repeated local work would mostly duplicate evidence.
 - Kept predictive evidence unopened, candidate statuses unchanged, and all
   incumbent/canonical/cloud/capture/telemetry/production boundaries untouched.
+
+## 2026-09-20 — candidate-specific era authority map
+
+- Mapped C1-C4 formula inputs to candidate-specific authority gates and
+  stratified the frozen structural artifact by natural calendar year.
+- C1/C2/C4 have broad finite support from 2022 onward; C3 has no finite rows
+  through 2024 and begins on 2025-04-25, with partial support through
+  2026-07-17.
+- Every observed panel key is an ACTIVE anchor and none is NO_TRADE, but 458
+  ACTIVE anchor rows are absent from the panel in 2021-2024. This narrows the
+  structural boundary without proving population completeness.
+- No era, candidate, or policy was selected. The map is SUPPORTED_SCOPED;
+  remaining authority requires owner policy plus population/identity/CA and,
+  for C3, publication/revision/provenance contracts.
+
+## 2026-09-20 — eligibility delta by era
+
+- Decomposed the minimum-20 versus minimum-60 mask difference by natural
+  calendar year using the frozen panel, official sessions, and ACTIVE anchors.
+- The difference occurs in every year: 11,623 new rows in 2021; 4,257 in
+  2022; 4,577 in 2023; 4,669 in 2024; 7,741 in 2025; and 5,137 in 2026.
+- This disproves the narrower hypothesis that the ambiguity is only an early
+  warm-up artifact. It remains a policy-sensitive upstream population choice
+  in the latest observed years, without establishing which rule is authoritative.
+- No policy, era, or candidate subset was selected; the protected boundary
+  remains closed.
+
+## 2026-09-20 — calendar-year Top-30 mechanics
+
+- Added fixed Top-30 turnover, selection persistence, slot concentration,
+  one-session rank displacement, and between-year selected-ticker overlap by
+  natural calendar year.
+- C1/C2/C4 show mild 2026 partial-year turnover increases versus 2022; C3
+  has no usable Top-30 date before 2025 and its long persistence/high HHI are
+  support-driven.
+- Corrected the initial output contract so between-year Jaccard is `null` and
+  marked non-comparable when either year has no selection support.
+- No era, policy, candidate status, or outcome was selected or accessed.
