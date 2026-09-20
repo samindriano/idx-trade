@@ -10,7 +10,8 @@
    strength, deterministic serialization, stale-hash rejection, synthetic
    forbidden-fixture detection, and mutation detection.
 3. Common-support methodology: native versus common support, sparse C3 handling,
-   and exact one-shot comparison design without opening outcomes.
+   and exact one-shot comparison design without opening outcomes. The initial
+   structural census is complete; rerun only after policy/source changes.
 4. Historical reinterpretation: map prior failures to implementation, data, PIT,
    target mismatch, coverage, model-family, instability, or economics causes.
 5. Re-entry preparation: only after an external/authoritative admission artifact

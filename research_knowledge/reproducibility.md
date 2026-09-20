@@ -56,3 +56,15 @@ access absence.
 4. Append new registry/finding entries; never overwrite prior evidence.
 5. Reassess candidate support and common-support methodology; do not open
    protected outcomes automatically.
+
+## Common-support census
+
+- Script: `research/alpha_common_support_census_v1.py`.
+- Script SHA-256: `4a1117170e93894534a137f480cbe12e747011344f13368a922d7662c158cd43`.
+- Input feature SHA-256:
+  `aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4`.
+- Current native rows: C1 `295243`, C2 `310761`, C3 `30994`, C4 `310323`.
+- Exact all-four finite intersection: `30861` rows, `9.9308%` of current
+  eligible rows; daily max `175`, 277 dates with at least 30 names, median 0.
+- The first daily aggregation attempt was wrong and was corrected before the
+  accepted output; the corrected method groups the all-four boolean by date.

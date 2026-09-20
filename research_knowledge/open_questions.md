@@ -15,3 +15,4 @@ Each question has an ownerless evidence requirement and a stopping rule.
 | Q-009 | Are old PASS outputs hash-bound to current code/policy? | `PARTIALLY_RESOLVED` | Re-run verifier and compare embedded code/contract/packet hashes | Stale output is non-authoritative |
 | Q-010 | Are there new local sources with admission-changing semantics? | `LOCAL_SURFACE_CLOSED` | Only a genuinely new artifact/source contract | Do not repeat broad searches |
 | Q-011 | Does the verifier catch producer semantic mutations and encoded protected payloads? | `OPEN_TOOLING_AUDIT` | Synthetic fixtures and an independent semantic challenger | Do not use PASS as semantic proof |
+| Q-012 | What native/common support should a future C1-C4 comparison use after policy resolution? | `METHODOLOGY_READY` | Recompute the census after eligibility/source admission | Never compare candidate metrics on silently different support |

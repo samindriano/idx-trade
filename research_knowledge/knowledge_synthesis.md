@@ -18,6 +18,9 @@
   the generic security-master warm-up path is separate. Both Stage-A versions
   inherit `min_periods=window`, so rolling completeness appears to have been
   conflated with the final eligibility mask. This does not select the policy.
+- The exact finite four-way C1/C2/C3/C4 intersection under the current mask is
+  30861 rows (9.9308% of current eligible rows); C3 sparsity dominates it. This
+  is a structural common-support census, not outcome evidence.
 
 ## What we think we know
 

@@ -94,9 +94,20 @@ def main() -> int:
         raise ValueError("protected payload policy is not explicitly false")
     if manifest.get("eligibility_authority_status") != "POLICY_AUTHORITY_MISSING":
         raise ValueError("eligibility authority status is not fail-closed")
+    listed_files = manifest.get("files", [])
+    if not isinstance(listed_files, list) or not listed_files:
+        raise ValueError("manifest file list is empty")
+    missing_listed = [name for name in listed_files if not (root / name).is_file()]
+    if missing_listed:
+        raise ValueError(f"manifest lists missing files: {missing_listed}")
 
     counts: dict[str, int] = {}
     all_values: list[Any] = [manifest, matrix]
+    census_path = root / "common_support_census_v1.json"
+    census = load_json(census_path)
+    if census.get("status") != "PASS" or census.get("scope") != "OUTCOME_BLIND_STRUCTURAL_SUPPORT_ONLY":
+        raise ValueError("common support census is not a passing outcome-blind artifact")
+    all_values.append(census)
     for filename, spec in JSONL_SPECS.items():
         path = root / filename
         rows = load_jsonl(path)

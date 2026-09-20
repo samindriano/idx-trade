@@ -1,0 +1,59 @@
+{
+  "all_four_common_support_fraction_of_eligible": 0.09930782820238061,
+  "all_four_common_support_rows": 30861,
+  "candidate_columns": {
+    "C1": "C1_residual_reversal_5_v1",
+    "C2": "C2_participation_confirmation_5_v1",
+    "C3": "C3_financial_quality_growth_v1",
+    "C4": "C4_path_efficiency_reversal_20_v1"
+  },
+  "code_sha256": "4a1117170e93894534a137f480cbe12e747011344f13368a922d7662c158cd43",
+  "daily_all_four_common_support": {
+    "date_count": 1260,
+    "dates_with_at_least_30_names": 277,
+    "max_names": 175,
+    "median_names": 0.0,
+    "min_names": 0
+  },
+  "input": {
+    "dates": 1260,
+    "eligible_rows": 310761,
+    "path": "D:\\Documents\\Project\\idx-alpha-available-data-staging-20260919\\stage-a-final-guarded\\20260919T-finalized-guarded\\alpha_stage_a_v3_features.parquet",
+    "rows": 981940,
+    "sha256": "aaff882f0ab2e8542203e117de39ac5a9caf5a8d73a44a110b4a5679311c03b4",
+    "unique_keys": true
+  },
+  "interpretation": [
+    "Native support is candidate-specific finite score support inside the current eligibility mask.",
+    "Common support is the exact ticker/date intersection where all four candidate scores are finite inside the current mask.",
+    "This census does not choose an eligibility policy, alter the population, or evaluate any outcome.",
+    "The current min_periods=60 versus minimum-20 conflict remains upstream and unresolved."
+  ],
+  "limitations": [
+    "Structural support is not predictive common-support evidence.",
+    "C3 sparsity may dominate the four-way intersection.",
+    "Current population and finite-score semantics remain subject to policy/PIT/CA admission."
+  ],
+  "native_support_rows": {
+    "C1": 295243,
+    "C2": 310761,
+    "C3": 30994,
+    "C4": 310323
+  },
+  "native_to_all_four_loss_rows": {
+    "C1": 264382,
+    "C2": 279900,
+    "C3": 133,
+    "C4": 279462
+  },
+  "pairwise_common_support_rows": {
+    "C1+C2": 295243,
+    "C1+C3": 30861,
+    "C1+C4": 295243,
+    "C2+C3": 30994,
+    "C2+C4": 310323,
+    "C3+C4": 30994
+  },
+  "scope": "OUTCOME_BLIND_STRUCTURAL_SUPPORT_ONLY",
+  "status": "PASS"
+}
