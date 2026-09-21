@@ -7,8 +7,9 @@ Status: **DOCUMENTATION PUSH / SHADOW QUALIFICATION NOT COMPLETE**
 This index is the review entry point for the isolated shadow-runtime lane. It
 records the real retained-artifact census performed so far and links the
 earlier authoritative-runtime adoption packet. It does not claim that a real
-runtime migration, replay, fallback rehearsal, canary, or production action
-was executed.
+runtime migration, replay, real-state fallback rehearsal, canary, or
+production action was executed. Synthetic fallback and identity-interface
+rehearsals are linked separately and remain non-production evidence.
 
 ## Lane identity
 

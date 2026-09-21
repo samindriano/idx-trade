@@ -25,7 +25,7 @@ read and no provider call was made.
 The prior candidate contract accepts a hash-pinned caller artifact and rejects
 missing/conflicting lineage. It does not itself admit an authoritative real
 identity artifact. This shadow packet therefore records `IDENTITY INTERFACE =
-CONTRACT READY / AUTHORITY BLOCKED`.
+SHADOW-READY / AUTHORITY BLOCKED`.
 
 No identity artifact was invented from session data, model data, discovery
 metadata, or a provider path.
