@@ -93,6 +93,10 @@ Date: 2026-09-21
 - completed the final Phase 16–17 structural audit: gap IDs `G-01`–`G-21`
   are contiguous, all ten blocker categories are represented, the canary
   design table has 14 explicit rows, and the canary remains no-go/unexecuted;
+- re-enumerated the approved active-runtime, forward-monitoring, and
+  parent-root paths metadata-only: counts stayed at 135 / 79,770, 819 /
+  63,136,721, and 32,656 files; no new paper-state class appeared, and no
+  stronger current-byte attestation was inferred;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

@@ -126,6 +126,12 @@ artifact evidence, and missing real state is not fabricated.
     categories are represented, the design table has 14 explicit rows, and
     the canary remains `NO-GO / NOT EXECUTED`. The audit is in
     `2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md`.
+32. Re-enumerated the approved active-runtime, forward-monitoring, and
+    parent-root paths in metadata-only mode. Counts remained 135 / 79,770,
+    819 / 63,136,721, and 32,656 files respectively; no new paper-state class
+    appeared. This is a freshness/count check, not a new byte-stability
+    attestation; details are in
+    `2026-09-21_IDX_CURRENT_RETAINED_ROOT_RECENSUS_V1.md`.
 
 ## Root census snapshot
 
