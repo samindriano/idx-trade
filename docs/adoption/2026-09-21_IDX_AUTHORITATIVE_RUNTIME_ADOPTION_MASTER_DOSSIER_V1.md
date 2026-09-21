@@ -77,10 +77,10 @@ adoption decision.
 | 2 clean extraction | IN PROGRESS | Extraction map; code groups to be materialized as clean commits |
 | 3 adoption base | PASS FOR CANDIDATE | 402 selected; no live adoption |
 | 4 integrated hardened stack | NOT YET PROVEN | Candidate source/tests pending |
-| 5 migration architecture | DEFINED / TESTING PENDING | State migration matrix and synthetic harness |
+| 5 migration architecture | DEFINED / PARTIAL EXECUTABLE | State migration matrix and compatibility classifier |
 | 6 shadow migration rehearsal | NOT YET PROVEN | Synthetic fixtures only; must run after candidate extraction |
 | 7 multi-session rehearsal | NOT YET PROVEN | Required 22 scenarios; exact invariant report pending |
-| 8 entrypoint compatibility | PARTIAL | Static entrypoint matrix pending candidate binding |
+| 8 entrypoint compatibility | PASS STATIC / SYNTHETIC RUNTIME PENDING | Static entrypoint matrix and V1/V2 mode guard |
 | 9 Windows/cloud interface review | READ-ONLY BASELINE PASS | Task/workflow mapping recorded; no mutation |
 | 10 identity authority boundary | CONTRACT READY / AUTHORITY NOT ADMITTED | Hash-pinned caller artifact only |
 | 11 policy review | FAIL-CLOSED / EXTERNAL DECISIONS OPEN | No unresolved policy invented |
@@ -122,4 +122,3 @@ production.
    rehearsal with explicit runtime and artifact roots.
 6. Separately authorize any scheduler/cloud/source adoption; none is implied
    by this branch.
-

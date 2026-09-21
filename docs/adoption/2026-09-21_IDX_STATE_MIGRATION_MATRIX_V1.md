@@ -5,6 +5,13 @@ Date: 2026-09-21
 Migration is a shadow-only design. No real runtime artifact is read, copied,
 rewritten, or activated by this branch.
 
+The granular rows below are executable through
+src/idx_trade/v4_x1_migration_compatibility_v1.py. That classifier accepts
+only a canonical caller-supplied evidence envelope and returns a typed
+classification; it never constructs a V2 state. The existing
+v4_x1_migration_provenance_v1.py remains the immutable artifact/provenance
+writer for verified runtime snapshots.
+
 | Historical shape | Classification | Allowed action | Proof required |
 |---|---|---|---|
 | Complete plan and complete fill vector | RECOVERABLE_COMPLETE | reconstruct filled obligation with zero remaining | exact source hash, plan/fill conservation, provenance |
@@ -47,4 +54,3 @@ Create-only/idempotent same-bytes writes are permitted in synthetic roots.
 
 Migration remains BLOCKED for any real artifact until the user authorizes a
 separate immutable input root and a shadow-only run.
-

@@ -49,6 +49,15 @@ def test_loads_hash_pinned_external_config(tmp_path: Path) -> None:
     assert loaded.controller.runtime_config_sha256 == loaded.config_sha256
 
 
+def test_v1_loader_rejects_dual_calendar_config_without_v2_binding(tmp_path: Path) -> None:
+    root = _write_config(tmp_path, operational_contract_version="DUAL_CALENDAR_V1")
+    with pytest.raises(
+        E2ERuntimeConfigError,
+        match="DUAL_CALENDAR_REQUIRES_V2_LOADER",
+    ):
+        load_runtime_config(root)
+
+
 def test_loads_dynamic_per_window_ca_capture_config(tmp_path: Path) -> None:
     root = _write_config(
         tmp_path,

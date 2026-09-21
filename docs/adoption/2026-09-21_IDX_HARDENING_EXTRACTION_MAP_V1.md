@@ -24,6 +24,7 @@ the clean extraction; it is not a request to merge that branch.
 | adopt: snapshot recovery and controller fences | modified e2e_paper_operational_controller_v1.py, e2e_paper_operational_controller_v2.py, e2e_paper_orchestration_v1.py, e2e_paper_runtime_config_v1.py; controller/orchestration tests | 66e11fb9, 2907a64b, 2aa210bf, 7969a07d, bb5bce56, 3b8ef010, 824c6bf6, d173ec2c, c91e2895, 42b9c63d, 5a85b1d3, ee4837da, 6b83def1, 1a1fe463 | in-memory controller state and unsafe latest-snapshot recovery | CONTROLLER-RECOVERY-V1, SNAPSHOT-RECOVERY-V1, PAPER-STATE-V2 |
 | adopt: phase-child binding and identity injection | e2e_paper_phase_binding_v1.py; modified four phase scripts; phase/identity tests | a6702aeb, 26d8399c, cfd5e594, 7ccc3055 | child can run with wrong config/branch or interrupted boundary | RUNTIME-LINEAGE-V2, IDENTITY-CANONICAL-V1, CONTROLLER-RECOVERY-V1 |
 | adopt: top-level replay and completion policy gates | modified top-level scripts/tests plus policy/replay assertions | 600866ae, 8f80b275, f9d323bd, 563e781f, e65356f2, d2388f37, 1cf774f3, 8ceec523 | component-green but semantically disconnected replay; close policy provenance | all contracts above; no new science |
+| adopt: migration compatibility and V1/V2 mode guard | v4_x1_migration_compatibility_v1.py; exhaustive shape tests; V1 loader mode guard; V2 loader opt-in | adoption remediation after independent challenge; source gap was not present as an executable hardening module | documented granular legacy classifications were not executable; V1 child could accept a dual-calendar config without using V2 binding | MIGRATION-PROVENANCE-V1, MIGRATION-ACTIVATION-V1, RUNTIME-LINEAGE-V2 |
 | adopt: evidence-only packet | lineage matrix, registry, migration/compatibility/rollback/policy docs, completion/challenge references | 8ceec523 plus hardening checkpoint history | loss of provenance during extraction | MIGRATION-PROVENANCE-V1, RUNTIME-LINEAGE-V2 |
 
 ## Source inventory
@@ -45,6 +46,7 @@ src/idx_trade additions:
 - v4_x1_runtime_lineage_v2.py
 - v4_x1_transition_binding_v1.py
 - e2e_paper_phase_binding_v1.py
+- v4_x1_migration_compatibility_v1.py
 
 Modified runtime sources are listed by group above; no source outside those
 groups is a dependency until the import and test graph proves it.
@@ -80,4 +82,3 @@ The clean extraction is accepted only when:
 5. no live or protected surface is touched.
 
 Until those checks run, extraction status is IN PROGRESS.
-

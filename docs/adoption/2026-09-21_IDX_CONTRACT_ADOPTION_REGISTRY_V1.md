@@ -20,7 +20,7 @@ operational activation. It is outcome-blind and candidate-local.
 | RUNTIME-LINEAGE-V2 | v4_x1_runtime_lineage_v2.py | config/runner/branch/commit hash gates | READY_IN_SOURCE after extraction | actual candidate entrypoint audit |
 | CONTROLLER-RECOVERY-V1 | e2e_paper_operational_controller_v1.py and v2.py | eight boundary recovery matrix and child interruption | SYNTHETIC_ONLY | candidate replay; no live validation |
 | SNAPSHOT-RECOVERY-V1 | snapshot consumers/orchestration | quarantine, ancestor, fork rejection | SYNTHETIC_ONLY | migration and restart rehearsal |
-| MIGRATION-PROVENANCE-V1 | v4_x1_migration_provenance_v1.py | immutable source/hash/classification provenance | READY_IN_SOURCE after extraction | source-shape challenge |
+| MIGRATION-PROVENANCE-V1 | v4_x1_migration_provenance_v1.py and v4_x1_migration_compatibility_v1.py | immutable source/hash/classification provenance plus executable granular legacy-shape classifier | READY_IN_SOURCE after extraction | source-shape challenge and candidate system replay |
 | MIGRATION-ACTIVATION-V1 | v4_x1_migration_activation_v1.py | explicit activation decision and legacy authorization | FAIL-CLOSED READY_IN_SOURCE | policy supplied by caller; never automatic |
 
 ## Adoption rules
@@ -32,4 +32,3 @@ operational activation. It is outcome-blind and candidate-local.
 - The incumbent alpha, Decision V2 science, sizing targets, fee assumptions,
   execution-price semantics, and unsupported-CA fail-closed boundary remain
   unchanged.
-

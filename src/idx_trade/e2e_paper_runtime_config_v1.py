@@ -19,6 +19,7 @@ from .e2e_paper_operational_controller_v1 import OperationalControllerConfig
 
 
 CONFIG_SCHEMA = "idx_trade_e2e_paper_runtime_config_v1"
+DUAL_CALENDAR_CONTRACT_VERSION = "DUAL_CALENDAR_V1"
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _FORBIDDEN_KEY_PARTS = ("secret", "password", "token", "api_key", "credential")
@@ -51,7 +52,12 @@ def _absolute_path(payload: dict[str, Any], key: str) -> Path:
     return path.resolve()
 
 
-def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None = None) -> LoadedRuntimeConfig:
+def load_runtime_config(
+    runtime_root: str | Path,
+    *,
+    expected_sha256: str | None = None,
+    allow_dual_calendar_contract: bool = False,
+) -> LoadedRuntimeConfig:
     root = Path(runtime_root).expanduser().resolve()
     config_path = root / "operational" / "config.json"
     digest_path = root / "operational" / "config.json.sha256"
@@ -73,6 +79,14 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_INVALID_JSON") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != CONFIG_SCHEMA:
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_SCHEMA_MISMATCH")
+    if (
+        payload.get("operational_contract_version")
+        == DUAL_CALENDAR_CONTRACT_VERSION
+        and not allow_dual_calendar_contract
+    ):
+        raise E2ERuntimeConfigError(
+            "E2E_RUNTIME_CONFIG_DUAL_CALENDAR_REQUIRES_V2_LOADER"
+        )
     for key in payload:
         lowered = str(key).lower()
         if any(part in lowered for part in _FORBIDDEN_KEY_PARTS):
@@ -194,4 +208,10 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
     )
 
 
-__all__ = ["CONFIG_SCHEMA", "E2ERuntimeConfigError", "LoadedRuntimeConfig", "load_runtime_config"]
+__all__ = [
+    "CONFIG_SCHEMA",
+    "DUAL_CALENDAR_CONTRACT_VERSION",
+    "E2ERuntimeConfigError",
+    "LoadedRuntimeConfig",
+    "load_runtime_config",
+]

@@ -47,7 +47,9 @@ def load_runtime_config_v2(
     """Load V1 deployment bindings plus the separately pinned planned schedule."""
 
     base: LoadedRuntimeConfig = load_runtime_config_v1(
-        runtime_root, expected_sha256=expected_sha256
+        runtime_root,
+        expected_sha256=expected_sha256,
+        allow_dual_calendar_contract=True,
     )
     try:
         payload = json.loads(base.config_path.read_text(encoding="utf-8"))
