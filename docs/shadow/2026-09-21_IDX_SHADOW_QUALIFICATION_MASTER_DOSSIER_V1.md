@@ -213,7 +213,10 @@ embedded hashes was recovered. The exact result is recorded in
 
 The independent Phase 18 challenge is recorded in
 `2026-09-21_IDX_INDEPENDENT_REAL_ARTIFACT_SHADOW_CHALLENGE_V1.md`. It found no
-new material locally fixable defect and did not upgrade any real gate.
+new material locally fixable defect and did not upgrade any real gate. It also
+confirmed that none of the 29 session manifests carries a runtime/config/
+checkout identity field, so historical identity remains missing rather than
+inferable.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or

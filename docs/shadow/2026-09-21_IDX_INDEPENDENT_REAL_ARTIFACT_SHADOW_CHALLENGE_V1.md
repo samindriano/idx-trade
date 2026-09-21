@@ -31,6 +31,7 @@ did not print or persist payload values.
 | Stock-summary row count | NOT APPLICABLE | the manifests do not carry a stock-summary row-count field; no mismatch was inferred |
 | Parquet state-like columns | PASS WITH LIMITATION | 89 copied Parquet files scanned; no `position`, `pending`, `fill`, `execution`, `prepared`, `portfolio`, `cash`, `order`, `obligation`, `entitlement`, `receivable`, `dividend`, `corporate`, or `reconciliation` column appeared |
 | JSON metadata-key challenge | PASS WITH LIMITATION | four files contained non-state matching metadata keys: two open-enrichment source-hash/volume-reconciliation surfaces and two calendar `ordered_consecutive` attestations; no paper-state key was found |
+| Runtime/config identity fields | BLOCKED | none of the 29 session manifests has a top-level `config`, `runtime`, `checkout`, `commit`, `runner`, `schedule`, `task`, or `revision` field; no identity was inferred |
 | Calendar binding | BLOCKED | copied current calendar SHA `8a5fd51630c331b651fcd41bd024a70c6f8fad6dcc9fe9d5393429e16766a6fe` matches only 1/29 manifests; 28 historical bindings remain unresolved |
 
 ## Challenge interpretation
