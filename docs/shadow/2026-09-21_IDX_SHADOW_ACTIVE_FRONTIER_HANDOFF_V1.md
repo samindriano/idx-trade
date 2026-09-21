@@ -110,6 +110,9 @@ Date: 2026-09-21
 - broader path-only scan matched 3,490 state-shaped files across 58
   top-level roots, all explicitly test/pytest/e2e/dual-calendar named;
   `non_test_roots=0`;
+- AppData-local path scan found only 35 matches in `pytest-manual-*` and the
+  already attested operational-shadow root; active `e2e_baseline_paper_v1`
+  had no new state-shaped path;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

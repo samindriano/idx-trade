@@ -75,6 +75,13 @@ under `state_snapshots`, `prepared`, `.transactions`, `paper_state*`, or
 test/pytest/e2e/dual-calendar roots and `non_test_roots=0`. This broader scan
 also opened no file contents and did not promote any match to real state.
 
+A matching path-only scan of `C:\Users\Sam\AppData\Local\IDXTrade` found 35
+files in only two roots: 16 under `pytest-manual-*` and 19 under the already
+attested `shadow-runtime-precanary-20260921-operational-shadow`. The active
+`e2e_baseline_paper_v1` root produced no new state-shaped path. The first root
+is test evidence; the second is this lane's synthetic output. Neither is real
+retained paper state.
+
 ## Result
 
 This audit closes a potential false-positive inventory path: state-like

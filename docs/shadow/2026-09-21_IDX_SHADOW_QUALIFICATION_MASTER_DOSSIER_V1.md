@@ -152,6 +152,9 @@ artifact evidence, and missing real state is not fabricated.
     top-level roots; every root was explicitly test/pytest/e2e/dual-calendar
     named and `non_test_roots=0`, so no additional real-state boundary was
     admitted.
+37. A matching AppData-local path scan found 35 files only in the
+    `pytest-manual-*` test root and the already attested operational-shadow
+    root; the active E2E runtime produced no new state-shaped path.
 
 ## Root census snapshot
 
