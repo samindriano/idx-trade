@@ -40,6 +40,9 @@ artifact evidence, and missing real state is not fabricated.
    protected outcomes, and counters from shadow inputs.
 9. Prepared this documentation packet. No source artifact was copied into a
    shadow runtime and no migration/replay entrypoint was executed.
+10. Ran a copy-only legacy ambiguity hunt over the two selected real sessions:
+    required-key, null/date, ticker-set, and close-value checks were recorded
+    without reading protected or live state.
 
 ## Root census snapshot
 
@@ -157,6 +160,15 @@ session child artifacts and config sidecar matched, but both manifests'
 calendar_sha256 values do not match the currently referenced calendar file.
 That calendar lineage mismatch is recorded as REQUIRES_RECONCILIATION and
 blocks replay of these sessions.
+
+The copy-only legacy ambiguity hunt found no duplicate required keys, required
+field nulls, invalid session dates, model/OHLCV ticker-set differences, or
+model/OHLCV close-value differences for 2026-09-16 and 2026-09-17. Evidence
+and stock-summary files contain the wider retained listed universe: 135 and
+132 extra non-model rows respectively. That is recorded as a scope distinction
+in 2026-09-21_IDX_REAL_LEGACY_AMBIGUITY_HUNT_V1.md, not promoted to a paper
+state or duplicate-state finding. The calendar mismatch and missing paper/
+CA/recovery artifacts remain open.
 
 ## Inherited documentation audit
 

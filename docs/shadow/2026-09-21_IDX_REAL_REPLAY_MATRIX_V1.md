@@ -18,6 +18,7 @@ Status: **INPUT CORPUS FOUND / REPLAY NOT RUN**
 | Input-level EOD validator | copied OHLCV/model input/current calendar | 2026-09-16 and 2026-09-17 | PASS_INPUT_LEVEL |
 | Schedule-bound validator | copied schedule attestation | not run against phase entrypoint | available but phase path remains blocked |
 | Score manifest/artifact | copied for 2026-09-17 | PASS via explicit shadow adapter | full replay still BLOCKED by missing state/CA and source path provenance |
+| Legacy input shape/ambiguity hunt | copied 2026-09-16 and 2026-09-17 | PASS WITH LIMITATION | no duplicate required keys, required-field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV close differences; wider evidence/stock universe remains an interface boundary |
 
 ## Selected real manifests
 
@@ -54,6 +55,14 @@ was not rewritten. A derived shadow adapter rebound only that path to the
 hash-identical copy; the candidate score validator then passed 296 rows after
 the timezone-aware freeze-boundary fix. The adapter is not a production
 manifest and does not establish paper-state or economic replay.
+
+The separate copy-only legacy ambiguity hunt found the selected model-input and
+OHLCV files aligned by ticker and close value, with no duplicate required keys,
+required-field nulls, or invalid session dates. Evidence and stock summaries
+retain 135 extra rows on 2026-09-16 and 132 on 2026-09-17 relative to the
+model universe. That is a wider-universe scope boundary, not proof of paper
+state or a duplicate version. Full details are in
+`2026-09-21_IDX_REAL_LEGACY_AMBIGUITY_HUNT_V1.md`.
 
 The final replay disposition is BLOCKED / INPUT-LEVEL PASS ONLY, not a full
 historical E2E replay.

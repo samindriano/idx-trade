@@ -15,6 +15,10 @@ Date: 2026-09-21
 - created a 20-file immutable shadow copy with source/copy hash equality;
 - validated both copied sessions at input level and validated the copied real
   score artifact through an explicitly labelled shadow adapter;
+- ran a copy-only legacy ambiguity hunt: no duplicate required keys, required
+  field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV
+  close differences; wider evidence/stock universe was recorded as a scope
+  boundary;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing
@@ -24,10 +28,14 @@ Date: 2026-09-21
 
 Only after separate authorization:
 
-1. repeat hashes for the narrowly selected input class;
-2. copy to a new isolated shadow root and hash the copies;
-3. inspect candidate interfaces against those copies without inventing state;
-4. run only a bounded read-only replay if the interface is compatible;
+1. recover/admit the exact historical calendar bytes referenced by the two
+   selected manifests, or preserve the sessions as NOT_REPLAYABLE;
+2. locate an immutable paper-state/CA/recovery package in a separately
+   authorized shadow input root, without provider/outcome access;
+3. inspect candidate interfaces against admitted copies while preserving the
+   explicit model-input/score universe boundary;
+4. run only a bounded read-only replay if all lineage and interface gates are
+   closed;
 5. update the dossier with measured results or fail-closed blockers.
 
 ## Main ownership
