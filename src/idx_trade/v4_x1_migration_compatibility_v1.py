@@ -70,10 +70,15 @@ def _shares(value: object, code: str, *, allow_zero: bool = True) -> int:
     return value
 
 
-def _optional_shares(value: object, code: str) -> int | None:
+def _optional_shares(
+    value: object,
+    code: str,
+    *,
+    allow_zero: bool,
+) -> int | None:
     if value is None:
         return None
-    return _shares(value, code, allow_zero=False)
+    return _shares(value, code, allow_zero=allow_zero)
 
 
 def _ticker(value: object) -> str:
@@ -169,10 +174,12 @@ def classify_legacy_evidence(
     planned = _optional_shares(
         value["planned_shares"],
         "MIGRATION_COMPATIBILITY_PLANNED_SHARES_INVALID",
+        allow_zero=False,
     )
     position = _optional_shares(
         value["position_shares"],
         "MIGRATION_COMPATIBILITY_POSITION_SHARES_INVALID",
+        allow_zero=True,
     )
     vector = _fill_vector(value["fill_vector"])
     if _duplicate_conflict(events):
@@ -263,4 +270,3 @@ __all__ = [
     "classify_legacy_evidence",
     "verify_compatibility_result",
 ]
-

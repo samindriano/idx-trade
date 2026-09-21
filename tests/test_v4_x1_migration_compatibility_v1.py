@@ -44,7 +44,7 @@ def _evidence(**overrides):
     [
         ({}, RECOVERABLE_COMPLETE, MIGRATABLE),
         (
-            {"fill_vector": None, "pending": True, "position_shares": None},
+            {"fill_vector": None, "pending": True, "position_shares": 0},
             RECOVERABLE_ZERO_FILL_PENDING,
             MIGRATABLE,
         ),
@@ -117,4 +117,3 @@ def test_result_hash_detects_tamper():
     tampered["classification"] = RECOVERABLE_PARTIAL
     with pytest.raises(DecisionV1Error, match="HASH_MISMATCH"):
         verify_compatibility_result(tampered)
-
