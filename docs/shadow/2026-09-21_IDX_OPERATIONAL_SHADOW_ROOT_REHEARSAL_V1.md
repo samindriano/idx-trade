@@ -114,6 +114,23 @@ current total is 89 files and 810,687 bytes:
 | `identity-interface` | 5 | 4,880 |
 | **Current total** | **89** | **810,687** |
 
+## Per-file attestation
+
+The expanded operational-shadow root was hashed in two passes. The source
+inventory was identical across both passes, so the attestation was admitted
+only after the source-stability check passed. The manifest is kept outside
+the operational root so it cannot alter the rehearsal inventory:
+
+| Item | Value |
+|---|---|
+| Attestation root | `C:\Users\Sam\AppData\Local\IDXTrade\shadow-runtime-precanary-20260921-operational-shadow-attestation-v1` |
+| Manifest file | `manifest.json` |
+| Manifest SHA-256 | `67fe8fcad4168ddaf6d37935990c314bf8ba987ec588535a264580ee37b97f4f` |
+| Entries aggregate SHA-256 | `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc` |
+| Attested files / bytes | 89 / 810,687 |
+| Two-pass source stability | `true` |
+| Provider / outcome / active runtime / scheduler touched | `false / false / false / false` |
+
 ## Gate impact
 
 | Gate | Result | Boundary |
