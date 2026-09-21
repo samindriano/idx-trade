@@ -33,5 +33,6 @@ The canary must not start until the following are independently PASS:
 
 ## Current decision
 
-This design is not a launch authorization. Because G-01 through G-10 remain
-open, `CONTROLLED_CANARY = NO-GO / NOT EXECUTED` and `PRODUCTION = NO-GO`.
+This design is not a launch authorization. Because G-01 through G-10 and the
+calendar-lineage G-17 remain open, `CONTROLLED_CANARY = NO-GO / NOT EXECUTED`
+and `PRODUCTION = NO-GO`.

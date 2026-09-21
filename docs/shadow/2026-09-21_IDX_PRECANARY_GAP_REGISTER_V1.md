@@ -7,7 +7,7 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 | ID | Gap | Impact | Closure evidence required |
 |---|---|---|---|
 | G-01 | No real E2E paper-state population in bounded inventory | real migration/recovery cannot run | immutable manifest containing actual state artifacts |
-| G-02 | Selected input class had only a pre-copy manifest | CLOSED for selected 17-file class; paper-state class remains absent | V2 manifest records source pre/post/copy equality |
+| G-02 | Selected input class had only a pre-copy manifest | CLOSED for selected 20-file class; paper-state class remains absent | V2 manifest records source pre/post/copy equality |
 | G-03 | Session corpus is not paper state | replay cannot be promoted | interface proof that consumes it without state fabrication |
 | G-04 | No real CA ledger/attestation admitted | CA composition cannot be challenged | separately authorized immutable CA evidence |
 | G-05 | No real old-vs-candidate artifact pair | equivalence is unproven | dual-runtime read-only differential on identical copied inputs |
