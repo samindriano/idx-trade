@@ -64,7 +64,7 @@ migrated.
 
 | Gate | Result after this challenge | Reason |
 |---|---|---|
-| SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | Synthetic continuation/recovery contracts pass; no real operational state root was started |
+| SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | Synthetic continuation/recovery contracts pass; the later operational shadow root contains synthetic outputs only and admits no real operational state |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Synthetic tamper/fork/ancestor tests pass; no real recovery chain was admitted |
 | FORWARD FALLBACK | DESIGN ONLY | These tests do not constitute a forward fallback rehearsal or runtime repin |
 | PRE-CANARY READINESS | NO-GO | Missing real paper-state, CA, calendar-lineage, differential, and recovery evidence remains unchanged |

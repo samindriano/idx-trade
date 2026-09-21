@@ -74,6 +74,12 @@ artifact evidence, and missing real state is not fabricated.
     as unknown rather than invalid. The focused CA/attestation/dividend/V4-X1
     regression set passed 38/38, and the candidate parsed all 38 copied real
     CA rows without network access.
+21. Ran a dedicated operationally-shaped shadow rehearsal in a new isolated
+    output root: five synthetic continuation sessions passed with the exact
+    rerun fence `ALREADY_COMPLETE`, the CA extension was exercised, and the
+    controller persisted a weekend/holiday no-op against the copied
+    516-session calendar. No provider, outcome, refit, rescore, live-runtime,
+    or shared-state operation was performed.
 
 ## Root census snapshot
 
@@ -160,7 +166,7 @@ equivalent to E2E paper-state migration inputs.
 | CA COMPOSITION | BLOCKED REAL | The real CA event registry now passes the isolated parser boundary, but no retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
 | CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; historical manifests omit runtime identity and the extended execution summary retains a `20260808u` cache path under a `20260808v` source root |
-| SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 isolated synthetic continuation/recovery contracts passed; no real operational state root was started |
+| SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 contract tests plus a dedicated five-session operational shadow rehearsal passed; no real operational state was admitted |
 | FORWARD FALLBACK | DESIGN ONLY | Fallback design exists; real rehearsal was not run |
 | IDENTITY INTERFACE | CONTRACT READY / AUTHORITY BLOCKED | Candidate accepts hash-pinned artifact shape; authority is not admitted |
 | PRE-CANARY READINESS | NO-GO | Real migration/replay/CA/recovery evidence is missing |
@@ -281,6 +287,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
 | Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
 | Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; pinned full suite passed 907/907 |
+| Operational shadow rehearsal | 72 files / 788,621 bytes; five synthetic sessions; controller persisted `WEEKEND_OR_HOLIDAY_NOOP`; no provider/outcome/refit/rescore |
 | Forward fallback | 0 real rehearsals; design recorded only |
 | External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
 | Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |

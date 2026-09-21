@@ -51,6 +51,10 @@ Date: 2026-09-21
   revalidated 38/38 focused CA/attestation/dividend/V4-X1 tests plus 38/38
   copied real CA rows; the source-pinned full suite also passed 907/907; no
   ratio or share count was fabricated;
+- ran a dedicated operational shadow rehearsal with five synthetic sessions,
+  an exact-rerun `ALREADY_COMPLETE` fence, CA-extension coverage, and a
+  persisted weekend/holiday controller no-op; the output root contains 72
+  files / 788,621 bytes and no real state was admitted;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 
