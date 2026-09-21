@@ -97,6 +97,10 @@ The extended parent-root evidence copy is separate from this census:
 The full per-file attestation and classification are in
 `2026-09-21_IDX_EXTENDED_REAL_EVIDENCE_SHADOW_MANIFEST_V1.md`.
 
+The retained Official Open archive is explicitly
+`BLOCKED_SOURCE_NOT_FROZEN` with no selected provider module or network price
+source; it cannot serve as an execution-grade state transition.
+
 ## Active runtime evidence
 
 The active `IDXTrade-E2E-Paper` task was `Ready`, enabled, last-run result

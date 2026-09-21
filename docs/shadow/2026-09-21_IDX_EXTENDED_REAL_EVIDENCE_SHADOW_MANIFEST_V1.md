@@ -91,7 +91,7 @@ LF and encoded as UTF-8:
 | Corporate actions | 38 IDX event rows / 35 tickers; 18 rows in the certified window; all `stockSplit`; Yahoo cross-check `22 MATCH`, `16 IDX_RATIO_UNAVAILABLE`, `5 YAHOO_ONLY` | `REAL_CA_EVENT_REGISTRY`, not a CA entitlement/settlement ledger | no migration; CA composition remains blocked without holdings, obligations, receivables, payment, and restart state |
 | Execution | 504 session report rows, all `OK`; 479,471 `REGULAR` anchor rows; 425,340 `ACTIVE` and 54,131 `NO_TRADE`; one regular-execution-observation evidence type; zero duplicate `(ticker, market, as_of_date)` keys; 0 unresolved metric rows | `REAL_EXECUTION_ANCHOR_INPUT`, not a transaction/fill vector or paper execution artifact | no migration; use only as source evidence after separate interface/lineage authorization |
 | Sessions | 516 available calendar sessions / 504 target sessions, 2024-06-03 through 2026-07-31 | `REAL_CALENDAR_INPUT`, not a runtime schedule binding | no substitution for the 23 embedded hashes; no historical manifest was rewritten |
-| Official Open archive | one retained run metadata file plus eight small logs | `REAL_OPEN_CAPTURE_ARCHIVE`, not an execution-grade paper state | no replay or activation |
+| Official Open archive | one retained run metadata file plus eight small logs; latest status `BLOCKED_SOURCE_NOT_FROZEN`, empty `provider_module`, and no network price source selected | `REAL_OPEN_CAPTURE_ARCHIVE`, not an execution-grade paper state | no replay or activation; source-freeze blocker remains explicit |
 
 The execution summary contains a cache path ending in `20260808u` while the
 approved parent root is `20260808v`. This is retained metadata and is recorded
