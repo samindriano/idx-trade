@@ -78,6 +78,10 @@ Date: 2026-09-21
   `snapshot_*` keys are model-input provenance, `point_state` is market
   evidence state, and execution-anchor `state` is only `ACTIVE/NO_TRADE`; no
   paper-trading-state schema was found;
+- exercised the candidate migration admission boundary against one real
+  representative from each of the seven observed input classes; all seven
+  failed closed as `MIGRATION_COMPATIBILITY_PAYLOAD_NOT_CANONICAL`, with no
+  fabricated state envelope;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

@@ -106,6 +106,10 @@ artifact evidence, and missing real state is not fabricated.
     market evidence state, and execution-anchor `state` is only
     `ACTIVE/NO_TRADE`; no paper-trading-state schema or recovery chain was
     admitted.
+28. Exercised the candidate migration admission boundary against one real
+    representative from each of the seven observed input classes. All seven
+    rejected with `MIGRATION_COMPATIBILITY_PAYLOAD_NOT_CANONICAL`; no
+    migration envelope, provenance record, or V2 state was fabricated.
 
 ## Root census snapshot
 

@@ -26,6 +26,12 @@ execution, calendar, and Official Open classes are input/operational evidence,
 not paper-state. No fabricated envelope, synthetic row, or
 position-to-obligation reconstruction was added to this registry.
 
+The candidate admission boundary was independently exercised against one
+representative copied object from every observed real input class. All seven
+were rejected as `MIGRATION_COMPATIBILITY_PAYLOAD_NOT_CANONICAL`; no input row
+was force-fit into a legacy execution-evidence envelope. The exact hashes and
+paths are recorded in `2026-09-21_IDX_REAL_CLASSIFIER_ADMISSION_AUDIT_V1.md`.
+
 ## Synthetic classifier context
 
 The preceding adoption packet records the candidate classifier's local shape
