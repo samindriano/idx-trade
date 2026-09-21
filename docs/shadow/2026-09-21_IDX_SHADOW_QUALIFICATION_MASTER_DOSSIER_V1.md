@@ -266,6 +266,16 @@ recorded in `2026-09-21_IDX_REAL_CA_INTERFACE_REMEDIATION_V1.md`. The local
 shape defect is closed in the shadow candidate; it does not upgrade real CA
 composition or pre-canary readiness.
 
+The follow-up real CA/recovery gate audit is recorded in
+`2026-09-21_IDX_REAL_CA_RECOVERY_GATE_AUDIT_V1.md`. It re-ran the candidate
+parser read-only against the immutable copied `idx_actions.csv`: 38/38 rows
+parsed, all 38 are `stockSplit`, 22 ratios are known, and 16 remain unknown
+without fabrication. It also reconciles the real CA and recovery surfaces:
+holdings, entitlements, obligations, receivables, settlement, prepared
+ancestors, fill vectors, and CA ledgers are absent. The resulting verdicts
+remain `CA COMPOSITION = BLOCKED REAL / INTERFACE PASS` and
+`RECOVERY = PASS SYNTHETIC / BLOCKED REAL`.
+
 The requirement-by-requirement Phase 0–18 coverage audit is recorded in
 `2026-09-21_IDX_PHASE_COVERAGE_AUDIT_V1.md`; it is a completeness audit of
 evidence and blockers, not a claim that the blocked real gates passed.

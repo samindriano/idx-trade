@@ -65,6 +65,9 @@ The extended parent-root evidence manifest and classification is in:
 The real CA parser remediation and regression result is in:
 2026-09-21_IDX_REAL_CA_INTERFACE_REMEDIATION_V1.md.
 
+The deterministic real-CA parser and recovery-gate reconciliation is in:
+2026-09-21_IDX_REAL_CA_RECOVERY_GATE_AUDIT_V1.md.
+
 The operationally-shaped synthetic continuation and controller rehearsal is in:
 2026-09-21_IDX_OPERATIONAL_SHADOW_ROOT_REHEARSAL_V1.md.
 
@@ -106,6 +109,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_INDEPENDENT_REAL_ARTIFACT_SHADOW_CHALLENGE_V1.md`
 - `2026-09-21_IDX_EXTENDED_REAL_EVIDENCE_SHADOW_MANIFEST_V1.md`
 - `2026-09-21_IDX_REAL_CA_INTERFACE_REMEDIATION_V1.md`
+- `2026-09-21_IDX_REAL_CA_RECOVERY_GATE_AUDIT_V1.md`
 - `2026-09-21_IDX_OPERATIONAL_SHADOW_ROOT_REHEARSAL_V1.md`
 - `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md`
 - `2026-09-21_IDX_SHADOW_IDENTITY_INTERFACE_V1.md`
