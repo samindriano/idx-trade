@@ -90,6 +90,9 @@ Date: 2026-09-21
   metadata only; focused runtime-like directories yielded no new paper-state
   class, while provider/backfill and research/model clusters were explicitly
   excluded without opening their contents;
+- completed the final Phase 16–17 structural audit: gap IDs `G-01`–`G-21`
+  are contiguous, all ten blocker categories are represented, the canary
+  design table has 14 explicit rows, and the canary remains no-go/unexecuted;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

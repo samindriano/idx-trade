@@ -99,6 +99,10 @@ The current source/test and documentation validation ledger is in:
 The metadata-only approved parent-root boundary census is in:
 2026-09-21_IDX_PARENT_ROOT_BOUNDARY_CENSUS_V1.md.
 
+The final structural cross-check of the Phase 16 gap register and Phase 17
+canary-design table is in:
+2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
@@ -132,6 +136,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_PHASE_COVERAGE_AUDIT_V1.md`
 - `2026-09-21_IDX_PRECANARY_GAP_REGISTER_V1.md`
 - `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`
+- `2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md`
 - `2026-09-21_IDX_SHADOW_ACTIVE_FRONTIER_HANDOFF_V1.md`
 - `2026-09-21_IDX_SHADOW_NO_RETRY_LOG_V1.md`
 

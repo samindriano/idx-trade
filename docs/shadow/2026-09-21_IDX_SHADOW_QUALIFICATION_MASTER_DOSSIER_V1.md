@@ -121,6 +121,11 @@ artifact evidence, and missing real state is not fabricated.
     were explicitly excluded without opening their contents. The exact
     boundary and limitations are in
     `2026-09-21_IDX_PARENT_ROOT_BOUNDARY_CENSUS_V1.md`.
+31. Performed a final structural cross-check of the Phase 16 gap register and
+    Phase 17 canary design: all 21 gap IDs are contiguous, all ten blocker
+    categories are represented, the design table has 14 explicit rows, and
+    the canary remains `NO-GO / NOT EXECUTED`. The audit is in
+    `2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md`.
 
 ## Root census snapshot
 
