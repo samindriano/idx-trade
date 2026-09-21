@@ -67,4 +67,3 @@ local inventory now has an explicit exclusion record for these synthetic roots.
 `SYNTHETIC CONTINUATION = PASS / KEPT SEPARATE`
 
 `PRE-CANARY READINESS = NO-GO`
-
