@@ -17,6 +17,10 @@ from idx_trade.decision_v2_minimal import (
     plan_decision_v2_minimal,
 )
 from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
+from idx_trade.v4_x1_decision_seat_policy_v1 import (
+    DecisionSeatClosePolicyV1,
+    SEAT_POLICY_SCHEMA,
+)
 from idx_trade.v4_x1_decision_v2_minimal import (
     V4_X1_DECISION_V2_MINIMAL_PROFILE_V1,
 )
@@ -24,7 +28,33 @@ from idx_trade.v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    LEGACY_POSITION_ONLY,
+    OBLIGATION_V1_STATE,
+    UNKNOWN_ORPHANED_PARTIAL,
+    classify_state_for_migration,
+    paper_state_hash,
+    pending_intents_from_obligations,
 )
+from idx_trade.v4_x1_quantity_obligation_v1 import apply_fill, plan_obligation
+
+
+def _canonical_hash(payload: object) -> str:
+    return hashlib.sha256(
+        (
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _seat_policy() -> DecisionSeatClosePolicyV1:
+    return DecisionSeatClosePolicyV1(
+        schema_version=SEAT_POLICY_SCHEMA,
+        policy_id="synthetic-seat-close-policy",
+        authorization_ref="synthetic-test-authority",
+        allowed_close_statuses=("CANCELED", "RELINQUISHED"),
+        allowed_close_reasons=("EXPLICIT_DECISION_REVERSAL_CLOSE",),
+    )
 
 
 def _event(
@@ -111,6 +141,7 @@ def _state(
     positions: tuple[PaperPosition, ...] = (),
     pending_buys: tuple[PendingPaperIntent, ...] = (),
     pending_sells: tuple[PendingPaperIntent, ...] = (),
+    obligations=(),
     ledger: fd.DividendLedger | None = None,
 ) -> fd.DividendAwarePaperState:
     return fd.DividendAwarePaperState(
@@ -120,9 +151,206 @@ def _state(
             positions=positions,
             pending_buys=pending_buys,
             pending_sells=pending_sells,
+            obligations=obligations,
         ),
         dividend_ledger=ledger or fd.DividendLedger(),
     )
+
+
+def test_legacy_state_payload_omits_new_contract_and_new_state_round_trips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    legacy = _state("2026-08-20")
+    legacy_payload = runtime._paper_state_payload(legacy.base_state)
+    assert "obligations" not in legacy_payload
+
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-2026-08-20-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-2026-08-20-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buy = PendingPaperIntent(
+        side="BUY",
+        ticker="BBCA",
+        rank_consensus=None,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    modern = _state(
+        "2026-08-21",
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=(pending_buy,),
+        obligations=(partial,),
+    )
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        modern,
+        registry,
+    )
+    payload = json.loads(snapshot.path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == runtime.RUNTIME_SCHEMA_V2
+    loaded = runtime.load_runtime_snapshot(snapshot.path)
+    assert loaded.state.base_state.obligations == (partial,)
+    assert loaded.state.base_state.pending_buys == (pending_buy,)
+    assert "obligations" in json.loads(snapshot.path.read_text(encoding="utf-8"))[
+        "state"
+    ]["base_paper_state"]
+
+
+def test_explicit_close_round_trips_through_v2_runtime_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-24",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        session_date="2026-08-24",
+        filled_shares=2_400,
+        reason="CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    before = _state(
+        "2026-08-24",
+        positions=(PaperPosition("BBCA", 2_400),),
+        pending_buys=pending_buys,
+        pending_sells=pending_sells,
+        obligations=(partial,),
+    )
+    before_hash = paper_state_hash(before.base_state)
+    with pytest.raises(DecisionV1Error, match="SEAT_POLICY_REQUIRED"):
+        runtime.close_runtime_obligation_explicitly(
+            before,
+            obligation_id=partial.obligation_id,
+            event_id="CLOSE-BBCA-EXPLICIT-CLOSE-RUNTIME-NO-POLICY",
+            session_date="2026-08-24",
+            reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+            status="CANCELED",
+            parent_state_sha256=before_hash,
+        )
+    closed = runtime.close_runtime_obligation_explicitly(
+        before,
+        obligation_id=partial.obligation_id,
+        event_id="CLOSE-BBCA-EXPLICIT-CLOSE-RUNTIME",
+        session_date="2026-08-24",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status="CANCELED",
+        parent_state_sha256=before_hash,
+        seat_policy=_seat_policy(),
+    )
+
+    snapshot = runtime.write_runtime_snapshot(tmp_path / "runtime", closed, registry)
+    loaded = runtime.load_runtime_snapshot(snapshot.path)
+    row = loaded.state.base_state.obligations[0]
+    assert row.status == "CANCELED"
+    assert row.remaining_shares == 0
+    assert row.event_history[-1].parent_state_sha256 == before_hash
+    assert row.event_history[-1].policy_payload == _seat_policy().payload()
+    assert row.event_history[-1].policy_sha256 == _seat_policy().payload()[
+        "policy_sha256"
+    ]
+    assert loaded.state.base_state.pending_buys == ()
+    assert loaded.state.base_state.pending_sells == ()
+    assert runtime.write_runtime_snapshot(
+        tmp_path / "runtime", closed, registry
+    ).file_sha256 == snapshot.file_sha256
+
+
+def test_v1_legacy_snapshot_can_parent_v2_obligation_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-2026-08-20-CHAIN",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+        rank_consensus=1,
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-2026-08-20-CHAIN",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buy = PendingPaperIntent("BUY", "BBCA", 1, "OPEN_CAPACITY_PARTIAL")
+    second = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=(pending_buy,),
+            obligations=(partial,),
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+
+    assert json.loads(first.path.read_text(encoding="utf-8"))["schema_version"] == (
+        runtime.RUNTIME_SCHEMA
+    )
+    assert json.loads(second.path.read_text(encoding="utf-8"))["schema_version"] == (
+        runtime.RUNTIME_SCHEMA_V2
+    )
+    loaded = runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+    assert loaded.path == second.path
+    assert loaded.previous_snapshot_path == first.path
+    assert loaded.state.base_state.obligations == (partial,)
+
+
+def test_legacy_migration_classification_never_fabricates_quantities():
+    assert classify_state_for_migration(_state("2026-08-20" ).base_state) == (
+        LEGACY_POSITION_ONLY
+    )
+    assert classify_state_for_migration(
+        _state("2026-08-20", positions=(PaperPosition("BBCA", 2_400),)).base_state
+    ) == UNKNOWN_ORPHANED_PARTIAL
+    assert classify_state_for_migration(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "LEGACY"),),
+            obligations=(),
+        ).base_state
+    ) == UNKNOWN_ORPHANED_PARTIAL
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-CLASSIFIED",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    assert classify_state_for_migration(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "PLANNED"),),
+            obligations=(planned,),
+        ).base_state
+    ) == OBLIGATION_V1_STATE
 
 
 def test_runtime_snapshot_roundtrip_binds_state_registry_and_parent(
@@ -188,6 +416,64 @@ def test_snapshot_payload_tamper_fails_closed(
     payload["state"]["base_paper_state"]["cash_idr"] = 2_000_000.0
     snapshot.path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(DecisionV1Error, match="PAYLOAD_SHA_MISMATCH"):
+        runtime.load_runtime_snapshot(snapshot.path)
+
+
+@pytest.mark.parametrize("shares", [100.9, True])
+def test_runtime_payload_rejects_non_integer_position_shares(shares: object) -> None:
+    payload = runtime._paper_state_payload(
+        _state("2026-08-20", positions=(PaperPosition("BBCA", 100),)).base_state
+    )
+    payload["positions"][0]["shares"] = shares
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="DIVIDEND_V1_1_RUNTIME_POSITION_ROW_INVALID",
+    ):
+        runtime._paper_state_from_payload(payload)
+
+
+@pytest.mark.parametrize("rank", [1.9, True, 0])
+def test_runtime_payload_rejects_invalid_pending_rank(rank: object) -> None:
+    payload = runtime._paper_state_payload(
+        _state(
+            "2026-08-20",
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", 1, "RETRY"),),
+        ).base_state
+    )
+    payload["pending_buys"][0]["rank_consensus"] = rank
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
+    ):
+        runtime._paper_state_from_payload(payload)
+
+
+def test_hash_valid_noncanonical_snapshot_payload_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    payload = json.loads(snapshot.path.read_text(encoding="utf-8"))
+    payload["unexpected_extension"] = "accepted-by-hash-only"
+    body = dict(payload)
+    body.pop("snapshot_payload_sha256")
+    payload["snapshot_payload_sha256"] = runtime._canonical_hash(body)
+    snapshot.path.write_text(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="SNAPSHOT_PAYLOAD_NOT_CANONICAL",
+    ):
         runtime.load_runtime_snapshot(snapshot.path)
 
 
@@ -348,6 +634,264 @@ def test_latest_loader_rejects_forked_snapshot_history(
     )
     with pytest.raises(DecisionV1Error, match="SNAPSHOT_CHAIN_FORK"):
         runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+
+
+def test_recovery_quarantines_tampered_latest_and_returns_verified_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    tampered_bytes = b"{not-json\n"
+    latest.path.write_bytes(tampered_bytes)
+
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_INVALID"):
+        runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    assert recovered.path == first.path
+    assert latest.path.read_bytes() == tampered_bytes
+    manifest_path = (
+        tmp_path
+        / "runtime"
+        / runtime.RUNTIME_DIRNAME
+        / runtime.SNAPSHOT_DIRNAME
+        / runtime.QUARANTINE_DIRNAME
+        / runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == runtime.QUARANTINE_SCHEMA
+    assert manifest["manifest_sha256"] == _canonical_hash(
+        {
+            "schema_version": runtime.QUARANTINE_SCHEMA,
+            "entries": manifest["entries"],
+        }
+    )
+    assert len(manifest["entries"]) == 1
+    entry = manifest["entries"][0]
+    assert entry["original_relative_path"] == latest.path.name
+    assert entry["original_sha256"] == hashlib.sha256(tampered_bytes).hexdigest()
+    quarantined = manifest_path.parent / entry["quarantined_relative_path"].split("/", 1)[1]
+    assert quarantined.read_bytes() == tampered_bytes
+
+    repeated = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    assert repeated.path == first.path
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
+
+
+def test_quarantine_manifest_tamper_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{tampered-latest\n")
+    runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+    manifest_path = (
+        tmp_path
+        / "runtime"
+        / runtime.RUNTIME_DIRNAME
+        / runtime.SNAPSHOT_DIRNAME
+        / runtime.QUARANTINE_DIRNAME
+        / runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["entries"][0]["reason"] = "FORGED_REASON"
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="QUARANTINE_MANIFEST_HASH_MISMATCH",
+    ):
+        runtime.load_latest_runtime_snapshot(tmp_path / "runtime")
+
+
+def test_recovery_preserves_verified_obligation_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-RECOVERY-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-RECOVERY-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=(
+                PendingPaperIntent("BUY", "BBCA", None, "OPEN_CAPACITY_PARTIAL"),
+            ),
+            obligations=(partial,),
+        ),
+        registry,
+    )
+    advanced = apply_fill(
+        partial,
+        event_id="FILL-BBCA-RECOVERY-02",
+        session_date="2026-08-22",
+        filled_shares=1_000,
+        reason="RETRY_FILL",
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-22",
+            positions=(PaperPosition("BBCA", 3_400),),
+            pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "RETRY_FILL"),),
+            obligations=(advanced,),
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{interrupted-after-write\n")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+    assert recovered.path == first.path
+    assert recovered.state.base_state.obligations == (partial,)
+    assert recovered.state.base_state.positions == (PaperPosition("BBCA", 2_400),)
+    assert recovered.state.base_state.pending_buys == (
+        PendingPaperIntent("BUY", "BBCA", None, "OPEN_CAPACITY_PARTIAL"),
+    )
+
+
+def test_recovery_quarantines_explicit_close_latest_and_keeps_partial_ancestor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    planned = plan_obligation(
+        obligation_id="BUY-BBCA-CLOSE-RECOVERY-01",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-21",
+    )
+    partial = apply_fill(
+        planned,
+        event_id="FILL-BBCA-CLOSE-RECOVERY-01",
+        session_date="2026-08-21",
+        filled_shares=2_400,
+        reason="OPEN_CAPACITY_PARTIAL",
+    )
+    pending_buys, pending_sells = pending_intents_from_obligations((partial,))
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state(
+            "2026-08-21",
+            positions=(PaperPosition("BBCA", 2_400),),
+            pending_buys=pending_buys,
+            pending_sells=pending_sells,
+            obligations=(partial,),
+        ),
+        registry,
+    )
+    closed = runtime.close_runtime_obligation_explicitly(
+        first.state,
+        obligation_id=partial.obligation_id,
+        event_id="CLOSE-BBCA-CLOSE-RECOVERY-01",
+        session_date="2026-08-21",
+        reason="EXPLICIT_DECISION_REVERSAL_CLOSE",
+        status="RELINQUISHED",
+        parent_state_sha256=paper_state_hash(first.state.base_state),
+        seat_policy=_seat_policy(),
+    )
+    latest = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        fd.DividendAwarePaperState(
+            base_state=replace(closed.base_state, as_of_session_date="2026-08-22"),
+            dividend_ledger=first.state.dividend_ledger,
+        ),
+        registry,
+        previous_snapshot=first,
+    )
+    latest.path.write_bytes(b"{tampered-explicit-close-latest\n")
+
+    recovered = runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+    assert recovered.path == first.path
+    assert recovered.state.base_state.obligations == (partial,)
+    assert recovered.state.base_state.pending_buys == pending_buys
+    assert recovered.state.base_state.pending_sells == pending_sells
+
+
+def test_recovery_does_not_choose_between_valid_forked_histories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    first = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-21"),
+        registry,
+        previous_snapshot=first,
+    )
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-24"),
+        registry,
+    )
+    with pytest.raises(DecisionV1Error, match="SNAPSHOT_CHAIN_FORK"):
+        runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
+
+
+def test_recovery_rejects_noncanonical_snapshot_filename_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = _registry(tmp_path, monkeypatch, _event())
+    runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        _state("2026-08-20"),
+        registry,
+    )
+    snapshot_dir = (
+        tmp_path / "runtime" / runtime.RUNTIME_DIRNAME / runtime.SNAPSHOT_DIRNAME
+    )
+    (snapshot_dir / "unexpected.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(
+        DecisionV1Error,
+        match="NONCANONICAL_SNAPSHOT_FILENAME",
+    ):
+        runtime.recover_latest_runtime_snapshot(tmp_path / "runtime")
 
 
 def _entitlement(event: fd.CertifiedCashDividend, shares: int = 200) -> fd.PaperDividendEntitlement:

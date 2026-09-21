@@ -15,6 +15,7 @@ from .v4_x1_execution_v1_contract import (
     normalize_state,
     paper_state_hash,
 )
+from .v4_x1_quantity_obligation_v1 import QuantityObligation
 from .v4_x1_execution_v1_verify import (
     VerifiedEODExecutionInputs,
     _EOD_INPUT_TOKEN,
@@ -52,6 +53,7 @@ def _reconcile_effective_intents_v2(
     positions: dict[str, int],
     pending_buys: dict[str, PendingPaperIntent],
     pending_sells: dict[str, PendingPaperIntent],
+    obligations: tuple[QuantityObligation, ...] = (),
 ) -> tuple[tuple[TradeIntent, ...], tuple[TradeIntent, ...]]:
     """Reconcile Decision V2 shadow intents against executable paper state.
 
@@ -88,7 +90,35 @@ def _reconcile_effective_intents_v2(
     if set(new_sells) & target:
         raise DecisionV2Error("EXECUTION_V1_DECISION_V2_SELL_STILL_IN_TARGET")
 
-    required_buys = target - actual
+    # A pending projection can be reversed mechanically when it has no
+    # quantity-bearing obligation behind it.  Once an obligation has filled
+    # any quantity, silently dropping its remainder would destroy the
+    # conservation ledger.  Cancellation/relinquishment is a separate
+    # explicit transition and is intentionally not inferred from Decision
+    # target membership here.
+    for row in obligations:
+        if row.remaining_shares <= 0:
+            continue
+        if row.side == "BUY" and row.canonical_ticker not in target:
+            raise DecisionV2Error(
+                "EXECUTION_V1_DECISION_V2_ACTIVE_BUY_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION"
+            )
+        if row.side == "SELL" and row.canonical_ticker in target:
+            raise DecisionV2Error(
+                "EXECUTION_V1_DECISION_V2_ACTIVE_SELL_OBLIGATION_REVERSAL_REQUIRES_EXPLICIT_CANCELLATION"
+            )
+
+    partial_buy_retries = {
+        row.canonical_ticker
+        for row in obligations
+        if (
+            row.side == "BUY"
+            and row.filled_shares > 0
+            and row.remaining_shares > 0
+            and row.canonical_ticker in target
+        )
+    }
+    required_buys = (target - actual) | partial_buy_retries
     required_sells = actual - target
     effective_buys: dict[str, TradeIntent] = {}
     effective_sells: dict[str, TradeIntent] = {}
@@ -237,6 +267,7 @@ def prepare_execution_v1_from_decision_v2(
         positions,
         pending_buys,
         pending_sells,
+        paper_state.obligations,
     )
 
     involved = set(positions) | set(plan.target_positions)

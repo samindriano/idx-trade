@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Any, Mapping, Sequence
 
 from .decision_v2_minimal import (
     DecisionV2Error,
@@ -14,6 +14,8 @@ from .v4_x1_decision_v2_minimal import (
     plan_v4_x1_decision_v2_minimal,
 )
 from .v4_x1_sizing_v1 import SizingPlan, _size_entries_core
+from .v4_x1_identity_contract_v1 import SecurityIdentityV1
+from .v4_x1_transition_binding_v1 import build_decision_identity_binding_v1
 
 _VERIFIED_DECISION_V2_SIZING_PLAN_TOKEN = object()
 
@@ -26,6 +28,7 @@ class VerifiedDecisionV2SizingPlan:
     previous_score_session_date: str | None
     previous_score_artifact_sha256: str | None
     _verification_token: object = field(repr=False, compare=False)
+    identity_binding: dict[str, Any] | None = field(default=None, repr=False, compare=False)
 
 
 def verify_decision_v2_plan_for_sizing(
@@ -33,6 +36,7 @@ def verify_decision_v2_plan_for_sizing(
     current_verified: VerifiedScoreSession,
     previous_verified: VerifiedScoreSession | None,
     shadow_state: DecisionV2ShadowState,
+    security_identities: Sequence[SecurityIdentityV1] | None = None,
 ) -> VerifiedDecisionV2SizingPlan:
     """Verify exact Decision V2 provenance before Sizing V1 consumes BUY intents."""
 
@@ -55,6 +59,11 @@ def verify_decision_v2_plan_for_sizing(
 
     previous_date = None if previous_verified is None else previous_verified.session_date
     previous_sha = None if previous_verified is None else previous_verified.artifact_sha256
+    identity_binding = (
+        None
+        if security_identities is None
+        else build_decision_identity_binding_v1(decision_plan, security_identities)
+    )
 
     return VerifiedDecisionV2SizingPlan(
         plan=decision_plan,
@@ -62,6 +71,7 @@ def verify_decision_v2_plan_for_sizing(
         current_score_artifact_sha256=current_verified.artifact_sha256,
         previous_score_session_date=previous_date,
         previous_score_artifact_sha256=previous_sha,
+        identity_binding=identity_binding,
         _verification_token=_VERIFIED_DECISION_V2_SIZING_PLAN_TOKEN,
     )
 

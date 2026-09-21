@@ -286,6 +286,85 @@ def test_prepare_v1_1_uses_receivable_in_nav_not_available_cash(monkeypatch: pyt
     assert result.base_plan.eod_nav_idr == 2_002_500.0
 
 
+def test_prepare_v1_1_binds_projected_sizing_to_raw_execution_parent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_state = fd.DividendAwarePaperState(
+        _base("2026-08-31", cash=1_000_000.0, shares=100),
+        fd.DividendLedger(
+            entitlements=(_entitlement(shares=100),),
+            receivables=(_receivable(shares=100),),
+        ),
+    )
+    projected_state = replace(
+        raw_state,
+        base_state=replace(raw_state.base_state, cash_idr=1_005_000.0),
+    )
+    sizing = SizingPlan(
+        decision_session_date="2026-08-31",
+        nav_idr=2_000_000.0,
+        available_cash_idr=1_000_000.0,
+        target_weight_per_name=0.10,
+        max_entry_weight_per_name=0.15,
+        entries=(),
+        total_sized_notional=0.0,
+        residual_cash_after_sizing_reference=1_000_000.0,
+        _verification_token=_SIZING_PLAN_TOKEN,
+    )
+    raw_base_plan = ExecutionOrderPlan(
+        decision_session_date="2026-08-31",
+        execution_session_date="2026-09-01",
+        state_hash=paper_state_hash(raw_state.base_state),
+        eod_nav_idr=2_000_000.0,
+        projected_cash_for_sizing_idr=1_000_000.0,
+        sizing_plan=sizing,
+        sells=(),
+        effective_buy_intents=(),
+        target_positions=("BBCA",),
+        regular_market_values_t={"BBCA": 1_000_000_000.0},
+        eod_ohlcv_sha256="c" * 64,
+        eod_model_input_sha256="d" * 64,
+        official_calendar_sha256="e" * 64,
+    )
+    monkeypatch.setattr(fd, "prepare_execution_v1", lambda *args, **kwargs: raw_base_plan)
+    monkeypatch.setattr(
+        fd,
+        "_size_entries_for_intents",
+        lambda verified_plan, intents, *, nav_idr, available_cash_idr, reference_prices: replace(
+            sizing,
+            nav_idr=nav_idr,
+            available_cash_idr=available_cash_idr,
+        ),
+    )
+
+    result = fd.prepare_execution_v1_1(
+        object(),
+        raw_state,
+        projected_state=projected_state,
+        eod_inputs=SimpleNamespace(raw_close_prices={"BBCA": 10_000.0}),
+    )
+
+    assert result.base_plan.state_hash == paper_state_hash(raw_state.base_state)
+    assert result.sizing_lineage is not None
+    assert (
+        result.sizing_lineage.transition_policy
+        == fd.DIVIDEND_SIZING_TRANSITION_PROJECTED_NAV_ONLY
+    )
+    assert result.sizing_lineage.execution_cash_idr == 1_000_000.0
+    assert result.sizing_lineage.sizing_cash_idr == 1_005_000.0
+    assert result.sizing_lineage.sizing_base_state_hash != result.base_plan.state_hash
+
+
+def test_sizing_lineage_rejects_projected_trade_state_change() -> None:
+    raw_state = fd.DividendAwarePaperState(_base("2026-08-31", shares=100))
+    changed = replace(
+        raw_state,
+        base_state=replace(raw_state.base_state, positions=()),
+    )
+    with pytest.raises(DecisionV1Error, match="SIZING_STATE_TRADE_STATE_CHANGED"):
+        fd._sizing_lineage(raw_state, changed)
+
+
 def test_execute_v1_1_preserves_dividend_ledger(monkeypatch: pytest.MonkeyPatch) -> None:
     ledger = fd.DividendLedger(entitlements=(_entitlement(shares=100),))
     state = fd.DividendAwarePaperState(_base("2026-08-28", shares=100), ledger)

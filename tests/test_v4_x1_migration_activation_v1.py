@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+import hashlib
+import json
+
+import pytest
+
+import idx_trade.forward_dividend_runtime_v1_1 as runtime
+import idx_trade.forward_dividend_v1 as dividend
+from idx_trade.v4_x1_decision_v1_contract import DecisionV1Error
+from idx_trade.v4_x1_execution_v1_contract import (
+    PaperPortfolioState,
+    PaperPosition,
+    PendingPaperIntent,
+)
+from idx_trade.v4_x1_migration_activation_v1 import (
+    ACTIVATION_POLICY_SCHEMA,
+    ACTIVATE_COMPATIBLE,
+    ACTIVATE_LEGACY_MODE,
+    BLOCKED_RECONCILIATION,
+    REQUIRES_AUTHORIZATION,
+    MigrationActivationPolicyV1,
+    authorize_migration_activation,
+    load_migration_activation_decision_v1,
+    verify_migration_activation_decision_payload,
+    verify_migration_activation_policy_payload,
+    write_migration_activation_decision_v1,
+)
+from idx_trade.v4_x1_migration_provenance_v1 import build_migration_provenance_v1
+from idx_trade.v4_x1_quantity_obligation_v1 import plan_obligation
+
+
+def _provenance(state: PaperPortfolioState) -> dict[str, object]:
+    return build_migration_provenance_v1(
+        state,
+        source_artifact_sha256="a" * 64,
+        source_schema_version="legacy_snapshot_v1",
+        decided_at_utc="2026-09-20T10:00:00Z",
+    ).payload()
+
+
+def _policy(*, allow_legacy_mode: bool) -> MigrationActivationPolicyV1:
+    return MigrationActivationPolicyV1(
+        schema_version=ACTIVATION_POLICY_SCHEMA,
+        policy_id="synthetic-migration-policy-v1",
+        authorization_ref="synthetic-test-authorization",
+        allow_legacy_mode=allow_legacy_mode,
+    )
+
+
+def test_legacy_activation_requires_explicit_policy_authorization() -> None:
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(),
+    )
+    denied = authorize_migration_activation(_provenance(state), _policy(allow_legacy_mode=False))
+    assert denied.activation_status == REQUIRES_AUTHORIZATION
+    allowed = authorize_migration_activation(_provenance(state), _policy(allow_legacy_mode=True))
+    assert allowed.activation_status == ACTIVATE_LEGACY_MODE
+
+
+def test_compatible_state_can_be_authorized_without_legacy_mode() -> None:
+    obligation = plan_obligation(
+        obligation_id="BUY-BBCA-ACTIVATION",
+        ticker="BBCA",
+        side="BUY",
+        planned_shares=5_000,
+        session_date="2026-08-20",
+    )
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(),
+        pending_buys=(PendingPaperIntent("BUY", "BBCA", None, "PLANNED"),),
+        obligations=(obligation,),
+    )
+    decision = authorize_migration_activation(_provenance(state), _policy(allow_legacy_mode=False))
+    assert decision.activation_status == ACTIVATE_COMPATIBLE
+
+
+def test_orphaned_state_remains_blocked_even_with_legacy_policy() -> None:
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(PaperPosition("BBCA", 2_400),),
+    )
+    decision = authorize_migration_activation(_provenance(state), _policy(allow_legacy_mode=True))
+    assert decision.activation_status == BLOCKED_RECONCILIATION
+
+
+def test_activation_decision_is_immutable_and_hash_verified(tmp_path) -> None:
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(),
+    )
+    decision = authorize_migration_activation(_provenance(state), _policy(allow_legacy_mode=True))
+    path = tmp_path / "activation.json"
+    assert write_migration_activation_decision_v1(path, decision) == path.resolve()
+    original = path.read_bytes()
+    assert write_migration_activation_decision_v1(path, decision) == path.resolve()
+    assert path.read_bytes() == original
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["reason_code"] = "tampered"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(DecisionV1Error, match="HASH_MISMATCH"):
+        load_migration_activation_decision_v1(path)
+
+
+def test_hash_valid_activation_extensions_are_rejected_as_noncanonical() -> None:
+    policy_payload = _policy(allow_legacy_mode=True).payload()
+    policy_payload["unexpected_extension"] = True
+    policy_body = dict(policy_payload)
+    policy_body.pop("policy_sha256")
+    policy_payload["policy_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                policy_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_migration_activation_policy_payload(policy_payload)
+
+    decision = authorize_migration_activation(
+        _provenance(
+            PaperPortfolioState(
+                as_of_session_date="2026-08-20",
+                cash_idr=1_000_000.0,
+                positions=(),
+            )
+        ),
+        _policy(allow_legacy_mode=True),
+    )
+    decision_payload = decision.payload()
+    decision_payload["unexpected_extension"] = True
+    decision_body = dict(decision_payload)
+    decision_body.pop("payload_sha256")
+    decision_payload["payload_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                decision_body,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode()
+    ).hexdigest()
+    with pytest.raises(DecisionV1Error, match="PAYLOAD_NOT_CANONICAL"):
+        verify_migration_activation_decision_payload(decision_payload)
+
+
+def test_runtime_snapshot_consumer_persists_provenance_and_policy_decision(
+    tmp_path,
+) -> None:
+    state = PaperPortfolioState(
+        as_of_session_date="2026-08-20",
+        cash_idr=1_000_000.0,
+        positions=(),
+    )
+    snapshot = runtime.write_runtime_snapshot(
+        tmp_path / "runtime",
+        dividend.DividendAwarePaperState(
+            base_state=state,
+            dividend_ledger=dividend.DividendLedger(),
+        ),
+    )
+    snapshot_bytes_before = snapshot.path.read_bytes()
+    policy = _policy(allow_legacy_mode=False)
+    decision = runtime.build_runtime_snapshot_migration_activation_decision(
+        snapshot.path,
+        policy=policy,
+        decided_at_utc="2026-09-20T10:00:00Z",
+    )
+    assert decision.activation_status == REQUIRES_AUTHORIZATION
+    provenance_path, decision_path = (
+        tmp_path / "migration.json",
+        tmp_path / "activation.json",
+    )
+    persisted = runtime.write_runtime_snapshot_migration_activation_decision(
+        snapshot.path,
+        provenance_path,
+        decision_path,
+        policy=policy,
+        decided_at_utc="2026-09-20T10:00:00Z",
+    )
+    assert persisted == (provenance_path.resolve(), decision_path.resolve())
+    assert snapshot.path.read_bytes() == snapshot_bytes_before
+    assert load_migration_activation_decision_v1(decision_path)["activation_status"] == (
+        REQUIRES_AUTHORIZATION
+    )

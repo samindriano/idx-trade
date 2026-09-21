@@ -8,12 +8,13 @@ import math
 import os
 from pathlib import Path
 import tempfile
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 from . import forward_dividend_execution_v1_1 as gate
 from . import forward_dividend_v1 as dividend
 from .decision_v2_minimal import DecisionV2ShadowState
 from .v4_x1_decision_v1_contract import DecisionV1Error
+from .v4_x1_decision_seat_policy_v1 import DecisionSeatClosePolicyV1
 from .v4_x1_decision_v2_minimal import (
     V4_X1_DECISION_V2_MINIMAL_PROFILE_V1,
 )
@@ -22,13 +23,40 @@ from .v4_x1_execution_v1_contract import (
     PaperPortfolioState,
     PaperPosition,
     PendingPaperIntent,
+    close_obligation_explicitly as close_paper_obligation_explicitly,
     normalize_state,
     paper_state_hash,
+    rank_consensus_value,
+    whole_lot_shares,
+)
+from .v4_x1_quantity_obligation_v1 import (
+    obligation_from_payload,
+    obligations_payload,
+    normalize_obligations,
+)
+from .v4_x1_migration_provenance_v1 import (
+    MigrationProvenanceV1,
+    build_migration_provenance_v1,
+    write_migration_provenance_v1,
+)
+from .v4_x1_migration_activation_v1 import (
+    MigrationActivationDecisionV1,
+    MigrationActivationPolicyV1,
+    authorize_migration_activation,
+    write_migration_activation_decision_v1,
 )
 
 RUNTIME_SCHEMA = "idx_trade_forward_dividend_runtime_state_v1_1"
+RUNTIME_SCHEMA_V2 = "idx_trade_forward_dividend_runtime_state_v2"
+SUPPORTED_RUNTIME_SCHEMAS = frozenset({RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2})
 RUNTIME_DIRNAME = "forward_execution_v1_1"
 SNAPSHOT_DIRNAME = "state_snapshots"
+QUARANTINE_DIRNAME = "quarantine"
+QUARANTINE_MANIFEST_FILENAME = "manifest.json"
+QUARANTINE_SCHEMA = "idx_trade_forward_dividend_snapshot_quarantine_v2"
+_QUARANTINE_MANIFEST_KEYS = frozenset(
+    {"schema_version", "entries", "manifest_sha256"}
+)
 _VERIFIED_RUNTIME_SNAPSHOT_TOKEN = object()
 
 
@@ -119,7 +147,7 @@ def _paper_state_payload(state: PaperPortfolioState) -> dict[str, Any]:
             for row in sorted(rows.values(), key=lambda x: x.ticker)
         ]
 
-    return {
+    payload: dict[str, Any] = {
         "as_of_session_date": session,
         "cash_idr": float(cash),
         "positions": [
@@ -131,6 +159,9 @@ def _paper_state_payload(state: PaperPortfolioState) -> dict[str, Any]:
         "reconciliation_required": bool(state.reconciliation_required),
         "source": state.source,
     }
+    if state.obligations:
+        payload["obligations"] = obligations_payload(state.obligations)
+    return payload
 
 
 def _paper_state_from_payload(value: object) -> PaperPortfolioState:
@@ -150,14 +181,23 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
     raw_positions = value.get("positions")
     raw_buys = value.get("pending_buys")
     raw_sells = value.get("pending_sells")
+    raw_obligations = value.get("obligations", [])
     if not isinstance(raw_positions, list):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_POSITIONS_INVALID")
     if not isinstance(raw_buys, list) or not isinstance(raw_sells, list):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PENDING_INVALID")
+    if not isinstance(raw_obligations, list):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_OBLIGATIONS_INVALID")
 
     try:
         positions = tuple(
-            PaperPosition(str(row["ticker"]), int(row["shares"]))
+            PaperPosition(
+                str(row["ticker"]),
+                whole_lot_shares(
+                    row["shares"],
+                    "DIVIDEND_V1_1_RUNTIME_POSITION_ROW_INVALID",
+                ),
+            )
             for row in raw_positions
             if isinstance(row, dict)
         )
@@ -165,10 +205,9 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
             PendingPaperIntent(
                 side=str(row["side"]),
                 ticker=str(row["ticker"]),
-                rank_consensus=(
-                    None
-                    if row.get("rank_consensus") is None
-                    else int(row["rank_consensus"])
+                rank_consensus=rank_consensus_value(
+                    row.get("rank_consensus"),
+                    "DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
                 ),
                 reason=str(row["reason"]),
                 replacement_peer=(
@@ -184,10 +223,9 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
             PendingPaperIntent(
                 side=str(row["side"]),
                 ticker=str(row["ticker"]),
-                rank_consensus=(
-                    None
-                    if row.get("rank_consensus") is None
-                    else int(row["rank_consensus"])
+                rank_consensus=rank_consensus_value(
+                    row.get("rank_consensus"),
+                    "DIVIDEND_V1_1_RUNTIME_PENDING_RANK_INVALID",
                 ),
                 reason=str(row["reason"]),
                 replacement_peer=(
@@ -205,6 +243,12 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_POSITION_ROW_INVALID")
     if len(pending_buys) != len(raw_buys) or len(pending_sells) != len(raw_sells):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PENDING_ROW_INVALID")
+    try:
+        obligations = normalize_obligations(
+            tuple(obligation_from_payload(row) for row in raw_obligations)
+        )
+    except (TypeError, ValueError) as exc:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_OBLIGATION_ROW_INVALID") from exc
 
     state = PaperPortfolioState(
         as_of_session_date=session,
@@ -214,6 +258,7 @@ def _paper_state_from_payload(value: object) -> PaperPortfolioState:
         pending_sells=pending_sells,
         reconciliation_required=bool(value.get("reconciliation_required")),
         source=PAPER_STATE_SOURCE,
+        obligations=obligations,
     )
     normalize_state(state)
     return state
@@ -559,6 +604,37 @@ def reconstruct_decision_shadow_state(
     )
 
 
+def close_runtime_obligation_explicitly(
+    state: dividend.DividendAwarePaperState,
+    *,
+    obligation_id: str,
+    event_id: str,
+    session_date: str,
+    reason: str,
+    status: Literal["CANCELED", "RELINQUISHED"] = "CANCELED",
+    parent_state_sha256: str | None = None,
+    seat_policy: DecisionSeatClosePolicyV1 | None = None,
+) -> dividend.DividendAwarePaperState:
+    """Close one obligation in the runtime-aware state via an explicit event."""
+
+    if not isinstance(state, dividend.DividendAwarePaperState):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_AWARE_STATE_REQUIRED")
+    closed_base = close_paper_obligation_explicitly(
+        state.base_state,
+        obligation_id=obligation_id,
+        event_id=event_id,
+        session_date=session_date,
+        reason=reason,
+        status=status,
+        parent_state_sha256=parent_state_sha256,
+        seat_policy=seat_policy,
+    )
+    return dividend.DividendAwarePaperState(
+        base_state=closed_base,
+        dividend_ledger=state.dividend_ledger,
+    )
+
+
 def _snapshot_payload(
     state: dividend.DividendAwarePaperState,
     registry: Sequence[RegisteredDividendEvidence],
@@ -619,7 +695,11 @@ def _snapshot_payload(
         "runtime_state_sha256": runtime_state_hash(state, normalized_registry),
     }
     payload: dict[str, Any] = {
-        "schema_version": RUNTIME_SCHEMA,
+        "schema_version": (
+            RUNTIME_SCHEMA_V2
+            if state.base_state.obligations
+            else RUNTIME_SCHEMA
+        ),
         "session_date": session,
         "state": {
             "base_paper_state": base_payload,
@@ -690,6 +770,257 @@ def write_runtime_snapshot(
     return load_runtime_snapshot(target)
 
 
+def build_runtime_snapshot_migration_provenance(
+    snapshot_path: str | Path,
+    *,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> MigrationProvenanceV1:
+    """Classify one verified snapshot and bind the exact source file hash."""
+
+    target = Path(snapshot_path).expanduser().resolve()
+    snapshot = load_runtime_snapshot(target)
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    source_schema = str(payload.get("schema_version") or "").strip()
+    if not source_schema:
+        raise DecisionV1Error("MIGRATION_PROVENANCE_V1_SOURCE_SCHEMA_INVALID")
+    return build_migration_provenance_v1(
+        snapshot.state.base_state,
+        source_artifact_sha256=snapshot.file_sha256,
+        source_schema_version=source_schema,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+
+
+def write_runtime_snapshot_migration_provenance(
+    snapshot_path: str | Path,
+    provenance_path: str | Path,
+    *,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> Path:
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    return write_migration_provenance_v1(provenance_path, provenance)
+
+
+def build_runtime_snapshot_migration_activation_decision(
+    snapshot_path: str | Path,
+    *,
+    policy: MigrationActivationPolicyV1,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> MigrationActivationDecisionV1:
+    """Authorize one verified snapshot through an explicit policy only."""
+
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    return authorize_migration_activation(provenance.payload(), policy)
+
+
+def write_runtime_snapshot_migration_activation_decision(
+    snapshot_path: str | Path,
+    provenance_path: str | Path,
+    decision_path: str | Path,
+    *,
+    policy: MigrationActivationPolicyV1,
+    decided_at_utc: str,
+    runtime_lineage_sha256: str | None = None,
+) -> tuple[Path, Path]:
+    """Persist provenance and its policy decision without mutating runtime state."""
+
+    provenance = build_runtime_snapshot_migration_provenance(
+        snapshot_path,
+        decided_at_utc=decided_at_utc,
+        runtime_lineage_sha256=runtime_lineage_sha256,
+    )
+    decision = authorize_migration_activation(provenance.payload(), policy)
+    persisted_provenance = write_migration_provenance_v1(
+        provenance_path,
+        provenance,
+    )
+    persisted_decision = write_migration_activation_decision_v1(
+        decision_path,
+        decision,
+    )
+    return persisted_provenance, persisted_decision
+
+
+def _snapshot_root(runtime_root: str | Path) -> Path:
+    return (
+        Path(runtime_root).expanduser().resolve()
+        / RUNTIME_DIRNAME
+        / SNAPSHOT_DIRNAME
+    )
+
+
+def _quarantine_manifest_path(snapshot_root: Path) -> Path:
+    return snapshot_root / QUARANTINE_DIRNAME / QUARANTINE_MANIFEST_FILENAME
+
+
+def _load_quarantine_manifest(snapshot_root: Path) -> list[dict[str, str]]:
+    manifest_path = _quarantine_manifest_path(snapshot_root)
+    if not manifest_path.exists():
+        return []
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise DecisionV1Error(
+            "DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_INVALID"
+        ) from exc
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != _QUARANTINE_MANIFEST_KEYS
+        or payload.get("schema_version") != QUARANTINE_SCHEMA
+    ):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_SCHEMA_CHANGED")
+    declared_manifest_sha = str(payload.get("manifest_sha256") or "")
+    manifest_body = dict(payload)
+    manifest_body.pop("manifest_sha256", None)
+    if _canonical_hash(manifest_body) != declared_manifest_sha:
+        raise DecisionV1Error(
+            "DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_HASH_MISMATCH"
+        )
+    raw_entries = payload.get("entries")
+    if not isinstance(raw_entries, list):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRIES_INVALID")
+
+    entries: list[dict[str, str]] = []
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        required = {
+            "original_relative_path",
+            "original_sha256",
+            "quarantined_relative_path",
+            "reason",
+        }
+        if set(raw) != required:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        if any(not isinstance(raw[key], str) for key in required):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        entry = {key: raw[key] for key in required}
+        if (
+            len(entry["original_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in entry["original_sha256"].lower())
+            or not entry["reason"]
+        ):
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_INVALID")
+        quarantined = (snapshot_root / entry["quarantined_relative_path"]).resolve()
+        try:
+            quarantined.relative_to(snapshot_root.resolve())
+        except ValueError as exc:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_PATH_ESCAPE") from exc
+        if not quarantined.is_file() or _sha256_file(quarantined) != entry["original_sha256"]:
+            raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ARTIFACT_MISMATCH")
+        entries.append(entry)
+    if entries != sorted(
+        entries,
+        key=lambda item: (
+            item["original_relative_path"],
+            item["original_sha256"],
+            item["reason"],
+        ),
+    ):
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_ENTRY_ORDER_INVALID")
+    return entries
+
+
+def quarantine_runtime_snapshot(
+    runtime_root: str | Path,
+    snapshot_path: str | Path,
+    *,
+    reason: str,
+) -> Path:
+    """Record an untrusted snapshot without mutating its original bytes."""
+
+    snapshot_root = _snapshot_root(runtime_root)
+    path = Path(snapshot_path).expanduser().resolve()
+    try:
+        relative = path.relative_to(snapshot_root.resolve())
+    except ValueError as exc:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_SCOPE_INVALID") from exc
+    if len(relative.parts) != 1 or path.suffix.lower() != ".json":
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_TARGET_INVALID")
+    if not path.is_file():
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_TARGET_MISSING")
+    reason_text = str(reason).strip()
+    if not reason_text:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_REASON_INVALID")
+
+    entries = _load_quarantine_manifest(snapshot_root)
+    original_sha = _sha256_file(path)
+    original_relative = relative.as_posix()
+    for entry in entries:
+        if (
+            entry["original_relative_path"] == original_relative
+            and entry["original_sha256"] == original_sha
+            and entry["reason"] == reason_text
+        ):
+            return _quarantine_manifest_path(snapshot_root)
+
+    quarantine_dir = snapshot_root / QUARANTINE_DIRNAME
+    quarantine_dir.mkdir(parents=True, exist_ok=True)
+    quarantined_relative = (
+        f"{QUARANTINE_DIRNAME}/{path.name}.{original_sha}.artifact"
+    )
+    quarantined = snapshot_root / quarantined_relative
+    data = path.read_bytes()
+    if quarantined.exists():
+        if quarantined.read_bytes() != data:
+            raise DecisionV1Error(
+                "DIVIDEND_V1_1_RUNTIME_QUARANTINE_ARTIFACT_CONFLICT"
+            )
+    else:
+        quarantined.write_bytes(data)
+    entries.append(
+        {
+            "original_relative_path": original_relative,
+            "original_sha256": original_sha,
+            "quarantined_relative_path": quarantined_relative,
+            "reason": reason_text,
+        }
+    )
+    entries.sort(
+        key=lambda item: (
+            item["original_relative_path"],
+            item["original_sha256"],
+            item["reason"],
+        )
+    )
+    payload = {
+        "schema_version": QUARANTINE_SCHEMA,
+        "entries": entries,
+    }
+    payload["manifest_sha256"] = _canonical_hash(payload)
+    manifest_data = _snapshot_bytes(payload)
+    manifest_path = _quarantine_manifest_path(snapshot_root)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=".quarantine-manifest.",
+        suffix=".tmp",
+        dir=quarantine_dir,
+    )
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(manifest_data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, manifest_path)
+    finally:
+        temp.unlink(missing_ok=True)
+    if manifest_path.read_bytes() != manifest_data:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_QUARANTINE_MANIFEST_WRITE_MISMATCH")
+    return manifest_path
+
+
 def _load_runtime_snapshot(
     path: Path,
     *,
@@ -705,7 +1036,10 @@ def _load_runtime_snapshot(
         payload = json.loads(resolved.read_text(encoding="utf-8"))
     except Exception as exc:
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_INVALID") from exc
-    if not isinstance(payload, dict) or payload.get("schema_version") != RUNTIME_SCHEMA:
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") not in SUPPORTED_RUNTIME_SCHEMAS
+    ):
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SCHEMA_CHANGED")
 
     session = _iso_date(
@@ -755,6 +1089,7 @@ def _load_runtime_snapshot(
 
     previous_path: Path | None = None
     previous_sha: str | None = None
+    parent_snapshot: VerifiedDividendRuntimeSnapshot | None = None
     previous = payload.get("previous_snapshot")
     if previous is not None:
         if not isinstance(previous, dict):
@@ -765,25 +1100,37 @@ def _load_runtime_snapshot(
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_MISSING")
         if _sha256_file(previous_path) != previous_sha:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_SHA_MISMATCH")
-        parent = _load_runtime_snapshot(previous_path, seen=seen)
-        if parent.file_sha256 != previous_sha:
+        parent_snapshot = _load_runtime_snapshot(previous_path, seen=seen)
+        if parent_snapshot.file_sha256 != previous_sha:
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_SHA_MISMATCH")
-        if previous.get("runtime_state_sha256") != parent.runtime_state_sha256:
+        if (
+            previous.get("runtime_state_sha256")
+            != parent_snapshot.runtime_state_sha256
+        ):
             raise DecisionV1Error(
                 "DIVIDEND_V1_1_RUNTIME_PARENT_STATE_HASH_MISMATCH"
             )
-        if previous.get("session_date") != parent.state.base_state.as_of_session_date:
+        if (
+            previous.get("session_date")
+            != parent_snapshot.state.base_state.as_of_session_date
+        ):
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_MISMATCH")
-        if date.fromisoformat(parent.state.base_state.as_of_session_date) >= date.fromisoformat(session):
+        if date.fromisoformat(
+            parent_snapshot.state.base_state.as_of_session_date
+        ) >= date.fromisoformat(session):
             raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_PARENT_DATE_NOT_PRIOR")
         _verify_registry_append_only(
-            parent.certified_dividend_registry,
+            parent_snapshot.certified_dividend_registry,
             registry,
         )
         _verify_ledger_progression(
-            parent.state.dividend_ledger,
+            parent_snapshot.state.dividend_ledger,
             ledger,
         )
+
+    canonical_payload = _snapshot_payload(state, registry, parent_snapshot)
+    if canonical_payload != payload:
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_PAYLOAD_NOT_CANONICAL")
 
     return VerifiedDividendRuntimeSnapshot(
         path=resolved,
@@ -807,15 +1154,17 @@ def load_runtime_snapshot(
 def load_latest_runtime_snapshot(
     runtime_root: str | Path,
 ) -> VerifiedDividendRuntimeSnapshot:
-    root = (
-        Path(runtime_root).expanduser().resolve()
-        / RUNTIME_DIRNAME
-        / SNAPSHOT_DIRNAME
-    )
+    root = _snapshot_root(runtime_root)
     if not root.is_dir():
         raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_DIR_MISSING")
+    quarantined = {
+        entry["original_relative_path"]
+        for entry in _load_quarantine_manifest(root)
+    }
     candidates: list[tuple[date, Path]] = []
     for path in root.glob("*.json"):
+        if path.name in quarantined:
+            continue
         try:
             session = date.fromisoformat(path.stem)
         except ValueError:
@@ -841,10 +1190,53 @@ def load_latest_runtime_snapshot(
     return latest
 
 
+def recover_latest_runtime_snapshot(
+    runtime_root: str | Path,
+) -> VerifiedDividendRuntimeSnapshot:
+    """Quarantine only untrusted latest-chain artifacts, never select a fork."""
+
+    root = _snapshot_root(runtime_root)
+    if not root.is_dir():
+        raise DecisionV1Error("DIVIDEND_V1_1_RUNTIME_SNAPSHOT_DIR_MISSING")
+    while True:
+        try:
+            return load_latest_runtime_snapshot(runtime_root)
+        except DecisionV1Error as exc:
+            if "SNAPSHOT_CHAIN_FORK" in str(exc):
+                raise
+            quarantined = {
+                entry["original_relative_path"]
+                for entry in _load_quarantine_manifest(root)
+            }
+            candidates = [
+                path
+                for path in root.glob("*.json")
+                if path.name not in quarantined
+            ]
+            if not candidates:
+                raise
+            try:
+                candidates.sort(key=lambda path: date.fromisoformat(path.stem))
+            except ValueError as error:
+                raise DecisionV1Error(
+                    "DIVIDEND_V1_1_RUNTIME_NONCANONICAL_SNAPSHOT_FILENAME"
+                ) from error
+            quarantine_runtime_snapshot(
+                runtime_root,
+                candidates[-1],
+                reason=str(exc),
+            )
+
+
 __all__ = [
     "RUNTIME_SCHEMA",
+    "RUNTIME_SCHEMA_V2",
+    "SUPPORTED_RUNTIME_SCHEMAS",
     "RUNTIME_DIRNAME",
     "SNAPSHOT_DIRNAME",
+    "QUARANTINE_DIRNAME",
+    "QUARANTINE_MANIFEST_FILENAME",
+    "QUARANTINE_SCHEMA",
     "RegisteredDividendEvidence",
     "VerifiedDividendRuntimeSnapshot",
     "normalize_certified_dividend_registry",
@@ -853,7 +1245,14 @@ __all__ = [
     "registered_certified_events",
     "runtime_state_hash",
     "reconstruct_decision_shadow_state",
+    "close_runtime_obligation_explicitly",
     "write_runtime_snapshot",
+    "build_runtime_snapshot_migration_provenance",
+    "write_runtime_snapshot_migration_provenance",
+    "build_runtime_snapshot_migration_activation_decision",
+    "write_runtime_snapshot_migration_activation_decision",
     "load_runtime_snapshot",
     "load_latest_runtime_snapshot",
+    "quarantine_runtime_snapshot",
+    "recover_latest_runtime_snapshot",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from .decision_v2_minimal import (
@@ -52,6 +53,10 @@ def rank_session_from_v4_x1_verified(verified: VerifiedScoreSession) -> RankSess
     frame["ticker"] = frame["ticker"].map(_normalize_ticker)
     if frame["ticker"].duplicated().any():
         raise DecisionV2Error("DECISION_V2_V4_X1_DUPLICATE_TICKER")
+    if frame["rank_consensus"].map(
+        lambda value: isinstance(value, (bool, np.bool_))
+    ).any():
+        raise DecisionV2Error("DECISION_V2_V4_X1_RANK_BOOLEAN_FORBIDDEN")
 
     numeric = pd.to_numeric(frame["rank_consensus"], errors="coerce")
     if numeric.isna().any():
