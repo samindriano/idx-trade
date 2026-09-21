@@ -76,21 +76,32 @@ adoption decision.
 | 1 lineage adjudication | PASS WITH SPLIT | Lineage matrix; actual task and checkout audit |
 | 2 clean extraction | IN PROGRESS | Extraction map; code groups to be materialized as clean commits |
 | 3 adoption base | PASS FOR CANDIDATE | 402 selected; no live adoption |
-| 4 integrated hardened stack | NOT YET PROVEN | Candidate source/tests pending |
+| 4 integrated hardened stack | PASS LOCAL / SYNTHETIC ONLY | Clean candidate extraction and full local suite |
 | 5 migration architecture | DEFINED / PARTIAL EXECUTABLE | State migration matrix and compatibility classifier |
-| 6 shadow migration rehearsal | NOT YET PROVEN | Synthetic fixtures only; must run after candidate extraction |
-| 7 multi-session rehearsal | NOT YET PROVEN | Required 22 scenarios; exact invariant report pending |
+| 6 shadow migration rehearsal | NOT YET PROVEN | Synthetic migration fixtures still pending |
+| 7 multi-session rehearsal | PASS SELECTED SYNTHETIC MATRIX | 22-scenario matrix executed; broader independent challenge pending |
 | 8 entrypoint compatibility | PASS STATIC / SYNTHETIC RUNTIME PENDING | Static entrypoint matrix and V1/V2 mode guard |
 | 9 Windows/cloud interface review | READ-ONLY BASELINE PASS | Task/workflow mapping recorded; no mutation |
 | 10 identity authority boundary | CONTRACT READY / AUTHORITY NOT ADMITTED | Hash-pinned caller artifact only |
 | 11 policy review | FAIL-CLOSED / EXTERNAL DECISIONS OPEN | No unresolved policy invented |
-| 12 backward compatibility | NOT YET PROVEN | V1/V2/legacy challenge pending |
+| 12 backward compatibility | PARTIAL SYNTHETIC | V1/V2/recovery tests pass; full adoption challenge pending |
 | 13 forward false-green challenge | NOT YET PROVEN | Independent semantic chain challenge pending |
 | 14 rollback architecture | DEFINED / REHEARSAL PENDING | Rollback matrix |
 | 15 adoption packet | IN PROGRESS | This dossier and durable companion records |
 | 16 independent adoption challenge | NOT YET RUN | Must run against assembled candidate |
 
 No global PASS is claimed.
+
+## Candidate verification snapshot
+
+- Candidate HEAD at the last full run: c602017f.
+- Full repository collection: 903 tests.
+- Full candidate run: 903/903 reached 100% with three pre-existing pandas
+  FutureWarnings and no test failures.
+- Selected 22-scenario rehearsal matrix: PASS; parameter expansion executed
+  the CA timing boundaries and explicit close variants.
+- No provider, outcome, cloud, capture, scheduler, telemetry, or live runtime
+  state was accessed.
 
 ## Acceptance levels
 
@@ -111,6 +122,8 @@ production.
 - `2026-09-21_IDX_ROLLBACK_MATRIX_V1.md`
 - `2026-09-21_IDX_ADOPTION_ACTIVE_FRONTIER_HANDOFF_V1.md`
 - `2026-09-21_IDX_ADOPTION_NO_RETRY_LOG_V1.md`
+- `2026-09-21_IDX_PHASE_5_13_REQUIREMENT_TRACEABILITY_V1.md`
+- `2026-09-21_IDX_MULTI_SESSION_REHEARSAL_MATRIX_V1.md`
 
 ## Required future authorization sequence
 
