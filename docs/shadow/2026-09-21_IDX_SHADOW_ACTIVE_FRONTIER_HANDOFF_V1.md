@@ -97,6 +97,10 @@ Date: 2026-09-21
   parent-root paths metadata-only: counts stayed at 135 / 79,770, 819 /
   63,136,721, and 32,656 files; no new paper-state class appeared, and no
   stronger current-byte attestation was inferred;
+- audited adjacent local boundaries: sibling `idx-trade-data-gate-20260808u`
+  is certification/input evidence, the rollback package is task/deployment
+  metadata, and the watchdog root is automation source/dispatch evidence; no
+  additional paper-state chain was admitted;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

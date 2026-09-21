@@ -132,6 +132,12 @@ artifact evidence, and missing real state is not fabricated.
     appeared. This is a freshness/count check, not a new byte-stability
     attestation; details are in
     `2026-09-21_IDX_CURRENT_RETAINED_ROOT_RECENSUS_V1.md`.
+33. Audited adjacent local boundaries: the 1,193-file `20260808u` sibling is
+    a certification/input bundle, the seven-file rollback package is
+    task/deployment metadata, and the 374-file watchdog root is automation
+    source/dispatch evidence. None is a real paper-state chain; the exact
+    shape and exclusion rationale are in
+    `2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md`.
 
 ## Root census snapshot
 
