@@ -15,6 +15,12 @@ root:
 No provider checkout, fetch, cloud/R2, counter, outcome, scheduler, or live
 runtime was accessed. No calendar file was rewritten or substituted.
 
+A second bounded search also hashed five calendar CSV candidates in the
+retained parent evidence root (`sessions/exchange_sessions.csv`, the two
+legacy/default calendar variants, and the two target/additional session lists)
+after copying them into the isolated extended evidence root. None matched any
+of the 23 embedded hashes.
+
 ## Results
 
 | Check | Result |
@@ -25,6 +31,8 @@ runtime was accessed. No calendar file was rewritten or substituted.
 | Historical embedded hashes found in approved CSVs | 0 |
 | Current calendar hash found | 1 |
 | Matching file | `calendar\exchange_sessions.csv` |
+| Additional parent-root calendar candidates hashed | 5 |
+| Matches among additional parent-root candidates | 0 |
 
 The sole match is the current calendar copy
 `8a5fd51630c331b651fcd41bd024a70c6f8fad6dcc9fe9d5393429e16766a6fe`, embedded

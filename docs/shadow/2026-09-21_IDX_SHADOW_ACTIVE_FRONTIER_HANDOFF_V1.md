@@ -43,6 +43,10 @@ Date: 2026-09-21
   sessions; child hashes, outcome-blind flags, and model/evidence row counts
   passed, while the 28/29 calendar-lineage blocker was independently
   reproduced;
+- admitted an additional 32-file / 85,180,491-byte parent-root evidence copy
+  covering CA event registry, execution anchors, historical calendars, and
+  Official Open archive metadata/logs; all hashes matched and all four classes
+  remained input-only rather than paper state;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 

@@ -20,6 +20,10 @@ Status: **INPUT CORPUS FOUND / REPLAY NOT RUN**
 | Score manifest/artifact | copied for 2026-09-17 | PASS via explicit shadow adapter | full replay still BLOCKED by missing state/CA and source path provenance |
 | All V4-X1 score manifests | 16 real manifests; 15 clean candidate-id, 1 legacy id | 15 PASS, 1 fail-closed rejection via shadow adapters | score-level validation only; full replay still BLOCKED |
 | Legacy input shape/ambiguity hunt | copied 2026-09-16 and 2026-09-17 | PASS WITH LIMITATION | no duplicate required keys, required-field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV close differences; wider evidence/stock universe remains an interface boundary |
+| Extended CA event registry | 38 IDX event rows / 35 tickers; 18 certified-window rows | not attempted as state replay | source event evidence only; no holdings, entitlement, payment, receivable, or restart ledger |
+| Extended execution-anchor corpus | 479,471 anchor rows across 504 session reports | not attempted as paper replay | source input evidence only; no transaction/fill vector or paper-state snapshot |
+| Extended historical calendars | 516 available / 504 target sessions | not substituted | none of the admitted candidate calendar hashes matched the 23 embedded session hashes |
+| Extended Official Open archive | one run metadata file plus eight logs | not attempted | operational capture evidence only; no execution-grade paper state |
 
 ## Selected real manifests
 

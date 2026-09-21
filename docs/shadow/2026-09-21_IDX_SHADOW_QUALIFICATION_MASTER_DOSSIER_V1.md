@@ -63,6 +63,11 @@ artifact evidence, and missing real state is not fabricated.
     immutable 29-session copy: all 29 child-hash sets and outcome-blind flags
     passed, no paper-state schema appeared, and the 28/29 calendar-lineage
     blocker was independently reproduced.
+19. Extended the bounded discovery to retained parent-root evidence classes,
+    then copied 32 files / 85,180,491 bytes into a separate shadow root: CA
+    event registry, execution-anchor inputs, historical calendars, and
+    Official Open archive metadata/logs. All source pre/post/copy hashes were
+    equal; these classes were classified as input-only, not paper state.
 
 ## Root census snapshot
 
@@ -72,6 +77,19 @@ artifact evidence, and missing real state is not fabricated.
 | Forward monitoring | 819 | 63,136,721 | real session/model-input/EOD evidence corpus |
 | Forward E2E source tree | 605 | 5,223,913 | source/tests, not a runtime state root |
 | Pinned operational checkout | 569 | 4,838,475 | active source checkout, not a state root |
+
+The extended parent-root evidence copy is separate from this census:
+
+| Extended class | Files | Bytes | Interpretation |
+|---|---:|---:|---|
+| corporate actions | 6 | 25,332 | real event registry, not CA ledger |
+| execution anchors | 5 | 85,032,239 | real input evidence, not fills/transactions |
+| historical sessions/calendars | 12 | 118,860 | calendar input, not runtime binding |
+| Official Open archive | 9 | 4,060 | capture metadata/logs, not execution state |
+| **Total** | **32** | **85,180,491** | immutable shadow copy; no migration candidate |
+
+The full per-file attestation and classification are in
+`2026-09-21_IDX_EXTENDED_REAL_EVIDENCE_SHADOW_MANIFEST_V1.md`.
 
 ## Active runtime evidence
 
@@ -125,13 +143,13 @@ equivalent to E2E paper-state migration inputs.
 | Required gate | Verdict | Evidence boundary |
 |---|---|---|
 | REAL ARTIFACT DISCOVERY | PASS WITH LIMITATION | Real roots/corpus found; eligible paper-state population absent in bounded census |
-| IMMUTABLE SHADOW INPUT | PASS WITH LIMITATION | 20 selected files copied to a new shadow root; source pre/post/copy hashes equal; paper-state class still absent |
+| IMMUTABLE SHADOW INPUT | PASS WITH LIMITATION | 20-file validation package, 237-file discovery copy, and 32-file extended evidence copy are hash-attested; paper-state class still absent |
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
 | HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for 27/29 copied sessions and the V4-X1 score verifier passed 15/16 real manifests; two boundary failures, 28/29 calendar mismatches, absent paper-state/CA chain, and one legacy model-id rejection remain explicit |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
-| CA COMPOSITION | BLOCKED REAL | No retained CA ledger/attestation admitted; provider was not accessed |
+| CA COMPOSITION | BLOCKED REAL | A real CA event registry is admitted, but no retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
-| CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; candidate not operationally bound |
+| CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; historical manifests omit runtime identity and the extended execution summary retains a `20260808u` cache path under a `20260808v` source root |
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 isolated synthetic continuation/recovery contracts passed; no real operational state root was started |
 | FORWARD FALLBACK | DESIGN ONLY | Fallback design exists; real rehearsal was not run |
 | IDENTITY INTERFACE | CONTRACT READY / AUTHORITY BLOCKED | Candidate accepts hash-pinned artifact shape; authority is not admitted |
@@ -235,8 +253,8 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Requested metric | Measured result |
 |---|---|
 | Real source artifact count | 819 files / 63,136,721 bytes in the approved forward-monitoring root; 817 files / 63,005,440 bytes after excluding the protected counter surfaces |
-| Immutable shadow artifact count | 237 files / 27,907,223 bytes; source pre/post/copy hashes equal for all 237 |
-| Real paper-state artifacts located | 0 snapshots, prepared parents, fill vectors, pending ledgers, CA ledgers, or recovery chains in the bounded admitted inventory |
+| Immutable shadow artifact count | 237 files / 27,907,223 bytes in the session discovery copy, plus a separate 32-file / 85,180,491-byte extended evidence copy; all admitted copy hashes equal |
+| Real paper-state artifacts located | 0 snapshots, prepared parents, fill vectors, pending ledgers, CA ledgers, or recovery chains in the bounded admitted inventory; 38 CA event rows and 479,471 execution anchors are input-only |
 | Real migration attempted | 0; fail-closed because no eligible paper-state candidate exists |
 | Migrated real artifacts | 0 |
 | Blocked real migration candidates | 0 artifact rows; the required paper-state classes are unavailable rather than individually rejected |
