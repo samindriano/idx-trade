@@ -26,12 +26,15 @@ or live runtime state. It did not run a migration, replay, or production flow.
 | Invalid date cases | 0 |
 | Model-vs-OHLCV ticker-set mismatch cases | 0 |
 | Model-vs-OHLCV close-value mismatch cases | 0 |
-| State-like columns in checked session families | 0 |
+| Explicit paper-trading-state columns in checked session families | 0 |
 
 The checked session families expose market/model/evidence fields only. No
 column matching position, pending, fill, execution, prepared, portfolio, cash,
 order, obligation, entitlement, receivable, dividend, corporate-action, or
-reconciliation state was present in these five families.
+reconciliation state was present in these five families. The separate
+`snapshot_*` manifest keys and `point_state` evidence field are resolved as
+model-input provenance and market observation state, respectively, in
+`2026-09-21_IDX_REAL_STATE_NAME_AMBIGUITY_AUDIT_V1.md`.
 
 ## Wider-universe scope, not duplicate state
 

@@ -74,6 +74,10 @@ Date: 2026-09-21
   evidence files, and all 89 operational-shadow attestation entries: zero
   missing sources, hash mismatches, or size mismatches; the operational
   aggregate recomputed to `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`;
+- independently resolved state-like names in the real copies: session
+  `snapshot_*` keys are model-input provenance, `point_state` is market
+  evidence state, and execution-anchor `state` is only `ACTIVE/NO_TRADE`; no
+  paper-trading-state schema was found;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

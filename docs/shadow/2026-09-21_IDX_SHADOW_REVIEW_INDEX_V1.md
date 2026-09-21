@@ -87,6 +87,9 @@ The tracked per-file operational-shadow attestation is in:
 The independent revalidation of all immutable shadow copies is in:
 2026-09-21_IDX_SHADOW_IMMUTABLE_ATTESTATION_REVALIDATION_V1.md.
 
+The semantic audit of state-like names versus actual paper-state schemas is in:
+2026-09-21_IDX_REAL_STATE_NAME_AMBIGUITY_AUDIT_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`

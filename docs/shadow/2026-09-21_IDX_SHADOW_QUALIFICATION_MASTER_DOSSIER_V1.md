@@ -101,6 +101,11 @@ artifact evidence, and missing real state is not fabricated.
     matched their source/attestation hashes and sizes. The operational
     aggregate was recomputed from the exact manifest serialization and matched
     `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`.
+27. Independently resolved apparent state-name hits in the real copies:
+    session `snapshot_*` keys point to model-input files, `point_state` is
+    market evidence state, and execution-anchor `state` is only
+    `ACTIVE/NO_TRADE`; no paper-trading-state schema or recovery chain was
+    admitted.
 
 ## Root census snapshot
 
