@@ -42,7 +42,7 @@ promoted to real-artifact evidence.
 | 14 | Rehearse forward-only fallback | Dedicated `fallback-v3` rehearsal freezes V2, fences new execution, injects failure, marks repair, and resumes same V2 state; no V1 downgrade | PASS SYNTHETIC / BLOCKED REAL |
 | 15 | Challenge shadow identity artifact interface | Valid hash-pinned artifact accepted; missing ticker, conflict, wrong session/hash, and extra field rejected; authority not admitted | PASS SHADOW / AUTHORITY BLOCKED |
 | 16 | Enumerate exact pre-canary blockers and owners/evidence | Gap register separates source, state, identity, policy, config, scheduler, provider, recovery, rollback, and observability blockers, with authority role, local help, and canary-dependency metadata for every gap | PASS |
-| 17 | Design but do not execute controlled canary | Controlled-canary design pins candidate/config/state/identity/scheduler/kill criteria and remains explicitly unexecuted | DESIGN COMPLETE / NO-GO |
+| 17 | Design but do not execute controlled canary | Controlled-canary design explicitly records all 13 required fields, with real state/production identity/session window marked `UNSET` fail-closed; it remains unexecuted | DESIGN COMPLETE / NO-GO |
 | 18 | Fresh independent real-artifact challenge | Independent 29-session hash/schema/calendar challenge completed; no new locally fixable real-state defect found | PASS WITH LIMITATION |
 
 ## Durable-output coverage
