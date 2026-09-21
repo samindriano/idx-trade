@@ -1,0 +1,64 @@
+# IDX-Trade Real Runtime Artifact Census V1
+
+Date: 2026-09-21 (Asia/Jakarta)
+
+Status: **READ-ONLY CENSUS COMPLETE; NO SOURCE MUTATION**
+
+## Approved roots inspected
+
+| Root | Files | Bytes | Role |
+|---|---:|---:|---|
+| `C:\Users\Sam\AppData\Local\IDXTrade\e2e_baseline_paper_v1` | 135 | 79,770 | active E2E runtime metadata/logs |
+| `D:\Documents\Project\idx-trade-data-gate-20260808v\forward_monitoring` | 819 | 63,136,721 | retained forward session/model/EOD evidence |
+| `C:\Users\Sam\OneDrive\Documents\Project\idx-trade-runtime\forward-e2e-operational` | 605 | 5,223,913 | source and tests, not state |
+| `C:\Users\Sam\.codex\worktrees\idx-e2e-baseline-paper-pinned-20260824` | 569 | 4,838,475 | pinned source checkout |
+
+## Active E2E runtime contents
+
+Retained relevant classes were `operational/config.json`, its SHA sidecar,
+`operational/latest.json`, `operational/controller.lock`,
+`official_open/latest_capture.json`, the OfficialOpen logs, and the pinned
+wrapper. No prepared artifact, execution artifact, pending ledger, paper
+portfolio state, CA ledger, reconciliation artifact, or state snapshot was
+found by the bounded filename census.
+
+The `controller.lock` value was all zeroes and was not treated as a live lock.
+The latest operational record terminated with
+`WAITING_PREPARED_EXECUTION/NO_PREPARED_EXECUTION_FOR_TODAY`.
+
+## Forward-monitoring contents
+
+Top-level classes observed:
+
+`attempts`, `calendar`, `context_bridge`, `eod_automation`,
+`model_calendar`, `model_runs`, `prospective`,
+`provenance_attestations`, `reliability_v1_shadow`, `sessions`,
+`shadow_runs`, and `v4_x1_clean_inputs`.
+
+The `sessions` class contains 29 session-date directories. It contains real
+session manifests and data products such as model input, session OHLCV,
+session evidence, and stock/index summaries. These are retained data/evidence
+artifacts, not proof of an E2E paper portfolio state or execution lifecycle.
+
+The EOD pipeline class contains run metadata. The selected 2026-09-17 run
+recorded `PIPELINE_OK_X1_EXISTING_SCORE_VERIFIED` with provider and protected
+outcome access disabled in its metadata. This record was not used as a paper
+state or migration input.
+
+## Explicit exclusions
+
+- `D:\Documents\Project\idx-bei-forward-ca-provider`: provider checkout; no
+  provider data was read and no call was made.
+- `C:\Users\Sam\AppData\Local\IDXTrade\pytest-manual-*`: synthetic/manual
+  test artifacts; not real retained runtime evidence.
+- `C:\Users\Sam\AppData\Local\IDXTrade\cloudflare-*`: Cloudflare handoff
+  state; not E2E paper state.
+- Protected outcome/counter artifacts: not used as shadow inputs.
+
+## Census conclusion
+
+`REAL_ARTIFACT_DISCOVERY = PASS_WITH_LIMITATION`.
+
+The retained inventory is sufficient to document a real session-input corpus,
+but insufficient to qualify real state migration or real recovery. No absence
+claim is made beyond the bounded roots and filename classes listed above.
