@@ -46,6 +46,7 @@ artifact evidence, and missing real state is not fabricated.
 11. Expanded the immutable discovery copy to all 29 retained session packages,
     plus current calendar files and calendar provenance attestations.
 12. Applied the existing input-level validator to all 29 copied sessions.
+13. Ran the legacy ambiguity hunt across all 29 copied session packages.
 
 ## Root census snapshot
 
@@ -176,6 +177,13 @@ because it is not an official session in the copied current calendar; and
 2026-09-18 failed because no next official session is available. These are
 structural observations only and do not establish paper-state, CA, recovery,
 or economic replay.
+
+The all-session ambiguity hunt found zero duplicate required keys, required
+field nulls, invalid dates, model/OHLCV ticker-set mismatches, model/OHLCV
+close mismatches, or state-like columns across the checked session families.
+Evidence and stock summaries contain wider-universe rows in every session;
+the exact counts and scope interpretation are recorded in
+`2026-09-21_IDX_ALL_SESSION_LEGACY_AMBIGUITY_HUNT_V1.md`.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or

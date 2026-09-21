@@ -23,6 +23,9 @@ Date: 2026-09-21
   a second isolated discovery root; all 237 source/copy hashes matched;
 - applied the input-level validator to all 29 copies: 27 passed, while the
   two explicit calendar-boundary failures remained fail-closed;
+- ran the legacy ambiguity hunt across all 29 copied packages: zero duplicate,
+  null/date, model/OHLCV set, close-value, or state-column anomalies; wider
+  evidence/stock universe was recorded as an interface boundary;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing
