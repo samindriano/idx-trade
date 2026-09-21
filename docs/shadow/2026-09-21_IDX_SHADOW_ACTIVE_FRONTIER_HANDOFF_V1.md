@@ -62,8 +62,20 @@ Date: 2026-09-21
 - completed the shadow identity-interface challenge: one valid hash-pinned
   artifact accepted and five negative cases rejected fail-closed; external
   identity authority remains blocked;
-- recorded the V2 manifest, gap register, and canary design without executing
-  migration, replay, fallback, canary, or production work.
+- expanded the operational shadow root to 89 files / 810,687 bytes and
+  independently attested every file in two passes; the tracked metadata-only
+  attestation has aggregate digest
+  `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`;
+- completed the deterministic real-CA/recovery gate audit: the immutable
+  copied registry parsed 38/38 rows, with 22 known ratios and 16 explicit
+  unknowns; CA composition remains real-blocked and recovery remains
+  synthetic-pass/real-blocked;
+- pinned the current shadow candidate code revision to
+  `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
+  historical adoption-test revision `66140b05`;
+- recorded the V2 manifest, gap register, canary design, phase coverage audit,
+  and review index without executing migration, replay, fallback, canary, or
+  production work.
 
 ## Next safe frontier
 
@@ -77,7 +89,9 @@ Only after separate authorization:
    explicit model-input/score universe boundary;
 4. run only a bounded read-only replay if all lineage and interface gates are
    closed;
-5. update the dossier with measured results or fail-closed blockers.
+5. admit an externally authorized paper-state/CA/recovery package only if its
+   source, identity, and outcome-blind boundaries are explicit;
+6. update the dossier with measured results or fail-closed blockers.
 
 ## Main ownership
 

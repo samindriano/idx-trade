@@ -89,6 +89,13 @@ artifact evidence, and missing real state is not fabricated.
 23. Ran the labelled shadow identity-artifact challenge: the valid
     hash-pinned artifact was accepted and five malformed/conflicting cases
     were rejected fail-closed. No external identity authority was admitted.
+24. Expanded the operational shadow root to 89 files / 810,687 bytes and
+    attested every file in two passes; the metadata-only attestation aggregate
+    is `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`.
+25. Re-ran the candidate CA parser read-only against the immutable copied
+    registry and reconciled the real recovery surfaces: 38/38 rows parsed,
+    22 ratios known, 16 unknown, with no real holdings, entitlement,
+    obligation, settlement, prepared-parent, fill-vector, or CA-ledger chain.
 
 ## Root census snapshot
 
@@ -108,6 +115,11 @@ The extended parent-root evidence copy is separate from this census:
 | historical sessions/calendars | 12 | 118,860 | calendar input, not runtime binding |
 | Official Open archive | 9 | 4,060 | capture metadata/logs, not execution state |
 | **Total** | **32** | **85,180,491** | immutable shadow copy; no migration candidate |
+
+The separate operational shadow output root contains 89 files / 810,687 bytes.
+Its two-pass per-file attestation is tracked in
+`attestations/2026-09-21_IDX_OPERATIONAL_SHADOW_FILE_ATTESTATION_V1.json` and
+contains metadata and hashes only; it is not real runtime state.
 
 The full per-file attestation and classification are in
 `2026-09-21_IDX_EXTENDED_REAL_EVIDENCE_SHADOW_MANIFEST_V1.md`.
@@ -172,8 +184,8 @@ equivalent to E2E paper-state migration inputs.
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
 | HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for 27/29 copied sessions and the V4-X1 score verifier passed 15/16 real manifests; two boundary failures, 28/29 calendar mismatches, absent paper-state/CA chain, and one legacy model-id rejection remain explicit |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
-| CA COMPOSITION | BLOCKED REAL | The real CA event registry now passes the isolated parser boundary, but no retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
-| RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
+| CA COMPOSITION | BLOCKED REAL / INTERFACE PASS | The immutable real CA registry parses 38/38 rows; 22 ratios are known and 16 remain unknown. No retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
+| RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Ancestor, quarantine, fork, prepared-restart, partial-execution, CA-settlement, and controller-fence contracts passed synthetically; no real snapshot/obligation/CA chain was available |
 | CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; historical manifests omit runtime identity and the extended execution summary retains a `20260808u` cache path under a `20260808v` source root |
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 contract tests plus a dedicated five-session operational shadow rehearsal passed; no real operational state was admitted |
 | FORWARD FALLBACK | PASS SYNTHETIC / BLOCKED REAL | Isolated V2 freeze/stop/failure/repair/resume preserved one pending obligation and one CA receivable; no real migratable state exists |

@@ -20,6 +20,9 @@ This lane intentionally records no retry of a live or external operation.
   and labelled synthetic verifier. No live or real-state fallback was retried.
 - Synthetic adoption test results remain synthetic and were not reclassified
   as real evidence.
+- The subsequent CA parser audit, identity pinning audit, and documentation
+  updates were read-only shadow work; no live, provider, scheduler, cloud, or
+  canary operation was retried.
 
 The correct response to the missing paper-state population is BLOCKED/NO-GO,
 not a fabricated fixture or a broader source search that crosses the lane
