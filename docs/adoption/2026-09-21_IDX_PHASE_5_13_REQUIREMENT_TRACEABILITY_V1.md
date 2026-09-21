@@ -19,7 +19,7 @@ implied; OPEN means an external gate remains.
 | 10 | identity contract vs authority admission | identity evidence loader and policy log | CONTRACT READY / AUTHORITY OPEN |
 | 11 | unresolved policy gates fail closed | policy module, typed failures, policy log | PASS FAIL-CLOSED / external decisions open |
 | 12 | V1/V2/legacy/duplicate/fork/missing provenance challenge | loader, recovery, compatibility, shadow migration, and full candidate suite | PASS LOCAL / synthetic only |
-| 13 | hashes/schema/local tests cannot hide semantic loss | independent hardening V2 record; candidate-specific challenge remains a review gate | OPEN EXTERNAL |
+| 13 | hashes/schema/local tests cannot hide semantic loss | independent hardening V2 record plus candidate independent challenge report | PASS LOCAL / synthetic only; external authority open |
 
 ## Explicit exclusions
 

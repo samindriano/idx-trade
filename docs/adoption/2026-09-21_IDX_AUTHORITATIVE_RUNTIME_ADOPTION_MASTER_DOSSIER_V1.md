@@ -79,16 +79,16 @@ adoption decision.
 | 4 integrated hardened stack | PASS LOCAL / SYNTHETIC ONLY | Clean candidate extraction and full local suite |
 | 5 migration architecture | PASS LOCAL / SYNTHETIC ONLY | State migration matrix and executable compatibility classifier |
 | 6 shadow migration rehearsal | PASS LOCAL / SYNTHETIC ONLY | Provenance, activation, reload/replay, and write-failure fence tests |
-| 7 multi-session rehearsal | PASS SELECTED SYNTHETIC MATRIX | 22-scenario matrix executed; broader independent challenge pending |
-| 8 entrypoint compatibility | PASS STATIC / SYNTHETIC | Static entrypoint matrix, phase binding, and V1/V2 mode guard |
+| 7 multi-session rehearsal | PASS SELECTED SYNTHETIC MATRIX | Selected nodes executed: 29 pass including parameterized CA/controller cases |
+| 8 entrypoint compatibility | PASS STATIC / SYNTHETIC | Machine-readable matrix, phase binding, V1/V2 mode guard, and CLI help checks |
 | 9 Windows/cloud interface review | READ-ONLY BASELINE PASS | Task/workflow mapping recorded; no mutation |
 | 10 identity authority boundary | CONTRACT READY / AUTHORITY NOT ADMITTED | Hash-pinned caller artifact only |
 | 11 policy review | FAIL-CLOSED / EXTERNAL DECISIONS OPEN | No unresolved policy invented |
 | 12 backward compatibility | PASS LOCAL / SYNTHETIC ONLY | V1/V2/recovery/migration compatibility tests pass; live authority is open |
-| 13 forward false-green challenge | NOT YET PROVEN | Independent semantic chain challenge pending |
+| 13 forward false-green challenge | PASS LOCAL / SYNTHETIC ONLY | Independent challenge found no material locally fixable defect |
 | 14 rollback architecture | DEFINED / REHEARSAL PENDING | Rollback matrix |
 | 15 adoption packet | PASS LOCAL | This dossier, packet, traceability, and durable companion records |
-| 16 independent adoption challenge | NOT YET RUN | Must run against assembled candidate |
+| 16 independent adoption challenge | PASS LOCAL / SYNTHETIC ONLY | Dedicated challenge report; external gates remain separate |
 
 No global PASS is claimed.
 
@@ -99,8 +99,11 @@ No global PASS is claimed.
   FutureWarnings and no test failures.
 - Selected 22-scenario rehearsal matrix: PASS; parameter expansion executed
   the CA timing boundaries and explicit close variants.
+- Selected rehearsal node IDs: 29 passed on candidate code HEAD `66140b05`.
 - Migration compatibility shape matrix: 11/11 PASS; shadow migration and
   partial-persistence fence: 2/2 PASS.
+- Entrypoint/config focus: 111 passed; Official Open/scheduler synthetic
+  focus: 16 passed; all four phase CLI `--help` surfaces parsed successfully.
 - No provider, outcome, cloud, capture, scheduler, telemetry, or live runtime
   state was accessed.
 
@@ -108,9 +111,9 @@ No global PASS is claimed.
 
 `READY_IN_SOURCE`, `READY_IN_SYNTHETIC_RUNTIME`, `READY_FOR_SHADOW`,
 `READY_FOR_CONTROLLED_CANARY`, and `PRODUCTION_READY` are separate gates.
-At this revision the candidate is at most **READY_IN_SOURCE** for the portions
-already extracted from hardening; it is not ready for shadow, canary, or
-production.
+At this revision the candidate is **READY_IN_SYNTHETIC_RUNTIME** for the
+assembled local stack. It is not ready for an operational shadow, controlled
+canary, or production.
 
 ## Durable companion records
 
@@ -125,6 +128,8 @@ production.
 - `2026-09-21_IDX_ADOPTION_NO_RETRY_LOG_V1.md`
 - `2026-09-21_IDX_PHASE_5_13_REQUIREMENT_TRACEABILITY_V1.md`
 - `2026-09-21_IDX_MULTI_SESSION_REHEARSAL_MATRIX_V1.md`
+- `2026-09-21_IDX_ENTRYPOINT_CONFIG_COMPATIBILITY_MATRIX_V1.json`
+- `2026-09-21_IDX_INDEPENDENT_ADOPTION_CHALLENGE_V1.md`
 - `2026-09-21_IDX_AUTHORITATIVE_RUNTIME_ADOPTION_PACKET_V1.md`
 
 ## Required future authorization sequence

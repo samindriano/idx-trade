@@ -1,0 +1,190 @@
+{
+  "schema_version": "idx_trade_entrypoint_config_compatibility_matrix_v1",
+  "date": "2026-09-21",
+  "candidate_branch": "codex/idx-authoritative-runtime-adoption-20260921",
+  "candidate_code_head": "66140b05",
+  "active_operational_checkout": "32eaaa8e50d0521de7faef98faa8081219bc667b",
+  "scope": "static_and_synthetic_only",
+  "operational_invocation": false,
+  "surfaces": [
+    {
+      "surface": "POST_EOD_V1",
+      "current_source": "scripts/run_e2e_paper_post_eod_v1.py@32eaaa8e",
+      "candidate_source": "scripts/run_e2e_paper_post_eod_v1.py@66140b05",
+      "required_arguments": [
+        "runtime-root",
+        "current-score-manifest",
+        "session-ohlcv",
+        "model-input",
+        "calendar",
+        "ca-attestation",
+        "expected-branch",
+        "expected-commit"
+      ],
+      "optional_arguments": [
+        "previous-score-manifest",
+        "phase-attestation",
+        "ca-journal",
+        "dividend-review",
+        "attachment-dir"
+      ],
+      "bindings": [
+        "hash-pinned runtime config",
+        "expected branch/commit",
+        "phase attestation",
+        "identity evidence when configured",
+        "CA attestation"
+      ],
+      "status": "PASS_STATIC_SYNTHETIC"
+    },
+    {
+      "surface": "POST_EOD_V2",
+      "current_source": "scripts/run_e2e_paper_post_eod_v2.py@32eaaa8e",
+      "candidate_source": "scripts/run_e2e_paper_post_eod_v2.py@66140b05",
+      "required_arguments": [
+        "runtime-root",
+        "current-score-manifest",
+        "session-ohlcv",
+        "model-input",
+        "calendar",
+        "execution-schedule-attestation",
+        "execution-schedule-attestation-sha256",
+        "ca-attestation",
+        "expected-branch",
+        "expected-commit"
+      ],
+      "optional_arguments": [
+        "previous-score-manifest",
+        "phase-attestation",
+        "ca-journal",
+        "dividend-review",
+        "attachment-dir"
+      ],
+      "bindings": [
+        "dual-calendar V2 loader",
+        "schedule attestation path/SHA",
+        "hash-pinned runtime config",
+        "expected branch/commit",
+        "prepared schedule binding"
+      ],
+      "status": "PASS_STATIC_SYNTHETIC"
+    },
+    {
+      "surface": "PREOPEN_V1",
+      "current_source": "scripts/run_e2e_paper_preopen_v1.py@32eaaa8e",
+      "candidate_source": "scripts/run_e2e_paper_preopen_v1.py@66140b05",
+      "required_arguments": [
+        "runtime-root",
+        "prepared",
+        "current-score-manifest",
+        "session-ohlcv",
+        "model-input",
+        "calendar",
+        "open-manifest",
+        "ca-attestation",
+        "expected-branch",
+        "expected-commit"
+      ],
+      "optional_arguments": [
+        "previous-score-manifest",
+        "phase-attestation",
+        "ca-journal",
+        "dividend-review",
+        "attachment-dir"
+      ],
+      "bindings": [
+        "prepared parent",
+        "hash-pinned runtime config",
+        "phase attestation",
+        "identity evidence when configured"
+      ],
+      "status": "PASS_STATIC_SYNTHETIC"
+    },
+    {
+      "surface": "PREOPEN_V2",
+      "current_source": "scripts/run_e2e_paper_preopen_v2.py@32eaaa8e",
+      "candidate_source": "scripts/run_e2e_paper_preopen_v2.py@66140b05",
+      "required_arguments": [
+        "runtime-root",
+        "prepared",
+        "current-score-manifest",
+        "session-ohlcv",
+        "model-input",
+        "calendar",
+        "execution-schedule-attestation",
+        "execution-schedule-attestation-sha256",
+        "open-manifest",
+        "ca-attestation",
+        "expected-branch",
+        "expected-commit"
+      ],
+      "optional_arguments": [
+        "previous-score-manifest",
+        "phase-attestation",
+        "ca-journal",
+        "dividend-review",
+        "attachment-dir"
+      ],
+      "bindings": [
+        "dual-calendar V2 loader",
+        "prepared schedule binding",
+        "schedule attestation path/SHA",
+        "hash-pinned runtime config",
+        "phase attestation"
+      ],
+      "status": "PASS_STATIC_SYNTHETIC"
+    },
+    {
+      "surface": "PREOPEN_CA_AND_MISSED_OPEN",
+      "current_source": "current orchestration/controller at 32eaaa8e",
+      "candidate_source": "src/idx_trade/e2e_paper_orchestration_v1.py + e2e_paper_operational_controller_v1.py + e2e_paper_operational_controller_v2.py",
+      "required_bindings": [
+        "session date",
+        "schedule attestation",
+        "prepared parent",
+        "CA timing parent",
+        "no late order creation"
+      ],
+      "status": "PASS_SYNTHETIC"
+    },
+    {
+      "surface": "RUNTIME_CONFIG_AND_PHASE_BINDING",
+      "current_source": "src/idx_trade/e2e_paper_runtime_config_v1.py@32eaaa8e",
+      "candidate_source": "src/idx_trade/e2e_paper_runtime_config_v1.py + v2.py + e2e_paper_phase_binding_v1.py@66140b05",
+      "required_bindings": [
+        "config bytes and SHA-256 sidecar",
+        "branch/commit",
+        "runner SHA",
+        "provider checkout/commit",
+        "calendar and CA authority",
+        "identity path/SHA pair",
+        "dual-calendar V2 opt-in"
+      ],
+      "status": "PASS_STATIC_SYNTHETIC"
+    },
+    {
+      "surface": "OFFICIAL_OPEN",
+      "current_source": "pinned v2 runner at 32eaaa8e",
+      "candidate_source": "official_open_capture_runtime_v2.py + schedule-bound verification@66140b05",
+      "verification_tests": [
+        "tests/test_v4_x1_execution_v1_official_open_verify.py",
+        "tests/test_e2e_paper_scheduler_contract_v1.py"
+      ],
+      "verification_result": "16 passed",
+      "status": "PASS_SYNTHETIC"
+    }
+  ],
+  "verification": {
+    "phase_cli_help": "4/4 passed",
+    "compatibility_focus": "111 passed",
+    "candidate_code_head": "66140b05",
+    "live_state_accessed": false
+  },
+  "external_gates": [
+    "no scheduler repin",
+    "no cloud adoption",
+    "no provider/capture invocation",
+    "no live runtime-root migration",
+    "no identity authority admission"
+  ]
+}

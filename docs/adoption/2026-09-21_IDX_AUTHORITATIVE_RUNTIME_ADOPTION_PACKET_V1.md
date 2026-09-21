@@ -53,13 +53,17 @@ three are candidate-only adoption remediations and rehearsal evidence.
 - Full candidate pytest: 905 passed, 3 pre-existing pandas FutureWarnings.
 - Full run was executed against candidate code HEAD `66140b05` and reached
   100%.
-- Selected 22-scenario rehearsal matrix: PASS.
+- Selected 22-scenario rehearsal matrix: PASS; its selected node IDs produced
+  29 passed, including parameterized CA timing and controller cases.
 - Migration compatibility matrix: 11 shape cases PASS.
 - Shadow migration/reload/replay and partial-persistence fence: 2 PASS.
-- V1/V2 config mode and phase binding focused tests: PASS.
+- V1/V2 config mode, phase binding, orchestration, and controller focus: 111
+  passed; synthetic Official Open/scheduler focus: 16 passed; all four phase
+  CLI `--help` surfaces parsed successfully.
 - Hardening independent challenge records V1/V2: PASS on the original
-  hardening source. A fresh candidate-specific independent challenge is still
-  a separate review gate; it does not authorize live adoption.
+  hardening source. Candidate independent challenge: PASS LOCAL / SYNTHETIC;
+  no material locally fixable defect found. It does not authorize live
+  adoption.
 
 ## Required external gates before any shadow or canary
 

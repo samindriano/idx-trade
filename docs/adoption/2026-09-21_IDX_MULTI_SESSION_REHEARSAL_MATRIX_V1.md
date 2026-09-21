@@ -46,5 +46,6 @@ the entire system. The final challenge must additionally inspect:
 - identity/config/session binding;
 - absence of provider/outcome access.
 
-The matrix is not complete until the selected node IDs execute on the
-adoption branch and the result is recorded with the candidate HEAD.
+The selected node IDs executed on candidate code HEAD `66140b05` and produced
+`29 passed` (parameterized CA timing and controller cases are included). This
+is synthetic evidence only; it does not invoke an operational entrypoint.
