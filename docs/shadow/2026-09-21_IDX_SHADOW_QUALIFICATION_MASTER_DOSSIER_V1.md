@@ -227,6 +227,30 @@ in 2026-09-21_IDX_REAL_LEGACY_AMBIGUITY_HUNT_V1.md, not promoted to a paper
 state or duplicate-state finding. The calendar mismatch and missing paper/
 CA/recovery artifacts remain open.
 
+## Final-format evidence metrics
+
+These metrics distinguish the approved-root inventory from the admitted
+immutable copy and distinguish absent candidates from failed migration runs.
+
+| Requested metric | Measured result |
+|---|---|
+| Real source artifact count | 819 files / 63,136,721 bytes in the approved forward-monitoring root; 817 files / 63,005,440 bytes after excluding the protected counter surfaces |
+| Immutable shadow artifact count | 237 files / 27,907,223 bytes; source pre/post/copy hashes equal for all 237 |
+| Real paper-state artifacts located | 0 snapshots, prepared parents, fill vectors, pending ledgers, CA ledgers, or recovery chains in the bounded admitted inventory |
+| Real migration attempted | 0; fail-closed because no eligible paper-state candidate exists |
+| Migrated real artifacts | 0 |
+| Blocked real migration candidates | 0 artifact rows; the required paper-state classes are unavailable rather than individually rejected |
+| Historical sessions | 29 retained session packages; 27 input-level passes, 2 current-calendar boundary failures |
+| Fully replayable historical sessions | 0; full E2E replay is blocked by state/CA/recovery absence and calendar lineage |
+| Calendar binding | 1/29 matches current calendar; 28/29 historical hashes unresolved; the matching session still has no next official session in the copy |
+| Old-vs-candidate real differential | 0 real artifact pairs; no unexplained divergence can be measured without a pair |
+| Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
+| Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
+| Forward fallback | 0 real rehearsals; design recorded only |
+| External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
+| Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |
+| Worktree state | clean isolated branch; active operational checkout and runtime were not modified |
+
 ## Inherited documentation audit
 
 The inherited adoption packet is linked for history, but it contains
