@@ -15,7 +15,8 @@ promoted to real-artifact evidence.
 |---|---|
 | Shadow branch | `codex/idx-shadow-runtime-precanary-20260921` |
 | Evidence baseline HEAD before this audit commit | `94919f980e72c6467506ca34e8506b825eba52b8` |
-| Candidate revision under review | `66140b05872e60191ae4090811f168aaef6d71a7` |
+| Candidate revision used by earlier adoption tests | `66140b05872e60191ae4090811f168aaef6d71a7` |
+| Current shadow candidate revision under review | `5c14b036ee179532903e1d0fd32d486db06cf3c7` |
 | Candidate base | `402fca4b27e91cf8c82d21ff1394ba2d6da73656` |
 | Active operational checkout | `32eaaa8e50d0521de7faef98faa8081219bc667b` |
 | Active E2E runtime census revalidation | 135 files / 79,770 bytes; zero state-like filenames in the read-only check |

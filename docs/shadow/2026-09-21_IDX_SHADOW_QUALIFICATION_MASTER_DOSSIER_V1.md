@@ -19,6 +19,7 @@ artifact evidence, and missing real state is not fabricated.
 | Shadow worktree | `C:\Users\Sam\.codex\worktrees\idx-shadow-runtime-precanary-20260921` |
 | Documentation base | `221e95640be73dd6f4887a27863ca93c2fd1b0d6` |
 | Candidate code HEAD used by earlier tests | `66140b05872e60191ae4090811f168aaef6d71a7` |
+| Current shadow candidate code under review | `5c14b036ee179532903e1d0fd32d486db06cf3c7` |
 | Candidate base | `402fca4b27e91cf8c82d21ff1394ba2d6da73656` |
 | Shadow CA remediation commit | `5c14b036` (`NaN` optional-count handling; isolated lane only) |
 | Active E2E task checkout | `32eaaa8e50d0521de7faef98faa8081219bc667b` |
