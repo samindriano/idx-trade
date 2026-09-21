@@ -132,6 +132,13 @@ def _parse_share_count(value: object, *, field: str, ticker: str) -> int | float
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
     try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        # Non-scalar values are rejected by Decimal below with the normal
+        # fail-closed invalid-field error.
+        pass
+    try:
         number = Decimal(str(value).replace(",", "").strip())
     except (InvalidOperation, ValueError) as error:
         raise ValueError(f"Invalid {field} for IDX corporate action {ticker}") from error

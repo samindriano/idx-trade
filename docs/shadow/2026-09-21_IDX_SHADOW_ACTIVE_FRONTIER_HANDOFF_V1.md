@@ -47,6 +47,9 @@ Date: 2026-09-21
   covering CA event registry, execution anchors, historical calendars, and
   Official Open archive metadata/logs; all hashes matched and all four classes
   remained input-only rather than paper state;
+- fixed the local CA parser's scalar-`NaN` optional-count boundary and
+  revalidated 38/38 focused CA/attestation/dividend/V4-X1 tests plus 38/38
+  copied real CA rows; no ratio or share count was fabricated;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 

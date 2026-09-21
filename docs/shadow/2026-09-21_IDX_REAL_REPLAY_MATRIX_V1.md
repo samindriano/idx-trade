@@ -24,6 +24,7 @@ Status: **INPUT CORPUS FOUND / REPLAY NOT RUN**
 | Extended execution-anchor corpus | 479,471 anchor rows across 504 session reports | not attempted as paper replay | source input evidence only; no transaction/fill vector or paper-state snapshot |
 | Extended historical calendars | 516 available / 504 target sessions | not substituted | none of the admitted candidate calendar hashes matched the 23 embedded session hashes |
 | Extended Official Open archive | one run metadata file plus eight logs | not attempted | operational capture evidence only; no execution-grade paper state |
+| Real CA parser boundary | copied canonical `idx_actions.csv` | isolated candidate parser after NaN remediation | 38/38 rows parsed; 22 ratios present and 16 unknown; this is event-shape validation, not CA/state replay |
 
 ## Selected real manifests
 

@@ -68,6 +68,11 @@ artifact evidence, and missing real state is not fabricated.
     event registry, execution-anchor inputs, historical calendars, and
     Official Open archive metadata/logs. All source pre/post/copy hashes were
     equal; these classes were classified as input-only, not paper state.
+20. Found and fixed a local candidate CA boundary defect: scalar `NaN`
+    optional share counts in the copied canonical CA registry are now treated
+    as unknown rather than invalid. The focused CA/attestation/dividend/V4-X1
+    regression set passed 38/38, and the candidate parsed all 38 copied real
+    CA rows without network access.
 
 ## Root census snapshot
 
@@ -147,7 +152,7 @@ equivalent to E2E paper-state migration inputs.
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
 | HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for 27/29 copied sessions and the V4-X1 score verifier passed 15/16 real manifests; two boundary failures, 28/29 calendar mismatches, absent paper-state/CA chain, and one legacy model-id rejection remain explicit |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
-| CA COMPOSITION | BLOCKED REAL | A real CA event registry is admitted, but no retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
+| CA COMPOSITION | BLOCKED REAL | The real CA event registry now passes the isolated parser boundary, but no retained entitlement/settlement ledger or holdings/obligation chain exists; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
 | CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; historical manifests omit runtime identity and the extended execution summary retains a `20260808u` cache path under a `20260808v` source root |
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 isolated synthetic continuation/recovery contracts passed; no real operational state root was started |
@@ -235,6 +240,11 @@ new material locally fixable defect and did not upgrade any real gate. It also
 confirmed that none of the 29 session manifests carries a runtime/config/
 checkout identity field, so historical identity remains missing rather than
 inferable.
+
+The real CA interface remediation and its focused regression evidence are
+recorded in `2026-09-21_IDX_REAL_CA_INTERFACE_REMEDIATION_V1.md`. The local
+shape defect is closed in the shadow candidate; it does not upgrade real CA
+composition or pre-canary readiness.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or
