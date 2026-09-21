@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from datetime import datetime
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -153,6 +155,50 @@ def test_child_failure_is_redacted_to_hash_only(tmp_path: Path, monkeypatch: pyt
     assert payload["stdout_sha256"] == _sha256_text("safe stdout")
 
 
+def test_real_child_timeout_preserves_boundary_and_requires_recovery(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status = {
+        "controller_status": "RUNNING",
+        "started_at_jakarta": "2026-08-24T18:00:00+07:00",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    controller._persist_running_boundary(
+        config,
+        status,
+        phase="PREOPEN",
+        side_effect="CHILD_EXECUTION",
+    )
+    with pytest.raises(E2EOperationalGuardError, match="CHILD_PROCESS_FAILED:interrupt"):
+        controller._run_child(
+            config,
+            "interrupt",
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            timeout_seconds=1,
+        )
+
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 1, tzinfo=JAKARTA),
+    )
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+    assert recovered["interrupted_phase"] == "PREOPEN"
+    assert recovered["interrupted_side_effect"] == "CHILD_EXECUTION"
+    assert recovered["provider_calls"] is False
+    assert recovered["outcome_access"] is False
+
+
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -183,6 +229,8 @@ def test_prepared_selection_requires_schema_payload_and_eod_file_hashes(tmp_path
         encoding="utf-8",
     )
     assert controller._prepared_for_session(config, "2026-08-24") == [prepared_dir / "valid.json"]
+    bound_config = replace(config, runtime_config_sha256="b" * 64)
+    assert controller._prepared_for_session(bound_config, "2026-08-24") == []
 
 
 def test_sunday_controller_is_a_persisted_noop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -204,3 +252,127 @@ def test_sunday_controller_is_a_persisted_noop(tmp_path: Path, monkeypatch: pyte
     assert status["provider_calls"] is False
     assert status["outcome_access"] is False
     assert (config.runtime_root / "operational" / "latest.json").is_file()
+
+
+def test_running_controller_status_fences_recovery_without_replaying_side_effects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status_path = config.runtime_root / "operational" / "latest.json"
+    controller.write_status_atomic(
+        status_path,
+        {
+            "controller_status": "RUNNING",
+            "started_at_jakarta": "2026-08-24T18:00:00+07:00",
+            "provider_calls": False,
+            "outcome_access": False,
+        },
+    )
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 1, tzinfo=JAKARTA),
+    )
+
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+    assert recovered["provider_calls"] is False
+    assert recovered["recovery_reason"] == "PREVIOUS_CONTROLLER_RUN_INTERRUPTED"
+
+
+def test_recovery_required_status_is_terminal_on_repeated_v1_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path)
+    status_path = config.runtime_root / "operational" / "latest.json"
+    expected = {
+        "controller_status": "RECOVERY_REQUIRED",
+        "controller_contract": "SINGLE_CALENDAR_V1",
+        "recovery_reason": "PREVIOUS_CONTROLLER_RUN_INTERRUPTED",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    controller.write_status_atomic(status_path, expected)
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+    monkeypatch.setattr(
+        controller,
+        "load_session_dates",
+        lambda *args, **kwargs: pytest.fail("terminal recovery fence resumed normal work"),
+    )
+
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 2, tzinfo=JAKARTA),
+    )
+
+    assert recovered == json.loads(status_path.read_text(encoding="utf-8"))
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+
+
+@pytest.mark.parametrize(
+    ("phase", "side_effect"),
+    (
+        ("PREOPEN", "CA_CAPTURE"),
+        ("PREOPEN", "PHASE_ATTESTATION"),
+        ("PREOPEN", "CHILD_EXECUTION"),
+        ("POST_EOD", "BOOTSTRAP_T0_WRITE"),
+        ("POST_EOD", "CA_CAPTURE"),
+        ("POST_EOD", "PHASE_ATTESTATION"),
+        ("POST_EOD", "CHILD_EXECUTION"),
+        ("POST_EOD", "MISSED_EXECUTION_WRITE"),
+    ),
+)
+def test_each_side_effect_boundary_is_durable_and_replay_fenced(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+    side_effect: str,
+) -> None:
+    config = _config(tmp_path)
+    status = {
+        "controller_status": "RUNNING",
+        "started_at_jakarta": "2026-08-24T18:00:00+07:00",
+        "provider_calls": False,
+        "outcome_access": False,
+    }
+    controller._persist_running_boundary(
+        config,
+        status,
+        phase=phase,
+        side_effect=side_effect,
+    )
+    monkeypatch.setattr(
+        controller,
+        "attest_deployment",
+        lambda *args, **kwargs: DeploymentAttestation(
+            config.repo_root, "integration/test", "abc123", "integration/test", "abc123", True
+        ),
+    )
+    monkeypatch.setattr(controller, "exclusive_run_lock", lambda path: nullcontext())
+
+    recovered = controller.run_operational_cycle(
+        config,
+        now=controller.datetime(2026, 8, 24, 18, 1, tzinfo=JAKARTA),
+    )
+
+    assert recovered["controller_status"] == "RECOVERY_REQUIRED"
+    assert recovered["interrupted_phase"] == phase
+    assert recovered["interrupted_side_effect"] == side_effect
+    assert recovered["provider_calls"] is False
+    assert recovered["outcome_access"] is False

@@ -34,7 +34,35 @@ from .forward_dividend_execution_v1_1 import (
     VerifiedDividendCAReconciliation,
     execute_open_v1_1_reconciled,
 )
-from .v4_x1_decision_v1_contract import VerifiedScoreSession
+from .v4_x1_execution_evidence_v2 import (
+    EXECUTION_EVIDENCE_SCHEMA,
+    build_execution_evidence_v2,
+    evaluate_execution_evidence_v2,
+    parse_execution_evidence_v2_payload,
+)
+from .v4_x1_execution_cause_v1 import ExecutionCauseV1
+from .v4_x1_reconciliation_result_v1 import (
+    RECONCILIATION_RESULT_SCHEMA,
+    build_reconciliation_result_v1,
+    verify_reconciliation_result_payload,
+)
+from .v4_x1_execution_v1 import EXPECTED_EXECUTION_CONFIG_SHA256
+from .v4_x1_runtime_lineage_v2 import (
+    build_runtime_lineage_v2,
+    verify_runtime_lineage_v2,
+)
+from .v4_x1_transition_binding_v1 import (
+    verify_cause_obligation_binding_v1,
+    verify_decision_identity_binding_v1,
+    verify_transition_binding_payload,
+)
+from .v4_x1_ca_timing_matrix_v1 import (
+    CA_TIMING_MATRIX_SCHEMA,
+    build_ca_timing_matrix_v1,
+    verify_ca_timing_matrix_extension,
+    verify_ca_timing_matrix_payload,
+)
+from .v4_x1_decision_v1_contract import DecisionV1Error, VerifiedScoreSession
 from .v4_x1_decision_v1_verify import verify_v4_x1_score_artifact
 from .v4_x1_decision_v2_minimal import plan_v4_x1_decision_v2_minimal
 from .v4_x1_execution_v1_contract import (
@@ -43,6 +71,7 @@ from .v4_x1_execution_v1_contract import (
     PendingPaperIntent,
     PaperPosition,
 )
+from .v4_x1_quantity_obligation_v1 import obligation_from_payload
 from .v4_x1_execution_v1_decision_v2_adapter import (
     prepare_execution_v1_from_decision_v2,
 )
@@ -54,6 +83,7 @@ from .v4_x1_sizing_v1_decision_v2_adapter import (
     VerifiedDecisionV2SizingPlan,
     verify_decision_v2_plan_for_sizing,
 )
+from .v4_x1_identity_contract_v1 import SecurityIdentityV1
 from .decision_v2_minimal import DecisionV2Plan, DecisionV2ShadowState
 
 
@@ -64,6 +94,202 @@ EXECUTION_SCHEMA = "idx_trade_e2e_paper_execution_v1"
 EXECUTION_TXN_SCHEMA = "idx_trade_e2e_paper_execution_transaction_v1"
 META_SCHEMA = "idx_trade_e2e_paper_meta_v1"
 INITIAL_NAV_IDR = 50_000_000.0
+
+_TOP_LEVEL_CANONICAL_KEYS: dict[str, tuple[frozenset[str], ...]] = {
+    T0_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "session_date",
+                "initial_nav_idr",
+                "historical_dividend_credit",
+                "zero_holdings",
+                "zero_pending_buys",
+                "zero_pending_sells",
+                "zero_receivables",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "state_sha256",
+                "payload_sha256",
+            }
+        ),
+    ),
+    PREPARED_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "bootstrap",
+                "required_tickers",
+                "state",
+                "current_score",
+                "previous_score",
+                "previous_execution",
+                "decision_plan",
+                "decision_plan_sha256",
+                "execution_plan",
+                "execution_plan_sha256",
+                "eod_inputs",
+                "ca_reconciliation",
+                "ca_timing_matrix",
+                "decision_identity_binding",
+                "runtime_lineage",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    EXECUTION_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "prepared_path",
+                "prepared_sha256",
+                "open_manifest_path",
+                "open_manifest_sha256",
+                "open_normalized_path",
+                "open_normalized_sha256",
+                "open_raw_source_path",
+                "open_raw_source_sha256",
+                "open_input_values_sha256",
+                "authority",
+                "upstream_path",
+                "field_semantics",
+                "fallback_policy",
+                "transport_policy",
+                "transport",
+                "ca_reconciliation",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "runtime_state_sha256",
+                "registry_sha256",
+                "execution_evidence",
+                "reconciliation_result",
+                "ca_timing_matrix",
+                "decision_identity_binding",
+                "runtime_lineage",
+                "fills",
+                "gross_turnover_idr",
+                "stamp_duty_idr",
+                "pending_transition_count",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    EXECUTION_TXN_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "execution_session_date",
+                "prepared_path",
+                "prepared_sha256",
+                "snapshot_path",
+                "snapshot_file_sha256",
+                "snapshot_payload",
+                "execution_body",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+    META_SCHEMA: (
+        frozenset(
+            {
+                "schema_version",
+                "last_score_manifest_path",
+                "last_score_manifest_sha256",
+                "last_score_session_date",
+                "last_execution_session_date",
+                "last_execution_path",
+                "last_execution_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "payload_sha256",
+            }
+        ),
+        frozenset(
+            {
+                "schema_version",
+                "last_score_manifest_path",
+                "last_score_manifest_sha256",
+                "last_score_session_date",
+                "last_execution_session_date",
+                "last_execution_path",
+                "last_execution_sha256",
+                "last_execution_status",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "payload_sha256",
+            }
+        ),
+    ),
+    "idx_trade_e2e_paper_missed_execution_v1": (
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "reason",
+                "prepared_path",
+                "prepared_sha256",
+                "prior_runtime_snapshot_path",
+                "prior_runtime_snapshot_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "prior_state_sha256",
+                "result_state_sha256",
+                "open_manifest_present",
+                "prepared_order_expired",
+                "fills",
+                "gross_turnover_idr",
+                "costs_idr",
+                "no_retroactive_execution",
+                "ca_reconciliation",
+                "issued_at_jakarta",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+        frozenset(
+            {
+                "schema_version",
+                "status",
+                "decision_session_date",
+                "execution_session_date",
+                "reason",
+                "prepared_path",
+                "prepared_sha256",
+                "schedule_binding_path",
+                "schedule_binding_sha256",
+                "execution_schedule_attestation_path",
+                "execution_schedule_attestation_sha256",
+                "prior_runtime_snapshot_path",
+                "prior_runtime_snapshot_sha256",
+                "runtime_snapshot_path",
+                "runtime_snapshot_sha256",
+                "prior_state_sha256",
+                "result_state_sha256",
+                "open_manifest_present",
+                "prepared_order_expired",
+                "fills",
+                "gross_turnover_idr",
+                "costs_idr",
+                "no_retroactive_execution",
+                "ca_reconciliation",
+                "issued_at_jakarta",
+                "outcome_access",
+                "payload_sha256",
+            }
+        ),
+    ),
+}
 
 
 class E2EPaperOrchestrationError(RuntimeError):
@@ -166,6 +392,9 @@ def _read_verified_json(path: Path, schema: str) -> dict[str, Any]:
         raise E2EPaperOrchestrationError(f"E2E_JSON_INVALID:{path}") from exc
     if not isinstance(payload, dict) or payload.get("schema_version") != schema:
         raise E2EPaperOrchestrationError(f"E2E_SCHEMA_INVALID:{path}")
+    allowed = _TOP_LEVEL_CANONICAL_KEYS.get(schema)
+    if allowed is not None and frozenset(payload) not in allowed:
+        raise E2EPaperOrchestrationError(f"E2E_PAYLOAD_NOT_CANONICAL:{path}")
     return payload
 
 
@@ -298,6 +527,9 @@ def _execution_plan_payload(
             "dividend_state_hash": dividend_plan.dividend_state_hash,
             "dividend_ledger_hash": dividend_plan.dividend_ledger_hash,
             "total_return_nav_idr": dividend_plan.total_return_nav_idr,
+            "sizing_lineage": None
+            if dividend_plan.sizing_lineage is None
+            else asdict(dividend_plan.sizing_lineage),
         } if dividend_plan is not None else {}),
     }
 
@@ -412,6 +644,252 @@ def _verify_persisted_reconciliation_payload(value: object) -> dict[str, Any]:
             raise E2EPaperOrchestrationError("E2E_CA_JOURNAL_IDENTITY_MISMATCH")
         payload["v12_journal_identity"] = actual_identity
     return payload
+
+
+def _verify_lineage_binding(
+    value: object,
+    *,
+    role: str,
+    implementation_branch: str | None,
+    implementation_commit: str | None,
+    runtime_config_sha256: str | None,
+) -> dict[str, Any]:
+    try:
+        payload = verify_runtime_lineage_v2(
+            value if isinstance(value, Mapping) else {}
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_INVALID") from exc
+    if payload.get("role") != role:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_ROLE_MISMATCH")
+    expected_commit = (
+        None
+        if implementation_commit is None
+        else str(implementation_commit).strip().lower()
+    )
+    expected_config = (
+        None
+        if runtime_config_sha256 is None
+        else str(runtime_config_sha256).strip().lower()
+    )
+    if implementation_branch is not None:
+        if payload.get("implementation_branch") != str(implementation_branch).strip():
+            raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_BRANCH_MISMATCH")
+    if expected_commit is not None and payload.get("implementation_commit") != expected_commit:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_COMMIT_MISMATCH")
+    if expected_config is not None and payload.get("config_sha256") != expected_config:
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_CONFIG_MISMATCH")
+    if any(value is not None for value in (implementation_branch, implementation_commit, runtime_config_sha256)) and payload.get("binding_status") != "BOUND":
+        raise E2EPaperOrchestrationError("E2E_RUNTIME_LINEAGE_UNBOUND_OPERATIONAL_PARENT")
+    return payload
+
+
+def _verify_persisted_execution_components(
+    execution_body: Mapping[str, Any],
+    *,
+    error_prefix: str,
+) -> dict[str, Any]:
+    """Verify the nested evidence/provenance parents during replay."""
+
+    evidence = execution_body.get("execution_evidence")
+    if not isinstance(evidence, Mapping):
+        raise E2EPaperOrchestrationError(error_prefix + "_EVIDENCE_MISSING")
+    try:
+        reconciliation = verify_reconciliation_result_payload(
+            execution_body.get("reconciliation_result")
+            if isinstance(execution_body.get("reconciliation_result"), Mapping)
+            else {}
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_RECONCILIATION_INVALID"
+        ) from exc
+    if reconciliation.get("execution_evidence_sha256") != _canonical_hash(dict(evidence)):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_PARENT_HASH_MISMATCH"
+        )
+    try:
+        parse_execution_evidence_v2_payload(dict(evidence))
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_INVALID"
+        ) from exc
+    if (
+        reconciliation.get("decision_session_date")
+        != execution_body.get("decision_session_date")
+        or reconciliation.get("execution_session_date")
+        != execution_body.get("execution_session_date")
+    ):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_RECONCILIATION_SESSION_PARENT_MISMATCH"
+        )
+    ca_parent = execution_body.get("ca_reconciliation")
+    if not isinstance(ca_parent, Mapping):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_CA_PARENT_MISSING"
+        )
+    for result_key, ca_key in (
+        ("ca_attestation_sha256", "attestation_sha256"),
+        ("ca_source_sha256", "source_sha256"),
+        ("ca_journal_sha256", "v12_journal_sha256"),
+    ):
+        if reconciliation.get(result_key) != ca_parent.get(ca_key):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RECONCILIATION_CA_PARENT_MISMATCH:" + result_key
+            )
+    if (
+        evidence.get("decision_session_date")
+        != execution_body.get("decision_session_date")
+        or evidence.get("execution_session_date")
+        != execution_body.get("execution_session_date")
+    ):
+        raise E2EPaperOrchestrationError(
+            error_prefix + "_EVIDENCE_SESSION_PARENT_MISMATCH"
+        )
+    causes = evidence.get("causes")
+    cause_binding = evidence.get("cause_obligation_binding")
+    if not isinstance(causes, list):
+        raise E2EPaperOrchestrationError(error_prefix + "_CAUSE_ROWS_INVALID")
+    if cause_binding is None:
+        if causes:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_MISSING"
+            )
+    else:
+        try:
+            verified_binding = verify_transition_binding_payload(cause_binding)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_INVALID"
+            ) from exc
+        if verified_binding.get("binding_type") != "CAUSE_OBLIGATION":
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_TYPE_MISMATCH"
+            )
+        if (
+            verified_binding.get("execution_session_date")
+            != execution_body.get("execution_session_date")
+        ):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_SESSION_MISMATCH"
+            )
+        cause_ids = [
+            row.get("cause_id")
+            for row in causes
+            if isinstance(row, Mapping)
+        ]
+        join_ids = [
+            row.get("cause_id")
+            for row in verified_binding.get("joins", ())
+            if isinstance(row, Mapping)
+        ]
+        if len(cause_ids) != len(causes) or cause_ids != join_ids:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_ROWS_MISMATCH"
+            )
+        state_after = evidence.get("state_after")
+        obligation_rows = (
+            state_after.get("obligations")
+            if isinstance(state_after, Mapping)
+            else None
+        )
+        try:
+            typed_causes = tuple(
+                ExecutionCauseV1(**dict(row))
+                for row in causes
+                if isinstance(row, Mapping)
+            )
+            if len(typed_causes) != len(causes) or not isinstance(
+                obligation_rows, list
+            ):
+                raise DecisionV1Error("TRANSITION_BINDING_CAUSE_ROWS_INVALID")
+            typed_obligations = tuple(
+                obligation_from_payload(row) for row in obligation_rows
+            )
+            verify_cause_obligation_binding_v1(
+                verified_binding,
+                execution_session_date=str(
+                    execution_body.get("execution_session_date") or ""
+                ),
+                causes=typed_causes,
+                obligations=typed_obligations,
+            )
+        except (DecisionV1Error, TypeError) as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CAUSE_BINDING_CONTENT_MISMATCH"
+            ) from exc
+    timing = execution_body.get("ca_timing_matrix")
+    verified_timing: Mapping[str, Any] | None = None
+    if timing is not None:
+        try:
+            verified_timing = verify_ca_timing_matrix_payload(timing)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_CA_TIMING_INVALID"
+            ) from exc
+    lineage = execution_body.get("runtime_lineage")
+    verified_lineage: Mapping[str, Any] | None = None
+    if lineage is not None:
+        try:
+            verified_lineage = verify_runtime_lineage_v2(
+                lineage if isinstance(lineage, Mapping) else {}
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RUNTIME_LINEAGE_INVALID"
+            ) from exc
+    if verified_lineage is not None:
+        contracts = verified_lineage.get("contracts")
+        artifacts = verified_lineage.get("artifacts")
+        if not isinstance(contracts, Mapping) or not isinstance(artifacts, Mapping):
+            raise E2EPaperOrchestrationError(
+                error_prefix + "_RUNTIME_LINEAGE_CONTRACTS_MISSING"
+            )
+
+        expected_contracts = {
+            "execution_evidence_schema": evidence.get("schema_version"),
+            "reconciliation_result_schema": reconciliation.get("schema_version"),
+        }
+        if verified_timing is not None:
+            expected_contracts.update(
+                {
+                    "ca_timing_matrix_schema": verified_timing.get("schema_version"),
+                    "ca_timing_matrix_sha256": verified_timing.get("payload_sha256"),
+                }
+            )
+        identity_binding = execution_body.get("decision_identity_binding")
+        expected_contracts["decision_identity_binding_sha256"] = (
+            None
+            if identity_binding is None
+            else identity_binding.get("payload_sha256")
+            if isinstance(identity_binding, Mapping)
+            else None
+        )
+        for key, expected in expected_contracts.items():
+            # Runtime lineage V2 currently serializes optional contract values
+            # through its string contract normalizer, so an absent optional
+            # binding is represented as the literal ``"None"``.
+            normalized_expected = "None" if expected is None else str(expected)
+            if contracts.get(key) != normalized_expected:
+                raise E2EPaperOrchestrationError(
+                    error_prefix + "_RUNTIME_LINEAGE_CONTRACT_MISMATCH:" + key
+                )
+
+        expected_artifacts = {
+            "execution_evidence": str(evidence.get("payload_sha256") or ""),
+            "reconciliation_result": str(
+                execution_body["reconciliation_result"].get("payload_sha256") or ""
+            ),
+        }
+        if verified_timing is not None:
+            expected_artifacts["ca_timing_matrix"] = verified_timing["payload_sha256"]
+        for key, expected in expected_artifacts.items():
+            artifact = artifacts.get(key)
+            if not isinstance(artifact, Mapping) or artifact.get("sha256") != expected:
+                raise E2EPaperOrchestrationError(
+                    error_prefix + "_RUNTIME_LINEAGE_ARTIFACT_MISMATCH:" + key
+                )
+    return reconciliation
 
 
 def _journal_identity_payload(path: str | Path) -> dict[str, list[dict[str, Any]]]:
@@ -604,7 +1082,9 @@ def _verify_dividend_evidence_bindings(
 
 def _load_latest_state(paths: E2EPaperPaths) -> dividend.DividendAwarePaperState:
     try:
-        snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+        # A corrupted latest snapshot may be quarantined only when a verified
+        # ancestor exists.  Forks and unrecoverable chains remain fail-closed.
+        snapshot = dividend_runtime.recover_latest_runtime_snapshot(paths.root)
     except Exception as exc:
         raise E2EPaperOrchestrationError("E2E_RUNTIME_STATE_MISSING") from exc
     return snapshot.state
@@ -695,6 +1175,11 @@ def _verify_previous_execution_parent(
     execution_sha = str(body.pop("payload_sha256") or "")
     if not execution_sha or _canonical_hash(body) != execution_sha:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PAYLOAD_HASH_MISMATCH")
+    if execution_kind == "EXECUTION":
+        _verify_persisted_execution_components(
+            execution,
+            error_prefix="E2E_PREVIOUS_EXECUTION",
+        )
     if str(meta.get("last_execution_session_date") or "") != str(execution.get("execution_session_date") or ""):
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_SESSION_MISMATCH")
     if execution.get("execution_session_date") > current_session:
@@ -887,6 +1372,11 @@ def prepare_post_eod(
     previous_score: VerifiedScoreSession | None,
     eod_inputs: VerifiedEODExecutionInputs,
     ca_reconciliation: VerifiedDividendCAReconciliation,
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
+    entrypoint_sha256: str | None = None,
+    security_identities: Sequence[SecurityIdentityV1] | None = None,
 ) -> PreparedExecutionResult:
     """Build one immutable PREPARED_EXECUTION artifact without accessing Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -938,6 +1428,13 @@ def prepare_post_eod(
         sizing_events,
         session_date=session,
     )
+    ca_timing_matrix = build_ca_timing_matrix_v1(
+        ca_reconciliation.certified_events,
+        decision_session_date=session,
+        execution_session_date=eod_inputs.next_official_session_date,
+        raw_state=state,
+        sizing_state=sizing_state,
+    )
     decision_shadow = (
         DecisionV2ShadowState.empty()
         if bootstrap
@@ -947,22 +1444,71 @@ def prepare_post_eod(
         )
     )
     verified_sizing = verify_decision_v2_plan_for_sizing(
-        plan, current_score, previous_score, decision_shadow
+        plan,
+        current_score,
+        previous_score,
+        decision_shadow,
+        security_identities=security_identities,
     )
     order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
         verified_sizing,
-        sizing_state,
+        state,
         eod_inputs=eod_inputs,
-    )
-    # The prepared plan is sized from the projected CA state, but execution
-    # still verifies and advances the immutable runtime state from its raw
-    # snapshot.  Keep the parent hashes bound to that raw snapshot.
-    order_plan = replace(
-        order_plan,
-        dividend_state_hash=dividend.dividend_aware_state_hash(state),
-        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
+        projected_state=sizing_state,
     )
     order_payload = _execution_plan_payload(order_plan)
+    ca_payload = _reconciliation_payload(ca_reconciliation)
+    prepared_lineage = build_runtime_lineage_v2(
+        role="PREPARED_EXECUTION",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        config_sha256=runtime_config_sha256,
+        entrypoint_sha256=entrypoint_sha256,
+        artifacts={
+            "state_snapshot": {
+                "path": str(snapshot.path.resolve()),
+                "sha256": snapshot.file_sha256,
+                "state_sha256": dividend.dividend_aware_state_hash(state),
+            },
+            "score_manifest": {
+                "path": str(current_score.manifest_path.resolve()),
+                "sha256": current_score.manifest_sha256,
+                "artifact_sha256": current_score.artifact_sha256,
+            },
+            "eod_ohlcv": {
+                "path": str(eod_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": eod_inputs.ohlcv_artifact_sha256,
+            },
+            "eod_model_input": {
+                "path": str(eod_inputs.model_input_path.resolve()),
+                "sha256": eod_inputs.model_input_sha256,
+            },
+            "official_calendar": {
+                "path": str(eod_inputs.official_calendar_path.resolve()),
+                "sha256": eod_inputs.official_calendar_sha256,
+            },
+            "ca_attestation": {
+                "path": ca_payload["attestation_path"],
+                "sha256": ca_payload["attestation_sha256"],
+            },
+            "ca_source": {
+                "path": ca_payload["source_path"],
+                "sha256": ca_payload["source_sha256"],
+            },
+        },
+        contracts={
+            "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
+            "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
+            "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+            "decision_identity_binding_sha256": (
+                None
+                if verified_sizing.identity_binding is None
+                else verified_sizing.identity_binding["payload_sha256"]
+            ),
+            "ca_timing_matrix_schema": CA_TIMING_MATRIX_SCHEMA,
+            "ca_timing_matrix_sha256": ca_timing_matrix["payload_sha256"],
+        },
+    )
     payload = {
         "schema_version": PREPARED_SCHEMA,
         "status": "PREPARED_EXECUTION",
@@ -987,7 +1533,10 @@ def prepare_post_eod(
             "model_input": _path_sha(eod_inputs.model_input_path, "E2E_EOD_MODEL_INPUT_MISSING"),
             "calendar": _path_sha(eod_inputs.official_calendar_path, "E2E_CALENDAR_MISSING"),
         },
-        "ca_reconciliation": _reconciliation_payload(ca_reconciliation),
+        "ca_reconciliation": ca_payload,
+        "ca_timing_matrix": ca_timing_matrix,
+        "decision_identity_binding": verified_sizing.identity_binding,
+        "runtime_lineage": prepared_lineage,
         "outcome_access": False,
     }
     payload["payload_sha256"] = _canonical_hash(payload)
@@ -1003,6 +1552,10 @@ def _recover_staged_execution(
     execution_date: str,
     expected_ca_reconciliation: Mapping[str, Any],
     expected_open_parent: Mapping[str, Any],
+    expected_ca_timing_matrix: Mapping[str, Any] | None = None,
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
 ) -> CompletedExecutionResult | None:
     stage_path = paths.execution_dir / ".transactions" / f"{execution_date}.json"
     if not stage_path.is_file():
@@ -1047,6 +1600,29 @@ def _recover_staged_execution(
     execution_body = stage.get("execution_body")
     if not isinstance(execution_body, dict):
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_EXECUTION_PAYLOAD_MISSING")
+    _verify_persisted_execution_components(
+        execution_body,
+        error_prefix="E2E_TRANSACTION",
+    )
+    _verify_lineage_binding(
+        execution_body.get("runtime_lineage"),
+        role="EXECUTION_RESULT",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        runtime_config_sha256=runtime_config_sha256,
+    )
+    if expected_ca_timing_matrix is not None:
+        try:
+            verify_ca_timing_matrix_extension(
+                expected_ca_timing_matrix,
+                execution_body.get("ca_timing_matrix")
+                if isinstance(execution_body.get("ca_timing_matrix"), Mapping)
+                else {},
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_TRANSACTION_CA_TIMING_MATRIX_INVALID"
+            ) from exc
     if execution_body.get("ca_reconciliation") != expected_ca_reconciliation:
         raise E2EPaperOrchestrationError("E2E_TRANSACTION_CA_PARENT_MISMATCH")
     for key, expected in expected_open_parent.items():
@@ -1089,6 +1665,11 @@ def execute_preopen(
     open_inputs: VerifiedOpenExecutionInputs,
     ca_reconciliation: VerifiedDividendCAReconciliation,
     dividend_evidence: Sequence[VerifiedCashDividendEvidence] = (),
+    implementation_branch: str | None = None,
+    implementation_commit: str | None = None,
+    runtime_config_sha256: str | None = None,
+    entrypoint_sha256: str | None = None,
+    security_identities: Sequence[SecurityIdentityV1] | None = None,
 ) -> CompletedExecutionResult:
     """Verify one prepared parent and execute exactly once at official Open."""
     paths = E2EPaperPaths.from_root(runtime_root)
@@ -1100,6 +1681,40 @@ def execute_preopen(
         raise E2EPaperOrchestrationError("E2E_PREPARED_PAYLOAD_SHA_MISMATCH")
     if payload.get("status") != "PREPARED_EXECUTION":
         raise E2EPaperOrchestrationError("E2E_PREPARED_STATUS_INVALID")
+    prepared_lineage = _verify_lineage_binding(
+        payload.get("runtime_lineage"),
+        role="PREPARED_EXECUTION",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        runtime_config_sha256=runtime_config_sha256,
+    )
+    persisted_identity_binding = payload.get("decision_identity_binding")
+    if persisted_identity_binding is not None:
+        if security_identities is None:
+            raise E2EPaperOrchestrationError(
+                "E2E_DECISION_IDENTITY_EVIDENCE_REQUIRED_FOR_REPLAY"
+            )
+        try:
+            verify_decision_identity_binding_v1(
+                persisted_identity_binding,
+                security_identities,
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_DECISION_IDENTITY_BINDING_INVALID"
+            ) from exc
+    elif security_identities is not None:
+        raise E2EPaperOrchestrationError(
+            "E2E_UNEXPECTED_DECISION_IDENTITY_EVIDENCE"
+        )
+    persisted_ca_timing_matrix = payload.get("ca_timing_matrix")
+    if persisted_ca_timing_matrix is not None:
+        try:
+            verify_ca_timing_matrix_payload(persisted_ca_timing_matrix)
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_PREPARED_CA_TIMING_MATRIX_INVALID"
+            ) from exc
     decision_date = _date(payload.get("decision_session_date"))
     execution_date = _date(payload.get("execution_session_date"))
     if current_score.session_date != decision_date or eod_inputs.session_date != decision_date or open_inputs.session_date != execution_date:
@@ -1164,15 +1779,70 @@ def execute_preopen(
         execution_date=execution_date,
         required_tickers=required,
     )
+    state_ref = payload.get("state")
+    if not isinstance(state_ref, Mapping):
+        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    try:
+        snapshot = dividend_runtime.load_runtime_snapshot(
+            Path(str(state_ref.get("snapshot_path") or "")).expanduser().resolve()
+        )
+    except Exception as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_PREPARED_STATE_PARENT_MISMATCH"
+        ) from exc
+    if (
+        str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve())
+        or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256
+        or str(state_ref.get("state_sha256"))
+        != dividend.dividend_aware_state_hash(snapshot.state)
+    ):
+        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    state = snapshot.state
+    declared_bootstrap = payload.get("bootstrap")
+    if not isinstance(declared_bootstrap, bool):
+        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
+    replay_meta = None
+    if not declared_bootstrap:
+        if previous_score is None:
+            raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
+        replay_meta = {
+            "last_score_manifest_path": str(previous_score.manifest_path.resolve()),
+            "last_score_manifest_sha256": previous_score.manifest_sha256,
+        }
+    plan, bootstrap = _resolve_scores(
+        current_score,
+        previous_score,
+        state=state,
+        meta=replay_meta,
+        current_date=decision_date,
+    )
+    declared_plan = payload.get("decision_plan")
+    expected_plan = _decision_payload(plan)
+    if (
+        not isinstance(declared_plan, Mapping)
+        or dict(declared_plan) != expected_plan
+        or _canonical_hash(dict(declared_plan))
+        != payload.get("decision_plan_sha256")
+        or payload.get("bootstrap") != bootstrap
+    ):
+        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
     target = paths.execution_dir / f"{execution_date}.json"
     if not target.exists():
         recovered = _recover_staged_execution(
             paths,
             prepared=prepared,
             execution_date=execution_date,
-            expected_ca_reconciliation=current_ca_payload,
-            expected_open_parent=_open_parent_payload(open_inputs),
-        )
+                expected_ca_reconciliation=current_ca_payload,
+                expected_open_parent=_open_parent_payload(open_inputs),
+                expected_ca_timing_matrix=(
+                    persisted_ca_timing_matrix
+                    if isinstance(persisted_ca_timing_matrix, Mapping)
+                    else None
+                ),
+                implementation_branch=implementation_branch,
+                implementation_commit=implementation_commit,
+                runtime_config_sha256=runtime_config_sha256,
+            )
         if recovered is not None:
             _write_meta(paths, {
                 "last_score_manifest_path": str(current_score.manifest_path.resolve()),
@@ -1185,6 +1855,80 @@ def execute_preopen(
                 "runtime_snapshot_sha256": recovered.runtime_snapshot_sha256,
             })
             return recovered
+    if not target.exists():
+        try:
+            latest_snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
+        except Exception as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_PREPARED_STATE_PARENT_MISMATCH"
+            ) from exc
+        if (
+            str(latest_snapshot.path.resolve()) != str(snapshot.path.resolve())
+            or latest_snapshot.file_sha256 != snapshot.file_sha256
+        ):
+            raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
+    _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
+    shadow = (
+        DecisionV2ShadowState.empty()
+        if bootstrap
+        else replace(
+            dividend_runtime.reconstruct_decision_shadow_state(state),
+            as_of_session_date=previous_score.session_date,
+        )
+    )
+    registered_events = dividend_runtime.registered_certified_events(
+        snapshot.certified_dividend_registry
+    )
+    sizing_events = tuple({
+        event.event_id: event
+        for event in (*registered_events, *ca_reconciliation.certified_events)
+    }.values())
+    sizing_state = _state_for_dividend_sizing(
+        paths,
+        state,
+        sizing_events,
+        session_date=decision_date,
+    )
+    ca_timing_matrix = build_ca_timing_matrix_v1(
+        ca_reconciliation.certified_events,
+        decision_session_date=decision_date,
+        execution_session_date=execution_date,
+        raw_state=state,
+        sizing_state=sizing_state,
+    )
+    try:
+        ca_timing_matrix = verify_ca_timing_matrix_extension(
+            persisted_ca_timing_matrix,
+            ca_timing_matrix,
+        )
+    except DecisionV1Error as exc:
+        raise E2EPaperOrchestrationError(
+            "E2E_CA_TIMING_MATRIX_PARENT_MISMATCH"
+        ) from exc
+    verified_sizing = verify_decision_v2_plan_for_sizing(
+        plan,
+        current_score,
+        previous_score,
+        shadow,
+        security_identities=security_identities,
+    )
+    if verified_sizing.identity_binding != payload.get("decision_identity_binding"):
+        raise E2EPaperOrchestrationError("E2E_DECISION_IDENTITY_BINDING_MISMATCH")
+    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
+        verified_sizing,
+        state,
+        eod_inputs=eod_inputs,
+        projected_state=sizing_state,
+    )
+    expected_execution_plan = _execution_plan_payload(order_plan)
+    declared_execution_plan = payload.get("execution_plan")
+    if (
+        not isinstance(declared_execution_plan, Mapping)
+        or dict(declared_execution_plan) != expected_execution_plan
+        or _canonical_hash(dict(declared_execution_plan))
+        != payload.get("execution_plan_sha256")
+    ):
+        raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
     if target.exists():
         snapshot_path = (
             paths.root
@@ -1199,6 +1943,17 @@ def execute_preopen(
         existing_hash = str(existing_body.pop("payload_sha256", ""))
         if not existing_hash or _canonical_hash(existing_body) != existing_hash:
             raise E2EPaperOrchestrationError("E2E_EXISTING_EXECUTION_HASH_MISMATCH")
+        _verify_persisted_execution_components(
+            existing_body,
+            error_prefix="E2E_EXISTING_EXECUTION",
+        )
+        _verify_lineage_binding(
+            existing_body.get("runtime_lineage"),
+            role="EXECUTION_RESULT",
+            implementation_branch=implementation_branch,
+            implementation_commit=implementation_commit,
+            runtime_config_sha256=runtime_config_sha256,
+        )
         if (
             str(existing_body.get("prepared_path") or "") != str(prepared)
             or str(existing_body.get("prepared_sha256") or "")
@@ -1209,6 +1964,17 @@ def execute_preopen(
             raise E2EPaperOrchestrationError(
                 "E2E_EXISTING_EXECUTION_CA_PARENT_MISMATCH"
             )
+        try:
+            verify_ca_timing_matrix_extension(
+                persisted_ca_timing_matrix,
+                existing_body.get("ca_timing_matrix")
+                if isinstance(existing_body.get("ca_timing_matrix"), Mapping)
+                else {},
+            )
+        except DecisionV1Error as exc:
+            raise E2EPaperOrchestrationError(
+                "E2E_EXISTING_EXECUTION_CA_TIMING_MATRIX_PARENT_MISMATCH"
+            ) from exc
         expected_open = _open_parent_payload(open_inputs)
         for key, expected in expected_open.items():
             if existing_body.get(key) != expected:
@@ -1249,12 +2015,6 @@ def execute_preopen(
             execution_date,
             "ALREADY_COMPLETE",
         )
-    state = _load_latest_state(paths)
-    state_ref = payload.get("state")
-    snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
-    if not isinstance(state_ref, dict) or str(state_ref.get("snapshot_path")) != str(snapshot.path.resolve()) or str(state_ref.get("snapshot_sha256")) != snapshot.file_sha256 or str(state_ref.get("state_sha256")) != dividend.dividend_aware_state_hash(state):
-        raise E2EPaperOrchestrationError("E2E_PREPARED_STATE_PARENT_MISMATCH")
-    plan, _ = _resolve_scores(current_score, previous_score, state=state, meta=_load_meta(paths), current_date=decision_date)
     declared_previous_execution = payload.get("previous_execution")
     current_meta = _load_meta(paths)
     actual_previous_execution = (
@@ -1266,44 +2026,6 @@ def execute_preopen(
     )
     if actual_previous_execution != declared_previous_execution:
         raise E2EPaperOrchestrationError("E2E_PREVIOUS_EXECUTION_PARENT_CHANGED")
-    if _canonical_hash(_decision_payload(plan)) != payload.get("decision_plan_sha256"):
-        raise E2EPaperOrchestrationError("E2E_DECISION_PARENT_MISMATCH")
-    _verify_reconciliation(ca_reconciliation, decision_date=decision_date, execution_date=execution_date, required_tickers=required)
-    shadow = (
-        DecisionV2ShadowState.empty()
-        if bool(payload.get("bootstrap"))
-        else replace(
-            dividend_runtime.reconstruct_decision_shadow_state(state),
-            as_of_session_date=previous_score.session_date,
-        )
-    )
-    snapshot = dividend_runtime.load_latest_runtime_snapshot(paths.root)
-    registered_events = dividend_runtime.registered_certified_events(
-        snapshot.certified_dividend_registry
-    )
-    sizing_events = tuple({
-        event.event_id: event
-        for event in (*registered_events, *ca_reconciliation.certified_events)
-    }.values())
-    sizing_state = _state_for_dividend_sizing(
-        paths,
-        state,
-        sizing_events,
-        session_date=decision_date,
-    )
-    verified_sizing = verify_decision_v2_plan_for_sizing(plan, current_score, previous_score, shadow)
-    order_plan = dividend.prepare_execution_v1_1_from_decision_v2(
-        verified_sizing,
-        sizing_state,
-        eod_inputs=eod_inputs,
-    )
-    order_plan = replace(
-        order_plan,
-        dividend_state_hash=dividend.dividend_aware_state_hash(state),
-        dividend_ledger_hash=dividend.dividend_ledger_hash(state.dividend_ledger),
-    )
-    if _canonical_hash(_execution_plan_payload(order_plan)) != payload.get("execution_plan_sha256"):
-        raise E2EPaperOrchestrationError("E2E_EXECUTION_PARENT_MISMATCH")
     evidence_by_event = {
         row.event.event_id: row for row in available_evidence
     }
@@ -1334,6 +2056,28 @@ def execute_preopen(
         reconciliation=lifecycle_reconciliation,
         historical_states_by_date=historical_states_by_date,
     )
+    execution_evidence = build_execution_evidence_v2(
+        order_plan.base_plan,
+        result.base_result,
+        state_before=state.base_state,
+    )
+    execution_evidence_evaluation = evaluate_execution_evidence_v2(
+        execution_evidence,
+        expected_order_plan=order_plan.base_plan,
+        expected_state_before=state.base_state,
+    )
+    reconciliation_result = build_reconciliation_result_v1(
+        order_plan.base_plan,
+        execution_evidence,
+        execution_evidence_evaluation,
+        lifecycle_reconciliation,
+        required_tickers=required,
+    )
+    if reconciliation_result.status != "PASS_INTERNAL_PAPER":
+        raise E2EPaperOrchestrationError(
+            "E2E_INTERNAL_RECONCILIATION_FAILED:"
+            + ",".join(row.code for row in reconciliation_result.mismatches)
+        )
     snapshot_payload = dividend_runtime._snapshot_payload(
         result.state_after,
         registry,
@@ -1348,6 +2092,79 @@ def execute_preopen(
     snapshot_bytes = _pretty_json_bytes(snapshot_payload)
     snapshot_file_sha = _sha256_bytes(snapshot_bytes)
     prepared_sha = _sha256_file(prepared)
+    execution_evidence_payload = execution_evidence.payload()
+    reconciliation_result_payload = reconciliation_result.payload()
+    execution_lineage = build_runtime_lineage_v2(
+        role="EXECUTION_RESULT",
+        implementation_branch=implementation_branch,
+        implementation_commit=implementation_commit,
+        config_sha256=runtime_config_sha256,
+        entrypoint_sha256=entrypoint_sha256,
+        artifacts={
+            "prepared_execution": {
+                "path": str(prepared.resolve()),
+                "sha256": _sha256_file(prepared),
+            },
+            "current_score_manifest": {
+                "path": str(current_score.manifest_path.resolve()),
+                "sha256": current_score.manifest_sha256,
+                "artifact_sha256": current_score.artifact_sha256,
+            },
+            "eod_ohlcv": {
+                "path": str(eod_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": eod_inputs.ohlcv_artifact_sha256,
+            },
+            "eod_model_input": {
+                "path": str(eod_inputs.model_input_path.resolve()),
+                "sha256": eod_inputs.model_input_sha256,
+            },
+            "official_open_manifest": {
+                "path": (
+                    str(open_inputs.manifest_path.resolve())
+                    if open_inputs.manifest_path is not None
+                    else None
+                ),
+                "sha256": open_inputs.manifest_sha256 or None,
+            },
+            "official_open_normalized": {
+                "path": str(open_inputs.ohlcv_artifact_path.resolve()),
+                "sha256": open_inputs.ohlcv_artifact_sha256,
+            },
+            "ca_attestation": {
+                "path": current_ca_payload["attestation_path"],
+                "sha256": current_ca_payload["attestation_sha256"],
+            },
+            "ca_source": {
+                "path": current_ca_payload["source_path"],
+                "sha256": current_ca_payload["source_sha256"],
+            },
+            "ca_timing_matrix": {
+                "sha256": ca_timing_matrix["payload_sha256"],
+            },
+            "execution_evidence": {
+                "sha256": execution_evidence_payload["payload_sha256"],
+            },
+            "reconciliation_result": {
+                "sha256": reconciliation_result_payload["payload_sha256"],
+            },
+            "runtime_snapshot": {
+                "path": str(snapshot_path.resolve()),
+                "sha256": snapshot_file_sha,
+            },
+        },
+        contracts={
+            "execution_config_sha256": EXPECTED_EXECUTION_CONFIG_SHA256,
+            "execution_evidence_schema": EXECUTION_EVIDENCE_SCHEMA,
+            "reconciliation_result_schema": RECONCILIATION_RESULT_SCHEMA,
+            "decision_identity_binding_sha256": (
+                None
+                if verified_sizing.identity_binding is None
+                else verified_sizing.identity_binding["payload_sha256"]
+            ),
+            "ca_timing_matrix_schema": CA_TIMING_MATRIX_SCHEMA,
+            "ca_timing_matrix_sha256": ca_timing_matrix["payload_sha256"],
+        },
+    )
     execution_body = {
         "schema_version": EXECUTION_SCHEMA,
         "status": "EXECUTION_COMPLETE",
@@ -1377,6 +2194,11 @@ def execute_preopen(
         "runtime_snapshot_sha256": snapshot_file_sha,
         "runtime_state_sha256": snapshot_payload["hashes"]["runtime_state_sha256"],
         "registry_sha256": dividend_runtime.certified_registry_hash(registry),
+        "execution_evidence": execution_evidence_payload,
+        "reconciliation_result": reconciliation_result_payload,
+        "ca_timing_matrix": ca_timing_matrix,
+        "decision_identity_binding": verified_sizing.identity_binding,
+        "runtime_lineage": execution_lineage,
         "fills": [asdict(x) for x in result.base_result.fills],
         "gross_turnover_idr": result.base_result.gross_turnover_idr,
         "stamp_duty_idr": result.base_result.stamp_duty_idr,

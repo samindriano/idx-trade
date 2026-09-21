@@ -27,3 +27,21 @@ def test_phase_scripts_pass_attestation_only_to_phase_verifier() -> None:
         assert len(phase_calls) == 1
         assert not any(keyword.arg == "attestation_path" for keyword in attest_calls[0].keywords)
         assert any(keyword.arg == "attestation_path" for keyword in phase_calls[0].keywords)
+
+
+def test_phase_scripts_bind_runtime_identity_into_orchestration() -> None:
+    expected = {
+        "implementation_branch",
+        "implementation_commit",
+        "runtime_config_sha256",
+        "entrypoint_sha256",
+    }
+    for name, function_name in (
+        ("run_e2e_paper_post_eod_v1.py", "prepare_post_eod"),
+        ("run_e2e_paper_preopen_v1.py", "execute_preopen"),
+        ("run_e2e_paper_post_eod_v2.py", "prepare_post_eod"),
+        ("run_e2e_paper_preopen_v2.py", "execute_preopen"),
+    ):
+        calls = _calls(REPO_ROOT / "scripts" / name, function_name)
+        assert len(calls) == 1
+        assert expected <= {keyword.arg for keyword in calls[0].keywords}

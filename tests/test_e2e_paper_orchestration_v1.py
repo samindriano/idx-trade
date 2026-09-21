@@ -16,6 +16,8 @@ from idx_trade.e2e_paper_orchestration_v1 import (
     INITIAL_NAV_IDR,
     _reconciliation_payload,
     _verify_prepared_ca_parent,
+    _load_latest_state,
+    E2EPaperPaths,
     execute_preopen,
     bootstrap_t0,
     prepare_post_eod,
@@ -43,6 +45,7 @@ from idx_trade.v4_x1_execution_v1_verify import (
     _EOD_INPUT_TOKEN,
     _OPEN_INPUT_TOKEN,
 )
+from idx_trade.v4_x1_identity_contract_v1 import SecurityIdentityV1
 from idx_trade.forward_dividend_execution_v1_1 import _DIVIDEND_RECONCILIATION_TOKEN
 from idx_trade.official_open_evidence_v1 import (
     AUTHORITY as OFFICIAL_OPEN_AUTHORITY,
@@ -217,11 +220,191 @@ def test_t0_post_eod_preopen_is_atomic_and_idempotent(tmp_path: Path) -> None:
     eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
     ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
     prepared = prepare_post_eod(root, current_score=current, previous_score=None, eod_inputs=eod, ca_reconciliation=ca)
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["runtime_lineage"]["role"] == "PREPARED_EXECUTION"
+    assert prepared_payload["runtime_lineage"]["binding_status"] == "LOCAL_UNBOUND"
     result = execute_preopen(root, prepared_path=prepared.path, current_score=current, previous_score=None, eod_inputs=eod, open_inputs=_open(tmp_path, "2026-08-25", tickers), ca_reconciliation=ca)
     assert result.status == "EXECUTION_COMPLETE"
+    execution_payload = json.loads(result.path.read_text(encoding="utf-8"))
+    assert execution_payload["runtime_lineage"]["role"] == "EXECUTION_RESULT"
+    assert execution_payload["execution_evidence"]["schema_version"] == "idx_trade_execution_evidence_v2"
+    assert execution_payload["reconciliation_result"]["status"] == "PASS_INTERNAL_PAPER"
     rerun = execute_preopen(root, prepared_path=prepared.path, current_score=current, previous_score=None, eod_inputs=eod, open_inputs=_open(tmp_path, "2026-08-25", tickers), ca_reconciliation=ca)
     assert rerun.status == "ALREADY_COMPLETE"
     assert result.file_sha256 == rerun.file_sha256
+
+    execution_payload["unexpected_extension"] = True
+    execution_body = dict(execution_payload)
+    execution_body.pop("payload_sha256")
+    execution_payload["payload_sha256"] = _canonical_hash(execution_body)
+    result.path.write_text(json.dumps(execution_payload, sort_keys=True), encoding="utf-8")
+    with pytest.raises(E2EPaperOrchestrationError, match="PAYLOAD_NOT_CANONICAL"):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_bound_runtime_lineage_survives_execution_and_rejects_config_mismatch(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    bound = {
+        "implementation_branch": "codex/runtime-bound-test",
+        "implementation_commit": "a" * 40,
+        "runtime_config_sha256": "b" * 64,
+        "entrypoint_sha256": "c" * 64,
+    }
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+        **bound,
+    )
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["runtime_lineage"]["binding_status"] == "BOUND"
+    result = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+        **bound,
+    )
+    execution_payload = json.loads(result.path.read_text(encoding="utf-8"))
+    assert execution_payload["runtime_lineage"]["binding_status"] == "BOUND"
+    with pytest.raises(E2EPaperOrchestrationError, match="RUNTIME_LINEAGE_CONFIG_MISMATCH"):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+            **{**bound, "runtime_config_sha256": "d" * 64},
+        )
+
+
+def test_identity_evidence_is_required_and_revalidated_on_orchestration_replay(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    identities = tuple(
+        SecurityIdentityV1(
+            canonical_security_id=f"ISSUER-{ticker}",
+            ticker=ticker,
+            instrument_class="COMMON_SHARE",
+            effective_from="2020-01-01",
+            effective_to=None,
+            identity_revision="R1",
+            source_ref=f"synthetic://identity/{ticker}",
+            source_evidence_sha256="a" * 64,
+        )
+        for ticker in tickers
+    )
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+        security_identities=identities,
+    )
+    prepared_payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    assert prepared_payload["decision_identity_binding"]["binding_type"] == (
+        "DECISION_IDENTITY"
+    )
+    execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+        security_identities=identities,
+    )
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_DECISION_IDENTITY_EVIDENCE_REQUIRED_FOR_REPLAY",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+    tampered = list(identities)
+    tampered[0] = replace(tampered[0], source_evidence_sha256="b" * 64)
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_DECISION_IDENTITY_BINDING_INVALID",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+            security_identities=tuple(tampered),
+        )
+
+
+def test_orchestration_state_loader_recovers_verified_snapshot_ancestor(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    first = dividend_runtime.load_latest_runtime_snapshot(root)
+    second_state = replace(
+        first.state,
+        base_state=replace(first.state.base_state, as_of_session_date="2026-08-25"),
+    )
+    second = dividend_runtime.write_runtime_snapshot(
+        root,
+        second_state,
+        (),
+        previous_snapshot=first,
+    )
+    tampered = json.loads(second.path.read_text(encoding="utf-8"))
+    tampered["state"]["base_paper_state"]["cash_idr"] = 1.0
+    second.path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    recovered = _load_latest_state(E2EPaperPaths.from_root(root))
+    assert recovered.base_state.as_of_session_date == "2026-08-24"
+    quarantine_manifest = (
+        root
+        / dividend_runtime.RUNTIME_DIRNAME
+        / dividend_runtime.SNAPSHOT_DIRNAME
+        / dividend_runtime.QUARANTINE_DIRNAME
+        / dividend_runtime.QUARANTINE_MANIFEST_FILENAME
+    )
+    assert quarantine_manifest.is_file()
 
 
 def test_existing_execution_rejects_forged_ca_reconciliation_token(
@@ -274,6 +457,20 @@ def test_t0_is_idempotent_and_rejects_divergent_inputs(tmp_path: Path) -> None:
     assert second.read_bytes() == first_bytes
     with pytest.raises(E2EPaperOrchestrationError, match="T0_INITIAL_NAV_CHANGED"):
         bootstrap_t0(root, session_date="2026-08-24", initial_nav_idr=1.0)
+
+
+def test_hash_valid_t0_extension_fails_closed_as_noncanonical(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    t0_path = bootstrap_t0(root, session_date="2026-08-24")
+    payload = json.loads(t0_path.read_text(encoding="utf-8"))
+    payload["unexpected_extension"] = True
+    body = dict(payload)
+    body.pop("payload_sha256")
+    payload["payload_sha256"] = _canonical_hash(body)
+    t0_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(E2EPaperOrchestrationError, match="PAYLOAD_NOT_CANONICAL"):
+        bootstrap_t0(root, session_date="2026-08-24")
 
 
 def test_t0_fails_before_mutation_when_runtime_snapshot_preexists(tmp_path: Path) -> None:
@@ -488,6 +685,358 @@ def test_preopen_recovers_after_snapshot_before_execution_commit(tmp_path: Path)
     )
     assert recovered.status == "RECOVERED_STAGED_EXECUTION"
     assert recovered.file_sha256 == completed.file_sha256
+
+
+def test_preopen_replay_rejects_nested_evidence_parent_tamper(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    payload["execution_evidence"]["gross_turnover_idr"] = 1.0
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_EVIDENCE_PARENT_HASH_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_preopen_replay_rejects_rehashed_decision_plan_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    payload["decision_plan"]["target_positions"] = ["FORGED"]
+    payload["decision_plan_sha256"] = _canonical_hash(payload["decision_plan"])
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    prepared.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_DECISION_PARENT_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_preopen_replay_rejects_rehashed_execution_plan_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(prepared.path.read_text(encoding="utf-8"))
+    payload["execution_plan"]["target_positions"] = ["FORGED"]
+    payload["execution_plan_sha256"] = _canonical_hash(payload["execution_plan"])
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    prepared.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXECUTION_PARENT_MISMATCH",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_preopen_replay_rejects_rehashed_lineage_contract_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    lineage = payload["runtime_lineage"]
+    lineage["contracts"]["ca_timing_matrix_sha256"] = "0" * 64
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_RUNTIME_LINEAGE_CONTRACT_MISMATCH:ca_timing_matrix_sha256",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+def test_preopen_replay_rejects_rehashed_reconciliation_ca_tamper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    reconciliation = payload["reconciliation_result"]
+    reconciliation["ca_source_sha256"] = "0" * 64
+    reconciliation_body = dict(reconciliation)
+    reconciliation_body.pop("payload_sha256", None)
+    reconciliation["payload_sha256"] = _canonical_hash(reconciliation_body)
+    lineage = payload["runtime_lineage"]
+    lineage["artifacts"]["reconciliation_result"]["sha256"] = reconciliation[
+        "payload_sha256"
+    ]
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match="E2E_EXISTING_EXECUTION_RECONCILIATION_CA_PARENT_MISMATCH:ca_source_sha256",
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
+
+
+@pytest.mark.parametrize(
+    ("tamper_kind", "expected_error"),
+    (
+        ("cause_id", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_ROWS_MISMATCH"),
+        ("join_content", "E2E_EXISTING_EXECUTION_CAUSE_BINDING_CONTENT_MISMATCH"),
+        (
+            "evidence_aggregate",
+            "E2E_EXISTING_EXECUTION_EVIDENCE_INVALID",
+        ),
+        (
+            "obligation_payload",
+            "E2E_EXISTING_EXECUTION_EVIDENCE_INVALID",
+        ),
+    ),
+)
+def test_preopen_replay_rejects_rehashed_cause_binding_tamper(
+    tmp_path: Path,
+    tamper_kind: str,
+    expected_error: str,
+) -> None:
+    root = tmp_path / "runtime"
+    bootstrap_t0(root, session_date="2026-08-24")
+    tickers = [f"T{index:02d}" for index in range(11)]
+    current = _score(tmp_path, "2026-08-24", 0)
+    eod = _eod(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    ca = _ca(tmp_path, "2026-08-24", "2026-08-25", tickers)
+    prepared = prepare_post_eod(
+        root,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        ca_reconciliation=ca,
+    )
+    completed = execute_preopen(
+        root,
+        prepared_path=prepared.path,
+        current_score=current,
+        previous_score=None,
+        eod_inputs=eod,
+        open_inputs=_open(tmp_path, "2026-08-25", tickers),
+        ca_reconciliation=ca,
+    )
+    payload = json.loads(completed.path.read_text(encoding="utf-8"))
+    evidence = payload["execution_evidence"]
+    assert evidence["causes"]
+    binding = evidence["cause_obligation_binding"]
+    assert binding["joins"]
+    if tamper_kind == "cause_id":
+        evidence["causes"][0]["cause_id"] = "0" * 64
+    elif tamper_kind == "join_content":
+        binding["joins"][0]["remaining_shares"] = (
+            int(binding["joins"][0]["remaining_shares"]) + 1
+        )
+    elif tamper_kind == "evidence_aggregate":
+        evidence["gross_turnover_idr"] = (
+            float(evidence["gross_turnover_idr"]) + 1.0
+        )
+    else:
+        evidence["state_after"]["obligations"][0][
+            "unexpected_extension"
+        ] = "accepted-by-hash-only"
+    binding_body = dict(binding)
+    binding_body.pop("payload_sha256", None)
+    binding["payload_sha256"] = _canonical_hash(binding_body)
+    evidence_body = dict(evidence)
+    evidence_body.pop("payload_sha256", None)
+    evidence["payload_sha256"] = _canonical_hash(evidence_body)
+    reconciliation = payload["reconciliation_result"]
+    reconciliation["execution_evidence_sha256"] = _canonical_hash(evidence)
+    reconciliation_body = dict(reconciliation)
+    reconciliation_body.pop("payload_sha256", None)
+    reconciliation["payload_sha256"] = _canonical_hash(reconciliation_body)
+    lineage = payload["runtime_lineage"]
+    lineage["artifacts"]["execution_evidence"]["sha256"] = evidence[
+        "payload_sha256"
+    ]
+    lineage["artifacts"]["reconciliation_result"]["sha256"] = reconciliation[
+        "payload_sha256"
+    ]
+    lineage_body = dict(lineage)
+    lineage_body.pop("lineage_sha256", None)
+    lineage["lineage_sha256"] = _canonical_hash(lineage_body)
+    body = dict(payload)
+    body.pop("payload_sha256", None)
+    payload["payload_sha256"] = _canonical_hash(body)
+    completed.path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(
+        E2EPaperOrchestrationError,
+        match=expected_error,
+    ):
+        execute_preopen(
+            root,
+            prepared_path=prepared.path,
+            current_score=current,
+            previous_score=None,
+            eod_inputs=eod,
+            open_inputs=_open(tmp_path, "2026-08-25", tickers),
+            ca_reconciliation=ca,
+        )
 
 
 def test_preopen_recovers_when_execution_and_snapshot_are_missing(tmp_path: Path) -> None:

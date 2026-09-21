@@ -28,6 +28,7 @@ from .e2e_operational_guard_v1 import (
 )
 from .e2e_paper_orchestration_v1 import (
     PREPARED_SCHEMA,
+    _verify_lineage_binding,
     _read_verified_json,
     bootstrap_t0,
     derive_required_execution_tickers,
@@ -52,6 +53,7 @@ class OperationalControllerConfig:
     repo_root: Path
     expected_branch: str
     expected_commit: str
+    runtime_config_sha256: str | None = None
     provider_checkout: Path | None = None
     provider_expected_commit: str | None = None
     uv_exe: Path | None = None
@@ -66,6 +68,8 @@ class OperationalControllerConfig:
     ca_capture_script_sha256: str | None = None
     initial_journal_path: Path | None = None
     initial_journal_sha256: str | None = None
+    identity_evidence_path: Path | None = None
+    identity_evidence_sha256: str | None = None
     preopen_capture_start: time = time(8, 30)
 
 
@@ -221,6 +225,14 @@ def _config_missing(config: OperationalControllerConfig) -> str | None:
         initial = Path(config.initial_journal_path).expanduser().resolve()
         if not initial.is_file() or _sha256(initial) != str(config.initial_journal_sha256).lower():
             return "INITIAL_JOURNAL_HASH_MISMATCH"
+    identity_path_present = config.identity_evidence_path is not None
+    identity_sha_present = config.identity_evidence_sha256 is not None
+    if identity_path_present != identity_sha_present:
+        return "IDENTITY_EVIDENCE_FIELDS_INCOMPLETE"
+    if identity_path_present:
+        identity_path = Path(config.identity_evidence_path).expanduser().resolve()
+        if not identity_path.is_file() or _sha256(identity_path) != str(config.identity_evidence_sha256).lower():
+            return "IDENTITY_EVIDENCE_HASH_MISMATCH"
     try:
         actual = subprocess.run(
             ["git", "-C", str(provider), "rev-parse", "HEAD"],
@@ -681,6 +693,68 @@ def _status_path(config: OperationalControllerConfig) -> Path:
     return config.runtime_root / "operational" / "latest.json"
 
 
+def _recover_interrupted_status(
+    config: OperationalControllerConfig,
+    *,
+    current: datetime,
+    controller_contract: str = "SINGLE_CALENDAR_V1",
+) -> dict[str, Any] | None:
+    """Persist a recovery-required fence after a crash before a side effect.
+
+    A prior ``RUNNING`` status is not evidence that a child completed.  The
+    next controller pass therefore records the interruption and stops; it
+    never silently replays a provider/capture/execution side effect.
+    """
+
+    path = _status_path(config)
+    if not path.is_file():
+        return None
+    previous = _read_json(path)
+    if previous.get("controller_status") == "RECOVERY_REQUIRED":
+        # Recovery is a terminal fence until an explicit operator-led recovery
+        # action changes the durable status.  A later controller pass must not
+        # silently resume provider, capture, or child-execution work.
+        return previous
+    if previous.get("controller_status") != "RUNNING":
+        return None
+    recovery: dict[str, Any] = {
+        "controller_status": "RECOVERY_REQUIRED",
+        "controller_contract": controller_contract,
+        "recovery_reason": "PREVIOUS_CONTROLLER_RUN_INTERRUPTED",
+        "previous_status_path": str(path.resolve()),
+        "previous_status_file_sha256": _sha256(path),
+        "previous_started_at_jakarta": previous.get("started_at_jakarta"),
+        "interrupted_phase": previous.get("phase"),
+        "interrupted_side_effect": previous.get("side_effect_boundary"),
+        "recovery_started_at_jakarta": current.isoformat(),
+        "provider_calls": False,
+        "model_refit": False,
+        "model_rescore": False,
+        "outcome_access": False,
+    }
+    recovery["status_sha256"] = write_status_atomic(path, recovery)
+    return recovery
+
+
+def _persist_running_boundary(
+    config: OperationalControllerConfig,
+    status: dict[str, Any],
+    *,
+    phase: str,
+    side_effect: str,
+    **updates: Any,
+) -> None:
+    """Durably record the next side-effect before attempting it."""
+
+    if status.get("controller_status") != "RUNNING":
+        raise E2EOperationalGuardError("E2E_OPERATIONAL_BOUNDARY_STATUS_INVALID")
+    status.update(updates)
+    status["phase"] = phase
+    status["side_effect_boundary"] = side_effect
+    status["boundary_started_at_jakarta"] = datetime.now(tz=JAKARTA).isoformat()
+    status["status_sha256"] = write_status_atomic(_status_path(config), status)
+
+
 def _prepared_for_session(config: OperationalControllerConfig, session: str) -> list[Path]:
     prepared_dir = config.runtime_root / "prepared"
     candidates: list[Path] = []
@@ -712,6 +786,17 @@ def _prepared_for_session(config: OperationalControllerConfig, session: str) -> 
                 valid_refs = False
                 break
         if valid_refs:
+            if config.runtime_config_sha256 is not None:
+                try:
+                    _verify_lineage_binding(
+                        payload.get("runtime_lineage"),
+                        role="PREPARED_EXECUTION",
+                        implementation_branch=config.expected_branch,
+                        implementation_commit=config.expected_commit,
+                        runtime_config_sha256=config.runtime_config_sha256,
+                    )
+                except Exception:
+                    continue
             candidates.append(path)
     return candidates
 
@@ -732,6 +817,9 @@ def _run_operational_cycle_legacy(
     lock_path = config.runtime_root / "operational" / "controller.lock"
     with exclusive_run_lock(lock_path):
         current = (now or datetime.now(tz=JAKARTA)).astimezone(JAKARTA)
+        recovered = _recover_interrupted_status(config, current=current)
+        if recovered is not None:
+            return recovered
         today = current.date().isoformat()
         status: dict[str, Any] = {
             "controller_status": "RUNNING",
@@ -868,6 +956,9 @@ def run_operational_cycle(
     lock_path = config.runtime_root / "operational" / "controller.lock"
     with exclusive_run_lock(lock_path):
         current = (now or datetime.now(tz=JAKARTA)).astimezone(JAKARTA)
+        recovered = _recover_interrupted_status(config, current=current)
+        if recovered is not None:
+            return recovered
         today = current.date().isoformat()
         status: dict[str, Any] = {
             "controller_status": "RUNNING",
@@ -930,6 +1021,13 @@ def run_operational_cycle(
                         prepared_path=str(prepared[0]),
                     )
                 payload = _read_json(prepared[0])
+                _persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="CA_CAPTURE",
+                    prepared_path=str(prepared[0]),
+                )
                 ca_status = _ensure_ca_phase(
                     config,
                     session=today,
@@ -994,6 +1092,13 @@ def run_operational_cycle(
                 eod = payload["eod_inputs"]
                 before_execution = config.runtime_root / "executions" / f"{today}.json"
                 was_complete = before_execution.is_file()
+                _persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="PHASE_ATTESTATION",
+                    prepared_path=str(prepared[0]),
+                )
                 phase_attestation_path, _ = write_phase_attestation(
                     config.runtime_root,
                     phase="PREOPEN",
@@ -1020,6 +1125,13 @@ def run_operational_cycle(
                 ]
                 if previous_score_path is not None:
                     command.extend(("--previous-score-manifest", str(previous_score_path)))
+                _persist_running_boundary(
+                    config,
+                    status,
+                    phase="PREOPEN",
+                    side_effect="CHILD_EXECUTION",
+                    prepared_path=str(prepared[0]),
+                )
                 _run_child(config, "preopen", command)
                 execution = _read_json(before_execution)
                 return finish(
@@ -1096,6 +1208,13 @@ def run_operational_cycle(
                         prepared_payload,
                         required_tickers=required_prepared,
                     )
+                    _persist_running_boundary(
+                        config,
+                        status,
+                        phase="POST_EOD",
+                        side_effect="MISSED_EXECUTION_WRITE",
+                        prepared_path=str(prepared_today[0]),
+                    )
                     missed = advance_missed_execution_no_certified_open(
                         config.runtime_root,
                         prepared_path=prepared_today[0],
@@ -1139,12 +1258,27 @@ def run_operational_cycle(
                         decision_session_date=today,
                     )
                 raise
+            _persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="BOOTSTRAP_T0_WRITE",
+                decision_session_date=today,
+            )
             bootstrap_t0(config.runtime_root, session_date=today)
             required = derive_required_execution_tickers(
                 config.runtime_root,
                 current_score=current_score,
                 previous_score=previous_score,
                 eod_inputs=eod_inputs,
+            )
+            _persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="CA_CAPTURE",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
             )
             ca_status = _ensure_ca_phase(
                 config,
@@ -1161,6 +1295,14 @@ def run_operational_cycle(
                 through_session=eod_inputs.next_official_session_date,
             )
             ca_attestation_path = Path(str(sidecar["ca_attestation_path"])).expanduser().resolve()
+            _persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="PHASE_ATTESTATION",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
+            )
             phase_attestation_path, _ = write_phase_attestation(
                 config.runtime_root,
                 phase="POST_EOD",
@@ -1185,6 +1327,14 @@ def run_operational_cycle(
             ]
             if previous_path is not None:
                 command.extend(("--previous-score-manifest", str(previous_path)))
+            _persist_running_boundary(
+                config,
+                status,
+                phase="POST_EOD",
+                side_effect="CHILD_EXECUTION",
+                decision_session_date=today,
+                execution_session_date=eod_inputs.next_official_session_date,
+            )
             _run_child(config, "post_eod", command)
             prepared_after = _prepared_for_session(config, eod_inputs.next_official_session_date)
             if len(prepared_after) != 1:

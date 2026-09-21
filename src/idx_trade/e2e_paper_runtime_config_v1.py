@@ -123,6 +123,17 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
     runner_sha = _required_text(payload, "runner_sha256").lower()
     if not _SHA_RE.fullmatch(runner_sha):
         raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_RUNNER_SHA_INVALID")
+    identity_path_present = payload.get("identity_evidence_path") is not None
+    identity_sha_present = payload.get("identity_evidence_sha256") is not None
+    if identity_path_present != identity_sha_present:
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_IDENTITY_EVIDENCE_FIELDS_INCOMPLETE")
+    identity_sha = (
+        _required_text(payload, "identity_evidence_sha256").lower()
+        if identity_path_present
+        else None
+    )
+    if identity_sha is not None and not _SHA_RE.fullmatch(identity_sha):
+        raise E2ERuntimeConfigError("E2E_RUNTIME_CONFIG_IDENTITY_EVIDENCE_SHA_INVALID")
 
     controller = OperationalControllerConfig(
         runtime_root=root,
@@ -132,6 +143,7 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
         repo_root=_absolute_path(payload, "repo_root"),
         expected_branch=expected_branch,
         expected_commit=expected_commit,
+        runtime_config_sha256=actual_sha,
         provider_checkout=_absolute_path(payload, "provider_checkout"),
         provider_expected_commit=provider_commit,
         uv_exe=_absolute_path(payload, "uv_exe"),
@@ -163,6 +175,12 @@ def load_runtime_config(runtime_root: str | Path, *, expected_sha256: str | None
             if payload.get("initial_journal_path") is not None
             else None
         ),
+        identity_evidence_path=(
+            _absolute_path(payload, "identity_evidence_path")
+            if identity_path_present
+            else None
+        ),
+        identity_evidence_sha256=identity_sha,
         preopen_capture_start=preopen_start,
     )
     if controller.initial_journal_path is not None:
