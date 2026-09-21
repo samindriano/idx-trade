@@ -26,6 +26,9 @@ Date: 2026-09-21
 - ran the legacy ambiguity hunt across all 29 copied packages: zero duplicate,
   null/date, model/OHLCV set, close-value, or state-column anomalies; wider
   evidence/stock universe was recorded as an interface boundary;
+- validated all 16 real V4-X1 score manifests through isolated adapters: 15
+  clean candidate-id artifacts passed and one legacy model-id artifact was
+  rejected fail-closed;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing

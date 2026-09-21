@@ -39,6 +39,9 @@ The per-file source/copy hash table is in:
 The real score validation and isolated timestamp fix are in:
 2026-09-21_IDX_REAL_SCORE_VALIDATION_V1.md.
 
+The all-manifest V4-X1 score validation is in:
+2026-09-21_IDX_ALL_V4X1_SCORE_VALIDATION_V1.md.
+
 The copied-session legacy shape and ambiguity check is in:
 2026-09-21_IDX_REAL_LEGACY_AMBIGUITY_HUNT_V1.md.
 
@@ -59,6 +62,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_FULL_SESSION_SHADOW_CENSUS_V1.md`
 - `2026-09-21_IDX_FULL_SESSION_COPY_ATTESTATION_V1.md`
 - `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
+- `2026-09-21_IDX_ALL_V4X1_SCORE_VALIDATION_V1.md`
 - `2026-09-21_IDX_REAL_MIGRATION_CLASSIFICATION_REGISTRY_V1.md`
 - `2026-09-21_IDX_OLD_CANDIDATE_DIFFERENTIAL_V1.md`
 - `2026-09-21_IDX_REAL_REPLAY_MATRIX_V1.md`

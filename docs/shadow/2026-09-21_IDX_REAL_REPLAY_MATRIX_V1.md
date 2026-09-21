@@ -18,6 +18,7 @@ Status: **INPUT CORPUS FOUND / REPLAY NOT RUN**
 | Input-level EOD validator | copied OHLCV/model input/current calendar | all 29 sessions | 27 `PASS_INPUT_LEVEL`; 2026-08-03 not official in copied calendar; 2026-09-18 has no next official session |
 | Schedule-bound validator | copied schedule attestation | not run against phase entrypoint | available but phase path remains blocked |
 | Score manifest/artifact | copied for 2026-09-17 | PASS via explicit shadow adapter | full replay still BLOCKED by missing state/CA and source path provenance |
+| All V4-X1 score manifests | 16 real manifests; 15 clean candidate-id, 1 legacy id | 15 PASS, 1 fail-closed rejection via shadow adapters | score-level validation only; full replay still BLOCKED |
 | Legacy input shape/ambiguity hunt | copied 2026-09-16 and 2026-09-17 | PASS WITH LIMITATION | no duplicate required keys, required-field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV close differences; wider evidence/stock universe remains an interface boundary |
 
 ## Selected real manifests

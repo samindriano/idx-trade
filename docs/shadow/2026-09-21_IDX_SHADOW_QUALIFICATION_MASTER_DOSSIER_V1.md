@@ -47,6 +47,9 @@ artifact evidence, and missing real state is not fabricated.
     plus current calendar files and calendar provenance attestations.
 12. Applied the existing input-level validator to all 29 copied sessions.
 13. Ran the legacy ambiguity hunt across all 29 copied session packages.
+14. Validated all 16 real V4-X1 score manifests through isolated adapters:
+    15 clean candidate-id artifacts passed and one legacy model-id artifact was
+    rejected fail-closed.
 
 ## Root census snapshot
 
@@ -111,7 +114,7 @@ equivalent to E2E paper-state migration inputs.
 | REAL ARTIFACT DISCOVERY | PASS WITH LIMITATION | Real roots/corpus found; eligible paper-state population absent in bounded census |
 | IMMUTABLE SHADOW INPUT | PASS WITH LIMITATION | 20 selected files copied to a new shadow root; source pre/post/copy hashes equal; paper-state class still absent |
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
-| HISTORICAL REPLAY | BLOCKED / INPUT-LEVEL VALIDATION ONLY | Input validator passed for 27/29 copied sessions; two boundary failures are explicit, 28/29 manifest calendar hashes mismatch the current calendar, and full paper-state/CA chain is absent |
+| HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for 27/29 copied sessions and the V4-X1 score verifier passed 15/16 real manifests; two boundary failures, 28/29 calendar mismatches, absent paper-state/CA chain, and one legacy model-id rejection remain explicit |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
 | CA COMPOSITION | BLOCKED REAL | No retained CA ledger/attestation admitted; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
@@ -184,6 +187,11 @@ close mismatches, or state-like columns across the checked session families.
 Evidence and stock summaries contain wider-universe rows in every session;
 the exact counts and scope interpretation are recorded in
 `2026-09-21_IDX_ALL_SESSION_LEGACY_AMBIGUITY_HUNT_V1.md`.
+
+The all-manifest V4-X1 score validation passed 15 clean candidate-id artifacts
+and rejected one legacy `V4_X1_GEOMETRY3_PROSPECTIVE` model-id artifact. The
+result is recorded in `2026-09-21_IDX_ALL_V4X1_SCORE_VALIDATION_V1.md` and is
+still score-level evidence, not historical E2E replay.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or
