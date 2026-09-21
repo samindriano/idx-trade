@@ -32,4 +32,3 @@ Workers are read-only and cannot merge, rebase, push, or touch external state.
 No merge to main, no push unless later authorized, no scheduler/cloud change,
 no provider/capture, no protected outcomes, no alpha/model work, no canonical
 data rewrite, no live migration, and no retry of a failed live operation.
-

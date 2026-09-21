@@ -37,4 +37,3 @@ identity.
 
 Code and runtime config are a pair. Restoring code without its matching
 config/runner/branch/SHA binding is a lineage mismatch and must fail closed.
-

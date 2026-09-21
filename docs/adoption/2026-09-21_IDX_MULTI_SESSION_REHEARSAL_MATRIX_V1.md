@@ -48,4 +48,3 @@ the entire system. The final challenge must additionally inspect:
 
 The matrix is not complete until the selected node IDs execute on the
 adoption branch and the result is recorded with the candidate HEAD.
-

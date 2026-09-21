@@ -30,4 +30,3 @@ silently promoted to production authority.
 If a policy is required for basic runtime adoption, isolate the exact missing
 decision and stop at the gate. Do not invent an answer to make the candidate
 pass.
-

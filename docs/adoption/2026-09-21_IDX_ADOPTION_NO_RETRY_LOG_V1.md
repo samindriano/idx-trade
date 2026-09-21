@@ -28,4 +28,3 @@ Stop implementation-port if:
 - a migration fixture requires fabricated state;
 - a semantic false-green is found and not yet repaired;
 - a required policy or external authority is missing.
-

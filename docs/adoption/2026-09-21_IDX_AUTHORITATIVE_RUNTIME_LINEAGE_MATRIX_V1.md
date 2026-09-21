@@ -82,4 +82,3 @@ execution surface and must be reviewed separately.
 alter the active 32eaaa8e tasks. A future operational adoption must explicitly
 reconcile the task checkout, config hash, runner identity, and the candidate
 contract stack in a separate authorization.
-

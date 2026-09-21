@@ -38,4 +38,3 @@ Source adoption, runtime-config adoption, Task Scheduler adoption, and cloud
 adoption are separate gates. A source branch cannot silently change any of
 them. Current task evidence remains read-only and the active 32eaaa8e source
 is not changed by this candidate.
-
