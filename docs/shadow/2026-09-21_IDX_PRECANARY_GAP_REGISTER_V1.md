@@ -25,6 +25,34 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 | G-17 | Full 29-session package has 28 historical calendar-hash mismatches; none of the 22 distinct historical hashes was found among 143 bounded CSVs; boundary sessions also fail current-calendar next-session rules | full historical replay remains blocked despite 27 input-level passes | admit exact historical calendar lineage, then rerun replayability and boundary checks |
 | G-18 | Candidate CA parser rejected canonical copied CSV rows whose optional share counts were materialized as scalar `NaN` | CLOSED in shadow candidate; no share count or ratio fabricated | focused CA/provider plus CA/attestation/dividend/V4-X1 regression set 38/38 and 38/38 copied real CA rows parsed |
 
+## Closure ownership and canary dependency
+
+This table supplies the Phase 16 decision metadata for every gap. “Owner” is
+an authority role, not an inferred person. “Yes” under canary dependency means
+the canary remains impossible until the specified evidence or authorization is
+present.
+
+| ID | Required provider/authority or decision owner | Remaining local help | Canary impossible without closure |
+|---|---|---|---|
+| G-01 | runtime/state archive owner must provide immutable paper-state package | inventory and admission tooling ready; cannot recover absent state | Yes |
+| G-02 | shadow evidence maintainer | closed for admitted class; keep source/copy attestations | No, independent of missing paper state |
+| G-03 | runtime-state owner must define an authoritative state interface | adapter design can remain outcome-blind; no state may be fabricated | Yes |
+| G-04 | CA/settlement evidence authority and state owner | parser and event-shape checks are complete; no ledger can be inferred | Yes |
+| G-05 | old-runtime artifact owner plus candidate integrator | comparator can run once identical real pair is admitted | Yes |
+| G-06 | runtime snapshot archive owner | recovery contracts and quarantine checks are ready | Yes |
+| G-07 | identity authority and policy owner | shadow loader/negative cases complete | Yes |
+| G-08 | runtime/state owner plus rollback policy owner | synthetic freeze/resume rehearsal complete | Yes for real-state fallback |
+| G-09 | explicit policy owner | can encode a supplied policy; cannot choose economic/tax/CA policy | Yes |
+| G-10 | deployment owner with explicit repin authorization | can validate a separately authorized candidate; no live repin allowed | Yes |
+| G-11 | review owner / documentation maintainer | corrected shadow audit is committed | Yes if review authority remains split |
+| G-12 | shadow evidence maintainer | exact commands and selectors can be retained; raw logs remain synthetic | Yes for reproducibility approval |
+| G-13 | historical calendar authority | bounded local search is complete; no substitution permitted | Yes for affected replay |
+| G-14 | score-artifact owner / immutable package authority | path-preserving adapter exists; cannot rewrite source manifest | Yes for full replay |
+| G-15 | local engineering | closed and regression-tested | No |
+| G-16 | replay-interface owner | preserve explicit model-input/score-universe boundary | Yes if a future replay collapses the universes |
+| G-17 | historical calendar authority | rerun reconciliation after exact bytes are admitted | Yes for historical replay |
+| G-18 | local engineering / CA parser maintainer | closed in shadow candidate with 38/38 evidence | No, provided the fix is separately reviewed |
+
 ## Stop condition
 
 Any attempt to close a gap by reading provider data, protected outcomes,
