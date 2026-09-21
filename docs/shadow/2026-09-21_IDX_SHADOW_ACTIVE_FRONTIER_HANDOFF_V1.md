@@ -37,6 +37,8 @@ Date: 2026-09-21
   root was admitted;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
+- ran one bounded synthetic continuation/recovery challenge: 86 selected
+  contract tests passed in the isolated worktree; no retry was performed;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 

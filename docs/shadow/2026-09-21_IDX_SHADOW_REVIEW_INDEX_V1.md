@@ -51,6 +51,9 @@ The all-29-session legacy ambiguity hunt is in:
 The historical calendar lineage reconciliation is in:
 2026-09-21_IDX_CALENDAR_LINEAGE_RECONCILIATION_V1.md.
 
+The bounded synthetic continuation/recovery challenge is in:
+2026-09-21_IDX_SYNTHETIC_CONTINUATION_CHALLENGE_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
@@ -73,6 +76,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_ALL_SESSION_LEGACY_AMBIGUITY_HUNT_V1.md`
 - `2026-09-21_IDX_CALENDAR_LINEAGE_RECONCILIATION_V1.md`
 - `2026-09-21_IDX_SHADOW_RECOVERY_MATRIX_V1.md`
+- `2026-09-21_IDX_SYNTHETIC_CONTINUATION_CHALLENGE_V1.md`
 - `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md`
 - `2026-09-21_IDX_SHADOW_IDENTITY_INTERFACE_V1.md`
 - `2026-09-21_IDX_PRECANARY_GAP_REGISTER_V1.md`
@@ -97,6 +101,10 @@ logs, and a no-prepared-execution terminal state, but no retained paper-state
 population was found in the bounded artifact census. Therefore the real
 migration and real replay gates are blocked by missing eligible state, not
 green-lit by synthetic tests.
+
+The isolated synthetic continuation challenge later selected 86 contract
+tests and observed 86 passes. That strengthens only the synthetic
+continuation/recovery record; it does not promote any real gate.
 
 No provider checkout, provider call, scheduler mutation, cloud/R2 mutation,
 canonical-data rewrite, counter reset, protected-outcome access, alpha change,

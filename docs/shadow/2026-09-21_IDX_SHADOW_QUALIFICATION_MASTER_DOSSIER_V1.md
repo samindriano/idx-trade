@@ -56,6 +56,9 @@ artifact evidence, and missing real state is not fabricated.
 16. Performed a bounded metadata-only extension over the local E2E runtime,
     rollback-package, and operational-source surfaces; no additional retained
     paper-state root was found.
+17. Ran one bounded synthetic continuation/recovery challenge in the isolated
+    worktree: 86 selected contract tests passed with exit code 0; no retry was
+    performed and no real runtime or retained state was touched.
 
 ## Root census snapshot
 
@@ -125,7 +128,7 @@ equivalent to E2E paper-state migration inputs.
 | CA COMPOSITION | BLOCKED REAL | No retained CA ledger/attestation admitted; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
 | CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; candidate not operationally bound |
-| SHADOW CONTINUATION | BLOCKED | No isolated runtime root was started |
+| SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 isolated synthetic continuation/recovery contracts passed; no real operational state root was started |
 | FORWARD FALLBACK | DESIGN ONLY | Fallback design exists; real rehearsal was not run |
 | IDENTITY INTERFACE | CONTRACT READY / AUTHORITY BLOCKED | Candidate accepts hash-pinned artifact shape; authority is not admitted |
 | PRE-CANARY READINESS | NO-GO | Real migration/replay/CA/recovery evidence is missing |
@@ -226,4 +229,7 @@ these as explicit limitations instead of silently upgrading them.
 
 After the real-artifact timestamp finding, the shadow candidate suite was
 rerun: 906 tests were collected, execution reached 100%, exit code was 0, and
-the same three pre-existing pandas FutureWarnings remained.
+the same three pre-existing pandas FutureWarnings remained. A later bounded
+continuation/recovery challenge selected 86 relevant contract tests and
+recorded 86 passes; its exact command and scope are in
+`2026-09-21_IDX_SYNTHETIC_CONTINUATION_CHALLENGE_V1.md`.
