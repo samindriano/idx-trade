@@ -306,7 +306,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Operational shadow rehearsal | Initial continuation/controller subroots: 72 files / 788,621 bytes; expanded dedicated root: 89 files / 810,687 bytes; two-pass per-file attestation aggregate `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`; five synthetic sessions; controller persisted `WEEKEND_OR_HOLIDAY_NOOP`; no provider/outcome/refit/rescore |
 | Forward fallback | 1 synthetic rehearsal passed; 0 real-state rehearsals because no real migratable state exists |
 | Identity interface | 1 valid shadow artifact accepted; 5 negative cases rejected fail-closed; production authority not admitted |
-| External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
+| External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, scheduler/provider scope, live observability contract, and separate canary authorization |
 | Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |
 | Worktree state | clean isolated branch; active operational checkout and runtime were not modified |
 

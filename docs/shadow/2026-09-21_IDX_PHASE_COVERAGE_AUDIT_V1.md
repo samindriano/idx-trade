@@ -45,6 +45,15 @@ promoted to real-artifact evidence.
 | 17 | Design but do not execute controlled canary | Controlled-canary design explicitly records all 13 required fields, with real state/production identity/session window marked `UNSET` fail-closed; it remains unexecuted | DESIGN COMPLETE / NO-GO |
 | 18 | Fresh independent real-artifact challenge | Independent 29-session hash/schema/calendar challenge completed; no new locally fixable real-state defect found | PASS WITH LIMITATION |
 
+### Phase 16 category coverage
+
+The required blocker categories are explicitly represented in the gap
+register: SOURCE (`G-02`, `G-13`, `G-14`, `G-17`), STATE (`G-01`, `G-03`,
+`G-04`), IDENTITY AUTHORITY (`G-07`), POLICY (`G-09`), CONFIG (`G-10`,
+`G-14`), SCHEDULER (`G-19`), PROVIDER (`G-20`), RECOVERY (`G-06`), ROLLBACK
+(`G-08`), and OBSERVABILITY (`G-21`). Cross-cutting review/evidence gaps are
+also retained in `G-05`, `G-11`, `G-12`, `G-15`, and `G-16`.
+
 ## Durable-output coverage
 
 All twelve durable outputs named by the specification are present in

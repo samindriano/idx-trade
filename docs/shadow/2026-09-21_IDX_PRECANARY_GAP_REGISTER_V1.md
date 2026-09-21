@@ -24,6 +24,9 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 | G-16 | Evidence/stock summaries retain a wider universe than model input across all 29 sessions | CLOSED as a duplicate/state ambiguity; remains an interface-scope constraint | preserve explicit model-input/score universe boundary in any future replay |
 | G-17 | Full 29-session package has 28 historical calendar-hash mismatches; none of the 22 distinct historical hashes was found among 143 bounded CSVs; boundary sessions also fail current-calendar next-session rules | full historical replay remains blocked despite 27 input-level passes | admit exact historical calendar lineage, then rerun replayability and boundary checks |
 | G-18 | Candidate CA parser rejected canonical copied CSV rows whose optional share counts were materialized as scalar `NaN` | CLOSED in shadow candidate; no share count or ratio fabricated | focused CA/provider plus CA/attestation/dividend/V4-X1 regression set 38/38 and 38/38 copied real CA rows parsed |
+| G-19 | Scheduler/task scope is not authorized for candidate invocation or repin | canary single-writer and task identity cannot be proven | explicit scheduler authorization, task/runner binding, and single-writer attestation without editing the active task |
+| G-20 | Provider checkout/call scope is not admitted in this shadow lane | real forward capture/execution cannot be qualified | separately authorized provider scope or immutable provider evidence package; no provider fallback may be inferred |
+| G-21 | Live canary observability/side-effect evidence does not exist | lifecycle, writer, outcome, and external-side-effect gates cannot be observed in a real run | predeclared telemetry/log/attestation contract and an immutable canary observation package |
 
 ## Closure ownership and canary dependency
 
@@ -52,6 +55,9 @@ present.
 | G-16 | replay-interface owner | preserve explicit model-input/score-universe boundary | Yes if a future replay collapses the universes |
 | G-17 | historical calendar authority | rerun reconciliation after exact bytes are admitted | Yes for historical replay |
 | G-18 | local engineering / CA parser maintainer | closed in shadow candidate with 38/38 evidence | No, provided the fix is separately reviewed |
+| G-19 | scheduler/deployment owner | can validate a supplied task identity and lock contract; no active task edit is allowed | Yes |
+| G-20 | provider/data authority | parser and captured-input adapters are ready; no provider call or checkout admission is allowed | Yes |
+| G-21 | runtime operations/observability owner | synthetic lifecycle/file attestation exists; live telemetry cannot be fabricated | Yes |
 
 ## Stop condition
 
