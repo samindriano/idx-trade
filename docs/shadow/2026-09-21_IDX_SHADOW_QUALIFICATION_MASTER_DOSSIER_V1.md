@@ -115,6 +115,12 @@ artifact evidence, and missing real state is not fabricated.
     same three pre-existing pandas `FutureWarning`s remained. The exact
     commands and documentation consistency checks are in
     `2026-09-21_IDX_SHADOW_VALIDATION_LEDGER_V1.md`.
+30. Extended the approved parent-root discovery by metadata only: 32,656
+    file paths were enumerated, focused runtime-like directories yielded no
+    new paper-state class, and provider/backfill plus research/model clusters
+    were explicitly excluded without opening their contents. The exact
+    boundary and limitations are in
+    `2026-09-21_IDX_PARENT_ROOT_BOUNDARY_CENSUS_V1.md`.
 
 ## Root census snapshot
 

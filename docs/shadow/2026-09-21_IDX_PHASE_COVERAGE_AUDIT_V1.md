@@ -80,7 +80,8 @@ session ambiguity hunt, calendar reconciliation, extended real-evidence
 manifest, CA parser remediation, deterministic real CA/recovery gate audit,
 operational-shadow rehearsal, immutable-attestation revalidation, state-name
 ambiguity audit, real-classifier admission audit, identity interface
-challenge, current validation ledger, and independent Phase 18 challenge.
+challenge, current validation ledger, parent-root boundary census, and
+independent Phase 18 challenge.
 
 ## Stop-rule audit
 

@@ -86,6 +86,10 @@ Date: 2026-09-21
   128 files, 100% completion, exit code `0`, with only the same three
   pre-existing pandas `FutureWarning`s; documentation/phase consistency also
   passed 15/15 and 19/19;
+- extended the approved parent-root boundary census to 32,656 file paths by
+  metadata only; focused runtime-like directories yielded no new paper-state
+  class, while provider/backfill and research/model clusters were explicitly
+  excluded without opening their contents;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;
