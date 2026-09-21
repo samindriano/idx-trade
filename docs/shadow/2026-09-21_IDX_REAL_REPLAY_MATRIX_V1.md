@@ -68,4 +68,10 @@ state or a duplicate version. Full details are in
 The final replay disposition is BLOCKED / INPUT-LEVEL PASS ONLY, not a full
 historical E2E replay.
 
+The expanded calendar search hashed 128 approved-root CSVs and recovered only
+the current calendar hash; none of the 22 distinct historical embedded hashes
+was found. The one matching 2026-09-18 session still has no next official
+session in that current calendar. Calendar lineage therefore remains a hard
+replay gate.
+
 `HISTORICAL_REPLAY = BLOCKED / NOT RUN`.

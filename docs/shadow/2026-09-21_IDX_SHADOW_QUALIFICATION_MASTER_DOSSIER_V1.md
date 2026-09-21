@@ -50,6 +50,9 @@ artifact evidence, and missing real state is not fabricated.
 14. Validated all 16 real V4-X1 score manifests through isolated adapters:
     15 clean candidate-id artifacts passed and one legacy model-id artifact was
     rejected fail-closed.
+15. Searched all 128 retained CSVs in the approved forward-monitoring root
+    against the 23 distinct embedded calendar hashes; no historical embedded
+    hash was recovered.
 
 ## Root census snapshot
 
@@ -192,6 +195,11 @@ The all-manifest V4-X1 score validation passed 15 clean candidate-id artifacts
 and rejected one legacy `V4_X1_GEOMETRY3_PROSPECTIVE` model-id artifact. The
 result is recorded in `2026-09-21_IDX_ALL_V4X1_SCORE_VALIDATION_V1.md` and is
 still score-level evidence, not historical E2E replay.
+
+The calendar reconciliation searched 128 approved-root CSVs and found only the
+current calendar hash, matching 2026-09-18. None of the 22 distinct historical
+embedded hashes was recovered. The exact result is recorded in
+`2026-09-21_IDX_CALENDAR_LINEAGE_RECONCILIATION_V1.md`.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or

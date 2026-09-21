@@ -29,6 +29,9 @@ Date: 2026-09-21
 - validated all 16 real V4-X1 score manifests through isolated adapters: 15
   clean candidate-id artifacts passed and one legacy model-id artifact was
   rejected fail-closed;
+- searched 128 approved-root CSVs against all 23 embedded calendar hashes; only
+  the current calendar matched, so the historical lineage blocker remains
+  explicit;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing
