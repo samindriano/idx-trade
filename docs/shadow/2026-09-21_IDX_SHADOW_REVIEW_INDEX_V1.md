@@ -15,6 +15,7 @@ was executed.
 - Branch: `codex/idx-shadow-runtime-precanary-20260921`
 - Base before this documentation commit: `221e95640be73dd6f4887a27863ca93c2fd1b0d6`
 - Candidate code under review: `66140b05872e60191ae4090811f168aaef6d71a7`
+- Shadow-lane remediation commit: `5c14b036` (NaN optional CA-count handling)
 - Candidate base: `402fca4b27e91cf8c82d21ff1394ba2d6da73656`
 - Active operational checkout: `32eaaa8e50d0521de7faef98faa8081219bc667b`
 - Active operational task source was not modified.

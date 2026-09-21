@@ -20,6 +20,7 @@ artifact evidence, and missing real state is not fabricated.
 | Documentation base | `221e95640be73dd6f4887a27863ca93c2fd1b0d6` |
 | Candidate code HEAD used by earlier tests | `66140b05872e60191ae4090811f168aaef6d71a7` |
 | Candidate base | `402fca4b27e91cf8c82d21ff1394ba2d6da73656` |
+| Shadow CA remediation commit | `5c14b036` (`NaN` optional-count handling; isolated lane only) |
 | Active E2E task checkout | `32eaaa8e50d0521de7faef98faa8081219bc667b` |
 | Active E2E runtime root | `C:\Users\Sam\AppData\Local\IDXTrade\e2e_baseline_paper_v1` |
 | Real forward-monitoring root | `D:\Documents\Project\idx-trade-data-gate-20260808v\forward_monitoring` |
@@ -274,6 +275,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Old-vs-candidate real differential | 0 real artifact pairs; no unexplained divergence can be measured without a pair |
 | Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
 | Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
+| Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; current full-suite collection is blocked by the unrelated missing `idx_trade.stockbit_stream_archive` dependency |
 | Forward fallback | 0 real rehearsals; design recorded only |
 | External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
 | Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |
