@@ -60,6 +60,24 @@ contains 237 files / 27,907,223 bytes; source pre/post/copy hashes were equal
 for every copied file. The copy-attestation digest is
 `5246c4ca7e25974db313ebc8f754014c2365d92eb88bac41d114fef0f2c12012`.
 
+## Bounded local extension
+
+A second metadata-only pass covered the local IDXTrade container and the
+operational source root to check whether a retained paper-state root existed
+outside the approved four roots:
+
+| Local surface | Files | Bytes | Finding |
+|---|---:|---:|---|
+| `C:\Users\Sam\AppData\Local\IDXTrade\e2e_baseline_paper_v1` | 135 | 79,770 | 129 logs, 3 JSON metadata files, lock/config/wrapper; no paper-state artifact class |
+| `C:\Users\Sam\AppData\Local\IDXTrade\rollback-packages` | 7 | 30,452 | deployment/task backup only; not runtime state |
+| `C:\Users\Sam\OneDrive\Documents\Project\idx-trade-runtime\forward-e2e-operational` | 605 | 5,223,913 | source/tests/docs, not retained state |
+
+Local cloud/handoff, watchdog, and synthetic-test surfaces were not admitted as
+runtime evidence. The provider checkout and protected outcome/counter surfaces
+remain excluded. This extension found no additional paper portfolio,
+prepared-execution, fill, pending, CA, or recovery artifact beyond the bounded
+inventory already recorded.
+
 ## Explicit exclusions
 
 - `D:\Documents\Project\idx-bei-forward-ca-provider`: provider checkout; no

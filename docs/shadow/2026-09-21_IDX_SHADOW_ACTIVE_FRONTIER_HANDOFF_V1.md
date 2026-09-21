@@ -32,6 +32,9 @@ Date: 2026-09-21
 - searched 128 approved-root CSVs against all 23 embedded calendar hashes; only
   the current calendar matched, so the historical lineage blocker remains
   explicit;
+- extended the metadata-only discovery to the local E2E runtime,
+  rollback-package, and operational-source surfaces; no additional paper-state
+  root was admitted;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing

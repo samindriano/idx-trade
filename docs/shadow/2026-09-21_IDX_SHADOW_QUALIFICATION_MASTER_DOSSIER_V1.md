@@ -53,6 +53,9 @@ artifact evidence, and missing real state is not fabricated.
 15. Searched all 128 retained CSVs in the approved forward-monitoring root
     against the 23 distinct embedded calendar hashes; no historical embedded
     hash was recovered.
+16. Performed a bounded metadata-only extension over the local E2E runtime,
+    rollback-package, and operational-source surfaces; no additional retained
+    paper-state root was found.
 
 ## Root census snapshot
 
