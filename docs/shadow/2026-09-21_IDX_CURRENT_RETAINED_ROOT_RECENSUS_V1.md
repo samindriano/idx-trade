@@ -49,4 +49,3 @@ The qualification decision remains:
 `REAL ARTIFACT DISCOVERY = PASS WITH LIMITATION`
 
 `PRE-CANARY READINESS = NO-GO`
-
