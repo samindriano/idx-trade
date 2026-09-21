@@ -59,6 +59,10 @@ artifact evidence, and missing real state is not fabricated.
 17. Ran one bounded synthetic continuation/recovery challenge in the isolated
     worktree: 86 selected contract tests passed with exit code 0; no retry was
     performed and no real runtime or retained state was touched.
+18. Ran an independently constructed metadata/schema challenge against the
+    immutable 29-session copy: all 29 child-hash sets and outcome-blind flags
+    passed, no paper-state schema appeared, and the 28/29 calendar-lineage
+    blocker was independently reproduced.
 
 ## Root census snapshot
 
@@ -206,6 +210,10 @@ The calendar reconciliation searched 128 approved-root CSVs and found only the
 current calendar hash, matching 2026-09-18. None of the 22 distinct historical
 embedded hashes was recovered. The exact result is recorded in
 `2026-09-21_IDX_CALENDAR_LINEAGE_RECONCILIATION_V1.md`.
+
+The independent Phase 18 challenge is recorded in
+`2026-09-21_IDX_INDEPENDENT_REAL_ARTIFACT_SHADOW_CHALLENGE_V1.md`. It found no
+new material locally fixable defect and did not upgrade any real gate.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or

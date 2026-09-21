@@ -39,6 +39,10 @@ Date: 2026-09-21
   candidate verifier without changing alpha/science;
 - ran one bounded synthetic continuation/recovery challenge: 86 selected
   contract tests passed in the isolated worktree; no retry was performed;
+- ran an independent metadata/schema challenge against all 29 copied
+  sessions; child hashes, outcome-blind flags, and model/evidence row counts
+  passed, while the 28/29 calendar-lineage blocker was independently
+  reproduced;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 
