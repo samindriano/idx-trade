@@ -67,6 +67,12 @@ The real CA parser remediation and regression result is in:
 The operationally-shaped synthetic continuation and controller rehearsal is in:
 2026-09-21_IDX_OPERATIONAL_SHADOW_ROOT_REHEARSAL_V1.md.
 
+The forward-only fallback rehearsal is in:
+2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md.
+
+The shadow identity-artifact challenge is in:
+2026-09-21_IDX_SHADOW_IDENTITY_INTERFACE_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
@@ -123,10 +129,16 @@ The isolated synthetic continuation challenge later selected 86 contract
 tests and observed 86 passes. That strengthens only the synthetic
 continuation/recovery record; it does not promote any real gate.
 
-The follow-up operational shadow root contains 72 synthetic/output files and
-records a five-session continuation pass plus a persisted weekend/holiday
-controller no-op. It also strengthens synthetic evidence only; no real
-operational state was admitted.
+The initial continuation/controller subroots contained 72 synthetic/output
+files and recorded a five-session continuation pass plus a persisted
+weekend/holiday controller no-op. The same isolated root now contains 89
+files / 810,687 bytes after the separate fallback and identity-interface
+challenges. It strengthens synthetic evidence only; no real operational state
+was admitted.
+
+The same isolated lane now also contains a synthetic forward-only fallback
+PASS and a shadow identity-interface PASS. Both remain explicitly separate
+from real-state qualification and external authority admission.
 
 No provider checkout, provider call, scheduler mutation, cloud/R2 mutation,
 canonical-data rewrite, counter reset, protected-outcome access, alpha change,

@@ -91,13 +91,28 @@ itself.
 
 ## Output inventory
 
-The operational-shadow root contains 72 files and 788,621 bytes:
+The initial continuation/controller rehearsal contained 72 files and 788,621
+bytes:
 
 | Subroot | Files | Bytes |
 |---|---:|---:|
 | `continuation` | 70 | 787,675 |
 | `controller` | 2 | 946 |
 | **Total** | **72** | **788,621** |
+
+The same dedicated root was then extended, without touching the initial
+subroots, by the separate fallback and identity-interface challenges. Its
+current total is 89 files and 810,687 bytes:
+
+| Current subroot | Files | Bytes |
+|---|---:|---:|
+| `continuation` | 70 | 787,675 |
+| `controller` | 2 | 946 |
+| `fallback` (fixture stopped before snapshot) | 1 | 25 |
+| `fallback-v2` (fixture stopped before snapshot) | 1 | 25 |
+| `fallback-v3` (successful rehearsal) | 10 | 17,136 |
+| `identity-interface` | 5 | 4,880 |
+| **Current total** | **89** | **810,687** |
 
 ## Gate impact
 
@@ -106,7 +121,7 @@ The operational-shadow root contains 72 files and 788,621 bytes:
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | Five-session continuation and exact-rerun fence passed; no real operational state was admitted |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Missing-open/pending-buy path was exercised with fixtures only |
 | OPERATIONAL CONTROLLER | PASS SYNTHETIC | Weekend/holiday no-op persisted without external side effects |
-| FORWARD FALLBACK | DESIGN ONLY | No real fallback or provider rehearsal was run |
+| FORWARD FALLBACK | PASS SYNTHETIC / BLOCKED REAL | Separate V2 freeze/stop/failure/repair/resume rehearsal is recorded in `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md`; no real state was available |
 | PRE-CANARY READINESS | NO-GO | Missing real paper-state, CA obligation/settlement chain, calendar authority, differential, and recovery evidence remains |
 
 This rehearsal does not change the master dossier's real-artifact verdicts.

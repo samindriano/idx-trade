@@ -80,6 +80,14 @@ artifact evidence, and missing real state is not fabricated.
     controller persisted a weekend/holiday no-op against the copied
     516-session calendar. No provider, outcome, refit, rescore, live-runtime,
     or shared-state operation was performed.
+22. Ran the forward-only fallback rehearsal in a separate isolated root:
+    freeze V2, stop new execution, inject a synthetic candidate failure,
+    persist a repair marker, and resume the same V2 state. One pending BUY,
+    one open quantity obligation, one CA receivable, and all state hashes were
+    preserved; no V1 downgrade was attempted.
+23. Ran the labelled shadow identity-artifact challenge: the valid
+    hash-pinned artifact was accepted and five malformed/conflicting cases
+    were rejected fail-closed. No external identity authority was admitted.
 
 ## Root census snapshot
 
@@ -167,8 +175,8 @@ equivalent to E2E paper-state migration inputs.
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
 | CONFIG LINEAGE | PASS WITH LIMITATION | Active config/task lineage observed read-only; historical manifests omit runtime identity and the extended execution summary retains a `20260808u` cache path under a `20260808v` source root |
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | 86 contract tests plus a dedicated five-session operational shadow rehearsal passed; no real operational state was admitted |
-| FORWARD FALLBACK | DESIGN ONLY | Fallback design exists; real rehearsal was not run |
-| IDENTITY INTERFACE | CONTRACT READY / AUTHORITY BLOCKED | Candidate accepts hash-pinned artifact shape; authority is not admitted |
+| FORWARD FALLBACK | PASS SYNTHETIC / BLOCKED REAL | Isolated V2 freeze/stop/failure/repair/resume preserved one pending obligation and one CA receivable; no real migratable state exists |
+| IDENTITY INTERFACE | PASS SHADOW / AUTHORITY BLOCKED | Valid hash-pinned shadow artifact accepted and five negative cases rejected; external authority is not admitted |
 | PRE-CANARY READINESS | NO-GO | Real migration/replay/CA/recovery evidence is missing |
 | CONTROLLED CANARY | NO-GO / NOT EXECUTED | No canary was authorized or started |
 | PRODUCTION | NO-GO | Explicitly outside this lane |
@@ -287,8 +295,9 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
 | Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
 | Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; pinned full suite passed 907/907 |
-| Operational shadow rehearsal | 72 files / 788,621 bytes; five synthetic sessions; controller persisted `WEEKEND_OR_HOLIDAY_NOOP`; no provider/outcome/refit/rescore |
-| Forward fallback | 0 real rehearsals; design recorded only |
+| Operational shadow rehearsal | Initial continuation/controller subroots: 72 files / 788,621 bytes; expanded dedicated root: 89 files / 810,687 bytes; five synthetic sessions; controller persisted `WEEKEND_OR_HOLIDAY_NOOP`; no provider/outcome/refit/rescore |
+| Forward fallback | 1 synthetic rehearsal passed; 0 real-state rehearsals because no real migratable state exists |
+| Identity interface | 1 valid shadow artifact accepted; 5 negative cases rejected fail-closed; production authority not admitted |
 | External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
 | Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |
 | Worktree state | clean isolated branch; active operational checkout and runtime were not modified |

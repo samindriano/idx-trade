@@ -12,8 +12,8 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 | G-04 | Real CA event registry is admitted, but no CA entitlement/settlement ledger or holdings/obligation attestation is admitted | CA composition cannot be challenged | separately authorized immutable ledger/holdings/obligation evidence |
 | G-05 | No real old-vs-candidate artifact pair | equivalence is unproven | dual-runtime read-only differential on identical copied inputs |
 | G-06 | No real recovery chain | restart/fork/quarantine remains synthetic | real ancestor/lineage chain in shadow root |
-| G-07 | Identity authority remains external | operational binding cannot be promoted | authoritative hash-pinned identity artifact and policy |
-| G-08 | Fallback rehearsal is design-only | operational rollback safety unproven | isolated forward-only rehearsal |
+| G-07 | Identity authority remains external | operational binding cannot be promoted | authoritative hash-pinned identity artifact and policy; shadow interface challenge is now PASS only |
+| G-08 | Real-state fallback remains unavailable; synthetic forward-only rehearsal is complete | actual historical-state rollback/resume safety remains unproven | real migratable V2 state plus separate fallback authorization; synthetic closure is recorded in `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md` |
 | G-09 | Policy decisions remain external | canary admission cannot be decided | explicit close/pairing/expiry/FULL/concentration/tax/CA policy |
 | G-10 | Active runtime/config remains pinned to old checkout | candidate is not deployed | separate explicit repin authorization and validation |
 | G-11 | Inherited adoption docs have identity/matrix/provenance defects | review authority is split | corrected doc-only audit and exact immutable references |

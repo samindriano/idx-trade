@@ -66,7 +66,7 @@ migrated.
 |---|---|---|
 | SHADOW CONTINUATION | PASS SYNTHETIC / BLOCKED REAL | Synthetic continuation/recovery contracts pass; the later operational shadow root contains synthetic outputs only and admits no real operational state |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Synthetic tamper/fork/ancestor tests pass; no real recovery chain was admitted |
-| FORWARD FALLBACK | DESIGN ONLY | These tests do not constitute a forward fallback rehearsal or runtime repin |
+| FORWARD FALLBACK | OUT OF SCOPE FOR THIS TEST SET | The separate isolated forward-only rehearsal is recorded in `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md`; these tests do not perform a runtime repin |
 | PRE-CANARY READINESS | NO-GO | Missing real paper-state, CA, calendar-lineage, differential, and recovery evidence remains unchanged |
 
 ## Non-goals and safety result

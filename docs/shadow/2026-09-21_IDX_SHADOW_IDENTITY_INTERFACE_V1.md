@@ -2,7 +2,7 @@
 
 Date: 2026-09-21 (Asia/Jakarta)
 
-Status: **CONTRACT READY / EXTERNAL AUTHORITY NOT ADMITTED**
+Status: **IDENTITY INTERFACE SHADOW-READY / EXTERNAL AUTHORITY NOT ADMITTED**
 
 ## Active read-only identity
 
@@ -29,3 +29,33 @@ CONTRACT READY / AUTHORITY BLOCKED`.
 
 No identity artifact was invented from session data, model data, discovery
 metadata, or a provider path.
+
+## Shadow artifact challenge
+
+An explicitly labelled synthetic identity artifact was written and verified
+only under:
+
+`C:\Users\Sam\AppData\Local\IDXTrade\shadow-runtime-precanary-20260921-operational-shadow\identity-interface\valid.json`
+
+Its file SHA-256 is
+`d129a74a8329f58b23bf942a6263dc532354cf9bdd776d23c3b5e31c41526d85`.
+The loader accepted the hash-pinned file for `T00` at session
+`2026-08-28`, with `outcome_access=false`.
+
+The following cases were then challenged and all failed closed as required:
+
+| Case | Result |
+|---|---|
+| valid hash-pinned artifact | accepted |
+| missing ticker | rejected as `IDENTITY_EVIDENCE_ROW_INVALID` |
+| conflicting interval/revision | rejected as unresolved required identity |
+| wrong session | rejected as `IDENTITY_EVIDENCE_SESSION_MISMATCH` |
+| wrong source file hash | rejected as `IDENTITY_EVIDENCE_FILE_SHA_MISMATCH` |
+| extra/noncanonical field | rejected as `IDENTITY_EVIDENCE_PAYLOAD_NOT_CANONICAL` |
+
+Challenge report:
+`...\\identity-interface\\challenge_report.json`.
+
+This establishes `IDENTITY INTERFACE = SHADOW-READY`; it does not establish
+identity authority production-ready, and no external identity source was
+read or promoted.

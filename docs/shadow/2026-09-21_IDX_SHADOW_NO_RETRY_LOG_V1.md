@@ -14,6 +14,10 @@ This lane intentionally records no retry of a live or external operation.
 - No protected outcome or counter was used as a shadow input.
 - No candidate phase entrypoint was run against the live writable root.
 - No real migration/replay/fallback/canary was retried or claimed.
+- The forward-only fallback run was synthetic-only. Two fixture-construction
+  attempts stopped before snapshot creation on explicit contract errors; the
+  successful isolated fixture used the canonical pending-intent projection
+  and labelled synthetic verifier. No live or real-state fallback was retried.
 - Synthetic adoption test results remain synthetic and were not reclassified
   as real evidence.
 

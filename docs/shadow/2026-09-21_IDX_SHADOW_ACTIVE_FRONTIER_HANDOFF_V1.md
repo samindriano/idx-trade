@@ -55,6 +55,13 @@ Date: 2026-09-21
   an exact-rerun `ALREADY_COMPLETE` fence, CA-extension coverage, and a
   persisted weekend/holiday controller no-op; the output root contains 72
   files / 788,621 bytes and no real state was admitted;
+- completed a synthetic forward-only fallback rehearsal: V2 freeze, stop-new-
+  execution fence, synthetic failure, repair marker, and same-V2 resume
+  preserved one pending obligation and one CA receivable; no V1 downgrade or
+  real state was involved;
+- completed the shadow identity-interface challenge: one valid hash-pinned
+  artifact accepted and five negative cases rejected fail-closed; external
+  identity authority remains blocked;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 
