@@ -230,9 +230,10 @@ and rejected one legacy `V4_X1_GEOMETRY3_PROSPECTIVE` model-id artifact. The
 result is recorded in `2026-09-21_IDX_ALL_V4X1_SCORE_VALIDATION_V1.md` and is
 still score-level evidence, not historical E2E replay.
 
-The calendar reconciliation searched 128 approved-root CSVs and found only the
-current calendar hash, matching 2026-09-18. None of the 22 distinct historical
-embedded hashes was recovered. The exact result is recorded in
+The calendar reconciliation searched 143 CSVs across the approved root and
+bounded sibling evidence roots and found only the current calendar hash,
+matching 2026-09-18. None of the 22 distinct historical embedded hashes was
+recovered. The exact result is recorded in
 `2026-09-21_IDX_CALENDAR_LINEAGE_RECONCILIATION_V1.md`.
 
 The independent Phase 18 challenge is recorded in
