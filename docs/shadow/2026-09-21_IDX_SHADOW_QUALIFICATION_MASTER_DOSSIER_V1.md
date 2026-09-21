@@ -110,6 +110,11 @@ artifact evidence, and missing real state is not fabricated.
     representative from each of the seven observed input classes. All seven
     rejected with `MIGRATION_COMPATIBILITY_PAYLOAD_NOT_CANONICAL`; no
     migration envelope, provenance record, or V2 state was fabricated.
+29. Reran the pinned source full suite at the current shadow candidate:
+    907 tests from 128 files completed at 100% with exit code `0`; only the
+    same three pre-existing pandas `FutureWarning`s remained. The exact
+    commands and documentation consistency checks are in
+    `2026-09-21_IDX_SHADOW_VALIDATION_LEDGER_V1.md`.
 
 ## Root census snapshot
 

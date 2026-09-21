@@ -93,6 +93,9 @@ The semantic audit of state-like names versus actual paper-state schemas is in:
 The real-input classifier admission audit is in:
 2026-09-21_IDX_REAL_CLASSIFIER_ADMISSION_AUDIT_V1.md.
 
+The current source/test and documentation validation ledger is in:
+2026-09-21_IDX_SHADOW_VALIDATION_LEDGER_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`

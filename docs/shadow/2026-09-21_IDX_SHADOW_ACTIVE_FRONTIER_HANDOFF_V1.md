@@ -82,6 +82,10 @@ Date: 2026-09-21
   representative from each of the seven observed input classes; all seven
   failed closed as `MIGRATION_COMPATIBILITY_PAYLOAD_NOT_CANONICAL`, with no
   fabricated state envelope;
+- reran the pinned source full suite at the current candidate: 907 tests from
+  128 files, 100% completion, exit code `0`, with only the same three
+  pre-existing pandas `FutureWarning`s; documentation/phase consistency also
+  passed 15/15 and 19/19;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;
