@@ -98,9 +98,9 @@ equivalent to E2E paper-state migration inputs.
 | Required gate | Verdict | Evidence boundary |
 |---|---|---|
 | REAL ARTIFACT DISCOVERY | PASS WITH LIMITATION | Real roots/corpus found; eligible paper-state population absent in bounded census |
-| IMMUTABLE SHADOW INPUT | BLOCKED / NOT EXECUTED | No source copy or two-pass stability attestation was created |
+| IMMUTABLE SHADOW INPUT | PASS WITH LIMITATION | 20 selected files copied to a new shadow root; source pre/post/copy hashes equal; paper-state class still absent |
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
-| HISTORICAL REPLAY | BLOCKED / NOT RUN | Session inputs exist, but paper-state/authority compatibility was not established |
+| HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for two sessions and real score passed via explicit shadow adapter; full paper-state/CA chain is absent and calendar lineage is inconsistent |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
 | CA COMPOSITION | BLOCKED REAL | No retained CA ledger/attestation admitted; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
@@ -126,9 +126,37 @@ blocked real gate above.
 The current evidence supports a real-artifact discovery result with a hard
 boundary: real forward-monitoring inputs exist, while the retained E2E paper
 state required for migration/recovery/old-vs-new differential is absent from
-the bounded inventory. The next action, if separately authorized, is to build
-an immutable hash-bound copy manifest for a narrowly selected real input class;
-it is not to run against the active writable runtime.
+the bounded inventory. The next safe action is to reconcile the historical
+calendar/path lineage and locate the missing paper-state/CA chain inside a
+separate authorized shadow package; it is not to run against the active
+writable runtime.
+
+## Actual immutable copy
+
+The selected input class is now cryptographically copied into
+C:\Users\Sam\AppData\Local\IDXTrade\shadow-runtime-precanary-20260921. The
+V2 manifest records 20 files and 750,681 bytes with source hash before copy,
+source hash after copy, and copy hash equal for every file. The copy is not
+treated as paper state: no paper portfolio, prepared execution, fill vector,
+pending ledger, or CA ledger was present in this admitted class.
+
+The copied class now also contains one real schedule attestation and one real
+score manifest plus score artifact. The score manifest still embeds an
+absolute source artifact path, so it is retained for lineage review but not
+loaded from the shadow root without a separately labelled adapter.
+
+The separately labelled score adapter exposed and enabled repair of one local
+candidate defect: raw string comparison rejected equivalent timezone
+representations of the freeze boundary. The isolated verifier now compares
+timezone-aware instants while still rejecting naive or different timestamps.
+Focused verifier/property tests passed 26/26, and the real 2026-09-17 score
+artifact validated at 296 rows. This does not open the paper-state replay gate.
+
+The copy-only schema census found 11/13 embedded hash checks passing: the
+session child artifacts and config sidecar matched, but both manifests'
+calendar_sha256 values do not match the currently referenced calendar file.
+That calendar lineage mismatch is recorded as REQUIRES_RECONCILIATION and
+blocks replay of these sessions.
 
 ## Inherited documentation audit
 
@@ -140,3 +168,7 @@ the Markdown/JSON surface matrices are not one-for-one, the challenge was
 MAIN-run rather than an external independent review, and exact test
 reproduction artifacts were not included. The current shadow records retain
 these as explicit limitations instead of silently upgrading them.
+
+After the real-artifact timestamp finding, the shadow candidate suite was
+rerun: 906 tests were collected, execution reached 100%, exit code was 0, and
+the same three pre-existing pandas FutureWarnings remained.

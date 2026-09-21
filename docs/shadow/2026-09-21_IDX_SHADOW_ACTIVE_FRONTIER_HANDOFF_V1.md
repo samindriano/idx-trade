@@ -12,8 +12,13 @@ Date: 2026-09-21
 - inventoried the active E2E runtime and retained forward-monitoring roots;
 - identified 29 retained session dates and selected real manifest hashes;
 - separated real session/model evidence from absent paper-state evidence;
-- recorded the pre-copy manifest, gap register, and canary design without
-  executing migration, replay, fallback, canary, or production work.
+- created a 20-file immutable shadow copy with source/copy hash equality;
+- validated both copied sessions at input level and validated the copied real
+  score artifact through an explicitly labelled shadow adapter;
+- fixed and regression-tested one timezone-representation defect in the
+  candidate verifier without changing alpha/science;
+- recorded the V2 manifest, gap register, and canary design without executing
+  migration, replay, fallback, canary, or production work.
 
 ## Next safe frontier
 

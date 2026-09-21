@@ -12,6 +12,18 @@ from .v4_x1_decision_v1_contract import (
     _sha256, _normalize_ticker, _read_manifest, _resolve_artifact,
 )
 
+
+def _same_timezone_aware_instant(left: object, right: object) -> bool:
+    try:
+        left_ts = pd.Timestamp(left)
+        right_ts = pd.Timestamp(right)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if left_ts.tz is None or right_ts.tz is None:
+        return False
+    return left_ts.tz_convert("UTC") == right_ts.tz_convert("UTC")
+
+
 def verify_v4_x1_score_artifact(manifest_path: str | Path) -> VerifiedScoreSession:
     manifest_path = Path(manifest_path).expanduser().resolve()
     if not manifest_path.is_file():
@@ -50,7 +62,13 @@ def verify_v4_x1_score_artifact(manifest_path: str | Path) -> VerifiedScoreSessi
         raise DecisionV1Error("DECISION_V1_UPSTREAM_MODEL_BUNDLE_CHANGED")
 
     freshness = manifest.get("freshness")
-    if not isinstance(freshness, dict) or freshness.get("model_freeze_observed_by") != EXPECTED_FREEZE_BOUNDARY:
+    if (
+        not isinstance(freshness, dict)
+        or not _same_timezone_aware_instant(
+            freshness.get("model_freeze_observed_by"),
+            EXPECTED_FREEZE_BOUNDARY,
+        )
+    ):
         raise DecisionV1Error("DECISION_V1_UPSTREAM_FREEZE_BOUNDARY_CHANGED")
 
     science = manifest.get("science")

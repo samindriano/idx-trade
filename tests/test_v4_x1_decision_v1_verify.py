@@ -27,6 +27,15 @@ def test_score_artifact_verification_happy_path(tmp_path, monkeypatch):
     assert verified.scores["rank_consensus"].tolist() == list(range(1, 31))
 
 
+def test_score_manifest_accepts_equivalent_timezone_representation(tmp_path, monkeypatch):
+    def mutate(manifest):
+        manifest["freshness"]["model_freeze_observed_by"] = "2026-08-20T19:08:44+07:00"
+
+    manifest, _ = _write_artifact(tmp_path, monkeypatch, manifest_mutator=mutate)
+    verified = verify_v4_x1_score_artifact(manifest)
+    assert verified.session_date == "2026-08-21"
+
+
 @pytest.mark.parametrize("field,value,error", [
     ("status", "FAILED", "UPSTREAM_NOT_DONE"),
     ("model_id", "WRONG", "MODEL_ID_MISMATCH"),

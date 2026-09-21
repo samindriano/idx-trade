@@ -24,6 +24,15 @@ was executed.
 The inherited adoption packet has a separate doc-only audit:
 2026-09-21_IDX_ADOPTION_DOCUMENTATION_AUDIT_V1.md.
 
+The actual copy attestation is in:
+2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V2.md.
+
+The copy-only schema and hash verification is in:
+2026-09-21_IDX_REAL_COPY_SCHEMA_CENSUS_V1.md.
+
+The real score validation and isolated timestamp fix are in:
+2026-09-21_IDX_REAL_SCORE_VALIDATION_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
@@ -31,6 +40,8 @@ The inherited adoption packet has a separate doc-only audit:
 5. `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`
 
 ## Durable shadow records
+
+The pre-copy record remains V1; the actual copy attestation is V2.
 
 - `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 - `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`

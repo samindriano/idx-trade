@@ -9,7 +9,8 @@ This lane intentionally records no retry of a live or external operation.
 - No live OfficialOpen capture was started.
 - No scheduler task was edited, triggered, or repinned.
 - No cloud/R2 state was mutated.
-- No active runtime file was copied over or rewritten.
+- No active runtime file was overwritten or rewritten; diagnostic copies were
+  made into the dedicated shadow root.
 - No protected outcome or counter was used as a shadow input.
 - No candidate phase entrypoint was run against the live writable root.
 - No real migration/replay/fallback/canary was retried or claimed.
