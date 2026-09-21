@@ -42,12 +42,12 @@ Added regression coverage:
 | Valid effective dates | 38/38 |
 | Derived ratios | 22 present; 16 remain unknown |
 | Provider/network/live invocation | none |
-| Full repository suite | collection blocked by an existing unrelated import/dependency issue involving `idx_trade.stockbit_stream_archive`; not treated as a CA regression |
+| Full repository suite | `907/907` passed with exit code 0 using the pinned shadow source (`PYTHONPATH=...shadow...\src`, `python -m pytest -q`); three pre-existing pandas `FutureWarning`s remained |
 
-The full suite attempt was not retried. The focused regression set is the
-authoritative validation for this isolated change; the earlier full-suite
-result remains documented separately, with the current collection limitation
-preserved explicitly.
+The plain `pytest` executable path produced a misleading collection failure
+because the environment's pytest import mode did not expose the local
+`scripts` package consistently. The authoritative reproduction is the pinned
+`python -m pytest` command above, which completed the full suite successfully.
 
 ## Qualification boundary
 

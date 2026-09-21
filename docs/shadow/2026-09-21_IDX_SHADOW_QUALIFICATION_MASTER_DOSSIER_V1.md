@@ -280,7 +280,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Old-vs-candidate real differential | 0 real artifact pairs; no unexplained divergence can be measured without a pair |
 | Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
 | Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
-| Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; current full-suite collection is blocked by the unrelated missing `idx_trade.stockbit_stream_archive` dependency |
+| Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; pinned full suite passed 907/907 |
 | Forward fallback | 0 real rehearsals; design recorded only |
 | External blockers | historical calendar authority, real paper-state/CA/recovery package, historical runtime/config identity, identity authority, policy decisions, and separate canary authorization |
 | Canary design | `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`; design only, not executed |
@@ -298,8 +298,10 @@ reproduction artifacts were not included. The current shadow records retain
 these as explicit limitations instead of silently upgrading them.
 
 After the real-artifact timestamp finding, the shadow candidate suite was
-rerun: 906 tests were collected, execution reached 100%, exit code was 0, and
-the same three pre-existing pandas FutureWarnings remained. A later bounded
+rereun: 906 tests were collected before the NaN remediation, execution reached
+100%, exit code was 0, and the same three pre-existing pandas FutureWarnings
+remained. After the remediation, the correctly source-pinned full suite
+collected and passed 907/907 tests with those same three warnings. A later bounded
 continuation/recovery challenge selected 86 relevant contract tests and
 recorded 86 passes; its exact command and scope are in
 `2026-09-21_IDX_SYNTHETIC_CONTINUATION_CHALLENGE_V1.md`.

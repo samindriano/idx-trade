@@ -49,7 +49,8 @@ Date: 2026-09-21
   remained input-only rather than paper state;
 - fixed the local CA parser's scalar-`NaN` optional-count boundary and
   revalidated 38/38 focused CA/attestation/dividend/V4-X1 tests plus 38/38
-  copied real CA rows; no ratio or share count was fabricated;
+  copied real CA rows; the source-pinned full suite also passed 907/907; no
+  ratio or share count was fabricated;
 - recorded the V2 manifest, gap register, and canary design without executing
   migration, replay, fallback, canary, or production work.
 
