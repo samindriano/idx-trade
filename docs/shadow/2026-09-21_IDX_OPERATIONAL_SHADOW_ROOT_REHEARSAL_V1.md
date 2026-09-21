@@ -125,6 +125,7 @@ the operational root so it cannot alter the rehearsal inventory:
 |---|---|
 | Attestation root | `C:\Users\Sam\AppData\Local\IDXTrade\shadow-runtime-precanary-20260921-operational-shadow-attestation-v1` |
 | Manifest file | `manifest.json` |
+| Git review copy | `docs/shadow/attestations/2026-09-21_IDX_OPERATIONAL_SHADOW_FILE_ATTESTATION_V1.json` |
 | Manifest SHA-256 | `67fe8fcad4168ddaf6d37935990c314bf8ba987ec588535a264580ee37b97f4f` |
 | Entries aggregate SHA-256 | `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc` |
 | Attested files / bytes | 89 / 810,687 |

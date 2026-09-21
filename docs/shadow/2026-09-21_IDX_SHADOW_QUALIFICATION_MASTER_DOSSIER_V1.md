@@ -270,6 +270,10 @@ The requirement-by-requirement Phase 0–18 coverage audit is recorded in
 `2026-09-21_IDX_PHASE_COVERAGE_AUDIT_V1.md`; it is a completeness audit of
 evidence and blockers, not a claim that the blocked real gates passed.
 
+The 89-entry operational-shadow file attestation is tracked at
+`docs/shadow/attestations/2026-09-21_IDX_OPERATIONAL_SHADOW_FILE_ATTESTATION_V1.json`;
+it contains metadata and hashes only, not runtime or prompt content.
+
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or
 model/OHLCV close-value differences for 2026-09-16 and 2026-09-17. Evidence
