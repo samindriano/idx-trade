@@ -27,9 +27,9 @@ promoted to real-artifact evidence.
 | Phase | Required outcome | Current evidence | Verdict |
 |---:|---|---|---|
 | 0 | Recover controlling adoption evidence and exact identities | Adoption packet audit, master dossier, runtime/config/task identity records, and current lane identity | PASS WITH LIMITATION |
-| 1 | Locate real retained runtime evidence without modifying sources | Real runtime census plus extended 32-file parent-root evidence manifest; real inputs found, paper-state classes absent | PASS WITH LIMITATION |
+| 1 | Locate real retained runtime evidence without modifying sources | Real runtime census, extended 32-file parent-root evidence manifest, adjacent local-boundary audit, and explicit synthetic-workdir provenance audit; real input classes found, admitted paper-state class absent | PASS WITH LIMITATION |
 | 2 | Build immutable manifest with source/copy hash equality | V2 manifest, 237-file full-session copy attestation, and 32-file extended evidence attestation | PASS WITH LIMITATION |
-| 3 | Census actual state population before migration | Classification registry records zero snapshots/prepared parents/fill vectors/pending ledgers/CA ledgers and separates input-only classes | PASS WITH LIMITATION |
+| 3 | Census actual state population before migration | Classification registry records zero admitted real snapshots/prepared parents/fill vectors/pending ledgers/CA ledgers; state-like replay workdirs are explicitly `synthetic_only=true` and remain separate | PASS WITH LIMITATION |
 | 4 | Apply migration classifier to real copied population | Full census classifies all located classes as input-only/unavailable; representative objects from all seven observed real input classes were rejected at the exact canonical-envelope admission boundary; no permissive class invented | BLOCKED BY ABSENT STATE |
 | 5 | Migrate and reload eligible real state | No eligible real state artifact exists; no migration was attempted or fabricated | BLOCKED |
 | 6 | Replay historical sessions where all inputs exist | 29 packages input-validated (27 input-level passes, 2 boundary failures); calendar lineage and paper-state/CA chain block E2E replay | BLOCKED / INPUT-LEVEL ONLY |
@@ -80,8 +80,9 @@ session ambiguity hunt, calendar reconciliation, extended real-evidence
 manifest, CA parser remediation, deterministic real CA/recovery gate audit,
 operational-shadow rehearsal, immutable-attestation revalidation, state-name
 ambiguity audit, real-classifier admission audit, identity interface
-challenge, current validation ledger, parent-root boundary census, and
-independent Phase 18 challenge.
+challenge, current validation ledger, parent-root boundary census, adjacent
+local-boundary audit, synthetic-paper-workdir boundary audit, and independent
+Phase 18 challenge.
 
 ## Stop-rule audit
 
