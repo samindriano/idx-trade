@@ -69,6 +69,12 @@ were not admitted as real history because no historical-runtime provenance,
 real session binding, or immutable source/copy package was established for
 them. The scan did not open file contents.
 
+A second path-only scan over the full local project tree matched 3,490 files
+under `state_snapshots`, `prepared`, `.transactions`, `paper_state*`, or
+`runtime_state*`. They belonged to 58 top-level roots; all 58 were explicitly
+test/pytest/e2e/dual-calendar roots and `non_test_roots=0`. This broader scan
+also opened no file contents and did not promote any match to real state.
+
 ## Result
 
 This audit closes a potential false-positive inventory path: state-like

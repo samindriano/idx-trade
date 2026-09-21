@@ -148,6 +148,10 @@ artifact evidence, and missing real state is not fabricated.
     test/pytest/e2e/dual-calendar roots: 737 `state_snapshots` directories
     and 453 `prepared` directories were found, all kept outside real-state
     admission because no historical-runtime provenance package was present.
+36. A broader path-only scan matched 3,490 state-shaped files across 58
+    top-level roots; every root was explicitly test/pytest/e2e/dual-calendar
+    named and `non_test_roots=0`, so no additional real-state boundary was
+    admitted.
 
 ## Root census snapshot
 
