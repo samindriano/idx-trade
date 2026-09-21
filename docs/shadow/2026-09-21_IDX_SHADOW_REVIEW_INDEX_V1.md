@@ -84,6 +84,9 @@ The requirement-by-requirement Phase 0–18 coverage audit is in:
 The tracked per-file operational-shadow attestation is in:
 `attestations/2026-09-21_IDX_OPERATIONAL_SHADOW_FILE_ATTESTATION_V1.json`.
 
+The independent revalidation of all immutable shadow copies is in:
+2026-09-21_IDX_SHADOW_IMMUTABLE_ATTESTATION_REVALIDATION_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`

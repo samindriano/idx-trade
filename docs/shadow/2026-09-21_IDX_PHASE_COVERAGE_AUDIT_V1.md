@@ -78,8 +78,8 @@ All twelve durable outputs named by the specification are present in
 Supporting records include the full-session census and copy attestation, all
 session ambiguity hunt, calendar reconciliation, extended real-evidence
 manifest, CA parser remediation, deterministic real CA/recovery gate audit,
-operational-shadow rehearsal, identity interface challenge, and independent
-Phase 18 challenge.
+operational-shadow rehearsal, immutable-attestation revalidation, identity
+interface challenge, and independent Phase 18 challenge.
 
 ## Stop-rule audit
 

@@ -96,6 +96,11 @@ artifact evidence, and missing real state is not fabricated.
     registry and reconciled the real recovery surfaces: 38/38 rows parsed,
     22 ratios known, 16 unknown, with no real holdings, entitlement,
     obligation, settlement, prepared-parent, fill-vector, or CA-ledger chain.
+26. Independently revalidated the immutable copies: 237 retained-session
+    files, 32 extended-evidence files, and 89 operational-shadow entries all
+    matched their source/attestation hashes and sizes. The operational
+    aggregate was recomputed from the exact manifest serialization and matched
+    `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`.
 
 ## Root census snapshot
 
