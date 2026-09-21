@@ -54,6 +54,21 @@ historical replay, CA composition, or recovery.
 The replay-readiness root is separately blocked by data according to its own
 manifest status. It also is not a real-state admission.
 
+## Bounded test-family directory scan
+
+A metadata-only scan of top-level roots explicitly labelled
+`idx-dual-calendar-*`, `idx-e2e-*`, or `idx-trade-test-tmp-*` found:
+
+- 45 test/pytest/e2e roots containing runtime-shaped directories;
+- 737 `state_snapshots` directories; and
+- 453 `prepared` directories.
+
+These paths are nested under `test_*`, `pytest`, `test-tmp`, or
+dual-calendar/e2e fixture roots. They are retained as test evidence only and
+were not admitted as real history because no historical-runtime provenance,
+real session binding, or immutable source/copy package was established for
+them. The scan did not open file contents.
+
 ## Result
 
 This audit closes a potential false-positive inventory path: state-like

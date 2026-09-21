@@ -104,6 +104,9 @@ Date: 2026-09-21
 - audited state-like `idx-e2e-paper-*` and replay workdirs: their acceptance
   metadata explicitly marks the three five-session roots `synthetic_only=true`
   and the replay-readiness root blocked by data, so none is real-state input;
+- bounded the wider test-family directory scan: 45 labelled test/pytest/e2e/
+  dual-calendar roots contain 737 `state_snapshots` and 453 `prepared`
+  directories; they remain synthetic/test evidence, not real-state input;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;

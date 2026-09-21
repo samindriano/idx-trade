@@ -144,6 +144,10 @@ artifact evidence, and missing real state is not fabricated.
     `HISTORICAL_E2E_REPLAY_BLOCKED_BY_DATA`. None was admitted as real state;
     the provenance evidence is in
     `2026-09-21_IDX_SYNTHETIC_PAPER_WORKDIR_BOUNDARY_AUDIT_V1.md`.
+35. Extended the metadata-only synthetic boundary scan across 45 explicitly
+    test/pytest/e2e/dual-calendar roots: 737 `state_snapshots` directories
+    and 453 `prepared` directories were found, all kept outside real-state
+    admission because no historical-runtime provenance package was present.
 
 ## Root census snapshot
 
