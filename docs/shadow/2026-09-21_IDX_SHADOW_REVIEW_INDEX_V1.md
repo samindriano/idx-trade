@@ -110,6 +110,10 @@ The adjacent local-boundary audit for historical data-gate, rollback, and
 watchdog roots is in:
 2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md.
 
+The audit proving that state-like paper/replay workdirs are explicitly
+synthetic and excluded from real-state admission is in:
+2026-09-21_IDX_SYNTHETIC_PAPER_WORKDIR_BOUNDARY_AUDIT_V1.md.
+
 1. `2026-09-21_IDX_SHADOW_QUALIFICATION_MASTER_DOSSIER_V1.md`
 2. `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
 3. `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V2.md`
@@ -146,6 +150,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md`
 - `2026-09-21_IDX_CURRENT_RETAINED_ROOT_RECENSUS_V1.md`
 - `2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md`
+- `2026-09-21_IDX_SYNTHETIC_PAPER_WORKDIR_BOUNDARY_AUDIT_V1.md`
 - `2026-09-21_IDX_SHADOW_ACTIVE_FRONTIER_HANDOFF_V1.md`
 - `2026-09-21_IDX_SHADOW_NO_RETRY_LOG_V1.md`
 

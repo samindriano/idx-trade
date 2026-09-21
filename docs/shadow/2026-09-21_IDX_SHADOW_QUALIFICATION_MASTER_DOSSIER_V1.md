@@ -138,6 +138,12 @@ artifact evidence, and missing real state is not fabricated.
     source/dispatch evidence. None is a real paper-state chain; the exact
     shape and exclusion rationale are in
     `2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md`.
+34. Audited replay-shaped workdirs that contain state-like filenames. Their
+    acceptance summaries explicitly set `synthetic_only=true` for the three
+    five-session roots, while the replay-readiness root is explicitly
+    `HISTORICAL_E2E_REPLAY_BLOCKED_BY_DATA`. None was admitted as real state;
+    the provenance evidence is in
+    `2026-09-21_IDX_SYNTHETIC_PAPER_WORKDIR_BOUNDARY_AUDIT_V1.md`.
 
 ## Root census snapshot
 

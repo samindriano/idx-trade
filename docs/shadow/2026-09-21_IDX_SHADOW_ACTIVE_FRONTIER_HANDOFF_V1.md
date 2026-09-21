@@ -101,6 +101,9 @@ Date: 2026-09-21
   is certification/input evidence, the rollback package is task/deployment
   metadata, and the watchdog root is automation source/dispatch evidence; no
   additional paper-state chain was admitted;
+- audited state-like `idx-e2e-paper-*` and replay workdirs: their acceptance
+  metadata explicitly marks the three five-session roots `synthetic_only=true`
+  and the replay-readiness root blocked by data, so none is real-state input;
 - pinned the current shadow candidate code revision to
   `5c14b036ee179532903e1d0fd32d486db06cf3c7` and separated it from the
   historical adoption-test revision `66140b05`;
