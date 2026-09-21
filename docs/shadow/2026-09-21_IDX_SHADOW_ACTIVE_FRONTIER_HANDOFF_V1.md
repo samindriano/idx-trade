@@ -19,6 +19,10 @@ Date: 2026-09-21
   field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV
   close differences; wider evidence/stock universe was recorded as a scope
   boundary;
+- copied all 29 retained session packages plus calendar/provenance files into
+  a second isolated discovery root; all 237 source/copy hashes matched;
+- applied the input-level validator to all 29 copies: 27 passed, while the
+  two explicit calendar-boundary failures remained fail-closed;
 - fixed and regression-tested one timezone-representation defect in the
   candidate verifier without changing alpha/science;
 - recorded the V2 manifest, gap register, and canary design without executing
@@ -28,8 +32,8 @@ Date: 2026-09-21
 
 Only after separate authorization:
 
-1. recover/admit the exact historical calendar bytes referenced by the two
-   selected manifests, or preserve the sessions as NOT_REPLAYABLE;
+1. recover/admit the exact historical calendar bytes referenced by the 29
+   session manifests, or preserve the affected sessions as NOT_REPLAYABLE;
 2. locate an immutable paper-state/CA/recovery package in a separately
    authorized shadow input root, without provider/outcome access;
 3. inspect candidate interfaces against admitted copies while preserving the

@@ -22,6 +22,7 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 | G-14 | Copied score manifest embeds an absolute source artifact path | full replay package is not path-consistent; score validation is closed via explicit derived adapter | path-preserving immutable package before full replay |
 | G-15 | Verifier compared equivalent timezone representations as raw strings | CLOSED in shadow candidate; no alpha/science change | 26 focused tests plus real score adapter validation |
 | G-16 | Evidence/stock summaries retain a wider universe than model input | CLOSED as a duplicate/state ambiguity; remains an interface-scope constraint | preserve explicit model-input/score universe boundary in any future replay |
+| G-17 | Full 29-session package has 28 historical calendar-hash mismatches; boundary sessions also fail current-calendar next-session rules | full historical replay remains blocked despite 27 input-level passes | admit exact historical calendar lineage, then rerun replayability and boundary checks |
 
 ## Stop condition
 

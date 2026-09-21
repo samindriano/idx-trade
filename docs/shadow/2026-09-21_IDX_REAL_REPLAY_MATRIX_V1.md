@@ -8,14 +8,14 @@ Status: **INPUT CORPUS FOUND / REPLAY NOT RUN**
 
 | Input family | Real inventory | Candidate replay | Result |
 |---|---|---|---|
-| Retained session manifests | 29 session dates, 2026-08-03 through 2026-09-18 | not attempted | available for compatibility review |
+| Retained session manifests | 29 session dates, 2026-08-03 through 2026-09-18 | copied to full discovery root | available for compatibility review; replay blocked by calendar lineage |
 | Model-input snapshots | present in session corpus | not attempted | not paper state |
 | Session OHLCV/evidence | present in session corpus | not attempted | not paper state |
 | Prepared execution artifacts | not located | impossible | BLOCKED |
 | Paper state/fill vectors | not located | impossible | BLOCKED |
 | Real CA composition | not admitted | impossible | BLOCKED |
 | Protected outcomes | excluded | prohibited | BLOCKED BY POLICY |
-| Input-level EOD validator | copied OHLCV/model input/current calendar | 2026-09-16 and 2026-09-17 | PASS_INPUT_LEVEL |
+| Input-level EOD validator | copied OHLCV/model input/current calendar | all 29 sessions | 27 `PASS_INPUT_LEVEL`; 2026-08-03 not official in copied calendar; 2026-09-18 has no next official session |
 | Schedule-bound validator | copied schedule attestation | not run against phase entrypoint | available but phase path remains blocked |
 | Score manifest/artifact | copied for 2026-09-17 | PASS via explicit shadow adapter | full replay still BLOCKED by missing state/CA and source path provenance |
 | Legacy input shape/ambiguity hunt | copied 2026-09-16 and 2026-09-17 | PASS WITH LIMITATION | no duplicate required keys, required-field nulls, invalid dates, model/OHLCV ticker differences, or model/OHLCV close differences; wider evidence/stock universe remains an interface boundary |

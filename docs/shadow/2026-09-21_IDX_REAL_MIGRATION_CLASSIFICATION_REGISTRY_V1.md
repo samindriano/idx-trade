@@ -14,7 +14,7 @@ Status: **NO REAL ROW CLASSIFIED / BLOCKED BY ABSENT MIGRATABLE STATE**
 | Pending obligation ledger | No | NOT_AVAILABLE | no pending recovery |
 | CA entitlement/settlement ledger | No | NOT_AVAILABLE | no CA composition |
 | Reconciliation chain | No | NOT_AVAILABLE | no recovery chain |
-| Session/model input files | Yes | NOT_A_PAPER_STATE / LINEAGE_PARTIAL | not classified as state; replay blocked by calendar reconciliation |
+| Session/model input files | Yes; 29 session packages / 232 files | NOT_A_PAPER_STATE / LINEAGE_PARTIAL | not classified as state; 27 input-level passes, 2 calendar-boundary failures, and replay blocked by historical calendar reconciliation |
 
 The absence is the result of the bounded real artifact census, not an
 inference from model behavior. No fabricated envelope, synthetic row, or

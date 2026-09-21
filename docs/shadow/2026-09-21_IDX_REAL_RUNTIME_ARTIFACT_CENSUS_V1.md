@@ -4,6 +4,9 @@ Date: 2026-09-21 (Asia/Jakarta)
 
 Status: **READ-ONLY CENSUS COMPLETE; NO SOURCE MUTATION**
 
+The complete 29-session discovery copy and expanded inventory are recorded in
+`2026-09-21_IDX_FULL_SESSION_SHADOW_CENSUS_V1.md`.
+
 ## Approved roots inspected
 
 | Root | Files | Bytes | Role |
@@ -44,6 +47,18 @@ The EOD pipeline class contains run metadata. The selected 2026-09-17 run
 recorded `PIPELINE_OK_X1_EXISTING_SCORE_VERIFIED` with provider and protected
 outcome access disabled in its metadata. This record was not used as a paper
 state or migration input.
+
+The expanded read-only scan found 132 model-run files, 262 EOD automation
+metadata files, 135 attempt files, and 29 session packages. JSON key-signature
+and filename classification did not identify an admitted paper portfolio,
+prepared execution, fill vector, pending ledger, or CA ledger. Prospective
+`*_state_v1` artifacts were retained as feature/context state contracts, not
+reclassified as trading state.
+
+All 29 session packages were copied to a new isolated discovery root. The copy
+contains 237 files / 27,907,223 bytes; source pre/post/copy hashes were equal
+for every copied file. The copy-attestation digest is
+`5246c4ca7e25974db313ebc8f754014c2365d92eb88bac41d114fef0f2c12012`.
 
 ## Explicit exclusions
 

@@ -30,6 +30,12 @@ The actual copy attestation is in:
 The copy-only schema and hash verification is in:
 2026-09-21_IDX_REAL_COPY_SCHEMA_CENSUS_V1.md.
 
+The complete 29-session discovery copy and expanded root census is in:
+2026-09-21_IDX_FULL_SESSION_SHADOW_CENSUS_V1.md.
+
+The per-file source/copy hash table is in:
+2026-09-21_IDX_FULL_SESSION_COPY_ATTESTATION_V1.md.
+
 The real score validation and isolated timestamp fix are in:
 2026-09-21_IDX_REAL_SCORE_VALIDATION_V1.md.
 
@@ -47,6 +53,8 @@ The copied-session legacy shape and ambiguity check is in:
 The pre-copy record remains V1; the actual copy attestation is V2.
 
 - `2026-09-21_IDX_REAL_RUNTIME_ARTIFACT_CENSUS_V1.md`
+- `2026-09-21_IDX_FULL_SESSION_SHADOW_CENSUS_V1.md`
+- `2026-09-21_IDX_FULL_SESSION_COPY_ATTESTATION_V1.md`
 - `2026-09-21_IDX_IMMUTABLE_SHADOW_INPUT_MANIFEST_V1.md`
 - `2026-09-21_IDX_REAL_MIGRATION_CLASSIFICATION_REGISTRY_V1.md`
 - `2026-09-21_IDX_OLD_CANDIDATE_DIFFERENTIAL_V1.md`

@@ -43,6 +43,9 @@ artifact evidence, and missing real state is not fabricated.
 10. Ran a copy-only legacy ambiguity hunt over the two selected real sessions:
     required-key, null/date, ticker-set, and close-value checks were recorded
     without reading protected or live state.
+11. Expanded the immutable discovery copy to all 29 retained session packages,
+    plus current calendar files and calendar provenance attestations.
+12. Applied the existing input-level validator to all 29 copied sessions.
 
 ## Root census snapshot
 
@@ -82,7 +85,11 @@ exists elsewhere.
 The forward-monitoring root has 29 retained session-date directories from
 `2026-08-03` through `2026-09-18`. The selected `2026-09-16` and
 `2026-09-17` manifests both report `DATA_READY`, `outcome_blind=true`, and
-`forward_outcomes_accessed=false`.
+`forward_outcomes_accessed=false`. The complete 29-session copy and its
+expanded lineage results are recorded in
+`2026-09-21_IDX_FULL_SESSION_SHADOW_CENSUS_V1.md`.
+The per-file source/copy hash attestation is recorded in
+`2026-09-21_IDX_FULL_SESSION_COPY_ATTESTATION_V1.md`.
 
 Selected session facts:
 
@@ -103,7 +110,7 @@ equivalent to E2E paper-state migration inputs.
 | REAL ARTIFACT DISCOVERY | PASS WITH LIMITATION | Real roots/corpus found; eligible paper-state population absent in bounded census |
 | IMMUTABLE SHADOW INPUT | PASS WITH LIMITATION | 20 selected files copied to a new shadow root; source pre/post/copy hashes equal; paper-state class still absent |
 | REAL MIGRATION | BLOCKED | No real migratable paper state, prepared artifact, pending ledger, or CA ledger found |
-| HISTORICAL REPLAY | BLOCKED / INPUT+SCORE VALIDATION ONLY | Input validator passed for two sessions and real score passed via explicit shadow adapter; full paper-state/CA chain is absent and calendar lineage is inconsistent |
+| HISTORICAL REPLAY | BLOCKED / INPUT-LEVEL VALIDATION ONLY | Input validator passed for 27/29 copied sessions; two boundary failures are explicit, 28/29 manifest calendar hashes mismatch the current calendar, and full paper-state/CA chain is absent |
 | OLD-vs-CANDIDATE EQUIVALENCE | BLOCKED REAL / PASS SYNTHETIC | Prior candidate tests only; no real artifact differential |
 | CA COMPOSITION | BLOCKED REAL | No retained CA ledger/attestation admitted; provider was not accessed |
 | RECOVERY | PASS SYNTHETIC / BLOCKED REAL | Recovery contracts were tested locally; no real chain was available |
@@ -160,6 +167,15 @@ session child artifacts and config sidecar matched, but both manifests'
 calendar_sha256 values do not match the currently referenced calendar file.
 That calendar lineage mismatch is recorded as REQUIRES_RECONCILIATION and
 blocks replay of these sessions.
+
+The expanded 29-session copy found 28/29 calendar hash mismatches; the sole
+matching 2026-09-18 session still cannot pass the next-session boundary because
+the copied current calendar ends there. The existing input-level validator was
+applied to all 29 copies: 27 returned `PASS_INPUT_LEVEL`; 2026-08-03 failed
+because it is not an official session in the copied current calendar; and
+2026-09-18 failed because no next official session is available. These are
+structural observations only and do not establish paper-state, CA, recovery,
+or economic replay.
 
 The copy-only legacy ambiguity hunt found no duplicate required keys, required
 field nulls, invalid session dates, model/OHLCV ticker-set differences, or
