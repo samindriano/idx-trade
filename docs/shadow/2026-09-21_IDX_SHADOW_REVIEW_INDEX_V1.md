@@ -106,6 +106,10 @@ canary-design table is in:
 The metadata-only current retained-root re-census is in:
 2026-09-21_IDX_CURRENT_RETAINED_ROOT_RECENSUS_V1.md.
 
+The 2026-09-22 legacy-state existence adjudication and stalled-run timeline is
+in:
+2026-09-22_IDX_LEGACY_STATE_EXISTENCE_ADJUDICATION_V1.md.
+
 The adjacent local-boundary audit for historical data-gate, rollback, and
 watchdog roots is in:
 2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md.
@@ -149,6 +153,7 @@ The pre-copy record remains V1; the actual copy attestation is V2.
 - `2026-09-21_IDX_CONTROLLED_CANARY_DESIGN_V1.md`
 - `2026-09-21_IDX_PHASE16_PHASE17_STRUCTURAL_AUDIT_V1.md`
 - `2026-09-21_IDX_CURRENT_RETAINED_ROOT_RECENSUS_V1.md`
+- `2026-09-22_IDX_LEGACY_STATE_EXISTENCE_ADJUDICATION_V1.md`
 - `2026-09-21_IDX_ADDITIONAL_LOCAL_BOUNDARY_AUDIT_V1.md`
 - `2026-09-21_IDX_SYNTHETIC_PAPER_WORKDIR_BOUNDARY_AUDIT_V1.md`
 - `2026-09-21_IDX_SHADOW_ACTIVE_FRONTIER_HANDOFF_V1.md`
@@ -168,9 +173,13 @@ qualification boundary.
 The real retained inventory contains 29 session-date directories and a real
 forward-monitoring corpus. The active E2E runtime contains operational metadata,
 logs, and a no-prepared-execution terminal state, but no retained paper-state
-population was found in the bounded artifact census. Therefore the real
-migration and real replay gates are blocked by missing eligible state, not
-green-lit by synthetic tests.
+population was found in the bounded artifact census as of 2026-09-21 16:10 WIB.
+The runtime subsequently created one recoverable zero-holding T0/snapshot pair
+on 2026-09-21 at 18:35:04 WIB. The current adjudication is linked in
+`2026-09-22_IDX_LEGACY_STATE_EXISTENCE_ADJUDICATION_V1.md`. No nonzero
+portfolio history, prepared execution, fill vector, CA settlement ledger, or
+recovery chain was found, so real migration and replay remain blocked rather
+than green-lit by the fresh T0 or synthetic tests.
 
 The isolated synthetic continuation challenge later selected 86 contract
 tests and observed 86 passes. That strengthens only the synthetic

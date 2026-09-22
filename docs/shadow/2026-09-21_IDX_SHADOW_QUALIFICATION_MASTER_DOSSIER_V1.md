@@ -4,6 +4,21 @@ Date: 2026-09-21 (Asia/Jakarta)
 
 Status: **REAL-ARTIFACT DISCOVERY COMPLETE WITH LIMITATION / PRE-CANARY NO-GO**
 
+## Current-state amendment — 2026-09-22
+
+The 2026-09-21 retained-root census was complete for its stated cutoff,
+2026-09-21 16:10 WIB. After that cutoff, the active runtime created a real
+zero-holding T0 and runtime snapshot at 18:35:04 WIB. The exact hashes,
+loader verification, operational timeline, and classification are recorded in
+`2026-09-22_IDX_LEGACY_STATE_EXISTENCE_ADJUDICATION_V1.md`.
+
+The current classification is `LEGACY_STATE_CREATED_AND_RECOVERABLE`, limited
+to one recoverable fresh T0/snapshot pair. No nonzero holdings, fills, prepared
+execution, pending obligations, CA settlement, or older snapshot chain is
+evidenced. The pre-canary decision remains `NO-GO` because the subsequent CA
+stage failed before prepared execution and explicit activation/provider/
+scheduler/observability gates remain open.
+
 ## Objective
 
 Qualify the authoritative-runtime adoption candidate against real retained
@@ -374,7 +389,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 |---|---|
 | Real source artifact count | 819 files / 63,136,721 bytes in the approved forward-monitoring root; 817 files / 63,005,440 bytes after excluding the protected counter surfaces |
 | Immutable shadow artifact count | 237 files / 27,907,223 bytes in the session discovery copy, plus a separate 32-file / 85,180,491-byte extended evidence copy; all admitted copy hashes equal |
-| Real paper-state artifacts located | 0 snapshots, prepared parents, fill vectors, pending ledgers, CA ledgers, or recovery chains in the bounded admitted inventory; 38 CA event rows and 479,471 execution anchors are input-only |
+| Real paper-state artifacts located | Historical 2026-09-21 16:10 census: 0 snapshots, prepared parents, fill vectors, pending ledgers, CA ledgers, or recovery chains; current 2026-09-22 amendment: 1 recoverable zero-holding T0 plus 1 runtime snapshot, with no prepared parent, fill vector, pending ledger, CA ledger, or recovery chain |
 | Real migration attempted | 0; fail-closed because no eligible paper-state candidate exists |
 | Migrated real artifacts | 0 |
 | Blocked real migration candidates | 0 artifact rows; the required paper-state classes are unavailable rather than individually rejected |
@@ -382,7 +397,7 @@ immutable copy and distinguish absent candidates from failed migration runs.
 | Fully replayable historical sessions | 0; full E2E replay is blocked by state/CA/recovery absence and calendar lineage |
 | Calendar binding | 1/29 matches current calendar; 28/29 historical hashes unresolved; the matching session still has no next official session in the copy |
 | Old-vs-candidate real differential | 0 real artifact pairs; no unexplained divergence can be measured without a pair |
-| Real recovery cases | 0; no real snapshot chain, fork, parent, or obligation ancestor admitted |
+| Real recovery cases | 0 nonzero/recovery cases; one fresh zero-holding snapshot is recoverable, but no chain, fork, parent, or obligation ancestor is admitted |
 | Synthetic recovery/continuation evidence | 86/86 selected contract tests passed; synthetic-only |
 | Post-remediation focused regression | 38/38 CA/attestation/dividend/V4-X1 tests passed; pinned full suite passed 907/907 |
 | Operational shadow rehearsal | Initial continuation/controller subroots: 72 files / 788,621 bytes; expanded dedicated root: 89 files / 810,687 bytes; two-pass per-file attestation aggregate `169dda434dd52c74f7456c9876caabdd33aa523db4097ba6a7b78c888b9597bc`; five synthetic sessions; controller persisted `WEEKEND_OR_HOLIDAY_NOOP`; no provider/outcome/refit/rescore |

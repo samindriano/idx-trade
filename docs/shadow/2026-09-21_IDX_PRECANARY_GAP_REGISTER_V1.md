@@ -6,12 +6,12 @@ Status: **NO-GO UNTIL EXTERNAL GATES CLOSE**
 
 | ID | Gap | Impact | Closure evidence required |
 |---|---|---|---|
-| G-01 | No real E2E paper-state population in bounded inventory | real migration/recovery cannot run | immutable manifest containing actual state artifacts |
+| G-01 | No non-empty or transaction-bearing real E2E paper-state population in bounded inventory; current root now contains one recoverable zero-holding T0/snapshot pair | nonzero migration/recovery cannot run | immutable manifest and loader evidence for any eligible nonzero state; current T0 evidence is recorded in `2026-09-22_IDX_LEGACY_STATE_EXISTENCE_ADJUDICATION_V1.md` |
 | G-02 | Selected input class had only a pre-copy manifest | CLOSED for selected 20-file class; paper-state class remains absent | V2 manifest records source pre/post/copy equality |
 | G-03 | Session corpus is not paper state | replay cannot be promoted | interface proof that consumes it without state fabrication |
 | G-04 | Real CA event registry is admitted, but no CA entitlement/settlement ledger or holdings/obligation attestation is admitted | CA composition cannot be challenged | separately authorized immutable ledger/holdings/obligation evidence |
 | G-05 | No real old-vs-candidate artifact pair | equivalence is unproven | dual-runtime read-only differential on identical copied inputs |
-| G-06 | No real recovery chain | restart/fork/quarantine remains synthetic | real ancestor/lineage chain in shadow root |
+| G-06 | No real nonzero recovery chain; current T0 has `previous_snapshot=null` | restart/fork/quarantine remains synthetic beyond fresh zero-state recovery | real ancestor/lineage chain in shadow root |
 | G-07 | Identity authority remains external | operational binding cannot be promoted | authoritative hash-pinned identity artifact and policy; shadow interface challenge is now PASS only |
 | G-08 | Real-state fallback remains unavailable; synthetic forward-only rehearsal is complete | actual historical-state rollback/resume safety remains unproven | real migratable V2 state plus separate fallback authorization; synthetic closure is recorded in `2026-09-21_IDX_FORWARD_FALLBACK_REHEARSAL_V1.md` |
 | G-09 | Policy decisions remain external | canary admission cannot be decided | explicit close/pairing/expiry/FULL/concentration/tax/CA policy |
@@ -37,12 +37,12 @@ present.
 
 | ID | Required provider/authority or decision owner | Remaining local help | Canary impossible without closure |
 |---|---|---|---|
-| G-01 | runtime/state archive owner must provide immutable paper-state package | inventory and admission tooling ready; cannot recover absent state | Yes |
+| G-01 | runtime/state archive owner must provide immutable nonzero paper-state package or explicitly authorize fresh-T0 policy | current T0 has been copied and loader-verified; nonzero migration evidence remains absent | Yes |
 | G-02 | shadow evidence maintainer | closed for admitted class; keep source/copy attestations | No, independent of missing paper state |
 | G-03 | runtime-state owner must define an authoritative state interface | adapter design can remain outcome-blind; no state may be fabricated | Yes |
 | G-04 | CA/settlement evidence authority and state owner | parser and event-shape checks are complete; no ledger can be inferred | Yes |
 | G-05 | old-runtime artifact owner plus candidate integrator | comparator can run once identical real pair is admitted | Yes |
-| G-06 | runtime snapshot archive owner | recovery contracts and quarantine checks are ready | Yes |
+| G-06 | runtime snapshot archive owner | fresh T0 is recoverable; no nonzero ancestor/recovery chain is admitted | Yes |
 | G-07 | identity authority and policy owner | shadow loader/negative cases complete | Yes |
 | G-08 | runtime/state owner plus rollback policy owner | synthetic freeze/resume rehearsal complete | Yes for real-state fallback |
 | G-09 | explicit policy owner | can encode a supplied policy; cannot choose economic/tax/CA policy | Yes |
