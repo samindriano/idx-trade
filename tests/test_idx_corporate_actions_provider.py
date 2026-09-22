@@ -81,6 +81,28 @@ def test_safe_ratio_requires_positive_share_counts():
     assert derive_split_ratio(None, 200) is None
 
 
+def test_nan_optional_share_counts_remain_unknown_not_invalid():
+    actions = parse_idx_corporate_actions(
+        [
+            {
+                "ticker": "ALDO",
+                "action": "stockSplit",
+                "effective_date": "2024-07-08",
+                "action_shares": 0,
+                "total_shares_after_action": 0,
+                "old_shares": float("nan"),
+                "new_shares": float("nan"),
+            }
+        ],
+        source_ref="shadow://canonical-ca-csv",
+    )
+
+    assert len(actions) == 1
+    assert pd.isna(actions.loc[0, "old_shares"])
+    assert pd.isna(actions.loc[0, "new_shares"])
+    assert pd.isna(actions.loc[0, "ratio"])
+
+
 def test_action_amount_and_after_total_have_directional_semantics():
     assert derive_action_share_counts("stockSplit", 45, 46.875) == pytest.approx((1.875, 46.875))
     assert derive_action_share_counts("reverseStock", 225, 25) == (250, 25)
