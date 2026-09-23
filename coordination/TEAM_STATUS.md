@@ -63,6 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
+| Repository Orchestra policy | `ACTIVE` | Owned by the current Codex task: recalibrate eligible-task delegation to roughly +20–50% (relative, capped at +50%) and align configured worker roles to GPT-6 Luna Max; no scientific or runtime authorization changes. | Update root `AGENTS.md` on this isolated branch; keep all data/research/runtime state untouched. |
 
 ## Always-on operational lanes
 
