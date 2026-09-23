@@ -63,7 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
-| Repository Orchestra policy | `ACTIVE` | Owned by the current Codex task: recalibrate eligible-task delegation to roughly +20–50% (relative, capped at +50%) and align configured worker roles to GPT-6 Luna Max; no scientific or runtime authorization changes. | Update root `AGENTS.md` on this isolated branch; keep all data/research/runtime state untouched. |
+| Repository Orchestra policy | `WAITING` | Root `AGENTS.md` now expresses the approximate +20–50% delegation target (hard cap +50%) and GPT-6 Luna Max worker pin; implementation is committed locally as `42e6eb85` on an isolated branch. No scientific, data, or runtime authorization changed. | Review/integrate `codex/idx-orchestra-policy-calibration-20260923` when the IDX-Trade coordination lane is next handled. |
 
 ## Always-on operational lanes
 
