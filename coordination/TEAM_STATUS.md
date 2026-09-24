@@ -63,7 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
-| Repository Orchestra policy | `ACTIVE` | Resuming the isolated policy update: pin default MAIN/root and configured workers to GPT-6 Luna XHigh (`gpt-6-luna`, `xhigh`) while preserving the +20–50% relative delegation guidance (hard cap +50%). No scientific, data, or runtime authorization changes. | Update and verify root `AGENTS.md` on `codex/idx-orchestra-policy-calibration-20260923`; keep research/data/runtime state untouched. |
+| Repository Orchestra policy | `WAITING` | Updated root `AGENTS.md` to pin default MAIN/root and all configured workers to GPT-6 Luna XHigh (`gpt-6-luna`, `xhigh`); the +20–50% relative delegation guidance (hard cap +50%) is preserved. Local implementation commit `4a3937bd` is on `codex/idx-orchestra-policy-calibration-20260923`; no scientific, data, or runtime authorization changed. | Await review/integration direction; do not merge or push the implementation branch. |
 
 ## Always-on operational lanes
 
