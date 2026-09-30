@@ -1,6 +1,6 @@
 # IDX Trade — Repository-Wide Team Status
 
-Last coordinated update: 2026-09-18 Asia/Jakarta
+Last coordinated update: 2026-09-30 Asia/Jakarta
 Canonical location: `main:coordination/TEAM_STATUS.md`
 
 ## Authority
@@ -63,7 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
-| Repository Orchestra policy | `ACTIVE` | User-directed rule update: MAIN/root GPT-6.1 Sol High; configured `default`, `explorer`, and `worker` roles remain GPT-6 Luna XHigh. The existing main rule and separate older policy branch still pin Luna for MAIN; this is a new, separately tracked correction. | Update the repository policy with the requested root/worker split; preserve the older branch and refetch this ledger before any further shared-file write. |
+| Repository Orchestra policy | `WAITING` | PR #128 proposes MAIN/root GPT-6.1 Sol High with configured `default`, `explorer`, and `worker` roles on GPT-6 Luna XHigh; only repository orchestration instructions changed. | Review PR #128; keep the separate older policy branch untouched and do not merge before review. |
 
 ## Always-on operational lanes
 
