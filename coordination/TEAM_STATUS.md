@@ -63,7 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
-| Repository Orchestra policy | `WAITING` | Updated root `AGENTS.md` to pin default MAIN/root and all configured workers to GPT-6 Luna XHigh (`gpt-6-luna`, `xhigh`); the +20–50% relative delegation guidance (hard cap +50%) is preserved. Local implementation commit `4a3937bd` is on `codex/idx-orchestra-policy-calibration-20260923`; no scientific, data, or runtime authorization changed. | Await review/integration direction; do not merge or push the implementation branch. |
+| Repository Orchestra policy | `ACTIVE` | User-directed rule update: MAIN/root GPT-6.1 Sol High; configured `default`, `explorer`, and `worker` roles remain GPT-6 Luna XHigh. The existing main rule and separate older policy branch still pin Luna for MAIN; this is a new, separately tracked correction. | Update the repository policy with the requested root/worker split; preserve the older branch and refetch this ledger before any further shared-file write. |
 
 ## Always-on operational lanes
 
