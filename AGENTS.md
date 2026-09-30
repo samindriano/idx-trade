@@ -86,9 +86,9 @@ Any `EXTERNAL_OR_REMOTE_WORKER` entry requires an explicit reason.
 
 ## Worker and integration rules
 
-- Default MAIN/root model: `Luna xhigh` unless the user overrides it.
-- Default worker model: `Luna xhigh` unless the user overrides it.
-- `Sol High` is a bounded decision-changing escalation for unresolved architecture conflict, repeated integration failure, methodology certification, suspiciously strong evidence, or a final high-risk gate; HEAVY does not imply Sol.
+- MAIN/root model for this project: GPT-6.1 Sol High (`gpt-6.1-sol`); select the explicit `global-gpt6-sol` / `GPT6_SOL_ROOT` profile.
+- Configured `default`, `explorer`, and `worker` roles remain GPT-6 Luna XHigh (`gpt-6-luna`, `xhigh`) under every root profile.
+- DIRECT/LIGHT/HEAVY changes execution width only. Do not auto-escalate to Astra or change reasoning effort; verify effective role pins before delegation, and work DIRECT if the runtime cannot select or confirm them.
 - Workers never spawn nested workers.
 - Concurrent writers require local isolated worktrees/branches or otherwise provably disjoint ownership; read-only workers do not require separate worktrees.
 - Workers do not merge, rebase, force-push, rewrite history, or integrate their own branches.
