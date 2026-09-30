@@ -63,7 +63,7 @@ capture systems.
 | GitHub Actions cost optimization | `WAITING` | Normal-CI optimization is integrated; representative scheduled production measurements are pending. | Measure the next representative scheduled runs. |
 | Stockbit Intraday cloud migration | `ACTIVE` | Cloud schedule, smoke, and bridge-preflight work are in place; genuine production proof is pending. | Run one controlled future-session single-writer proof. |
 | Capture/runtime repository hygiene V3 | `WAITING` | Registry and CI are complete; the local tag-capable atomic cleanup has not been applied. | Apply and verify the documented ref cleanup. |
-| Repository Orchestra policy | `WAITING` | PR #128 proposes MAIN/root GPT-6.1 Sol High with configured `default`, `explorer`, and `worker` roles on GPT-6 Luna XHigh; only repository orchestration instructions changed. | Review PR #128; keep the separate older policy branch untouched and do not merge before review. |
+| Repository Orchestra policy | `DONE` | PR #128 was squash-merged to `main` at `3413c6f5`; MAIN/root is GPT-6.1 Sol High and configured `default`, `explorer`, and `worker` roles remain GPT-6 Luna XHigh. | Keep the root/worker split; no follow-up is currently required. |
 
 ## Always-on operational lanes
 
